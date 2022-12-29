@@ -16,7 +16,7 @@ use crate::{
     tests::{data, Fixture},
     utils::RemoveResult,
 };
-use cryfs_utils::{async_drop::SyncDrop, testutils::assert_data_range_eq};
+use cryfs_utils::{async_drop::AsyncDropGuard, testutils::assert_data_range_eq};
 
 mod block_store_adapter;
 pub use block_store_adapter::TestFixtureAdapter;
@@ -29,7 +29,7 @@ pub trait LockingBlockStoreFixture {
     type UnderlyingBlockStore: BlockStore + Send + Sync + Debug + 'static;
 
     fn new() -> Self;
-    async fn store(&mut self) -> SyncDrop<LockingBlockStore<Self::UnderlyingBlockStore>>;
+    async fn store(&mut self) -> AsyncDropGuard<LockingBlockStore<Self::UnderlyingBlockStore>>;
     async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>);
 }
 
@@ -48,9 +48,9 @@ where
     fn new() -> Self {
         Self { f: F::new() }
     }
-    async fn store(&mut self) -> SyncDrop<LockingBlockStore<Self::UnderlyingBlockStore>> {
-        let inner = self.f.store().await.into_inner_dont_drop();
-        SyncDrop::new(LockingBlockStore::new(inner))
+    async fn store(&mut self) -> AsyncDropGuard<LockingBlockStore<Self::UnderlyingBlockStore>> {
+        let inner = self.f.store().await;
+        LockingBlockStore::new(inner)
     }
     async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>) {
         if FLUSH_CACHE_ON_YIELD {
@@ -79,13 +79,15 @@ pub mod create {
     use super::*;
 
     pub async fn test_twoCreatedBlocksHaveDifferentIds(mut f: impl LockingBlockStoreFixture) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let first = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
         let second = store.create(&data(1024, 1)).await.unwrap();
         assert_ne!(first, second);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     // TODO Test block exists and has correct data after creation
@@ -97,7 +99,7 @@ pub mod remove {
     use super::*;
 
     pub async fn test_canRemoveAModifiedBlock(mut f: impl LockingBlockStoreFixture) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         let mut block = store.load(blockid).await.unwrap().unwrap();
@@ -112,6 +114,8 @@ pub mod remove {
             store.remove(&blockid).await.unwrap()
         );
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 
@@ -121,7 +125,7 @@ pub mod resize {
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -132,12 +136,14 @@ pub mod resize {
 
         std::mem::drop(block);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -147,12 +153,14 @@ pub mod resize {
         assert_block_is_usable(&store, block).await;
 
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -163,12 +171,14 @@ pub mod resize {
 
         std::mem::drop(block);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -178,12 +188,14 @@ pub mod resize {
         assert_block_is_usable(&store, block).await;
 
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -194,12 +206,14 @@ pub mod resize {
 
         std::mem::drop(block);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -209,12 +223,14 @@ pub mod resize {
         assert_block_is_usable(&store, block).await;
 
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -225,12 +241,14 @@ pub mod resize {
 
         std::mem::drop(block);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable(
         mut f: impl LockingBlockStoreFixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -239,6 +257,8 @@ pub mod resize {
         block.resize(0).await;
         assert_block_is_usable(&store, block).await;
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     // TODO Make sure all tests have an afterLoading variant
@@ -276,7 +296,7 @@ pub mod data {
 
     pub async fn test_writeAndReadImmediately(mut f: impl LockingBlockStoreFixture) {
         for data_range in DATA_RANGES {
-            let store = f.store().await;
+            let mut store = f.store().await;
 
             let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
             f.yield_fixture(&store).await;
@@ -306,12 +326,14 @@ pub mod data {
 
             std::mem::drop(block);
             f.yield_fixture(&store).await;
+
+            store.async_drop().await.unwrap();
         }
     }
 
     pub async fn test_writeAndReadAfterLoading(mut f: impl LockingBlockStoreFixture) {
         for data_range in DATA_RANGES {
-            let store = f.store().await;
+            let mut store = f.store().await;
 
             let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
             f.yield_fixture(&store).await;
@@ -346,6 +368,8 @@ pub mod data {
 
             std::mem::drop(block);
             f.yield_fixture(&store).await;
+
+            store.async_drop().await.unwrap();
         }
     }
 }
@@ -370,16 +394,16 @@ pub mod overwrite {
         std::mem::drop(block);
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert!(overwrite_task.is_finished());
+
+        Arc::try_unwrap(store).unwrap().async_drop().await.unwrap();
     }
 
     pub async fn test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites(
         mut f: impl LockingBlockStoreFixture,
     ) {
         let store = Arc::new(f.store().await);
-
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         let block = store.load(blockid).await.unwrap().unwrap();
-
         let _store = Arc::clone(&store);
         let overwrite_task = tokio::task::spawn(async move {
             _store.overwrite(&blockid, &data(512, 1)).await.unwrap();
@@ -391,6 +415,9 @@ pub mod overwrite {
 
         let block = store.load(blockid).await.unwrap().unwrap();
         assert_eq!(&data(512, 1), block.data());
+
+        drop(block);
+        Arc::try_unwrap(store).unwrap().async_drop().await.unwrap();
     }
 
     // TODO Test other locking behaviors, i.e. loading while loaded, removing while loaded, ...

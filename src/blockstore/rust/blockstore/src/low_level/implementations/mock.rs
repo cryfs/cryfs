@@ -48,7 +48,7 @@ mod tests {
     use crate::instantiate_blockstore_tests;
     use crate::low_level::InMemoryBlockStore;
     use async_trait::async_trait;
-    use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
+    use cryfs_utils::async_drop::AsyncDropGuard;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -216,8 +216,8 @@ mod tests {
         fn new() -> Self {
             Self {}
         }
-        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-            SyncDrop::new(make_working_mock_block_store())
+        async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+            make_working_mock_block_store()
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }

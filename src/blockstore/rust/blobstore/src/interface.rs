@@ -38,6 +38,7 @@ pub trait BlobStore {
         Self: 'a;
 
     async fn create(&self) -> Result<Self::ConcreteBlob<'_>>;
+    async fn try_create(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>>;
     async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>>;
     async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
     async fn num_nodes(&self) -> Result<u64>;

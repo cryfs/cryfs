@@ -19,7 +19,7 @@ pub mod try_create {
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -36,12 +36,14 @@ pub mod try_create {
 
         assert_eq!(Some(data(1024, 0)), store.load(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingEmptyBlock_thenFails(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(1), &data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -58,12 +60,14 @@ pub mod try_create {
 
         assert_eq!(Some(data(0, 0)), store.load(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -77,12 +81,14 @@ pub mod try_create {
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -96,12 +102,14 @@ pub mod try_create {
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         let status = store
             .try_create(&blockid(1), data(1024, 1).as_ref())
@@ -112,12 +120,14 @@ pub mod try_create {
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         let status = store
             .try_create(&blockid(1), data(0, 1).as_ref())
@@ -128,6 +138,8 @@ pub mod try_create {
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 
@@ -137,7 +149,7 @@ pub mod load {
     pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withNonEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(0), data(1024, 0).as_ref())
@@ -154,12 +166,14 @@ pub mod load {
         let loaded = store.load(&blockid(1)).await.unwrap();
         assert_eq!(Some(data(1024, 1)), loaded);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenLoadExistingBlock_withEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(0), data(1024, 0).as_ref())
@@ -173,12 +187,14 @@ pub mod load {
         let loaded = store.load(&blockid(1)).await.unwrap();
         assert_eq!(Some(data(0, 1)), loaded);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(0), data(1024, 0).as_ref())
@@ -195,14 +211,18 @@ pub mod load {
         let loaded = store.load(&blockid(2)).await.unwrap();
         assert_eq!(None, loaded);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails(mut f: impl Fixture) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         let loaded = store.load(&blockid(1)).await.unwrap();
         assert_eq!(None, loaded);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 
@@ -212,7 +232,7 @@ pub mod store {
     pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 1).as_ref())
@@ -222,24 +242,28 @@ pub mod store {
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(1), data(0, 1).as_ref()).await.unwrap();
         f.yield_fixture(&store).await;
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 0).as_ref())
@@ -254,12 +278,14 @@ pub mod store {
 
         assert_eq!(Some(data(1024, 1)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 0).as_ref())
@@ -272,12 +298,14 @@ pub mod store {
 
         assert_eq!(Some(data(0, 1)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withNonEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 0).as_ref())
@@ -304,12 +332,14 @@ pub mod store {
         // Check it got successfully overwritten
         assert_eq!(Some(data(1024, 2)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenStoringExistingBlock_withEmptyData_thenSucceeds(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 0).as_ref())
@@ -333,6 +363,8 @@ pub mod store {
         // Check it got successfully overwritten
         assert_eq!(Some(data(0, 2)), store.load(&blockid(2)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     // TODO Test that overwriting an existing block with larger/smaller blocksize works
@@ -344,7 +376,7 @@ pub mod remove {
     pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 1).as_ref())
@@ -363,12 +395,14 @@ pub mod remove {
 
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenOtherwiseEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(1), data(0, 1).as_ref()).await.unwrap();
         f.yield_fixture(&store).await;
@@ -384,12 +418,14 @@ pub mod remove {
 
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 2).as_ref())
@@ -414,12 +450,14 @@ pub mod remove {
 
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 2).as_ref())
@@ -441,12 +479,14 @@ pub mod remove {
 
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         assert_eq!(
             RemoveResult::NotRemovedBecauseItDoesntExist,
@@ -456,12 +496,14 @@ pub mod remove {
 
         assert!(store.load(&blockid(1)).await.unwrap().is_none());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store
             .store(&blockid(1), data(1024, 2).as_ref())
@@ -477,6 +519,8 @@ pub mod remove {
 
         assert!(store.load(&blockid(2)).await.unwrap().is_none());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 
@@ -486,15 +530,17 @@ pub mod num_blocks {
     pub async fn test_givenEmptyBlockStore_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         assert_eq!(0, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         assert_eq!(0, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
 
@@ -517,12 +563,14 @@ pub mod num_blocks {
         f.yield_fixture(&store).await;
         assert_eq!(3, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_afterStoringBlocks_withSameId_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         assert_eq!(0, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
 
@@ -535,12 +583,14 @@ pub mod num_blocks {
         f.yield_fixture(&store).await;
         assert_eq!(1, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         assert_eq!(0, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
@@ -576,12 +626,14 @@ pub mod num_blocks {
         f.yield_fixture(&store).await;
         assert_eq!(3, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
 
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -624,6 +676,8 @@ pub mod num_blocks {
         f.yield_fixture(&store).await;
         assert_eq!(0, store.num_blocks().await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 
@@ -643,35 +697,41 @@ pub mod all_blocks {
     pub async fn test_givenEmptyBlockStore_whenCallingAllBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         assert_unordered_vec_eq(vec![], call_all_blocks(store.deref()).await);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![blockid(0)], call_all_blocks(store.deref()).await);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenBlockStoreWithTwoBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
@@ -681,12 +741,14 @@ pub mod all_blocks {
             call_all_blocks(store.deref()).await,
         );
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
@@ -698,12 +760,14 @@ pub mod all_blocks {
             call_all_blocks(store.deref()).await,
         );
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_afterRemovingBlock_whenCallingAllBlocks_doesntListRemovedBlocks(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         store.store(&blockid(1), &data(1024, 0)).await.unwrap();
@@ -737,6 +801,8 @@ pub mod all_blocks {
         f.yield_fixture(&store).await;
         assert_unordered_vec_eq(vec![], call_all_blocks(store.deref()).await);
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 
@@ -746,29 +812,35 @@ pub mod exists {
     pub async fn test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         assert!(!store.exists(&blockid(0)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         assert!(!store.exists(&blockid(1)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 
     pub async fn test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue(
         mut f: impl Fixture,
     ) {
-        let store = f.store().await;
+        let mut store = f.store().await;
         store.store(&blockid(0), &data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         assert!(store.exists(&blockid(0)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
     }
 }
 

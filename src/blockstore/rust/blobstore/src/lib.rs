@@ -8,3 +8,6 @@ mod on_blocks;
 pub use on_blocks::{BlobOnBlocks, BlobStoreOnBlocks};
 
 pub use cryfs_blockstore::RemoveResult;
+
+#[cfg(test)]
+mod tests;

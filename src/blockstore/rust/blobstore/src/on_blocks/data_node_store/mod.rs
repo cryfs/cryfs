@@ -7,7 +7,6 @@ use futures::Stream;
 use std::pin::Pin;
 
 pub use crate::RemoveResult;
-#[cfg(test)]
 use cryfs_blockstore::TryCreateResult;
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore, BLOCKID_LEN};
 use cryfs_utils::{
@@ -108,20 +107,19 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         self._load_created_node(block_id).await
     }
 
-    #[cfg(test)]
     pub async fn try_create_new_leaf_node(
         &self,
         block_id: BlockId,
         data: &Data,
-    ) -> Result<DataLeafNode<B>> {
+    ) -> Result<Option<DataLeafNode<B>>> {
         let block_data = self._serialize_leaf(data);
         // TODO Use create_optimized instead of create?
         match self.block_store.try_create(&block_id, &block_data).await? {
             TryCreateResult::SuccessfullyCreated => {}
-            TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => bail!("Block already exists"),
+            TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => return Ok(None),
         }
         // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
-        self._load_created_node(block_id).await
+        Ok(Some(self._load_created_node(block_id).await?))
     }
 
     fn _serialize_leaf(&self, data: &Data) -> Data {
@@ -451,6 +449,7 @@ mod tests {
             let node = nodestore
                 .try_create_new_leaf_node(blockid(), &data)
                 .await
+                .unwrap()
                 .unwrap();
             assert_eq!(blockid(), *node.block_id());
             assert_eq!(data.as_ref(), node.data());
@@ -511,14 +510,11 @@ mod tests {
                         .block_id();
 
                     let data = data_fixture(10, 2);
-                    assert_eq!(
-                        "Block already exists",
-                        nodestore
-                            .try_create_new_leaf_node(existing_block_id, &data)
-                            .await
-                            .unwrap_err()
-                            .to_string()
-                    );
+                    assert!(nodestore
+                        .try_create_new_leaf_node(existing_block_id, &data)
+                        .await
+                        .unwrap()
+                        .is_none());
 
                     // Existing block wasn't modified
                     let node = load_leaf_node(nodestore, existing_block_id).await;

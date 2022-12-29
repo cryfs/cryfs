@@ -37,13 +37,6 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.tree_store.clear_cache_slow().await
     }
-
-    #[cfg(test)]
-    pub async fn try_create(&self, id: &BlobId) -> Result<BlobOnBlocks<'_, B>> {
-        Ok(BlobOnBlocks::new(
-            self.tree_store.try_create_tree(id.root).await?,
-        ))
-    }
 }
 
 #[async_trait]
@@ -52,6 +45,14 @@ impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
 
     async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
         Ok(BlobOnBlocks::new(self.tree_store.create_tree().await?))
+    }
+
+    async fn try_create(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+        Ok(self
+            .tree_store
+            .try_create_tree(id.root)
+            .await?
+            .map(|tree| BlobOnBlocks::new(tree)))
     }
 
     async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {

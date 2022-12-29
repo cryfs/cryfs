@@ -357,7 +357,6 @@ mod tests {
     use crate::instantiate_blockstore_tests;
     use crate::low_level::BlockStoreWriter;
     use crate::tests::{blockid, data, Fixture};
-    use cryfs_utils::async_drop::SyncDrop;
     use tempdir::TempDir;
 
     struct TestFixture {
@@ -370,8 +369,8 @@ mod tests {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
             Self { basedir }
         }
-        async fn store(&mut self) -> SyncDrop<OnDiskBlockStore> {
-            SyncDrop::new(OnDiskBlockStore::new(self.basedir.path().to_path_buf()))
+        async fn store(&mut self) -> AsyncDropGuard<OnDiskBlockStore> {
+            OnDiskBlockStore::new(self.basedir.path().to_path_buf())
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
@@ -399,7 +398,7 @@ mod tests {
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store().await;
+        let mut store = fixture.store().await;
         let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64;
 
         assert_eq!(
@@ -415,6 +414,8 @@ mod tests {
                 .unwrap()
         );
         assert!(store.block_size_from_physical_block_size(0).is_err());
+
+        store.async_drop().await.unwrap();
     }
 
     fn _get_block_file_size(basedir: &Path, block_id: &BlockId) -> u64 {
@@ -433,7 +434,7 @@ mod tests {
     #[tokio::test]
     async fn test_ondisk_block_size() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store().await;
+        let mut store = fixture.store().await;
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert_eq!(
@@ -456,12 +457,14 @@ mod tests {
                 ))
                 .unwrap()
         );
+
+        store.async_drop().await.unwrap();
     }
 
     #[tokio::test]
     async fn test_whenStoringBlock_thenBlockFileExists() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store().await;
+        let mut store = fixture.store().await;
 
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(0)));
         store.store(&blockid(0), &[]).await.unwrap();
@@ -470,12 +473,14 @@ mod tests {
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(1)));
         store.store(&blockid(1), &data(500, 0)).await.unwrap();
         assert!(_block_file_exists(fixture.basedir.path(), &blockid(1)));
+
+        store.async_drop().await.unwrap();
     }
 
     #[tokio::test]
     async fn test_whenRemovingBlock_thenBlockFileDoesntExist() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store().await;
+        let mut store = fixture.store().await;
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert!(_block_file_exists(fixture.basedir.path(), &blockid(0)));
@@ -492,5 +497,7 @@ mod tests {
             store.remove(&blockid(1)).await.unwrap()
         );
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(1)));
+
+        store.async_drop().await.unwrap();
     }
 }

@@ -161,7 +161,6 @@ mod generic_tests {
     use super::*;
     use crate::low_level::InMemoryBlockStore;
     use crate::tests::Fixture;
-    use cryfs_utils::async_drop::SyncDrop;
 
     use crate::instantiate_blockstore_tests;
 
@@ -172,8 +171,8 @@ mod generic_tests {
         fn new() -> Self {
             Self {}
         }
-        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-            SyncDrop::new(CompressingBlockStore::new(InMemoryBlockStore::new()))
+        async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+            CompressingBlockStore::new(InMemoryBlockStore::new())
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
@@ -183,7 +182,7 @@ mod generic_tests {
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let store = fixture.store().await;
+        let mut store = fixture.store().await;
         let expected_overhead: u64 = 0 as u64;
 
         assert_eq!(
@@ -198,5 +197,7 @@ mod generic_tests {
                 .block_size_from_physical_block_size(expected_overhead + 20u64)
                 .unwrap()
         );
+
+        store.async_drop().await.unwrap();
     }
 }

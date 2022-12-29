@@ -49,13 +49,12 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
         Ok(DataTree::new(new_leaf.upcast(), &self.node_store))
     }
 
-    #[cfg(test)]
-    pub async fn try_create_tree(&self, id: BlockId) -> Result<DataTree<'_, B>> {
+    pub async fn try_create_tree(&self, id: BlockId) -> Result<Option<DataTree<'_, B>>> {
         let new_leaf = self
             .node_store
             .try_create_new_leaf_node(id, &Data::from(vec![]))
             .await?;
-        Ok(DataTree::new(new_leaf.upcast(), &self.node_store))
+        Ok(new_leaf.map(|new_leaf| DataTree::new(new_leaf.upcast(), &self.node_store)))
     }
 
     pub async fn remove_tree_by_id(&self, root_node_id: BlockId) -> Result<RemoveResult> {

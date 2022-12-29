@@ -263,7 +263,7 @@ mod tests {
     use crate::low_level::{BlockStoreReader, BlockStoreWriter, InMemoryBlockStore};
     use crate::tests::{blockid, data, Fixture};
     use cryfs_utils::{
-        async_drop::{AsyncDropArc, SyncDrop},
+        async_drop::AsyncDropArc,
         crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305},
     };
 
@@ -285,11 +285,8 @@ mod tests {
         fn new() -> Self {
             Self { _c: PhantomData }
         }
-        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-            SyncDrop::new(EncryptedBlockStore::new(
-                InMemoryBlockStore::new(),
-                Cipher::new(key(0)),
-            ))
+        async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+            EncryptedBlockStore::new(InMemoryBlockStore::new(), Cipher::new(key(0)))
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
@@ -318,7 +315,7 @@ mod tests {
     async fn test_block_size_from_physical_block_size() {
         async fn _test_block_size_from_physical_block_size<C: 'static + Cipher + Send + Sync>() {
             let mut fixture = TestFixture::<C>::new();
-            let store = fixture.store().await;
+            let mut store = fixture.store().await;
             let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64
                 + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
                 + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64;
@@ -336,6 +333,8 @@ mod tests {
                     .unwrap()
             );
             assert!(store.block_size_from_physical_block_size(0).is_err());
+
+            store.async_drop().await.unwrap();
         }
 
         _test_block_size_from_physical_block_size::<Aes256Gcm>().await;

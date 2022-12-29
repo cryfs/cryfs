@@ -471,7 +471,6 @@ mod generic_tests {
     use super::*;
     use crate::low_level::InMemoryBlockStore;
     use crate::tests::Fixture;
-    use cryfs_utils::async_drop::SyncDrop;
     use std::num::NonZeroU32;
     use tempdir::TempDir;
 
@@ -495,37 +494,34 @@ mod generic_tests {
             let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
             Self { integrity_file_dir }
         }
-        async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-            SyncDrop::new(
-                IntegrityBlockStore::new(
-                    InMemoryBlockStore::new(),
-                    self.integrity_file_dir
-                        .path()
-                        .join("integrity_file")
-                        .to_path_buf(),
-                    ClientId {
-                        id: NonZeroU32::new(1).unwrap(),
+        async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+            IntegrityBlockStore::new(
+                InMemoryBlockStore::new(),
+                self.integrity_file_dir
+                    .path()
+                    .join("integrity_file")
+                    .to_path_buf(),
+                ClientId {
+                    id: NonZeroU32::new(1).unwrap(),
+                },
+                IntegrityConfig {
+                    allow_integrity_violations: if ALLOW_INTEGRITY_VIOLATIONS {
+                        AllowIntegrityViolations::AllowViolations
+                    } else {
+                        AllowIntegrityViolations::DontAllowViolations
                     },
-                    IntegrityConfig {
-                        allow_integrity_violations: if ALLOW_INTEGRITY_VIOLATIONS {
-                            AllowIntegrityViolations::AllowViolations
-                        } else {
-                            AllowIntegrityViolations::DontAllowViolations
-                        },
-                        missing_block_is_integrity_violation:
-                            if MISSING_BLOCK_IS_INTEGRITY_VIOLATION {
-                                MissingBlockIsIntegrityViolation::IsAViolation
-                            } else {
-                                MissingBlockIsIntegrityViolation::IsNotAViolation
-                            },
-                        on_integrity_violation: Box::new(|err| {
-                            panic!("Integrity violation: {:?}", err)
-                        }),
+                    missing_block_is_integrity_violation: if MISSING_BLOCK_IS_INTEGRITY_VIOLATION {
+                        MissingBlockIsIntegrityViolation::IsAViolation
+                    } else {
+                        MissingBlockIsIntegrityViolation::IsNotAViolation
                     },
-                )
-                .await
-                .unwrap(),
+                    on_integrity_violation: Box::new(|err| {
+                        panic!("Integrity violation: {:?}", err)
+                    }),
+                },
             )
+            .await
+            .unwrap()
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
@@ -552,7 +548,7 @@ mod generic_tests {
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::<false, false>::new();
-        let store = fixture.store().await;
+        let mut store = fixture.store().await;
         let expected_overhead: u64 = HEADER_SIZE as u64;
 
         assert_eq!(
@@ -568,6 +564,8 @@ mod generic_tests {
                 .unwrap()
         );
         assert!(store.block_size_from_physical_block_size(0).is_err());
+
+        store.async_drop().await.unwrap();
     }
 }
 

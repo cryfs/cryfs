@@ -11,7 +11,7 @@ use cryfs_blockstore::{
     InMemoryBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop},
+    async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
 };
 
@@ -94,17 +94,15 @@ impl BlockStoreDeleter for BlockStoreAdapter {
 #[async_trait]
 impl BlockStoreWriter for BlockStoreAdapter {
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<TryCreateResult> {
-        if self.exists(id).await? {
-            Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
-        } else {
-            let mut blob = self
-                .underlying_store
-                .try_create(&BlobId { root: *id })
-                .await?;
-            blob.resize(data.len() as u64).await?;
-            blob.write(data, 0).await?;
-            Ok(TryCreateResult::SuccessfullyCreated)
-        }
+        let Some(mut blob) = self
+            .underlying_store
+            .try_create(&BlobId { root: *id })
+            .await? else {
+                return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
+            };
+        blob.resize(data.len() as u64).await?;
+        blob.write(data, 0).await?;
+        Ok(TryCreateResult::SuccessfullyCreated)
     }
 
     async fn store(&self, id: &BlockId, data: &[u8]) -> Result<()> {
@@ -115,6 +113,7 @@ impl BlockStoreWriter for BlockStoreAdapter {
             self.underlying_store
                 .try_create(&BlobId { root: *id })
                 .await?
+                .expect("We just checked that it doesn't exist, so it must be creatable.")
         };
         if blob.num_bytes().await? != data.len() as u64 {
             blob.resize(data.len() as u64).await?;
@@ -152,8 +151,8 @@ impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u32> Fixture
     fn new() -> Self {
         Self {}
     }
-    async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-        SyncDrop::new(BlockStoreAdapter::new(BLOCK_SIZE_BYTES).await)
+    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+        BlockStoreAdapter::new(BLOCK_SIZE_BYTES).await
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
         if FLUSH_CACHE_ON_YIELD {

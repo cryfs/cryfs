@@ -11,7 +11,7 @@ use cryfs_blockstore::{
     InMemoryBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop},
+    async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
 };
 
@@ -133,8 +133,8 @@ impl<const FLUSH_CACHE_ON_YIELD: bool> Fixture for TestFixtureAdapter<FLUSH_CACH
     fn new() -> Self {
         Self {}
     }
-    async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore> {
-        SyncDrop::new(BlockStoreAdapter::new().await)
+    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+        BlockStoreAdapter::new().await
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
         if FLUSH_CACHE_ON_YIELD {

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use crate::{low_level::BlockStore, BlockId};
-use cryfs_utils::{async_drop::SyncDrop, data::Data};
+use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
 
 /// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests] macro,
 /// our suite of block store tests is instantiated for a given block store.
@@ -20,7 +20,7 @@ pub trait Fixture {
     fn new() -> Self;
 
     /// Create a new block store for testing
-    async fn store(&mut self) -> SyncDrop<Self::ConcreteBlockStore>;
+    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore>;
 
     /// Run some action defined by the fixture. This is often called
     /// by test cases between making changes and asserting that the changes
