@@ -23,7 +23,7 @@ namespace onblocks {
 namespace datanodestore {
 
 DataNodeStore::DataNodeStore(unique_ref<BlockStore> blockstore, uint64_t physicalBlocksizeBytes)
-: _blockstore(std::move(blockstore)), _layout(_blockstore->blockSizeFromPhysicalBlockSize(physicalBlocksizeBytes)), _physicalBlockSizeBytes(physicalBlockSizeBytes) {
+: _blockstore(std::move(blockstore)), _layout(_blockstore->blockSizeFromPhysicalBlockSize(physicalBlocksizeBytes)), _physicalBlockSizeBytes(physicalBlocksizeBytes) {
 }
 
 DataNodeStore::~DataNodeStore() {
