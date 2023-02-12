@@ -890,6 +890,24 @@ mod tests {
         use super::*;
 
         #[tokio::test]
+        async fn givenEmptyNodeStore_whenRemovingNonExistingEntry_thenFails() {
+            with_nodestore(move |nodestore| {
+                Box::pin(async move {
+                    assert_eq!(
+                        RemoveResult::NotRemovedBecauseItDoesntExist,
+                        nodestore
+                            .remove_by_id(
+                                &BlockId::from_hex("3674b8dc1c3c1c41e331a1ebd4949087").unwrap()
+                            )
+                            .await
+                            .unwrap()
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
         async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_thenCannotBeLoadedAnymore() {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
@@ -928,24 +946,6 @@ mod tests {
                         nodestore.remove_by_id(&node_id).await.unwrap()
                     );
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
-                })
-            })
-            .await
-        }
-
-        #[tokio::test]
-        async fn givenEmptyNodeStore_whenRemovingNonExistingEntry_thenFails() {
-            with_nodestore(move |nodestore| {
-                Box::pin(async move {
-                    assert_eq!(
-                        RemoveResult::NotRemovedBecauseItDoesntExist,
-                        nodestore
-                            .remove_by_id(
-                                &BlockId::from_hex("3674b8dc1c3c1c41e331a1ebd4949087").unwrap()
-                            )
-                            .await
-                            .unwrap()
-                    );
                 })
             })
             .await

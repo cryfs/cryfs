@@ -117,3 +117,389 @@ impl<B: BlockStore + Send + Sync> AsyncDrop for DataTreeStore<B> {
         self.node_store.async_drop().await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(non_snake_case)]
+
+    use super::super::testutils::*;
+    use super::*;
+
+    mod load_tree {
+        use super::*;
+
+        #[tokio::test]
+        async fn not_existing() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let tree = store
+                        .load_tree(BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap())
+                        .await
+                        .unwrap();
+                    assert!(tree.is_none());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn existing_one_leaf_node() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = *store.create_tree().await.unwrap().root_node_id();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn existing_multiple_leaf_nodes() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = {
+                        let mut tree = store.create_tree().await.unwrap();
+                        tree.resize_num_bytes(10 * PHYSICAL_BLOCK_SIZE_BYTES as u64)
+                            .await
+                            .unwrap();
+                        *tree.root_node_id()
+                    };
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await;
+        }
+    }
+
+    mod create_tree {
+        use super::*;
+
+        #[tokio::test]
+        async fn loadable_after_creation() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = *store.create_tree().await.unwrap().root_node_id();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn is_just_one_empty_leaf_node() {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let mut tree = treestore.create_tree().await.unwrap();
+                    assert_eq!(tree.num_nodes().await.unwrap(), 1);
+                    assert_eq!(tree.num_bytes().await.unwrap(), 0);
+                    tree.flush().await.unwrap();
+
+                    let DataNode::Leaf(node) = nodestore.load(*tree.root_node_id()).await.unwrap().unwrap() else {
+                        panic!("Expected inner node");
+                    };
+                    assert_eq!(0, node.num_bytes());
+                })
+            })
+            .await;
+        }
+    }
+
+    mod try_create_tree {
+        use super::*;
+
+        #[tokio::test]
+        async fn loadable_after_creation() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
+                    assert_eq!(
+                        root_id,
+                        *store
+                            .try_create_tree(root_id)
+                            .await
+                            .unwrap()
+                            .unwrap()
+                            .root_node_id()
+                    );
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn is_just_one_empty_leaf_node() {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
+                    let mut tree = treestore.try_create_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(tree.num_nodes().await.unwrap(), 1);
+                    assert_eq!(tree.num_bytes().await.unwrap(), 0);
+                    tree.flush().await.unwrap();
+
+                    let DataNode::Leaf(node) = nodestore.load(*tree.root_node_id()).await.unwrap().unwrap() else {
+                        panic!("Expected inner node");
+                    };
+                    assert_eq!(0, node.num_bytes());
+                })
+            })
+            .await;
+        }
+
+        #[tokio::test]
+        async fn with_already_existing_id() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
+                    assert_eq!(
+                        root_id,
+                        *store
+                            .try_create_tree(root_id)
+                            .await
+                            .unwrap()
+                            .unwrap()
+                            .root_node_id()
+                    );
+                    assert!(store.try_create_tree(root_id).await.unwrap().is_none());
+                })
+            })
+            .await;
+        }
+    }
+
+    mod remove_tree_by_id {
+        use super::*;
+
+        #[tokio::test]
+        async fn givenEmptyTreeStore_whenRemovingNonExistingEntry_thenFails() {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    assert_eq!(
+                        RemoveResult::NotRemovedBecauseItDoesntExist,
+                        store
+                            .remove_tree_by_id(
+                                BlockId::from_hex("3674b8dc1c3c1c41e331a1ebd4949087").unwrap()
+                            )
+                            .await
+                            .unwrap()
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingOneNodeTree_thenCannotBeLoadedAnymore(
+        ) {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    let root_id = *create_one_leaf_tree(&store).await.root_node_id();
+                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    assert!(store.load_tree(root_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingMultiNodeTree_thenCannotBeLoadedAnymore(
+        ) {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    const NUM_LEAVES: u64 = 10;
+                    let root_id = *create_multi_leaf_tree(&store, NUM_LEAVES)
+                        .await
+                        .root_node_id();
+                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    assert!(store.load_tree(root_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingMultiNodeTree_thenDeletesAllNodesOfThisTree(
+        ) {
+            with_treestore_and_nodestore(move |treestore, nodestore| {
+                Box::pin(async move {
+                    const NUM_LEAVES: u64 = 10;
+                    let root_id = *create_multi_leaf_tree(&treestore, NUM_LEAVES)
+                        .await
+                        .root_node_id();
+                    treestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(NUM_LEAVES + 1, nodestore.num_nodes().await.unwrap());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        treestore.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    treestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(0, nodestore.num_nodes().await.unwrap());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenTreeStoreWithOtherTrees_whenRemovingNonExistingEntry_thenFails() {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    let _other_tree = TreeFixture::create_tree_with_data_and_id(
+                        &store,
+                        BlockId::from_hex("41e331a31c3c1c1ebd4949087674b8dc").unwrap(),
+                        10 * store.virtual_block_size_bytes() as usize,
+                        0,
+                    )
+                    .await;
+
+                    assert_eq!(
+                        RemoveResult::NotRemovedBecauseItDoesntExist,
+                        store
+                            .remove_tree_by_id(
+                                BlockId::from_hex("3674b8dc1c3c1c41e331a1ebd4949087").unwrap()
+                            )
+                            .await
+                            .unwrap()
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingOneNodeTree_thenCannotBeLoadedAnymore(
+        ) {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    let _other_tree = TreeFixture::create_tree_with_data(
+                        &store,
+                        10 * store.virtual_block_size_bytes() as usize,
+                        0,
+                    )
+                    .await;
+                    let root_id = *create_one_leaf_tree(&store).await.root_node_id();
+                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    assert!(store.load_tree(root_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenCannotBeLoadedAnymore(
+        ) {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    const NUM_LEAVES: u64 = 10;
+
+                    let _other_tree = TreeFixture::create_tree_with_data(
+                        &store,
+                        NUM_LEAVES as usize * store.virtual_block_size_bytes() as usize,
+                        0,
+                    )
+                    .await;
+
+                    let root_id = *create_multi_leaf_tree(&store, NUM_LEAVES)
+                        .await
+                        .root_node_id();
+                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    assert!(store.load_tree(root_id).await.unwrap().is_none());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenDeletesAllNodesOfThisTree(
+        ) {
+            with_treestore_and_nodestore(move |treestore, nodestore| {
+                Box::pin(async move {
+                    const NUM_LEAVES: u64 = 10;
+
+                    let _other_tree = TreeFixture::create_tree_with_data(
+                        &treestore,
+                        NUM_LEAVES as usize * treestore.virtual_block_size_bytes() as usize,
+                        0,
+                    )
+                    .await;
+
+                    let root_id = *create_multi_leaf_tree(&treestore, NUM_LEAVES)
+                        .await
+                        .root_node_id();
+                    treestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(2 * NUM_LEAVES + 2, nodestore.num_nodes().await.unwrap());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        treestore.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    treestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(NUM_LEAVES + 1, nodestore.num_nodes().await.unwrap());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenDoesntDeleteOtherTrees(
+        ) {
+            with_treestore_and_nodestore(move |treestore, nodestore| {
+                Box::pin(async move {
+                    const NUM_LEAVES: u64 = 10;
+
+                    let other_tree = TreeFixture::create_tree_with_data(
+                        &treestore,
+                        NUM_LEAVES as usize * treestore.virtual_block_size_bytes() as usize,
+                        0,
+                    )
+                    .await;
+
+                    let root_id = *create_multi_leaf_tree(&treestore, NUM_LEAVES)
+                        .await
+                        .root_node_id();
+                    treestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(2 * NUM_LEAVES + 2, nodestore.num_nodes().await.unwrap());
+
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        treestore.remove_tree_by_id(root_id).await.unwrap()
+                    );
+                    treestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(NUM_LEAVES + 1, nodestore.num_nodes().await.unwrap());
+
+                    other_tree.assert_data_is_still_intact(&treestore).await;
+                })
+            })
+            .await
+        }
+    }
+
+    // TODO Test num_nodes
+    // TODO Test estimate_space_for_num_blocks_left
+    // TODO Test virtual_block_size_bytes
+    // TODO Test load_block_depth
+}
