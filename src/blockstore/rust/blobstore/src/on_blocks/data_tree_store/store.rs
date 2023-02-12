@@ -79,6 +79,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
         self.node_store.virtual_block_size_bytes()
     }
 
+    // TODO Test
     pub async fn load_block_depth(&self, id: &BlockId) -> Result<Option<u8>> {
         Ok(self.node_store.load(*id).await?.map(|node| node.depth()))
     }
@@ -124,6 +125,57 @@ mod tests {
 
     use super::super::testutils::*;
     use super::*;
+    use anyhow::anyhow;
+    use cryfs_blockstore::{InMemoryBlockStore, MockBlockStore};
+
+    fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
+        let mut blockstore = AsyncDropGuard::new(MockBlockStore::new());
+        blockstore
+            .expect_async_drop_impl()
+            .times(1)
+            .returning(move || Box::pin(async { Ok(()) }));
+        blockstore
+    }
+
+    mod new {
+        use super::*;
+
+        #[tokio::test]
+        async fn invalid_block_size() {
+            assert_eq!(
+                "Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
+                DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 10)
+                    .await
+                    .unwrap_err()
+                    .to_string(),
+            );
+        }
+
+        #[tokio::test]
+        async fn valid_block_size() {
+            let mut store =
+                DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 40)
+                    .await
+                    .unwrap();
+            store.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn calculation_throws_error() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |_| Err(anyhow!("some error")));
+            assert_eq!(
+                "some error",
+                DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
+                    .await
+                    .unwrap_err()
+                    .to_string()
+            );
+        }
+    }
 
     mod load_tree {
         use super::*;
@@ -498,8 +550,216 @@ mod tests {
         }
     }
 
-    // TODO Test num_nodes
-    // TODO Test estimate_space_for_num_blocks_left
-    // TODO Test virtual_block_size_bytes
-    // TODO Test load_block_depth
+    mod num_nodes {
+        use super::*;
+
+        #[tokio::test]
+        async fn empty() {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    assert_eq!(0, store.num_nodes().await.unwrap());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn after_adding_trees() {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    assert_eq!(0, store.num_nodes().await.unwrap());
+                    create_one_leaf_tree(&store).await;
+                    assert_eq!(1, store.num_nodes().await.unwrap());
+                    create_multi_leaf_tree(&store, 10).await;
+                    assert_eq!(12, store.num_nodes().await.unwrap());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn after_removing_trees() {
+            with_treestore(move |store| {
+                Box::pin(async move {
+                    let tree1 = *create_multi_leaf_tree(&store, 10).await.root_node_id();
+                    let tree2 = *create_one_leaf_tree(&store).await.root_node_id();
+                    let tree3 = *create_multi_leaf_tree(&store, 20).await.root_node_id();
+                    assert_eq!(33, store.num_nodes().await.unwrap());
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(tree1).await.unwrap()
+                    );
+                    assert_eq!(22, store.num_nodes().await.unwrap());
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(tree2).await.unwrap()
+                    );
+                    assert_eq!(21, store.num_nodes().await.unwrap());
+                    assert_eq!(
+                        RemoveResult::SuccessfullyRemoved,
+                        store.remove_tree_by_id(tree3).await.unwrap()
+                    );
+                    assert_eq!(0, store.num_nodes().await.unwrap());
+                })
+            })
+            .await
+        }
+    }
+
+    mod estimate_space_for_num_blocks_left {
+        use super::*;
+
+        #[tokio::test]
+        async fn no_space_left() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(0));
+            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(0, treestore.estimate_space_for_num_blocks_left().unwrap());
+
+            treestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn almost_enough_space_for_one_block() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(99));
+            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(0, treestore.estimate_space_for_num_blocks_left().unwrap());
+
+            treestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn just_enough_space_for_one_block() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(100));
+            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 100)
+                .await
+                .unwrap();
+
+            assert_eq!(1, treestore.estimate_space_for_num_blocks_left().unwrap());
+
+            treestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn enough_space_for_100_blocks() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(32 * 1024 * 10240 + 123));
+            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                10240,
+                treestore.estimate_space_for_num_blocks_left().unwrap()
+            );
+
+            treestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn calculation_is_based_on_physical_block_size_not_block_size() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v / 10));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Ok(32 * 1024 * 10240 + 123));
+            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                10240,
+                treestore.estimate_space_for_num_blocks_left().unwrap()
+            );
+
+            treestore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn calculation_throws_error() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v));
+            blockstore
+                .expect_estimate_num_free_bytes()
+                .returning(|| Err(anyhow!("some error")));
+            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
+                .await
+                .unwrap();
+
+            assert_eq!(
+                "some error",
+                treestore
+                    .estimate_space_for_num_blocks_left()
+                    .unwrap_err()
+                    .to_string(),
+            );
+
+            treestore.async_drop().await.unwrap();
+        }
+    }
+
+    mod virtual_block_size_bytes {
+        use super::*;
+
+        #[tokio::test]
+        async fn test() {
+            let mut blockstore = make_mock_block_store();
+            blockstore
+                .expect_block_size_from_physical_block_size()
+                .times(1)
+                .returning(move |v| Ok(v / 10));
+            let mut treestore =
+                DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024 * 10)
+                    .await
+                    .unwrap();
+
+            assert_eq!(
+                super::super::super::super::data_node_store::NodeLayout {
+                    block_size_bytes: 32 * 1024
+                }
+                .max_bytes_per_leaf() as u32,
+                treestore.virtual_block_size_bytes()
+            );
+
+            treestore.async_drop().await.unwrap();
+        }
+    }
 }
