@@ -1054,6 +1054,11 @@ mod tests {
                         tree.resize_num_bytes(num_bytes).await.unwrap();
                         assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
                         assert_eq!(param.num_nodes, tree.num_nodes().await.unwrap());
+
+                        // Check the values are still the same when queried again
+                        // (they should now be returned from the cache instead of calculated)
+                        assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
+                        assert_eq!(param.num_nodes, tree.num_nodes().await.unwrap());
                     })
                 })
                 .await;
@@ -1080,6 +1085,11 @@ mod tests {
                             + param.last_leaf_num_bytes;
                         assert_eq!(expected_num_bytes, tree.num_bytes().await.unwrap());
                         assert_eq!(param.num_nodes, tree.num_nodes().await.unwrap());
+
+                        // Check the values are still the same when queried again
+                        // (they should now be returned from the cache instead of calculated)
+                        assert_eq!(expected_num_bytes, tree.num_bytes().await.unwrap());
+                        assert_eq!(param.num_nodes, tree.num_nodes().await.unwrap());
                     })
                 })
                 .await;
@@ -1087,4 +1097,14 @@ mod tests {
             future::join_all(PARAMETERS.iter().copied().map(run_test)).await;
         }
     }
+
+    // TODO Test root_node_id
+    // TODO Test read_bytes
+    // TODO Test try_read_bytes
+    // TODO Test read_all
+    // TODO Test write_bytes
+    // TODO Test flush
+    // TODO Test resize_num_bytes
+    // TODO Test remove
+    // TODO Test all_blocks
 }

@@ -775,3 +775,5 @@ async fn _while_root_has_only_one_child_remove_root_return_child<B: BlockStore +
         }
     }
 }
+
+// TODO Tests
