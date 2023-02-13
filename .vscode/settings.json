@@ -74,7 +74,8 @@
         "ranges": "cpp",
         "cinttypes": "cpp",
         "forward_list": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "regex": "cpp"
     },
     "rust-analyzer.linkedProjects": [
         "src/blockstore/rust/Cargo.toml"

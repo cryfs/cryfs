@@ -1,4 +1,9 @@
-use futures::future::BoxFuture;
+use divrem::DivCeil;
+use futures::{
+    future::{self, BoxFuture},
+    join,
+};
+use iter_chunks::IterChunks;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use cryfs_blockstore::{
@@ -9,7 +14,7 @@ use cryfs_utils::data::Data;
 use super::super::data_node_store::DataNodeStore;
 use super::{store::DataTreeStore, tree::DataTree};
 
-pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 1024;
+pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 512;
 
 pub struct TreeFixture {
     root_id: BlockId,
@@ -87,6 +92,67 @@ pub async fn create_multi_leaf_tree<B: BlockStore + Send + Sync>(
         .await
         .unwrap();
     tree
+}
+
+pub async fn manually_create_tree<B: BlockStore + Send + Sync>(
+    nodestore: &DataNodeStore<B>,
+    num_full_leaves: u64,
+    last_leaf_num_bytes: u64,
+) -> BlockId {
+    // First, create all leaves
+    let leaves = {
+        let full_leaves_future = future::join_all((0..num_full_leaves).map(|_| async {
+            *nodestore
+                .create_new_leaf_node(
+                    &vec![0; nodestore.layout().max_bytes_per_leaf() as usize].into(),
+                )
+                .await
+                .unwrap()
+                .block_id()
+        }));
+        let last_leaf_future = async {
+            *nodestore
+                .create_new_leaf_node(&vec![0; last_leaf_num_bytes as usize].into())
+                .await
+                .unwrap()
+                .block_id()
+        };
+        let (mut leaves, last_leaf) = join!(full_leaves_future, last_leaf_future);
+        leaves.push(last_leaf);
+        leaves
+    };
+
+    // Second, combine them into inner nodes until there's only one root node left
+    let mut nodes = leaves;
+    let mut depth = 1;
+    while nodes.len() > 1 {
+        let mut inner_nodes = Vec::with_capacity(DivCeil::div_ceil(
+            nodes.len(),
+            nodestore.layout().max_children_per_inner_node() as usize,
+        ));
+        let mut chunks = nodes
+            .into_iter()
+            .chunks(nodestore.layout().max_children_per_inner_node() as usize);
+        while let Some(chunk) = chunks.next() {
+            let children = chunk.collect::<Vec<_>>();
+            if children.len() < nodestore.layout().max_children_per_inner_node() as usize {
+                assert!(chunks.next().is_none());
+                if children.is_empty() {
+                    break;
+                }
+            }
+            inner_nodes.push(async move {
+                *nodestore
+                    .create_new_inner_node(depth, &children)
+                    .await
+                    .unwrap()
+                    .block_id()
+            });
+        }
+        nodes = future::join_all(inner_nodes).await;
+        depth += 1;
+    }
+    nodes[0]
 }
 
 pub async fn with_treestore(

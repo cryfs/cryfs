@@ -33,13 +33,17 @@ impl NodeLayout {
         node::data::OFFSET
     }
 
-    pub fn max_bytes_per_leaf(&self) -> u32 {
-        self.block_size_bytes - u32::try_from(node::data::OFFSET).unwrap()
+    pub const fn max_bytes_per_leaf(&self) -> u32 {
+        // TODO This should be
+        // self.block_size_bytes - u32::try_from(node::data::OFFSET).unwrap()
+        self.block_size_bytes - node::data::OFFSET as u32
     }
 
-    pub fn max_children_per_inner_node(&self) -> u32 {
+    pub const fn max_children_per_inner_node(&self) -> u32 {
         let datasize = self.max_bytes_per_leaf();
-        datasize / u32::try_from(BLOCKID_LEN).unwrap()
+        // TODO This should be
+        // datasize / u32::try_from(BLOCKID_LEN).unwrap()
+        datasize / BLOCKID_LEN as u32
     }
 
     pub fn num_leaves_per_full_subtree(&self, depth: u8) -> Result<NonZeroU64> {

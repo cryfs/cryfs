@@ -690,3 +690,401 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
         write!(f, "DataTree")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::data_node_store::NodeLayout;
+    use super::super::testutils::*;
+    use futures::future;
+
+    mod num_bytes_and_num_nodes {
+        use super::*;
+
+        #[tokio::test]
+        async fn new_tree() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let mut tree = store.create_tree().await.unwrap();
+                    assert_eq!(0, tree.num_bytes().await.unwrap());
+                    assert_eq!(1, tree.num_nodes().await.unwrap());
+                })
+            })
+            .await;
+        }
+
+        #[derive(Clone, Copy)]
+        struct Parameter {
+            num_full_leaves: u64,
+            last_leaf_num_bytes: u64,
+            num_nodes: u64,
+        }
+        const LAYOUT: NodeLayout = NodeLayout {
+            block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+        };
+        const PARAMETERS: &[Parameter] = &[
+            // One leaf, empty
+            Parameter {
+                num_full_leaves: 0,
+                last_leaf_num_bytes: 0,
+                num_nodes: 1,
+            },
+            // One leaf, almostempty
+            Parameter {
+                num_full_leaves: 0,
+                last_leaf_num_bytes: 1,
+                num_nodes: 1,
+            },
+            // One leaf, half full
+            Parameter {
+                num_full_leaves: 0,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: 1,
+            },
+            // One leaf, full
+            Parameter {
+                num_full_leaves: 0,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: 1,
+            },
+            // Two leaves, last leaf empty
+            Parameter {
+                num_full_leaves: 1,
+                last_leaf_num_bytes: 0,
+                num_nodes: 3,
+            },
+            // Two leaves, last leaf almost empty
+            Parameter {
+                num_full_leaves: 1,
+                last_leaf_num_bytes: 1,
+                num_nodes: 3,
+            },
+            // Two leaves, last leaf half full
+            Parameter {
+                num_full_leaves: 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: 3,
+            },
+            // Two leaves, last leaf full
+            Parameter {
+                num_full_leaves: 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: 3,
+            },
+            // Almost full two level tree, last leaf empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
+                last_leaf_num_bytes: 0,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64,
+            },
+            // Almost full two level tree, last leaf almost empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
+                last_leaf_num_bytes: 1,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64,
+            },
+            // Almost full two level tree, last leaf half full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64,
+            },
+            // Almost full two level tree, last leaf full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64,
+            },
+            // Full two level tree, last leaf empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
+                last_leaf_num_bytes: 0,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64 + 1,
+            },
+            // Full two level tree, last leaf almost empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
+                last_leaf_num_bytes: 1,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64 + 1,
+            },
+            // Full two level tree, last leaf half full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64 + 1,
+            },
+            // Full two level tree, last leaf full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: LAYOUT.max_children_per_inner_node() as u64 + 1,
+            },
+            // Three level tree, last inner has one child, last leaf empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + 1
+                    - 1,
+                last_leaf_num_bytes: 0,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + 1,
+            },
+            // Three level tree, last inner has one child, last leaf almost empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + 1
+                    - 1,
+                last_leaf_num_bytes: 1,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + 1,
+            },
+            // Three level tree, last inner has one child, last leaf half full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + 1
+                    - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + 1,
+            },
+            // Three level tree, last inner has one child, last leaf full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + 1
+                    - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + 1,
+            },
+            // Three level tree, last inner has half num children, last leaf empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2
+                    - 1,
+                last_leaf_num_bytes: 0,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2,
+            },
+            // Three level tree, last inner has half num children, last leaf almost empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2
+                    - 1,
+                last_leaf_num_bytes: 1,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2,
+            },
+            // Three level tree, last inner has half num children, last leaf half full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2
+                    - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2,
+            },
+            // Three level tree, last inner has half num children, last leaf full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2
+                    - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * (LAYOUT.max_children_per_inner_node() as u64)
+                    + LAYOUT.max_children_per_inner_node() as u64 / 2,
+            },
+            // Full three level tree, last leaf empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    - 1,
+                last_leaf_num_bytes: 0,
+                num_nodes: 1 + LAYOUT.max_children_per_inner_node() as u64
+                    * (1 + LAYOUT.max_children_per_inner_node() as u64),
+            },
+            // Full three level tree, last leaf almost empty
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    - 1,
+                last_leaf_num_bytes: 1,
+                num_nodes: 1 + LAYOUT.max_children_per_inner_node() as u64
+                    * (1 + LAYOUT.max_children_per_inner_node() as u64),
+            },
+            // Full three level tree, last leaf half full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: 1 + LAYOUT.max_children_per_inner_node() as u64
+                    * (1 + LAYOUT.max_children_per_inner_node() as u64),
+            },
+            // Full three level tree, last leaf full
+            Parameter {
+                num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    - 1,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: 1 + LAYOUT.max_children_per_inner_node() as u64
+                    * (1 + LAYOUT.max_children_per_inner_node() as u64),
+            },
+            // Four level min data tree, last leaf empty
+            Parameter {
+                num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64,
+                last_leaf_num_bytes: 0,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1,
+            },
+            // Four level min data tree, last leaf almost empty
+            Parameter {
+                num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64,
+                last_leaf_num_bytes: 1,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1,
+            },
+            // Four level min data tree, last leaf half full
+            Parameter {
+                num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1,
+            },
+            // Four level min data tree, last leaf full
+            Parameter {
+                num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                    * LAYOUT.max_children_per_inner_node() as u64
+                    * LAYOUT.max_children_per_inner_node() as u64,
+                last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
+                num_nodes: 1
+                    + LAYOUT.max_children_per_inner_node() as u64
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1
+                    + (LAYOUT.max_children_per_inner_node() as u64 - 1)
+                        * LAYOUT.max_children_per_inner_node() as u64
+                        * LAYOUT.max_children_per_inner_node() as u64
+                    + 1,
+            },
+        ];
+
+        #[tokio::test]
+        async fn check_test_setup() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    // Just make sure our calculation of LAYOUT is correct
+                    assert_eq!(
+                        LAYOUT.max_bytes_per_leaf(),
+                        store.virtual_block_size_bytes(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn build_tree_via_resize_and_check_num_bytes_and_num_nodes() {
+            async fn run_test(param: Parameter) {
+                if param.num_full_leaves > 0 && param.last_leaf_num_bytes == 0 {
+                    // This is a special case where we can't build the tree via a call to [resize_num_bytes]
+                    // because that would never leave the last leaf empty
+                    return;
+                }
+                with_treestore(|store| {
+                    Box::pin(async move {
+                        let mut tree = store.create_tree().await.unwrap();
+                        let num_bytes = LAYOUT.max_bytes_per_leaf() as u64 * param.num_full_leaves
+                            + param.last_leaf_num_bytes;
+                        tree.resize_num_bytes(num_bytes).await.unwrap();
+                        assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
+                        assert_eq!(param.num_nodes, tree.num_nodes().await.unwrap());
+                    })
+                })
+                .await;
+            }
+            future::join_all(PARAMETERS.iter().copied().map(run_test)).await;
+        }
+
+        #[tokio::test(flavor = "multi_thread")]
+        async fn build_tree_manually_and_check_num_bytes_and_num_nodes() {
+            async fn run_test(param: Parameter) {
+                with_treestore_and_nodestore(|treestore, nodestore| {
+                    Box::pin(async move {
+                        let root_id = manually_create_tree(
+                            nodestore,
+                            param.num_full_leaves,
+                            param.last_leaf_num_bytes,
+                        )
+                        .await;
+                        nodestore.clear_cache_slow().await.unwrap();
+
+                        let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
+                        let expected_num_bytes = param.num_full_leaves
+                            * LAYOUT.max_bytes_per_leaf() as u64
+                            + param.last_leaf_num_bytes;
+                        assert_eq!(expected_num_bytes, tree.num_bytes().await.unwrap());
+                        assert_eq!(param.num_nodes, tree.num_nodes().await.unwrap());
+                    })
+                })
+                .await;
+            }
+            future::join_all(PARAMETERS.iter().copied().map(run_test)).await;
+        }
+    }
+}
