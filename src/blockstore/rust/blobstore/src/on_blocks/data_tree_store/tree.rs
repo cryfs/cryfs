@@ -695,6 +695,7 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 mod tests {
     use super::super::super::data_node_store::NodeLayout;
     use super::super::testutils::*;
+    use cryfs_blockstore::BlockId;
     use futures::future;
 
     mod num_bytes_and_num_nodes {
@@ -1098,7 +1099,68 @@ mod tests {
         }
     }
 
-    // TODO Test root_node_id
+    mod root_node_id {
+        use super::*;
+
+        #[tokio::test]
+        async fn after_creating_one_node_tree() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                    let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn after_loading_one_node_tree() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                    store.try_create_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn after_creating_multi_node_tree() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
+                        .await
+                        .unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn after_loading_multi_node_tree() {
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
+                        .await
+                        .unwrap();
+                    std::mem::drop(tree);
+
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                })
+            })
+            .await
+        }
+    }
+
     // TODO Test read_bytes
     // TODO Test try_read_bytes
     // TODO Test read_all
