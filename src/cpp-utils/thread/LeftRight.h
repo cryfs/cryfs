@@ -4,6 +4,7 @@
 #include <thread>
 #include <cpp-utils/macros.h>
 #include <array>
+#include <stdexcept>
 
 namespace cpputils {
 
