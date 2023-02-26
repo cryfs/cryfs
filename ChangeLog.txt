@@ -1,9 +1,12 @@
-
 Version 0.12.0 (unreleased)
 ---------------
 * Updated to DokanY 1.3.0.1000
 * Added a man page for `cryfs-unmount`
 * Fixed small inaccuracy in calculation of free space in statvfs
+
+Version 0.11.4 (unreleased)
+---------------
+* Fixed build issue on Fedora (see https://github.com/cryfs/cryfs/pull/448 )
 
 Version 0.11.3
 ---------------
