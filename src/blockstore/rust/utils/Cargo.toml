@@ -22,14 +22,19 @@ region = "^3.0.0"
 sodiumoxide = "^0.2.7"
 tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros", "time"]}
 tokio-util = "^0.7.4"
+divrem = {version = "^1.0.0", optional = true}
+rayon = {version = "^1.6.1", optional = true}
 
 [dev-dependencies]
 criterion = "^0.4.0"
 generic-tests = "^0.1.2"
 tempdir = "^0.3.7"
+divrem = "^1.0.0"
+rayon = "^1.6.1"
+rand = {version = "^0.8.5", features=["small_rng"]}
 
 [features]
-testutils = []
+testutils = ["divrem", "rand/small_rng", "rayon"]
 
 [[bench]]
 harness = false

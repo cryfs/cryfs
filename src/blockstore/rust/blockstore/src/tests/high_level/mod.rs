@@ -16,7 +16,7 @@ use crate::{
     tests::{data, Fixture},
     utils::RemoveResult,
 };
-use cryfs_utils::{async_drop::AsyncDropGuard, testutils::assert_data_range_eq};
+use cryfs_utils::{async_drop::AsyncDropGuard, testutils::asserts::assert_data_range_eq};
 
 mod block_store_adapter;
 pub use block_store_adapter::TestFixtureAdapter;

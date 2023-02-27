@@ -2,10 +2,9 @@
 //! To use it, implement [Fixture] for your block store and call [instantiate_blockstore_tests!].
 
 use async_trait::async_trait;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use crate::{low_level::BlockStore, BlockId};
-use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
+use cryfs_utils::{async_drop::AsyncDropGuard, data::Data, testutils::data_fixture::DataFixture};
 
 /// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests] macro,
 /// our suite of block store tests is instantiated for a given block store.
@@ -36,10 +35,7 @@ pub fn blockid(seed: u64) -> BlockId {
 }
 
 pub fn data(size: usize, seed: u64) -> Data {
-    let mut rng = StdRng::seed_from_u64(seed);
-    let mut res = vec![0; size];
-    rng.fill_bytes(&mut res);
-    res.into()
+    DataFixture::new(seed).get(size).into()
 }
 
 pub mod high_level;

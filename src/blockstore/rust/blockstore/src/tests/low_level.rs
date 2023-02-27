@@ -11,7 +11,7 @@ use crate::{
     utils::{RemoveResult, TryCreateResult},
     BlockId,
 };
-use cryfs_utils::testutils::assert_unordered_vec_eq;
+use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 pub mod try_create {
     use super::*;

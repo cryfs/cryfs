@@ -4,12 +4,11 @@ use futures::{
     join,
 };
 use iter_chunks::IterChunks;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 use cryfs_blockstore::{
     BlockId, BlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
 };
-use cryfs_utils::data::Data;
+use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 use super::super::data_node_store::DataNodeStore;
 use super::{store::DataTreeStore, tree::DataTree};
@@ -71,10 +70,7 @@ impl TreeFixture {
 // TODO We have this function copied over several times in the code base.
 //      We should probably move it to a common place.
 fn data(size: usize, seed: u64) -> Data {
-    let mut rng = StdRng::seed_from_u64(seed);
-    let mut res = vec![0; size];
-    rng.fill_bytes(&mut res);
-    res.into()
+    DataFixture::new(seed).get(size).into()
 }
 
 pub async fn create_one_leaf_tree<B: BlockStore + Send + Sync>(

@@ -392,7 +392,7 @@ mod tests {
     #![allow(non_snake_case)]
     use super::*;
     use crate::tests::blockid;
-    use cryfs_utils::testutils::assert_unordered_vec_eq;
+    use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
     use common_macros::hash_map;
     use tempdir::TempDir;
