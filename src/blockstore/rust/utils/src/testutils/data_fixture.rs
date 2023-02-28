@@ -51,8 +51,8 @@ impl DataFixture {
         let dest_slices = subslices(dest, first_block_size, BLOCK_SIZE);
 
         dest_slices
+            .into_par_iter()
             .enumerate()
-            .par_bridge()
             .for_each(|(relative_block_index, dest)| {
                 let block_index = block_index_start + relative_block_index;
                 let block_offset = block_index * BLOCK_SIZE;
@@ -87,23 +87,23 @@ fn subslices<'a, T>(
     arr: &'a mut [T],
     first_block_size: usize,
     block_size: usize,
-) -> impl Iterator<Item = &'a mut [T]> {
+) -> Vec<&'a mut [T]> {
     assert!(
         first_block_size <= arr.len(),
         "first_block_size == {first_block_size} > {} == arr.len()",
         arr.len(),
     );
-    let (first_block, tail) = arr.split_at_mut(first_block_size);
+    let (first_block, mut tail) = arr.split_at_mut(first_block_size);
     let num_tail_blocks = DivCeil::div_ceil(tail.len(), block_size);
-    let tail_blocks = (0..num_tail_blocks)
-        .into_iter()
-        .scan(tail, move |tail, _block_index| {
-            let split_index = block_size.min(tail.len());
-            let (piece, new_tail) = std::mem::take(tail).split_at_mut(split_index);
-            *tail = new_tail;
-            Some(piece)
-        });
-    std::iter::once(first_block).chain(tail_blocks)
+    let mut blocks = Vec::with_capacity(1 + num_tail_blocks);
+    blocks.push(first_block);
+    for _ in 0..num_tail_blocks {
+        let split_index = block_size.min(tail.len());
+        let (block, new_tail) = std::mem::take(&mut tail).split_at_mut(split_index);
+        tail = new_tail;
+        blocks.push(block);
+    }
+    blocks
 }
 
 #[cfg(test)]
