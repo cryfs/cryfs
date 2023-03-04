@@ -110,6 +110,7 @@ fn subslices<'a, T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     mod generate {
         use super::*;
@@ -161,92 +162,82 @@ mod tests {
             assert_eq!(4221, num_zeroes);
         }
 
-        #[test]
-        fn generating_data_in_sections_generates_same_data_as_generating_whole_data() {
-            #[derive(Clone, Copy)]
-            struct Params {
-                section_size: usize,
-                data_size: usize,
+        #[derive(Clone, Copy)]
+        struct Params {
+            section_size: usize,
+            data_size: usize,
+        }
+
+        const SMALL_DATA_SIZE: usize = (BLOCK_SIZE as f64 * 3.2) as usize;
+        const DATA_SIZE: usize = (BLOCK_SIZE as f64 * 142.2) as usize;
+
+        #[rstest]
+        #[case::generate_byte_by_byte_1(Params {
+            section_size: 1,
+            // smaller data size because otherwise test takes too much time
+            data_size: SMALL_DATA_SIZE,
+        })]
+        #[case::generate_byte_by_byte_2(Params {
+            section_size: 2,
+            // smaller data size because otherwise test takes too much time
+            data_size: SMALL_DATA_SIZE,
+        })]
+        #[case::generate_byte_by_byte_3(Params {
+            section_size: 3,
+            // smaller data size because otherwise test takes too much time
+            data_size: SMALL_DATA_SIZE,
+        })]
+        #[case::section_smaller_than_block_size_but_unaligned(Params {
+            section_size: (BLOCK_SIZE as f64 * 0.9) as usize,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_smaller_than_block_size_and_aligned_1(Params {
+            section_size: BLOCK_SIZE / 2,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_smaller_than_block_size_and_aligned_2(Params {
+            section_size: BLOCK_SIZE / 3,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_smaller_than_block_size_and_aligned_3(Params {
+            section_size: BLOCK_SIZE / 4,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_larger_than_block_size_but_unaligned(Params {
+            section_size: (BLOCK_SIZE as f64 * 10.4) as usize,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_larger_than_block_size_and_aligned_1(Params {
+            section_size: BLOCK_SIZE * 2,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_larger_than_block_size_and_aligned_2(Params {
+            section_size: BLOCK_SIZE * 3,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_larger_than_block_size_and_aligned_3(Params {
+            section_size: BLOCK_SIZE * 4,
+            data_size: DATA_SIZE,
+        })]
+        #[case::section_size_equal_to_block_size(Params {
+            section_size: BLOCK_SIZE,
+            data_size: DATA_SIZE,
+        })]
+        fn generating_data_in_sections_generates_same_data_as_generating_whole_data(
+            #[case] params: Params,
+        ) {
+            let fixture = DataFixture::new(0);
+            let mut data1 = vec![0; params.data_size];
+            let mut data2 = vec![0; params.data_size];
+            fixture.generate(0, &mut data1);
+
+            let mut offset = 0;
+            while offset < data2.len() {
+                let section_size = params.section_size.min(data2.len() - offset);
+                fixture.generate(offset, &mut data2[offset..(offset + section_size)]);
+                offset += section_size;
             }
-
-            fn run_test(params: Params) {
-                let fixture = DataFixture::new(0);
-                let mut data1 = vec![0; params.data_size];
-                let mut data2 = vec![0; params.data_size];
-                fixture.generate(0, &mut data1);
-
-                let mut offset = 0;
-                while offset < data2.len() {
-                    let section_size = params.section_size.min(data2.len() - offset);
-                    fixture.generate(offset, &mut data2[offset..(offset + section_size)]);
-                    offset += section_size;
-                }
-                assert_eq!(data1, data2);
-            }
-
-            const SMALL_DATA_SIZE: usize = (BLOCK_SIZE as f64 * 3.2) as usize;
-            const DATA_SIZE: usize = (BLOCK_SIZE as f64 * 142.2) as usize;
-
-            const PARAMS: &[Params] = &[
-                // section_size such that we generate byte by byte
-                Params {
-                    section_size: 1,
-                    data_size: SMALL_DATA_SIZE, // smaller data size because otherwise test takes too much time
-                },
-                Params {
-                    section_size: 2,
-                    data_size: SMALL_DATA_SIZE, // smaller data size because otherwise test takes too much time
-                },
-                Params {
-                    section_size: 3,
-                    data_size: SMALL_DATA_SIZE, // smaller data size because otherwise test takes too much time
-                },
-                // section_size smaller than BLOCK_SIZE but not aligned to it
-                Params {
-                    section_size: (BLOCK_SIZE as f64 * 0.9) as usize,
-                    data_size: DATA_SIZE,
-                },
-                // section_size smaller than BLOCK_SIZE and aligned to it.
-                Params {
-                    section_size: BLOCK_SIZE / 2,
-                    data_size: DATA_SIZE,
-                },
-                Params {
-                    section_size: BLOCK_SIZE / 3,
-                    data_size: DATA_SIZE,
-                },
-                Params {
-                    section_size: BLOCK_SIZE / 4,
-                    data_size: DATA_SIZE,
-                },
-                // section_size larger than BLOCK_SIZE but not aligned to it.
-                Params {
-                    section_size: (BLOCK_SIZE as f64 * 10.4) as usize,
-                    data_size: DATA_SIZE,
-                },
-                // section_size larger than BLOCK_SIZE and aligned to it.
-                Params {
-                    section_size: BLOCK_SIZE * 2,
-                    data_size: DATA_SIZE,
-                },
-                Params {
-                    section_size: BLOCK_SIZE * 3,
-                    data_size: DATA_SIZE,
-                },
-                Params {
-                    section_size: BLOCK_SIZE * 4,
-                    data_size: DATA_SIZE,
-                },
-                // section_size equal to BLOCK_SIZE
-                Params {
-                    section_size: BLOCK_SIZE,
-                    data_size: DATA_SIZE,
-                },
-            ];
-
-            PARAMS.par_iter().for_each(|&params| {
-                run_test(params);
-            });
+            assert_eq!(data1, data2);
         }
     }
 

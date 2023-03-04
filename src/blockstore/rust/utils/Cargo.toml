@@ -32,6 +32,7 @@ tempdir = "^0.3.7"
 divrem = "^1.0.0"
 rayon = "^1.6.1"
 rand = {version = "^0.8.5", features=["small_rng"]}
+rstest = "^0.16.0"
 
 [features]
 testutils = ["divrem", "rand/small_rng", "rayon"]

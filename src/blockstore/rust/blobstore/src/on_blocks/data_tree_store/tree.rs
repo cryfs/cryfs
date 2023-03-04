@@ -695,15 +695,15 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 mod tests {
     use super::super::super::data_node_store::NodeLayout;
     use super::super::testutils::*;
-    use cryfs_blockstore::BlockId;
+    use cryfs_blockstore::{BlockId, BlockStore};
     use cryfs_utils::testutils::data_fixture::DataFixture;
-    use futures::future;
+    use divrem::DivCeil;
+    use rstest::rstest;
+    use rstest_reuse::{apply, template};
 
     mod testutils {
         use super::super::super::super::data_node_store::DataNodeStore;
         use super::*;
-        use cryfs_blockstore::BlockStore;
-        use divrem::DivCeil;
 
         /// Parameter for creating a tree.
         /// This can be used for parameterized tests
@@ -787,240 +787,209 @@ mod tests {
         pub const LAYOUT: NodeLayout = NodeLayout {
             block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
         };
-        pub const PARAMETERS: &[Parameter] = &[
-            // One leaf, empty
-            Parameter {
+        #[template]
+        #[rstest]
+        #[case::one_leaf_empty(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // One leaf, almostempty
-            Parameter {
+            })]
+        #[case::one_leaf_almost_empty(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // One leaf, half full
-            Parameter {
+            })]
+        #[case::one_leaf_half_full(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // One leaf, full
-            Parameter {
+            })]
+        #[case::one_leaf_full(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Two leaves, last leaf empty
-            Parameter {
+            })]
+        #[case::two_leaves_last_leaf_empty(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Two leaves, last leaf almost empty
-            Parameter {
+            })]
+        #[case::two_leaves_last_leaf_almost_empty(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Two leaves, last leaf half full
-            Parameter {
+            })]
+        #[case::two_leaves_last_leaf_half_full(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Two leaves, last leaf full
-            Parameter {
+            })]
+        #[case::two_leaves_last_leaf_full(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Almost full two level tree, last leaf empty
-            Parameter {
+            })]
+        #[case::almost_full_two_level_tree_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Almost full two level tree, last leaf almost empty
-            Parameter {
+            })]
+        #[case::almost_full_two_level_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Almost full two level tree, last leaf half full
-            Parameter {
+            })]
+        #[case::almost_full_two_level_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Almost full two level tree, last leaf full
-            Parameter {
+            })]
+        #[case::almost_full_two_level_tree_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full two level tree, last leaf empty
-            Parameter {
+            })]
+        #[case::full_two_level_tree_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full two level tree, last leaf almost empty
-            Parameter {
+            })]
+        #[case::full_two_level_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full two level tree, last leaf half full
-            Parameter {
+            })]
+        #[case::full_two_level_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full two level tree, last leaf full
-            Parameter {
+            })]
+        #[case::full_two_level_tree_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has one child, last leaf empty
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_one_child_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + 1
                     - 1,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has one child, last leaf almost empty
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_one_child_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + 1
                     - 1,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has one child, last leaf half full
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_one_child_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + 1
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has one child, last leaf full
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_one_child_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + 1
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has half num children, last leaf empty
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has half num children, last leaf almost empty
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has half num children, last leaf half full
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Three level tree, last inner has half num children, last leaf full
-            Parameter {
+            })]
+        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full three level tree, last leaf empty
-            Parameter {
+            })]
+        #[case::full_three_level_tree_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full three level tree, last leaf almost empty
-            Parameter {
+            })]
+        #[case::full_three_level_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full three level tree, last leaf half full
-            Parameter {
+            })]
+        #[case::full_three_level_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Full three level tree, last leaf full
-            Parameter {
+            })]
+        #[case::full_three_level_tree_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Four level min data tree, last leaf empty
-            Parameter {
+            })]
+        #[case::four_level_min_data_tree_last_leaf_empty(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: 0,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Four level min data tree, last leaf almost empty
-            Parameter {
+            })]
+        #[case::four_level_min_data_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: 1,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Four level min data tree, last leaf half full
-            Parameter {
+            })]
+        #[case::four_level_min_data_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-            // Four level min data tree, last leaf full
-            Parameter {
+            })]
+        #[case::four_level_min_data_tree_last_leaf_full(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
                 // subregions: &[Subregion::new(0, 0)],
-            },
-        ];
+            })]
+        fn tree_parameters(#[case] param: Parameter) {}
     }
 
     mod num_bytes_and_num_nodes {
@@ -1053,54 +1022,50 @@ mod tests {
             .await
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn build_tree_via_resize_and_check_num_bytes_and_num_nodes() {
-            async fn run_test(param: Parameter) {
-                if param.num_full_leaves > 0 && param.last_leaf_num_bytes == 0 {
-                    // This is a special case where we can't build the tree via a call to [resize_num_bytes]
-                    // because that would never leave the last leaf empty
-                    return;
-                }
-                with_treestore(|store| {
-                    Box::pin(async move {
-                        let mut tree = store.create_tree().await.unwrap();
-                        let num_bytes = LAYOUT.max_bytes_per_leaf() as u64 * param.num_full_leaves
-                            + param.last_leaf_num_bytes;
-                        tree.resize_num_bytes(num_bytes).await.unwrap();
-                        assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
-                        assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
-
-                        // Check the values are still the same when queried again
-                        // (they should now be returned from the cache instead of calculated)
-                        assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
-                        assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
-                    })
-                })
-                .await;
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(#[case] param: Parameter) {
+            if param.num_full_leaves > 0 && param.last_leaf_num_bytes == 0 {
+                // This is a special case where we can't build the tree via a call to [resize_num_bytes]
+                // because that would never leave the last leaf empty
+                return;
             }
-            future::join_all(PARAMETERS.iter().copied().map(run_test)).await;
+            with_treestore(|store| {
+                Box::pin(async move {
+                    let mut tree = store.create_tree().await.unwrap();
+                    let num_bytes = LAYOUT.max_bytes_per_leaf() as u64 * param.num_full_leaves
+                        + param.last_leaf_num_bytes;
+                    tree.resize_num_bytes(num_bytes).await.unwrap();
+                    assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
+                    assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
+
+                    // Check the values are still the same when queried again
+                    // (they should now be returned from the cache instead of calculated)
+                    assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
+                    assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
+                })
+            })
+            .await;
         }
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn build_tree_manually_and_check_num_bytes_and_num_nodes() {
-            async fn run_test(param: Parameter) {
-                with_treestore_and_nodestore(|treestore, nodestore| {
-                    Box::pin(async move {
-                        let root_id = param.create_tree(nodestore).await;
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn build_tree_manually_and_check_num_bytes_and_num_nodes(#[case] param: Parameter) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let root_id = param.create_tree(nodestore).await;
 
-                        let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
-                        assert_eq!(param.expected_num_bytes(), tree.num_bytes().await.unwrap());
-                        assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
+                    let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(param.expected_num_bytes(), tree.num_bytes().await.unwrap());
+                    assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
 
-                        // Check the values are still the same when queried again
-                        // (they should now be returned from the cache instead of calculated)
-                        assert_eq!(param.expected_num_bytes(), tree.num_bytes().await.unwrap());
-                        assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
-                    })
+                    // Check the values are still the same when queried again
+                    // (they should now be returned from the cache instead of calculated)
+                    assert_eq!(param.expected_num_bytes(), tree.num_bytes().await.unwrap());
+                    assert_eq!(param.expected_num_nodes(), tree.num_nodes().await.unwrap());
                 })
-                .await;
-            }
-            future::join_all(PARAMETERS.iter().copied().map(run_test)).await;
+            })
+            .await;
         }
     }
 
@@ -1170,23 +1135,20 @@ mod tests {
         use super::testutils::*;
         use super::*;
 
-        #[tokio::test(flavor = "multi_thread")]
-        async fn read_whole_tree() {
-            async fn run_test(param: Parameter) {
-                with_treestore_and_nodestore(|treestore, nodestore| {
-                    Box::pin(async move {
-                        let data = DataFixture::new(0);
-                        let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                        let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                        let mut read_data = vec![0; param.expected_num_bytes() as usize];
-                        tree.read_bytes(0, &mut read_data).await.unwrap();
-                        assert_eq!(data.get(param.expected_num_bytes() as usize), read_data);
-                    })
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_whole_tree(#[case] param: Parameter) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    let mut read_data = vec![0; param.expected_num_bytes() as usize];
+                    tree.read_bytes(0, &mut read_data).await.unwrap();
+                    assert_eq!(data.get(param.expected_num_bytes() as usize), read_data);
                 })
-                .await;
-            }
-
-            future::join_all(PARAMETERS.iter().copied().map(run_test)).await;
+            })
+            .await;
         }
 
         // TODO More tests
