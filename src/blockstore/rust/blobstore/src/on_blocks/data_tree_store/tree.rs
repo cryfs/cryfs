@@ -734,6 +734,10 @@ mod tests {
                 num_nodes
             }
 
+            pub fn expected_num_leaves(&self) -> u64 {
+                self.num_full_leaves + 1
+            }
+
             pub fn expected_num_bytes(&self) -> u64 {
                 self.num_full_leaves * LAYOUT.max_bytes_per_leaf() as u64 + self.last_leaf_num_bytes
             }
@@ -1148,6 +1152,35 @@ mod tests {
             assert_eq!(expected_data, read_data);
         }
 
+        async fn assert_reading_is_out_of_range<'a, B: BlockStore + Send + Sync>(
+            tree: &mut DataTree<'a, B>,
+            params: &Parameter,
+            offset: u64,
+            num_bytes: usize,
+        ) {
+            assert_eq!(
+                tree.read_bytes(offset, &mut vec![0; num_bytes])
+                    .await
+                    .unwrap_err()
+                    .to_string(),
+                format!("DataTree::read_bytes() tried to read range {}..{} but only has {} bytes stored. Use try_read_bytes() if this should be allowed.", offset, offset + num_bytes as u64, params.expected_num_bytes()),
+            );
+        }
+
+        async fn test_read_bytes<'a, B: BlockStore + Send + Sync>(
+            tree: &mut DataTree<'a, B>,
+            params: &Parameter,
+            data: &DataFixture,
+            offset: u64,
+            num_bytes: usize,
+        ) {
+            if offset + num_bytes as u64 > params.expected_num_bytes() {
+                assert_reading_is_out_of_range(tree, params, offset, num_bytes).await;
+            } else {
+                assert_reads_correct_data(tree, &data, offset, num_bytes).await;
+            }
+        }
+
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn read_whole_tree(#[case] param: Parameter) {
@@ -1168,34 +1201,100 @@ mod tests {
             .await;
         }
 
-        // #[apply(super::testutils::tree_parameters)]
-        // #[tokio::test]
-        // async fn read_single_byte(#[case] param: Parameter) {
-        //     with_treestore_and_nodestore(|treestore, nodestore| {
-        //         Box::pin(async move {
-        //             let data = DataFixture::new(0);
-        //             let tree_id = param.create_tree_with_data(nodestore, &data).await;
-        //             let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-        //             for byte_index in 0..param.expected_num_bytes() {
-        //                 assert_reads_correct_data(&mut tree, &data, byte_index, 1).await;
-        //             }
-        //         })
-        //     })
-        //     .await;
-        // }
+        #[derive(Clone, Copy)]
+        enum LeafIndex {
+            FromStart(i64),
+            FromMid(i64),
+            FromEnd(i64),
+        }
+        impl LeafIndex {
+            pub fn get(&self, num_leaves: u64) -> u64 {
+                match self {
+                    LeafIndex::FromStart(i) => *i as u64,
+                    LeafIndex::FromMid(i) => (num_leaves as i64 / 2 + i) as u64,
+                    LeafIndex::FromEnd(i) => (num_leaves as i64 + i) as u64,
+                }
+            }
+        }
 
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
-        async fn read_first_leaf(#[case] param: Parameter) {
+        async fn read_single_byte(
+            #[case] param: Parameter,
+            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0))]
+            leaf_index: LeafIndex,
+            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
+            byte_index_in_leaf: u64,
+        ) {
             with_treestore_and_nodestore(|treestore, nodestore| {
                 Box::pin(async move {
                     let data = DataFixture::new(0);
                     let tree_id = param.create_tree_with_data(nodestore, &data).await;
                     let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    // TODO Add a test case that reads the full leaf size even if the leaf is smaller
-                    let first_leaf_size = (nodestore.layout().max_bytes_per_leaf() as usize)
-                        .min(param.expected_num_bytes() as usize);
-                    assert_reads_correct_data(&mut tree, &data, 0, first_leaf_size).await;
+                    let leaf_index = leaf_index.get(param.expected_num_leaves());
+                    let byte_index =
+                        leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + byte_index_in_leaf;
+                    test_read_bytes(&mut tree, &param, &data, byte_index, 1).await;
+                })
+            })
+            .await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_two_bytes(
+            #[case] param: Parameter,
+            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0))]
+            leaf_index: LeafIndex,
+            // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
+            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
+            first_byte_index_in_leaf: u64,
+        ) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    let leaf_index = leaf_index.get(param.expected_num_leaves());
+                    let first_byte_index =
+                        leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + first_byte_index_in_leaf;
+                    test_read_bytes(&mut tree, &param, &data, first_byte_index, 2).await;
+                })
+            })
+            .await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_single_leaf(
+            #[case] param: Parameter,
+            #[values(LeafIndex::FromStart(0), LeafIndex::FromMid(0), LeafIndex::FromEnd(0))]
+            leaf_index: LeafIndex,
+            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64)]
+            begin_byte_index_in_leaf: u64,
+            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64)]
+            end_byte_index_in_leaf: u64,
+        ) {
+            if end_byte_index_in_leaf < begin_byte_index_in_leaf {
+                return;
+            }
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    let first_leaf_byte = leaf_index.get(param.expected_num_leaves())
+                        * LAYOUT.max_bytes_per_leaf() as u64;
+                    let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf;
+                    let end_byte_index = first_leaf_byte + end_byte_index_in_leaf;
+                    test_read_bytes(
+                        &mut tree,
+                        &param,
+                        &data,
+                        begin_byte_index,
+                        (end_byte_index - begin_byte_index) as usize,
+                    )
+                    .await;
                 })
             })
             .await;

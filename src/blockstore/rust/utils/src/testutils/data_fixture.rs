@@ -2,7 +2,7 @@ use divrem::DivCeil;
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
 use rayon::prelude::*;
 
-const BLOCK_SIZE: usize = 8 * 1024;
+const BLOCK_SIZE: usize = 1024;
 
 /// A fixture that generates random but reproducible data. Useful for test cases.
 /// It allows efficiently jumping around in the data stream and getting later
