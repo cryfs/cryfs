@@ -693,7 +693,7 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::data_node_store::NodeLayout;
+    use super::super::super::{data_node_store::NodeLayout, data_tree_store::DataTree};
     use super::super::testutils::*;
     use cryfs_blockstore::{BlockId, BlockStore};
     use cryfs_utils::testutils::data_fixture::DataFixture;
@@ -758,7 +758,7 @@ mod tests {
                 nodestore: &DataNodeStore<B>,
                 data: &DataFixture,
             ) -> BlockId {
-                let generate_leaf_data = |offset: usize, num_bytes: usize| {
+                let generate_leaf_data = |offset: u64, num_bytes: usize| {
                     let mut result = vec![0; num_bytes];
                     data.generate(offset, &mut result);
                     result.into()
@@ -1135,6 +1135,19 @@ mod tests {
         use super::testutils::*;
         use super::*;
 
+        async fn assert_reads_correct_data<'a, B: BlockStore + Send + Sync>(
+            tree: &mut DataTree<'a, B>,
+            data: &DataFixture,
+            offset: u64,
+            num_bytes: usize,
+        ) {
+            let mut read_data = vec![0; num_bytes];
+            tree.read_bytes(offset, &mut read_data).await.unwrap();
+            let mut expected_data = vec![0; num_bytes];
+            data.generate(offset, &mut expected_data);
+            assert_eq!(expected_data, read_data);
+        }
+
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn read_whole_tree(#[case] param: Parameter) {
@@ -1143,9 +1156,46 @@ mod tests {
                     let data = DataFixture::new(0);
                     let tree_id = param.create_tree_with_data(nodestore, &data).await;
                     let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let mut read_data = vec![0; param.expected_num_bytes() as usize];
-                    tree.read_bytes(0, &mut read_data).await.unwrap();
-                    assert_eq!(data.get(param.expected_num_bytes() as usize), read_data);
+                    assert_reads_correct_data(
+                        &mut tree,
+                        &data,
+                        0,
+                        param.expected_num_bytes() as usize,
+                    )
+                    .await;
+                })
+            })
+            .await;
+        }
+
+        // #[apply(super::testutils::tree_parameters)]
+        // #[tokio::test]
+        // async fn read_single_byte(#[case] param: Parameter) {
+        //     with_treestore_and_nodestore(|treestore, nodestore| {
+        //         Box::pin(async move {
+        //             let data = DataFixture::new(0);
+        //             let tree_id = param.create_tree_with_data(nodestore, &data).await;
+        //             let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+        //             for byte_index in 0..param.expected_num_bytes() {
+        //                 assert_reads_correct_data(&mut tree, &data, byte_index, 1).await;
+        //             }
+        //         })
+        //     })
+        //     .await;
+        // }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_first_leaf(#[case] param: Parameter) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    // TODO Add a test case that reads the full leaf size even if the leaf is smaller
+                    let first_leaf_size = (nodestore.layout().max_bytes_per_leaf() as usize)
+                        .min(param.expected_num_bytes() as usize);
+                    assert_reads_correct_data(&mut tree, &data, 0, first_leaf_size).await;
                 })
             })
             .await;

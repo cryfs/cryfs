@@ -94,12 +94,12 @@ pub async fn manually_create_tree<B: BlockStore + Send + Sync>(
     nodestore: &DataNodeStore<B>,
     num_full_leaves: u64,
     last_leaf_num_bytes: u64,
-    leaf_data: impl Fn(usize, usize) -> Data,
+    leaf_data: impl Fn(u64, usize) -> Data,
 ) -> BlockId {
     // First, create all leaves
     let leaves = {
         let full_leaves_future = future::join_all((0..num_full_leaves).map(|leaf_index| {
-            let offset = leaf_index as usize * nodestore.layout().max_bytes_per_leaf() as usize;
+            let offset = leaf_index * nodestore.layout().max_bytes_per_leaf() as u64;
             let leaf_data = leaf_data(offset, nodestore.layout().max_bytes_per_leaf() as usize);
             async move {
                 *nodestore
@@ -109,8 +109,7 @@ pub async fn manually_create_tree<B: BlockStore + Send + Sync>(
                     .block_id()
             }
         }));
-        let last_leaf_offset =
-            num_full_leaves as usize * nodestore.layout().max_bytes_per_leaf() as usize;
+        let last_leaf_offset = num_full_leaves * nodestore.layout().max_bytes_per_leaf() as u64;
         let last_leaf_data = leaf_data(last_leaf_offset, last_leaf_num_bytes as usize);
         let last_leaf_future = async {
             *nodestore
