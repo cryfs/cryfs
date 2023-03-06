@@ -1270,14 +1270,17 @@ mod tests {
             #[case] param: Parameter,
             #[values(LeafIndex::FromStart(0), LeafIndex::FromMid(0), LeafIndex::FromEnd(0))]
             leaf_index: LeafIndex,
-            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64)]
-            begin_byte_index_in_leaf: u64,
-            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64)]
-            end_byte_index_in_leaf: u64,
+            #[values(
+                // Ranges starting at the beginning of the leaf
+                (0, 0), (0, 1), (0, LAYOUT.max_bytes_per_leaf() as u64 / 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 1), (0, LAYOUT.max_bytes_per_leaf() as u64),
+                // Ranges in the middle
+                (1, 2), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1),
+                // Ranges going until the end of the leaf
+                (1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64, LAYOUT.max_bytes_per_leaf() as u64)
+            )]
+            byte_indices: (u64, u64),
         ) {
-            if end_byte_index_in_leaf < begin_byte_index_in_leaf {
-                return;
-            }
+            let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
             with_treestore_and_nodestore(|treestore, nodestore| {
                 Box::pin(async move {
                     let data = DataFixture::new(0);
