@@ -1201,7 +1201,7 @@ mod tests {
             .await;
         }
 
-        #[derive(Clone, Copy)]
+        #[derive(Clone, Copy, Debug)]
         enum LeafIndex {
             FromStart(i64),
             FromMid(i64),
@@ -1211,8 +1211,8 @@ mod tests {
             pub fn get(&self, num_leaves: u64) -> u64 {
                 match self {
                     LeafIndex::FromStart(i) => *i as u64,
-                    LeafIndex::FromMid(i) => (num_leaves as i64 / 2 + i) as u64,
-                    LeafIndex::FromEnd(i) => (num_leaves as i64 + i) as u64,
+                    LeafIndex::FromMid(i) => (num_leaves as i64 / 2 + i).max(0) as u64,
+                    LeafIndex::FromEnd(i) => (num_leaves as i64 + i).max(0) as u64,
                 }
             }
         }
@@ -1303,7 +1303,55 @@ mod tests {
             .await;
         }
 
-        // TODO More tests
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_across_leaves(
+            #[case] param: Parameter,
+            #[values(
+                (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
+                (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
+                (LeafIndex::FromStart(0), LeafIndex::FromEnd(0)),
+                (LeafIndex::FromStart(10), LeafIndex::FromEnd(-10)),
+                (LeafIndex::FromMid(0), LeafIndex::FromMid(1)),
+                (LeafIndex::FromMid(0), LeafIndex::FromEnd(0)),
+            )]
+            leaf_indices: (LeafIndex, LeafIndex),
+            #[values(0, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
+            begin_byte_index_in_leaf: u64,
+            #[values(1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64)]
+            end_byte_index_in_leaf: u64,
+        ) {
+            let (begin_leaf_index, last_leaf_index) = leaf_indices;
+            let begin_byte_index = {
+                let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves())
+                    * LAYOUT.max_bytes_per_leaf() as u64;
+                first_leaf_byte + begin_byte_index_in_leaf
+            };
+            let end_byte_index = {
+                let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves())
+                    * LAYOUT.max_bytes_per_leaf() as u64;
+                first_leaf_byte + end_byte_index_in_leaf
+            };
+            if end_byte_index < begin_byte_index {
+                return;
+            }
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    test_read_bytes(
+                        &mut tree,
+                        &param,
+                        &data,
+                        begin_byte_index,
+                        (end_byte_index - begin_byte_index) as usize,
+                    )
+                    .await;
+                })
+            })
+            .await;
+        }
     }
 
     // TODO Test try_read_bytes
