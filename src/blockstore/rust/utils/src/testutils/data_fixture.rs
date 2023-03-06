@@ -2,7 +2,7 @@ use divrem::DivCeil;
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
 use rayon::prelude::*;
 
-const BLOCK_SIZE: usize = 1024;
+const BLOCK_SIZE: usize = 2 * 1024;
 
 /// A fixture that generates random but reproducible data. Useful for test cases.
 /// It allows efficiently jumping around in the data stream and getting later
@@ -24,9 +24,10 @@ impl DataFixture {
     fn generate_block(&self, block_index: usize, in_block_offset: usize, dest: &mut [u8]) {
         assert!(in_block_offset + dest.len() <= BLOCK_SIZE);
         let mut rng = SmallRng::seed_from_u64(self.seed + block_index as u64);
-        // We need to generate the full block and can't just skip to the offset,
-        // because RngCore::fill_bytes() fills the buffer with u32 or u64, not with u8.
-        let mut block = [0u8; BLOCK_SIZE];
+        // We generate a multiple of 64bits because RngCore::fill_bytes() fills the
+        // buffer with u32 or u64, not with u8.
+        let block_size = DivCeil::div_ceil(in_block_offset + dest.len(), 8) * 8;
+        let mut block = vec![0u8; block_size];
         rng.fill_bytes(block.as_mut());
         dest.copy_from_slice(&block[in_block_offset..in_block_offset + dest.len()]);
     }
@@ -160,7 +161,7 @@ mod tests {
             let mut data = vec![0; 1024 * 1024];
             fixture.generate(0, &mut data);
             let num_zeroes = data.iter().filter(|&&x| x == 0).count();
-            assert_eq!(4221, num_zeroes);
+            assert_eq!(4059, num_zeroes);
         }
 
         #[derive(Clone, Copy)]
