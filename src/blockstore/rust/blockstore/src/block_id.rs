@@ -1,5 +1,5 @@
 use anyhow::Result;
-use binrw::{BinRead, BinResult, BinWrite, ReadOptions, WriteOptions};
+use binrw::{BinRead, BinResult, BinWrite, Endian};
 use rand::{thread_rng, Rng};
 use std::io::{Read, Seek, Write};
 
@@ -51,9 +51,9 @@ impl std::fmt::Debug for BlockId {
 }
 
 impl BinRead for BlockId {
-    type Args = ();
-    fn read_options<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> BinResult<BlockId> {
-        let blockid = <[u8; BLOCKID_LEN]>::read_options(reader, ro, ())?;
+    type Args<'a> = ();
+    fn read_options<R: Read + Seek>(reader: &mut R, endian: Endian, _: ()) -> BinResult<BlockId> {
+        let blockid = <[u8; BLOCKID_LEN]>::read_options(reader, endian, ())?;
         let blockid = BlockId::from_slice(&blockid)
             .expect("Can't fail because we pass in an array of exactly the right size");
         Ok(blockid)
@@ -61,15 +61,15 @@ impl BinRead for BlockId {
 }
 
 impl BinWrite for BlockId {
-    type Args = ();
+    type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        wo: &WriteOptions,
+        endian: Endian,
         args: (),
     ) -> Result<(), binrw::Error> {
-        <[u8; BLOCKID_LEN]>::write_options(self.data(), writer, wo, args)
+        <[u8; BLOCKID_LEN]>::write_options(self.data(), writer, endian, args)
     }
 }
 

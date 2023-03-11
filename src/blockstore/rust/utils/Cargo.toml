@@ -9,7 +9,7 @@ aead = "^0.5.1"
 aes-gcm = {version = "^0.10.1", features = ["std"]}
 anyhow = "^1.0.68"
 async-trait = "^0.1.60"
-binrw = "^0.10.0"
+binrw = "^0.11.1"
 chacha20poly1305 = "^0.10.1"
 common_macros = "^0.1.1"
 futures = "^0.3.25"

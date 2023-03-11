@@ -1,5 +1,5 @@
 use anyhow::{ensure, Context, Error, Result};
-use binrw::{BinRead, BinResult, BinWrite, ReadOptions, WriteOptions};
+use binrw::{BinRead, BinResult, BinWrite, Endian};
 use itertools::Itertools;
 use std::collections::hash_map::HashMap;
 use std::fs::File;
@@ -25,10 +25,12 @@ pub trait BinaryReadExt: Sized {
     fn deserialize_from_file(file_path: &Path) -> Result<Option<Self>>;
 }
 
-impl<T: BinRead<Args = ()> + Sized> BinaryReadExt for T {
+impl<T> BinaryReadExt for T
+where
+    for<'a> T: BinRead<Args<'a> = ()> + Sized,
+{
     fn deserialize_from_complete_stream(source: &mut (impl Read + Seek)) -> Result<Self> {
-        let read_options = ReadOptions::new(binrw::Endian::Little);
-        let result = Self::read_options(source, &read_options, ())
+        let result = Self::read_options(source, Endian::Little, ())
             .map_err(|err| {
                 let actual_error = if let binrw::Error::Backtrace(backtrace) = &err {
                     backtrace.error.as_ref()
@@ -87,10 +89,12 @@ pub trait BinaryWriteExt {
     fn serialize_to_file(&self, file_path: &Path) -> Result<()>;
 }
 
-impl<T: BinWrite<Args = ()>> BinaryWriteExt for T {
+impl<T> BinaryWriteExt for T
+where
+    for<'a> T: BinWrite<Args<'a> = ()> + Sized,
+{
     fn serialize_to_stream(&self, dest: &mut (impl Write + Seek)) -> Result<()> {
-        let write_options = WriteOptions::new(binrw::Endian::Little);
-        self.write_options(dest, &write_options, ())
+        self.write_options(dest, Endian::Little, ())
             .context("Tried to write object to stream")?;
         Ok(())
     }
@@ -116,9 +120,9 @@ impl<T: BinWrite<Args = ()>> BinaryWriteExt for T {
 /// }
 /// ```
 ///
-pub fn read_bool<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> BinResult<bool> {
+pub fn read_bool<R: Read + Seek>(reader: &mut R, endian: Endian, _: ()) -> BinResult<bool> {
     let pos = reader.seek(SeekFrom::Current(0))?;
-    let value = u8::read_options(reader, ro, ())?;
+    let value = u8::read_options(reader, endian, ())?;
     match value {
         0 => Ok(false),
         1 => Ok(true),
@@ -149,11 +153,11 @@ pub fn read_bool<R: Read + Seek>(reader: &mut R, ro: &ReadOptions, _: ()) -> Bin
 pub fn write_bool(
     v: &bool,
     writer: &mut (impl Write + Seek),
-    options: &WriteOptions,
+    endian: Endian,
     args: (),
 ) -> Result<(), binrw::Error> {
     let v = u8::from(*v);
-    u8::write_options(&v, writer, options, args)
+    u8::write_options(&v, writer, endian, args)
 }
 
 /// Deserialize a hashmap with [binread].
@@ -170,16 +174,17 @@ pub fn write_bool(
 ///   some_map: HashMap<String, i64>,
 /// }
 /// ```
-pub fn read_hashmap<K: BinRead<Args = ()> + Eq + Hash, V: BinRead<Args = ()>, R: Read + Seek>(
-    reader: &mut R,
-    ro: &ReadOptions,
-    _: (),
-) -> BinResult<HashMap<K, V>> {
-    let len = u64::read_options(reader, ro, ())?;
+pub fn read_hashmap<K, V, R>(reader: &mut R, endian: Endian, _: ()) -> BinResult<HashMap<K, V>>
+where
+    for<'a> K: BinRead<Args<'a> = ()> + Eq + Hash,
+    for<'a> V: BinRead<Args<'a> = ()>,
+    R: Read + Seek,
+{
+    let len = u64::read_options(reader, endian, ())?;
     (0..len)
         .map(|_| {
-            let key = K::read_options(reader, ro, ())?;
-            let value = V::read_options(reader, ro, ())?;
+            let key = K::read_options(reader, endian, ())?;
+            let value = V::read_options(reader, endian, ())?;
             Ok((key, value))
         })
         .collect()
@@ -199,17 +204,21 @@ pub fn read_hashmap<K: BinRead<Args = ()> + Eq + Hash, V: BinRead<Args = ()>, R:
 ///   some_map: HashMap<String, i64>,
 /// }
 /// ```
-pub fn write_hashmap<K: BinWrite<Args = ()> + Eq + Hash, V: BinWrite<Args = ()>>(
+pub fn write_hashmap<K, V>(
     v: &HashMap<K, V>,
     writer: &mut (impl Write + Seek),
-    options: &WriteOptions,
+    endian: Endian,
     args: (),
-) -> Result<(), binrw::Error> {
+) -> Result<(), binrw::Error>
+where
+    for<'a> K: BinWrite<Args<'a> = ()> + Eq + Hash,
+    for<'a> V: BinWrite<Args<'a> = ()>,
+{
     let len = v.len() as u64;
-    u64::write_options(&len, writer, options, ())?;
+    u64::write_options(&len, writer, endian, ())?;
     for (key, value) in v {
-        key.write_options(writer, options, args)?;
-        value.write_options(writer, options, args)?;
+        key.write_options(writer, endian, args)?;
+        value.write_options(writer, endian, args)?;
     }
     Ok(())
 }
@@ -233,7 +242,7 @@ pub fn write_hashmap<K: BinWrite<Args = ()> + Eq + Hash, V: BinWrite<Args = ()>>
 /// ```
 pub fn read_null_string<R: Read + Seek>(
     reader: &mut R,
-    _ro: &ReadOptions,
+    _endian: Endian,
     _: (),
 ) -> BinResult<Vec<NonZeroU8>> {
     let pos = reader.seek(SeekFrom::Current(0))?;
@@ -277,25 +286,25 @@ pub fn read_null_string<R: Read + Seek>(
 pub fn write_null_string(
     str: &Vec<NonZeroU8>,
     writer: &mut (impl Write + Seek),
-    options: &WriteOptions,
+    endian: Endian,
     args: (),
 ) -> Result<(), binrw::Error> {
     for c in str {
-        c.get().write_options(writer, options, args)?;
+        c.get().write_options(writer, endian, args)?;
     }
     // and add null byte
-    u8::write_options(&0, writer, options, args)
+    u8::write_options(&0, writer, endian, args)
 }
 
 /// TODO Docs
 /// TODO Tests
 pub fn read_nonzerou32<R: Read + Seek>(
     reader: &mut R,
-    ro: &ReadOptions,
+    endian: Endian,
     _: (),
 ) -> BinResult<NonZeroU32> {
     let pos = reader.seek(SeekFrom::Current(0))?;
-    let value = u32::read_options(reader, ro, ())?;
+    let value = u32::read_options(reader, endian, ())?;
     NonZeroU32::new(value).ok_or_else(|| binrw::Error::AssertFail {
         pos,
         message: String::from("Tried to read '0' as a NonZeroU32 value. Must not be zero."),
@@ -307,10 +316,10 @@ pub fn read_nonzerou32<R: Read + Seek>(
 pub fn write_nonzerou32(
     v: &NonZeroU32,
     writer: &mut (impl Write + Seek),
-    options: &WriteOptions,
+    endian: Endian,
     args: (),
 ) -> Result<(), binrw::Error> {
-    u32::write_options(&v.get(), writer, options, args)
+    u32::write_options(&v.get(), writer, endian, args)
 }
 
 #[derive(BinRead, BinWrite)]
@@ -340,10 +349,10 @@ impl From<TimeSpec> for SystemTime {
 /// TODO Tests
 pub fn read_timespec<R: Read + Seek>(
     reader: &mut R,
-    ro: &ReadOptions,
+    endian: Endian,
     _: (),
 ) -> BinResult<SystemTime> {
-    TimeSpec::read_options(reader, ro, ()).map(Into::into)
+    TimeSpec::read_options(reader, endian, ()).map(Into::into)
 }
 
 /// TODO Docs
@@ -351,10 +360,10 @@ pub fn read_timespec<R: Read + Seek>(
 pub fn write_timespec(
     v: &SystemTime,
     writer: &mut (impl Write + Seek),
-    options: &WriteOptions,
+    endian: Endian,
     args: (),
 ) -> Result<(), binrw::Error> {
-    TimeSpec::from(*v).write_options(writer, options, args)
+    TimeSpec::from(*v).write_options(writer, endian, args)
 }
 
 #[cfg(any(test, feature = "testutils"))]
@@ -374,7 +383,10 @@ pub mod testutils {
     }
 
     /// Deserialize an object from binary data
-    pub fn deserialize<T: BinRead<Args = ()>>(serialized: &[u8]) -> Result<T> {
+    pub fn deserialize<T>(serialized: &[u8]) -> Result<T>
+    where
+        for<'a> T: BinRead<Args<'a> = ()>,
+    {
         let mut cursor = Cursor::new(serialized);
         T::deserialize_from_complete_stream(&mut cursor)
     }
@@ -384,7 +396,7 @@ pub mod testutils {
     /// * deserializing each of the `serialized_variants` yields `object`
     pub fn test_serialize_deserialize<T>(object: T, serialized_variants: &[&[u8]])
     where
-        T: BinRead<Args = ()> + BinWrite<Args = ()> + PartialEq + Debug,
+        for<'a, 'b> T: BinRead<Args<'a> = ()> + BinWrite<Args<'b> = ()> + PartialEq + Debug,
     {
         for serialized in serialized_variants {
             let loaded = deserialize(serialized).unwrap();

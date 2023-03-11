@@ -1,5 +1,5 @@
 use anyhow::{bail, ensure, Result};
-use binrw::{BinRead, BinResult, BinWrite, ReadOptions, WriteOptions};
+use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
 use std::collections::hash_map::{Entry, HashMap};
 use std::hash::Hash;
@@ -59,14 +59,14 @@ impl std::fmt::Debug for MaybeClientId {
 }
 
 impl BinRead for MaybeClientId {
-    type Args = ();
+    type Args<'a> = ();
 
     fn read_options<R: Read + Seek>(
         reader: &mut R,
-        ro: &ReadOptions,
+        endian: Endian,
         _: (),
     ) -> BinResult<MaybeClientId> {
-        let value = u32::read_options(reader, ro, ())?;
+        let value = u32::read_options(reader, endian, ())?;
         let result = match NonZeroU32::new(value) {
             Some(id) => MaybeClientId::ClientId(ClientId { id }),
             None => MaybeClientId::BlockWasDeleted,
@@ -76,19 +76,19 @@ impl BinRead for MaybeClientId {
 }
 
 impl BinWrite for MaybeClientId {
-    type Args = ();
+    type Args<'a> = ();
 
     fn write_options<W: Write + Seek>(
         &self,
         writer: &mut W,
-        options: &WriteOptions,
+        endian: Endian,
         args: (),
     ) -> Result<(), binrw::Error> {
         let value = match &self {
             MaybeClientId::ClientId(id) => id.id.get(),
             MaybeClientId::BlockWasDeleted => 0,
         };
-        u32::write_options(&value, writer, options, args)
+        u32::write_options(&value, writer, endian, args)
     }
 }
 
