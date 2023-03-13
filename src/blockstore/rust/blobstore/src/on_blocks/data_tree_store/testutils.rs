@@ -1,8 +1,9 @@
+#[cfg(feature = "slow-tests-any")]
 use divrem::DivCeil;
-use futures::{
-    future::{self, BoxFuture},
-    join,
-};
+use futures::future::BoxFuture;
+#[cfg(feature = "slow-tests-any")]
+use futures::{future, join};
+#[cfg(feature = "slow-tests-any")]
 use iter_chunks::IterChunks;
 
 use cryfs_blockstore::{
@@ -90,6 +91,7 @@ pub async fn create_multi_leaf_tree<B: BlockStore + Send + Sync>(
     tree
 }
 
+#[cfg(feature = "slow-tests-any")]
 pub async fn manually_create_tree<B: BlockStore + Send + Sync>(
     nodestore: &DataNodeStore<B>,
     num_full_leaves: u64,

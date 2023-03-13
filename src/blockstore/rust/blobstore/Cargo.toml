@@ -27,4 +27,9 @@ rstest_reuse = "^0.5.0"
 
 [features]
 # Enable tests that are very slow to build or run
-slow-tests = []
+# TODO We need a better way of doing this, see https://github.com/la10736/rstest/issues/184
+slow-tests-any = []
+slow-tests-1 = ["slow-tests-any"]
+slow-tests-2 = ["slow-tests-any"]
+slow-tests-3 = ["slow-tests-any"]
+slow-tests-4 = ["slow-tests-any"]

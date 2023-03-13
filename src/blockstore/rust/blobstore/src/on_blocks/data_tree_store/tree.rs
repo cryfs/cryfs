@@ -694,28 +694,29 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 #[cfg(test)]
 mod tests {
     use super::super::super::data_node_store::NodeLayout;
-    use super::super::super::data_tree_store::{DataTree, DataTreeStore};
+    #[cfg(feature = "slow-tests-any")]
+    use super::super::super::data_tree_store::DataTree;
     use super::super::testutils::*;
     use cryfs_blockstore::BlockId;
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-any")]
     use cryfs_blockstore::BlockStore;
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-any")]
     use cryfs_utils::testutils::data_fixture::DataFixture;
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-1")]
     use divrem::DivCeil;
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-any")]
     use rstest::rstest;
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-any")]
     use rstest_reuse::{apply, template};
 
     mod testutils {
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-any")]
         use super::super::super::super::data_node_store::DataNodeStore;
         use super::*;
 
         /// Parameter for creating a tree.
         /// This can be used for parameterized tests
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-any")]
         #[derive(Clone, Copy)]
         pub struct Parameter {
             /// Number of full leaves in the tree (the tree will have a total of [num_full_leaves] + 1 leaves)
@@ -723,11 +724,10 @@ mod tests {
 
             /// Number of bytes in the last leaf
             pub last_leaf_num_bytes: u64,
-            // /// Interesting sub ranges within the data stored in the tree
-            // pub // subregions: &'static [Subregion],
         }
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-any")]
         impl Parameter {
+            #[cfg(feature = "slow-tests-1")]
             pub fn expected_num_nodes(&self) -> u64 {
                 let mut num_nodes = 0;
                 let num_leaves = 1 + self.num_full_leaves;
@@ -752,6 +752,7 @@ mod tests {
                 self.num_full_leaves * LAYOUT.max_bytes_per_leaf() as u64 + self.last_leaf_num_bytes
             }
 
+            #[cfg(feature = "slow-tests-1")]
             pub async fn create_tree<B: BlockStore + Send + Sync>(
                 &self,
                 nodestore: &DataNodeStore<B>,
@@ -788,101 +789,75 @@ mod tests {
                 id
             }
         }
-        // #[derive(Clone, Copy)]
-        // pub struct Subregion {
-        //     pub begin: u64,
-        //     pub num_bytes: u64,
-        // }
-        // impl Subregion {
-        //     pub const fn new(begin: u64, num_bytes: u64) -> Self {
-        //         Self { begin, num_bytes }
-        //     }
-        // }
         pub const LAYOUT: NodeLayout = NodeLayout {
             block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
         };
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-any")]
         #[template]
         #[rstest]
         #[case::one_leaf_empty(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::one_leaf_almost_empty(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::one_leaf_half_full(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::one_leaf_full(Parameter {
                 num_full_leaves: 0,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::two_leaves_last_leaf_empty(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::two_leaves_last_leaf_almost_empty(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::two_leaves_last_leaf_half_full(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::two_leaves_last_leaf_full(Parameter {
                 num_full_leaves: 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::almost_full_two_level_tree_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::almost_full_two_level_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::almost_full_two_level_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::almost_full_two_level_tree_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 2,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_two_level_tree_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_two_level_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_two_level_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_two_level_tree_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64 - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_one_child_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -890,7 +865,6 @@ mod tests {
                     + 1
                     - 1,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_one_child_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -898,7 +872,6 @@ mod tests {
                     + 1
                     - 1,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_one_child_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -906,7 +879,6 @@ mod tests {
                     + 1
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_one_child_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -914,7 +886,6 @@ mod tests {
                     + 1
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -922,7 +893,6 @@ mod tests {
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -930,7 +900,6 @@ mod tests {
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -938,7 +907,6 @@ mod tests {
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
@@ -946,74 +914,65 @@ mod tests {
                     + LAYOUT.max_children_per_inner_node() as u64 / 2
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_three_level_tree_last_leaf_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_three_level_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_three_level_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::full_three_level_tree_last_leaf_full(Parameter {
                 num_full_leaves: LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64
                     - 1,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::four_level_min_data_tree_last_leaf_empty(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: 0,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::four_level_min_data_tree_last_leaf_almost_empty(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: 1,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::four_level_min_data_tree_last_leaf_half_full(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64 / 2,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         #[case::four_level_min_data_tree_last_leaf_full(Parameter {
                 num_full_leaves: (LAYOUT.max_children_per_inner_node() as u64 - 1)
                     * LAYOUT.max_children_per_inner_node() as u64
                     * LAYOUT.max_children_per_inner_node() as u64,
                 last_leaf_num_bytes: LAYOUT.max_bytes_per_leaf() as u64,
-                // subregions: &[Subregion::new(0, 0)],
             })]
         fn tree_parameters(#[case] param: Parameter) {}
 
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-any")]
         #[derive(Clone, Copy, Debug)]
         pub enum LeafIndex {
             FromStart(i64),
             FromMid(i64),
             FromEnd(i64),
         }
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-any")]
         impl LeafIndex {
             pub fn get(&self, num_leaves: u64) -> u64 {
                 match self {
@@ -1055,7 +1014,7 @@ mod tests {
             .await
         }
 
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-1")]
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(#[case] param: Parameter) {
@@ -1082,7 +1041,7 @@ mod tests {
             .await;
         }
 
-        #[cfg(feature = "slow-tests")]
+        #[cfg(feature = "slow-tests-1")]
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn build_tree_manually_and_check_num_bytes_and_num_nodes(#[case] param: Parameter) {
@@ -1166,7 +1125,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-1")]
     mod read_bytes {
         use super::testutils::*;
         use super::*;
@@ -1199,38 +1158,27 @@ mod tests {
             );
         }
 
-        async fn test_read_bytes<'a, B: BlockStore + Send + Sync>(
-            tree: &mut DataTree<'a, B>,
-            params: &Parameter,
-            data: &DataFixture,
-            offset: u64,
-            num_bytes: usize,
-        ) {
-            if offset + num_bytes as u64 > params.expected_num_bytes() {
-                assert_reading_is_out_of_range(tree, params, offset, num_bytes).await;
-            } else {
-                assert_reads_correct_data(tree, &data, offset, num_bytes).await;
-            }
+        async fn test_read_bytes(params: Parameter, offset: u64, num_bytes: usize) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = params.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+
+                    if offset + num_bytes as u64 > params.expected_num_bytes() {
+                        assert_reading_is_out_of_range(&mut tree, &params, offset, num_bytes).await;
+                    } else {
+                        assert_reads_correct_data(&mut tree, &data, offset, num_bytes).await;
+                    }
+                })
+            })
+            .await;
         }
 
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn read_whole_tree(#[case] param: Parameter) {
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    assert_reads_correct_data(
-                        &mut tree,
-                        &data,
-                        0,
-                        param.expected_num_bytes() as usize,
-                    )
-                    .await;
-                })
-            })
-            .await;
+            test_read_bytes(param, 0, param.expected_num_bytes() as usize).await;
         }
 
         #[apply(super::testutils::tree_parameters)]
@@ -1242,18 +1190,9 @@ mod tests {
             #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
             byte_index_in_leaf: u64,
         ) {
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let leaf_index = leaf_index.get(param.expected_num_leaves());
-                    let byte_index =
-                        leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + byte_index_in_leaf;
-                    test_read_bytes(&mut tree, &param, &data, byte_index, 1).await;
-                })
-            })
-            .await;
+            let leaf_index = leaf_index.get(param.expected_num_leaves());
+            let byte_index = leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + byte_index_in_leaf;
+            test_read_bytes(param, byte_index, 1).await;
         }
 
         #[apply(super::testutils::tree_parameters)]
@@ -1266,18 +1205,10 @@ mod tests {
             #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
             first_byte_index_in_leaf: u64,
         ) {
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let leaf_index = leaf_index.get(param.expected_num_leaves());
-                    let first_byte_index =
-                        leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + first_byte_index_in_leaf;
-                    test_read_bytes(&mut tree, &param, &data, first_byte_index, 2).await;
-                })
-            })
-            .await;
+            let leaf_index = leaf_index.get(param.expected_num_leaves());
+            let first_byte_index =
+                leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + first_byte_index_in_leaf;
+            test_read_bytes(param, first_byte_index, 2).await;
         }
 
         #[apply(super::testutils::tree_parameters)]
@@ -1302,25 +1233,15 @@ mod tests {
             byte_indices: (u64, u64),
         ) {
             let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let first_leaf_byte = leaf_index.get(param.expected_num_leaves())
-                        * LAYOUT.max_bytes_per_leaf() as u64;
-                    let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf;
-                    let end_byte_index = first_leaf_byte + end_byte_index_in_leaf;
-                    test_read_bytes(
-                        &mut tree,
-                        &param,
-                        &data,
-                        begin_byte_index,
-                        (end_byte_index - begin_byte_index) as usize,
-                    )
-                    .await;
-                })
-            })
+            let first_leaf_byte =
+                leaf_index.get(param.expected_num_leaves()) * LAYOUT.max_bytes_per_leaf() as u64;
+            let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf;
+            let end_byte_index = first_leaf_byte + end_byte_index_in_leaf;
+            test_read_bytes(
+                param,
+                begin_byte_index,
+                (end_byte_index - begin_byte_index) as usize,
+            )
             .await;
         }
 
@@ -1360,26 +1281,16 @@ mod tests {
             if end_byte_index < begin_byte_index {
                 return;
             }
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    test_read_bytes(
-                        &mut tree,
-                        &param,
-                        &data,
-                        begin_byte_index,
-                        (end_byte_index - begin_byte_index) as usize,
-                    )
-                    .await;
-                })
-            })
+            test_read_bytes(
+                param,
+                begin_byte_index,
+                (end_byte_index - begin_byte_index) as usize,
+            )
             .await;
         }
     }
 
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-2")]
     mod try_read_bytes {
         use super::testutils::*;
         use super::*;
@@ -1421,38 +1332,27 @@ mod tests {
             );
         }
 
-        async fn test_try_read_bytes<'a, B: BlockStore + Send + Sync>(
-            tree: &mut DataTree<'a, B>,
-            params: &Parameter,
-            data: &DataFixture,
-            offset: u64,
-            num_bytes: usize,
-        ) {
-            if offset + num_bytes as u64 > params.expected_num_bytes() {
-                assert_reading_is_out_of_range(tree, &data, params, offset, num_bytes).await;
-            } else {
-                assert_reads_correct_data(tree, &data, offset, num_bytes).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_whole_tree(#[case] param: Parameter) {
+        async fn test_try_read_bytes(param: Parameter, offset: u64, num_bytes: usize) {
             with_treestore_and_nodestore(|treestore, nodestore| {
                 Box::pin(async move {
                     let data = DataFixture::new(0);
                     let tree_id = param.create_tree_with_data(nodestore, &data).await;
                     let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    assert_reads_correct_data(
-                        &mut tree,
-                        &data,
-                        0,
-                        param.expected_num_bytes() as usize,
-                    )
-                    .await;
+                    if offset + num_bytes as u64 > param.expected_num_bytes() {
+                        assert_reading_is_out_of_range(&mut tree, &data, &param, offset, num_bytes)
+                            .await;
+                    } else {
+                        assert_reads_correct_data(&mut tree, &data, offset, num_bytes).await;
+                    }
                 })
             })
             .await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_whole_tree(#[case] param: Parameter) {
+            test_try_read_bytes(param, 0, param.expected_num_bytes() as usize).await;
         }
 
         #[apply(super::testutils::tree_parameters)]
@@ -1464,18 +1364,9 @@ mod tests {
             #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
             byte_index_in_leaf: u64,
         ) {
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let leaf_index = leaf_index.get(param.expected_num_leaves());
-                    let byte_index =
-                        leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + byte_index_in_leaf;
-                    test_try_read_bytes(&mut tree, &param, &data, byte_index, 1).await;
-                })
-            })
-            .await;
+            let leaf_index = leaf_index.get(param.expected_num_leaves());
+            let byte_index = leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + byte_index_in_leaf;
+            test_try_read_bytes(param, byte_index, 1).await;
         }
 
         #[apply(super::testutils::tree_parameters)]
@@ -1488,18 +1379,10 @@ mod tests {
             #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
             first_byte_index_in_leaf: u64,
         ) {
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let leaf_index = leaf_index.get(param.expected_num_leaves());
-                    let first_byte_index =
-                        leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + first_byte_index_in_leaf;
-                    test_try_read_bytes(&mut tree, &param, &data, first_byte_index, 2).await;
-                })
-            })
-            .await;
+            let leaf_index = leaf_index.get(param.expected_num_leaves());
+            let first_byte_index =
+                leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + first_byte_index_in_leaf;
+            test_try_read_bytes(param, first_byte_index, 2).await;
         }
 
         #[apply(super::testutils::tree_parameters)]
@@ -1524,25 +1407,15 @@ mod tests {
             byte_indices: (u64, u64),
         ) {
             let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    let first_leaf_byte = leaf_index.get(param.expected_num_leaves())
-                        * LAYOUT.max_bytes_per_leaf() as u64;
-                    let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf;
-                    let end_byte_index = first_leaf_byte + end_byte_index_in_leaf;
-                    test_try_read_bytes(
-                        &mut tree,
-                        &param,
-                        &data,
-                        begin_byte_index,
-                        (end_byte_index - begin_byte_index) as usize,
-                    )
-                    .await;
-                })
-            })
+            let first_leaf_byte =
+                leaf_index.get(param.expected_num_leaves()) * LAYOUT.max_bytes_per_leaf() as u64;
+            let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf;
+            let end_byte_index = first_leaf_byte + end_byte_index_in_leaf;
+            test_try_read_bytes(
+                param,
+                begin_byte_index,
+                (end_byte_index - begin_byte_index) as usize,
+            )
             .await;
         }
 
@@ -1582,26 +1455,16 @@ mod tests {
             if end_byte_index < begin_byte_index {
                 return;
             }
-            with_treestore_and_nodestore(|treestore, nodestore| {
-                Box::pin(async move {
-                    let data = DataFixture::new(0);
-                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                    test_try_read_bytes(
-                        &mut tree,
-                        &param,
-                        &data,
-                        begin_byte_index,
-                        (end_byte_index - begin_byte_index) as usize,
-                    )
-                    .await;
-                })
-            })
+            test_try_read_bytes(
+                param,
+                begin_byte_index,
+                (end_byte_index - begin_byte_index) as usize,
+            )
             .await;
         }
     }
 
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-3")]
     mod read_all {
         use super::testutils::*;
         use super::*;
@@ -1626,7 +1489,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "slow-tests")]
+    #[cfg(feature = "slow-tests-4")]
     mod write_bytes {
         use super::testutils::*;
         use super::*;
