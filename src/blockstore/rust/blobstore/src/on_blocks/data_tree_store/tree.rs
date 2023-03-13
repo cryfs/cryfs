@@ -694,8 +694,7 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 #[cfg(test)]
 mod tests {
     use super::super::super::data_node_store::NodeLayout;
-    #[cfg(feature = "slow-tests")]
-    use super::super::super::data_tree_store::DataTree;
+    use super::super::super::data_tree_store::{DataTree, DataTreeStore};
     use super::super::testutils::*;
     use cryfs_blockstore::BlockId;
     #[cfg(feature = "slow-tests")]
@@ -1296,7 +1295,7 @@ mod tests {
                 // Ranges starting at the beginning of the leaf
                 (0, 0), (0, 1), (0, LAYOUT.max_bytes_per_leaf() as u64 / 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 1), (0, LAYOUT.max_bytes_per_leaf() as u64),
                 // Ranges in the middle
-                (1, 2), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1),
+                (1, 2), (2, 2), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1),
                 // Ranges going until the end of the leaf
                 (1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64, LAYOUT.max_bytes_per_leaf() as u64)
             )]
@@ -1518,7 +1517,7 @@ mod tests {
                 // Ranges starting at the beginning of the leaf
                 (0, 0), (0, 1), (0, LAYOUT.max_bytes_per_leaf() as u64 / 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 1), (0, LAYOUT.max_bytes_per_leaf() as u64),
                 // Ranges in the middle
-                (1, 2), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1),
+                (1, 2), (2, 2), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1),
                 // Ranges going until the end of the leaf
                 (1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64, LAYOUT.max_bytes_per_leaf() as u64)
             )]
@@ -1627,7 +1626,198 @@ mod tests {
         }
     }
 
-    // TODO Test write_bytes
+    #[cfg(feature = "slow-tests")]
+    mod write_bytes {
+        use super::testutils::*;
+        use super::*;
+
+        async fn test_write_bytes(params: Parameter, offset: u64, num_bytes: usize) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let base_data = DataFixture::new(0);
+                    let write_data = DataFixture::new(1);
+
+                    // Create tree with `base_data`
+                    let tree_id = params.create_tree_with_data(nodestore, &base_data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+
+                    // Write subregion with `write_data`
+                    let source = write_data.get(num_bytes);
+                    tree.write_bytes(&source, offset).await.unwrap();
+
+                    // Read whole tree back so we can check it
+                    let expected_new_size = if num_bytes == 0 {
+                        // Writing doesn't grow the tree if num_bytes == 0, even if
+                        // offset is beyond the current tree data size. So we don't
+                        // max with offset+num_bytes here.
+                        // TODO Is this actually the behavior we want? Or do we want write_bytes to grow the tree here?
+                        params.expected_num_bytes()
+                    } else {
+                        params.expected_num_bytes().max(offset + num_bytes as u64)
+                    };
+                    let read_data = tree.read_all().await.unwrap();
+                    assert_eq!(expected_new_size, read_data.len() as u64);
+
+                    // TODO Instead of checking the written data using a call to `read_all()`,
+                    //      we should look at the actual node store (that's also how we're doing it in `read_bytes`
+                    //      tests to write the initial tree data), make sure intermediate nodes are unchanged,
+                    //      new intermediate nodes are added as needed, and leaf data is changed as needed.
+
+                    // Now we expect the tree data to contain 4 sections:
+                    // A) The data before the written subregion (up until the first of `offset` or of the old tree size)
+                    //    This region should contain `base_data`.
+                    // B) The data after the old data size up until `offset`. This only exists if our write started after the old data size.
+                    //    This region should be zeroed out if it exists.
+                    // C) The written subregion
+                    //    This region should contain `write_data`.
+                    // D) The data after the written subregion. This only exists if our write ended before the old data size
+                    //    This region should contain `base_data` if it exists.
+
+                    // Check section A
+                    let section_a_end = offset.min(params.expected_num_bytes()) as usize;
+                    let expected_data = base_data.get(section_a_end);
+                    assert_eq!(expected_data, &read_data[..section_a_end]);
+
+                    if num_bytes != 0 {
+                        // Check section B
+                        let section_b_end = offset as usize;
+                        let expected_data = vec![0; section_b_end - section_a_end];
+                        assert_eq!(expected_data, &read_data[section_a_end..section_b_end]);
+
+                        // Check section C
+                        let section_c_end = (offset + num_bytes as u64) as usize;
+                        let expected_data = write_data.get(num_bytes);
+                        assert_eq!(expected_data, &read_data[section_b_end..section_c_end]);
+
+                        // Check section D
+                        let mut expected_data =
+                            vec![0; (expected_new_size as usize - section_c_end) as usize];
+                        base_data.generate(section_c_end as u64, &mut expected_data);
+                        assert_eq!(expected_data, &read_data[section_c_end..]);
+                    } else {
+                        // See comment above, we don't grow the region if num_bytes == 0
+                        // TODO See TODO above, is this actually the behavior we want?
+                    }
+                })
+            })
+            .await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn write_whole_tree(#[case] param: Parameter) {
+            test_write_bytes(param, 0, param.expected_num_bytes() as usize).await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn write_single_byte(
+            #[case] param: Parameter,
+            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
+            leaf_index: LeafIndex,
+            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
+            byte_index_in_leaf: u64,
+        ) {
+            let leaf_index = leaf_index.get(param.expected_num_leaves());
+            let byte_index = leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + byte_index_in_leaf;
+            test_write_bytes(param, byte_index, 1).await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn write_two_bytes(
+            #[case] param: Parameter,
+            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
+            leaf_index: LeafIndex,
+            // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
+            #[values(0, 1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
+            first_byte_index_in_leaf: u64,
+        ) {
+            let leaf_index = leaf_index.get(param.expected_num_leaves());
+            let first_byte_index =
+                leaf_index * LAYOUT.max_bytes_per_leaf() as u64 + first_byte_index_in_leaf;
+            test_write_bytes(param, first_byte_index, 2).await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn write_single_leaf(
+            #[case] param: Parameter,
+            #[values(
+                LeafIndex::FromStart(0),
+                LeafIndex::FromMid(0),
+                LeafIndex::FromEnd(0),
+                LeafIndex::FromEnd(1)
+            )]
+            leaf_index: LeafIndex,
+            #[values(
+                // Ranges starting at the beginning of the leaf
+                (0, 0), (0, 1), (0, LAYOUT.max_bytes_per_leaf() as u64 / 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 2), (0, LAYOUT.max_bytes_per_leaf() as u64 - 1), (0, LAYOUT.max_bytes_per_leaf() as u64),
+                // Ranges in the middle
+                (1, 2), (2, 2), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1),
+                // Ranges going until the end of the leaf
+                (1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64 - 1, LAYOUT.max_bytes_per_leaf() as u64), (LAYOUT.max_bytes_per_leaf() as u64, LAYOUT.max_bytes_per_leaf() as u64)
+            )]
+            byte_indices: (u64, u64),
+        ) {
+            let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
+            let first_leaf_byte =
+                leaf_index.get(param.expected_num_leaves()) * LAYOUT.max_bytes_per_leaf() as u64;
+            let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf;
+            let end_byte_index = first_leaf_byte + end_byte_index_in_leaf;
+            test_write_bytes(
+                param,
+                begin_byte_index,
+                (end_byte_index - begin_byte_index) as usize,
+            )
+            .await;
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn write_across_leaves(
+            #[case] param: Parameter,
+            #[values(
+                (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
+                (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
+                (LeafIndex::FromStart(0), LeafIndex::FromEnd(0)),
+                (LeafIndex::FromStart(0), LeafIndex::FromEnd(10)),
+                (LeafIndex::FromStart(10), LeafIndex::FromEnd(-10)),
+                (LeafIndex::FromMid(0), LeafIndex::FromMid(1)),
+                (LeafIndex::FromMid(0), LeafIndex::FromEnd(0)),
+                (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
+                (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
+                (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
+            )]
+            leaf_indices: (LeafIndex, LeafIndex),
+            #[values(0, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
+            begin_byte_index_in_leaf: u64,
+            #[values(1, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64)]
+            end_byte_index_in_leaf: u64,
+        ) {
+            let (begin_leaf_index, last_leaf_index) = leaf_indices;
+            let begin_byte_index = {
+                let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves())
+                    * LAYOUT.max_bytes_per_leaf() as u64;
+                first_leaf_byte + begin_byte_index_in_leaf
+            };
+            let end_byte_index = {
+                let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves())
+                    * LAYOUT.max_bytes_per_leaf() as u64;
+                first_leaf_byte + end_byte_index_in_leaf
+            };
+            if end_byte_index < begin_byte_index {
+                return;
+            }
+            test_write_bytes(
+                param,
+                begin_byte_index,
+                (end_byte_index - begin_byte_index) as usize,
+            )
+            .await;
+        }
+    }
+
     // TODO Test flush
     // TODO Test resize_num_bytes
     // TODO Test remove
