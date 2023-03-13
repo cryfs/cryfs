@@ -693,20 +693,30 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::{data_node_store::NodeLayout, data_tree_store::DataTree};
+    use super::super::super::data_node_store::NodeLayout;
+    #[cfg(feature = "slow-tests")]
+    use super::super::super::data_tree_store::DataTree;
     use super::super::testutils::*;
-    use cryfs_blockstore::{BlockId, BlockStore};
+    use cryfs_blockstore::BlockId;
+    #[cfg(feature = "slow-tests")]
+    use cryfs_blockstore::BlockStore;
+    #[cfg(feature = "slow-tests")]
     use cryfs_utils::testutils::data_fixture::DataFixture;
+    #[cfg(feature = "slow-tests")]
     use divrem::DivCeil;
+    #[cfg(feature = "slow-tests")]
     use rstest::rstest;
+    #[cfg(feature = "slow-tests")]
     use rstest_reuse::{apply, template};
 
     mod testutils {
+        #[cfg(feature = "slow-tests")]
         use super::super::super::super::data_node_store::DataNodeStore;
         use super::*;
 
         /// Parameter for creating a tree.
         /// This can be used for parameterized tests
+        #[cfg(feature = "slow-tests")]
         #[derive(Clone, Copy)]
         pub struct Parameter {
             /// Number of full leaves in the tree (the tree will have a total of [num_full_leaves] + 1 leaves)
@@ -717,6 +727,7 @@ mod tests {
             // /// Interesting sub ranges within the data stored in the tree
             // pub // subregions: &'static [Subregion],
         }
+        #[cfg(feature = "slow-tests")]
         impl Parameter {
             pub fn expected_num_nodes(&self) -> u64 {
                 let mut num_nodes = 0;
@@ -791,6 +802,7 @@ mod tests {
         pub const LAYOUT: NodeLayout = NodeLayout {
             block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
         };
+        #[cfg(feature = "slow-tests")]
         #[template]
         #[rstest]
         #[case::one_leaf_empty(Parameter {
@@ -1026,6 +1038,7 @@ mod tests {
             .await
         }
 
+        #[cfg(feature = "slow-tests")]
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(#[case] param: Parameter) {
@@ -1052,6 +1065,7 @@ mod tests {
             .await;
         }
 
+        #[cfg(feature = "slow-tests")]
         #[apply(super::testutils::tree_parameters)]
         #[tokio::test]
         async fn build_tree_manually_and_check_num_bytes_and_num_nodes(#[case] param: Parameter) {
@@ -1135,6 +1149,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "slow-tests")]
     mod read_bytes {
         use super::testutils::*;
         use super::*;

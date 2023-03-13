@@ -14,4 +14,5 @@ mod tests;
 
 // This is needed by rstest_reuse, at least in 0.5.0, because otherwise they can't find their macros
 #[cfg(test)]
+#[cfg(feature = "slow-tests")]
 use rstest_reuse;
