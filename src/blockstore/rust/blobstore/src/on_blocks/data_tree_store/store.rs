@@ -393,7 +393,7 @@ mod tests {
                         .await
                         .root_node_id();
                     treestore.clear_cache_slow().await.unwrap();
-                    assert_eq!(NUM_LEAVES + 1, nodestore.num_nodes().await.unwrap());
+                    assert_eq!(NUM_LEAVES + 3, nodestore.num_nodes().await.unwrap());
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
@@ -503,14 +503,14 @@ mod tests {
                         .await
                         .root_node_id();
                     treestore.clear_cache_slow().await.unwrap();
-                    assert_eq!(2 * NUM_LEAVES + 2, nodestore.num_nodes().await.unwrap());
+                    assert_eq!(2 * NUM_LEAVES + 6, nodestore.num_nodes().await.unwrap());
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
                         treestore.remove_tree_by_id(root_id).await.unwrap()
                     );
                     treestore.clear_cache_slow().await.unwrap();
-                    assert_eq!(NUM_LEAVES + 1, nodestore.num_nodes().await.unwrap());
+                    assert_eq!(NUM_LEAVES + 3, nodestore.num_nodes().await.unwrap());
                 })
             })
             .await
@@ -534,14 +534,14 @@ mod tests {
                         .await
                         .root_node_id();
                     treestore.clear_cache_slow().await.unwrap();
-                    assert_eq!(2 * NUM_LEAVES + 2, nodestore.num_nodes().await.unwrap());
+                    assert_eq!(2 * NUM_LEAVES + 6, nodestore.num_nodes().await.unwrap());
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
                         treestore.remove_tree_by_id(root_id).await.unwrap()
                     );
                     treestore.clear_cache_slow().await.unwrap();
-                    assert_eq!(NUM_LEAVES + 1, nodestore.num_nodes().await.unwrap());
+                    assert_eq!(NUM_LEAVES + 3, nodestore.num_nodes().await.unwrap());
 
                     other_tree.assert_data_is_still_intact(&treestore).await;
                 })
@@ -571,7 +571,7 @@ mod tests {
                     create_one_leaf_tree(&store).await;
                     assert_eq!(1, store.num_nodes().await.unwrap());
                     create_multi_leaf_tree(&store, 10).await;
-                    assert_eq!(12, store.num_nodes().await.unwrap());
+                    assert_eq!(14, store.num_nodes().await.unwrap());
                 })
             })
             .await
@@ -584,17 +584,17 @@ mod tests {
                     let tree1 = *create_multi_leaf_tree(&store, 10).await.root_node_id();
                     let tree2 = *create_one_leaf_tree(&store).await.root_node_id();
                     let tree3 = *create_multi_leaf_tree(&store, 20).await.root_node_id();
-                    assert_eq!(33, store.num_nodes().await.unwrap());
+                    assert_eq!(38, store.num_nodes().await.unwrap());
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
                         store.remove_tree_by_id(tree1).await.unwrap()
                     );
-                    assert_eq!(22, store.num_nodes().await.unwrap());
+                    assert_eq!(25, store.num_nodes().await.unwrap());
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
                         store.remove_tree_by_id(tree2).await.unwrap()
                     );
-                    assert_eq!(21, store.num_nodes().await.unwrap());
+                    assert_eq!(24, store.num_nodes().await.unwrap());
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
                         store.remove_tree_by_id(tree3).await.unwrap()

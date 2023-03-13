@@ -14,7 +14,7 @@ use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 use super::super::data_node_store::DataNodeStore;
 use super::{store::DataTreeStore, tree::DataTree};
 
-pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 512;
+pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 128;
 
 pub struct TreeFixture {
     root_id: BlockId,
