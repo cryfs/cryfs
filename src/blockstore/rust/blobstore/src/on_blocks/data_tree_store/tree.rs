@@ -1260,6 +1260,7 @@ mod tests {
                 (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
                 (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
                 (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
+                (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
             )]
             leaf_indices: (LeafIndex, LeafIndex),
             #[values(0, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
@@ -1434,6 +1435,7 @@ mod tests {
                 (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
                 (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
                 (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
+                (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
             )]
             leaf_indices: (LeafIndex, LeafIndex),
             #[values(0, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
@@ -1651,6 +1653,7 @@ mod tests {
                 (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
                 (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
                 (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
+                (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
             )]
             leaf_indices: (LeafIndex, LeafIndex),
             #[values(0, LAYOUT.max_bytes_per_leaf() as u64 / 2, LAYOUT.max_bytes_per_leaf() as u64 - 1)]
