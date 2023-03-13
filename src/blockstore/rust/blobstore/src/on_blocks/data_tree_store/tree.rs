@@ -1602,7 +1602,31 @@ mod tests {
         }
     }
 
-    // TODO Test read_all
+    #[cfg(feature = "slow-tests")]
+    mod read_all {
+        use super::testutils::*;
+        use super::*;
+        use cryfs_utils::data::Data;
+
+        #[apply(super::testutils::tree_parameters)]
+        #[tokio::test]
+        async fn read_whole_tree(#[case] param: Parameter) {
+            with_treestore_and_nodestore(|treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+
+                    let read_data = tree.read_all().await.unwrap();
+                    assert_eq!(param.expected_num_bytes() as usize, read_data.len());
+                    let expected_data: Data = data.get(param.expected_num_bytes() as usize).into();
+                    assert_eq!(expected_data, read_data);
+                })
+            })
+            .await;
+        }
+    }
+
     // TODO Test write_bytes
     // TODO Test flush
     // TODO Test resize_num_bytes
