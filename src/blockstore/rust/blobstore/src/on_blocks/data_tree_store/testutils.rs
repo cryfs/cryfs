@@ -184,19 +184,26 @@ pub async fn with_treestore_and_nodestore(
         &'a DataNodeStore<SharedBlockStore<InMemoryBlockStore>>,
     ) -> BoxFuture<'a, ()>,
 ) {
+    with_treestore_and_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE_BYTES, f).await
+}
+
+pub async fn with_treestore_and_nodestore_with_blocksize(
+    blocksize_bytes: u32,
+    f: impl for<'a> FnOnce(
+        &'a DataTreeStore<SharedBlockStore<InMemoryBlockStore>>,
+        &'a DataNodeStore<SharedBlockStore<InMemoryBlockStore>>,
+    ) -> BoxFuture<'a, ()>,
+) {
     let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
     let mut nodestore = DataNodeStore::new(
         LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
-        PHYSICAL_BLOCK_SIZE_BYTES,
+        blocksize_bytes,
     )
     .await
     .unwrap();
-    let mut treestore = DataTreeStore::new(
-        LockingBlockStore::new(blockstore),
-        PHYSICAL_BLOCK_SIZE_BYTES,
-    )
-    .await
-    .unwrap();
+    let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), blocksize_bytes)
+        .await
+        .unwrap();
     f(&treestore, &nodestore).await;
     treestore.async_drop().await.unwrap();
     nodestore.async_drop().await.unwrap();
