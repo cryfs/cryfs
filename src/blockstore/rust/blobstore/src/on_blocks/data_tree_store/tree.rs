@@ -1000,98 +1000,78 @@ mod tests {
         }
     }
 
+    // TODO Remove this macro and go back to using #[tokio::test] once https://github.com/la10736/rstest/issues/184 is resolved
+    macro_rules! run_tokio_test {
+        ($code:block) => {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async move {$code});
+        };
+    }
+
     mod num_bytes_and_num_nodes {
         #[cfg(feature = "slow-tests-1")]
         use super::testutils::*;
         use super::*;
 
-        #[tokio::test]
-        async fn new_tree() {
-            with_treestore(|store| {
-                Box::pin(async move {
-                    let mut tree = store.create_tree().await.unwrap();
-                    assert_eq!(0, tree.num_bytes().await.unwrap());
-                    assert_eq!(1, tree.num_nodes().await.unwrap());
-                })
-            })
-            .await;
-        }
-
-        #[tokio::test]
-        async fn check_test_setup() {
-            with_treestore(|store| {
-                Box::pin(async move {
-                    let layout = NodeLayout {
-                        block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
-                    };
-                    // Just make sure our calculation of LAYOUT is correct
-                    assert_eq!(
-                        layout.max_bytes_per_leaf(),
-                        store.virtual_block_size_bytes(),
-                    );
-                })
-            })
-            .await
-        }
-
-        #[cfg(feature = "slow-tests-1")]
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
-        ) {
-            let layout = NodeLayout { block_size_bytes };
-            if param.num_full_leaves.eval(layout) > 0 && param.last_leaf_num_bytes.eval(layout) == 0
-            {
-                // This is a special case where we can't build the tree via a call to [resize_num_bytes]
-                // because that would never leave the last leaf empty
-                return;
-            }
-            with_treestore_with_blocksize(block_size_bytes, move |store| {
-                Box::pin(async move {
-                    let mut tree = store.create_tree().await.unwrap();
-                    let num_bytes = layout.max_bytes_per_leaf() as u64
-                        * param.num_full_leaves.eval(layout)
-                        + param.last_leaf_num_bytes.eval(layout);
-                    tree.resize_num_bytes(num_bytes).await.unwrap();
-                    assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
-                    assert_eq!(
-                        param.expected_num_nodes(layout),
-                        tree.num_nodes().await.unwrap()
-                    );
-
-                    // Check the values are still the same when queried again
-                    // (they should now be returned from the cache instead of calculated)
-                    assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
-                    assert_eq!(
-                        param.expected_num_nodes(layout),
-                        tree.num_nodes().await.unwrap()
-                    );
-                })
-            })
-            .await;
-        }
-
-        #[cfg(feature = "slow-tests-1")]
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn build_tree_manually_and_check_num_bytes_and_num_nodes(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
-        ) {
-            let layout = NodeLayout { block_size_bytes };
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
+        #[test]
+        fn new_tree() {
+            run_tokio_test!({
+                with_treestore(|store| {
                     Box::pin(async move {
-                        let root_id = param.create_tree(nodestore).await;
+                        let mut tree = store.create_tree().await.unwrap();
+                        assert_eq!(0, tree.num_bytes().await.unwrap());
+                        assert_eq!(1, tree.num_nodes().await.unwrap());
+                    })
+                })
+                .await;
+            });
+        }
 
-                        let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
+        #[test]
+        fn check_test_setup() {
+            run_tokio_test!({
+                with_treestore(|store| {
+                    Box::pin(async move {
+                        let layout = NodeLayout {
+                            block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+                        };
+                        // Just make sure our calculation of LAYOUT is correct
                         assert_eq!(
-                            param.expected_num_bytes(layout),
-                            tree.num_bytes().await.unwrap()
+                            layout.max_bytes_per_leaf(),
+                            store.virtual_block_size_bytes(),
                         );
+                    })
+                })
+                .await;
+            });
+        }
+
+        #[cfg(feature = "slow-tests-1")]
+        #[apply(super::testutils::tree_parameters)]
+        #[test]
+        fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(
+            #[values(40, 64, 512)] block_size_bytes: u32,
+            #[case] param: Parameter,
+        ) {
+            run_tokio_test!({
+                let layout = NodeLayout { block_size_bytes };
+                if param.num_full_leaves.eval(layout) > 0 && param.last_leaf_num_bytes.eval(layout) == 0
+                {
+                    // This is a special case where we can't build the tree via a call to [resize_num_bytes]
+                    // because that would never leave the last leaf empty
+                    return;
+                }
+                with_treestore_with_blocksize(block_size_bytes, move |store| {
+                    Box::pin(async move {
+                        let mut tree = store.create_tree().await.unwrap();
+                        let num_bytes = layout.max_bytes_per_leaf() as u64
+                            * param.num_full_leaves.eval(layout)
+                            + param.last_leaf_num_bytes.eval(layout);
+                        tree.resize_num_bytes(num_bytes).await.unwrap();
+                        assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
                         assert_eq!(
                             param.expected_num_nodes(layout),
                             tree.num_nodes().await.unwrap()
@@ -1099,80 +1079,127 @@ mod tests {
 
                         // Check the values are still the same when queried again
                         // (they should now be returned from the cache instead of calculated)
-                        assert_eq!(
-                            param.expected_num_bytes(layout),
-                            tree.num_bytes().await.unwrap()
-                        );
+                        assert_eq!(num_bytes, tree.num_bytes().await.unwrap());
                         assert_eq!(
                             param.expected_num_nodes(layout),
                             tree.num_nodes().await.unwrap()
                         );
                     })
-                },
-            )
-            .await;
+                })
+                .await;
+            });
+        }
+
+        #[cfg(feature = "slow-tests-1")]
+        #[apply(super::testutils::tree_parameters)]
+        #[test]
+        fn build_tree_manually_and_check_num_bytes_and_num_nodes(
+            #[values(40, 64, 512)] block_size_bytes: u32,
+            #[case] param: Parameter,
+        ) {
+            run_tokio_test!({
+                let layout = NodeLayout { block_size_bytes };
+                with_treestore_and_nodestore_with_blocksize(
+                    block_size_bytes,
+                    |treestore, nodestore| {
+                        Box::pin(async move {
+                            let root_id = param.create_tree(nodestore).await;
+
+                            let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
+                            assert_eq!(
+                                param.expected_num_bytes(layout),
+                                tree.num_bytes().await.unwrap()
+                            );
+                            assert_eq!(
+                                param.expected_num_nodes(layout),
+                                tree.num_nodes().await.unwrap()
+                            );
+
+                            // Check the values are still the same when queried again
+                            // (they should now be returned from the cache instead of calculated)
+                            assert_eq!(
+                                param.expected_num_bytes(layout),
+                                tree.num_bytes().await.unwrap()
+                            );
+                            assert_eq!(
+                                param.expected_num_nodes(layout),
+                                tree.num_nodes().await.unwrap()
+                            );
+                        })
+                    },
+                )
+                .await;
+            });
         }
     }
 
     mod root_node_id {
         use super::*;
 
-        #[tokio::test]
-        async fn after_creating_one_node_tree() {
-            with_treestore(|store| {
-                Box::pin(async move {
-                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
-                    assert_eq!(root_id, *tree.root_node_id());
+        #[test]
+        fn after_creating_one_node_tree() {
+            run_tokio_test!({
+                with_treestore(|store| {
+                    Box::pin(async move {
+                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                        assert_eq!(root_id, *tree.root_node_id());
+                    })
                 })
-            })
-            .await
+                .await
+            });
         }
 
-        #[tokio::test]
-        async fn after_loading_one_node_tree() {
-            with_treestore(|store| {
-                Box::pin(async move {
-                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    store.try_create_tree(root_id).await.unwrap().unwrap();
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
-                    assert_eq!(root_id, *tree.root_node_id());
+        #[test]
+        fn after_loading_one_node_tree() {
+            run_tokio_test!({
+                with_treestore(|store| {
+                    Box::pin(async move {
+                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        store.try_create_tree(root_id).await.unwrap().unwrap();
+                        let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                        assert_eq!(root_id, *tree.root_node_id());
+                    })
                 })
-            })
-            .await
+                .await
+            });
         }
 
-        #[tokio::test]
-        async fn after_creating_multi_node_tree() {
-            with_treestore(|store| {
-                Box::pin(async move {
-                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
-                    tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
-                        .await
-                        .unwrap();
-                    assert_eq!(root_id, *tree.root_node_id());
+        #[test]
+        fn after_creating_multi_node_tree() {
+            run_tokio_test!({
+                with_treestore(|store| {
+                    Box::pin(async move {
+                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                        tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
+                            .await
+                            .unwrap();
+                        assert_eq!(root_id, *tree.root_node_id());
+                    })
                 })
-            })
-            .await
+                .await
+            });
         }
 
-        #[tokio::test]
-        async fn after_loading_multi_node_tree() {
-            with_treestore(|store| {
-                Box::pin(async move {
-                    let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
-                    tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
-                        .await
-                        .unwrap();
-                    std::mem::drop(tree);
+        #[test]
+        fn after_loading_multi_node_tree() {
+            run_tokio_test!({
+                with_treestore(|store| {
+                    Box::pin(async move {
+                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                        tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
+                            .await
+                            .unwrap();
+                        std::mem::drop(tree);
 
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
-                    assert_eq!(root_id, *tree.root_node_id());
+                        let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                        assert_eq!(root_id, *tree.root_node_id());
+                    })
                 })
-            })
-            .await
+                .await
+            });
         }
     }
 
@@ -1184,19 +1211,21 @@ mod tests {
     macro_rules! instantiate_read_write_tests {
         ($test_fn:ident) => {
             #[apply(super::testutils::tree_parameters)]
-            #[tokio::test]
-            async fn whole_tree(
+            #[test]
+            fn whole_tree(
                 #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
             ) {
-                let layout = NodeLayout { block_size_bytes };
-                let expected_num_bytes = param.expected_num_bytes(layout);
-                $test_fn(block_size_bytes, param, 0, expected_num_bytes as usize).await;
+                run_tokio_test!({
+                    let layout = NodeLayout { block_size_bytes };
+                    let expected_num_bytes = param.expected_num_bytes(layout);
+                    $test_fn(block_size_bytes, param, 0, expected_num_bytes as usize).await;
+                });
             }
 
             #[apply(super::testutils::tree_parameters)]
-            #[tokio::test]
-            async fn single_byte(
+            #[test]
+            fn single_byte(
                 #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
@@ -1210,16 +1239,18 @@ mod tests {
                 )]
                 byte_index_in_leaf: ParamNum,
             ) {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + byte_index_in_leaf.eval(layout);
-                $test_fn(block_size_bytes, param, byte_index, 1).await;
+                run_tokio_test!({
+                    let layout = NodeLayout { block_size_bytes };
+                    let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
+                    let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
+                        + byte_index_in_leaf.eval(layout);
+                    $test_fn(block_size_bytes, param, byte_index, 1).await;
+                });
             }
 
             #[apply(super::testutils::tree_parameters)]
-            #[tokio::test]
-            async fn two_bytes(
+            #[test]
+            fn two_bytes(
                 #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
@@ -1234,16 +1265,18 @@ mod tests {
                 )]
                 first_byte_index_in_leaf: ParamNum,
             ) {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + first_byte_index_in_leaf.eval(layout);
-                $test_fn(block_size_bytes, param, first_byte_index, 2).await;
+                run_tokio_test!({
+                    let layout = NodeLayout { block_size_bytes };
+                    let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
+                    let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
+                        + first_byte_index_in_leaf.eval(layout);
+                    $test_fn(block_size_bytes, param, first_byte_index, 2).await;
+                });
             }
 
             #[apply(super::testutils::tree_parameters)]
-            #[tokio::test]
-            async fn single_leaf(
+            #[test]
+            fn single_leaf(
                 #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(
@@ -1263,24 +1296,26 @@ mod tests {
                 )]
                 byte_indices: (ParamNum, ParamNum),
             ) {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-                let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
-                    * layout.max_bytes_per_leaf() as u64;
-                let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
-                let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
-                $test_fn(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
+                run_tokio_test!({
+                    let layout = NodeLayout { block_size_bytes };
+                    let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
+                    let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
+                        * layout.max_bytes_per_leaf() as u64;
+                    let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
+                    let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
+                    $test_fn(
+                        block_size_bytes,
+                        param,
+                        begin_byte_index,
+                        (end_byte_index - begin_byte_index) as usize,
+                    )
+                    .await;
+                });
             }
 
             #[apply(super::testutils::tree_parameters)]
-            #[tokio::test]
-            async fn across_leaves(
+            #[test]
+            fn across_leaves(
                 #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(
@@ -1310,28 +1345,30 @@ mod tests {
                 )]
                 end_byte_index_in_leaf: ParamNum,
             ) {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_leaf_index, last_leaf_index) = leaf_indices;
-                let begin_byte_index = {
-                    let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
-                };
-                let end_byte_index = {
-                    let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + end_byte_index_in_leaf.eval(layout)
-                };
-                if end_byte_index < begin_byte_index {
-                    return;
-                }
-                $test_fn(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
+                run_tokio_test!({
+                    let layout = NodeLayout { block_size_bytes };
+                    let (begin_leaf_index, last_leaf_index) = leaf_indices;
+                    let begin_byte_index = {
+                        let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
+                            * layout.max_bytes_per_leaf() as u64;
+                        first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
+                    };
+                    let end_byte_index = {
+                        let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
+                            * layout.max_bytes_per_leaf() as u64;
+                        first_leaf_byte + end_byte_index_in_leaf.eval(layout)
+                    };
+                    if end_byte_index < begin_byte_index {
+                        return;
+                    }
+                    $test_fn(
+                        block_size_bytes,
+                        param,
+                        begin_byte_index,
+                        (end_byte_index - begin_byte_index) as usize,
+                    )
+                    .await;
+                });
             }
         };
     }
@@ -1484,29 +1521,31 @@ mod tests {
         use cryfs_utils::data::Data;
 
         #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_whole_tree(
+        #[test]
+        fn read_whole_tree(
             #[values(40, 64, 512)] block_size_bytes: u32,
             #[case] param: Parameter,
         ) {
-            let layout = NodeLayout { block_size_bytes };
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
-                    Box::pin(async move {
-                        let data = DataFixture::new(0);
-                        let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                        let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+            run_tokio_test!({
+                let layout = NodeLayout { block_size_bytes };
+                with_treestore_and_nodestore_with_blocksize(
+                    block_size_bytes,
+                    |treestore, nodestore| {
+                        Box::pin(async move {
+                            let data = DataFixture::new(0);
+                            let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                            let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
-                        let read_data = tree.read_all().await.unwrap();
-                        assert_eq!(param.expected_num_bytes(layout) as usize, read_data.len());
-                        let expected_data: Data =
-                            data.get(param.expected_num_bytes(layout) as usize).into();
-                        assert_eq!(expected_data, read_data);
-                    })
-                },
-            )
-            .await;
+                            let read_data = tree.read_all().await.unwrap();
+                            assert_eq!(param.expected_num_bytes(layout) as usize, read_data.len());
+                            let expected_data: Data =
+                                data.get(param.expected_num_bytes(layout) as usize).into();
+                            assert_eq!(expected_data, read_data);
+                        })
+                    },
+                )
+                .await;
+            });
         }
     }
 
