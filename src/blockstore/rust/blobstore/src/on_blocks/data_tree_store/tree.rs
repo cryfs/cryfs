@@ -839,7 +839,7 @@ mod tests {
                 id
             }
         }
-        
+
         #[template]
         #[rstest]
         #[case::one_leaf_empty(Parameter {
@@ -1175,6 +1175,174 @@ mod tests {
         }
     }
 
+    #[cfg(any(
+        feature = "slow-tests-1",
+        feature = "slow-tests-2",
+        feature = "slow-tests-4",
+    ))]
+    macro_rules! instantiate_read_write_tests {
+        ($test_fn:ident) => {
+            #[apply(super::testutils::tree_parameters)]
+            #[tokio::test]
+            async fn whole_tree(
+                #[values(40, 64, 512)] block_size_bytes: u32,
+                #[case] param: Parameter,
+            ) {
+                let layout = NodeLayout { block_size_bytes };
+                let expected_num_bytes = param.expected_num_bytes(layout);
+                $test_fn(block_size_bytes, param, 0, expected_num_bytes as usize).await;
+            }
+
+            #[apply(super::testutils::tree_parameters)]
+            #[tokio::test]
+            async fn single_byte(
+                #[case] param: Parameter,
+                #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
+                leaf_index: LeafIndex,
+                #[values(
+                    ParamNum::Val(0),
+                    ParamNum::Val(1),
+                    ParamNum::HalfMaxBytesPerLeaf,
+                    ParamNum::MaxBytesPerLeafMinus(2),
+                    ParamNum::MaxBytesPerLeafMinus(1)
+                )]
+                byte_index_in_leaf: ParamNum,
+            ) {
+                // Using for-loop instead of #[values] because otherwise compile times go through the roof
+                for block_size_bytes in [40, 64, 512] {
+                    let layout = NodeLayout { block_size_bytes };
+                    let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
+                    let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
+                        + byte_index_in_leaf.eval(layout);
+                    $test_fn(block_size_bytes, param, byte_index, 1).await;
+                }
+            }
+
+            #[apply(super::testutils::tree_parameters)]
+            #[tokio::test]
+            async fn two_bytes(
+                #[case] param: Parameter,
+                #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
+                leaf_index: LeafIndex,
+                // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
+                #[values(
+                    ParamNum::Val(0),
+                    ParamNum::Val(1),
+                    ParamNum::HalfMaxBytesPerLeaf,
+                    ParamNum::MaxBytesPerLeafMinus(2),
+                    ParamNum::MaxBytesPerLeafMinus(1)
+                )]
+                first_byte_index_in_leaf: ParamNum,
+            ) {
+                // Using for-loop instead of #[values] because otherwise compile times go through the roof
+                for block_size_bytes in [40, 64, 512] {
+                    let layout = NodeLayout { block_size_bytes };
+                    let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
+                    let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
+                        + first_byte_index_in_leaf.eval(layout);
+                    $test_fn(block_size_bytes, param, first_byte_index, 2).await;
+                }
+            }
+
+            #[apply(super::testutils::tree_parameters)]
+            #[tokio::test]
+            async fn single_leaf(
+                #[case] param: Parameter,
+                #[values(
+                    LeafIndex::FromStart(0),
+                    LeafIndex::FromMid(0),
+                    LeafIndex::FromEnd(0),
+                    LeafIndex::FromEnd(1)
+                )]
+                leaf_index: LeafIndex,
+                #[values(
+                    // Ranges starting at the beginning of the leaf
+                    (ParamNum::Val(0), ParamNum::Val(0)), (ParamNum::Val(0), ParamNum::Val(1)), (ParamNum::Val(0), ParamNum::HalfMaxBytesPerLeaf), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(2)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(1)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(0)),
+                    // Ranges in the middle
+                    (ParamNum::Val(1), ParamNum::Val(2)), (ParamNum::Val(2), ParamNum::Val(2)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(1)),
+                    // Ranges going until the end of the leaf
+                    (ParamNum::Val(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(0), ParamNum::MaxBytesPerLeafMinus(0))
+                )]
+                byte_indices: (ParamNum, ParamNum),
+            ) {
+                // Using for-loop instead of #[values] because otherwise compile times go through the roof
+                for block_size_bytes in [40, 64, 512] {
+                    let layout = NodeLayout { block_size_bytes };
+                    let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
+                    let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
+                        * layout.max_bytes_per_leaf() as u64;
+                    let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
+                    let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
+                    $test_fn(
+                        block_size_bytes,
+                        param,
+                        begin_byte_index,
+                        (end_byte_index - begin_byte_index) as usize,
+                    )
+                    .await;
+                }
+            }
+
+            #[apply(super::testutils::tree_parameters)]
+            #[tokio::test]
+            async fn across_leaves(
+                #[case] param: Parameter,
+                #[values(
+                    (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
+                    (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
+                    (LeafIndex::FromStart(0), LeafIndex::FromEnd(0)),
+                    (LeafIndex::FromStart(0), LeafIndex::FromEnd(10)),
+                    (LeafIndex::FromStart(10), LeafIndex::FromEnd(-10)),
+                    (LeafIndex::FromMid(0), LeafIndex::FromMid(1)),
+                    (LeafIndex::FromMid(0), LeafIndex::FromEnd(0)),
+                    (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
+                    (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
+                    (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
+                    (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
+                )]
+                leaf_indices: (LeafIndex, LeafIndex),
+                #[values(
+                    ParamNum::Val(0),
+                    ParamNum::HalfMaxBytesPerLeaf,
+                    ParamNum::MaxBytesPerLeafMinus(1)
+                )]
+                begin_byte_index_in_leaf: ParamNum,
+                #[values(
+                    ParamNum::Val(1),
+                    ParamNum::HalfMaxBytesPerLeaf,
+                    ParamNum::MaxBytesPerLeafMinus(0)
+                )]
+                end_byte_index_in_leaf: ParamNum,
+            ) {
+                // Using for-loop instead of #[values] because otherwise compile times go through the roof
+                for block_size_bytes in [40, 64, 512] {
+                    let layout = NodeLayout { block_size_bytes };
+                    let (begin_leaf_index, last_leaf_index) = leaf_indices;
+                    let begin_byte_index = {
+                        let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
+                            * layout.max_bytes_per_leaf() as u64;
+                        first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
+                    };
+                    let end_byte_index = {
+                        let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
+                            * layout.max_bytes_per_leaf() as u64;
+                        first_leaf_byte + end_byte_index_in_leaf.eval(layout)
+                    };
+                    if end_byte_index < begin_byte_index {
+                        return;
+                    }
+                    $test_fn(
+                        block_size_bytes,
+                        param,
+                        begin_byte_index,
+                        (end_byte_index - begin_byte_index) as usize,
+                    )
+                    .await;
+                }
+            }
+        };
+    }
+
     #[cfg(feature = "slow-tests-1")]
     mod read_bytes {
         use super::testutils::*;
@@ -1239,160 +1407,7 @@ mod tests {
             .await;
         }
 
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_whole_tree(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
-        ) {
-            let layout = NodeLayout { block_size_bytes };
-            let expected_num_bytes = param.expected_num_bytes(layout);
-            test_read_bytes(block_size_bytes, param, 0, expected_num_bytes as usize).await;
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_single_byte(
-            #[case] param: Parameter,
-            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
-            leaf_index: LeafIndex,
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(2),
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + byte_index_in_leaf.eval(layout);
-                test_read_bytes(block_size_bytes, param, byte_index, 1).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_two_bytes(
-            #[case] param: Parameter,
-            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
-            leaf_index: LeafIndex,
-            // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(2),
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            first_byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + first_byte_index_in_leaf.eval(layout);
-                test_read_bytes(block_size_bytes, param, first_byte_index, 2).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_single_leaf(
-            #[case] param: Parameter,
-            #[values(
-                LeafIndex::FromStart(0),
-                LeafIndex::FromMid(0),
-                LeafIndex::FromEnd(0),
-                LeafIndex::FromEnd(1)
-            )]
-            leaf_index: LeafIndex,
-            #[values(
-                // Ranges starting at the beginning of the leaf
-                (ParamNum::Val(0), ParamNum::Val(0)), (ParamNum::Val(0), ParamNum::Val(1)), (ParamNum::Val(0), ParamNum::HalfMaxBytesPerLeaf), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(2)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(1)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(0)),
-                // Ranges in the middle
-                (ParamNum::Val(1), ParamNum::Val(2)), (ParamNum::Val(2), ParamNum::Val(2)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(1)),
-                // Ranges going until the end of the leaf
-                (ParamNum::Val(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(0), ParamNum::MaxBytesPerLeafMinus(0))
-            )]
-            byte_indices: (ParamNum, ParamNum),
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-                let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
-                    * layout.max_bytes_per_leaf() as u64;
-                let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
-                let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
-                test_read_bytes(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_across_leaves(
-            #[case] param: Parameter,
-            #[values(
-                (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
-                (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
-                (LeafIndex::FromStart(0), LeafIndex::FromEnd(0)),
-                (LeafIndex::FromStart(0), LeafIndex::FromEnd(10)),
-                (LeafIndex::FromStart(10), LeafIndex::FromEnd(-10)),
-                (LeafIndex::FromMid(0), LeafIndex::FromMid(1)),
-                (LeafIndex::FromMid(0), LeafIndex::FromEnd(0)),
-                (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
-                (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
-                (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
-                (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
-            )]
-            leaf_indices: (LeafIndex, LeafIndex),
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            begin_byte_index_in_leaf: ParamNum,
-            #[values(
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(0)
-            )]
-            end_byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_leaf_index, last_leaf_index) = leaf_indices;
-                let begin_byte_index = {
-                    let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
-                };
-                let end_byte_index = {
-                    let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + end_byte_index_in_leaf.eval(layout)
-                };
-                if end_byte_index < begin_byte_index {
-                    return;
-                }
-                test_read_bytes(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
-            }
-        }
+        instantiate_read_write_tests!(test_read_bytes);
     }
 
     #[cfg(feature = "slow-tests-2")]
@@ -1466,160 +1481,7 @@ mod tests {
             .await;
         }
 
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_whole_tree(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
-        ) {
-            let layout = NodeLayout { block_size_bytes };
-            let expected_num_bytes = param.expected_num_bytes(layout);
-            test_try_read_bytes(block_size_bytes, param, 0, expected_num_bytes as usize).await;
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_single_byte(
-            #[case] param: Parameter,
-            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
-            leaf_index: LeafIndex,
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(2),
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + byte_index_in_leaf.eval(layout);
-                test_try_read_bytes(block_size_bytes, param, byte_index, 1).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_two_bytes(
-            #[case] param: Parameter,
-            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
-            leaf_index: LeafIndex,
-            // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(2),
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            first_byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + first_byte_index_in_leaf.eval(layout);
-                test_try_read_bytes(block_size_bytes, param, first_byte_index, 2).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_single_leaf(
-            #[case] param: Parameter,
-            #[values(
-                LeafIndex::FromStart(0),
-                LeafIndex::FromMid(0),
-                LeafIndex::FromEnd(0),
-                LeafIndex::FromEnd(1)
-            )]
-            leaf_index: LeafIndex,
-            #[values(
-                // Ranges starting at the beginning of the leaf
-                (ParamNum::Val(0), ParamNum::Val(0)), (ParamNum::Val(0), ParamNum::Val(1)), (ParamNum::Val(0), ParamNum::HalfMaxBytesPerLeaf), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(2)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(1)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(0)),
-                // Ranges in the middle
-                (ParamNum::Val(1), ParamNum::Val(2)), (ParamNum::Val(2), ParamNum::Val(2)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(1)),
-                // Ranges going until the end of the leaf
-                (ParamNum::Val(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(0), ParamNum::MaxBytesPerLeafMinus(0))
-            )]
-            byte_indices: (ParamNum, ParamNum),
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-                let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
-                    * layout.max_bytes_per_leaf() as u64;
-                let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
-                let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
-                test_try_read_bytes(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn read_across_leaves(
-            #[case] param: Parameter,
-            #[values(
-                (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
-                (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
-                (LeafIndex::FromStart(0), LeafIndex::FromEnd(0)),
-                (LeafIndex::FromStart(0), LeafIndex::FromEnd(10)),
-                (LeafIndex::FromStart(10), LeafIndex::FromEnd(-10)),
-                (LeafIndex::FromMid(0), LeafIndex::FromMid(1)),
-                (LeafIndex::FromMid(0), LeafIndex::FromEnd(0)),
-                (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
-                (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
-                (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
-                (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
-            )]
-            leaf_indices: (LeafIndex, LeafIndex),
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            begin_byte_index_in_leaf: ParamNum,
-            #[values(
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(0)
-            )]
-            end_byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_leaf_index, last_leaf_index) = leaf_indices;
-                let begin_byte_index = {
-                    let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
-                };
-                let end_byte_index = {
-                    let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + end_byte_index_in_leaf.eval(layout)
-                };
-                if end_byte_index < begin_byte_index {
-                    return;
-                }
-                test_try_read_bytes(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
-            }
-        }
+        instantiate_read_write_tests!(test_try_read_bytes);
     }
 
     #[cfg(feature = "slow-tests-3")]
@@ -1743,160 +1605,7 @@ mod tests {
             .await;
         }
 
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn write_whole_tree(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
-        ) {
-            let layout = NodeLayout { block_size_bytes };
-            let expected_num_bytes = param.expected_num_bytes(layout);
-            test_write_bytes(block_size_bytes, param, 0, expected_num_bytes as usize).await;
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn write_single_byte(
-            #[case] param: Parameter,
-            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
-            leaf_index: LeafIndex,
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(2),
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + byte_index_in_leaf.eval(layout);
-                test_write_bytes(block_size_bytes, param, byte_index, 1).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn write_two_bytes(
-            #[case] param: Parameter,
-            #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
-            leaf_index: LeafIndex,
-            // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(2),
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            first_byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                    + first_byte_index_in_leaf.eval(layout);
-                test_write_bytes(block_size_bytes, param, first_byte_index, 2).await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn write_single_leaf(
-            #[case] param: Parameter,
-            #[values(
-                LeafIndex::FromStart(0),
-                LeafIndex::FromMid(0),
-                LeafIndex::FromEnd(0),
-                LeafIndex::FromEnd(1)
-            )]
-            leaf_index: LeafIndex,
-            #[values(
-                // Ranges starting at the beginning of the leaf
-                (ParamNum::Val(0), ParamNum::Val(0)), (ParamNum::Val(0), ParamNum::Val(1)), (ParamNum::Val(0), ParamNum::HalfMaxBytesPerLeaf), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(2)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(1)), (ParamNum::Val(0), ParamNum::MaxBytesPerLeafMinus(0)),
-                // Ranges in the middle
-                (ParamNum::Val(1), ParamNum::Val(2)), (ParamNum::Val(2), ParamNum::Val(2)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(1)),
-                // Ranges going until the end of the leaf
-                (ParamNum::Val(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::HalfMaxBytesPerLeaf, ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(1), ParamNum::MaxBytesPerLeafMinus(0)), (ParamNum::MaxBytesPerLeafMinus(0), ParamNum::MaxBytesPerLeafMinus(0))
-            )]
-            byte_indices: (ParamNum, ParamNum),
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-                let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
-                    * layout.max_bytes_per_leaf() as u64;
-                let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
-                let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
-                test_write_bytes(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
-            }
-        }
-
-        #[apply(super::testutils::tree_parameters)]
-        #[tokio::test]
-        async fn write_across_leaves(
-            #[case] param: Parameter,
-            #[values(
-                (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
-                (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
-                (LeafIndex::FromStart(0), LeafIndex::FromEnd(0)),
-                (LeafIndex::FromStart(0), LeafIndex::FromEnd(10)),
-                (LeafIndex::FromStart(10), LeafIndex::FromEnd(-10)),
-                (LeafIndex::FromMid(0), LeafIndex::FromMid(1)),
-                (LeafIndex::FromMid(0), LeafIndex::FromEnd(0)),
-                (LeafIndex::FromMid(0), LeafIndex::FromEnd(10)),
-                (LeafIndex::FromEnd(0), LeafIndex::FromEnd(5)),
-                (LeafIndex::FromEnd(1), LeafIndex::FromEnd(5)),
-                (LeafIndex::FromEnd(20), LeafIndex::FromEnd(50)),
-            )]
-            leaf_indices: (LeafIndex, LeafIndex),
-            #[values(
-                ParamNum::Val(0),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(1)
-            )]
-            begin_byte_index_in_leaf: ParamNum,
-            #[values(
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(0)
-            )]
-            end_byte_index_in_leaf: ParamNum,
-        ) {
-            for block_size_bytes in [40, 64, 512] {
-                let layout = NodeLayout { block_size_bytes };
-                let (begin_leaf_index, last_leaf_index) = leaf_indices;
-                let begin_byte_index = {
-                    let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
-                };
-                let end_byte_index = {
-                    let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    first_leaf_byte + end_byte_index_in_leaf.eval(layout)
-                };
-                if end_byte_index < begin_byte_index {
-                    return;
-                }
-                test_write_bytes(
-                    block_size_bytes,
-                    param,
-                    begin_byte_index,
-                    (end_byte_index - begin_byte_index) as usize,
-                )
-                .await;
-            }
-        }
+        instantiate_read_write_tests!(test_write_bytes);
     }
 
     // TODO Test flush
