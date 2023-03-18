@@ -760,7 +760,6 @@ mod tests {
             }
         }
 
-
         /// Parameter for creating a tree.
         /// This can be used for parameterized tests
         #[derive(Clone, Copy)]
@@ -1007,7 +1006,7 @@ mod tests {
                 .enable_all()
                 .build()
                 .unwrap()
-                .block_on(async move {$code});
+                .block_on(async move { $code });
         };
     }
 
@@ -1058,7 +1057,8 @@ mod tests {
         ) {
             run_tokio_test!({
                 let layout = NodeLayout { block_size_bytes };
-                if param.num_full_leaves.eval(layout) > 0 && param.last_leaf_num_bytes.eval(layout) == 0
+                if param.num_full_leaves.eval(layout) > 0
+                    && param.last_leaf_num_bytes.eval(layout) == 0
                 {
                     // This is a special case where we can't build the tree via a call to [resize_num_bytes]
                     // because that would never leave the last leaf empty
@@ -1141,7 +1141,8 @@ mod tests {
             run_tokio_test!({
                 with_treestore(|store| {
                     Box::pin(async move {
-                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let root_id =
+                            BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
                         let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                         assert_eq!(root_id, *tree.root_node_id());
                     })
@@ -1155,7 +1156,8 @@ mod tests {
             run_tokio_test!({
                 with_treestore(|store| {
                     Box::pin(async move {
-                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let root_id =
+                            BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
                         store.try_create_tree(root_id).await.unwrap().unwrap();
                         let tree = store.load_tree(root_id).await.unwrap().unwrap();
                         assert_eq!(root_id, *tree.root_node_id());
@@ -1170,7 +1172,8 @@ mod tests {
             run_tokio_test!({
                 with_treestore(|store| {
                     Box::pin(async move {
-                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let root_id =
+                            BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
                         let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                         tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
                             .await
@@ -1187,7 +1190,8 @@ mod tests {
             run_tokio_test!({
                 with_treestore(|store| {
                     Box::pin(async move {
-                        let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
+                        let root_id =
+                            BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
                         let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                         tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
                             .await
@@ -1522,10 +1526,7 @@ mod tests {
 
         #[apply(super::testutils::tree_parameters)]
         #[test]
-        fn read_whole_tree(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
-        ) {
+        fn read_whole_tree(#[values(40, 64, 512)] block_size_bytes: u32, #[case] param: Parameter) {
             run_tokio_test!({
                 let layout = NodeLayout { block_size_bytes };
                 with_treestore_and_nodestore_with_blocksize(
