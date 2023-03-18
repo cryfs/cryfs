@@ -697,6 +697,7 @@ mod tests {
     #[cfg(any(feature = "slow-tests-1", feature = "slow-tests-2",))]
     use super::super::super::data_tree_store::DataTree;
     use super::super::testutils::*;
+    use divrem::DivCeil;
     use cryfs_blockstore::BlockId;
     #[cfg(feature = "slow-tests-any")]
     use cryfs_blockstore::BlockStore;
@@ -711,10 +712,14 @@ mod tests {
 
     #[cfg(feature = "slow-tests-any")]
     mod testutils {
-        use super::super::super::super::data_node_store::DataNodeStore;
+        use super::super::super::super::data_node_store::{DataNode, DataNodeStore};
+        use super::super::super::{DataTree, DataTreeStore};
         use super::*;
 
-        #[derive(Clone, Copy)]
+        use futures::future;
+        use async_recursion::async_recursion;
+
+        #[derive(Clone, Copy, PartialEq, Eq)]
         pub enum ParamNum {
             Val(u64),
             MaxBytesPerLeafMinus(u64),
@@ -802,6 +807,11 @@ mod tests {
                     + self.last_leaf_num_bytes.eval(layout)
             }
 
+            pub fn expected_depth(&self, layout: NodeLayout) -> u8 {
+                let num_leaves = 1 + self.num_full_leaves.eval(layout);
+                expected_depth_for_num_leaves(num_leaves, layout)
+            }
+
             #[cfg(feature = "slow-tests-1")]
             pub async fn create_tree<B: BlockStore + Send + Sync>(
                 &self,
@@ -838,6 +848,26 @@ mod tests {
                 nodestore.clear_cache_slow().await.unwrap();
                 id
             }
+        }
+
+        pub fn expected_depth_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u8 {
+            assert!(num_leaves > 0);
+            let mut depth = 0;
+            let mut num_nodes_current_level = num_leaves;
+            while num_nodes_current_level > 1 {
+                depth += 1;
+                num_nodes_current_level = DivCeil::div_ceil(
+                    num_nodes_current_level,
+                    layout.max_children_per_inner_node() as u64,
+                );
+            }
+            assert_eq!(1, num_nodes_current_level);
+            depth
+        }
+
+        pub fn expected_depth_for_num_bytes(num_bytes: u64, layout: NodeLayout) -> u8 {
+            let num_leaves = DivCeil::div_ceil(num_bytes, layout.max_bytes_per_leaf() as u64).max(1);
+            expected_depth_for_num_leaves(num_leaves, layout)
         }
 
         #[template]
@@ -997,6 +1027,75 @@ mod tests {
                 }
             }
         }
+
+        #[async_recursion]
+        pub async fn assert_is_max_data_tree<B: BlockStore + Send + Sync>(root_id: BlockId, expected_depth: u8, nodestore: &DataNodeStore<B>) {
+            let root = nodestore.load(root_id).await.unwrap().expect("Node not found");
+            let root_depth = root.depth();
+            assert_eq!(root_depth, expected_depth, "Expected a node at depth {expected_depth} but found one at depth {root_depth}");
+            match root {
+                DataNode::Leaf(leaf) => {
+                    assert_eq!(nodestore.layout().max_bytes_per_leaf(), leaf.num_bytes());
+                }
+                DataNode::Inner(inner) => {
+                    let next_expected_depth = expected_depth.checked_sub(1).unwrap();
+                    let children = inner.children();
+                    assert_eq!(nodestore.layout().max_children_per_inner_node() as usize, children.len());
+                    future::join_all(children.map(|child_id| async move {
+                        assert_is_max_data_tree(child_id, next_expected_depth, nodestore).await;
+                    })).await;
+                }
+            }
+        }
+
+        #[async_recursion]
+        pub async fn assert_is_left_max_data_tree<B: BlockStore + Send + Sync>(root_id: BlockId, expected_depth: u8, nodestore: &DataNodeStore<B>) {
+            let root = nodestore.load(root_id).await.unwrap().expect("Node not found");
+            let root_depth = root.depth();
+            assert_eq!(expected_depth, root_depth, "Expected a node at depth {expected_depth} but found one at depth {root_depth}");
+            match root {
+                DataNode::Leaf(_) => {}
+                DataNode::Inner(inner) => {
+                    let next_expected_depth = expected_depth.checked_sub(1).unwrap();
+                    let children = inner.children();
+                    let children_len = children.len();
+                    assert!(children_len >= 1);
+                    future::join_all(children.enumerate().map(|(child_index, child_id)| async move {
+                        if child_index == children_len - 1 {
+                            assert_is_left_max_data_tree(child_id, next_expected_depth, nodestore).await;
+                        } else {
+                            // Children not on the right boundary need to be full
+                            assert_is_max_data_tree(child_id, next_expected_depth, nodestore).await;
+                        }
+                    })).await;
+                }
+            }
+        }
+
+        pub async fn assert_tree_structure<'a, B: BlockStore + Send + Sync>(tree: DataTree<'a, B>, expected_depth: u8, treestore: &DataTreeStore<B>, nodestore: &DataNodeStore<B>) {
+            let root_id = *tree.root_node_id();
+
+            // Flush tree
+            std::mem::drop(tree);
+
+            // Flush tree store cache
+            treestore.clear_cache_slow().await.unwrap();
+            nodestore.clear_cache_slow().await.unwrap();
+
+            // The root node must be a leaf or have more than one child, otherwise it would be a degenerate tree
+            {
+                let root = nodestore.load(root_id).await.unwrap().expect("Root node not found");
+                match root {
+                    DataNode::Leaf(_) => {}
+                    DataNode::Inner(inner) => {
+                        assert!(inner.children().len() >= 2);
+                    }
+                }
+            }
+
+
+            assert_is_left_max_data_tree(root_id, expected_depth, nodestore).await;
+        }
     }
 
     // TODO Remove this macro and go back to using #[tokio::test] once https://github.com/la10736/rstest/issues/184 is resolved
@@ -1064,9 +1163,9 @@ mod tests {
                     // because that would never leave the last leaf empty
                     return;
                 }
-                with_treestore_with_blocksize(block_size_bytes, move |store| {
+                with_treestore_with_blocksize(block_size_bytes, move |treestore| {
                     Box::pin(async move {
-                        let mut tree = store.create_tree().await.unwrap();
+                        let mut tree = treestore.create_tree().await.unwrap();
                         let num_bytes = layout.max_bytes_per_leaf() as u64
                             * param.num_full_leaves.eval(layout)
                             + param.last_leaf_num_bytes.eval(layout);
@@ -1442,6 +1541,8 @@ mod tests {
         }
 
         instantiate_read_write_tests!(test_read_bytes);
+
+        // TODO Test read_bytes, try_read_bytes and read_all don't change the tree
     }
 
     #[cfg(feature = "slow-tests-2")]
@@ -1571,6 +1672,10 @@ mod tests {
 
                         // Create tree with `base_data`
                         let tree_id = params.create_tree_with_data(nodestore, &base_data).await;
+                        let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+
+                        // Check the test case set it up correctly
+                        assert_tree_structure(tree, params.expected_depth(layout), treestore, nodestore).await;
                         let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
                         // Write subregion with `write_data`
@@ -1632,6 +1737,16 @@ mod tests {
                             // See comment above, we don't grow the region if num_bytes == 0
                             // TODO See TODO above, is this actually the behavior we want?
                         }
+
+                        // Check the new tree structure is valid
+                        let expected_depth = if expected_new_size > params.expected_num_bytes(layout) {
+                            expected_depth_for_num_bytes(expected_new_size, layout)
+                        } else {
+                            // We don't use `expected_depth_for_num_bytes` here because it would be inaccurate
+                            // for the corner case where we created a tree with last_leaf_size == 0.
+                            params.expected_depth(layout)
+                        };
+                        assert_tree_structure(tree, expected_depth, treestore, nodestore).await;
                     })
                 },
             )
