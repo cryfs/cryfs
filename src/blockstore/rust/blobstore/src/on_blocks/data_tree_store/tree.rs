@@ -760,6 +760,7 @@ mod tests {
             }
         }
 
+
         /// Parameter for creating a tree.
         /// This can be used for parameterized tests
         #[derive(Clone, Copy)]
@@ -1196,6 +1197,7 @@ mod tests {
             #[apply(super::testutils::tree_parameters)]
             #[tokio::test]
             async fn single_byte(
+                #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
                 leaf_index: LeafIndex,
@@ -1208,19 +1210,17 @@ mod tests {
                 )]
                 byte_index_in_leaf: ParamNum,
             ) {
-                // Using for-loop instead of #[values] because otherwise compile times go through the roof
-                for block_size_bytes in [40, 64, 512] {
-                    let layout = NodeLayout { block_size_bytes };
-                    let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                    let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                        + byte_index_in_leaf.eval(layout);
-                    $test_fn(block_size_bytes, param, byte_index, 1).await;
-                }
+                let layout = NodeLayout { block_size_bytes };
+                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
+                let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
+                    + byte_index_in_leaf.eval(layout);
+                $test_fn(block_size_bytes, param, byte_index, 1).await;
             }
 
             #[apply(super::testutils::tree_parameters)]
             #[tokio::test]
             async fn two_bytes(
+                #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
                 leaf_index: LeafIndex,
@@ -1234,19 +1234,17 @@ mod tests {
                 )]
                 first_byte_index_in_leaf: ParamNum,
             ) {
-                // Using for-loop instead of #[values] because otherwise compile times go through the roof
-                for block_size_bytes in [40, 64, 512] {
-                    let layout = NodeLayout { block_size_bytes };
-                    let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
-                    let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
-                        + first_byte_index_in_leaf.eval(layout);
-                    $test_fn(block_size_bytes, param, first_byte_index, 2).await;
-                }
+                let layout = NodeLayout { block_size_bytes };
+                let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
+                let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
+                    + first_byte_index_in_leaf.eval(layout);
+                $test_fn(block_size_bytes, param, first_byte_index, 2).await;
             }
 
             #[apply(super::testutils::tree_parameters)]
             #[tokio::test]
             async fn single_leaf(
+                #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(
                     LeafIndex::FromStart(0),
@@ -1265,27 +1263,25 @@ mod tests {
                 )]
                 byte_indices: (ParamNum, ParamNum),
             ) {
-                // Using for-loop instead of #[values] because otherwise compile times go through the roof
-                for block_size_bytes in [40, 64, 512] {
-                    let layout = NodeLayout { block_size_bytes };
-                    let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
-                    let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
-                        * layout.max_bytes_per_leaf() as u64;
-                    let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
-                    let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
-                    $test_fn(
-                        block_size_bytes,
-                        param,
-                        begin_byte_index,
-                        (end_byte_index - begin_byte_index) as usize,
-                    )
-                    .await;
-                }
+                let layout = NodeLayout { block_size_bytes };
+                let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
+                let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
+                    * layout.max_bytes_per_leaf() as u64;
+                let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
+                let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
+                $test_fn(
+                    block_size_bytes,
+                    param,
+                    begin_byte_index,
+                    (end_byte_index - begin_byte_index) as usize,
+                )
+                .await;
             }
 
             #[apply(super::testutils::tree_parameters)]
             #[tokio::test]
             async fn across_leaves(
+                #[values(40, 64, 512)] block_size_bytes: u32,
                 #[case] param: Parameter,
                 #[values(
                     (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
@@ -1314,31 +1310,28 @@ mod tests {
                 )]
                 end_byte_index_in_leaf: ParamNum,
             ) {
-                // Using for-loop instead of #[values] because otherwise compile times go through the roof
-                for block_size_bytes in [40, 64, 512] {
-                    let layout = NodeLayout { block_size_bytes };
-                    let (begin_leaf_index, last_leaf_index) = leaf_indices;
-                    let begin_byte_index = {
-                        let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
-                            * layout.max_bytes_per_leaf() as u64;
-                        first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
-                    };
-                    let end_byte_index = {
-                        let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
-                            * layout.max_bytes_per_leaf() as u64;
-                        first_leaf_byte + end_byte_index_in_leaf.eval(layout)
-                    };
-                    if end_byte_index < begin_byte_index {
-                        return;
-                    }
-                    $test_fn(
-                        block_size_bytes,
-                        param,
-                        begin_byte_index,
-                        (end_byte_index - begin_byte_index) as usize,
-                    )
-                    .await;
+                let layout = NodeLayout { block_size_bytes };
+                let (begin_leaf_index, last_leaf_index) = leaf_indices;
+                let begin_byte_index = {
+                    let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
+                        * layout.max_bytes_per_leaf() as u64;
+                    first_leaf_byte + begin_byte_index_in_leaf.eval(layout)
+                };
+                let end_byte_index = {
+                    let first_leaf_byte = last_leaf_index.get(param.expected_num_leaves(layout))
+                        * layout.max_bytes_per_leaf() as u64;
+                    first_leaf_byte + end_byte_index_in_leaf.eval(layout)
+                };
+                if end_byte_index < begin_byte_index {
+                    return;
                 }
+                $test_fn(
+                    block_size_bytes,
+                    param,
+                    begin_byte_index,
+                    (end_byte_index - begin_byte_index) as usize,
+                )
+                .await;
             }
         };
     }
