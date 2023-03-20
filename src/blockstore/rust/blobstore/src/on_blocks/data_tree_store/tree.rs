@@ -877,141 +877,38 @@ mod tests {
             expected_depth_for_num_leaves(num_leaves, layout)
         }
 
+        pub const TREE_ONE_LEAF: ParamNum = ParamNum::Val(0);
+        pub const TREE_TWO_LEAVES: ParamNum = ParamNum::Val(1);
+        pub const TREE_TWO_LEVEL_ALMOST_FULL: ParamNum = ParamNum::MaxChildrenPerInnerNodeMinus(2);
+        pub const TREE_TWO_LEVEL_FULL: ParamNum = ParamNum::MaxChildrenPerInnerNodeMinus(1);
+        pub const TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_ONE_CHILD: ParamNum = ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasOneChild;
+        pub const TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_HALF_NUM_CHILDREN: ParamNum = ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasHalfNumChildren;
+        pub const TREE_THREE_LEVEL_FULL: ParamNum = ParamNum::NumFullLeavesForThreeLevelTree;
+        pub const TREE_FOUR_LEVEL_MIN_DATA: ParamNum = ParamNum::NumFullLeavesForFourLevelMinDataTree;
+
         #[template]
         #[rstest]
-        #[case::one_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::Val(0),
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::one_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::Val(0),
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::one_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::Val(0),
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::one_leaf_full(Parameter {
-                num_full_leaves: ParamNum::Val(0),
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::two_leaves_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::Val(1),
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::two_leaves_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::Val(1),
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::two_leaves_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::Val(1),
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::two_leaves_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::Val(1),
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::almost_full_two_level_tree_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(2),
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::almost_full_two_level_tree_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(2),
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::almost_full_two_level_tree_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(2),
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::almost_full_two_level_tree_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(2),
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::full_two_level_tree_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(1),
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::full_two_level_tree_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(1),
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::full_two_level_tree_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(1),
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::full_two_level_tree_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::MaxChildrenPerInnerNodeMinus(1),
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::three_level_tree_last_inner_has_one_child_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasOneChild,
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::three_level_tree_last_inner_has_one_child_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasOneChild,
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::three_level_tree_last_inner_has_one_child_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasOneChild,
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::three_level_tree_last_inner_has_one_child_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasOneChild,
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasHalfNumChildren,
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasHalfNumChildren,
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasHalfNumChildren,
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::three_level_tree_last_inner_has_half_num_children_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTreeWithLastInnerHasHalfNumChildren,
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::full_three_level_tree_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTree,
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::full_three_level_tree_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTree,
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::full_three_level_tree_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTree,
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::full_three_level_tree_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForThreeLevelTree,
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        #[case::four_level_min_data_tree_last_leaf_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForFourLevelMinDataTree,
-                last_leaf_num_bytes: ParamNum::Val(0),
-            })]
-        #[case::four_level_min_data_tree_last_leaf_almost_empty(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForFourLevelMinDataTree,
-                last_leaf_num_bytes: ParamNum::Val(1),
-            })]
-        #[case::four_level_min_data_tree_last_leaf_half_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForFourLevelMinDataTree,
-                last_leaf_num_bytes: ParamNum::HalfMaxBytesPerLeaf,
-            })]
-        #[case::four_level_min_data_tree_last_leaf_full(Parameter {
-                num_full_leaves: ParamNum::NumFullLeavesForFourLevelMinDataTree,
-                last_leaf_num_bytes: ParamNum::MaxBytesPerLeafMinus(0),
-            })]
-        fn tree_parameters<Fn>(#[case] param: Parameter) {}
+        fn tree_parameters<Fn>(
+            #[values(
+                TREE_ONE_LEAF,
+                TREE_TWO_LEAVES,
+                TREE_TWO_LEVEL_ALMOST_FULL,
+                TREE_TWO_LEVEL_FULL,
+                TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_ONE_CHILD,
+                TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_HALF_NUM_CHILDREN,
+                TREE_THREE_LEVEL_FULL,
+                TREE_FOUR_LEVEL_MIN_DATA,
+            )] param_num_full_leaves: ParamNum,
+            #[values(
+                ParamNum::Val(0),
+                ParamNum::Val(1),
+                ParamNum::HalfMaxBytesPerLeaf,
+                ParamNum::MaxBytesPerLeafMinus(0),
+            )] param_last_leaf_num_bytes: ParamNum) {}
 
         #[cfg(any(
             feature = "slow-tests-1",
-            feature = "slow-tests-2",
+                        feature = "slow-tests-2",
             feature = "slow-tests-4",
         ))]
         #[derive(Clone, Copy, Debug)]
@@ -1184,8 +1081,13 @@ mod tests {
         #[test]
         fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(
             #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
+            param_num_full_leaves: ParamNum,
+            param_last_leaf_num_bytes: ParamNum,
         ) {
+            let param = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
             run_tokio_test!({
                 let layout = NodeLayout { block_size_bytes };
                 if param.num_full_leaves.eval(layout) > 0
@@ -1226,8 +1128,13 @@ mod tests {
         #[test]
         fn build_tree_manually_and_check_num_bytes_and_num_nodes(
             #[values(40, 64, 512)] block_size_bytes: u32,
-            #[case] param: Parameter,
+            param_num_full_leaves: ParamNum,
+            param_last_leaf_num_bytes: ParamNum,
         ) {
+            let param = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
             run_tokio_test!({
                 let layout = NodeLayout { block_size_bytes };
                 with_treestore_and_nodestore_with_blocksize(
@@ -1349,8 +1256,13 @@ mod tests {
             #[test]
             fn whole_tree(
                 #[values(40, 64, 512)] block_size_bytes: u32,
-                #[case] param: Parameter,
+                param_num_full_leaves: ParamNum,
+                param_last_leaf_num_bytes: ParamNum,
             ) {
+                let param = Parameter {
+                    num_full_leaves: param_num_full_leaves,
+                    last_leaf_num_bytes: param_last_leaf_num_bytes,
+                };
                 run_tokio_test!({
                     let layout = NodeLayout { block_size_bytes };
                     let expected_num_bytes = param.expected_num_bytes(layout);
@@ -1362,7 +1274,8 @@ mod tests {
             #[test]
             fn single_byte(
                 #[values(40, 64, 512)] block_size_bytes: u32,
-                #[case] param: Parameter,
+                param_num_full_leaves: ParamNum,
+                param_last_leaf_num_bytes: ParamNum,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
                 leaf_index: LeafIndex,
                 #[values(
@@ -1374,6 +1287,10 @@ mod tests {
                 )]
                 byte_index_in_leaf: ParamNum,
             ) {
+                let param = Parameter {
+                    num_full_leaves: param_num_full_leaves,
+                    last_leaf_num_bytes: param_last_leaf_num_bytes,
+                };
                 run_tokio_test!({
                     let layout = NodeLayout { block_size_bytes };
                     let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
@@ -1387,7 +1304,8 @@ mod tests {
             #[test]
             fn two_bytes(
                 #[values(40, 64, 512)] block_size_bytes: u32,
-                #[case] param: Parameter,
+                param_num_full_leaves: ParamNum,
+                param_last_leaf_num_bytes: ParamNum,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
                 leaf_index: LeafIndex,
                 // The last value of `LAYOUT.max_bytes_per_leaf() as u64 - 1` means we read across the leaf boundary
@@ -1400,6 +1318,10 @@ mod tests {
                 )]
                 first_byte_index_in_leaf: ParamNum,
             ) {
+                let param = Parameter {
+                    num_full_leaves: param_num_full_leaves,
+                    last_leaf_num_bytes: param_last_leaf_num_bytes,
+                };
                 run_tokio_test!({
                     let layout = NodeLayout { block_size_bytes };
                     let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
@@ -1413,7 +1335,8 @@ mod tests {
             #[test]
             fn single_leaf(
                 #[values(40, 64, 512)] block_size_bytes: u32,
-                #[case] param: Parameter,
+                param_num_full_leaves: ParamNum,
+                param_last_leaf_num_bytes: ParamNum,
                 #[values(
                     LeafIndex::FromStart(0),
                     LeafIndex::FromMid(0),
@@ -1431,6 +1354,10 @@ mod tests {
                 )]
                 byte_indices: (ParamNum, ParamNum),
             ) {
+                let param = Parameter {
+                    num_full_leaves: param_num_full_leaves,
+                    last_leaf_num_bytes: param_last_leaf_num_bytes,
+                };
                 run_tokio_test!({
                     let layout = NodeLayout { block_size_bytes };
                     let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
@@ -1452,7 +1379,8 @@ mod tests {
             #[test]
             fn across_leaves(
                 #[values(40, 64, 512)] block_size_bytes: u32,
-                #[case] param: Parameter,
+                param_num_full_leaves: ParamNum,
+                param_last_leaf_num_bytes: ParamNum,
                 #[values(
                     (LeafIndex::FromStart(0), LeafIndex::FromStart(1)),
                     (LeafIndex::FromStart(0), LeafIndex::FromMid(0)),
@@ -1480,6 +1408,10 @@ mod tests {
                 )]
                 end_byte_index_in_leaf: ParamNum,
             ) {
+                let param = Parameter {
+                    num_full_leaves: param_num_full_leaves,
+                    last_leaf_num_bytes: param_last_leaf_num_bytes,
+                };
                 run_tokio_test!({
                     let layout = NodeLayout { block_size_bytes };
                     let (begin_leaf_index, last_leaf_index) = leaf_indices;
@@ -1659,7 +1591,11 @@ mod tests {
 
         #[apply(super::testutils::tree_parameters)]
         #[test]
-        fn read_whole_tree(#[values(40, 64, 512)] block_size_bytes: u32, #[case] param: Parameter) {
+        fn read_whole_tree(#[values(40, 64, 512)] block_size_bytes: u32, param_num_full_leaves: ParamNum, param_last_leaf_num_bytes: ParamNum,) {
+            let param = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
             run_tokio_test!({
                 let layout = NodeLayout { block_size_bytes };
                 with_treestore_and_nodestore_with_blocksize(
