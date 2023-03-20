@@ -1082,9 +1082,8 @@ mod tests {
         }
 
         #[cfg(feature = "slow-tests-4")]
-        pub async fn assert_tree_structure<'a, B: BlockStore + Send + Sync>(tree: DataTree<'a, B>, expected_depth: u8, treestore: &DataTreeStore<B>, nodestore: &DataNodeStore<B>) {
+        pub async fn flush_caches<'a, B: BlockStore + Send + Sync>(tree: DataTree<'a, B>, nodestore: &DataNodeStore<B>, treestore: &DataTreeStore<B>) -> BlockId {
             let root_id = *tree.root_node_id();
-
             // Flush tree
             std::mem::drop(tree);
 
@@ -1092,6 +1091,11 @@ mod tests {
             treestore.clear_cache_slow().await.unwrap();
             nodestore.clear_cache_slow().await.unwrap();
 
+            root_id
+        }
+        
+        #[cfg(feature = "slow-tests-4")]
+        pub async fn assert_tree_structure<B: BlockStore + Send + Sync>(root_id: BlockId, expected_depth: u8, nodestore: &DataNodeStore<B>) {
             // The root node must be a leaf or have more than one child, otherwise it would be a degenerate tree
             {
                 let root = nodestore.load(root_id).await.unwrap().expect("Root node not found");
@@ -1103,8 +1107,26 @@ mod tests {
                 }
             }
 
-
             assert_is_left_max_data_tree(root_id, expected_depth, nodestore).await;
+        }
+
+        #[cfg(feature = "slow-tests-4")]
+        #[async_recursion]
+        pub async fn for_each_leaf<B: BlockStore + Send + Sync>(root_id: BlockId, first_leaf_index: u64, nodestore: &DataNodeStore<B>, leaf_callback: &(impl Fn(u64, &[u8]) + Sync)) {
+            let root = nodestore.load(root_id).await.unwrap().expect("Node not found");
+            match root {
+                DataNode::Leaf(leaf) => {
+                    let leaf_bytes = leaf.data();
+                    leaf_callback(first_leaf_index, leaf_bytes);
+                }
+                DataNode::Inner(inner) => {
+                    let num_leaves_per_child = (nodestore.layout().max_children_per_inner_node() as u64).pow(inner.depth().get() as u32 - 1);
+                    let children = inner.children();
+                    future::join_all(children.enumerate().map(|(child_index, child_id)| {
+                        for_each_leaf(child_id, first_leaf_index + child_index as u64 * num_leaves_per_child, nodestore, leaf_callback)
+                    })).await;
+                }
+            }
         }
     }
 
@@ -1686,14 +1708,15 @@ mod tests {
                         let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
                         // Check the test case set it up correctly
-                        assert_tree_structure(tree, params.expected_depth(layout), treestore, nodestore).await;
+                        flush_caches(tree, nodestore, treestore).await;
+                        assert_tree_structure(tree_id, params.expected_depth(layout), nodestore).await;
                         let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
                         // Write subregion with `write_data`
                         let source = write_data.get(num_bytes);
                         tree.write_bytes(&source, offset).await.unwrap();
 
-                        // Read whole tree back and check it
+                        // Calculate what we expect the tree data to be now
                         let expected_new_data: Data = {
                             let mut data: Vec<u8> = base_data.get(params.expected_num_bytes(layout) as usize);
                             if num_bytes == 0 {
@@ -1709,13 +1732,10 @@ mod tests {
                             }
                             data.into()
                         };
+
+                        // Check tree data using `read_all()`.
                         let read_data = tree.read_all().await.unwrap();
                         assert_eq!(expected_new_data, read_data);
-
-                        // TODO Instead of checking the written data using a call to `read_all()`,
-                        //      we should look at the actual node store (that's also how we're doing it in `read_bytes`
-                        //      tests to write the initial tree data), make sure intermediate nodes are unchanged,
-                        //      new intermediate nodes are added as needed, and leaf data is changed as needed.
 
                         // Check the new tree structure is valid
                         let writing_grew_data = expected_new_data.len() as u64 > params.expected_num_bytes(layout);
@@ -1726,7 +1746,16 @@ mod tests {
                             // for the corner case where we created a tree with last_leaf_size == 0.
                             params.expected_depth(layout)
                         };
-                        assert_tree_structure(tree, expected_depth, treestore, nodestore).await;
+                        flush_caches(tree, nodestore, treestore).await;
+                        assert_tree_structure(tree_id, expected_depth, nodestore).await;
+
+                        // Read whole tree back and check its leaves have the correct data
+                        for_each_leaf(tree_id, 0, nodestore, &|leaf_index, leaf_data| {
+                            let start_byte_index = leaf_index as usize * nodestore.layout().max_bytes_per_leaf() as usize;
+                            let end_byte_index = (start_byte_index + nodestore.layout().max_bytes_per_leaf() as usize).min(expected_new_data.len());
+                            let expected_leaf_data = &expected_new_data[start_byte_index..end_byte_index];
+                            assert_eq!(expected_leaf_data, leaf_data);
+                        }).await;
                     })
                 },
             )
