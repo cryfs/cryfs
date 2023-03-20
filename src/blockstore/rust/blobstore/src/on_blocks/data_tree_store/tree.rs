@@ -697,13 +697,12 @@ mod tests {
     #[cfg(any(feature = "slow-tests-1", feature = "slow-tests-2",))]
     use super::super::super::data_tree_store::DataTree;
     use super::super::testutils::*;
-    use divrem::DivCeil;
     use cryfs_blockstore::BlockId;
     #[cfg(feature = "slow-tests-any")]
     use cryfs_blockstore::BlockStore;
     #[cfg(feature = "slow-tests-any")]
     use cryfs_utils::testutils::data_fixture::DataFixture;
-    #[cfg(feature = "slow-tests-1")]
+    #[cfg(any(feature = "slow-tests-1", feature="slow-tests-4"))]
     use divrem::DivCeil;
     #[cfg(feature = "slow-tests-any")]
     use rstest::rstest;
@@ -712,11 +711,16 @@ mod tests {
 
     #[cfg(feature = "slow-tests-any")]
     mod testutils {
-        use super::super::super::super::data_node_store::{DataNode, DataNodeStore};
+        #[cfg(feature = "slow-tests-4")]
+        use super::super::super::super::data_node_store::DataNode;
+        use super::super::super::super::data_node_store::DataNodeStore;
+        #[cfg(feature = "slow-tests-4")]
         use super::super::super::{DataTree, DataTreeStore};
         use super::*;
 
+        #[cfg(feature = "slow-tests-4")]
         use futures::future;
+        #[cfg(feature = "slow-tests-4")]
         use async_recursion::async_recursion;
 
         #[derive(Clone, Copy, PartialEq, Eq)]
@@ -807,6 +811,7 @@ mod tests {
                     + self.last_leaf_num_bytes.eval(layout)
             }
 
+            #[cfg(feature = "slow-tests-4")]
             pub fn expected_depth(&self, layout: NodeLayout) -> u8 {
                 let num_leaves = 1 + self.num_full_leaves.eval(layout);
                 expected_depth_for_num_leaves(num_leaves, layout)
@@ -850,6 +855,7 @@ mod tests {
             }
         }
 
+        #[cfg(feature = "slow-tests-4")]
         pub fn expected_depth_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u8 {
             assert!(num_leaves > 0);
             let mut depth = 0;
@@ -865,6 +871,7 @@ mod tests {
             depth
         }
 
+        #[cfg(feature = "slow-tests-4")]
         pub fn expected_depth_for_num_bytes(num_bytes: u64, layout: NodeLayout) -> u8 {
             let num_leaves = DivCeil::div_ceil(num_bytes, layout.max_bytes_per_leaf() as u64).max(1);
             expected_depth_for_num_leaves(num_leaves, layout)
@@ -1028,6 +1035,7 @@ mod tests {
             }
         }
 
+        #[cfg(feature = "slow-tests-4")]
         #[async_recursion]
         pub async fn assert_is_max_data_tree<B: BlockStore + Send + Sync>(root_id: BlockId, expected_depth: u8, nodestore: &DataNodeStore<B>) {
             let root = nodestore.load(root_id).await.unwrap().expect("Node not found");
@@ -1048,6 +1056,7 @@ mod tests {
             }
         }
 
+        #[cfg(feature = "slow-tests-4")]
         #[async_recursion]
         pub async fn assert_is_left_max_data_tree<B: BlockStore + Send + Sync>(root_id: BlockId, expected_depth: u8, nodestore: &DataNodeStore<B>) {
             let root = nodestore.load(root_id).await.unwrap().expect("Node not found");
@@ -1072,6 +1081,7 @@ mod tests {
             }
         }
 
+        #[cfg(feature = "slow-tests-4")]
         pub async fn assert_tree_structure<'a, B: BlockStore + Send + Sync>(tree: DataTree<'a, B>, expected_depth: u8, treestore: &DataTreeStore<B>, nodestore: &DataNodeStore<B>) {
             let root_id = *tree.root_node_id();
 
@@ -1655,6 +1665,7 @@ mod tests {
     mod write_bytes {
         use super::testutils::*;
         use super::*;
+        use cryfs_utils::data::Data;
 
         async fn test_write_bytes(
             block_size_bytes: u32,
@@ -1682,65 +1693,34 @@ mod tests {
                         let source = write_data.get(num_bytes);
                         tree.write_bytes(&source, offset).await.unwrap();
 
-                        // Read whole tree back so we can check it
-                        let expected_new_size = if num_bytes == 0 {
-                            // Writing doesn't grow the tree if num_bytes == 0, even if
-                            // offset is beyond the current tree data size. So we don't
-                            // max with offset+num_bytes here.
-                            // TODO Is this actually the behavior we want? Or do we want write_bytes to grow the tree here?
-                            params.expected_num_bytes(layout)
-                        } else {
-                            params
-                                .expected_num_bytes(layout)
-                                .max(offset + num_bytes as u64)
+                        // Read whole tree back and check it
+                        let expected_new_data: Data = {
+                            let mut data: Vec<u8> = base_data.get(params.expected_num_bytes(layout) as usize);
+                            if num_bytes == 0 {
+                                // Writing doesn't grow the tree if num_bytes == 0, even if
+                                // offset is beyond the current tree data size.
+                                // TODO Is this actually the behavior we want? Or do we want write_bytes to grow the tree here?
+                            } else {
+                                if offset as usize + num_bytes > data.len() {
+                                    data.resize(offset as usize + num_bytes, 0);
+                                }
+                                data[offset as usize..offset as usize + num_bytes]
+                                    .copy_from_slice(&source);
+                            }
+                            data.into()
                         };
                         let read_data = tree.read_all().await.unwrap();
-                        assert_eq!(expected_new_size, read_data.len() as u64);
+                        assert_eq!(expected_new_data, read_data);
 
                         // TODO Instead of checking the written data using a call to `read_all()`,
                         //      we should look at the actual node store (that's also how we're doing it in `read_bytes`
                         //      tests to write the initial tree data), make sure intermediate nodes are unchanged,
                         //      new intermediate nodes are added as needed, and leaf data is changed as needed.
 
-                        // Now we expect the tree data to contain 4 sections:
-                        // A) The data before the written subregion (up until the first of `offset` or of the old tree size)
-                        //    This region should contain `base_data`.
-                        // B) The data after the old data size up until `offset`. This only exists if our write started after the old data size.
-                        //    This region should be zeroed out if it exists.
-                        // C) The written subregion
-                        //    This region should contain `write_data`.
-                        // D) The data after the written subregion. This only exists if our write ended before the old data size
-                        //    This region should contain `base_data` if it exists.
-
-                        // Check section A
-                        let section_a_end = offset.min(params.expected_num_bytes(layout)) as usize;
-                        let expected_data = base_data.get(section_a_end);
-                        assert_eq!(expected_data, &read_data[..section_a_end]);
-
-                        if num_bytes != 0 {
-                            // Check section B
-                            let section_b_end = offset as usize;
-                            let expected_data = vec![0; section_b_end - section_a_end];
-                            assert_eq!(expected_data, &read_data[section_a_end..section_b_end]);
-
-                            // Check section C
-                            let section_c_end = (offset + num_bytes as u64) as usize;
-                            let expected_data = write_data.get(num_bytes);
-                            assert_eq!(expected_data, &read_data[section_b_end..section_c_end]);
-
-                            // Check section D
-                            let mut expected_data =
-                                vec![0; (expected_new_size as usize - section_c_end) as usize];
-                            base_data.generate(section_c_end as u64, &mut expected_data);
-                            assert_eq!(expected_data, &read_data[section_c_end..]);
-                        } else {
-                            // See comment above, we don't grow the region if num_bytes == 0
-                            // TODO See TODO above, is this actually the behavior we want?
-                        }
-
                         // Check the new tree structure is valid
-                        let expected_depth = if expected_new_size > params.expected_num_bytes(layout) {
-                            expected_depth_for_num_bytes(expected_new_size, layout)
+                        let writing_grew_data = expected_new_data.len() as u64 > params.expected_num_bytes(layout);
+                        let expected_depth = if writing_grew_data {
+                            expected_depth_for_num_bytes(expected_new_data.len() as u64, layout)
                         } else {
                             // We don't use `expected_depth_for_num_bytes` here because it would be inaccurate
                             // for the corner case where we created a tree with last_leaf_size == 0.
