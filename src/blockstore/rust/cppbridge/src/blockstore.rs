@@ -1,10 +1,9 @@
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
-use futures::stream::{Stream, TryStreamExt};
+use futures::stream::{BoxStream, TryStreamExt};
 use std::fmt::{self, Debug};
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
-use std::pin::Pin;
 
 use super::runtime::{LOGGER_INIT, TOKIO_RUNTIME};
 use crate::utils::log_errors;
@@ -349,9 +348,7 @@ impl BlockStoreReader for DynBlockStore {
         self.0.block_size_from_physical_block_size(block_size)
     }
 
-    async fn all_blocks(
-        &self,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<cryfs_blockstore::BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<cryfs_blockstore::BlockId>>> {
         self.0.all_blocks().await
     }
 }

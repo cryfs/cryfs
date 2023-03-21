@@ -1,9 +1,8 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use futures::stream::{Stream, StreamExt};
+use futures::stream::{BoxStream, StreamExt};
 use std::collections::hash_map::HashMap;
 use std::fmt::{self, Debug};
-use std::pin::Pin;
 use std::sync::RwLock;
 use sysinfo::{System, SystemExt};
 
@@ -68,7 +67,7 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(block_size)
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         let blocks = self
             .blocks
             .read()

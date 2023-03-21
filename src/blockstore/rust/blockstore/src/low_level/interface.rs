@@ -1,9 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::stream::Stream;
+use futures::stream::BoxStream;
 use std::any::Any;
 use std::fmt::Debug;
-use std::pin::Pin;
 
 use crate::{
     utils::{RemoveResult, TryCreateResult},
@@ -20,8 +19,7 @@ pub trait BlockStoreReader {
     fn estimate_num_free_bytes(&self) -> Result<u64>;
     fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
 
-    // TODO Should we replace the return type with BoxStream?
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>>;
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>>;
 }
 
 #[async_trait]

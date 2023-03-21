@@ -3,13 +3,12 @@ use async_trait::async_trait;
 use binary_layout::prelude::*;
 use futures::{
     future, join,
-    stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
+    stream::{BoxStream, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use log::warn;
 use std::collections::hash_set::HashSet;
 use std::fmt::{self, Debug};
 use std::path::PathBuf;
-use std::pin::Pin;
 
 use crate::{
     low_level::{
@@ -166,7 +165,7 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
             .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, HEADER_SIZE))
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         match self.config.missing_block_is_integrity_violation {
             MissingBlockIsIntegrityViolation::IsAViolation => {
                 // TODO Is there a way to do this with stream processing, i.e. without collecting?

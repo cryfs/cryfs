@@ -1,8 +1,7 @@
 use anyhow::Result;
-use futures::{future::BoxFuture, stream::Stream};
+use futures::{future::BoxFuture, stream::BoxStream};
 use mockall::mock;
 use std::fmt::{self, Debug};
-use std::pin::Pin;
 
 use crate::{
     low_level::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
@@ -21,7 +20,7 @@ mock! {
         fn estimate_num_free_bytes(&self) -> Result<u64>;
         fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
 
-        fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>>> where 'a: 'r;
+        fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<BoxStream<'static, Result<BlockId>>>> where 'a: 'r;
     }
     impl BlockStoreDeleter for BlockStore {
         fn remove<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<RemoveResult>> where 'a: 'r, 'b: 'r;

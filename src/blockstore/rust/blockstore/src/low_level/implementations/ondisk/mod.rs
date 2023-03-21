@@ -1,10 +1,9 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
-use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::stream::{BoxStream, Stream, StreamExt, TryStreamExt};
 use std::fmt::{self, Debug};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use std::pin::Pin;
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
 
@@ -98,7 +97,7 @@ impl BlockStoreReader for OnDiskBlockStore {
             .with_context(|| anyhow!("Physical block size of {} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         Ok(self
             ._all_block_files()
             .await?

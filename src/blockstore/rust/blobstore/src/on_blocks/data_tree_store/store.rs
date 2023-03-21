@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 #[cfg(test)]
-use futures::TryStreamExt;
+use futures::stream::TryStreamExt;
 #[cfg(test)]
 use std::collections::HashSet;
 

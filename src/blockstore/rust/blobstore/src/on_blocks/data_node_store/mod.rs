@@ -2,9 +2,7 @@ use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
 #[cfg(test)]
-use futures::Stream;
-#[cfg(test)]
-use std::pin::Pin;
+use futures::stream::BoxStream;
 
 pub use crate::RemoveResult;
 use cryfs_blockstore::TryCreateResult;
@@ -205,7 +203,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     #[cfg(test)]
-    pub async fn all_nodes(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    pub async fn all_nodes(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         self.block_store.all_blocks().await
     }
 
@@ -230,7 +228,7 @@ mod tests {
     use cryfs_blockstore::{
         BlockStoreReader, InMemoryBlockStore, MockBlockStore, SharedBlockStore,
     };
-    use futures::{stream, TryStreamExt};
+    use futures::{stream, StreamExt, TryStreamExt};
     use testutils::*;
 
     fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
@@ -1619,8 +1617,8 @@ mod tests {
                 .returning(move |v| Ok(v));
             blockstore.expect_all_blocks().returning(|| {
                 Box::pin(async {
-                    let stream: Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>> =
-                        Box::pin(stream::iter(vec![].into_iter()));
+                    let stream: BoxStream<'static, Result<BlockId>> =
+                        stream::iter(vec![].into_iter()).boxed();
                     Ok(stream)
                 })
             });
@@ -1650,8 +1648,8 @@ mod tests {
                 .returning(move |v| Ok(v));
             blockstore.expect_all_blocks().returning(|| {
                 Box::pin(async {
-                    let stream: Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>> =
-                        Box::pin(stream::iter(block_ids().into_iter().map(Ok)));
+                    let stream: BoxStream<'static, Result<BlockId>> =
+                        stream::iter(block_ids().into_iter().map(Ok)).boxed();
                     Ok(stream)
                 })
             });

@@ -1,9 +1,8 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
-use futures::Stream;
+use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
-use std::pin::Pin;
 
 use super::super::{layout::node, DataLeafNode, DataNode, DataNodeStore};
 use cryfs_blockstore::{
@@ -74,7 +73,7 @@ impl BlockStoreReader for BlockStoreAdapter {
             .ok_or_else(|| anyhow!("Out of bounds"))
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         self.0.all_nodes().await
     }
 }

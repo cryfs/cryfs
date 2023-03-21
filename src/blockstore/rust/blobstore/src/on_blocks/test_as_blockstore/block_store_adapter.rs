@@ -1,8 +1,7 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use futures::Stream;
+use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
-use std::pin::Pin;
 
 use super::super::BlobStoreOnBlocks;
 use crate::{Blob, BlobId, BlobStore};
@@ -71,7 +70,7 @@ impl BlockStoreReader for BlockStoreAdapter {
             .ok_or_else(|| anyhow!("block size out of range"))
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         let blob_ids = self
             .underlying_store
             .all_blobs()

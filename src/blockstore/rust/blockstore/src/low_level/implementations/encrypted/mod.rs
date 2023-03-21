@@ -1,11 +1,10 @@
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
-use futures::stream::Stream;
+use futures::stream::BoxStream;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::pin::Pin;
 
 use crate::{
     low_level::{
@@ -105,7 +104,7 @@ impl<
             .with_context(|| anyhow!("Physical block size of {} is too small.", block_size))
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         self.underlying_block_store
             .deref()
             .borrow()

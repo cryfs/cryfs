@@ -2,11 +2,10 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use futures::{
     future,
-    stream::{self, Stream, StreamExt, TryStreamExt},
+    stream::{self, BoxStream, StreamExt, TryStreamExt},
 };
 use std::collections::HashSet;
 use std::fmt::{self, Debug};
-use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::{
@@ -231,7 +230,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     // Note: for any blocks that are created or removed while the returned stream is running,
     // we don't give any guarantees for whether they'll be part of the stream or not.
     // TODO Make sure we have tests that have some blocks in the cache and some in the base store
-    pub async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    pub async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
 
         // TODO Is keys_with_entries_or_locked the right thing here? Do we want to count locked entries?
@@ -242,10 +241,9 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         let blocks_in_base_store_and_not_in_cache = blocks_in_base_store
             .try_filter(move |block_id| future::ready(!blocks_in_cache_set.contains(block_id)));
 
-        Ok(Box::pin(
-            stream::iter(blocks_in_cache.into_iter().map(Ok))
-                .chain(blocks_in_base_store_and_not_in_cache),
-        ))
+        Ok(stream::iter(blocks_in_cache.into_iter().map(Ok))
+            .chain(blocks_in_base_store_and_not_in_cache)
+            .boxed())
     }
 
     pub async fn create(&self, data: &Data) -> Result<BlockId> {

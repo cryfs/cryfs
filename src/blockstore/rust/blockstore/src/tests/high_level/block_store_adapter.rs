@@ -1,8 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::Stream;
+use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
-use std::pin::Pin;
 
 use crate::{
     high_level::LockingBlockStore,
@@ -56,7 +55,7 @@ impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStoreReader for BlockSt
         self.0.block_size_from_physical_block_size(block_size)
     }
 
-    async fn all_blocks(&self) -> Result<Pin<Box<dyn Stream<Item = Result<BlockId>> + Send>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         self.0.all_blocks().await
     }
 }
