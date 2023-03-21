@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use futures::Stream;
+use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use cryfs_blobstore::{BlobId, BlobStore};
@@ -138,11 +138,11 @@ where
         }
     }
 
-    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
+    pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         match self {
-            Self::File(blob) => blob.all_blocks().await,
-            Self::Directory(blob) => blob.all_blocks().await,
-            Self::Symlink(blob) => blob.all_blocks().await,
+            Self::File(blob) => blob.all_blocks(),
+            Self::Directory(blob) => blob.all_blocks(),
+            Self::Symlink(blob) => blob.all_blocks(),
         }
     }
 }

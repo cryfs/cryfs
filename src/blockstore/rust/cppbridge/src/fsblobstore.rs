@@ -594,8 +594,7 @@ impl<'a> RustFsBlobBridge<'a> {
                     .0
                     .as_ref()
                     .expect("FsBlob already destructed")
-                    .all_blocks()
-                    .await?
+                    .all_blocks()?
                     .map(|id| id.map(|id| FsBlobId(cryfs_blobstore::BlobId::from_array(id.data()))))
                     .try_collect()
                     .await?;

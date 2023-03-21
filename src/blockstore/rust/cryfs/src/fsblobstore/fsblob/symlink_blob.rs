@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use futures::Stream;
+use futures::stream::BoxStream;
 use std::fmt::Debug;
 use std::path::PathBuf;
 
@@ -66,8 +66,8 @@ where
             .len() as u64)
     }
 
-    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
-        self.blob.all_blocks().await
+    pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
+        self.blob.all_blocks()
     }
 }
 

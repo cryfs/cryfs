@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::Stream;
+use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use cryfs_blockstore::{BlockId, BLOCKID_LEN};
@@ -27,7 +27,7 @@ pub trait Blob<'a>: Sized + Debug {
 
     async fn remove(self) -> Result<()>;
 
-    async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>>;
+    fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>>;
 }
 
 #[async_trait]

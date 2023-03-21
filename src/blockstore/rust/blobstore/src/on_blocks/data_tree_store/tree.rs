@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use divrem::DivCeil;
 use futures::{
     future::{self, FutureExt},
-    stream::{self, Stream, StreamExt},
+    stream::{self, BoxStream, StreamExt},
 };
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
@@ -618,56 +618,55 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         Ok(())
     }
 
-    pub async fn all_blocks(&self) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
+    pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         let root_node = self.root_node.as_ref().expect("root_node is None");
-        self._all_blocks_in_subtree(root_node).await
+        self._all_blocks_in_subtree(root_node)
     }
 
-    async fn _all_blocks_in_subtree(
+    fn _all_blocks_in_subtree(
         &self,
         subtree_root: &DataNode<B>,
-    ) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
+    ) -> Result<BoxStream<'_, Result<BlockId>>> {
         match subtree_root {
-            DataNode::Leaf(leaf) => Ok(Box::new(stream::once(future::ready(Ok(*leaf.block_id()))))),
+            DataNode::Leaf(leaf) => Ok(stream::once(future::ready(Ok(*leaf.block_id()))).boxed()),
             DataNode::Inner(inner) => {
-                let block_ids_in_descendants = self._all_blocks_descendants_of(inner).await?;
-                Ok(Box::new(
-                    stream::once(future::ready(Ok(*inner.block_id())))
-                        .chain(block_ids_in_descendants),
-                ))
+                let block_ids_in_descendants = self._all_blocks_descendants_of(inner)?;
+                Ok(stream::once(future::ready(Ok(*inner.block_id())))
+                    .chain(block_ids_in_descendants)
+                    .boxed())
             }
         }
     }
 
-    async fn _all_blocks_descendants_of(
+    fn _all_blocks_descendants_of(
         &self,
         subtree_root: &DataInnerNode<B>,
-    ) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
+    ) -> Result<BoxStream<'_, Result<BlockId>>> {
         // iter<stream<result<block_id>>>
         let subtree_stream = subtree_root.children().map(|child_id| {
             let child_stream = async move {
                 self._all_blocks_in_subtree_of_id(child_id)
                     .await
                     // Transform Result<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
-                    .unwrap_or_else(|err| Box::new(stream::once(future::ready(Err(err)))))
+                    .unwrap_or_else(|err| stream::once(future::ready(Err(err))).boxed())
             };
             // Transform Future<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
-            Box::pin(child_stream.flatten_stream())
+            child_stream.flatten_stream().boxed()
         });
-        let subtree_stream = stream::select_all(subtree_stream);
-        Ok(Box::new(subtree_stream))
+        let subtree_stream = stream::select_all(subtree_stream).boxed();
+        Ok(subtree_stream)
     }
 
     async fn _all_blocks_in_subtree_of_id(
         &self,
         subtree_root_id: BlockId,
-    ) -> Result<Box<dyn Stream<Item = Result<BlockId>> + Unpin + '_>> {
+    ) -> Result<BoxStream<'_, Result<BlockId>>> {
         let child = self
             .node_store
             .load(subtree_root_id)
             .await?
             .ok_or_else(|| anyhow!("Didn't find block {:?}", subtree_root_id))?;
-        self._all_blocks_in_subtree(&child).await
+        self._all_blocks_in_subtree(&child)
     }
 }
 
@@ -706,6 +705,7 @@ mod tests {
         feature = "slow-tests-1",
         feature = "slow-tests-4",
         feature = "slow-tests-5",
+        feature = "slow-tests-6",
     ))]
     use divrem::DivCeil;
     #[cfg(feature = "slow-tests-any")]
@@ -787,7 +787,8 @@ mod tests {
             #[cfg(any(
                 feature = "slow-tests-1",
                 feature = "slow-tests-4",
-                feature = "slow-tests-5"
+                feature = "slow-tests-5",
+                feature = "slow-tests-6",
             ))]
             pub fn expected_num_nodes(&self, layout: NodeLayout) -> u64 {
                 let num_leaves = 1 + self.num_full_leaves.eval(layout);
@@ -862,7 +863,8 @@ mod tests {
         #[cfg(any(
             feature = "slow-tests-1",
             feature = "slow-tests-4",
-            feature = "slow-tests-5"
+            feature = "slow-tests-5",
+            feature = "slow-tests-6",
         ))]
         pub fn expected_num_nodes_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u64 {
             let mut num_nodes = 0;
@@ -2000,5 +2002,81 @@ mod tests {
         }
     }
 
-    // TODO Test all_blocks
+    #[cfg(feature = "slow-tests-6")]
+    mod all_blocks {
+        use super::testutils::*;
+        use super::*;
+        use futures::stream::TryStreamExt;
+        use std::collections::HashSet;
+
+        #[apply(super::testutils::tree_parameters)]
+        #[test]
+        fn test_all_blocks(
+            #[values(40, 64, 512)] block_size_bytes: u32,
+            param_num_full_leaves: ParamNum,
+            param_last_leaf_num_bytes: ParamNum,
+        ) {
+            let param = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
+            let layout = NodeLayout { block_size_bytes };
+            run_tokio_test!({
+                with_treestore_and_nodestore_with_blocksize(
+                    block_size_bytes,
+                    |treestore, nodestore| {
+                        Box::pin(async move {
+                            let data = DataFixture::new(0);
+
+                            // Create a tree
+                            let tree1_id = param.create_tree_with_data(nodestore, &data).await;
+                            let expected_tree1_blocks: HashSet<BlockId> = {
+                                treestore.clear_cache_slow().await.unwrap();
+                                nodestore.clear_cache_slow().await.unwrap();
+                                let all_blocks: Result<HashSet<BlockId>, _> =
+                                    nodestore.all_nodes().await.unwrap().try_collect().await;
+                                all_blocks.unwrap()
+                            };
+                            assert_eq!(
+                                param.expected_num_nodes(layout),
+                                expected_tree1_blocks.len() as u64,
+                            );
+
+                            // Create another tree
+                            let tree2_id = param.create_tree_with_data(nodestore, &data).await;
+                            let expected_tree2_blocks: HashSet<BlockId> = {
+                                treestore.clear_cache_slow().await.unwrap();
+                                nodestore.clear_cache_slow().await.unwrap();
+                                let all_blocks: Result<HashSet<BlockId>, _> =
+                                    nodestore.all_nodes().await.unwrap().try_collect().await;
+                                let mut expected_blocks = all_blocks.unwrap();
+                                for block in &expected_tree1_blocks {
+                                    expected_blocks.remove(block);
+                                }
+                                expected_blocks
+                            };
+                            assert_eq!(
+                                param.expected_num_nodes(layout),
+                                expected_tree2_blocks.len() as u64,
+                            );
+
+                            let tree1 = treestore.load_tree(tree1_id).await.unwrap().unwrap();
+                            let tree2 = treestore.load_tree(tree2_id).await.unwrap().unwrap();
+
+                            let tree1_blocks: Result<HashSet<BlockId>, _> =
+                                tree1.all_blocks().unwrap().try_collect().await;
+                            let tree1_blocks = tree1_blocks.unwrap();
+                            assert_eq!(expected_tree1_blocks, tree1_blocks);
+
+                            let tree2_blocks: Result<HashSet<BlockId>, _> =
+                                tree2.all_blocks().unwrap().try_collect().await;
+                            let tree2_blocks = tree2_blocks.unwrap();
+                            assert_eq!(expected_tree2_blocks, tree2_blocks);
+                        })
+                    },
+                )
+                .await;
+            });
+        }
+    }
 }
