@@ -1,8 +1,8 @@
 use anyhow::{anyhow, bail, Result};
+use async_recursion::async_recursion;
 use std::num::NonZeroU64;
 
-use super::traversal;
-use crate::on_blocks::data_node_store::{DataNode, DataNodeStore, NodeLayout};
+use crate::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout};
 use cryfs_blockstore::{BlockId, BlockStore};
 
 #[derive(Clone, Copy)]
@@ -28,11 +28,10 @@ impl SizeCache {
     ) -> Result<NonZeroU64> {
         match (*self, root_node) {
             (Self::SizeUnknown, DataNode::Inner(root_node)) => {
-                let traversal::NumLeavesAndRightmostLeafId {
+                let NumLeavesAndRightmostLeafId {
                     num_leaves,
                     rightmost_leaf_id,
-                } = traversal::calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node)
-                    .await?;
+                } = calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node).await?;
                 *self = SizeCache::RootIsInnerNodeAndNumLeavesIsKnown {
                     num_leaves,
                     rightmost_leaf_id,
@@ -76,11 +75,10 @@ impl SizeCache {
         };
         match (*self, root_node) {
             (Self::SizeUnknown, DataNode::Inner(root_node)) => {
-                let traversal::NumLeavesAndRightmostLeafId {
+                let NumLeavesAndRightmostLeafId {
                     num_leaves,
                     rightmost_leaf_id,
-                } = traversal::calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node)
-                    .await?;
+                } = calculate_num_leaves_and_rightmost_leaf_id(node_store, root_node).await?;
                 let rightmost_leaf_num_bytes =
                     Self::_calculate_leaf_size(node_store, rightmost_leaf_id).await?;
                 *self = Self::NumBytesIsKnown {
@@ -156,6 +154,78 @@ impl SizeCache {
             ),
             Some(DataNode::Leaf(leaf)) => Ok(leaf.num_bytes()),
         }
+    }
+}
+
+struct NumLeavesAndRightmostLeafId {
+    pub num_leaves: NonZeroU64,
+    pub rightmost_leaf_id: BlockId,
+}
+
+#[async_recursion]
+async fn calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + Send + Sync>(
+    node_store: &DataNodeStore<B>,
+    root_node: &DataInnerNode<B>,
+) -> Result<NumLeavesAndRightmostLeafId> {
+    let depth = root_node.depth();
+    let children = root_node.children();
+    let num_children = children.len() as u64;
+    let last_child_id = children.last().expect(
+        "Inner node must have at least one child, that's a class invariant of DataInnerNode",
+    );
+    let num_children = NonZeroU64::new(num_children).unwrap();
+    if depth.get() == 1 {
+        Ok(NumLeavesAndRightmostLeafId {
+            num_leaves: num_children,
+            rightmost_leaf_id: last_child_id,
+        })
+    } else {
+        let num_leaves_per_full_child = node_store
+            .layout()
+            .num_leaves_per_full_subtree(depth.get() - 1)?;
+        let num_leaves_in_left_children = (num_children.get() - 1)
+            .checked_mul(num_leaves_per_full_child.get())
+            .ok_or_else(|| {
+                anyhow!(
+                    "Overflow in (num_children-1)*num_leaves_per_full_child: ({}-1)*{}",
+                    num_children,
+                    num_leaves_per_full_child,
+                )
+            })?;
+        let last_child = node_store.load(last_child_id).await?.ok_or_else(|| {
+            anyhow!(
+                "Tried to load {:?} as a child node but couldn't find it",
+                last_child_id
+            )
+        })?;
+        let NumLeavesAndRightmostLeafId {
+            num_leaves: num_leaves_in_right_child,
+            rightmost_leaf_id,
+        } = match last_child {
+            DataNode::Leaf(_last_child) => {
+                bail!(
+                    "Loaded {:?} as a leaf node but the inner node above it has depth {}",
+                    last_child_id,
+                    depth,
+                );
+            }
+            DataNode::Inner(last_child) => {
+                calculate_num_leaves_and_rightmost_leaf_id(node_store, &last_child).await?
+            }
+        };
+        let num_leaves = num_leaves_in_right_child
+            .checked_add(num_leaves_in_left_children)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Overflow in num_leaves_in_right_child+num_leaves_in_left_children: {}+{}",
+                    num_leaves_in_right_child,
+                    num_leaves_in_left_children,
+                )
+            })?;
+        Ok(NumLeavesAndRightmostLeafId {
+            num_leaves,
+            rightmost_leaf_id,
+        })
     }
 }
 
