@@ -703,9 +703,9 @@ mod tests {
     #[cfg(feature = "slow-tests-any")]
     use cryfs_utils::testutils::data_fixture::DataFixture;
     #[cfg(any(
-        feature = "slow-test-1",
+        feature = "slow-tests-1",
         feature = "slow-tests-4",
-        feature = "slow-tests-5"
+        feature = "slow-tests-5",
     ))]
     use divrem::DivCeil;
     #[cfg(feature = "slow-tests-any")]
@@ -803,6 +803,13 @@ mod tests {
                 self.num_full_leaves.eval(layout) + 1
             }
 
+            #[cfg(any(
+                feature = "slow-tests-1",
+                feature = "slow-tests-2",
+                feature = "slow-tests-3",
+                feature = "slow-tests-4",
+                feature = "slow-tests-5",
+            ))]
             pub fn expected_num_bytes(&self, layout: NodeLayout) -> u64 {
                 self.num_full_leaves.eval(layout) * layout.max_bytes_per_leaf() as u64
                     + self.last_leaf_num_bytes.eval(layout)
@@ -1948,6 +1955,50 @@ mod tests {
         }
     }
 
-    // TODO Test remove
+    #[cfg(feature = "slow-tests-6")]
+    mod remove {
+        use super::testutils::*;
+        use super::*;
+
+        #[apply(super::testutils::tree_parameters)]
+        #[test]
+        fn test_remove(
+            #[values(40, 64, 512)] block_size_bytes: u32,
+            param_num_full_leaves: ParamNum,
+            param_last_leaf_num_bytes: ParamNum,
+        ) {
+            let param = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
+            run_tokio_test!({
+                with_treestore_and_nodestore_with_blocksize(
+                    block_size_bytes,
+                    |treestore, nodestore| {
+                        Box::pin(async move {
+                            let data = DataFixture::new(0);
+
+                            // Create tree with `data`
+                            let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                            let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+
+                            // Remove tree
+                            tree.remove().await.unwrap();
+
+                            // Check tree is gone
+                            assert!(treestore.load_tree(tree_id).await.unwrap().is_none());
+
+                            // Check nodes are deleted
+                            treestore.clear_cache_slow().await.unwrap();
+                            nodestore.clear_cache_slow().await.unwrap();
+                            assert_eq!(0, nodestore.num_nodes().await.unwrap());
+                        })
+                    },
+                )
+                .await;
+            });
+        }
+    }
+
     // TODO Test all_blocks
 }
