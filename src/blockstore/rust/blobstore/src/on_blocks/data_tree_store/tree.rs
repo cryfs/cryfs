@@ -1773,6 +1773,12 @@ mod tests {
                         );
                         let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
+                        // Fill size cache (so we can check if it gets correctly updated)
+                        assert_eq!(
+                            params.expected_num_bytes(layout),
+                            tree.num_bytes().await.unwrap(),
+                        );
+
                         // Write subregion with `write_data`
                         let source = write_data.get(num_bytes);
                         tree.write_bytes(&source, offset).await.unwrap();
@@ -1794,6 +1800,20 @@ mod tests {
                             }
                             data.into()
                         };
+
+                        // Check new tree size (as read from size cache)
+                        assert_eq!(
+                            expected_new_data.len() as u64,
+                            tree.num_bytes().await.unwrap()
+                        );
+
+                        // Check new tree size (as read after clearing size cache)
+                        std::mem::drop(tree);
+                        let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                        assert_eq!(
+                            expected_new_data.len() as u64,
+                            tree.num_bytes().await.unwrap()
+                        );
 
                         // Check tree data using `read_all()`.
                         let read_data = tree.read_all().await.unwrap();
@@ -1846,42 +1866,11 @@ mod tests {
         use super::*;
         use cryfs_utils::data::Data;
 
-        #[apply(super::testutils::tree_parameters)]
-        #[test]
         fn test_resize(
-            #[values(40, 64, 512)] block_size_bytes: u32,
-            param_num_full_leaves: ParamNum,
-            param_last_leaf_num_bytes: ParamNum,
-            // param2_num_full_leaves and param2_last_leaf_num_bytes are set up the same way
-            // as param_num_full_leaves and param_last_leaf_num_bytes are set up using `#[apply(super::testutils::tree_parameters)]`.
-            // TODO Probably better to use 2 separate `#[apply(...)]` attributes here but seems `rstest` doesn't support that yet.
-            #[values(
-                TREE_ONE_LEAF,
-                TREE_TWO_LEAVES,
-                TREE_TWO_LEVEL_ALMOST_FULL,
-                TREE_TWO_LEVEL_FULL,
-                TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_ONE_CHILD,
-                TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_HALF_NUM_CHILDREN,
-                TREE_THREE_LEVEL_FULL,
-                TREE_FOUR_LEVEL_MIN_DATA
-            )]
-            param2_num_full_leaves: ParamNum,
-            #[values(
-                ParamNum::Val(1),
-                ParamNum::HalfMaxBytesPerLeaf,
-                ParamNum::MaxBytesPerLeafMinus(1),
-                ParamNum::MaxBytesPerLeafMinus(0)
-            )]
-            param2_last_leaf_num_bytes: ParamNum,
+            block_size_bytes: u32,
+            param_before_resize: Parameter,
+            param_after_resize: Parameter,
         ) {
-            let param_before_resize = Parameter {
-                num_full_leaves: param_num_full_leaves,
-                last_leaf_num_bytes: param_last_leaf_num_bytes,
-            };
-            let param_after_resize = Parameter {
-                num_full_leaves: param2_num_full_leaves,
-                last_leaf_num_bytes: param2_last_leaf_num_bytes,
-            };
             run_tokio_test!({
                 let layout = NodeLayout { block_size_bytes };
                 with_treestore_and_nodestore_with_blocksize(
@@ -1910,12 +1899,38 @@ mod tests {
                             );
                             let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
+                            // Fill size cache (so we can check if it gets correctly updated)
+                            assert_eq!(
+                                param_before_resize.expected_num_bytes(layout),
+                                tree.num_bytes().await.unwrap()
+                            );
+                            assert_eq!(
+                                param_before_resize.expected_num_nodes(layout),
+                                tree.num_nodes().await.unwrap()
+                            );
+
                             // Resize tree with `resize_num_bytes`
                             let new_num_bytes = param_after_resize.expected_num_bytes(layout);
                             tree.resize_num_bytes(new_num_bytes).await.unwrap();
 
-                            // Check tree has correct size
+                            // Check key didn't change
+                            assert_eq!(tree_id, *tree.root_node_id());
+
+                            // Check tree has correct size (looked up from the size cache of the `tree` instance)
                             assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
+                            assert_eq!(
+                                param_after_resize.expected_num_nodes(layout),
+                                tree.num_nodes().await.unwrap()
+                            );
+
+                            // Check tree has correct size (looked up after clearing the size cache of the `tree` instance)
+                            std::mem::drop(tree);
+                            let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                            assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
+                            assert_eq!(
+                                param_after_resize.expected_num_nodes(layout),
+                                tree.num_nodes().await.unwrap()
+                            );
 
                             // Check tree data using `read_all`
                             let read_data = tree.read_all().await.unwrap();
@@ -1954,6 +1969,63 @@ mod tests {
                 )
                 .await;
             });
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[test]
+        fn test_resize_basic(
+            #[values(40, 64, 512)] block_size_bytes: u32,
+            param_num_full_leaves: ParamNum,
+            param_last_leaf_num_bytes: ParamNum,
+            // param2_num_full_leaves and param2_last_leaf_num_bytes are set up the same way
+            // as param_num_full_leaves and param_last_leaf_num_bytes are set up using `#[apply(super::testutils::tree_parameters)]`.
+            // TODO Probably better to use 2 separate `#[apply(...)]` attributes here but seems `rstest` doesn't support that yet.
+            #[values(
+                TREE_ONE_LEAF,
+                TREE_TWO_LEAVES,
+                TREE_TWO_LEVEL_ALMOST_FULL,
+                TREE_TWO_LEVEL_FULL,
+                TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_ONE_CHILD,
+                TREE_THREE_LEVEL_WITH_LAST_INNER_HAS_HALF_NUM_CHILDREN,
+                TREE_THREE_LEVEL_FULL,
+                TREE_FOUR_LEVEL_MIN_DATA
+            )]
+            param2_num_full_leaves: ParamNum,
+            #[values(
+                ParamNum::Val(1),
+                ParamNum::HalfMaxBytesPerLeaf,
+                ParamNum::MaxBytesPerLeafMinus(1),
+                ParamNum::MaxBytesPerLeafMinus(0)
+            )]
+            param2_last_leaf_num_bytes: ParamNum,
+        ) {
+            let param_before_resize = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
+            let param_after_resize = Parameter {
+                num_full_leaves: param2_num_full_leaves,
+                last_leaf_num_bytes: param2_last_leaf_num_bytes,
+            };
+            test_resize(block_size_bytes, param_before_resize, param_after_resize);
+        }
+
+        #[apply(super::testutils::tree_parameters)]
+        #[test]
+        fn test_resize_to_zero(
+            #[values(40, 64, 512)] block_size_bytes: u32,
+            param_num_full_leaves: ParamNum,
+            param_last_leaf_num_bytes: ParamNum,
+        ) {
+            let param_before_resize = Parameter {
+                num_full_leaves: param_num_full_leaves,
+                last_leaf_num_bytes: param_last_leaf_num_bytes,
+            };
+            let param_after_resize = Parameter {
+                num_full_leaves: ParamNum::Val(0),
+                last_leaf_num_bytes: ParamNum::Val(0),
+            };
+            test_resize(block_size_bytes, param_before_resize, param_after_resize);
         }
     }
 
