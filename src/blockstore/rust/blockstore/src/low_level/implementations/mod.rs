@@ -28,3 +28,8 @@ pub use mock::MockBlockStore;
 mod shared;
 #[cfg(any(test, feature = "testutils"))]
 pub use shared::SharedBlockStore;
+
+#[cfg(any(test, feature = "testutils"))]
+mod tracking;
+#[cfg(any(test, feature = "testutils"))]
+pub use tracking::TrackingBlockStore;
