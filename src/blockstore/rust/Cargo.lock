@@ -441,6 +441,7 @@ dependencies = [
  "binrw",
  "common_macros",
  "cryfs-utils",
+ "derive_more",
  "errno",
  "futures",
  "generic-array",

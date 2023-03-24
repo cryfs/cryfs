@@ -692,3 +692,6 @@ impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod tests_performance;

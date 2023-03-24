@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
+use std::ops::Deref;
 
 use crate::{
     low_level::{BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter},
@@ -111,6 +112,14 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop for Sh
 impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
     for SharedBlockStore<B>
 {
+}
+
+impl<B: Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>> Deref for SharedBlockStore<B> {
+    type Target = B;
+
+    fn deref(&self) -> &Self::Target {
+        &self.underlying_store
+    }
 }
 
 #[cfg(test)]

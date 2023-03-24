@@ -18,6 +18,7 @@ lockable = {git = "https://github.com/smessmer/lockable", rev = "f075ea07795aa38
 log = "^0.4.17"
 lzzzz = "^1.0.4"
 mockall = {version = "^0.11.3", optional = true}
+derive_more = {version = "^0.99.17", optional = true}
 rand = "^0.8.5"
 sysinfo = "^0.27.1"
 thiserror = "^1.0.38"
@@ -32,10 +33,11 @@ winapi = {version = "^0.3.9", features = ["fileapi"]}
 
 [dev-dependencies]
 common_macros = "^0.1.1"
+derive_more = "^0.99.17"
 cryfs-utils = {path = "../utils", features = ["testutils"]}
 generic-array = "^0.14.6"
 mockall = "^0.11.3"
 tempdir = "^0.3.7"
 
 [features]
-testutils = ["mockall"]
+testutils = ["mockall", "derive_more"]

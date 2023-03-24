@@ -11,7 +11,7 @@ use cryfs_blockstore::{
 };
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
-use super::super::data_node_store::DataNodeStore;
+use super::super::data_node_store::{DataNodeStore, NodeLayout};
 use super::{store::DataTreeStore, tree::DataTree};
 
 pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 128;
@@ -207,4 +207,51 @@ pub async fn with_treestore_and_nodestore_with_blocksize(
     f(&treestore, &nodestore).await;
     treestore.async_drop().await.unwrap();
     nodestore.async_drop().await.unwrap();
+}
+
+// TODO Replace with std::num::div_ceil once it's stable
+const fn div_ceil(numerator: u64, denominator: u64) -> u64 {
+    (numerator + denominator - 1) / denominator
+}
+
+pub const fn expected_num_nodes_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u64 {
+    let mut num_nodes = 0;
+    let mut num_nodes_current_level = num_leaves;
+    while num_nodes_current_level > 1 {
+        num_nodes += num_nodes_current_level;
+        num_nodes_current_level = div_ceil(
+            num_nodes_current_level,
+            layout.max_children_per_inner_node() as u64,
+        );
+    }
+    if 1 != num_nodes_current_level {
+        // TODO Use assert_eq instead once that works in const fn
+        panic!("assertion failed");
+    }
+    num_nodes += 1;
+    num_nodes
+}
+
+pub const fn expected_depth_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u8 {
+    assert!(num_leaves > 0);
+    let mut depth = 0;
+    let mut num_nodes_current_level = num_leaves;
+    while num_nodes_current_level > 1 {
+        depth += 1;
+        num_nodes_current_level = div_ceil(
+            num_nodes_current_level,
+            layout.max_children_per_inner_node() as u64,
+        );
+    }
+    if 1 != num_nodes_current_level {
+        // TODO Use assert_eq instead once that works in const fn
+        panic!("assertion failed");
+    }
+    depth
+}
+
+#[cfg(feature = "slow-tests-4")]
+pub fn expected_depth_for_num_bytes(num_bytes: u64, layout: NodeLayout) -> u8 {
+    let num_leaves = DivCeil::div_ceil(num_bytes, layout.max_bytes_per_leaf() as u64).max(1);
+    expected_depth_for_num_leaves(num_leaves, layout)
 }

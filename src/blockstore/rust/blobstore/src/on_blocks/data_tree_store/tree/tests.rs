@@ -166,49 +166,6 @@ mod testutils {
         }
     }
 
-    #[cfg(any(
-        feature = "slow-tests-1",
-        feature = "slow-tests-4",
-        feature = "slow-tests-5",
-        feature = "slow-tests-6",
-    ))]
-    pub fn expected_num_nodes_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u64 {
-        let mut num_nodes = 0;
-        let mut num_nodes_current_level = num_leaves;
-        while num_nodes_current_level > 1 {
-            num_nodes += num_nodes_current_level;
-            num_nodes_current_level = DivCeil::div_ceil(
-                num_nodes_current_level,
-                layout.max_children_per_inner_node() as u64,
-            );
-        }
-        assert!(num_nodes_current_level == 1);
-        num_nodes += 1;
-        num_nodes
-    }
-
-    #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub fn expected_depth_for_num_leaves(num_leaves: u64, layout: NodeLayout) -> u8 {
-        assert!(num_leaves > 0);
-        let mut depth = 0;
-        let mut num_nodes_current_level = num_leaves;
-        while num_nodes_current_level > 1 {
-            depth += 1;
-            num_nodes_current_level = DivCeil::div_ceil(
-                num_nodes_current_level,
-                layout.max_children_per_inner_node() as u64,
-            );
-        }
-        assert_eq!(1, num_nodes_current_level);
-        depth
-    }
-
-    #[cfg(feature = "slow-tests-4")]
-    pub fn expected_depth_for_num_bytes(num_bytes: u64, layout: NodeLayout) -> u8 {
-        let num_leaves = DivCeil::div_ceil(num_bytes, layout.max_bytes_per_leaf() as u64).max(1);
-        expected_depth_for_num_leaves(num_leaves, layout)
-    }
-
     pub const TREE_ONE_LEAF: ParamNum = ParamNum::Val(0);
     pub const TREE_TWO_LEAVES: ParamNum = ParamNum::Val(1);
     pub const TREE_TWO_LEVEL_ALMOST_FULL: ParamNum = ParamNum::MaxChildrenPerInnerNodeMinus(2);

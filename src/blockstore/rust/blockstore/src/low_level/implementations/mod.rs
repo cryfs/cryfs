@@ -32,4 +32,4 @@ pub use shared::SharedBlockStore;
 #[cfg(any(test, feature = "testutils"))]
 mod tracking;
 #[cfg(any(test, feature = "testutils"))]
-pub use tracking::TrackingBlockStore;
+pub use tracking::{ActionCounts, TrackingBlockStore};
