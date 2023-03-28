@@ -17,6 +17,7 @@ use cryfs_utils::{
 
 #[derive(Debug, Default, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
 pub struct ActionCounts {
+    pub exists: u32,
     pub loaded: u32,
     pub stored: u32,
     pub removed: u32,
@@ -59,6 +60,7 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
     for TrackingBlockStore<B>
 {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
+        self.counts.lock().unwrap().entry(*id).or_default().exists += 1;
         self.underlying_store.exists(id).await
     }
 
@@ -165,12 +167,57 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
+                exists: 0,
                 created: 0,
                 stored: 0,
                 loaded: 0,
                 removed: 0,
             },
             store.totals(),
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn exists_increases_counter() {
+        let mut fixture = TestFixture::new();
+        let mut store = fixture.store().await;
+
+        let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
+        let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
+
+        assert_eq!(
+            TryCreateResult::SuccessfullyCreated,
+            store.try_create(&id1, &[1, 2, 3]).await.unwrap()
+        );
+
+        assert_eq!(true, store.exists(&id1).await.unwrap());
+        assert_eq!(false, store.exists(&id2).await.unwrap());
+
+        assert_eq!(
+            ActionCounts {
+                exists: 1,
+                created: 1,
+                ..ActionCounts::default()
+            },
+            store.counts_for_block(id1)
+        );
+        assert_eq!(
+            ActionCounts {
+                exists: 1,
+                created: 0,
+                ..ActionCounts::default()
+            },
+            store.counts_for_block(id2)
+        );
+        assert_eq!(
+            ActionCounts {
+                exists: 2,
+                created: 1,
+                ..ActionCounts::default()
+            },
+            store.totals()
         );
 
         store.async_drop().await.unwrap();
@@ -560,6 +607,7 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
+                exists: 0,
                 created: 8,
                 removed: 10,
                 stored: 12,
@@ -569,6 +617,7 @@ mod tests {
         );
         assert_eq!(
             ActionCounts {
+                exists: 0,
                 created: 0,
                 removed: 0,
                 stored: 0,

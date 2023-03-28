@@ -259,4 +259,80 @@ mod num_bytes {
     }
 }
 
-// TODO Add performance tests for other operations
+mod create_tree {
+    use super::testutils::*;
+    use super::*;
+
+    #[tokio::test]
+    async fn only_creates_one_leaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                treestore.create_tree().await.unwrap();
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        exists: 1,
+                        stored: 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+}
+
+mod try_create_tree {
+    use super::testutils::*;
+    use super::*;
+
+    #[tokio::test]
+    async fn nonexisting_tree() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = BlockId::from_hex("1bacce38f52f578d4196331b8deadbe9").unwrap();
+                treestore.try_create_tree(block_id).await.unwrap().unwrap();
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        exists: 1,
+                        stored: 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn existing_tree() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = BlockId::from_hex("1bacce38f52f578d4196331b8deadbe9").unwrap();
+
+                // First make sure that the tree already exists
+                treestore.try_create_tree(block_id).await.unwrap().unwrap();
+                treestore.clear_cache_slow().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                // And then run our creation op
+                assert!(treestore.try_create_tree(block_id).await.unwrap().is_none());
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        exists: 1,
+                        stored: 0,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+}
+
+// TODO Test read_bytes, try_read_bytes, read_all, write_bytes, flush, resize_num_bytes, remove, all_blocks,
