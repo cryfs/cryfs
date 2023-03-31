@@ -275,6 +275,11 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.cache.prune_all_blocks().await
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
+        self.cache.prune_unloaded_blocks().await
+    }
 }
 
 #[async_trait]

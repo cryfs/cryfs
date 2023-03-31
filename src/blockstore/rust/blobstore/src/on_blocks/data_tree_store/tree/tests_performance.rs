@@ -1,14 +1,19 @@
 //! This module contains tests that ensure that tree operations only access the minimal required number of nodes.
 
+use anyhow::Result;
+use divrem::DivCeil;
 use futures::future::BoxFuture;
 
 use cryfs_blockstore::{
-    ActionCounts, BlockId, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
+    ActionCounts, BlockId, BlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
     TrackingBlockStore,
 };
 
 use super::super::testutils::*;
-use crate::on_blocks::{data_node_store::NodeLayout, data_tree_store::DataTreeStore};
+use crate::on_blocks::{
+    data_node_store::NodeLayout,
+    data_tree_store::{DataTree, DataTreeStore},
+};
 
 const LAYOUT: NodeLayout = NodeLayout {
     block_size_bytes: 40,
@@ -65,6 +70,28 @@ mod testutils {
         treestore.clear_cache_slow().await.unwrap();
         blockstore.get_and_reset_totals();
         id
+    }
+
+    pub fn num_inner_nodes_above_num_consecutive_leaves(first_leaf: u64, num_leaves: u64) -> u64 {
+        let mut num_inner_nodes = 0;
+        let mut num_leaves_per_node_on_current_level = 1;
+        let mut num_nodes_current_level = num_leaves;
+        for _ in 0..DEPTH {
+            num_leaves_per_node_on_current_level *= LAYOUT.max_children_per_inner_node() as u64;
+            num_nodes_current_level = DivCeil::div_ceil(
+                num_nodes_current_level,
+                LAYOUT.max_children_per_inner_node() as u64,
+            );
+            let first_node_current_level = first_leaf / num_leaves_per_node_on_current_level;
+            let last_node_current_level =
+                (first_leaf + num_leaves - 1) / num_leaves_per_node_on_current_level;
+            num_inner_nodes += last_node_current_level - first_node_current_level + 1;
+        }
+        assert_eq!(
+            1, num_nodes_current_level,
+            "Root level should only have one node"
+        );
+        num_inner_nodes
     }
 }
 
@@ -335,4 +362,537 @@ mod try_create_tree {
     }
 }
 
-// TODO Test read_bytes, try_read_bytes, read_all, write_bytes, flush, resize_num_bytes, remove, all_blocks,
+macro_rules! instantiate_read_tests {
+    ($read_fn:ident) => {
+        #[tokio::test]
+        async fn givenNumBytesAlreadyLoaded_readOneLeaf() {
+            with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+                Box::pin(async move {
+                    let block_id = create_nonempty_tree(treestore, blockstore).await;
+                    let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                    // Load num_bytes so that the size cache is already loaded
+                    tree.num_bytes().await.unwrap();
+                    treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                    blockstore.get_and_reset_totals();
+
+                    let read_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+
+                    ($read_fn(&mut tree, read_offset, 1)).await.unwrap();
+
+                    // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                    // it is already loaded inside of the `tree` instance. That means reading the leaf should load `DEPTH` nodes.
+                    assert_eq!(
+                        ActionCounts {
+                            loaded: DEPTH as u32,
+                            ..Default::default()
+                        },
+                        blockstore.get_and_reset_totals(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNumBytesNotLoadedYet_readOneLeaf() {
+            with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+                Box::pin(async move {
+                    let block_id = create_nonempty_tree(treestore, blockstore).await;
+                    let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                    blockstore.get_and_reset_totals();
+
+                    let read_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+
+                    $read_fn(&mut tree, read_offset, 1).await.unwrap();
+
+                    // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                    // it is already loaded inside of the `tree` instance. That means reading the leaf should load `DEPTH` nodes.
+                    // TODO This should be `let expected_loaded =  DEPTH as u32,`
+                    //      but the current implementation is inefficent because it first needs to load the num_bytes in to the cache
+                    let expected_loaded = 14;
+                    assert_eq!(
+                        ActionCounts {
+                            loaded: expected_loaded,
+                            ..Default::default()
+                        },
+                        blockstore.get_and_reset_totals(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNumBytesAlreadyLoaded_readMultipleLeaves() {
+            with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+                Box::pin(async move {
+                    let block_id = create_nonempty_tree(treestore, blockstore).await;
+                    let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                    // Load num_bytes so that the size cache is already loaded
+                    tree.num_bytes().await.unwrap();
+                    treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                    blockstore.get_and_reset_totals();
+
+                    const FIRST_ACCESSED_LEAF: u64 = 40;
+                    const NUM_ACCESSED_LEAVES: u64 = 11;
+
+                    let read_offset = ((FIRST_ACCESSED_LEAF as f32 + 0.5)
+                        * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+                    let read_len =
+                        (NUM_ACCESSED_LEAVES as usize - 1) * LAYOUT.max_bytes_per_leaf() as usize;
+
+                    $read_fn(&mut tree, read_offset, read_len).await.unwrap();
+
+                    let expected_num_loaded_inner_nodes =
+                        num_inner_nodes_above_num_consecutive_leaves(
+                            FIRST_ACCESSED_LEAF,
+                            NUM_ACCESSED_LEAVES,
+                        );
+                    let expected_num_loaded_inner_nodes_without_root =
+                        expected_num_loaded_inner_nodes - 1;
+                    let expected_num_loaded_nodes =
+                        expected_num_loaded_inner_nodes_without_root + NUM_ACCESSED_LEAVES;
+
+                    assert_eq!(
+                        ActionCounts {
+                            loaded: expected_num_loaded_nodes as u32,
+                            ..Default::default()
+                        },
+                        blockstore.get_and_reset_totals(),
+                    );
+                })
+            })
+            .await
+        }
+
+        #[tokio::test]
+        async fn givenNumBytesNotLoadedYet_readMultipleLeaves() {
+            with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+                Box::pin(async move {
+                    let block_id = create_nonempty_tree(treestore, blockstore).await;
+                    let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                    blockstore.get_and_reset_totals();
+
+                    const FIRST_ACCESSED_LEAF: u64 = 40;
+                    const NUM_ACCESSED_LEAVES: u64 = 11;
+
+                    let read_offset = ((FIRST_ACCESSED_LEAF as f32 + 0.5)
+                        * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+                    let read_len =
+                        (NUM_ACCESSED_LEAVES as usize - 1) * LAYOUT.max_bytes_per_leaf() as usize;
+
+                    $read_fn(&mut tree, read_offset, read_len).await.unwrap();
+
+                    let expected_num_loaded_inner_nodes =
+                        num_inner_nodes_above_num_consecutive_leaves(
+                            FIRST_ACCESSED_LEAF,
+                            NUM_ACCESSED_LEAVES,
+                        );
+                    let _expected_num_loaded_inner_nodes_without_root =
+                        expected_num_loaded_inner_nodes - 1;
+                    // TODO This should just be `let expected_num_loaded_nodes = expected_num_loaded_inner_nodes_without_root + NUM_ACCESSED_LEAVES`
+                    //      but the current implementation is inefficent because it first needs to load the num_bytes in to the cache
+                    let expected_num_loaded_nodes = 33;
+
+                    assert_eq!(
+                        ActionCounts {
+                            loaded: expected_num_loaded_nodes as u32,
+                            ..Default::default()
+                        },
+                        blockstore.get_and_reset_totals(),
+                    );
+                })
+            })
+            .await
+        }
+    };
+}
+
+#[allow(non_snake_case)]
+mod read_bytes {
+    use super::testutils::*;
+    use super::*;
+
+    async fn read_fn<B: BlockStore + Send + Sync>(
+        tree: &mut DataTree<'_, B>,
+        offset: u64,
+        len: usize,
+    ) -> Result<()> {
+        let mut target = vec![0; len];
+        tree.read_bytes(offset, &mut target).await?;
+        Ok(())
+    }
+
+    instantiate_read_tests!(read_fn);
+}
+
+#[allow(non_snake_case)]
+mod try_read_bytes {
+    use super::testutils::*;
+    use super::*;
+
+    async fn read_fn<B: BlockStore + Send + Sync>(
+        tree: &mut DataTree<'_, B>,
+        offset: u64,
+        len: usize,
+    ) -> Result<()> {
+        let mut target = vec![0; len];
+        tree.try_read_bytes(offset, &mut target).await?;
+        Ok(())
+    }
+
+    instantiate_read_tests!(read_fn);
+}
+
+#[allow(non_snake_case)]
+mod read_all {
+    use super::testutils::*;
+    use super::*;
+
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_readAll() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                tree.read_all().await.unwrap();
+
+                // We need to load the full tree except for the root node, which is already loaded in the `tree` instance.
+                assert_eq!(
+                    ActionCounts {
+                        loaded: NUM_NODES as u32 - 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_readAll() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                tree.read_all().await.unwrap();
+
+                // We need to load the full tree except for the root node, which is already loaded in the `tree` instance.
+                assert_eq!(
+                    ActionCounts {
+                        loaded: NUM_NODES as u32 - 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+}
+
+#[allow(non_snake_case)]
+mod write_bytes {
+    use super::testutils::*;
+    use super::*;
+
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_writePartOfOneLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                let write_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+
+                tree.write_bytes(&[0; 1], write_offset).await.unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We also have to load the leaf itself, because we only write part of it.
+                // That means reading the leaf should load `DEPTH` nodes.
+                assert_eq!(
+                    ActionCounts {
+                        loaded: DEPTH as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        stored: 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_writePartOfOneLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                let write_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+
+                tree.write_bytes(&[0; 1], write_offset).await.unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We also have to load the leaf itself, because we only write part of it.
+                // That means reading the leaf should load `DEPTH` nodes.
+                let expected_loaded = DEPTH as u32;
+                assert_eq!(
+                    ActionCounts {
+                        loaded: expected_loaded,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        stored: 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_writeAFullLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                let write_offset = 40 * LAYOUT.max_bytes_per_leaf();
+
+                tree.write_bytes(
+                    &[0; LAYOUT.max_bytes_per_leaf() as usize],
+                    write_offset as u64,
+                )
+                .await
+                .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
+                // That means reading the leaf should load `DEPTH - 1` nodes.
+                assert_eq!(
+                    ActionCounts {
+                        exists: 1, // TODO Why do we need exists here?
+                        loaded: DEPTH as u32 - 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        stored: 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_writeAFullLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                let write_offset = 40 * LAYOUT.max_bytes_per_leaf();
+
+                tree.write_bytes(
+                    &[0; LAYOUT.max_bytes_per_leaf() as usize],
+                    write_offset as u64,
+                )
+                .await
+                .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
+                // That means reading the leaf should load `DEPTH - 1` nodes.
+                let expected_loaded = DEPTH as u32 - 1;
+                assert_eq!(
+                    ActionCounts {
+                        exists: 1, // TODO Why do we need exists here?
+                        loaded: expected_loaded,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        stored: 1,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_writeMultipleLeaves() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                const FIRST_ACCESSED_LEAF: u64 = 40;
+                const NUM_ACCESSED_LEAVES: u64 = 11;
+
+                let write_offset = ((FIRST_ACCESSED_LEAF as f32 + 0.5)
+                    * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+                const WRITE_LEN: usize =
+                    (NUM_ACCESSED_LEAVES as usize - 1) * LAYOUT.max_bytes_per_leaf() as usize;
+
+                tree.write_bytes(&[0; WRITE_LEN], write_offset)
+                    .await
+                    .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                let expected_num_loaded_inner_nodes = num_inner_nodes_above_num_consecutive_leaves(
+                    FIRST_ACCESSED_LEAF,
+                    NUM_ACCESSED_LEAVES,
+                );
+                let expected_num_loaded_inner_nodes_without_root =
+                    expected_num_loaded_inner_nodes - 1;
+                // We also have to load the first and the last leaf of the writing region because we're
+                // only partially overwriting those
+                let expected_num_loaded_nodes = expected_num_loaded_inner_nodes_without_root + 2;
+                assert_eq!(
+                    ActionCounts {
+                        exists: NUM_ACCESSED_LEAVES as u32 - 2, // TODO Why do we need exists here?
+                        loaded: expected_num_loaded_nodes as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        stored: NUM_ACCESSED_LEAVES as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_writeMultipleLeaves() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                const FIRST_ACCESSED_LEAF: u64 = 40;
+                const NUM_ACCESSED_LEAVES: u64 = 11;
+
+                let write_offset = ((FIRST_ACCESSED_LEAF as f32 + 0.5)
+                    * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+                const WRITE_LEN: usize =
+                    (NUM_ACCESSED_LEAVES as usize - 1) * LAYOUT.max_bytes_per_leaf() as usize;
+
+                tree.write_bytes(&[0; WRITE_LEN], write_offset)
+                    .await
+                    .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                let expected_num_loaded_inner_nodes = num_inner_nodes_above_num_consecutive_leaves(
+                    FIRST_ACCESSED_LEAF,
+                    NUM_ACCESSED_LEAVES,
+                );
+                let expected_num_loaded_inner_nodes_without_root =
+                    expected_num_loaded_inner_nodes - 1;
+                // We also have to load the first and the last leaf of the writing region because we're
+                // only partially overwriting those
+                let expected_num_loaded_nodes = expected_num_loaded_inner_nodes_without_root + 2;
+
+                assert_eq!(
+                    ActionCounts {
+                        exists: NUM_ACCESSED_LEAVES as u32 - 2, // TODO Why do we need exists here?
+                        loaded: expected_num_loaded_nodes as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                assert_eq!(
+                    ActionCounts {
+                        stored: NUM_ACCESSED_LEAVES as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    // TODO Test scenarios where writing grows the tree
+}
+
+// TODO Test resize_num_bytes, remove, all_blocks

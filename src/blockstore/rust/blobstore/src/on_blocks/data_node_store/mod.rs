@@ -211,6 +211,11 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.block_store.clear_cache_slow().await
     }
+
+    #[cfg(test)]
+    pub async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
+        self.block_store.clear_unloaded_blocks_from_cache().await
+    }
 }
 
 #[async_trait]

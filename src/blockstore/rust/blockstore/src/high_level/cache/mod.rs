@@ -139,6 +139,14 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
     /// TODO Docs
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
+    pub async fn prune_unloaded_blocks(&self) -> Result<()> {
+        let cache = self.cache.as_ref().expect("Object is already destructed");
+        Self::_prune_blocks_not_accessed_for_at_least(Arc::clone(cache), Duration::ZERO).await
+    }
+
+    /// TODO Docs
+    /// TODO Test
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_all_blocks(&self) -> Result<()> {
         use futures::StreamExt;
         let cache = self.cache.as_ref().expect("Object is already destructed");
