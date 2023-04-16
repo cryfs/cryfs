@@ -73,7 +73,35 @@ mod testutils {
     }
 
     pub fn num_inner_nodes_above_num_consecutive_leaves(first_leaf: u64, num_leaves: u64) -> u64 {
-        let mut num_inner_nodes = 0;
+        num_existing_inner_nodes_above_num_consecutive_leaves(
+            first_leaf,
+            num_leaves,
+            first_leaf + num_leaves,
+        )
+        .get_assert_same()
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct NodeCount {
+        existing: u64,
+        total: u64,
+    }
+    impl NodeCount {
+        fn get_assert_same(&self) -> u64 {
+            assert_eq!(self.existing, self.total);
+            self.total
+        }
+    }
+
+    pub fn num_existing_inner_nodes_above_num_consecutive_leaves(
+        first_leaf: u64,
+        num_leaves: u64,
+        existing_num_leaves: u64,
+    ) -> NodeCount {
+        let mut num_inner_nodes = NodeCount {
+            existing: 0,
+            total: 0,
+        };
         let mut num_leaves_per_node_on_current_level = 1;
         let mut num_nodes_current_level = num_leaves;
         for _ in 0..DEPTH {
@@ -85,13 +113,63 @@ mod testutils {
             let first_node_current_level = first_leaf / num_leaves_per_node_on_current_level;
             let last_node_current_level =
                 (first_leaf + num_leaves - 1) / num_leaves_per_node_on_current_level;
-            num_inner_nodes += last_node_current_level - first_node_current_level + 1;
+            let last_existing_node_current_level =
+                (existing_num_leaves - 1) / num_leaves_per_node_on_current_level;
+            num_inner_nodes.existing +=
+                last_existing_node_current_level.saturating_sub(first_node_current_level) + 1;
+            num_inner_nodes.total +=
+                last_node_current_level.saturating_sub(first_node_current_level) + 1;
         }
         assert_eq!(
             1, num_nodes_current_level,
             "Root level should only have one node"
         );
         num_inner_nodes
+    }
+
+    pub fn num_nodes_written_when_growing_tree(old_num_leaves: u64, new_num_leaves: u64) -> u64 {
+        assert!(new_num_leaves >= old_num_leaves);
+        let mut num_nodes_written = 0;
+        let mut old_num_nodes_current_level = old_num_leaves;
+        let mut new_num_nodes_current_level = new_num_leaves;
+        for _ in 0..DEPTH {
+            assert!(new_num_nodes_current_level >= old_num_nodes_current_level);
+            num_nodes_written += new_num_nodes_current_level - old_num_nodes_current_level;
+            old_num_nodes_current_level = DivCeil::div_ceil(
+                old_num_nodes_current_level,
+                LAYOUT.max_children_per_inner_node() as u64,
+            );
+            new_num_nodes_current_level = DivCeil::div_ceil(
+                new_num_nodes_current_level,
+                LAYOUT.max_children_per_inner_node() as u64,
+            );
+        }
+        assert_eq!(
+            1, old_num_nodes_current_level,
+            "Root level should only have one node"
+        );
+        while new_num_nodes_current_level > 1 {
+            // We need to grow the tree size by one level.
+            // Precondition: we already created one node on the current level for the old tree 9or there was one preexisting in the old tree)
+            let old_num_nodes_current_level = 1;
+            num_nodes_written += new_num_nodes_current_level - old_num_nodes_current_level;
+            // We also need to add a node one level above ourselves to create the new root
+            // and because the next loop iteration assumes that the "old" tree already has a node there
+            // Because the blob it has to remain the same, this new root actually is written to the
+            // current root, and a new node is created with the previous data of the current root.
+            // This means we have to write 2 additional nodes.
+            num_nodes_written += 2;
+            new_num_nodes_current_level = DivCeil::div_ceil(
+                new_num_nodes_current_level,
+                LAYOUT.max_children_per_inner_node() as u64,
+            );
+            // Postcondition: All nodes on the current level were created plus a new root node on the level one above
+        }
+        assert_eq!(
+            1, new_num_nodes_current_level,
+            "Root level should only have one node"
+        );
+        num_nodes_written
     }
 }
 
@@ -605,7 +683,7 @@ mod write_bytes {
     use super::*;
 
     #[tokio::test]
-    async fn givenNumBytesAlreadyLoaded_writePartOfOneLeaf() {
+    async fn givenNumBytesAlreadyLoaded_whenWritingDoesntGrowTree_writePartOfOneLeaf() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
@@ -647,7 +725,7 @@ mod write_bytes {
     }
 
     #[tokio::test]
-    async fn givenNumBytesNotLoadedYet_writePartOfOneLeaf() {
+    async fn givenNumBytesNotLoadedYet_whenWritingDoesntGrowTree_writePartOfOneLeaf() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
@@ -687,7 +765,7 @@ mod write_bytes {
     }
 
     #[tokio::test]
-    async fn givenNumBytesAlreadyLoaded_writeAFullLeaf() {
+    async fn givenNumBytesAlreadyLoaded_whenWritingDoesntGrowTree_writeAFullLeaf() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
@@ -735,7 +813,7 @@ mod write_bytes {
     }
 
     #[tokio::test]
-    async fn givenNumBytesNotLoadedYet_writeAFullLeaf() {
+    async fn givenNumBytesNotLoadedYet_whenWritingDoesntGrowTree_writeAFullLeaf() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
@@ -781,7 +859,7 @@ mod write_bytes {
     }
 
     #[tokio::test]
-    async fn givenNumBytesAlreadyLoaded_writeMultipleLeaves() {
+    async fn givenNumBytesAlreadyLoaded_whenWritingDoesntGrowTree_writeMultipleLeaves() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
@@ -838,7 +916,7 @@ mod write_bytes {
     }
 
     #[tokio::test]
-    async fn givenNumBytesNotLoadedYet_writeMultipleLeaves() {
+    async fn givenNumBytesNotLoadedYet_whenWritingDoesntGrowTree_writeMultipleLeaves() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
@@ -892,7 +970,315 @@ mod write_bytes {
         .await
     }
 
-    // TODO Test scenarios where writing grows the tree
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_whenWritingGrowsTree_writePartOfOneLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                const WRITTEN_LEAF_INDEX: u32 = 140;
+
+                let write_offset =
+                    ((WRITTEN_LEAF_INDEX as f32 + 0.5) * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+
+                tree.write_bytes(&[0; 1], write_offset).await.unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We also have to load the leaf itself, because we only write part of it.
+                // That means reading the leaf should load `DEPTH` nodes.
+                assert_eq!(
+                    ActionCounts {
+                        exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
+                        loaded: DEPTH as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                let expected_stored =
+                    num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
+                        as u32;
+                assert_eq!(
+                    ActionCounts {
+                        stored: expected_stored + 3, // TODO Why + 3 ?
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_whenWritingGrowsTree_writePartOfOneLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                const WRITTEN_LEAF_INDEX: u32 = 140;
+                let write_offset =
+                    ((WRITTEN_LEAF_INDEX as f32 + 0.5) * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+
+                tree.write_bytes(&[0; 1], write_offset).await.unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We also have to load the leaf itself, because we only write part of it.
+                // That means reading the leaf should load `DEPTH` nodes.
+                let expected_loaded = DEPTH as u32;
+                assert_eq!(
+                    ActionCounts {
+                        exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
+                        loaded: expected_loaded,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                let expected_stored =
+                    num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
+                        as u32;
+                assert_eq!(
+                    ActionCounts {
+                        stored: expected_stored + 3, // TODO Why + 3 ?
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_whenWritingGrowsTree_writeAFullLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                const WRITTEN_LEAF_INDEX: u32 = 140;
+                let write_offset = WRITTEN_LEAF_INDEX * LAYOUT.max_bytes_per_leaf();
+
+                tree.write_bytes(
+                    &[0; LAYOUT.max_bytes_per_leaf() as usize],
+                    write_offset as u64,
+                )
+                .await
+                .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
+                // That means reading the leaf should load `DEPTH - 1` nodes.
+                // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
+                assert_eq!(
+                    ActionCounts {
+                        exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
+                        loaded: DEPTH as u32,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                let expected_stored =
+                    num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
+                        as u32;
+                assert_eq!(
+                    ActionCounts {
+                        stored: expected_stored + 3, // TODO Why + 3 ?
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_whenWritingGrowsTree_writeAFullLeaf() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                const WRITTEN_LEAF_INDEX: u32 = 140;
+                let write_offset = WRITTEN_LEAF_INDEX * LAYOUT.max_bytes_per_leaf();
+
+                tree.write_bytes(
+                    &[0; LAYOUT.max_bytes_per_leaf() as usize],
+                    write_offset as u64,
+                )
+                .await
+                .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
+                // That means reading the leaf should load `DEPTH - 1` nodes.
+                // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
+                let expected_loaded = DEPTH as u32;
+                assert_eq!(
+                    ActionCounts {
+                        exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
+                        loaded: expected_loaded,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                let expected_stored =
+                    num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
+                        as u32;
+                assert_eq!(
+                    ActionCounts {
+                        stored: expected_stored + 3, // TODO Why + 3 ?
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesAlreadyLoaded_whenWritingGrowsTree_writeMultipleLeaves() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                // Load num_bytes so that the size cache is already loaded
+                tree.num_bytes().await.unwrap();
+                treestore.clear_unloaded_blocks_from_cache().await.unwrap();
+                blockstore.get_and_reset_totals();
+
+                const FIRST_ACCESSED_LEAF: u64 = 140;
+                const NUM_ACCESSED_LEAVES: u64 = 11;
+
+                let write_offset = ((FIRST_ACCESSED_LEAF as f32 + 0.5)
+                    * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+                const WRITE_LEN: usize =
+                    (NUM_ACCESSED_LEAVES as usize - 1) * LAYOUT.max_bytes_per_leaf() as usize;
+
+                tree.write_bytes(&[0; WRITE_LEN], write_offset)
+                    .await
+                    .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the rightmost pre-existing leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
+                // That means reading the leaf should load `DEPTH - 1` nodes.
+                // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
+                let expected_loaded = DEPTH as u32;
+                assert_eq!(
+                    ActionCounts {
+                        exists: 103, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
+                        loaded: expected_loaded,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                let expected_stored = num_nodes_written_when_growing_tree(
+                    NUM_LEAVES,
+                    FIRST_ACCESSED_LEAF + NUM_ACCESSED_LEAVES,
+                ) as u32;
+                assert_eq!(
+                    ActionCounts {
+                        stored: expected_stored + 3, // TODO Why +3?
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn givenNumBytesNotLoadedYet_whenWritingGrowsTree_writeMultipleLeaves() {
+        with_treestore_and_tracking_blockstore(|treestore, blockstore| {
+            Box::pin(async move {
+                let block_id = create_nonempty_tree(treestore, blockstore).await;
+                let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
+                blockstore.get_and_reset_totals();
+
+                const FIRST_ACCESSED_LEAF: u64 = 140;
+                const NUM_ACCESSED_LEAVES: u64 = 11;
+
+                let write_offset = ((FIRST_ACCESSED_LEAF as f32 + 0.5)
+                    * LAYOUT.max_bytes_per_leaf() as f32) as u64;
+                const WRITE_LEN: usize =
+                    (NUM_ACCESSED_LEAVES as usize - 1) * LAYOUT.max_bytes_per_leaf() as usize;
+
+                tree.write_bytes(&[0; WRITE_LEN], write_offset)
+                    .await
+                    .unwrap();
+
+                // Even before writing, we need to load the inner nodes on the path to the rightmost pre-existing leaf.
+                // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
+                // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
+                // That means reading the leaf should load `DEPTH - 1` nodes.
+                // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
+                let expected_loaded = DEPTH as u32;
+                assert_eq!(
+                    ActionCounts {
+                        exists: 103, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
+                        loaded: expected_loaded,
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+
+                // After flushing, the new content should have been written
+                std::mem::drop(tree);
+                treestore.clear_cache_slow().await.unwrap();
+                let expected_stored = num_nodes_written_when_growing_tree(
+                    NUM_LEAVES,
+                    FIRST_ACCESSED_LEAF + NUM_ACCESSED_LEAVES,
+                ) as u32;
+                assert_eq!(
+                    ActionCounts {
+                        stored: expected_stored + 3, // TODO Why +3?
+                        ..Default::default()
+                    },
+                    blockstore.get_and_reset_totals(),
+                );
+            })
+        })
+        .await
+    }
 }
 
 // TODO Test resize_num_bytes, remove, all_blocks
