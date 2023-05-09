@@ -8,7 +8,7 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use crate::interface::{Device, Dir, DirEntry, FsError, FsResult, Node, NodeAttrs};
-use crate::utils::{Mode, NodeKind};
+use crate::utils::{Gid, Mode, NodeKind, Uid};
 
 pub struct FsAdapter<Fs: Device> {
     fs: Fs,
@@ -178,9 +178,23 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// * `parent`: path to the directory to make the directory under.
     /// * `name`: name of the directory.
     /// * `mode`: permissions for the new directory.
-    fn mkdir(&self, _req: RequestInfo, parent: &Path, name: &OsStr, mode: u32) -> ResultEntry {
-        log::warn!("mkdir({parent:?}, name={name:?}, mode={mode})...unimplemented");
-        Err(libc::ENOSYS)
+    fn mkdir(&self, req: RequestInfo, parent: &Path, name: &OsStr, mode: u32) -> ResultEntry {
+        self.run_async(
+            &format!("mkdir({parent:?}, name={name:?}, mode={mode})"),
+            move || async move {
+                // TODO Don't assert but return an error
+                let name = name.to_string_lossy(); // TODO Is to_string_lossy the best way to convert from OsString to String?
+                assert!(!name.contains('/'), "name must not contain '/'");
+                let uid = Uid::from(req.uid);
+                let gid = Gid::from(req.gid);
+                let mode = Mode::from(mode);
+                let parent_dir = self.fs.load_dir(parent).await?;
+                let new_dir_attrs = parent_dir.create_dir(&name, mode, uid, gid).await?;
+                // TODO What is the ttl here?
+                let ttl = Duration::ZERO;
+                Ok((ttl, convert_file_attrs(new_dir_attrs)))
+            },
+        )
     }
 
     /// Remove a file.

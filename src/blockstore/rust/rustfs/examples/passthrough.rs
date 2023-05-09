@@ -102,6 +102,34 @@ impl Dir for PassthroughDir {
         }
         Ok(entries)
     }
+
+    async fn create_dir(&self, name: &str, mode: Mode, uid: Uid, gid: Gid) -> FsResult<NodeAttrs> {
+        let path = self.path.join(name);
+        let path_clone = path.clone();
+        let _: () = tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                // TODO Make this platform independent
+                // TODO Don't use unwrap
+                nix::unistd::mkdir(
+                    &path_clone,
+                    nix::sys::stat::Mode::from_bits(mode.into()).unwrap(),
+                )
+                // TODO Don't use UnknownError
+                .map_err(|_| FsError::UnknownError)?;
+                nix::unistd::chown(
+                    &path_clone,
+                    Some(nix::unistd::Uid::from_raw(uid.into())),
+                    Some(nix::unistd::Gid::from_raw(gid.into())),
+                )
+                // TODO Don't use UnknownError
+                .map_err(|_| FsError::UnknownError)?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        // TODO Return value directly without another call but make sure it returns the same value
+        PassthroughNode { path }.getattr().await
+    }
 }
 
 trait IoResultExt<T> {

@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 
 use super::error::FsResult;
-use crate::utils::NodeKind;
+use super::node::NodeAttrs;
+use crate::utils::{Gid, Mode, NodeKind, Uid};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirEntry {
@@ -12,4 +13,6 @@ pub struct DirEntry {
 #[async_trait]
 pub trait Dir {
     async fn entries(&self) -> FsResult<Vec<DirEntry>>;
+
+    async fn create_dir(&self, name: &str, mode: Mode, uid: Uid, gid: Gid) -> FsResult<NodeAttrs>;
 }

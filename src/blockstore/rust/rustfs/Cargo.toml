@@ -14,6 +14,8 @@ log = "^0.4.17"
 tokio = "^1.23.0"
 # TODO env_logger is only needed for the passthrough example
 env_logger = "^0.10.0"
+# TODO nix is only needed for the passthrough example
+nix = "^0.26.2"
 derive_more = "^0.99.17"
 thiserror = "^1.0.40"
 
