@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{Device, Dir, DirEntry, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes, Uid};
+use cryfs_rustfs::{
+    Device, Dir, DirEntry, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes, Uid,
+};
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -31,12 +33,12 @@ impl Device for PassthroughDevice {
     type Node = PassthroughNode;
     type Dir = PassthroughDir;
 
-    async fn load_node(&self, path: &Path) -> std::io::Result<Self::Node> {
+    async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
         let path = self.apply_basedir(path);
         Ok(PassthroughNode { path })
     }
 
-    async fn load_dir(&self, path: &Path) -> std::io::Result<Self::Dir> {
+    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
         let path = self.apply_basedir(path);
         Ok(PassthroughDir { path })
     }
@@ -48,8 +50,8 @@ struct PassthroughNode {
 
 #[async_trait]
 impl Node for PassthroughNode {
-    async fn getattr(&self) -> std::io::Result<NodeAttrs> {
-        let metadata = tokio::fs::symlink_metadata(&self.path).await?;
+    async fn getattr(&self) -> FsResult<NodeAttrs> {
+        let metadata = tokio::fs::symlink_metadata(&self.path).await.map_error()?;
         Ok(NodeAttrs {
             // TODO Make nlink platform independent
             // TODO No unwrap
@@ -60,8 +62,8 @@ impl Node for PassthroughNode {
             gid: metadata.st_gid().into(),
             num_bytes: NumBytes::from(metadata.len()),
             blocks: metadata.st_blocks(),
-            atime: metadata.accessed()?,
-            mtime: metadata.modified()?,
+            atime: metadata.accessed().map_error()?,
+            mtime: metadata.modified().map_error()?,
             // TODO No unwrap in ctime
             // TODO Make ctime platform independent (currently it requires the linux field st_ctime)
             // TODO Is st_ctime_nsec actually the total number of nsec or only the sub-second part?
@@ -77,13 +79,13 @@ struct PassthroughDir {
 
 #[async_trait]
 impl Dir for PassthroughDir {
-    async fn entries(&self) -> std::io::Result<Vec<DirEntry>> {
+    async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let mut entries = Vec::new();
-        let mut dir = tokio::fs::read_dir(&self.path).await?;
-        while let Some(entry) = dir.next_entry().await? {
+        let mut dir = tokio::fs::read_dir(&self.path).await.map_error()?;
+        while let Some(entry) = dir.next_entry().await.map_error()? {
             let name = entry.file_name();
             let name = name.to_string_lossy().into_owned(); // TODO Is to_string_lossy the best way to convert from OsString to String?
-            let node_type = entry.file_type().await?;
+            let node_type = entry.file_type().await.map_error()?;
             let kind = if node_type.is_file() {
                 NodeKind::File
             } else if node_type.is_dir() {
@@ -99,6 +101,18 @@ impl Dir for PassthroughDir {
             entries.push(DirEntry { name, kind });
         }
         Ok(entries)
+    }
+}
+
+trait IoResultExt<T> {
+    fn map_error(self) -> FsResult<T>;
+}
+impl<T> IoResultExt<T> for std::io::Result<T> {
+    fn map_error(self) -> FsResult<T> {
+        self.map_err(|err| match err.raw_os_error() {
+            Some(error_code) => FsError::Custom { error_code },
+            None => FsError::UnknownError,
+        })
     }
 }
 

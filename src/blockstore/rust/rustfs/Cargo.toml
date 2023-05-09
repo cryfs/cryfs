@@ -15,6 +15,7 @@ tokio = "^1.23.0"
 # TODO env_logger is only needed for the passthrough example
 env_logger = "^0.10.0"
 derive_more = "^0.99.17"
+thiserror = "^1.0.40"
 
 [features]
 default = ["dep:fuse_mt", "fuse_mt"]

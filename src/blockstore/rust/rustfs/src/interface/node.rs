@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use std::time::SystemTime;
 
+use super::error::FsResult;
 use crate::utils::{Gid, Mode, NumBytes, Uid};
 
 #[derive(Debug, Clone, Copy)]
@@ -18,5 +19,5 @@ pub struct NodeAttrs {
 
 #[async_trait]
 pub trait Node {
-    async fn getattr(&self) -> std::io::Result<NodeAttrs>;
+    async fn getattr(&self) -> FsResult<NodeAttrs>;
 }

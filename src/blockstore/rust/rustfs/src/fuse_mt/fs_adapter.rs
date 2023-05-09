@@ -7,7 +7,7 @@ use std::future::Future;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use crate::interface::{Device, Dir, DirEntry, Node, NodeAttrs};
+use crate::interface::{Device, Dir, DirEntry, FsError, FsResult, Node, NodeAttrs};
 use crate::utils::{Mode, NodeKind};
 
 pub struct FsAdapter<Fs: Device> {
@@ -27,7 +27,7 @@ impl<Fs: Device> FsAdapter<Fs> {
 
     fn run_async<R, F>(&self, log_msg: &str, func: impl FnOnce() -> F) -> Result<R, libc::c_int>
     where
-        F: Future<Output = Result<R, libc::c_int>>,
+        F: Future<Output = FsResult<R>>,
     {
         self.runtime.block_on(async move {
             log::info!("{}...", log_msg);
@@ -39,7 +39,7 @@ impl<Fs: Device> FsAdapter<Fs> {
                 }
                 Err(err) => {
                     log::error!("{}...failed: {}", log_msg, err);
-                    Err(err)
+                    Err(err.system_error_code())
                 }
             }
         })
@@ -67,18 +67,9 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
             if fh.is_some() {
                 todo!();
             }
-            let node = self
-                .fs
-                .load_node(path)
-                .await
-                // TODO Is this the correct error code handling?
-                .map_err(|e| e.raw_os_error().unwrap())?;
+            let node = self.fs.load_node(path).await?;
             // TODO No unwrap
-            let attrs = node
-                .getattr()
-                .await
-                // TODO Is this the correct error code handling?
-                .map_err(|e| e.raw_os_error().unwrap())?;
+            let attrs = node.getattr().await?;
             // TODO What is the ttl here?
             let ttl = Duration::ZERO;
             Ok((ttl, convert_file_attrs(attrs)))
@@ -407,18 +398,9 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// Return all the entries of the directory.
     fn readdir(&self, _req: RequestInfo, path: &Path, fh: u64) -> ResultReaddir {
         self.run_async(&format!("readdir({path:?}, fh={fh})"), move || async move {
-            let dir = self
-                .fs
-                .load_dir(path)
-                .await
-                // TODO Is this the correct error code handling?
-                .map_err(|e| e.raw_os_error().unwrap())?;
+            let dir = self.fs.load_dir(path).await?;
             // TODO No unwrap
-            let entries = dir
-                .entries()
-                .await
-                // TODO Is this the correct error code handling?
-                .map_err(|e| e.raw_os_error().unwrap())?;
+            let entries = dir.entries().await?;
             let entries = convert_dir_entries(entries);
             Ok(entries)
         })
