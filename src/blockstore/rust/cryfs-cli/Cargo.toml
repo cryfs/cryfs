@@ -1,0 +1,10 @@
+[package]
+authors = ["Sebastian Messmer <messmer@cryfs.org>"]
+edition = "2021"
+name = "cryfs-cli"
+version = "0.1.0"
+
+[dependencies]
+async-trait = "^0.1.60"
+cryfs-cryfs = {path = "../cryfs"}
+cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
