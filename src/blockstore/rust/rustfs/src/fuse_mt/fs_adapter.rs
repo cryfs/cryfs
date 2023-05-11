@@ -9,7 +9,7 @@ use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use crate::interface::{Device, Dir, DirEntry, FsError, FsResult, Node, NodeAttrs, Symlink};
+use crate::interface::{Device, Dir, DirEntry, FsResult, Node, NodeAttrs, Symlink};
 use crate::utils::{Gid, Mode, NodeKind, Uid};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute

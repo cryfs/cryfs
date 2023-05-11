@@ -103,11 +103,7 @@ impl Node for PassthroughNode {
                     gid,
                     nix::unistd::FchownatFlags::NoFollowSymlink,
                 )
-                // TODO Don't use UnknownError
-                .map_err(|e| {
-                    log::error!("{e:?}");
-                    FsError::UnknownError
-                })?;
+                .map_error()?;
                 Ok(())
             })
             .await
@@ -163,21 +159,13 @@ impl Dir for PassthroughDir {
                     &path_clone,
                     nix::sys::stat::Mode::from_bits(mode.into()).unwrap(),
                 )
-                // TODO Don't use UnknownError
-                .map_err(|e| {
-                    log::error!("{e:?}");
-                    FsError::UnknownError
-                })?;
+                .map_error()?;
                 nix::unistd::chown(
                     &path_clone,
                     Some(nix::unistd::Uid::from_raw(uid.into())),
                     Some(nix::unistd::Gid::from_raw(gid.into())),
                 )
-                // TODO Don't use UnknownError
-                .map_err(|e| {
-                    log::error!("{e:?}");
-                    FsError::UnknownError
-                })?;
+                .map_error()?;
                 Ok(())
             })
             .await
@@ -213,11 +201,7 @@ impl Dir for PassthroughDir {
                     Some(nix::unistd::Gid::from_raw(gid.into())),
                     nix::unistd::FchownatFlags::NoFollowSymlink,
                 )
-                // TODO Don't use UnknownError
-                .map_err(|e| {
-                    log::error!("{e:?}");
-                    FsError::UnknownError
-                })?;
+                .map_error()?;
                 Ok(())
             })
             .await
@@ -253,6 +237,20 @@ impl<T> IoResultExt<T> for std::io::Result<T> {
         self.map_err(|err| match err.raw_os_error() {
             Some(error_code) => FsError::Custom { error_code },
             None => FsError::UnknownError,
+        })
+    }
+}
+trait NixResultExt<T> {
+    fn map_error(self) -> FsResult<T>;
+}
+impl<T> NixResultExt<T> for nix::Result<T> {
+    fn map_error(self) -> FsResult<T> {
+        self.map_err(|errno| {
+            let error = std::io::Error::from(errno);
+            match error.raw_os_error() {
+                Some(error_code) => FsError::Custom { error_code },
+                None => FsError::UnknownError,
+            }
         })
     }
 }
