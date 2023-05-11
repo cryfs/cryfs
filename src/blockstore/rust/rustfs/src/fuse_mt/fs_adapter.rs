@@ -2,7 +2,9 @@ use fuse_mt::{
     CallbackResult, FileAttr, FilesystemMT, RequestInfo, ResultCreate, ResultData, ResultEmpty,
     ResultEntry, ResultOpen, ResultReaddir, ResultSlice, ResultStatfs, ResultWrite, ResultXattr,
 };
+use std::borrow::Cow;
 use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::future::Future;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
@@ -182,14 +184,12 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
         self.run_async(
             &format!("mkdir({parent:?}, name={name:?}, mode={mode})"),
             move || async move {
-                // TODO Don't assert but return an error
-                let name = name.to_string_lossy(); // TODO Is to_string_lossy the best way to convert from OsString to String?
-                assert!(!name.contains('/'), "name must not contain '/'");
+                let name = parse_node_name(name);
                 let uid = Uid::from(req.uid);
                 let gid = Gid::from(req.gid);
                 let mode = Mode::from(mode);
                 let parent_dir = self.fs.load_dir(parent).await?;
-                let new_dir_attrs = parent_dir.create_dir(&name, mode, uid, gid).await?;
+                let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
                 // TODO What is the ttl here?
                 let ttl = Duration::ZERO;
                 Ok((ttl, convert_file_attrs(new_dir_attrs)))
@@ -211,8 +211,15 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// * `parent`: path to the directory containing the directory to delete.
     /// * `name`: name of the directory to delete.
     fn rmdir(&self, _req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
-        log::warn!("rmdir({parent:?}, name={name:?})...unimplemented");
-        Err(libc::ENOSYS)
+        self.run_async(
+            &format!("rmdir({parent:?}, name={name:?})"),
+            move || async move {
+                let name = parse_node_name(name);
+                let parent_dir = self.fs.load_dir(parent).await?;
+                parent_dir.remove_child_dir(&name).await?;
+                Ok(())
+            },
+        )
     }
 
     /// Create a symbolic link.
@@ -595,4 +602,10 @@ fn convert_dir_entries(entries: Vec<DirEntry>) -> Vec<fuse_mt::DirectoryEntry> {
             kind: convert_node_kind(entry.kind),
         })
         .collect()
+}
+
+fn parse_node_name(name: &OsStr) -> Cow<'_, str> {
+    let name = name.to_string_lossy(); // TODO Is to_string_lossy the best way to convert from OsString to String?
+    assert!(!name.contains('/'), "name must not contain '/': {name:?}");
+    name
 }

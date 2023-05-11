@@ -103,7 +103,13 @@ impl Dir for PassthroughDir {
         Ok(entries)
     }
 
-    async fn create_dir(&self, name: &str, mode: Mode, uid: Uid, gid: Gid) -> FsResult<NodeAttrs> {
+    async fn create_child_dir(
+        &self,
+        name: &str,
+        mode: Mode,
+        uid: Uid,
+        gid: Gid,
+    ) -> FsResult<NodeAttrs> {
         let path = self.path.join(name);
         let path_clone = path.clone();
         let _: () = tokio::runtime::Handle::current()
@@ -129,6 +135,12 @@ impl Dir for PassthroughDir {
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         // TODO Return value directly without another call but make sure it returns the same value
         PassthroughNode { path }.getattr().await
+    }
+
+    async fn remove_child_dir(&self, name: &str) -> FsResult<()> {
+        let path = self.path.join(name);
+        tokio::fs::remove_dir(path).await.map_error()?;
+        Ok(())
     }
 }
 
