@@ -4,6 +4,7 @@ use cryfs_rustfs::{
     Symlink, Uid,
 };
 use std::os::linux::fs::MetadataExt;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, UNIX_EPOCH};
 
@@ -77,6 +78,41 @@ impl Node for PassthroughNode {
             ctime: UNIX_EPOCH
                 + Duration::from_nanos(u64::try_from(metadata.st_ctime_nsec()).unwrap()),
         })
+    }
+
+    async fn chmod(&self, mode: Mode) -> FsResult<()> {
+        let path = self.path.join(&self.path);
+        let permissions = std::fs::Permissions::from_mode(mode.into());
+        tokio::fs::set_permissions(path, permissions)
+            .await
+            .map_error()?;
+        Ok(())
+    }
+
+    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
+        let path = self.path.join(&self.path);
+        let uid = uid.map(|uid| nix::unistd::Uid::from_raw(uid.into()));
+        let gid = gid.map(|gid| nix::unistd::Gid::from_raw(gid.into()));
+        let _: () = tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                // TODO Make this platform independent
+                nix::unistd::fchownat(
+                    None,
+                    &path,
+                    uid,
+                    gid,
+                    nix::unistd::FchownatFlags::NoFollowSymlink,
+                )
+                // TODO Don't use UnknownError
+                .map_err(|e| {
+                    log::error!("{e:?}");
+                    FsError::UnknownError
+                })?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        Ok(())
     }
 }
 

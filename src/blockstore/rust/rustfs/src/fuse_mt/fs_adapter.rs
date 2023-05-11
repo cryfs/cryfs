@@ -13,6 +13,8 @@ use crate::interface::{Device, Dir, DirEntry, FsError, FsResult, Node, NodeAttrs
 use crate::utils::{Gid, Mode, NodeKind, Uid};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
+// TODO Check which of the logging statements parameters actually need :? formatting
+// TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent
 
 pub struct FsAdapter<Fs: Device> {
     fs: Fs,
@@ -72,7 +74,6 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
                 todo!();
             }
             let node = self.fs.load_node(path).await?;
-            // TODO No unwrap
             let attrs = node.getattr().await?;
             // TODO What is the ttl here?
             let ttl = Duration::ZERO;
@@ -87,9 +88,18 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     ///
     /// * `fh`: a file handle if this is called on an open file.
     /// * `mode`: the mode to change the file to.
-    fn chmod(&self, _req: RequestInfo, path: &Path, _fh: Option<u64>, mode: u32) -> ResultEmpty {
-        log::warn!("chmod({path:?}, mode={mode})...unimplemented");
-        Err(libc::ENOSYS)
+    fn chmod(&self, _req: RequestInfo, path: &Path, fh: Option<u64>, mode: u32) -> ResultEmpty {
+        self.run_async(
+            &format!("chmod({path:?}, mode={mode})"),
+            move || async move {
+                if fh.is_some() {
+                    todo!();
+                }
+                let node = self.fs.load_node(path).await?;
+                node.chmod(Mode::from(mode)).await?;
+                Ok(())
+            },
+        )
     }
 
     /// Change the owner UID and/or group GID of a filesystem entry.
@@ -101,12 +111,23 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
         &self,
         _req: RequestInfo,
         path: &Path,
-        _fh: Option<u64>,
+        fh: Option<u64>,
         uid: Option<u32>,
         gid: Option<u32>,
     ) -> ResultEmpty {
-        log::warn!("chown({path:?}, uid={uid:?}, gid={gid:?})...unimplemented");
-        Err(libc::ENOSYS)
+        self.run_async(
+            &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
+            move || async move {
+                if fh.is_some() {
+                    todo!();
+                }
+                let node = self.fs.load_node(path).await?;
+                let uid = uid.map(Uid::from);
+                let gid = gid.map(Gid::from);
+                node.chown(uid, gid).await?;
+                Ok(())
+            },
+        )
     }
 
     /// Set the length of a file.

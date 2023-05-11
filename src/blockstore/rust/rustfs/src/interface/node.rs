@@ -20,4 +20,6 @@ pub struct NodeAttrs {
 #[async_trait]
 pub trait Node {
     async fn getattr(&self) -> FsResult<NodeAttrs>;
+    async fn chmod(&self, mode: Mode) -> FsResult<()>;
+    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()>;
 }
