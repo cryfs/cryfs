@@ -1,10 +1,11 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Device, Dir, DirEntry, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes, Uid,
+    Device, Dir, DirEntry, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes,
+    Symlink, Uid,
 };
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
 struct PassthroughDevice {
     basedir: PathBuf,
@@ -32,6 +33,7 @@ impl PassthroughDevice {
 impl Device for PassthroughDevice {
     type Node = PassthroughNode;
     type Dir = PassthroughDir;
+    type Symlink = PassthroughSymlink;
 
     async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
         let path = self.apply_basedir(path);
@@ -41,6 +43,11 @@ impl Device for PassthroughDevice {
     async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
         let path = self.apply_basedir(path);
         Ok(PassthroughDir { path })
+    }
+
+    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink> {
+        let path = self.apply_basedir(path);
+        Ok(PassthroughSymlink { path })
     }
 }
 
@@ -121,14 +128,20 @@ impl Dir for PassthroughDir {
                     nix::sys::stat::Mode::from_bits(mode.into()).unwrap(),
                 )
                 // TODO Don't use UnknownError
-                .map_err(|_| FsError::UnknownError)?;
+                .map_err(|e| {
+                    log::error!("{e:?}");
+                    FsError::UnknownError
+                })?;
                 nix::unistd::chown(
                     &path_clone,
                     Some(nix::unistd::Uid::from_raw(uid.into())),
                     Some(nix::unistd::Gid::from_raw(gid.into())),
                 )
                 // TODO Don't use UnknownError
-                .map_err(|_| FsError::UnknownError)?;
+                .map_err(|e| {
+                    log::error!("{e:?}");
+                    FsError::UnknownError
+                })?;
                 Ok(())
             })
             .await
@@ -141,6 +154,58 @@ impl Dir for PassthroughDir {
         let path = self.path.join(name);
         tokio::fs::remove_dir(path).await.map_error()?;
         Ok(())
+    }
+
+    async fn create_child_symlink(
+        &self,
+        name: &str,
+        target: &Path,
+        uid: Uid,
+        gid: Gid,
+    ) -> FsResult<NodeAttrs> {
+        let path = self.path.join(name);
+        let path_clone = path.clone();
+        let target = target.to_owned();
+        let _: () = tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                // TODO Make this platform independent
+                std::os::unix::fs::symlink(&target, &path_clone).map_error()?;
+                nix::unistd::fchownat(
+                    None,
+                    &path_clone,
+                    Some(nix::unistd::Uid::from_raw(uid.into())),
+                    Some(nix::unistd::Gid::from_raw(gid.into())),
+                    nix::unistd::FchownatFlags::NoFollowSymlink,
+                )
+                // TODO Don't use UnknownError
+                .map_err(|e| {
+                    log::error!("{e:?}");
+                    FsError::UnknownError
+                })?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        // TODO Return value directly without another call but make sure it returns the same value
+        PassthroughNode { path }.getattr().await
+    }
+
+    async fn remove_child_file_or_symlink(&self, name: &str) -> FsResult<()> {
+        let path = self.path.join(name);
+        tokio::fs::remove_file(path).await.map_error()?;
+        Ok(())
+    }
+}
+
+struct PassthroughSymlink {
+    path: PathBuf,
+}
+
+#[async_trait]
+impl Symlink for PassthroughSymlink {
+    async fn target(&self) -> FsResult<PathBuf> {
+        let target = tokio::fs::read_link(&self.path).await.map_error()?;
+        Ok(target)
     }
 }
 

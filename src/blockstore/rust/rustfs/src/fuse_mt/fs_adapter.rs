@@ -4,13 +4,15 @@ use fuse_mt::{
 };
 use std::borrow::Cow;
 use std::ffi::OsStr;
-use std::ffi::OsString;
 use std::future::Future;
+use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use crate::interface::{Device, Dir, DirEntry, FsError, FsResult, Node, NodeAttrs};
+use crate::interface::{Device, Dir, DirEntry, FsError, FsResult, Node, NodeAttrs, Symlink};
 use crate::utils::{Gid, Mode, NodeKind, Uid};
+
+// TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 
 pub struct FsAdapter<Fs: Device> {
     fs: Fs,
@@ -74,7 +76,7 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
             let attrs = node.getattr().await?;
             // TODO What is the ttl here?
             let ttl = Duration::ZERO;
-            Ok((ttl, convert_file_attrs(attrs)))
+            Ok((ttl, convert_node_attrs(attrs)))
         })
     }
 
@@ -153,8 +155,11 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
 
     /// Read a symbolic link.
     fn readlink(&self, _req: RequestInfo, path: &Path) -> ResultData {
-        log::warn!("readlink({path:?})...unimplemented");
-        Err(libc::ENOSYS)
+        self.run_async(&format!("readlink({path:?})"), move || async move {
+            let link = self.fs.load_symlink(path).await?;
+            // TODO is OsStr the best way to convert our path to the return value?
+            Ok(link.target().await?.as_os_str().to_owned().into_vec())
+        })
     }
 
     /// Create a special file.
@@ -192,7 +197,7 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
                 let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
                 // TODO What is the ttl here?
                 let ttl = Duration::ZERO;
-                Ok((ttl, convert_file_attrs(new_dir_attrs)))
+                Ok((ttl, convert_node_attrs(new_dir_attrs)))
             },
         )
     }
@@ -202,8 +207,15 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// * `parent`: path to the directory containing the file to delete.
     /// * `name`: name of the file to delete.
     fn unlink(&self, _req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
-        log::warn!("unlink({parent:?}, name={name:?})...unimplemented");
-        Err(libc::ENOSYS)
+        self.run_async(
+            &format!("unlink({parent:?}, name={name:?})"),
+            move || async move {
+                let name = parse_node_name(name);
+                let parent_dir = self.fs.load_dir(parent).await?;
+                parent_dir.remove_child_file_or_symlink(&name).await?;
+                Ok(())
+            },
+        )
     }
 
     /// Remove a directory.
@@ -227,15 +239,22 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// * `parent`: path to the directory to make the link in.
     /// * `name`: name of the symbolic link.
     /// * `target`: path (may be relative or absolute) to the target of the link.
-    fn symlink(
-        &self,
-        _req: RequestInfo,
-        parent: &Path,
-        name: &OsStr,
-        target: &Path,
-    ) -> ResultEntry {
-        log::warn!("symlink({parent:?}, name={name:?}, target={target:?})...unimplemented");
-        Err(libc::ENOSYS)
+    fn symlink(&self, req: RequestInfo, parent: &Path, name: &OsStr, target: &Path) -> ResultEntry {
+        self.run_async(
+            &format!("symlink({parent:?}, parent={parent:?} name={name:?}, target={target:?})"),
+            move || async move {
+                let name = parse_node_name(name);
+                let uid = Uid::from(req.uid);
+                let gid = Gid::from(req.gid);
+                let parent_dir = self.fs.load_dir(parent).await?;
+                let new_symlink_attrs = parent_dir
+                    .create_child_symlink(&name, target, uid, gid)
+                    .await?;
+                // TODO What is the ttl here?
+                let ttl = Duration::ZERO;
+                Ok((ttl, convert_node_attrs(new_symlink_attrs)))
+            },
+        )
     }
 
     /// Rename a filesystem entry.
@@ -559,7 +578,7 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     }
 }
 
-fn convert_file_attrs(attrs: NodeAttrs) -> FileAttr {
+fn convert_node_attrs(attrs: NodeAttrs) -> FileAttr {
     FileAttr {
         size: attrs.num_bytes.into(),
         blocks: attrs.blocks,
