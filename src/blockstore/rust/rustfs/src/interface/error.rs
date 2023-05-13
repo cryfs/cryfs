@@ -9,12 +9,16 @@ pub enum FsError {
 
     #[error("Unknown Error")]
     UnknownError,
+
+    #[error("The file descriptor {fh} does not represent an open file")]
+    InvalidFileDescriptor { fh: u64 },
 }
 
 impl FsError {
     pub fn system_error_code(self) -> libc::c_int {
         match self {
             FsError::Custom { error_code } => error_code,
+            FsError::InvalidFileDescriptor { .. } => libc::EBADF,
             FsError::UnknownError => libc::EIO,
         }
     }

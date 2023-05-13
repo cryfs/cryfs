@@ -8,16 +8,19 @@ use std::ffi::OsStr;
 use std::future::Future;
 use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::RwLock;
 use std::time::{Duration, SystemTime};
 
-use crate::interface::{Device, Dir, DirEntry, File, FsResult, Node, NodeAttrs, Symlink};
-use crate::open_file_list::OpenFileList;
+use crate::interface::{
+    Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Symlink,
+};
+use crate::open_file_list::{OpenFileHandle, OpenFileList};
 use crate::utils::{Gid, Mode, NodeKind, OpenFlags, Uid};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
 // TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent
+// TODO Go through fuse documentation and syscall manpages to check for behavior and possible error codes
 
 pub struct FsAdapter<Fs: Device>
 where
@@ -26,7 +29,9 @@ where
 {
     fs: Fs,
     runtime: tokio::runtime::Runtime,
-    open_files: Mutex<OpenFileList<Fs::OpenFile>>,
+
+    // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
+    open_files: RwLock<OpenFileList<Fs::OpenFile>>,
 }
 
 impl<Fs: Device> FsAdapter<Fs>
@@ -91,11 +96,17 @@ where
     /// * `fh`: a file handle if this is called on an open file.
     fn getattr(&self, _req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
         self.run_async(&format!("getattr {path:?}"), move || async move {
-            if fh.is_some() {
-                todo!();
-            }
-            let node = self.fs.load_node(path).await?;
-            let attrs = node.getattr().await?;
+            let attrs = if let Some(fh) = fh {
+                let open_file_list = self.open_files.read().unwrap();
+                let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                })?;
+                open_file.getattr().await?
+            } else {
+                let node = self.fs.load_node(path).await?;
+                node.getattr().await?
+            };
             // TODO What is the ttl here?
             let ttl = Duration::ZERO;
             Ok((ttl, convert_node_attrs(attrs)))
@@ -113,11 +124,18 @@ where
         self.run_async(
             &format!("chmod({path:?}, mode={mode})"),
             move || async move {
-                if fh.is_some() {
-                    todo!();
-                }
-                let node = self.fs.load_node(path).await?;
-                node.chmod(Mode::from(mode)).await?;
+                let mode = Mode::from(mode);
+                if let Some(fh) = fh {
+                    let open_file_list = self.open_files.read().unwrap();
+                    let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                        log::error!("getattr: no open file with handle {}", u64::from(fh));
+                        FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                    })?;
+                    open_file.chmod(mode).await?
+                } else {
+                    let node = self.fs.load_node(path).await?;
+                    node.chmod(mode).await?;
+                };
                 Ok(())
             },
         )
@@ -139,13 +157,21 @@ where
         self.run_async(
             &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
             move || async move {
-                if fh.is_some() {
-                    todo!();
-                }
-                let node = self.fs.load_node(path).await?;
                 let uid = uid.map(Uid::from);
                 let gid = gid.map(Gid::from);
-                node.chown(uid, gid).await?;
+
+                if let Some(fh) = fh {
+                    let open_file_list = self.open_files.read().unwrap();
+                    let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                        log::error!("getattr: no open file with handle {}", u64::from(fh));
+                        FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                    })?;
+                    open_file.chown(uid, gid).await?
+                } else {
+                    let node = self.fs.load_node(path).await?;
+                    node.chown(uid, gid).await?;
+                }
+
                 Ok(())
             },
         )
@@ -351,7 +377,7 @@ where
             move || async move {
                 let file = self.fs.load_file(path).await?;
                 let open_file = file.open(parse_openflags(flags)).await?;
-                let fh = self.open_files.lock().unwrap().add(open_file);
+                let fh = self.open_files.write().unwrap().add(open_file);
                 // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
                 Ok((fh.into(), flags as u32))
             },
@@ -450,7 +476,7 @@ where
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
             ),
             move || async move {
-                self.open_files.lock().unwrap().remove(fh.into());
+                self.open_files.write().unwrap().remove(fh.into());
                 Ok(())
             },
         )
@@ -645,7 +671,7 @@ where
                 let (file_attrs, open_file) = parent_dir
                     .create_and_open_file(&name, mode, uid, gid)
                     .await?;
-                let fh = self.open_files.lock().unwrap().add(open_file);
+                let fh = self.open_files.write().unwrap().add(open_file);
                 Ok(CreatedEntry {
                     // TODO What is ttl here?
                     ttl: Duration::ZERO,

@@ -4,6 +4,7 @@ use cryfs_rustfs::{
     OpenFile, OpenFlags, Symlink, Uid,
 };
 use std::fs::Metadata;
+use std::os::fd::AsRawFd;
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::fs::PermissionsExt;
@@ -287,7 +288,37 @@ struct PassthroughOpenFile {
 }
 
 #[async_trait]
-impl OpenFile for PassthroughOpenFile {}
+impl OpenFile for PassthroughOpenFile {
+    async fn getattr(&self) -> FsResult<NodeAttrs> {
+        let metadata = self.open_file.metadata().await.map_error()?;
+        convert_metadata(metadata)
+    }
+
+    async fn chmod(&self, mode: Mode) -> FsResult<()> {
+        let permissions = std::fs::Permissions::from_mode(mode.into());
+        self.open_file
+            .set_permissions(permissions)
+            .await
+            .map_error()?;
+        Ok(())
+    }
+
+    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
+        let uid = uid.map(|uid| nix::unistd::Uid::from_raw(uid.into()));
+        let gid = gid.map(|gid| nix::unistd::Gid::from_raw(gid.into()));
+        // TODO Can we do this without duplicating the file descriptor?
+        let open_file = self.open_file.try_clone().await.map_error()?;
+
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                nix::unistd::fchown(open_file.as_raw_fd(), uid, gid).map_error()?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        Ok(())
+    }
+}
 
 trait IoResultExt<T> {
     fn map_error(self) -> FsResult<T>;

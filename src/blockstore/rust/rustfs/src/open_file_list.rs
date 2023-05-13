@@ -6,10 +6,7 @@ use crate::interface::OpenFile;
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, From, Into)]
 pub struct OpenFileHandle(u64);
 
-pub struct OpenFileList<OF: OpenFile> {
-    // We use a hashset instead of Vec so that space gets freed when a file gets closed.
-    open_files: HashMap<OpenFileHandle, OF>,
-
+struct HandlePool {
     // Handles that were used previously but then returned and are now free to be reused
     released_handles: Vec<OpenFileHandle>,
 
@@ -17,30 +14,48 @@ pub struct OpenFileList<OF: OpenFile> {
     next_handle: OpenFileHandle,
 }
 
-impl<OF: OpenFile> Default for OpenFileList<OF> {
-    fn default() -> Self {
+impl HandlePool {
+    fn new() -> Self {
         Self {
-            open_files: HashMap::new(),
             released_handles: Vec::new(),
             next_handle: OpenFileHandle(0),
         }
     }
-}
 
-impl<OF: OpenFile> OpenFileList<OF> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn add(&mut self, file: OF) -> OpenFileHandle {
-        let handle = if let Some(handle) = self.released_handles.pop() {
+    fn acquire(&mut self) -> OpenFileHandle {
+        if let Some(handle) = self.released_handles.pop() {
             handle
         } else {
             let handle = self.next_handle;
             self.next_handle.0 += 1;
             handle
-        };
+        }
+    }
 
+    fn release(&mut self, handle: OpenFileHandle) {
+        self.released_handles.push(handle);
+    }
+}
+
+pub struct OpenFileList<OF: OpenFile> {
+    // We use a hashset instead of Vec so that space gets freed when a file gets closed.
+    open_files: HashMap<OpenFileHandle, OF>,
+
+    available_handles: HandlePool,
+}
+
+impl<OF: OpenFile> Default for OpenFileList<OF> {
+    fn default() -> Self {
+        Self {
+            open_files: HashMap::new(),
+            available_handles: HandlePool::new(),
+        }
+    }
+}
+
+impl<OF: OpenFile> OpenFileList<OF> {
+    pub fn add(&mut self, file: OF) -> OpenFileHandle {
+        let handle = self.available_handles.acquire();
         self.open_files.insert(handle, file);
         handle
     }
@@ -50,7 +65,7 @@ impl<OF: OpenFile> OpenFileList<OF> {
             .open_files
             .remove(&handle)
             .expect("Tried to remove a file from the open file list but the handle didn't represent an open file");
-        self.released_handles.push(handle);
+        self.available_handles.release(handle);
         file
     }
 
