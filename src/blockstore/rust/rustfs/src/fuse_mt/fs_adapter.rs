@@ -15,7 +15,7 @@ use crate::interface::{
     Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Symlink,
 };
 use crate::open_file_list::{OpenFileHandle, OpenFileList};
-use crate::utils::{Gid, Mode, NodeKind, OpenFlags, Uid};
+use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
@@ -181,9 +181,22 @@ where
     ///
     /// * `fh`: a file handle if this is called on an open file.
     /// * `size`: size in bytes to set as the file's length.
-    fn truncate(&self, _req: RequestInfo, path: &Path, _fh: Option<u64>, size: u64) -> ResultEmpty {
-        log::warn!("truncate({path:?}, size={size})...unimplemented");
-        Err(libc::ENOSYS)
+    fn truncate(&self, _req: RequestInfo, path: &Path, fh: Option<u64>, size: u64) -> ResultEmpty {
+        let size = NumBytes::from(size);
+        self.run_async(&format!("getattr {path:?}"), move || async move {
+            if let Some(fh) = fh {
+                let open_file_list = self.open_files.read().unwrap();
+                let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                })?;
+                open_file.truncate(size).await?
+            } else {
+                let file = self.fs.load_file(path).await?;
+                file.truncate(size).await?
+            };
+            Ok(())
+        })
     }
 
     /// Set timestamps of a filesystem entry.
