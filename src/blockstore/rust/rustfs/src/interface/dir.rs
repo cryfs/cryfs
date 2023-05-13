@@ -13,6 +13,8 @@ pub struct DirEntry {
 
 #[async_trait]
 pub trait Dir {
+    type Device: super::Device;
+
     async fn entries(&self) -> FsResult<Vec<DirEntry>>;
 
     async fn create_child_dir(
@@ -32,4 +34,12 @@ pub trait Dir {
         gid: Gid,
     ) -> FsResult<NodeAttrs>;
     async fn remove_child_file_or_symlink(&self, name: &str) -> FsResult<()>;
+
+    async fn create_and_open_file(
+        &self,
+        name: &str,
+        mode: Mode,
+        uid: Uid,
+        gid: Gid,
+    ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::OpenFile)>;
 }

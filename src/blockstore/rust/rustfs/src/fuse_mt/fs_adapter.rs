@@ -1,34 +1,51 @@
 use fuse_mt::{
-    CallbackResult, FileAttr, FilesystemMT, RequestInfo, ResultCreate, ResultData, ResultEmpty,
-    ResultEntry, ResultOpen, ResultReaddir, ResultSlice, ResultStatfs, ResultWrite, ResultXattr,
+    CallbackResult, CreatedEntry, FileAttr, FilesystemMT, RequestInfo, ResultCreate, ResultData,
+    ResultEmpty, ResultEntry, ResultOpen, ResultReaddir, ResultSlice, ResultStatfs, ResultWrite,
+    ResultXattr,
 };
 use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::future::Future;
 use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
+use std::sync::Mutex;
 use std::time::{Duration, SystemTime};
 
-use crate::interface::{Device, Dir, DirEntry, FsResult, Node, NodeAttrs, Symlink};
-use crate::utils::{Gid, Mode, NodeKind, Uid};
+use crate::interface::{Device, Dir, DirEntry, File, FsResult, Node, NodeAttrs, Symlink};
+use crate::open_file_list::OpenFileList;
+use crate::utils::{Gid, Mode, NodeKind, OpenFlags, Uid};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
 // TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent
 
-pub struct FsAdapter<Fs: Device> {
+pub struct FsAdapter<Fs: Device>
+where
+    // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs::OpenFile: Send + Sync,
+{
     fs: Fs,
     runtime: tokio::runtime::Runtime,
+    open_files: Mutex<OpenFileList<Fs::OpenFile>>,
 }
 
-impl<Fs: Device> FsAdapter<Fs> {
+impl<Fs: Device> FsAdapter<Fs>
+where
+    // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs::OpenFile: Send + Sync,
+{
     pub fn new(fs: Fs) -> Self {
         // TODO Runtime settings
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name("rustfs")
             .build()
             .unwrap();
-        Self { fs, runtime }
+        let open_files = Default::default();
+        Self {
+            fs,
+            runtime,
+            open_files,
+        }
     }
 
     fn run_async<R, F>(&self, log_msg: &str, func: impl FnOnce() -> F) -> Result<R, libc::c_int>
@@ -52,7 +69,11 @@ impl<Fs: Device> FsAdapter<Fs> {
     }
 }
 
-impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
+impl<Fs: Device> FilesystemMT for FsAdapter<Fs>
+where
+    // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs::OpenFile: Send + Sync,
+{
     /// Called on mount, before any other function.
     fn init(&self, _req: RequestInfo) -> ResultEmpty {
         log::info!("init");
@@ -323,8 +344,18 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// calls that operate on the file, and can be any value you choose, though it should allow
     /// your filesystem to identify the file opened even without any path info.
     fn open(&self, _req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
-        log::warn!("open({path:?}, flags={flags})...unimplemented");
-        Err(libc::ENOSYS)
+        // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
+        let flags = flags as i32;
+        self.run_async(
+            &format!("open({path:?}, flags={flags})"),
+            move || async move {
+                let file = self.fs.load_file(path).await?;
+                let open_file = file.open(parse_openflags(flags)).await?;
+                let fh = self.open_files.lock().unwrap().add(open_file);
+                // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
+                Ok((fh.into(), flags as u32))
+            },
+        )
     }
 
     /// Read from a file.
@@ -412,10 +443,17 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
         lock_owner: u64,
         flush: bool,
     ) -> ResultEmpty {
-        log::warn!(
-            "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})...unimplemented",
-        );
-        Err(libc::ENOSYS)
+        // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
+        let flags = flags as i32;
+        self.run_async(
+            &format!(
+                "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
+            ),
+            move || async move {
+                self.open_files.lock().unwrap().remove(fh.into());
+                Ok(())
+            },
+        )
     }
 
     /// Write out any pending changes of a file.
@@ -588,14 +626,36 @@ impl<Fs: Device> FilesystemMT for FsAdapter<Fs> {
     /// -- see documentation on `open` for more info on that).
     fn create(
         &self,
-        _req: RequestInfo,
+        req: RequestInfo,
         parent: &Path,
         name: &OsStr,
         mode: u32,
         flags: u32,
     ) -> ResultCreate {
-        log::warn!("create({parent:?}, name={name:?}, mode={mode}, flags={flags})...unimplemented",);
-        Err(libc::ENOSYS)
+        // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
+        let flags = flags as i32;
+        self.run_async(
+            &format!("create({parent:?}, name={name:?}, mode={mode}, flags={flags})"),
+            move || async move {
+                let name = parse_node_name(name);
+                let uid = Uid::from(req.uid);
+                let gid = Gid::from(req.gid);
+                let mode = Mode::from(mode);
+                let parent_dir = self.fs.load_dir(parent).await?;
+                let (file_attrs, open_file) = parent_dir
+                    .create_and_open_file(&name, mode, uid, gid)
+                    .await?;
+                let fh = self.open_files.lock().unwrap().add(open_file);
+                Ok(CreatedEntry {
+                    // TODO What is ttl here?
+                    ttl: Duration::ZERO,
+                    attr: convert_node_attrs(file_attrs),
+                    fh: fh.into(),
+                    // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
+                    flags: flags as u32,
+                })
+            },
+        )
     }
 }
 
@@ -648,4 +708,15 @@ fn parse_node_name(name: &OsStr) -> Cow<'_, str> {
     let name = name.to_string_lossy(); // TODO Is to_string_lossy the best way to convert from OsString to String?
     assert!(!name.contains('/'), "name must not contain '/': {name:?}");
     name
+}
+
+fn parse_openflags(flags: i32) -> OpenFlags {
+    // TODO Is this the right way to parse openflags? Are there other flags than just Read+Write?
+    //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
+    match flags & libc::O_ACCMODE {
+        libc::O_RDONLY => OpenFlags::Read,
+        libc::O_WRONLY => OpenFlags::Write,
+        libc::O_RDWR => OpenFlags::ReadWrite,
+        _ => panic!("invalid flags: {flags}"),
+    }
 }

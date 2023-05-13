@@ -171,3 +171,10 @@ pub enum NodeKind {
     Dir,
     Symlink,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpenFlags {
+    Read,
+    Write,
+    ReadWrite,
+}

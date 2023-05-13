@@ -1,12 +1,17 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Device, Dir, DirEntry, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes,
-    Symlink, Uid,
+    Device, Dir, DirEntry, File, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes,
+    OpenFile, OpenFlags, Symlink, Uid,
 };
+use std::fs::Metadata;
 use std::os::linux::fs::MetadataExt;
+use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, UNIX_EPOCH};
+
+// TODO Go through all API calls we're doing (e.g. std::fs, tokio::fs, nix::) and make sure we're using the API correctly
+//      and handle errors that can happen.
 
 struct PassthroughDevice {
     basedir: PathBuf,
@@ -35,6 +40,8 @@ impl Device for PassthroughDevice {
     type Node = PassthroughNode;
     type Dir = PassthroughDir;
     type Symlink = PassthroughSymlink;
+    type File = PassthroughFile;
+    type OpenFile = PassthroughOpenFile;
 
     async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
         let path = self.apply_basedir(path);
@@ -50,6 +57,11 @@ impl Device for PassthroughDevice {
         let path = self.apply_basedir(path);
         Ok(PassthroughSymlink { path })
     }
+
+    async fn load_file(&self, path: &Path) -> FsResult<Self::File> {
+        let path = self.apply_basedir(path);
+        Ok(PassthroughFile { path })
+    }
 }
 
 struct PassthroughNode {
@@ -60,24 +72,7 @@ struct PassthroughNode {
 impl Node for PassthroughNode {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         let metadata = tokio::fs::symlink_metadata(&self.path).await.map_error()?;
-        Ok(NodeAttrs {
-            // TODO Make nlink platform independent
-            // TODO No unwrap
-            nlink: u32::try_from(metadata.st_nlink()).unwrap(),
-            // TODO Make mode, uid, gid, blocks platform independent
-            mode: metadata.st_mode().into(),
-            uid: metadata.st_uid().into(),
-            gid: metadata.st_gid().into(),
-            num_bytes: NumBytes::from(metadata.len()),
-            blocks: metadata.st_blocks(),
-            atime: metadata.accessed().map_error()?,
-            mtime: metadata.modified().map_error()?,
-            // TODO No unwrap in ctime
-            // TODO Make ctime platform independent (currently it requires the linux field st_ctime)
-            // TODO Is st_ctime_nsec actually the total number of nsec or only the sub-second part?
-            ctime: UNIX_EPOCH
-                + Duration::from_nanos(u64::try_from(metadata.st_ctime_nsec()).unwrap()),
-        })
+        convert_metadata(metadata)
     }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
@@ -118,6 +113,8 @@ struct PassthroughDir {
 
 #[async_trait]
 impl Dir for PassthroughDir {
+    type Device = PassthroughDevice;
+
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let mut entries = Vec::new();
         let mut dir = tokio::fs::read_dir(&self.path).await.map_error()?;
@@ -215,6 +212,42 @@ impl Dir for PassthroughDir {
         tokio::fs::remove_file(path).await.map_error()?;
         Ok(())
     }
+
+    async fn create_and_open_file(
+        &self,
+        name: &str,
+        mode: Mode,
+        uid: Uid,
+        gid: Gid,
+    ) -> FsResult<(NodeAttrs, PassthroughOpenFile)> {
+        let path = self.path.join(name);
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                let open_file = std::fs::OpenOptions::new()
+                    .create_new(true)
+                    .mode(mode.into())
+                    .open(&path)
+                    .map_error()?;
+                // TODO Can we compute the Metadata without asking the underlying file system? We just created the file after all.
+                let metadata = open_file.metadata().map_error()?;
+                nix::unistd::fchownat(
+                    None,
+                    &path,
+                    Some(nix::unistd::Uid::from_raw(uid.into())),
+                    Some(nix::unistd::Gid::from_raw(gid.into())),
+                    nix::unistd::FchownatFlags::NoFollowSymlink,
+                )
+                .map_error()?;
+                Ok((
+                    convert_metadata(metadata)?,
+                    PassthroughOpenFile {
+                        open_file: tokio::fs::File::from_std(open_file),
+                    },
+                ))
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
+    }
 }
 
 struct PassthroughSymlink {
@@ -228,6 +261,33 @@ impl Symlink for PassthroughSymlink {
         Ok(target)
     }
 }
+
+struct PassthroughFile {
+    path: PathBuf,
+}
+
+#[async_trait]
+impl File for PassthroughFile {
+    type Device = PassthroughDevice;
+
+    async fn open(&self, openflags: OpenFlags) -> FsResult<PassthroughOpenFile> {
+        let mut options = tokio::fs::OpenOptions::new();
+        match openflags {
+            OpenFlags::Read => options.read(true),
+            OpenFlags::Write => options.write(true),
+            OpenFlags::ReadWrite => options.read(true).write(true),
+        };
+        let open_file = options.open(&self.path).await.map_error()?;
+        Ok(PassthroughOpenFile { open_file })
+    }
+}
+
+struct PassthroughOpenFile {
+    open_file: tokio::fs::File,
+}
+
+#[async_trait]
+impl OpenFile for PassthroughOpenFile {}
 
 trait IoResultExt<T> {
     fn map_error(self) -> FsResult<T>;
@@ -253,6 +313,26 @@ impl<T> NixResultExt<T> for nix::Result<T> {
             }
         })
     }
+}
+
+fn convert_metadata(metadata: Metadata) -> FsResult<NodeAttrs> {
+    Ok(NodeAttrs {
+        // TODO Make nlink platform independent
+        // TODO No unwrap
+        nlink: u32::try_from(metadata.st_nlink()).unwrap(),
+        // TODO Make mode, uid, gid, blocks platform independent
+        mode: metadata.st_mode().into(),
+        uid: metadata.st_uid().into(),
+        gid: metadata.st_gid().into(),
+        num_bytes: NumBytes::from(metadata.len()),
+        blocks: metadata.st_blocks(),
+        atime: metadata.accessed().map_error()?,
+        mtime: metadata.modified().map_error()?,
+        // TODO No unwrap in ctime
+        // TODO Make ctime platform independent (currently it requires the linux field st_ctime)
+        // TODO Is st_ctime_nsec actually the total number of nsec or only the sub-second part?
+        ctime: UNIX_EPOCH + Duration::from_nanos(u64::try_from(metadata.st_ctime_nsec()).unwrap()),
+    })
 }
 
 const USAGE: &str = "Usage: passthroughfs [basedir] [mountdir]";
