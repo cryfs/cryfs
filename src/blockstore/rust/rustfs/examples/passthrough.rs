@@ -13,6 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // TODO Go through all API calls we're doing (e.g. std::fs, tokio::fs, nix::) and make sure we're using the API correctly
 //      and handle errors that can happen.
+// TODO Split this example into multiple files, one for PassthroughDir, one for PassthroughFile, ...
 
 struct PassthroughDevice {
     basedir: PathBuf,
