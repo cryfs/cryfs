@@ -20,19 +20,7 @@ struct PassthroughDevice {
 
 impl PassthroughDevice {
     fn apply_basedir(&self, path: &Path) -> PathBuf {
-        assert!(path.is_absolute());
-        let path = path.strip_prefix("/").unwrap();
-        assert!(!path.is_absolute());
-        let node_path = self.basedir.join(path);
-        // Assert node_path doesn't escape the basedir
-        // TODO Assert is probably a bad choice here. What should we do instead? Return an error?
-        assert!(
-            node_path.starts_with(&self.basedir),
-            "Path {} escaped basedir {}",
-            node_path.display(),
-            self.basedir.display()
-        );
-        node_path
+        apply_basedir(&self.basedir, path)
     }
 }
 
@@ -51,7 +39,10 @@ impl Device for PassthroughDevice {
 
     async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
         let path = self.apply_basedir(path);
-        Ok(PassthroughDir { path })
+        Ok(PassthroughDir {
+            basedir: self.basedir.clone(),
+            path,
+        })
     }
 
     async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink> {
@@ -163,6 +154,7 @@ impl Node for PassthroughNode {
 }
 
 struct PassthroughDir {
+    basedir: PathBuf,
     path: PathBuf,
 }
 
@@ -307,6 +299,7 @@ impl Dir for PassthroughDir {
 
     async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()> {
         let old_path = self.path.join(old_name);
+        let new_path = apply_basedir(&self.basedir, new_path);
         tokio::fs::rename(old_path, new_path).await.map_error()?;
         Ok(())
     }
@@ -578,6 +571,22 @@ fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
         num_total_inodes: stat.files(),
         num_free_inodes: stat.files_free(),
     }
+}
+
+fn apply_basedir(basedir: &Path, path: &Path) -> PathBuf {
+    assert!(path.is_absolute());
+    let path = path.strip_prefix("/").unwrap();
+    assert!(!path.is_absolute());
+    let node_path = basedir.join(path);
+    // Assert node_path doesn't escape the basedir
+    // TODO Assert is probably a bad choice here. What should we do instead? Return an error?
+    assert!(
+        node_path.starts_with(&basedir),
+        "Path {} escaped basedir {}",
+        node_path.display(),
+        basedir.display()
+    );
+    node_path
 }
 
 const USAGE: &str = "Usage: passthroughfs [basedir] [mountdir]";
