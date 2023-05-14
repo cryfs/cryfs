@@ -36,6 +36,7 @@ const fn S_ISLNK(mode: Mode) -> bool {
 
 #[derive(
     Debug,
+    Default,
     Clone,
     Copy,
     PartialEq,
@@ -133,7 +134,22 @@ pub struct Uid(u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, From, Into)]
 pub struct Gid(u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, From, Into, Add, AddAssign, Sub, SubAssign, Sum)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    From,
+    Into,
+    Add,
+    AddAssign,
+    Sub,
+    SubAssign,
+    Sum,
+    PartialOrd,
+    Ord,
+)]
 pub struct NumBytes(u64);
 
 impl Mul<u64> for NumBytes {

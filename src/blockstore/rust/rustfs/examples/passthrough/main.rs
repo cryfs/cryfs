@@ -27,5 +27,5 @@ fn main() {
 
     let device = PassthroughDevice::new(basedir.into());
 
-    cryfs_rustfs::fuse_mt::mount(device, mountdir).unwrap();
+    cryfs_rustfs::fuse_mt::mount(|_uid, _gid| device, mountdir).unwrap();
 }

@@ -1,7 +1,8 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{FsResult, NodeAttrs, Symlink};
+use cryfs_rustfs::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Symlink, Uid};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::time::SystemTime;
 
 use super::node::IsInMemoryNode;
 
@@ -11,9 +12,30 @@ pub struct InMemorySymlink {
 }
 
 impl InMemorySymlink {
-    pub fn new(target: PathBuf, metadata: NodeAttrs) -> Self {
+    pub fn new(target: PathBuf, uid: Uid, gid: Gid) -> Self {
         Self {
-            metadata: Mutex::new(metadata),
+            metadata: Mutex::new(NodeAttrs {
+                // TODO What are the right symlink attributes here?
+                nlink: 1,
+                mode: Mode::default()
+                    .add_symlink_flag()
+                    .add_user_read_flag()
+                    .add_user_write_flag()
+                    .add_user_exec_flag()
+                    .add_group_read_flag()
+                    .add_group_write_flag()
+                    .add_group_exec_flag()
+                    .add_other_read_flag()
+                    .add_other_write_flag()
+                    .add_other_exec_flag(),
+                uid,
+                gid,
+                num_bytes: NumBytes::from(0),
+                blocks: 1,
+                atime: SystemTime::now(),
+                mtime: SystemTime::now(),
+                ctime: SystemTime::now(),
+            }),
             target,
         }
     }

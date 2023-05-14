@@ -18,7 +18,7 @@ fn main() {
     let mountdir = args.next().expect(USAGE);
     assert!(args.next().is_none(), "{}", USAGE);
 
-    let device = InMemoryDevice::default();
+    let device = |uid, gid| InMemoryDevice::new(uid, gid);
 
     cryfs_rustfs::fuse_mt::mount(device, mountdir).unwrap();
 }

@@ -8,7 +8,7 @@ use std::ffi::OsStr;
 use std::future::Future;
 use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
 use crate::interface::{
@@ -24,12 +24,45 @@ use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 // TODO We don't need the multithreading from fuse_mt, it's probably better to use fuser instead.
 // TODO This adapter currently adapts between multiple things. fuse_mt -> async interface -> rust_fs interface. Can we split that by having one adapter that only goes to an async version of fuse_mt/fuser and a second one that goes to rust_fs?
 
+enum MaybeInitializedFs<Fs: Device> {
+    Uninitialized(Option<Box<dyn FnOnce(Uid, Gid) -> Fs + Send + Sync>>),
+    Initialized(Fs),
+}
+
+impl<Fs: Device> MaybeInitializedFs<Fs> {
+    pub fn initialize(&mut self, uid: Uid, gid: Gid) {
+        match self {
+            MaybeInitializedFs::Uninitialized(construct_fs) => {
+                let construct_fs = construct_fs
+                    .take()
+                    .expect("MaybeInitializedFs::initialize() called twice");
+                let fs = construct_fs(uid, gid);
+                *self = MaybeInitializedFs::Initialized(fs);
+            }
+            MaybeInitializedFs::Initialized(_) => {
+                panic!("MaybeInitializedFs::initialize() called twice");
+            }
+        }
+    }
+
+    pub fn get(&self) -> &Fs {
+        match self {
+            MaybeInitializedFs::Uninitialized(_) => {
+                panic!("MaybeInitializedFs::get() called before initialize()");
+            }
+            MaybeInitializedFs::Initialized(fs) => fs,
+        }
+    }
+}
+
 pub struct FsAdapter<Fs: Device>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
     Fs::OpenFile: Send + Sync,
 {
-    fs: Fs,
+    // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
+    fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
+
     runtime: tokio::runtime::Runtime,
 
     // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
@@ -41,7 +74,7 @@ where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
     Fs::OpenFile: Send + Sync,
 {
-    pub fn new(fs: Fs) -> Self {
+    pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> Self {
         // TODO Runtime settings
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name("rustfs")
@@ -49,7 +82,9 @@ where
             .unwrap();
         let open_files = Default::default();
         Self {
-            fs,
+            fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
+                Box::new(fs),
+            )))),
             runtime,
             open_files,
         }
@@ -83,8 +118,11 @@ where
     Fs::OpenFile: Send + Sync,
 {
     /// Called on mount, before any other function.
-    fn init(&self, _req: RequestInfo) -> ResultEmpty {
+    fn init(&self, req: RequestInfo) -> ResultEmpty {
         log::info!("init");
+        let uid = Uid::from(req.uid);
+        let gid = Gid::from(req.gid);
+        self.fs.write().unwrap().initialize(uid, gid);
         Ok(())
     }
 
@@ -107,7 +145,7 @@ where
                 })?;
                 open_file.getattr().await?
             } else {
-                let node = self.fs.load_node(path).await?;
+                let node = self.fs.read().unwrap().get().load_node(path).await?;
                 node.getattr().await?
             };
             // TODO What is the ttl here?
@@ -136,7 +174,7 @@ where
                     })?;
                     open_file.chmod(mode).await?
                 } else {
-                    let node = self.fs.load_node(path).await?;
+                    let node = self.fs.read().unwrap().get().load_node(path).await?;
                     node.chmod(mode).await?;
                 };
                 Ok(())
@@ -171,7 +209,7 @@ where
                     })?;
                     open_file.chown(uid, gid).await?
                 } else {
-                    let node = self.fs.load_node(path).await?;
+                    let node = self.fs.read().unwrap().get().load_node(path).await?;
                     node.chown(uid, gid).await?;
                 }
 
@@ -195,7 +233,7 @@ where
                 })?;
                 open_file.truncate(size).await?
             } else {
-                let file = self.fs.load_file(path).await?;
+                let file = self.fs.read().unwrap().get().load_file(path).await?;
                 file.truncate(size).await?
             };
             Ok(())
@@ -226,7 +264,7 @@ where
                     })?;
                     open_file.utimens(atime, mtime).await?
                 } else {
-                    let node = self.fs.load_node(path).await?;
+                    let node = self.fs.read().unwrap().get().load_node(path).await?;
                     node.utimens(atime, mtime).await?
                 };
                 Ok(())
@@ -255,7 +293,7 @@ where
     /// Read a symbolic link.
     fn readlink(&self, _req: RequestInfo, path: &Path) -> ResultData {
         self.run_async(&format!("readlink({path:?})"), move || async move {
-            let link = self.fs.load_symlink(path).await?;
+            let link = self.fs.read().unwrap().get().load_symlink(path).await?;
             // TODO is OsStr the best way to convert our path to the return value?
             Ok(link.target().await?.as_os_str().to_owned().into_vec())
         })
@@ -292,7 +330,7 @@ where
                 let uid = Uid::from(req.uid);
                 let gid = Gid::from(req.gid);
                 let mode = Mode::from(mode);
-                let parent_dir = self.fs.load_dir(parent).await?;
+                let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
                 // TODO What is the ttl here?
                 let ttl = Duration::ZERO;
@@ -310,7 +348,7 @@ where
             &format!("unlink({parent:?}, name={name:?})"),
             move || async move {
                 let name = parse_node_name(name);
-                let parent_dir = self.fs.load_dir(parent).await?;
+                let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 parent_dir.remove_child_file_or_symlink(&name).await?;
                 Ok(())
             },
@@ -326,7 +364,7 @@ where
             &format!("rmdir({parent:?}, name={name:?})"),
             move || async move {
                 let name = parse_node_name(name);
-                let parent_dir = self.fs.load_dir(parent).await?;
+                let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 parent_dir.remove_child_dir(&name).await?;
                 Ok(())
             },
@@ -345,7 +383,7 @@ where
                 let name = parse_node_name(name);
                 let uid = Uid::from(req.uid);
                 let gid = Gid::from(req.gid);
-                let parent_dir = self.fs.load_dir(parent).await?;
+                let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 let new_symlink_attrs = parent_dir
                     .create_child_symlink(&name, target, uid, gid)
                     .await?;
@@ -377,7 +415,7 @@ where
             move || async move {
                 let oldname = parse_node_name(oldname);
                 let newname = parse_node_name(newname);
-                let old_parent_dir = self.fs.load_dir(oldparent).await?;
+                let old_parent_dir = self.fs.read().unwrap().get().load_dir(oldparent).await?;
                 let new_path = newparent.join(&*newname);
                 // TODO Should rename overwrite a potentially already existing target or not? Make sure we handle that the right way.
                 old_parent_dir
@@ -418,7 +456,7 @@ where
         self.run_async(
             &format!("open({path:?}, flags={flags})"),
             move || async move {
-                let file = self.fs.load_file(path).await?;
+                let file = self.fs.read().unwrap().get().load_file(path).await?;
                 let open_file = file.open(parse_openflags(flags)).await?;
                 let fh = self.open_files.write().unwrap().add(open_file);
                 // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
@@ -618,7 +656,7 @@ where
     /// Return all the entries of the directory.
     fn readdir(&self, _req: RequestInfo, path: &Path, fh: u64) -> ResultReaddir {
         self.run_async(&format!("readdir({path:?}, fh={fh})"), move || async move {
-            let dir = self.fs.load_dir(path).await?;
+            let dir = self.fs.read().unwrap().get().load_dir(path).await?;
             // TODO No unwrap
             let entries = dir.entries().await?;
             let entries = convert_dir_entries(entries);
@@ -659,7 +697,7 @@ where
     fn statfs(&self, _req: RequestInfo, path: &Path) -> ResultStatfs {
         log::warn!("statfs({path:?})...");
         self.run_async(&format!("statfs({path:?})"), move || async move {
-            let stat = self.fs.statfs().await?;
+            let stat = self.fs.read().unwrap().get().statfs().await?;
             Ok(convert_statfs(stat))
         })
     }
@@ -765,7 +803,7 @@ where
                 let uid = Uid::from(req.uid);
                 let gid = Gid::from(req.gid);
                 let mode = Mode::from(mode);
-                let parent_dir = self.fs.load_dir(parent).await?;
+                let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 let (file_attrs, open_file) = parent_dir
                     .create_and_open_file(&name, mode, uid, gid)
                     .await?;

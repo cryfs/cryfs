@@ -4,6 +4,7 @@ use fuse_mt::FuseMT;
 use std::path::Path;
 
 use crate::interface::Device;
+use crate::utils::{Gid, Uid};
 
 mod running_filesystem;
 pub use running_filesystem::RunningFilesystem;
@@ -11,7 +12,10 @@ pub use running_filesystem::RunningFilesystem;
 mod fs_adapter;
 use fs_adapter::FsAdapter;
 
-pub fn mount<D>(fs: D, mountpoint: impl AsRef<Path>) -> std::io::Result<()>
+pub fn mount<D>(
+    fs: impl FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
+    mountpoint: impl AsRef<Path>,
+) -> std::io::Result<()>
 where
     D: Device + Sync + Send + 'static,
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
@@ -24,7 +28,10 @@ where
     fuse_mt::mount(fs, mountpoint, &[])
 }
 
-pub fn spawn_mount<D>(fs: D, mountpoint: impl AsRef<Path>) -> std::io::Result<RunningFilesystem>
+pub fn spawn_mount<D>(
+    fs: impl FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
+    mountpoint: impl AsRef<Path>,
+) -> std::io::Result<RunningFilesystem>
 where
     D: Device + Sync + Send + 'static,
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
