@@ -14,7 +14,7 @@ use std::time::{Duration, SystemTime};
 use crate::interface::{
     Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Symlink,
 };
-use crate::open_file_list::{OpenFileHandle, OpenFileList};
+use crate::open_file_list::OpenFileList;
 use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
@@ -437,8 +437,31 @@ where
         size: u32,
         callback: impl FnOnce(ResultSlice<'_>) -> CallbackResult,
     ) -> CallbackResult {
-        log::warn!("read({path:?}, fh={fh}, offset={offset}, size={size})...unimplemented");
-        callback(Err(libc::ENOSYS))
+        self.run_async(
+            &format!("read({path:?}, fh={fh}, offset={offset}, size={size})"),
+            move || async move {
+                let offset = NumBytes::from(offset);
+                let size = NumBytes::from(u64::from(size));
+                let open_file_list = self.open_files.read().unwrap();
+                let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                });
+                let callback_result = match open_file {
+                    Ok(open_file) => {
+                        let data = open_file
+                            .read(offset, size).await;
+                        match data {
+                            Ok(data) => callback(Ok(data.as_ref())),
+                            Err(err) => callback(Err(err.system_error_code())),
+                        }
+                    }
+                    Err(err) => callback(Err(err.system_error_code())),
+                };
+                Ok(callback_result)
+            },
+        // TODO Having to .expect() here is weird. Should we instead write a variant of `run_async` that doesn't map errors and just returns T? That would be simpler.
+        ).expect("We're not throwing any errors in the async block, so this should never fail. Errors are instead being passed to the callback function.")
     }
 
     /// Write to a file.
@@ -459,8 +482,22 @@ where
         data: Vec<u8>,
         flags: u32,
     ) -> ResultWrite {
-        log::warn!("write({path:?}, fh={fh}, offset={offset}, data={data:?}, flags={flags})...unimplemented");
-        Err(libc::ENOSYS)
+        // TODO What is the `flags` parameter for?
+        self.run_async(
+            &format!("write({path:?}, fh={fh}, offset={offset}, data={data:?}, flags={flags})"),
+            move || async move {
+                let data_len = data.len();
+                let data = data.into();
+                let offset = NumBytes::from(offset);
+                let open_file_list = self.open_files.read().unwrap();
+                let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                })?;
+                open_file.write(offset, data).await?;
+                Ok(u32::try_from(data_len).unwrap())
+            },
+        )
     }
 
     /// Called each time a program calls `close` on an open file.

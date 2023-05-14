@@ -10,3 +10,5 @@ pub use utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 
 #[cfg(feature = "fuse_mt")]
 pub mod fuse_mt;
+
+pub use cryfs_utils::data::Data;

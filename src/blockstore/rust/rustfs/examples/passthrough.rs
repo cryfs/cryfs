@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Device, Dir, DirEntry, File, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, NumBytes,
-    OpenFile, OpenFlags, Symlink, Uid,
+    Data, Device, Dir, DirEntry, File, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind,
+    NumBytes, OpenFile, OpenFlags, Symlink, Uid,
 };
 use std::fs::Metadata;
 use std::os::fd::AsRawFd;
@@ -417,6 +417,56 @@ impl OpenFile for PassthroughOpenFile {
                     &convert_timespec(mtime),
                 )
                 .map_error()?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        Ok(())
+    }
+
+    async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {
+        let mut buffer: Data = vec![0; usize::try_from(u64::from(size)).unwrap()].into();
+        // TODO Is this possible without duplicating the file descriptor?
+        let open_file = self.open_file.try_clone().await.map_error()?;
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                // Using `pread` instead of `read` because `read` requires a call to `seek` first
+                // and there could be a race condition if multiple tasks read from the same file
+                // and overwrite each other's seek position.
+                let res = nix::sys::uio::pread(
+                    open_file.as_raw_fd(),
+                    &mut buffer,
+                    i64::try_from(u64::from(offset)).unwrap(),
+                )
+                .map_error();
+                match res {
+                    Ok(num_read) => {
+                        buffer.shrink_to_subregion(0..num_read);
+                        Ok(buffer)
+                    }
+                    Err(err) => Err(err),
+                }
+            })
+            .await
+            .expect("Error in spawn_blocking task")
+    }
+
+    async fn write(&self, offset: NumBytes, data: Data) -> FsResult<()> {
+        // TODO Is this possible without duplicating the file descriptor?
+        let open_file = self.open_file.try_clone().await.map_error()?;
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                // Using `pwrite` instead of `write` because `write` requires a call to `seek` first
+                // and there could be a race condition if multiple tasks write to the same file
+                // and overwrite each other's seek position.
+                let num_written = nix::sys::uio::pwrite(
+                    open_file.as_raw_fd(),
+                    data.as_ref(),
+                    i64::try_from(u64::from(offset)).unwrap(),
+                )
+                .map_error()?;
+                // TODO Should we handle the case where not all data was written gracefully by retrying to write the rest? The pwrite manpage says it's not an error if not all data gets written.
+                assert_eq!(data.len(), num_written, "pwrite did not write all data");
                 Ok(())
             })
             .await

@@ -1,6 +1,6 @@
 //! This module allows running a file system using the [fuse-mt] library.
 
-use fuse_mt::{FilesystemMT, FuseMT};
+use fuse_mt::FuseMT;
 use std::path::Path;
 
 use crate::interface::Device;

@@ -517,6 +517,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "cryfs-cryfs",
+ "cryfs-utils",
  "derive_more",
  "env_logger",
  "fuse_mt",

@@ -18,6 +18,7 @@ env_logger = "^0.10.0"
 nix = "^0.26.2"
 derive_more = "^0.99.17"
 thiserror = "^1.0.40"
+cryfs-utils = {path = "../utils"}
 
 [features]
 default = ["dep:fuse_mt", "fuse_mt"]
