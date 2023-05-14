@@ -279,6 +279,7 @@ impl Dir for PassthroughDir {
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
                 let open_file = std::fs::OpenOptions::new()
+                    .write(true)
                     .create_new(true)
                     .mode(mode.into())
                     .open(&path)
