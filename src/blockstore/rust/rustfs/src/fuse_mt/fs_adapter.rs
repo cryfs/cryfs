@@ -12,7 +12,7 @@ use std::sync::RwLock;
 use std::time::{Duration, SystemTime};
 
 use crate::interface::{
-    Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Symlink,
+    Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Statfs, Symlink,
 };
 use crate::open_file_list::OpenFileList;
 use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
@@ -645,8 +645,11 @@ where
     ///
     /// See the `Statfs` struct for more details.
     fn statfs(&self, _req: RequestInfo, path: &Path) -> ResultStatfs {
-        log::warn!("statfs({path:?})...unimplemented");
-        Err(libc::ENOSYS)
+        log::warn!("statfs({path:?})...");
+        self.run_async(&format!("statfs({path:?})"), move || async move {
+            let stat = self.fs.statfs().await?;
+            Ok(convert_statfs(stat))
+        })
     }
 
     /// Set a file extended attribute.
@@ -827,5 +830,19 @@ fn parse_openflags(flags: i32) -> OpenFlags {
         libc::O_WRONLY => OpenFlags::Write,
         libc::O_RDWR => OpenFlags::ReadWrite,
         _ => panic!("invalid flags: {flags}"),
+    }
+}
+
+fn convert_statfs(statfs: Statfs) -> fuse_mt::Statfs {
+    fuse_mt::Statfs {
+        blocks: statfs.num_total_blocks,
+        bfree: statfs.num_free_blocks,
+        bavail: statfs.num_available_blocks,
+        files: statfs.num_total_inodes,
+        ffree: statfs.num_free_inodes,
+        bsize: statfs.blocksize,
+        namelen: statfs.max_filename_length,
+        // TODO What is fragment size? Should it be different to blocksize?
+        frsize: statfs.blocksize,
     }
 }

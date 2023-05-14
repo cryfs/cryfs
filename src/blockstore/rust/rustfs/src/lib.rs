@@ -1,6 +1,6 @@
 mod interface;
 pub use interface::{
-    Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Symlink,
+    Device, Dir, DirEntry, File, FsError, FsResult, Node, NodeAttrs, OpenFile, Statfs, Symlink,
 };
 
 mod open_file_list;

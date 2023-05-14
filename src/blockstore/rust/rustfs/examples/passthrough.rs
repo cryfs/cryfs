@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
     Data, Device, Dir, DirEntry, File, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind,
-    NumBytes, OpenFile, OpenFlags, Symlink, Uid,
+    NumBytes, OpenFile, OpenFlags, Statfs, Symlink, Uid,
 };
 use std::fs::Metadata;
 use std::os::fd::AsRawFd;
@@ -62,6 +62,18 @@ impl Device for PassthroughDevice {
     async fn load_file(&self, path: &Path) -> FsResult<Self::File> {
         let path = self.apply_basedir(path);
         Ok(PassthroughFile { path })
+    }
+
+    async fn statfs(&self) -> FsResult<Statfs> {
+        let path = self.basedir.clone();
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                // TODO Make this platform independent
+                let stat = nix::sys::statfs::statfs(&path).map_error()?;
+                Ok(convert_statfs(stat))
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
     }
 }
 
@@ -546,6 +558,19 @@ fn convert_timespec(time: SystemTime) -> nix::sys::time::TimeSpec {
         // TODO No unwrap.expect
         .expect("Time is before unix epoch")
         .into()
+}
+
+fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
+    Statfs {
+        // TODO Don't use unwrap
+        max_filename_length: u32::try_from(stat.maximum_name_length()).unwrap(),
+        blocksize: u32::try_from(stat.block_size()).unwrap(),
+        num_total_blocks: stat.blocks(),
+        num_free_blocks: stat.blocks_free(),
+        num_available_blocks: stat.blocks_available(),
+        num_total_inodes: stat.files(),
+        num_free_inodes: stat.files_free(),
+    }
 }
 
 const USAGE: &str = "Usage: passthroughfs [basedir] [mountdir]";

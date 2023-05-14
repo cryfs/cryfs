@@ -1,7 +1,7 @@
 //! This module defines the filesystem interface.
 
 mod device;
-pub use device::Device;
+pub use device::{Device, Statfs};
 
 mod node;
 pub use node::{Node, NodeAttrs};
