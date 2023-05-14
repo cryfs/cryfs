@@ -20,4 +20,6 @@ pub trait OpenFile {
     // TODO Is it a better API to return a &[u8] from `read` in a callback instead of returning a Data object? Might reduce copies.
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data>;
     async fn write(&self, offset: NumBytes, data: Data) -> FsResult<()>;
+    async fn flush(&self) -> FsResult<()>;
+    async fn fsync(&self, datasync: bool) -> FsResult<()>;
 }

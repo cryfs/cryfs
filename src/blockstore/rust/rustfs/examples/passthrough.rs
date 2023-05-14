@@ -473,6 +473,26 @@ impl OpenFile for PassthroughOpenFile {
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         Ok(())
     }
+
+    async fn flush(&self) -> FsResult<()> {
+        // flush strictly speaking isn't a request to sync dirty data,
+        // but it's a good place to do it because it's usually triggered
+        // by a `close` syscall and errors that happen here are reported
+        // back as errors by the `close` syscall.
+        self.open_file.sync_all().await.map_error()?;
+        Ok(())
+    }
+
+    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+        if datasync {
+            // sync data and metadata
+            self.open_file.sync_all().await.map_error()?;
+        } else {
+            // only sync data, not metadata
+            self.open_file.sync_data().await.map_error()?;
+        }
+        Ok(())
+    }
 }
 
 trait IoResultExt<T> {

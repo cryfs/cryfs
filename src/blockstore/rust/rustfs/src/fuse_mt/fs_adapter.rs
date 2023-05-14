@@ -22,6 +22,7 @@ use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 // TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent
 // TODO Go through fuse documentation and syscall manpages to check for behavior and possible error codes
 // TODO We don't need the multithreading from fuse_mt, it's probably better to use fuser instead.
+// TODO This adapter currently adapts between multiple things. fuse_mt -> async interface -> rust_fs interface. Can we split that by having one adapter that only goes to an async version of fuse_mt/fuser and a second one that goes to rust_fs?
 
 pub struct FsAdapter<Fs: Device>
 where
@@ -130,7 +131,7 @@ where
                 if let Some(fh) = fh {
                     let open_file_list = self.open_files.read().unwrap();
                     let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
-                        log::error!("getattr: no open file with handle {}", u64::from(fh));
+                        log::error!("chmod: no open file with handle {}", u64::from(fh));
                         FsError::InvalidFileDescriptor { fh: u64::from(fh) }
                     })?;
                     open_file.chmod(mode).await?
@@ -165,7 +166,7 @@ where
                 if let Some(fh) = fh {
                     let open_file_list = self.open_files.read().unwrap();
                     let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
-                        log::error!("getattr: no open file with handle {}", u64::from(fh));
+                        log::error!("chown: no open file with handle {}", u64::from(fh));
                         FsError::InvalidFileDescriptor { fh: u64::from(fh) }
                     })?;
                     open_file.chown(uid, gid).await?
@@ -189,7 +190,7 @@ where
             if let Some(fh) = fh {
                 let open_file_list = self.open_files.read().unwrap();
                 let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
-                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    log::error!("truncate: no open file with handle {}", u64::from(fh));
                     FsError::InvalidFileDescriptor { fh: u64::from(fh) }
                 })?;
                 open_file.truncate(size).await?
@@ -220,7 +221,7 @@ where
                 if let Some(fh) = fh {
                     let open_file_list = self.open_files.read().unwrap();
                     let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
-                        log::error!("getattr: no open file with handle {}", u64::from(fh));
+                        log::error!("utimens: no open file with handle {}", u64::from(fh));
                         FsError::InvalidFileDescriptor { fh: u64::from(fh) }
                     })?;
                     open_file.utimens(atime, mtime).await?
@@ -444,7 +445,7 @@ where
                 let size = NumBytes::from(u64::from(size));
                 let open_file_list = self.open_files.read().unwrap();
                 let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
-                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    log::error!("read: no open file with handle {}", u64::from(fh));
                     FsError::InvalidFileDescriptor { fh: u64::from(fh) }
                 });
                 let callback_result = match open_file {
@@ -491,7 +492,7 @@ where
                 let offset = NumBytes::from(offset);
                 let open_file_list = self.open_files.read().unwrap();
                 let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
-                    log::error!("getattr: no open file with handle {}", u64::from(fh));
+                    log::error!("write: no open file with handle {}", u64::from(fh));
                     FsError::InvalidFileDescriptor { fh: u64::from(fh) }
                 })?;
                 open_file.write(offset, data).await?;
@@ -511,9 +512,16 @@ where
     /// * `fh`: file handle returned from the `open` call.
     /// * `lock_owner`: if the filesystem supports locking (`setlk`, `getlk`), remove all locks
     ///   belonging to this lock owner.
-    fn flush(&self, _req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
-        log::warn!("flush({path:?}, fh={fh}, lock_owner={lock_owner})...unimplemented");
-        Err(libc::ENOSYS)
+    fn flush(&self, _req: RequestInfo, path: &Path, fh: u64, _lock_owner: u64) -> ResultEmpty {
+        self.run_async(&format!("flush({path:?}, fh={fh})"), move || async move {
+            let open_file_list = self.open_files.read().unwrap();
+            let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                log::error!("flush: no open file with handle {}", u64::from(fh));
+                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+            })?;
+            open_file.flush().await?;
+            Ok(())
+        })
     }
 
     /// Called when an open file is closed.
@@ -536,8 +544,6 @@ where
         lock_owner: u64,
         flush: bool,
     ) -> ResultEmpty {
-        // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-        let flags = flags as i32;
         self.run_async(
             &format!(
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
@@ -557,8 +563,18 @@ where
     /// * `fh`: file handle returned from the `open` call.
     /// * `datasync`: if `false`, also write metadata, otherwise just write file data.
     fn fsync(&self, _req: RequestInfo, path: &Path, fh: u64, datasync: bool) -> ResultEmpty {
-        log::warn!("fsync({path:?}, fh={fh}, datasync={datasync})...unimplemented");
-        Err(libc::ENOSYS)
+        self.run_async(
+            &format!("fsync({path:?}, fh={fh}, datasync={datasync})"),
+            move || async move {
+                let open_file_list = self.open_files.read().unwrap();
+                let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                    log::error!("fsync: no open file with handle {}", u64::from(fh));
+                    FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                })?;
+                open_file.fsync(datasync).await?;
+                Ok(())
+            },
+        )
     }
 
     /// Open a directory.
