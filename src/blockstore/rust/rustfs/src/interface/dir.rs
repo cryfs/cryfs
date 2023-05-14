@@ -42,4 +42,6 @@ pub trait Dir {
         uid: Uid,
         gid: Gid,
     ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::OpenFile)>;
+
+    async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()>;
 }

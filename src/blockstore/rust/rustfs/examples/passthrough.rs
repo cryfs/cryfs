@@ -303,6 +303,12 @@ impl Dir for PassthroughDir {
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
     }
+
+    async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()> {
+        let old_path = self.path.join(old_name);
+        tokio::fs::rename(old_path, new_path).await.map_error()?;
+        Ok(())
+    }
 }
 
 struct PassthroughSymlink {

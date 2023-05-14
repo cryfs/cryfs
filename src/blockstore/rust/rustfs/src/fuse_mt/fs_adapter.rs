@@ -365,15 +365,27 @@ where
     fn rename(
         &self,
         _req: RequestInfo,
-        parent: &Path,
-        name: &OsStr,
+        oldparent: &Path,
+        oldname: &OsStr,
         newparent: &Path,
         newname: &OsStr,
     ) -> ResultEmpty {
-        log::warn!(
-            "rename({parent:?}, name={name:?}, newparent={newparent:?}, newname={newname:?})...unimplemented"
-        );
-        Err(libc::ENOSYS)
+        self.run_async(
+            &format!(
+                "rename(oldparent={oldparent:?}, oldname={oldname:?}, newparent={newparent:?}, newname={newname:?})"
+            ),
+            move || async move {
+                let oldname = parse_node_name(oldname);
+                let newname = parse_node_name(newname);
+                let old_parent_dir = self.fs.load_dir(oldparent).await?;
+                let new_path = newparent.join(&*newname);
+                // TODO Should rename overwrite a potentially already existing target or not? Make sure we handle that the right way.
+                old_parent_dir
+                    .rename_child(&oldname, &new_path)
+                    .await?;
+                Ok(())
+            },
+        )
     }
 
     /// Create a hard link.
