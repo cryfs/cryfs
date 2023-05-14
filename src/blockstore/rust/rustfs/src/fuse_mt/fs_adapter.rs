@@ -21,6 +21,7 @@ use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 // TODO Check which of the logging statements parameters actually need :? formatting
 // TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent
 // TODO Go through fuse documentation and syscall manpages to check for behavior and possible error codes
+// TODO We don't need the multithreading from fuse_mt, it's probably better to use fuser instead.
 
 pub struct FsAdapter<Fs: Device>
 where
@@ -57,6 +58,7 @@ where
     where
         F: Future<Output = FsResult<R>>,
     {
+        // TODO Is it ok to call block_on concurrently for multiple fs operations? Probably not.
         self.runtime.block_on(async move {
             log::info!("{}...", log_msg);
             let result = func().await;
@@ -208,12 +210,27 @@ where
         &self,
         _req: RequestInfo,
         path: &Path,
-        _fh: Option<u64>,
+        fh: Option<u64>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> ResultEmpty {
-        log::warn!("utimens({path:?}, atime={atime:?}, mtime={mtime:?})...unimplemented");
-        Err(libc::ENOSYS)
+        self.run_async(
+            &format!("utimens({path:?}, atime={atime:?}, mtime={mtime:?})"),
+            move || async move {
+                if let Some(fh) = fh {
+                    let open_file_list = self.open_files.read().unwrap();
+                    let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+                        log::error!("getattr: no open file with handle {}", u64::from(fh));
+                        FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                    })?;
+                    open_file.utimens(atime, mtime).await?
+                } else {
+                    let node = self.fs.load_node(path).await?;
+                    node.utimens(atime, mtime).await?
+                };
+                Ok(())
+            },
+        )
     }
 
     /// Set timestamps of a filesystem entry (with extra options only used on MacOS).

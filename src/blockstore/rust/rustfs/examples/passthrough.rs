@@ -9,7 +9,7 @@ use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // TODO Go through all API calls we're doing (e.g. std::fs, tokio::fs, nix::) and make sure we're using the API correctly
 //      and handle errors that can happen.
@@ -98,6 +98,48 @@ impl Node for PassthroughNode {
                     uid,
                     gid,
                     nix::unistd::FchownatFlags::NoFollowSymlink,
+                )
+                .map_error()?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        Ok(())
+    }
+
+    async fn utimens(
+        &self,
+        last_access: Option<SystemTime>,
+        last_modification: Option<SystemTime>,
+    ) -> FsResult<()> {
+        let path = self.path.join(&self.path);
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                let (atime, mtime) = match (last_access, last_modification) {
+                    (Some(atime), Some(mtime)) => {
+                        // Both atime and mtime are being overwritten, no need to load previous values
+                        (atime, mtime)
+                    }
+                    (atime, mtime) => {
+                        // Either atime or mtime are not being overwritten, we need to load the previous values first.
+                        let metadata = path.metadata().map_error()?;
+                        let atime = match atime {
+                            Some(atime) => atime,
+                            None => metadata.accessed().map_error()?,
+                        };
+                        let mtime = match mtime {
+                            Some(mtime) => mtime,
+                            None => metadata.modified().map_error()?,
+                        };
+                        (atime, mtime)
+                    }
+                };
+                nix::sys::stat::utimensat(
+                    None,
+                    &path,
+                    &convert_timespec(atime),
+                    &convert_timespec(mtime),
+                    nix::sys::stat::UtimensatFlags::NoFollowSymlink,
                 )
                 .map_error()?;
                 Ok(())
@@ -334,6 +376,53 @@ impl OpenFile for PassthroughOpenFile {
         self.open_file.set_len(new_size.into()).await.map_error()?;
         Ok(())
     }
+
+    async fn utimens(
+        &self,
+        last_access: Option<SystemTime>,
+        last_modification: Option<SystemTime>,
+    ) -> FsResult<()> {
+        // TODO Can we do this without duplicating the file descriptor?
+        let open_file = self
+            .open_file
+            .try_clone()
+            .await
+            .map_error()?
+            .into_std()
+            .await;
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                let (atime, mtime) = match (last_access, last_modification) {
+                    (Some(atime), Some(mtime)) => {
+                        // Both atime and mtime are being overwritten, no need to load previous values
+                        (atime, mtime)
+                    }
+                    (atime, mtime) => {
+                        // Either atime or mtime are not being overwritten, we need to load the previous values first.
+                        let metadata = open_file.metadata().map_error()?;
+                        let atime = match atime {
+                            Some(atime) => atime,
+                            None => metadata.accessed().map_error()?,
+                        };
+                        let mtime = match mtime {
+                            Some(mtime) => mtime,
+                            None => metadata.modified().map_error()?,
+                        };
+                        (atime, mtime)
+                    }
+                };
+                nix::sys::stat::futimens(
+                    open_file.as_raw_fd(),
+                    &convert_timespec(atime),
+                    &convert_timespec(mtime),
+                )
+                .map_error()?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        Ok(())
+    }
 }
 
 trait IoResultExt<T> {
@@ -380,6 +469,13 @@ fn convert_metadata(metadata: Metadata) -> FsResult<NodeAttrs> {
         // TODO Is st_ctime_nsec actually the total number of nsec or only the sub-second part?
         ctime: UNIX_EPOCH + Duration::from_nanos(u64::try_from(metadata.st_ctime_nsec()).unwrap()),
     })
+}
+
+fn convert_timespec(time: SystemTime) -> nix::sys::time::TimeSpec {
+    time.duration_since(UNIX_EPOCH)
+        // TODO No unwrap.expect
+        .expect("Time is before unix epoch")
+        .into()
 }
 
 const USAGE: &str = "Usage: passthroughfs [basedir] [mountdir]";
