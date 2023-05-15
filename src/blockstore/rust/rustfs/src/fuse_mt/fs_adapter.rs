@@ -23,6 +23,7 @@ use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 // TODO Go through fuse documentation and syscall manpages to check for behavior and possible error codes
 // TODO We don't need the multithreading from fuse_mt, it's probably better to use fuser instead.
 // TODO This adapter currently adapts between multiple things. fuse_mt -> async interface -> rust_fs interface. Can we split that by having one adapter that only goes to an async version of fuse_mt/fuser and a second one that goes to rust_fs?
+// TODO Which operations are supposed to follow symlinks, which ones aren't? Make sure we handle that correctly. Does fuse automatically deref symlinks before calling us?
 
 enum MaybeInitializedFs<Fs: Device> {
     Uninitialized(Option<Box<dyn FnOnce(Uid, Gid) -> Fs + Send + Sync>>),

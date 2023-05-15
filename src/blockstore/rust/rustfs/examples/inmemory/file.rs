@@ -6,111 +6,162 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use super::device::InMemoryDevice;
-use super::node::IsInMemoryNode;
+use super::inode_metadata::{chmod, chown, utimens};
 
-struct FileInode {
-    metadata: NodeAttrs,
-    data: Vec<u8>,
-}
+// Inode is in separate module so we can ensure class invariant through public/private boundaries
+mod inode {
+    use super::*;
 
-impl FileInode {
-    pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
-        Self {
-            metadata: NodeAttrs {
-                // TODO What are the right file attributes here?
-                nlink: 1,
-                mode,
-                uid,
-                gid,
-                num_bytes: NumBytes::from(0),
-                blocks: 1,
-                atime: SystemTime::now(),
-                mtime: SystemTime::now(),
-                ctime: SystemTime::now(),
-            },
-            data: vec![],
-        }
+    pub struct FileInode {
+        // Invariant: metadata.num_bytes == data.len()
+        metadata: NodeAttrs,
+        data: Vec<u8>,
     }
 
-    pub fn resize(&mut self, new_size: NumBytes) {
-        self.data
+    impl FileInode {
+        pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
+            Self {
+                metadata: NodeAttrs {
+                    // TODO What are the right file attributes here?
+                    nlink: 1,
+                    mode,
+                    uid,
+                    gid,
+                    num_bytes: NumBytes::from(0),
+                    blocks: 1,
+                    atime: SystemTime::now(),
+                    mtime: SystemTime::now(),
+                    ctime: SystemTime::now(),
+                },
+                data: vec![],
+            }
+        }
+
+        pub fn metadata(&self) -> &NodeAttrs {
+            &self.metadata
+        }
+
+        pub fn resize(&mut self, new_size: NumBytes) {
             // TODO No unwrap
-            .resize(usize::try_from(u64::from(new_size)).unwrap(), 0u8);
-        self.metadata.num_bytes = new_size;
-    }
+            let new_size_usize = usize::try_from(u64::from(new_size)).unwrap();
+            self.data.resize(new_size_usize, 0u8);
+            self.metadata.num_bytes = new_size;
+        }
 
-    pub fn len(&self) -> NumBytes {
-        self.metadata.num_bytes
+        pub fn len(&self) -> NumBytes {
+            self.metadata.num_bytes
+        }
+
+        pub fn data(&self) -> &[u8] {
+            &self.data
+        }
+
+        pub fn data_mut(&mut self) -> &mut [u8] {
+            &mut self.data
+        }
+
+        pub fn chmod(&mut self, mode: Mode) {
+            chmod(&mut self.metadata, mode);
+        }
+
+        pub fn chown(&mut self, uid: Option<Uid>, gid: Option<Gid>) {
+            chown(&mut self.metadata, uid, gid);
+        }
+
+        pub fn utimens(
+            &mut self,
+            last_access: Option<SystemTime>,
+            last_modification: Option<SystemTime>,
+        ) {
+            utimens(&mut self.metadata, last_access, last_modification);
+        }
     }
 }
 
-pub struct InMemoryFile {
+use inode::FileInode;
+
+pub struct InMemoryFileRef {
     // TODO Here (and also in InMemoryDir/Symlink), can we avoid the Mutex by using Rust's `&mut` for functions that modify data?
-    implementation: Arc<Mutex<FileInode>>,
+    inode: Arc<Mutex<FileInode>>,
 }
 
-impl InMemoryFile {
+impl InMemoryFileRef {
     pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
         Self {
-            implementation: Arc::new(Mutex::new(FileInode::new(mode, uid, gid))),
+            inode: Arc::new(Mutex::new(FileInode::new(mode, uid, gid))),
         }
     }
 
-    pub fn open_sync(&self, openflags: OpenFlags) -> InMemoryOpenFile {
-        InMemoryOpenFile {
-            openflags,
-            implementation: Arc::clone(&self.implementation),
+    pub fn clone_ref(&self) -> Self {
+        Self {
+            inode: Arc::clone(&self.inode),
         }
+    }
+
+    pub fn open_sync(&self, openflags: OpenFlags) -> InMemoryOpenFileRef {
+        InMemoryOpenFileRef {
+            openflags,
+            inode: Arc::clone(&self.inode),
+        }
+    }
+
+    pub fn metadata(&self) -> NodeAttrs {
+        let inode = self.inode.lock().unwrap();
+        *inode.metadata()
+    }
+
+    pub fn chmod(&self, mode: Mode) {
+        self.inode.lock().unwrap().chmod(mode);
+    }
+
+    pub fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) {
+        self.inode.lock().unwrap().chown(uid, gid);
+    }
+
+    pub fn utimens(&self, last_access: Option<SystemTime>, last_modification: Option<SystemTime>) {
+        self.inode
+            .lock()
+            .unwrap()
+            .utimens(last_access, last_modification);
     }
 }
 
 #[async_trait]
-impl File for InMemoryFile {
+impl File for InMemoryFileRef {
     type Device = InMemoryDevice;
 
-    async fn open(&self, openflags: OpenFlags) -> FsResult<InMemoryOpenFile> {
+    async fn open(&self, openflags: OpenFlags) -> FsResult<InMemoryOpenFileRef> {
         Ok(self.open_sync(openflags))
     }
 
     async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        self.implementation.lock().unwrap().resize(new_size);
+        self.inode.lock().unwrap().resize(new_size);
         Ok(())
     }
 }
 
-pub struct InMemoryOpenFile {
+pub struct InMemoryOpenFileRef {
     openflags: OpenFlags,
-    implementation: Arc<Mutex<FileInode>>,
+    inode: Arc<Mutex<FileInode>>,
 }
 
 #[async_trait]
-impl OpenFile for InMemoryOpenFile {
+impl OpenFile for InMemoryOpenFileRef {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         // TODO Deduplicate with implementation in InMemoryNode
         // TODO Is getattr allowed when openflags are writeonly?
-        Ok(self.implementation.lock().unwrap().metadata)
+        Ok(*self.inode.lock().unwrap().metadata())
     }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        // TODO Deduplicate with implementation in InMemoryNode
         // TODO Is chmod allowed when openflags are readonly?
-        self.update_metadata(|metadata| {
-            metadata.mode = Mode::from(mode);
-        });
+        self.inode.lock().unwrap().chmod(mode);
         Ok(())
     }
 
     async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        // TODO Deduplicate with implementation in InMemoryNode
         // TODO Is chown allowed when openflags are readonly?
-        self.update_metadata(|metadata| {
-            if let Some(uid) = uid {
-                metadata.uid = uid;
-            }
-            if let Some(gid) = gid {
-                metadata.gid = gid;
-            }
-        });
+        self.inode.lock().unwrap().chown(uid, gid);
         Ok(())
     }
 
@@ -118,7 +169,7 @@ impl OpenFile for InMemoryOpenFile {
         match self.openflags {
             OpenFlags::Read => Err(FsError::WriteOnReadOnlyFileDescriptor),
             OpenFlags::Write | OpenFlags::ReadWrite => {
-                self.implementation.lock().unwrap().resize(new_size);
+                self.inode.lock().unwrap().resize(new_size);
                 Ok(())
             }
         }
@@ -130,15 +181,10 @@ impl OpenFile for InMemoryOpenFile {
         last_modification: Option<SystemTime>,
     ) -> FsResult<()> {
         // TODO Is utimens allowed when openflags are readonly?
-        // TODO Deduplicate with implementation in InMemoryNode
-        self.update_metadata(|metadata| {
-            if let Some(last_access) = last_access {
-                metadata.atime = last_access;
-            }
-            if let Some(last_modification) = last_modification {
-                metadata.mtime = last_modification;
-            }
-        });
+        self.inode
+            .lock()
+            .unwrap()
+            .utimens(last_access, last_modification);
         Ok(())
     }
 
@@ -148,7 +194,8 @@ impl OpenFile for InMemoryOpenFile {
             OpenFlags::Read | OpenFlags::ReadWrite => {
                 let offset = usize::try_from(u64::from(offset)).unwrap();
                 let size = usize::try_from(u64::from(size)).unwrap();
-                let data = &self.implementation.lock().unwrap().data;
+                let inode = self.inode.lock().unwrap();
+                let data = inode.data();
                 let actually_read = std::cmp::min(size, data.len() - offset);
                 Ok(data[offset..offset + actually_read].to_vec().into())
             }
@@ -161,12 +208,12 @@ impl OpenFile for InMemoryOpenFile {
             OpenFlags::Write | OpenFlags::ReadWrite => {
                 // TODO No unwrap
                 let data_len = NumBytes::from(u64::try_from(data.len()).unwrap());
-                let implementation = &mut self.implementation.lock().unwrap();
-                if offset + data_len > implementation.len() {
-                    implementation.resize(offset + data_len);
+                let inode = &mut self.inode.lock().unwrap();
+                if offset + data_len > inode.len() {
+                    inode.resize(offset + data_len);
                 }
                 let offset = usize::try_from(u64::from(offset)).unwrap();
-                implementation.data[offset..offset + data.len()].copy_from_slice(&data);
+                inode.data_mut()[offset..offset + data.len()].copy_from_slice(&data);
                 Ok(())
             }
         }
@@ -182,27 +229,5 @@ impl OpenFile for InMemoryOpenFile {
         // TODO Is fsync allowed when openflags are readonly?
         // No need to fsync because we're in-memory
         Ok(())
-    }
-}
-
-impl IsInMemoryNode for InMemoryFile {
-    fn metadata(&self) -> NodeAttrs {
-        self.implementation.lock().unwrap().metadata
-    }
-
-    fn update_metadata(&self, callback: impl FnOnce(&mut NodeAttrs)) {
-        let mut data = self.implementation.lock().unwrap();
-        callback(&mut data.metadata);
-    }
-}
-
-impl IsInMemoryNode for InMemoryOpenFile {
-    fn metadata(&self) -> NodeAttrs {
-        self.implementation.lock().unwrap().metadata
-    }
-
-    fn update_metadata(&self, callback: impl FnOnce(&mut NodeAttrs)) {
-        let mut data = self.implementation.lock().unwrap();
-        callback(&mut data.metadata);
     }
 }

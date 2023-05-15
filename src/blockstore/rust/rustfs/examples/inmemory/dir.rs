@@ -1,74 +1,138 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Dir, DirEntry, File, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags,
-    Uid,
+    Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Uid,
 };
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use super::device::InMemoryDevice;
-use super::file::InMemoryFile;
-use super::file::InMemoryOpenFile;
-use super::node::{InMemoryNode, IsInMemoryNode};
-use super::symlink::InMemorySymlink;
+use super::file::InMemoryFileRef;
+use super::file::InMemoryOpenFileRef;
+use super::inode_metadata::{chmod, chown, utimens};
+use super::node::InMemoryNodeRef;
+use super::symlink::InMemorySymlinkRef;
 
-struct DirInode {
-    metadata: NodeAttrs,
-    entries: HashMap<String, InMemoryNode>,
-}
+// Inode is in separate module so we can ensure class invariant through public/private boundaries
+mod inode {
+    use super::*;
 
-impl DirInode {
-    pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
-        Self {
-            metadata: NodeAttrs {
-                // TODO What are the right dir attributes here for directories?
-                nlink: 1,
-                mode,
-                uid,
-                gid,
-                num_bytes: NumBytes::from(0),
-                blocks: 1,
-                atime: SystemTime::now(),
-                mtime: SystemTime::now(),
-                ctime: SystemTime::now(),
-            },
-            entries: HashMap::new(),
+    pub struct DirInode {
+        metadata: NodeAttrs,
+        entries: HashMap<String, InMemoryNodeRef>,
+    }
+
+    impl DirInode {
+        pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
+            Self {
+                metadata: NodeAttrs {
+                    // TODO What are the right dir attributes here for directories?
+                    nlink: 1,
+                    mode,
+                    uid,
+                    gid,
+                    num_bytes: NumBytes::from(0),
+                    blocks: 1,
+                    atime: SystemTime::now(),
+                    mtime: SystemTime::now(),
+                    ctime: SystemTime::now(),
+                },
+                entries: HashMap::new(),
+            }
+        }
+
+        pub fn metadata(&self) -> &NodeAttrs {
+            &self.metadata
+        }
+
+        pub fn chmod(&mut self, mode: Mode) {
+            chmod(&mut self.metadata, mode);
+        }
+
+        pub fn chown(&mut self, uid: Option<Uid>, gid: Option<Gid>) {
+            chown(&mut self.metadata, uid, gid);
+        }
+
+        pub fn utimens(
+            &mut self,
+            last_access: Option<SystemTime>,
+            last_modification: Option<SystemTime>,
+        ) {
+            utimens(&mut self.metadata, last_access, last_modification);
+        }
+
+        pub fn entries(&self) -> &HashMap<String, InMemoryNodeRef> {
+            &self.entries
+        }
+
+        // TODO Once we have an invariant that depends on the number of entries
+        //      (e.g. metadata.num_bytes),
+        //      we can't offer `entries_mut` as a function anymore because it could
+        //      violate that invariant.
+        pub fn entries_mut(&mut self) -> &mut HashMap<String, InMemoryNodeRef> {
+            &mut self.entries
         }
     }
 }
+use inode::DirInode;
 
-pub struct InMemoryDir {
-    implementation: Mutex<DirInode>,
+pub struct InMemoryDirRef {
+    inode: Arc<Mutex<DirInode>>,
 }
 
-impl InMemoryDir {
+impl InMemoryDirRef {
     pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
         Self {
-            implementation: Mutex::new(DirInode::new(mode, uid, gid)),
+            inode: Arc::new(Mutex::new(DirInode::new(mode, uid, gid))),
         }
     }
 
-    pub fn load_node_relative_path(&self, path: &Path) -> FsResult<InMemoryNode> {
+    pub fn clone_ref(&self) -> Self {
+        Self {
+            inode: Arc::clone(&self.inode),
+        }
+    }
+
+    pub fn load_node_relative_path(&self, path: &Path) -> FsResult<InMemoryNodeRef> {
         todo!()
+    }
+
+    pub fn metadata(&self) -> NodeAttrs {
+        let inode = self.inode.lock().unwrap();
+        *inode.metadata()
+    }
+
+    pub fn chmod(&self, mode: Mode) {
+        self.inode.lock().unwrap().chmod(mode);
+    }
+
+    pub fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) {
+        self.inode.lock().unwrap().chown(uid, gid);
+    }
+
+    pub fn utimens(&self, last_access: Option<SystemTime>, last_modification: Option<SystemTime>) {
+        self.inode
+            .lock()
+            .unwrap()
+            .utimens(last_access, last_modification);
     }
 }
 
 #[async_trait]
-impl Dir for InMemoryDir {
+impl Dir for InMemoryDirRef {
     type Device = InMemoryDevice;
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
-        let implementation = self.implementation.lock().unwrap();
-        Ok(implementation
-            .entries
+        let inode = self.inode.lock().unwrap();
+        Ok(inode
+            .entries()
             .iter()
             .map(|(name, node)| {
-                let kind = match node {
-                    InMemoryNode::File(_) => NodeKind::File,
-                    InMemoryNode::Dir(_) => NodeKind::Dir,
-                    InMemoryNode::Symlink(_) => NodeKind::Symlink,
+                let kind: NodeKind = match node {
+                    InMemoryNodeRef::File(_) => NodeKind::File,
+                    InMemoryNodeRef::Dir(_) => NodeKind::Dir,
+                    InMemoryNodeRef::Symlink(_) => NodeKind::Symlink,
                 };
                 DirEntry {
                     name: name.clone(),
@@ -85,30 +149,30 @@ impl Dir for InMemoryDir {
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
-        let mut implementation = self.implementation.lock().unwrap();
-        let dir = InMemoryDir::new(mode, uid, gid);
+        let mut inode = self.inode.lock().unwrap();
+        let dir = InMemoryDirRef::new(mode, uid, gid);
         let metadata = dir.metadata();
         // TODO Use try_insert once that is stable
-        match implementation.entries.entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_string()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 return Err(FsError::NodeAlreadyExists);
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(InMemoryNode::Dir(dir));
+                entry.insert(InMemoryNodeRef::Dir(dir));
             }
         }
         Ok(metadata)
     }
 
     async fn remove_child_dir(&self, name: &str) -> FsResult<()> {
-        let mut implementation = self.implementation.lock().unwrap();
+        let mut inode = self.inode.lock().unwrap();
         // TODO Use try_insert once that is stable
-        match implementation.entries.entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_string()) {
             std::collections::hash_map::Entry::Occupied(entry) => match entry.get() {
-                InMemoryNode::File(_) | InMemoryNode::Symlink(_) => {
+                InMemoryNodeRef::File(_) | InMemoryNodeRef::Symlink(_) => {
                     return Err(FsError::NodeIsNotADirectory);
                 }
-                InMemoryNode::Dir(dir) => {
+                InMemoryNodeRef::Dir(dir) => {
                     entry.remove();
                     Ok(())
                 }
@@ -124,31 +188,31 @@ impl Dir for InMemoryDir {
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
-        let mut implementation = self.implementation.lock().unwrap();
-        let symlink = InMemorySymlink::new(target.to_owned(), uid, gid);
+        let mut inode = self.inode.lock().unwrap();
+        let symlink = InMemorySymlinkRef::new(target.to_owned(), uid, gid);
         let metadata = symlink.metadata();
         // TODO Use try_insert once that is stable
-        match implementation.entries.entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_string()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 return Err(FsError::NodeAlreadyExists);
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(InMemoryNode::Symlink(symlink));
+                entry.insert(InMemoryNodeRef::Symlink(symlink));
             }
         }
         Ok(metadata)
     }
 
     async fn remove_child_file_or_symlink(&self, name: &str) -> FsResult<()> {
-        let mut implementation = self.implementation.lock().unwrap();
+        let mut inode = self.inode.lock().unwrap();
         // TODO Use try_insert once that is stable
-        match implementation.entries.entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_string()) {
             std::collections::hash_map::Entry::Occupied(entry) => match entry.get() {
-                InMemoryNode::File(_) | InMemoryNode::Symlink(_) => {
+                InMemoryNodeRef::File(_) | InMemoryNodeRef::Symlink(_) => {
                     entry.remove();
                     Ok(())
                 }
-                InMemoryNode::Dir(_) => return Err(FsError::NodeIsADirectory),
+                InMemoryNodeRef::Dir(_) => return Err(FsError::NodeIsADirectory),
             },
             std::collections::hash_map::Entry::Vacant(_) => Err(FsError::NodeDoesNotExist),
         }
@@ -160,18 +224,18 @@ impl Dir for InMemoryDir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, InMemoryOpenFile)> {
-        let mut implementation = self.implementation.lock().unwrap();
-        let file = InMemoryFile::new(mode, uid, gid);
+    ) -> FsResult<(NodeAttrs, InMemoryOpenFileRef)> {
+        let mut inode = self.inode.lock().unwrap();
+        let file = InMemoryFileRef::new(mode, uid, gid);
         let openfile = file.open_sync(OpenFlags::ReadWrite);
         let metadata = file.metadata();
         // TODO Use try_insert once that is stable
-        match implementation.entries.entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_string()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 return Err(FsError::NodeAlreadyExists);
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(InMemoryNode::File(file));
+                entry.insert(InMemoryNodeRef::File(file));
             }
         }
         Ok((metadata, openfile))
@@ -179,16 +243,5 @@ impl Dir for InMemoryDir {
 
     async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()> {
         todo!()
-    }
-}
-
-impl IsInMemoryNode for InMemoryDir {
-    fn metadata(&self) -> NodeAttrs {
-        self.implementation.lock().unwrap().metadata
-    }
-
-    fn update_metadata(&self, callback: impl FnOnce(&mut NodeAttrs)) {
-        let mut implementation = self.implementation.lock().unwrap();
-        callback(&mut implementation.metadata);
     }
 }

@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use cryfs_rustfs::{Device, FsError, FsResult, Gid, Mode, Statfs, Uid};
 use std::path::Path;
 
-use super::dir::InMemoryDir;
-use super::file::{InMemoryFile, InMemoryOpenFile};
-use super::node::InMemoryNode;
-use super::symlink::InMemorySymlink;
+use super::dir::InMemoryDirRef;
+use super::file::{InMemoryFileRef, InMemoryOpenFileRef};
+use super::node::InMemoryNodeRef;
+use super::symlink::InMemorySymlinkRef;
 
 pub struct InMemoryDevice {
-    rootdir: InMemoryDir,
+    rootdir: InMemoryDirRef,
 }
 
 impl InMemoryDevice {
@@ -19,18 +19,18 @@ impl InMemoryDevice {
             .add_user_write_flag()
             .add_user_exec_flag();
         Self {
-            rootdir: InMemoryDir::new(mode, uid, gid),
+            rootdir: InMemoryDirRef::new(mode, uid, gid),
         }
     }
 }
 
 #[async_trait]
 impl Device for InMemoryDevice {
-    type Node = InMemoryNode;
-    type Dir = InMemoryDir;
-    type Symlink = InMemorySymlink;
-    type File = InMemoryFile;
-    type OpenFile = InMemoryOpenFile;
+    type Node = InMemoryNodeRef;
+    type Dir = InMemoryDirRef;
+    type Symlink = InMemorySymlinkRef;
+    type File = InMemoryFileRef;
+    type OpenFile = InMemoryOpenFileRef;
 
     async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
         self.rootdir.load_node_relative_path(path)
