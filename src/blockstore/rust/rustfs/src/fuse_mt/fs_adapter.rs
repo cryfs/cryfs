@@ -167,6 +167,7 @@ where
             &format!("chmod({path:?}, mode={mode})"),
             move || async move {
                 let mode = Mode::from(mode);
+                // TODO Make sure file/symlink/dir flags are correctly set by this
                 if let Some(fh) = fh {
                     let open_file_list = self.open_files.read().unwrap();
                     let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
@@ -330,7 +331,8 @@ where
                 let name = parse_node_name(name);
                 let uid = Uid::from(req.uid);
                 let gid = Gid::from(req.gid);
-                let mode = Mode::from(mode);
+                let mode = Mode::from(mode).add_dir_flag();
+                // TODO Assert mode doesn't have file or symlink flags set
                 let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
                 // TODO What is the ttl here?
@@ -803,7 +805,8 @@ where
                 let name = parse_node_name(name);
                 let uid = Uid::from(req.uid);
                 let gid = Gid::from(req.gid);
-                let mode = Mode::from(mode);
+                let mode = Mode::from(mode).add_file_flag();
+                // TODO Assert that dir/symlink flags aren't set
                 let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
                 let (file_attrs, open_file) = parent_dir
                     .create_and_open_file(&name, mode, uid, gid)

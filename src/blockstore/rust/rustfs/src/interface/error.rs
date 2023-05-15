@@ -36,6 +36,9 @@ pub enum FsError {
 
     #[error("The file system node is not a symlink")]
     NodeIsNotASymlink,
+
+    #[error("The path is invalid")]
+    InvalidPath,
 }
 
 impl FsError {
@@ -50,6 +53,7 @@ impl FsError {
             FsError::NodeIsNotADirectory { .. } => libc::ENOTDIR,
             FsError::NodeIsADirectory { .. } => libc::EISDIR,
             FsError::NodeIsNotASymlink => libc::EINVAL,
+            FsError::InvalidPath => libc::EINVAL,
             FsError::UnknownError => libc::EIO,
         }
     }

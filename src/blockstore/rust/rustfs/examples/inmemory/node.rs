@@ -7,12 +7,22 @@ use super::file::InMemoryFileRef;
 use super::symlink::InMemorySymlinkRef;
 
 // TODO We should update ctime whenever metadata changes
-// TODO We should update atime and mtime correctly
+// TODO We should update atime and mtime correctly when things change
 
 pub enum InMemoryNodeRef {
     File(InMemoryFileRef),
     Dir(InMemoryDirRef),
     Symlink(InMemorySymlinkRef),
+}
+
+impl InMemoryNodeRef {
+    pub fn clone_ref(&self) -> InMemoryNodeRef {
+        match self {
+            InMemoryNodeRef::File(file) => InMemoryNodeRef::File(file.clone_ref()),
+            InMemoryNodeRef::Dir(dir) => InMemoryNodeRef::Dir(dir.clone_ref()),
+            InMemoryNodeRef::Symlink(symlink) => InMemoryNodeRef::Symlink(symlink.clone_ref()),
+        }
+    }
 }
 
 #[async_trait]

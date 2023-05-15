@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{Device, FsError, FsResult, Gid, Mode, Statfs, Uid};
-use std::path::Path;
+use std::path::{Component, Path};
 
 use super::dir::InMemoryDirRef;
 use super::file::{InMemoryFileRef, InMemoryOpenFileRef};
@@ -33,7 +33,40 @@ impl Device for InMemoryDevice {
     type OpenFile = InMemoryOpenFileRef;
 
     async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
-        self.rootdir.load_node_relative_path(path)
+        let mut current_node = InMemoryNodeRef::Dir(self.rootdir.clone_ref());
+        let mut components = path.components();
+        if components.next() != Some(Component::RootDir) {
+            return Err(FsError::InvalidPath);
+        }
+        for component in components {
+            match component {
+                Component::Prefix(_) => {
+                    return Err(FsError::InvalidPath);
+                }
+                Component::RootDir => {
+                    return Err(FsError::InvalidPath);
+                }
+                Component::ParentDir => {
+                    return Err(FsError::InvalidPath);
+                }
+                Component::CurDir => {
+                    return Err(FsError::InvalidPath);
+                }
+                Component::Normal(name) => {
+                    // TODO Is this the right way to convert from OsStr?
+                    let name = name.to_string_lossy();
+                    match &current_node {
+                        InMemoryNodeRef::Dir(dir) => {
+                            current_node = dir.get_child(&name)?;
+                        }
+                        InMemoryNodeRef::Symlink(_) | InMemoryNodeRef::File(_) => {
+                            return Err(FsError::NodeIsNotADirectory);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(current_node)
     }
 
     async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {

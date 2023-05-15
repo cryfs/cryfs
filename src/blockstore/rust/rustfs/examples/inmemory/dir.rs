@@ -94,13 +94,17 @@ impl InMemoryDirRef {
         }
     }
 
-    pub fn load_node_relative_path(&self, path: &Path) -> FsResult<InMemoryNodeRef> {
-        todo!()
-    }
-
     pub fn metadata(&self) -> NodeAttrs {
         let inode = self.inode.lock().unwrap();
         *inode.metadata()
+    }
+
+    pub fn get_child(&self, name: &str) -> FsResult<InMemoryNodeRef> {
+        let inode = self.inode.lock().unwrap();
+        match inode.entries().get(name) {
+            Some(node) => Ok(node.clone_ref()),
+            None => Err(FsError::NodeDoesNotExist),
+        }
     }
 
     pub fn chmod(&self, mode: Mode) {
