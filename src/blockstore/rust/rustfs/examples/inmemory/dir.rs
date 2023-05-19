@@ -34,7 +34,7 @@ mod inode {
                     uid,
                     gid,
                     num_bytes: NumBytes::from(0),
-                    blocks: 1,
+                    num_blocks: None,
                     atime: SystemTime::now(),
                     mtime: SystemTime::now(),
                     ctime: SystemTime::now(),

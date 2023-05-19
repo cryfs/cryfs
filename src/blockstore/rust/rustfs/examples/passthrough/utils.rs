@@ -32,7 +32,7 @@ pub fn convert_metadata(metadata: Metadata) -> FsResult<NodeAttrs> {
         uid: metadata.st_uid().into(),
         gid: metadata.st_gid().into(),
         num_bytes: NumBytes::from(metadata.len()),
-        blocks: metadata.st_blocks(),
+        num_blocks: Some(metadata.st_blocks()),
         atime: metadata.accessed().map_error()?,
         mtime: metadata.modified().map_error()?,
         // TODO No unwrap in ctime

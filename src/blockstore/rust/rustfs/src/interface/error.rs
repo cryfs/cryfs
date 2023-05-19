@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use thiserror::Error;
 
 // TODO Add fh parameters for descriptor errors and path parameters to others

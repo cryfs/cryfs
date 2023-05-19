@@ -829,9 +829,10 @@ where
 }
 
 fn convert_node_attrs(attrs: NodeAttrs) -> FileAttr {
+    let size: u64 = attrs.num_bytes.into();
     FileAttr {
-        size: attrs.num_bytes.into(),
-        blocks: attrs.blocks,
+        size,
+        blocks: attrs.num_blocks.unwrap_or(size / 512),
         atime: attrs.atime,
         mtime: attrs.mtime,
         ctime: attrs.ctime,
