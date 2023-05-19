@@ -139,21 +139,28 @@ impl Dir for InMemoryDirRef {
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let inode = self.inode.lock().unwrap();
-        Ok(inode
-            .entries()
-            .iter()
-            .map(|(name, node)| {
-                let kind: NodeKind = match node {
-                    InMemoryNodeRef::File(_) => NodeKind::File,
-                    InMemoryNodeRef::Dir(_) => NodeKind::Dir,
-                    InMemoryNodeRef::Symlink(_) => NodeKind::Symlink,
-                };
-                DirEntry {
-                    name: name.clone(),
-                    kind,
-                }
-            })
-            .collect())
+        let basic_entries = [
+            DirEntry {
+                name: ".".to_string(),
+                kind: NodeKind::Dir,
+            },
+            DirEntry {
+                name: "..".to_string(),
+                kind: NodeKind::Dir,
+            },
+        ];
+        let real_entries = inode.entries().iter().map(|(name, node)| {
+            let kind: NodeKind = match node {
+                InMemoryNodeRef::File(_) => NodeKind::File,
+                InMemoryNodeRef::Dir(_) => NodeKind::Dir,
+                InMemoryNodeRef::Symlink(_) => NodeKind::Symlink,
+            };
+            DirEntry {
+                name: name.clone(),
+                kind,
+            }
+        });
+        Ok(basic_entries.into_iter().chain(real_entries).collect())
     }
 
     async fn create_child_dir(
