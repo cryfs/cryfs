@@ -4,6 +4,7 @@ mod file;
 mod inode_metadata;
 mod node;
 mod symlink;
+mod utils;
 
 use device::InMemoryDevice;
 

@@ -39,6 +39,9 @@ pub enum FsError {
 
     #[error("The path is invalid")]
     InvalidPath,
+
+    #[error("The operation is invalid")]
+    InvalidOperation,
 }
 
 impl FsError {
@@ -54,6 +57,7 @@ impl FsError {
             FsError::NodeIsADirectory { .. } => libc::EISDIR,
             FsError::NodeIsNotASymlink => libc::EINVAL,
             FsError::InvalidPath => libc::EINVAL,
+            FsError::InvalidOperation => libc::EINVAL,
             FsError::UnknownError => libc::EIO,
         }
     }

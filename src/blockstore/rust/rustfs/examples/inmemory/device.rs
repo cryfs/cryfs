@@ -1,39 +1,36 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{Device, FsError, FsResult, Gid, Mode, Statfs, Uid};
 use std::path::{Component, Path};
+use std::sync::{Arc, Mutex};
 
-use super::dir::InMemoryDirRef;
+use super::dir::{DirInode, InMemoryDirRef};
 use super::file::{InMemoryFileRef, InMemoryOpenFileRef};
 use super::node::InMemoryNodeRef;
 use super::symlink::InMemorySymlinkRef;
 
-pub struct InMemoryDevice {
-    rootdir: InMemoryDirRef,
+pub struct RootDir {
+    // We're pointing directly to the [DirInode] instead of using an [InMemoryDirRef] to avoid
+    // reference cycles. [InMemoryDirRef] has a reference back to [RootDir].
+    rootdir: Arc<Mutex<DirInode>>,
 }
 
-impl InMemoryDevice {
-    pub fn new(uid: Uid, gid: Gid) -> Self {
+impl RootDir {
+    pub fn new(uid: Uid, gid: Gid) -> Arc<Self> {
         let mode = Mode::default()
             .add_dir_flag()
             .add_user_read_flag()
             .add_user_write_flag()
             .add_user_exec_flag();
-        Self {
-            rootdir: InMemoryDirRef::new(mode, uid, gid),
-        }
+        Arc::new(Self {
+            rootdir: Arc::new(Mutex::new(DirInode::new(mode, uid, gid))),
+        })
     }
-}
 
-#[async_trait]
-impl Device for InMemoryDevice {
-    type Node = InMemoryNodeRef;
-    type Dir = InMemoryDirRef;
-    type Symlink = InMemorySymlinkRef;
-    type File = InMemoryFileRef;
-    type OpenFile = InMemoryOpenFileRef;
-
-    async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
-        let mut current_node = InMemoryNodeRef::Dir(self.rootdir.clone_ref());
+    pub fn load_node(self: &Arc<Self>, path: &Path) -> FsResult<InMemoryNodeRef> {
+        let mut current_node = InMemoryNodeRef::Dir(InMemoryDirRef::from_inode(
+            Arc::downgrade(&self),
+            Arc::clone(&self.rootdir),
+        ));
         let mut components = path.components();
         if components.next() != Some(Component::RootDir) {
             return Err(FsError::InvalidPath);
@@ -69,32 +66,74 @@ impl Device for InMemoryDevice {
         Ok(current_node)
     }
 
-    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
-        let node = self.load_node(path).await?;
+    pub fn load_dir(self: &Arc<Self>, path: &Path) -> FsResult<InMemoryDirRef> {
+        let node = self.load_node(path)?;
         match node {
-            Self::Node::Dir(dir) => Ok(dir),
+            InMemoryNodeRef::Dir(dir) => Ok(dir),
             _ => Err(FsError::NodeIsNotADirectory),
         }
     }
 
-    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink> {
-        let node = self.load_node(path).await?;
+    pub fn load_symlink(self: &Arc<Self>, path: &Path) -> FsResult<InMemorySymlinkRef> {
+        let node = self.load_node(path)?;
         match node {
-            Self::Node::Symlink(symlink) => Ok(symlink),
+            InMemoryNodeRef::Symlink(symlink) => Ok(symlink),
             _ => Err(FsError::NodeIsNotASymlink),
         }
     }
 
-    async fn load_file(&self, path: &Path) -> FsResult<Self::File> {
-        let node = self.load_node(path).await?;
+    pub fn load_file(self: &Arc<Self>, path: &Path) -> FsResult<InMemoryFileRef> {
+        let node = self.load_node(path)?;
         match node {
-            Self::Node::File(file) => Ok(file),
-            Self::Node::Dir(_) => Err(FsError::NodeIsADirectory),
-            Self::Node::Symlink(_) => {
+            InMemoryNodeRef::File(file) => Ok(file),
+            InMemoryNodeRef::Dir(_) => Err(FsError::NodeIsADirectory),
+            InMemoryNodeRef::Symlink(_) => {
                 // TODO What's the right error here?
                 Err(FsError::UnknownError)
             }
         }
+    }
+}
+
+pub struct InMemoryDevice {
+    rootdir: Arc<RootDir>,
+}
+
+impl InMemoryDevice {
+    pub fn new(uid: Uid, gid: Gid) -> Self {
+        let mode = Mode::default()
+            .add_dir_flag()
+            .add_user_read_flag()
+            .add_user_write_flag()
+            .add_user_exec_flag();
+        Self {
+            rootdir: RootDir::new(uid, gid),
+        }
+    }
+}
+
+#[async_trait]
+impl Device for InMemoryDevice {
+    type Node = InMemoryNodeRef;
+    type Dir = InMemoryDirRef;
+    type Symlink = InMemorySymlinkRef;
+    type File = InMemoryFileRef;
+    type OpenFile = InMemoryOpenFileRef;
+
+    async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
+        self.rootdir.load_node(path)
+    }
+
+    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
+        self.rootdir.load_dir(path)
+    }
+
+    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink> {
+        self.rootdir.load_symlink(path)
+    }
+
+    async fn load_file(&self, path: &Path) -> FsResult<Self::File> {
+        self.rootdir.load_file(path)
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {

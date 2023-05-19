@@ -873,6 +873,12 @@ fn convert_dir_entries(entries: Vec<DirEntry>) -> Vec<fuse_mt::DirectoryEntry> {
 fn parse_node_name(name: &OsStr) -> Cow<'_, str> {
     let name = name.to_string_lossy(); // TODO Is to_string_lossy the best way to convert from OsString to String?
     assert!(!name.contains('/'), "name must not contain '/': {name:?}");
+    assert!(
+        !name.contains('\0'),
+        "name must not contain the null byte: {name:?}"
+    );
+    assert!(name != ".", "name cannot be '.'");
+    assert!(name != "..", "name cannot be '..'");
     name
 }
 
