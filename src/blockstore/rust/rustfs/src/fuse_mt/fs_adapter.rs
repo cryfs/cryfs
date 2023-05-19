@@ -24,7 +24,6 @@ use crate::utils::{Gid, Mode, NodeKind, NumBytes, OpenFlags, Uid};
 // TODO We don't need the multithreading from fuse_mt, it's probably better to use fuser instead.
 // TODO This adapter currently adapts between multiple things. fuse_mt -> async interface -> rust_fs interface. Can we split that by having one adapter that only goes to an async version of fuse_mt/fuser and a second one that goes to rust_fs?
 // TODO Which operations are supposed to follow symlinks, which ones aren't? Make sure we handle that correctly. Does fuse automatically deref symlinks before calling us?
-// TODO Many of our error logs are actually not errors, just file system operations that failed and were supposed to fail (e.g. getattr on a nonexisting file). We shouldn't report those as errors.
 
 enum MaybeInitializedFs<Fs: Device> {
     Uninitialized(Option<Box<dyn FnOnce(Uid, Gid) -> Fs + Send + Sync>>),
@@ -106,7 +105,7 @@ where
                     Ok(ok)
                 }
                 Err(err) => {
-                    log::error!("{}...failed: {}", log_msg, err);
+                    log::info!("{}...failed: {}", log_msg, err);
                     Err(err.system_error_code())
                 }
             }

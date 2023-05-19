@@ -193,7 +193,7 @@ impl Dir for InMemoryDirRef {
                 InMemoryNodeRef::File(_) | InMemoryNodeRef::Symlink(_) => {
                     return Err(FsError::NodeIsNotADirectory);
                 }
-                InMemoryNodeRef::Dir(dir) => {
+                InMemoryNodeRef::Dir(_) => {
                     entry.remove();
                     Ok(())
                 }

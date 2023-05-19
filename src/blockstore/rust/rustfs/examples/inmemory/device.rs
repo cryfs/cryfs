@@ -101,11 +101,6 @@ pub struct InMemoryDevice {
 
 impl InMemoryDevice {
     pub fn new(uid: Uid, gid: Gid) -> Self {
-        let mode = Mode::default()
-            .add_dir_flag()
-            .add_user_read_flag()
-            .add_user_write_flag()
-            .add_user_exec_flag();
         Self {
             rootdir: RootDir::new(uid, gid),
         }
