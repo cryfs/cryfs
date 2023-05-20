@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Uid,
+    object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
+    OpenFlags, Uid,
 };
 use std::collections::HashMap;
 use std::path::Path;

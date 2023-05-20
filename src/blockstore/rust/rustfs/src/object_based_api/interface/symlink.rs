@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-
-use super::error::FsResult;
 use std::path::PathBuf;
+
+use crate::common::FsResult;
 
 #[async_trait]
 pub trait Symlink {

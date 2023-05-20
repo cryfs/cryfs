@@ -1,15 +1,7 @@
 use async_trait::async_trait;
-
-use super::error::FsResult;
-use super::node::NodeAttrs;
-use crate::utils::{Gid, Mode, NodeKind, Uid};
 use std::path::Path;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DirEntry {
-    pub name: String,
-    pub kind: NodeKind,
-}
+use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, Uid};
 
 #[async_trait]
 pub trait Dir {

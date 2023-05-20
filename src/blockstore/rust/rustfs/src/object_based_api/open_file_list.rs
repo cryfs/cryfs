@@ -1,28 +1,25 @@
-use derive_more::{From, Into};
 use std::collections::HashMap;
 
-use crate::interface::OpenFile;
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, From, Into)]
-pub struct OpenFileHandle(u64);
+use super::interface::OpenFile;
+use crate::low_level_api::FileHandle;
 
 struct HandlePool {
     // Handles that were used previously but then returned and are now free to be reused
-    released_handles: Vec<OpenFileHandle>,
+    released_handles: Vec<FileHandle>,
 
     // The next handle to be used
-    next_handle: OpenFileHandle,
+    next_handle: FileHandle,
 }
 
 impl HandlePool {
     fn new() -> Self {
         Self {
             released_handles: Vec::new(),
-            next_handle: OpenFileHandle(0),
+            next_handle: FileHandle(0),
         }
     }
 
-    fn acquire(&mut self) -> OpenFileHandle {
+    fn acquire(&mut self) -> FileHandle {
         if let Some(handle) = self.released_handles.pop() {
             handle
         } else {
@@ -32,14 +29,14 @@ impl HandlePool {
         }
     }
 
-    fn release(&mut self, handle: OpenFileHandle) {
+    fn release(&mut self, handle: FileHandle) {
         self.released_handles.push(handle);
     }
 }
 
 pub struct OpenFileList<OF: OpenFile> {
     // We use a hashset instead of Vec so that space gets freed when a file gets closed.
-    open_files: HashMap<OpenFileHandle, OF>,
+    open_files: HashMap<FileHandle, OF>,
 
     available_handles: HandlePool,
 }
@@ -54,13 +51,13 @@ impl<OF: OpenFile> Default for OpenFileList<OF> {
 }
 
 impl<OF: OpenFile> OpenFileList<OF> {
-    pub fn add(&mut self, file: OF) -> OpenFileHandle {
+    pub fn add(&mut self, file: OF) -> FileHandle {
         let handle = self.available_handles.acquire();
         self.open_files.insert(handle, file);
         handle
     }
 
-    pub fn remove(&mut self, handle: OpenFileHandle) -> OF {
+    pub fn remove(&mut self, handle: FileHandle) -> OF {
         let file = self
             .open_files
             .remove(&handle)
@@ -69,7 +66,7 @@ impl<OF: OpenFile> OpenFileList<OF> {
         file
     }
 
-    pub fn get(&self, handle: OpenFileHandle) -> Option<&OF> {
+    pub fn get(&self, handle: FileHandle) -> Option<&OF> {
         self.open_files.get(&handle)
     }
 }

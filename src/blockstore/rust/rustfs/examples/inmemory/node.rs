@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{FsResult, Gid, Mode, Node, NodeAttrs, Uid};
+use cryfs_rustfs::{object_based_api::Node, FsResult, Gid, Mode, NodeAttrs, Uid};
 use std::time::SystemTime;
 
 use super::dir::InMemoryDirRef;

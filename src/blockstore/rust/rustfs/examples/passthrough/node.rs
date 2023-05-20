@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{FsError, FsResult, Gid, Mode, Node, NodeAttrs, Uid};
+use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::time::SystemTime;

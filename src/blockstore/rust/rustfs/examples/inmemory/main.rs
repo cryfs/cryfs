@@ -22,5 +22,5 @@ fn main() {
 
     let device = |uid, gid| InMemoryDevice::new(uid, gid);
 
-    cryfs_rustfs::fuse_mt::mount(device, mountdir).unwrap();
+    cryfs_rustfs::backend::fuse_mt::mount(device, mountdir).unwrap();
 }

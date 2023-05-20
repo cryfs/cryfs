@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{Device, FsError, FsResult, Gid, Mode, Statfs, Uid};
+use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Gid, Mode, Statfs, Uid};
 use std::path::{Component, Path};
 use std::sync::{Arc, Mutex};
 

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{FsResult, Symlink};
+use cryfs_rustfs::{object_based_api::Symlink, FsResult};
 use std::path::PathBuf;
 
 use super::errors::IoResultExt;

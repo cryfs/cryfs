@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{Dir, DirEntry, FsError, FsResult, Gid, Mode, Node, NodeAttrs, NodeKind, Uid};
+use cryfs_rustfs::{
+    object_based_api::{Dir, Node},
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
+};
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Data, File, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFile, OpenFlags, Uid,
+    object_based_api::{File, OpenFile},
+    Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags, Uid,
 };
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -225,7 +226,7 @@ impl OpenFile for InMemoryOpenFileRef {
         Ok(())
     }
 
-    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+    async fn fsync(&self, _datasync: bool) -> FsResult<()> {
         // TODO Is fsync allowed when openflags are readonly?
         // No need to fsync because we're in-memory
         Ok(())

@@ -3,14 +3,18 @@
 use fuse_mt::FuseMT;
 use std::path::Path;
 
-use crate::interface::Device;
-use crate::utils::{Gid, Uid};
+use crate::common::{Gid, Uid};
+
+// TODO Don't depend on object_based_api
+use crate::object_based_api::{Device, ObjectBasedFsAdapter};
 
 mod running_filesystem;
 pub use running_filesystem::RunningFilesystem;
 
 mod fs_adapter;
 use fs_adapter::FsAdapter;
+
+// TODO Change mount/spawn_mount to work on AsyncFilesystem instead of Device
 
 pub fn mount<D>(
     fs: impl FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
@@ -23,7 +27,7 @@ where
 {
     // TODO Ctrl+C doesn't do a clean unmount
     // TODO Num threads
-    let fs = FuseMT::new(FsAdapter::new(fs), 1);
+    let fs = FuseMT::new(FsAdapter::new(ObjectBasedFsAdapter::new(fs)), 1);
     // TODO Fuse args (e.g. filesystem name)
     fuse_mt::mount(fs, mountpoint, &[])
 }
@@ -38,7 +42,7 @@ where
     D::OpenFile: Send + Sync,
 {
     // TODO Num threads
-    let fs = FuseMT::new(FsAdapter::new(fs), 1);
+    let fs = FuseMT::new(FsAdapter::new(ObjectBasedFsAdapter::new(fs)), 1);
     // TODO Fuse args (e.g. filesystem name)
     let handle = fuse_mt::spawn_mount(fs, mountpoint, &[])?;
     Ok(RunningFilesystem::new(handle))

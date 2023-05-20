@@ -1,8 +1,8 @@
 use derive_more::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, From, Into,
-    Not, Sub, SubAssign, Sum,
+    BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, From, Into, Not,
 };
-use std::ops::{Div, DivAssign, Mul, MulAssign};
+
+use super::NodeKind;
 
 const S_IFMT: Mode = Mode(0o170000);
 const S_IFDIR: Mode = Mode(0o040000);
@@ -41,6 +41,7 @@ const fn S_ISLNK(mode: Mode) -> bool {
     Copy,
     PartialEq,
     Eq,
+    Hash,
     From,
     Into,
     BitAnd,
@@ -126,71 +127,4 @@ impl Mode {
             panic!("invalid mode")
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, From, Into)]
-pub struct Uid(u32);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, From, Into)]
-pub struct Gid(u32);
-
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    From,
-    Into,
-    Add,
-    AddAssign,
-    Sub,
-    SubAssign,
-    Sum,
-    PartialOrd,
-    Ord,
-)]
-pub struct NumBytes(u64);
-
-impl Mul<u64> for NumBytes {
-    type Output = NumBytes;
-    fn mul(self, rhs: u64) -> Self::Output {
-        NumBytes(self.0 * rhs)
-    }
-}
-impl MulAssign<u64> for NumBytes {
-    fn mul_assign(&mut self, rhs: u64) {
-        self.0 *= rhs;
-    }
-}
-impl Mul<NumBytes> for u64 {
-    type Output = NumBytes;
-    fn mul(self, rhs: NumBytes) -> Self::Output {
-        NumBytes(self * rhs.0)
-    }
-}
-impl Div<u64> for NumBytes {
-    type Output = NumBytes;
-    fn div(self, rhs: u64) -> Self::Output {
-        NumBytes(self.0 / rhs)
-    }
-}
-impl DivAssign<u64> for NumBytes {
-    fn div_assign(&mut self, rhs: u64) {
-        self.0 /= rhs;
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NodeKind {
-    File,
-    Dir,
-    Symlink,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OpenFlags {
-    Read,
-    Write,
-    ReadWrite,
 }

@@ -1,13 +1,13 @@
 //! This module defines the filesystem interface.
 
 mod device;
-pub use device::{Device, Statfs};
+pub use device::Device;
 
 mod node;
-pub use node::{Node, NodeAttrs};
+pub use node::Node;
 
 mod dir;
-pub use dir::{Dir, DirEntry};
+pub use dir::Dir;
 
 mod symlink;
 pub use symlink::Symlink;
@@ -17,6 +17,3 @@ pub use file::File;
 
 mod open_file;
 pub use open_file::OpenFile;
-
-mod error;
-pub use error::{FsError, FsResult};

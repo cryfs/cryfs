@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Symlink, Uid};
+use cryfs_rustfs::{object_based_api::Symlink, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;

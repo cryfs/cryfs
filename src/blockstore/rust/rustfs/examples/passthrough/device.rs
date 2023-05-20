@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{Device, FsError, FsResult, Statfs};
+use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
 use std::path::{Path, PathBuf};
 
 use super::dir::PassthroughDir;

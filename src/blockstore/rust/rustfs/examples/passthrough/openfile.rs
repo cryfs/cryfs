@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFile, Uid};
+use cryfs_rustfs::{
+    object_based_api::OpenFile, Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;

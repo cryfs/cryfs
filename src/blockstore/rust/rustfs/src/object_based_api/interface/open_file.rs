@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use cryfs_utils::data::Data;
 
-use super::error::FsResult;
-use super::node::NodeAttrs;
-use crate::utils::{Gid, Mode, NumBytes, Uid};
+use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
 use std::time::SystemTime;
 
 #[async_trait]
@@ -17,7 +15,7 @@ pub trait OpenFile {
         last_access: Option<SystemTime>,
         last_modification: Option<SystemTime>,
     ) -> FsResult<()>;
-    // TODO Is it a better API to return a &[u8] from `read` in a callback instead of returning a Data object? Might reduce copies.
+    // TODO Is it a better API to return a &[u8] from `read` by having the implementation pass &[u8] to a callback instead of returning a Data object? Might reduce copies. fuse-mt does this.
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data>;
     async fn write(&self, offset: NumBytes, data: Data) -> FsResult<()>;
     async fn flush(&self) -> FsResult<()>;
