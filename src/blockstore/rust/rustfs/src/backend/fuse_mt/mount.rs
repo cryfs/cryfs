@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use super::{fs_adapter::BackendAdapter, RunningFilesystem};
+use super::{backend_adapter::BackendAdapter, RunningFilesystem};
 use crate::low_level_api::{AsyncFilesystem, IntoFs};
 
 pub fn mount<Fs: AsyncFilesystem + Send + Sync + 'static>(

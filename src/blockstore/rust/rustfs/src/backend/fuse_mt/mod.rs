@@ -3,7 +3,7 @@
 mod running_filesystem;
 pub use running_filesystem::RunningFilesystem;
 
-mod fs_adapter;
+mod backend_adapter;
 
 mod mount;
 pub use mount::{mount, spawn_mount};
