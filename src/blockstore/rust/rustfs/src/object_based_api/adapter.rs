@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 use crate::common::{DirEntry, FsError, FsResult, Gid, Mode, NumBytes, OpenFlags, Statfs, Uid};
 
 use crate::low_level_api::{
-    AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, OpenResponse, OpendirResponse,
-    RequestInfo,
+    AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, IntoFs, OpenResponse,
+    OpendirResponse, RequestInfo,
 };
 
 use super::{open_file_list::OpenFileList, Device, Dir, File, Node, OpenFile, Symlink};
@@ -559,5 +559,16 @@ where
             // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
             flags,
         })
+    }
+}
+
+impl<Fn, D> IntoFs<ObjectBasedFsAdapter<D>> for Fn
+where
+    Fn: FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
+    D: Device + Send + Sync,
+    D::OpenFile: Send + Sync,
+{
+    fn into_fs(self) -> ObjectBasedFsAdapter<D> {
+        ObjectBasedFsAdapter::new(self)
     }
 }

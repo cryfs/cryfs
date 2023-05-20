@@ -10,6 +10,7 @@ mod openfile;
 mod symlink;
 mod utils;
 
+use cryfs_rustfs::{Gid, Uid};
 use device::PassthroughDevice;
 
 const USAGE: &str = "Usage: passthroughfs [basedir] [mountdir]";
@@ -25,7 +26,7 @@ fn main() {
     let mountdir = args.next().expect(USAGE);
     assert!(args.next().is_none(), "{}", USAGE);
 
-    let device = PassthroughDevice::new(basedir.into());
+    let fs = |_uid: Uid, _gid: Gid| PassthroughDevice::new(basedir.into());
 
-    cryfs_rustfs::backend::fuse_mt::mount(|_uid, _gid| device, mountdir).unwrap();
+    cryfs_rustfs::backend::fuse_mt::mount(fs, mountdir).unwrap();
 }

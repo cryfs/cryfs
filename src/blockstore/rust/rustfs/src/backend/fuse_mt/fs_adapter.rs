@@ -27,13 +27,13 @@ use crate::low_level_api::{AsyncFilesystem, FileHandle};
 //  - "Set flag_nullpath_ok nonzero if your code can accept a NULL path argument (because it gets file information from fi->fh) for the following operations: fgetattr, flush, fsync, fsyncdir, ftruncate, lock, read, readdir, release, releasedir, and write. This will allow FUSE to run more efficiently."
 //  - Check function documentation and corner cases are as I expect them to be
 
-pub struct FsAdapter<Fs: AsyncFilesystem> {
+pub struct BackendAdapter<Fs: AsyncFilesystem> {
     fs: Fs,
 
     runtime: tokio::runtime::Runtime,
 }
 
-impl<Fs: AsyncFilesystem> FsAdapter<Fs> {
+impl<Fs: AsyncFilesystem> BackendAdapter<Fs> {
     pub fn new(fs: Fs) -> Self {
         // TODO Runtime settings
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -65,7 +65,7 @@ impl<Fs: AsyncFilesystem> FsAdapter<Fs> {
     }
 }
 
-impl<Fs: AsyncFilesystem> FilesystemMT for FsAdapter<Fs> {
+impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     fn init(&self, req: RequestInfo) -> ResultEmpty {
         self.run_async(&format!("init"), move || self.fs.init(req.into()))
     }
