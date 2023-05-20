@@ -1,4 +1,5 @@
 pub mod async_drop;
+pub mod at_exit;
 pub mod binary;
 pub mod containers;
 pub mod crypto;

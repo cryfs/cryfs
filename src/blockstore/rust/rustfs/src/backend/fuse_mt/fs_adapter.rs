@@ -9,6 +9,7 @@ use std::future::Future;
 use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::time::SystemTime;
+use tokio::runtime::Runtime;
 
 use crate::common::{
     DirEntry, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Statfs, Uid,
@@ -30,7 +31,7 @@ use crate::low_level_api::{AsyncFilesystem, FileHandle};
 pub struct BackendAdapter<Fs: AsyncFilesystem> {
     fs: Fs,
 
-    runtime: tokio::runtime::Runtime,
+    runtime: Runtime,
 }
 
 impl<Fs: AsyncFilesystem> BackendAdapter<Fs> {

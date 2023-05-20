@@ -1,7 +1,9 @@
 //! This module allows running a file system using the [fuse-mt] library.
 
 use fuse_mt::FuseMT;
+use std::num::NonZeroUsize;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 mod running_filesystem;
 pub use running_filesystem::RunningFilesystem;
@@ -15,20 +17,27 @@ pub fn mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
 ) -> std::io::Result<()> {
-    // TODO Ctrl+C doesn't do a clean unmount
-    // TODO Num threads
-    let fs = FuseMT::new(BackendAdapter::new(fs.into_fs()), 1);
-    // TODO Fuse args (e.g. filesystem name)
-    fuse_mt::mount(fs, mountpoint, &[])
+    let fs = spawn_mount(fs, mountpoint)?;
+    fs.block_until_unmounted();
+    Ok(())
 }
 
-pub fn spawn_mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
+fn spawn_mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
 ) -> std::io::Result<RunningFilesystem> {
-    // TODO Num threads
-    let fs = FuseMT::new(BackendAdapter::new(fs.into_fs()), 1);
+    let backend = BackendAdapter::new(fs.into_fs());
+    let fs = FuseMT::new(backend, num_threads());
+
     // TODO Fuse args (e.g. filesystem name)
-    let handle = fuse_mt::spawn_mount(fs, mountpoint, &[])?;
-    Ok(RunningFilesystem::new(handle))
+    let session = fuse_mt::spawn_mount(fs, mountpoint, &[])?;
+    let session = Arc::new(Mutex::new(Some(session)));
+
+    Ok(RunningFilesystem::new(session))
+}
+
+fn num_threads() -> usize {
+    std::thread::available_parallelism()
+        .unwrap_or(NonZeroUsize::new(2).unwrap())
+        .get()
 }
