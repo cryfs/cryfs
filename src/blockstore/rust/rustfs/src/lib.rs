@@ -10,3 +10,9 @@ pub use common::{
 pub mod backend;
 
 pub use cryfs_utils::data::Data;
+
+// TODO Test backends by running a mock filesystem, calling syscalls into it, and making sure the correct AsyncFilesystem functions get called
+// TODO Black-box test AsyncFilesystem instances (e.g. passthrough, inmemory) by mounting them and calling file system operations on them
+// TODO Test mount/spawn_mount correctly mount
+// TODO Test RunningFilesystem::unmount_join correctly unmounts and SIGINT correctly unmounts.
+// TODO Test the file system mountpoint is correctly freed after unmounting (e.g. we can re-mount to the same directory)

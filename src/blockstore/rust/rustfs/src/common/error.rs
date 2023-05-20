@@ -3,6 +3,7 @@ use thiserror::Error;
 // TODO Add fh parameters for descriptor errors and path parameters to others
 
 // TODO Is there a better way for error reporting, e.g. having custom error types for each interface function and mapping them to system error codes in the fuse_mt backend adapter?
+
 #[derive(Error, Clone, Copy, Debug)]
 pub enum FsError {
     // TODO We should probably get rid of Custom and instead use more specific error types, or at least minimize its use

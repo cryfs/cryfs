@@ -128,3 +128,5 @@ impl Mode {
         }
     }
 }
+
+// TODO Tests

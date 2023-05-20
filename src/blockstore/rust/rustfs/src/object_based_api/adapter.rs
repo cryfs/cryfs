@@ -12,6 +12,8 @@ use crate::low_level_api::{
 
 use super::{open_file_list::OpenFileList, Device, Dir, File, Node, OpenFile, Symlink};
 
+// TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
+
 // TODO Set these TTLs to the fuse defaults
 const TTL_GETATTR: Duration = Duration::from_secs(1);
 const TTL_MKDIR: Duration = Duration::from_secs(1);

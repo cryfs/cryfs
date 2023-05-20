@@ -20,9 +20,8 @@ use crate::low_level_api::{AsyncFilesystem, FileHandle};
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
 // TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent
-// TODO Go through fuse documentation and syscall manpages to check for behavior and possible error codes
+// TODO Go through fuse documentation and syscall manpages to check for behavior and possible error codes, make sure we handle all of them
 // TODO We don't need the multithreading from fuse_mt, it's probably better to use fuser instead.
-// TODO This adapter currently adapts between multiple things. fuse_mt -> async interface -> rust_fs interface. Can we split that by having one adapter that only goes to an async version of fuse_mt/fuser and a second one that goes to rust_fs?
 // TODO Which operations are supposed to follow symlinks, which ones aren't? Make sure we handle that correctly. Does fuse automatically deref symlinks before calling us?
 // TODO https://www.cs.hmc.edu/~geoff/classes/hmc.cs135.201001/homework/fuse/fuse_doc.html#function-purposes :
 //  - "Set flag_nullpath_ok nonzero if your code can accept a NULL path argument (because it gets file information from fi->fh) for the following operations: fgetattr, flush, fsync, fsyncdir, ftruncate, lock, read, readdir, release, releasedir, and write. This will allow FUSE to run more efficiently."
