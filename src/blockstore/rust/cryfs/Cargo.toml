@@ -15,3 +15,8 @@ cryfs-utils = {path = "../utils"}
 derive_more = "^0.99.17"
 futures = "^0.3.25"
 thiserror = "^1.0.38"
+serde = {version = "^1.0.163", features=["derive"]}
+serde_json = "^1.0.96"
+serde_with = {version = "^3.0.0", features=["hex"]}
+rand = "^0.8.5"
+version-compare = "^0.1.1"

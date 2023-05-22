@@ -1,3 +1,4 @@
 // TODO Figure out what the public API of this module should be
-pub mod fsblobstore;
+pub mod config;
+pub mod filesystem;
 pub mod utils;

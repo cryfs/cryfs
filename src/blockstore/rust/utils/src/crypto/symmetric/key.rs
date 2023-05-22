@@ -25,7 +25,7 @@ impl<KeySize: ArrayLength<u8>> EncryptionKey<KeySize> {
                 None
             }
         };
-        // TOTO mprotect would be nice too
+        // TODO mprotect would be nice too
         init(&mut key_data)?;
         Ok(Self {
             key_data,
