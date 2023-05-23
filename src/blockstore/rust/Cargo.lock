@@ -600,6 +600,7 @@ dependencies = [
  "scrypt",
  "signal-hook",
  "sodiumoxide",
+ "static_assertions",
  "tempdir",
  "tokio",
  "tokio-util",

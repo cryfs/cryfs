@@ -1,5 +1,4 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use generic_array::ArrayLength;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
@@ -23,13 +22,13 @@ fn make_key(size: usize) -> EncryptionKey {
     .infallible_unwrap()
 }
 
-fn make_plaintext<C: Cipher>(_c: &C, size: usize) -> Data {
+fn make_plaintext<C: CipherDef>(_c: &C, size: usize) -> Data {
     let mut plaintext = data(size, 0);
     plaintext.reserve(C::CIPHERTEXT_OVERHEAD_PREFIX, C::CIPHERTEXT_OVERHEAD_SUFFIX);
     plaintext
 }
 
-fn make_ciphertext(cipher: &impl Cipher, size: usize) -> Data {
+fn make_ciphertext(cipher: &impl CipherDef, size: usize) -> Data {
     let plaintext = make_plaintext(cipher, size);
     cipher.encrypt(plaintext).unwrap()
 }

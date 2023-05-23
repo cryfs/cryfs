@@ -16,7 +16,7 @@ use crate::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::Cipher,
+    crypto::symmetric::CipherDef,
     data::Data,
 };
 
@@ -25,7 +25,7 @@ use cryfs_utils::{
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
 
 pub struct EncryptedBlockStore<
-    C: 'static + Cipher,
+    C: 'static + CipherDef,
     _B: Debug,
     B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
 > {
@@ -36,7 +36,7 @@ pub struct EncryptedBlockStore<
 
 impl<
         // TODO Are all those bounds on C, _B, B still needed ?
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: Debug + Send + Sync,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > EncryptedBlockStore<C, _B, B>
@@ -52,7 +52,7 @@ impl<
 
 #[async_trait]
 impl<
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: BlockStoreReader + Send + Sync + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > BlockStoreReader for EncryptedBlockStore<C, _B, B>
@@ -115,7 +115,7 @@ impl<
 
 #[async_trait]
 impl<
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: BlockStoreDeleter + Send + Sync + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > BlockStoreDeleter for EncryptedBlockStore<C, _B, B>
@@ -133,7 +133,7 @@ create_block_data_wrapper!(BlockData);
 
 #[async_trait]
 impl<
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: OptimizedBlockStoreWriter + Send + Sync + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > OptimizedBlockStoreWriter for EncryptedBlockStore<C, _B, B>
@@ -179,7 +179,7 @@ impl<
 }
 
 impl<
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: Send + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > Debug for EncryptedBlockStore<C, _B, B>
@@ -191,7 +191,7 @@ impl<
 
 #[async_trait]
 impl<
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: Sync + Send + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > AsyncDrop for EncryptedBlockStore<C, _B, B>
@@ -203,7 +203,7 @@ impl<
 }
 
 impl<
-        C: 'static + Cipher + Send + Sync,
+        C: 'static + CipherDef + Send + Sync,
         _B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > BlockStore for EncryptedBlockStore<C, _B, B>
@@ -211,7 +211,7 @@ impl<
 }
 
 impl<
-        C: 'static + Cipher,
+        C: 'static + CipherDef,
         _B: Debug,
         B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
     > EncryptedBlockStore<C, _B, B>
@@ -276,11 +276,11 @@ mod tests {
         .infallible_unwrap()
     }
 
-    struct TestFixture<C: 'static + Cipher + Send + Sync> {
+    struct TestFixture<C: 'static + CipherDef + Send + Sync> {
         _c: PhantomData<C>,
     }
     #[async_trait]
-    impl<C: 'static + Cipher + Send + Sync> Fixture for TestFixture<C> {
+    impl<C: 'static + CipherDef + Send + Sync> Fixture for TestFixture<C> {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore, InMemoryBlockStore>;
         fn new() -> Self {
             Self { _c: PhantomData }
@@ -316,7 +316,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {
-        async fn _test_block_size_from_physical_block_size<C: 'static + Cipher + Send + Sync>() {
+        async fn _test_block_size_from_physical_block_size<C: 'static + CipherDef + Send + Sync>() {
             let mut fixture = TestFixture::<C>::new();
             let mut store = fixture.store().await;
             let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64

@@ -6,26 +6,19 @@ pub trait KDFParameters: Sized {
     fn deserialize(serialized: &[u8]) -> Result<Self>;
 }
 
-pub struct KDFResult<P: KDFParameters> {
-    key: EncryptionKey,
-    kdf_parameters: P,
-}
-
 pub trait PasswordBasedKDF {
     type Settings;
     type Parameters: KDFParameters;
 
-    fn derive_existing_key(
+    fn derive_key(
         key_size: usize,
         password: &str,
         kdf_parameters: &Self::Parameters,
     ) -> EncryptionKey;
 
-    fn derive_new_key(
-        key_size: usize,
-        password: &str,
-        settings: &Self::Settings,
-    ) -> KDFResult<Self::Parameters>;
+    /// Generate a new set of KDF parameters based on the given settings.
+    /// This can be used to encrypt new data but will be useless for trying to decrypt existing data.
+    fn generate_parameters(settings: &Self::Settings) -> Result<Self::Parameters>;
 }
 
 pub mod scrypt;

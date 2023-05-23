@@ -16,7 +16,7 @@ use cryfs_blockstore::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::{self, Aes256Gcm, Cipher, CipherCallback, EncryptionKey},
+    crypto::symmetric::{self, Aes256Gcm, AsyncCipherCallback, CipherDef, EncryptionKey},
     data::Data,
 };
 
@@ -525,12 +525,12 @@ struct _BlockStoreCreator<'a, B: Debug> {
 }
 
 #[async_trait]
-impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> CipherCallback
+impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> AsyncCipherCallback
     for _BlockStoreCreator<'a, B>
 {
     type Result = Result<Box<RustBlockStoreBridge>>;
 
-    async fn callback<C: Cipher + Send + Sync + 'static>(
+    async fn callback<C: CipherDef + Send + Sync + 'static>(
         self,
     ) -> Result<Box<RustBlockStoreBridge>> {
         Ok(Box::new(RustBlockStoreBridge(LockingBlockStore::new(
@@ -562,7 +562,7 @@ async fn _new_locking_integrity_encrypted_blockstore(
     base_store: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static>,
 ) -> Result<Box<RustBlockStoreBridge>> {
     let on_integrity_violation = std::sync::Arc::new(std::sync::Mutex::new(on_integrity_violation));
-    symmetric::lookup_cipher(
+    symmetric::lookup_cipher_async(
         cipher_name,
         _BlockStoreCreator {
             integrity_file_path: Path::new(integrity_file_path).to_path_buf(),
@@ -590,7 +590,7 @@ async fn _new_locking_integrity_encrypted_blockstore(
             base_store,
         },
     )
-    .await
+    .await?
 }
 
 pub fn new_locking_integrity_encrypted_ondisk_blockstore(

@@ -11,6 +11,8 @@ pub struct CryConfig {
 
     /// Encryption Key used for encrypting the blocks of the file system
     /// TODO Protect enc_key with mlock, etc. (see cryfs_utils::crypto::symmetric::key::EncryptionKey)
+    ///      We can probably change the type of this member to `EncryptionKey`, but need to be careful
+    ///      that (de)serialization still keeps it protected.
     pub enc_key: String,
 
     /// Cipher used for encrypting the blocks of the file system
@@ -35,4 +37,16 @@ pub struct CryConfig {
     /// If the exclusive client Id is set, then additional integrity measures (i.e. treating missing blocks as integrity violations) are enabled.
     /// Because this only works in a single-client setting, only this one client Id is allowed to access the file system.
     pub exclusive_client_id: Option<u32>,
+}
+
+impl CryConfig {
+    pub fn serialize(self) -> String {
+        super::serialization::serialize(self)
+    }
+
+    pub fn deserialize(
+        serialized: &str,
+    ) -> Result<Self, super::serialization::DeserializationError> {
+        super::serialization::deserialize(serialized)
+    }
 }

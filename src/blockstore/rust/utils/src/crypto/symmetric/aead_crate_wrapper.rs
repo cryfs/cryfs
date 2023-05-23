@@ -6,7 +6,7 @@ use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
-use super::{Cipher, EncryptionKey};
+use super::{Cipher, CipherDef, EncryptionKey};
 use crate::data::Data;
 
 // TODO The aes-gcm crate currently needs
@@ -23,7 +23,7 @@ pub struct AeadCipher<C: KeyInit + AeadInPlace> {
     _phantom: PhantomData<C>,
 }
 
-impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
+impl<C: KeyInit + AeadInPlace> CipherDef for AeadCipher<C> {
     const KEY_SIZE: usize = C::KeySize::USIZE;
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NonceSize::USIZE;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = C::TagSize::USIZE;
@@ -40,7 +40,9 @@ impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
             _phantom: PhantomData {},
         })
     }
+}
 
+impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Move C::new_from_slice call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the

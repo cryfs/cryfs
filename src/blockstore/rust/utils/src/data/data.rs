@@ -151,6 +151,15 @@ impl Data {
             self.storage.len()
         );
     }
+
+    // TODO Test
+    pub fn into_vec(self) -> Vec<u8> {
+        if self.region.start == 0 && self.region.end == self.storage.len() {
+            self.storage
+        } else {
+            self.storage[self.region].to_vec()
+        }
+    }
 }
 
 impl From<Vec<u8>> for Data {

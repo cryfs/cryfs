@@ -6,7 +6,7 @@ use log::warn;
 
 mod libsodium;
 
-use super::{Cipher, EncryptionKey};
+use super::{Cipher, CipherDef, EncryptionKey};
 use crate::data::Data;
 
 const NONCE_SIZE: usize = 12;
@@ -27,7 +27,7 @@ enum Aes256GcmImpl {
 
 pub struct Aes256Gcm(Aes256GcmImpl);
 
-impl Cipher for Aes256Gcm {
+impl CipherDef for Aes256Gcm {
     const KEY_SIZE: usize = 32;
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = NONCE_SIZE;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = AUTH_TAG_SIZE;
@@ -45,7 +45,9 @@ impl Cipher for Aes256Gcm {
             )))
         }
     }
+}
 
+impl Cipher for Aes256Gcm {
     fn encrypt(&self, plaintext: Data) -> Result<Data> {
         match &self.0 {
             Aes256GcmImpl::HardwareAccelerated(i) => i.encrypt(plaintext),

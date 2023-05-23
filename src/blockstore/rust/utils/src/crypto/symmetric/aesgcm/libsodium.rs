@@ -6,7 +6,7 @@ use anyhow::{anyhow, ensure, Context, Result};
 use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, Tag};
 use std::sync::Once;
 
-use super::super::{Cipher, EncryptionKey};
+use super::super::{Cipher, CipherDef, EncryptionKey};
 
 use crate::data::Data;
 
@@ -32,7 +32,7 @@ impl Aes256Gcm {
     }
 }
 
-impl Cipher for Aes256Gcm {
+impl CipherDef for Aes256Gcm {
     const KEY_SIZE: usize = 32;
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_PREFIX;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_SUFFIX;
@@ -52,7 +52,9 @@ impl Cipher for Aes256Gcm {
             encryption_key,
         })
     }
+}
 
+impl Cipher for Aes256Gcm {
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Use binary-layout here?
         let ciphertext_size =

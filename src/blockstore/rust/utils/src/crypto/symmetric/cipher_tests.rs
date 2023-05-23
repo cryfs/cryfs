@@ -1,6 +1,5 @@
 #![cfg(test)]
 
-use generic_array::ArrayLength;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 // TODO Separate out infallible from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
@@ -9,7 +8,7 @@ use super::aesgcm::{
     Aes128Gcm, Aes256Gcm, Aes256GcmHardwareAccelerated, Aes256GcmSoftwareImplemented,
 };
 use super::XChaCha20Poly1305;
-use super::{Cipher, EncryptionKey};
+use super::{Cipher, CipherDef, EncryptionKey};
 use crate::data::Data;
 
 pub fn key(num_bytes: usize, seed: u64) -> EncryptionKey {
@@ -22,7 +21,7 @@ pub fn key(num_bytes: usize, seed: u64) -> EncryptionKey {
 }
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
-pub fn allocate_space_for_ciphertext<C: Cipher>(plaintext: &[u8]) -> Data {
+pub fn allocate_space_for_ciphertext<C: CipherDef>(plaintext: &[u8]) -> Data {
     let mut result = Data::from(vec![
         0;
         C::CIPHERTEXT_OVERHEAD_PREFIX
@@ -41,7 +40,7 @@ mod enc_dec {
     use super::*;
 
     #[test]
-    fn given_emptydata_when_encrypted_then_canbedecrypted<Enc: Cipher, Dec: Cipher>() {
+    fn given_emptydata_when_encrypted_then_canbedecrypted<Enc: CipherDef, Dec: CipherDef>() {
         let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
         let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&[]);
@@ -51,7 +50,7 @@ mod enc_dec {
     }
 
     #[test]
-    fn given_somedata_when_encrypted_then_canbedecrypted<Enc: Cipher, Dec: Cipher>() {
+    fn given_somedata_when_encrypted_then_canbedecrypted<Enc: CipherDef, Dec: CipherDef>() {
         let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
         let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
@@ -61,7 +60,7 @@ mod enc_dec {
     }
 
     #[test]
-    fn given_invalidciphertext_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
+    fn given_invalidciphertext_then_doesntdecrypt<Enc: CipherDef, Dec: CipherDef>() {
         let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
         let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
@@ -72,7 +71,7 @@ mod enc_dec {
     }
 
     #[test]
-    fn given_toosmallciphertext_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
+    fn given_toosmallciphertext_then_doesntdecrypt<Enc: CipherDef, Dec: CipherDef>() {
         let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
         let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
@@ -83,7 +82,7 @@ mod enc_dec {
     }
 
     #[test]
-    fn given_differentkey_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
+    fn given_differentkey_then_doesntdecrypt<Enc: CipherDef, Dec: CipherDef>() {
         let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
         let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 2)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
@@ -122,7 +121,7 @@ mod basics {
     use super::*;
 
     #[test]
-    fn given_emptydata_then_sizecalculationsarecorrect<C: Cipher>() {
+    fn given_emptydata_then_sizecalculationsarecorrect<C: CipherDef>() {
         let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<C>(&[]);
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
@@ -137,7 +136,7 @@ mod basics {
     }
 
     #[test]
-    fn given_somedata_then_sizecalculationsarecorrect<C: Cipher>() {
+    fn given_somedata_then_sizecalculationsarecorrect<C: CipherDef>() {
         let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
@@ -152,7 +151,7 @@ mod basics {
     }
 
     #[test]
-    fn given_zerosizeciphertext_then_doesntdecrypt<C: Cipher>() {
+    fn given_zerosizeciphertext_then_doesntdecrypt<C: CipherDef>() {
         let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let ciphertext = vec![];
         let decrypted_plaintext = cipher.decrypt(ciphertext.into());
@@ -160,7 +159,7 @@ mod basics {
     }
 
     #[test]
-    fn given_toosmallciphertext_then_doesntdecrypt<C: Cipher>() {
+    fn given_toosmallciphertext_then_doesntdecrypt<C: CipherDef>() {
         let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let ciphertext = vec![0xab, 0xcd];
         let decrypted_plaintext = cipher.decrypt(ciphertext.into());
@@ -168,7 +167,7 @@ mod basics {
     }
 
     #[test]
-    fn test_encryption_is_indeterministic<C: Cipher>() {
+    fn test_encryption_is_indeterministic<C: CipherDef>() {
         let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext1 = cipher.encrypt(plaintext.clone().into()).unwrap();

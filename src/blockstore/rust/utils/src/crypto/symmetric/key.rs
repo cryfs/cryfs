@@ -1,6 +1,9 @@
 use anyhow::{ensure, Result};
 use log::warn;
 
+// TODO Separate InfallibleUnwrap from the lockable crate and don't depend on lockable from this crate
+use lockable::InfallibleUnwrap;
+
 // TODO The 'secrets' crate looks interesting as a replacement to 'region',
 // but the dependency didn't compile for me.
 
@@ -54,6 +57,24 @@ impl EncryptionKey {
 
     pub fn as_bytes(&self) -> &[u8] {
         &self.key_data
+    }
+
+    /// Copies the first `num_bytes` bytes of the [EncryptionKey] into a new [EncryptionKey]
+    pub fn take_bytes(&self, num_bytes: usize) -> EncryptionKey {
+        Self::new(num_bytes, |data| {
+            data.copy_from_slice(&self.key_data[..num_bytes]);
+            Ok(())
+        })
+        .infallible_unwrap()
+    }
+
+    /// Skips the first `num_bytes` bytes of the [EncryptionKey] and returns a new [EncryptionKey] with the remaining bytes.
+    pub fn skip_bytes(&self, num_bytes: usize) -> EncryptionKey {
+        Self::new(self.key_data.len() - num_bytes, |data| {
+            data.copy_from_slice(&self.key_data[num_bytes..]);
+            Ok(())
+        })
+        .infallible_unwrap()
     }
 }
 
