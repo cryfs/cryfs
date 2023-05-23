@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use cryfs_blobstore::{BlobStoreOnBlocks, BLOBID_LEN};
 use cryfs_cryfs::{
-    fsblobstore::{
+    filesystem::fsblobstore::{
         AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsBlobStore, FsError,
         SymlinkBlob,
     },

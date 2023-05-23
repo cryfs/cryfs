@@ -1,1 +1,2 @@
-mod fsblobstore;
+// TODO Make private
+pub mod fsblobstore;
