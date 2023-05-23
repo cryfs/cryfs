@@ -254,7 +254,6 @@ fn _prepend_header(mut data: Data) -> Data {
 mod tests {
     use super::*;
 
-    use generic_array::ArrayLength;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
     use std::marker::PhantomData;
 
@@ -265,14 +264,16 @@ mod tests {
         async_drop::AsyncDropArc,
         crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305},
     };
+    // TODO Separate out InfallibleUnwrap from lockable and depend on that instead of on lockable
+    use lockable::InfallibleUnwrap;
 
-    fn key<KeySize: ArrayLength<u8>>(seed: u64) -> EncryptionKey<KeySize> {
-        EncryptionKey::new(|key_data| {
+    fn key(size: usize, seed: u64) -> EncryptionKey {
+        EncryptionKey::new(size, |key_data| {
             let mut rng = StdRng::seed_from_u64(seed);
             rng.fill_bytes(key_data);
             Ok(())
         })
-        .unwrap()
+        .infallible_unwrap()
     }
 
     struct TestFixture<C: 'static + Cipher + Send + Sync> {
@@ -285,7 +286,10 @@ mod tests {
             Self { _c: PhantomData }
         }
         async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
-            EncryptedBlockStore::new(InMemoryBlockStore::new(), Cipher::new(key(0)))
+            EncryptedBlockStore::new(
+                InMemoryBlockStore::new(),
+                C::new(key(C::KEY_SIZE, 0)).unwrap(),
+            )
         }
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
@@ -343,7 +347,7 @@ mod tests {
 
     async fn _store(
         bs: &AsyncDropGuard<AsyncDropArc<InMemoryBlockStore>>,
-        key: EncryptionKey<<Aes256Gcm as Cipher>::KeySize>,
+        key: EncryptionKey,
         block_id: &BlockId,
         data: &Data,
     ) {
@@ -351,7 +355,7 @@ mod tests {
             Aes256Gcm,
             InMemoryBlockStore,
             AsyncDropArc<InMemoryBlockStore>,
-        >::new(AsyncDropArc::clone(&bs), Aes256Gcm::new(key));
+        >::new(AsyncDropArc::clone(&bs), Aes256Gcm::new(key).unwrap());
 
         store.store(block_id, data).await.unwrap();
         store.async_drop().await.unwrap();
@@ -359,14 +363,14 @@ mod tests {
 
     async fn _load(
         bs: &AsyncDropGuard<AsyncDropArc<InMemoryBlockStore>>,
-        key: EncryptionKey<<Aes256Gcm as Cipher>::KeySize>,
+        key: EncryptionKey,
         block_id: &BlockId,
     ) -> Result<Option<Data>> {
         let mut store = EncryptedBlockStore::<
             Aes256Gcm,
             InMemoryBlockStore,
             AsyncDropArc<InMemoryBlockStore>,
-        >::new(AsyncDropArc::clone(&bs), Aes256Gcm::new(key));
+        >::new(AsyncDropArc::clone(&bs), Aes256Gcm::new(key)?);
         let result = store.load(block_id).await;
 
         store.async_drop().await.unwrap();
@@ -386,10 +390,18 @@ mod tests {
     async fn test_loading_with_same_key_works() {
         let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
 
-        _store(&inner, key(0), &blockid(0), &data(1024, 0)).await;
+        _store(
+            &inner,
+            key(Aes256Gcm::KEY_SIZE, 0),
+            &blockid(0),
+            &data(1024, 0),
+        )
+        .await;
         assert_eq!(
             Some(data(1024, 0)),
-            _load(&inner, key(0), &blockid(0)).await.unwrap()
+            _load(&inner, key(Aes256Gcm::KEY_SIZE, 0), &blockid(0))
+                .await
+                .unwrap()
         );
 
         inner.async_drop().await.unwrap();
@@ -399,8 +411,16 @@ mod tests {
     async fn test_loading_with_different_key_doesnt_work() {
         let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
 
-        _store(&inner, key(0), &blockid(0), &data(1024, 0)).await;
-        _load(&inner, key(1), &blockid(0)).await.unwrap_err();
+        _store(
+            &inner,
+            key(Aes256Gcm::KEY_SIZE, 0),
+            &blockid(0),
+            &data(1024, 0),
+        )
+        .await;
+        _load(&inner, key(Aes256Gcm::KEY_SIZE, 1), &blockid(0))
+            .await
+            .unwrap_err();
 
         inner.async_drop().await.unwrap();
     }
@@ -409,9 +429,17 @@ mod tests {
     async fn test_loading_manipulated_block_doesnt_work() {
         let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
 
-        _store(&inner, key(0), &blockid(0), &data(1024, 0)).await;
+        _store(
+            &inner,
+            key(Aes256Gcm::KEY_SIZE, 0),
+            &blockid(0),
+            &data(1024, 0),
+        )
+        .await;
         _manipulate(&inner, &blockid(0)).await;
-        _load(&inner, key(0), &blockid(0)).await.unwrap_err();
+        _load(&inner, key(Aes256Gcm::KEY_SIZE, 0), &blockid(0))
+            .await
+            .unwrap_err();
 
         inner.async_drop().await.unwrap();
     }

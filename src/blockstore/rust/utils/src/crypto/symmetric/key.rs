@@ -1,5 +1,4 @@
-use anyhow::Result;
-use generic_array::{ArrayLength, GenericArray};
+use anyhow::{ensure, Result};
 use log::warn;
 
 // TODO The 'secrets' crate looks interesting as a replacement to 'region',
@@ -9,15 +8,18 @@ use log::warn;
 /// it shouldn't be swapped to disk and will be automatically zeroed on destruction.
 /// Note that this is only a best-effort and not guaranteed. There's still scenarios
 /// (say when the PC is suspended to disk) where the key will end up on the disk.
-pub struct EncryptionKey<KeySize: ArrayLength<u8>> {
-    key_data: Box<GenericArray<u8, KeySize>>,
+pub struct EncryptionKey {
+    key_data: Box<[u8]>,
     _lock_guard: Option<region::LockGuard>,
 }
 
-impl<KeySize: ArrayLength<u8>> EncryptionKey<KeySize> {
-    pub fn new(init: impl FnOnce(&mut [u8]) -> Result<()>) -> Result<Self> {
-        let mut key_data: Box<GenericArray<u8, KeySize>> = Box::default();
-        let lock_guard = region::lock(key_data.as_slice().as_ptr(), key_data.as_slice().len());
+impl EncryptionKey {
+    pub fn new<E>(
+        num_bytes: usize,
+        init: impl FnOnce(&mut [u8]) -> Result<(), E>,
+    ) -> Result<Self, E> {
+        let mut key_data: Box<[u8]> = vec![0u8; num_bytes].into_boxed_slice();
+        let lock_guard = region::lock(key_data.as_ptr(), key_data.len());
         let lock_guard = match lock_guard {
             Ok(lock_guard) => Some(lock_guard),
             Err(err) => {
@@ -39,8 +41,13 @@ impl<KeySize: ArrayLength<u8>> EncryptionKey<KeySize> {
     /// only available to test cases using cfg(test).
     // TODO #[cfg(test)]
     pub fn from_hex(hex_str: &str) -> Result<Self> {
-        Self::new(|data| {
-            data.copy_from_slice(&hex::decode(hex_str)?);
+        ensure!(
+            hex_str.len() % 2 == 0,
+            "Hex string must have an even length"
+        );
+        let num_bytes = hex_str.len() / 2;
+        Self::new(num_bytes, |data| {
+            hex::decode_to_slice(hex_str, data)?;
             Ok(())
         })
     }
@@ -50,13 +57,13 @@ impl<KeySize: ArrayLength<u8>> EncryptionKey<KeySize> {
     }
 }
 
-impl<KeySize: ArrayLength<u8>> std::fmt::Debug for EncryptionKey<KeySize> {
+impl std::fmt::Debug for EncryptionKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "EncryptionKey<{}>(****)", KeySize::USIZE)
+        write!(f, "EncryptionKey(len={})", self.key_data.len())
     }
 }
 
-impl<KeySize: ArrayLength<u8>> Drop for EncryptionKey<KeySize> {
+impl Drop for EncryptionKey {
     fn drop(&mut self) {
         sodiumoxide::utils::memzero(&mut self.key_data);
     }

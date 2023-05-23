@@ -469,7 +469,8 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
         EncryptionKey::from_hex("9726ca3703940a918802953d8db5996c5fb25008a20c92cb95aa4b8fe92702d9")
             .unwrap();
     Box::new(RustBlockStore2Bridge(DynBlockStore::from(
-        EncryptedBlockStore::new(InMemoryBlockStore::new(), Aes256Gcm::new(key)).into_box(),
+        EncryptedBlockStore::new(InMemoryBlockStore::new(), Aes256Gcm::new(key).unwrap())
+            .into_box(),
     )))
 }
 
@@ -537,9 +538,7 @@ impl<'a, B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static> Ciph
                 IntegrityBlockStore::new(
                     EncryptedBlockStore::new(
                         self.base_store,
-                        C::new(EncryptionKey::<C::KeySize>::from_hex(
-                            self.encryption_key_hex,
-                        )?),
+                        C::new(EncryptionKey::from_hex(self.encryption_key_hex)?)?,
                     ),
                     self.integrity_file_path,
                     self.my_client_id,

@@ -481,7 +481,7 @@ dependencies = [
  "generic-array",
  "hex",
  "libc",
- "lockable",
+ "lockable 0.0.3",
  "log",
  "lzzzz",
  "mockall",
@@ -581,6 +581,7 @@ dependencies = [
  "generic-tests",
  "hex",
  "itertools",
+ "lockable 0.0.6",
  "log",
  "rand 0.8.5",
  "rayon",
@@ -1186,6 +1187,20 @@ dependencies = [
  "derive_more",
  "futures",
  "log",
+ "lru",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "lockable"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "765a8320c5cb94647bca3dec5defabc788934349dd290fa262d0eb4d551f4b01"
+dependencies = [
+ "derive_more",
+ "futures",
+ "itertools",
  "lru",
  "thiserror",
  "tokio",

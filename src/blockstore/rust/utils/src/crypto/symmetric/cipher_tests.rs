@@ -2,6 +2,8 @@
 
 use generic_array::ArrayLength;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
+// TODO Separate out infallible from lockable and don't depend on lockable from this crate
+use lockable::InfallibleUnwrap;
 
 use super::aesgcm::{
     Aes128Gcm, Aes256Gcm, Aes256GcmHardwareAccelerated, Aes256GcmSoftwareImplemented,
@@ -10,15 +12,13 @@ use super::XChaCha20Poly1305;
 use super::{Cipher, EncryptionKey};
 use crate::data::Data;
 
-pub fn key<L: ArrayLength<u8>>(seed: u64) -> EncryptionKey<L> {
+pub fn key(num_bytes: usize, seed: u64) -> EncryptionKey {
     let mut rng = StdRng::seed_from_u64(seed);
-    let mut res = vec![0; L::USIZE];
-    rng.fill_bytes(&mut res);
-    EncryptionKey::new(|key_data| {
-        key_data.copy_from_slice(&res);
+    EncryptionKey::new(num_bytes, move |key_data| {
+        rng.fill_bytes(key_data);
         Ok(())
     })
-    .unwrap()
+    .infallible_unwrap()
 }
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
@@ -42,8 +42,8 @@ mod enc_dec {
 
     #[test]
     fn given_emptydata_when_encrypted_then_canbedecrypted<Enc: Cipher, Dec: Cipher>() {
-        let enc_cipher = Enc::new(key(1));
-        let dec_cipher = Dec::new(key(1));
+        let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
+        let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&[]);
         let ciphertext = enc_cipher.encrypt(plaintext.clone().into()).unwrap();
         let decrypted_plaintext = dec_cipher.decrypt(ciphertext.into()).unwrap();
@@ -52,8 +52,8 @@ mod enc_dec {
 
     #[test]
     fn given_somedata_when_encrypted_then_canbedecrypted<Enc: Cipher, Dec: Cipher>() {
-        let enc_cipher = Enc::new(key(1));
-        let dec_cipher = Dec::new(key(1));
+        let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
+        let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = enc_cipher.encrypt(plaintext.clone().into()).unwrap();
         let decrypted_plaintext = dec_cipher.decrypt(ciphertext.into()).unwrap();
@@ -62,8 +62,8 @@ mod enc_dec {
 
     #[test]
     fn given_invalidciphertext_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
-        let enc_cipher = Enc::new(key(1));
-        let dec_cipher = Dec::new(key(1));
+        let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
+        let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let mut ciphertext = enc_cipher.encrypt(plaintext.clone().into()).unwrap();
         ciphertext[20] ^= 1;
@@ -73,8 +73,8 @@ mod enc_dec {
 
     #[test]
     fn given_toosmallciphertext_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
-        let enc_cipher = Enc::new(key(1));
-        let dec_cipher = Dec::new(key(1));
+        let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
+        let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = enc_cipher.encrypt(plaintext.clone().into()).unwrap();
         let ciphertext = &ciphertext[..(ciphertext.len() - 1)];
@@ -84,8 +84,8 @@ mod enc_dec {
 
     #[test]
     fn given_differentkey_then_doesntdecrypt<Enc: Cipher, Dec: Cipher>() {
-        let enc_cipher = Enc::new(key(1));
-        let dec_cipher = Dec::new(key(2));
+        let enc_cipher = Enc::new(key(Enc::KEY_SIZE, 1)).unwrap();
+        let dec_cipher = Dec::new(key(Dec::KEY_SIZE, 2)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<Enc>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = enc_cipher.encrypt(plaintext.clone().into()).unwrap();
         let decrypted_plaintext = dec_cipher.decrypt(ciphertext.into());
@@ -123,7 +123,7 @@ mod basics {
 
     #[test]
     fn given_emptydata_then_sizecalculationsarecorrect<C: Cipher>() {
-        let cipher = C::new(key(1));
+        let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<C>(&[]);
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
         assert_eq!(
@@ -138,7 +138,7 @@ mod basics {
 
     #[test]
     fn given_somedata_then_sizecalculationsarecorrect<C: Cipher>() {
-        let cipher = C::new(key(1));
+        let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext = cipher.encrypt(plaintext.clone().into()).unwrap();
         assert_eq!(
@@ -153,7 +153,7 @@ mod basics {
 
     #[test]
     fn given_zerosizeciphertext_then_doesntdecrypt<C: Cipher>() {
-        let cipher = C::new(key(1));
+        let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let ciphertext = vec![];
         let decrypted_plaintext = cipher.decrypt(ciphertext.into());
         assert!(decrypted_plaintext.is_err());
@@ -161,7 +161,7 @@ mod basics {
 
     #[test]
     fn given_toosmallciphertext_then_doesntdecrypt<C: Cipher>() {
-        let cipher = C::new(key(1));
+        let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let ciphertext = vec![0xab, 0xcd];
         let decrypted_plaintext = cipher.decrypt(ciphertext.into());
         assert!(decrypted_plaintext.is_err());
@@ -169,7 +169,7 @@ mod basics {
 
     #[test]
     fn test_encryption_is_indeterministic<C: Cipher>() {
-        let cipher = C::new(key(1));
+        let cipher = C::new(key(C::KEY_SIZE, 1)).unwrap();
         let plaintext = allocate_space_for_ciphertext::<C>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
         let ciphertext1 = cipher.encrypt(plaintext.clone().into()).unwrap();
         let ciphertext2 = cipher.encrypt(plaintext.clone().into()).unwrap();
@@ -199,7 +199,7 @@ mod xchacha20poly1305 {
     #[test]
     fn test_backward_compatibility() {
         // Test a preencrypted message to make sure we can still encrypt it
-        let cipher = XChaCha20Poly1305::new(key(1));
+        let cipher = XChaCha20Poly1305::new(key(XChaCha20Poly1305::KEY_SIZE, 1)).unwrap();
         let ciphertext = hex::decode("f75cbc1dfb19c7686a90deb76123d628b6ff74a38cdb3a899c9c1d4dc4558bfee4d9e9af7b289436999fe779b47b1a6b95b30f").unwrap();
         assert_eq!(
             b"Hello World",
@@ -214,7 +214,7 @@ mod aes_128_gcm {
     #[test]
     fn test_backward_compatibility() {
         // Test a preencrypted message to make sure we can still encrypt it
-        let cipher = Aes128Gcm::new(key(1));
+        let cipher = Aes128Gcm::new(key(Aes128Gcm::KEY_SIZE, 1)).unwrap();
         let ciphertext = hex::decode(
             "3d15d00e18d0bb55a5b7d37614e3621bef03f3758390b98be8d7b0e7a51b4fc07b5af9dc3e19bf",
         )
@@ -232,7 +232,9 @@ mod aes_256_gcm {
     #[test]
     fn test_backward_compatibility_software() {
         // Test a preencrypted message to make sure we can still encrypt it
-        let cipher = Aes256GcmSoftwareImplemented::new(key(1));
+        let cipher =
+            Aes256GcmSoftwareImplemented::new(key(Aes256GcmSoftwareImplemented::KEY_SIZE, 1))
+                .unwrap();
         let ciphertext = hex::decode(
             "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
         )
@@ -247,7 +249,9 @@ mod aes_256_gcm {
     #[test]
     fn test_backward_compatibility_hardware() {
         // Test a preencrypted message to make sure we can still encrypt it
-        let cipher = Aes256GcmHardwareAccelerated::new(key(1));
+        let cipher =
+            Aes256GcmHardwareAccelerated::new(key(Aes256GcmHardwareAccelerated::KEY_SIZE, 1))
+                .unwrap();
         let ciphertext = hex::decode(
             "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
         )

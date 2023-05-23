@@ -1,5 +1,4 @@
 use anyhow::Result;
-use generic_array::typenum::U32;
 use log::warn;
 
 // TODO AES-GCM-SIV or XChaCha20-Poly1305 (XChaCha20-Poly1305-ietf, chacha20poly1305_ietf, chacha20poly1305) might be better than AES-GCM
@@ -29,22 +28,21 @@ enum Aes256GcmImpl {
 pub struct Aes256Gcm(Aes256GcmImpl);
 
 impl Cipher for Aes256Gcm {
-    type KeySize = U32;
-
+    const KEY_SIZE: usize = 32;
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = NONCE_SIZE;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = AUTH_TAG_SIZE;
 
-    fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
+    fn new(encryption_key: EncryptionKey) -> Result<Self> {
         let hardware_acceleration_available = Aes256GcmHardwareAccelerated::is_available();
         if hardware_acceleration_available {
-            Self(Aes256GcmImpl::HardwareAccelerated(
-                Aes256GcmHardwareAccelerated::new(encryption_key),
-            ))
+            Ok(Self(Aes256GcmImpl::HardwareAccelerated(
+                Aes256GcmHardwareAccelerated::new(encryption_key)?,
+            )))
         } else {
             warn!("Your CPU doesn't offer hardware acceleration for AES. Doing cryptography will be very slow.");
-            Self(Aes256GcmImpl::SoftwareImplementation(
-                Aes256GcmSoftwareImplemented::new(encryption_key),
-            ))
+            Ok(Self(Aes256GcmImpl::SoftwareImplementation(
+                Aes256GcmSoftwareImplemented::new(encryption_key)?,
+            )))
         }
     }
 

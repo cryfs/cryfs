@@ -19,21 +19,26 @@ use crate::data::Data;
 // or it won't use AVX2.
 
 pub struct AeadCipher<C: KeyInit + AeadInPlace> {
-    encryption_key: EncryptionKey<C::KeySize>,
+    encryption_key: EncryptionKey,
     _phantom: PhantomData<C>,
 }
 
 impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
-    type KeySize = C::KeySize;
-
+    const KEY_SIZE: usize = C::KeySize::USIZE;
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NonceSize::USIZE;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = C::TagSize::USIZE;
 
-    fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
-        Self {
+    fn new(encryption_key: EncryptionKey) -> Result<Self> {
+        ensure!(
+            encryption_key.as_bytes().len() == C::KeySize::USIZE,
+            "Expected key size of {} bytes, but got {} bytes",
+            C::KeySize::USIZE,
+            encryption_key.as_bytes().len()
+        );
+        Ok(Self {
             encryption_key,
             _phantom: PhantomData {},
-        }
+        })
     }
 
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {

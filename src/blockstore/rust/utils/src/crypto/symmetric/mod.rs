@@ -1,12 +1,11 @@
 use crate::data::Data;
 use anyhow::Result;
 use async_trait::async_trait;
-use generic_array::ArrayLength;
 
 pub trait Cipher: Sized {
-    type KeySize: ArrayLength<u8>;
+    const KEY_SIZE: usize;
 
-    fn new(key: EncryptionKey<Self::KeySize>) -> Self;
+    fn new(key: EncryptionKey) -> Result<Self>;
 
     // How many bytes is a ciphertext larger than a plaintext?
     const CIPHERTEXT_OVERHEAD_PREFIX: usize;
@@ -93,8 +92,8 @@ mod tests {
         type Result = ();
         async fn callback<ActualCipher: Cipher + Send + Sync + 'static>(self) {
             let plaintext: Data = allocate_space_for_ciphertext::<ExpectedCipher>(&hex::decode("0ffc9a43e15ccfbef1b0880167df335677c9005948eeadb31f89b06b90a364ad03c6b0859652dca960f8fa60c75747c4f0a67f50f5b85b800468559ea1a816173c0abaf5df8f02978a54b250bc57c7c6a55d4d245014722c0b1764718a6d5ca654976370").unwrap());
-            let expected_cipher = ExpectedCipher::new(key(1));
-            let actual_cipher = ActualCipher::new(key(1));
+            let expected_cipher = ExpectedCipher::new(key(ExpectedCipher::KEY_SIZE, 1)).unwrap();
+            let actual_cipher = ActualCipher::new(key(ActualCipher::KEY_SIZE, 1)).unwrap();
             let encrypted_with_expected = expected_cipher.encrypt(plaintext.clone()).unwrap();
             let encrypted_with_actual = actual_cipher.encrypt(plaintext.clone()).unwrap();
             assert_eq!(

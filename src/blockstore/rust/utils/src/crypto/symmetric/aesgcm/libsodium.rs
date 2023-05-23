@@ -3,7 +3,6 @@
 //! will return an error.
 
 use anyhow::{anyhow, ensure, Context, Result};
-use generic_array::typenum::U32;
 use sodiumoxide::crypto::aead::aes256gcm::{Aes256Gcm as _Aes256Gcm, Key, Nonce, Tag};
 use std::sync::Once;
 
@@ -21,7 +20,7 @@ fn init_libsodium() {
 
 pub struct Aes256Gcm {
     cipher: _Aes256Gcm,
-    encryption_key: EncryptionKey<U32>,
+    encryption_key: EncryptionKey,
 }
 
 impl Aes256Gcm {
@@ -34,19 +33,24 @@ impl Aes256Gcm {
 }
 
 impl Cipher for Aes256Gcm {
-    type KeySize = U32;
-
+    const KEY_SIZE: usize = 32;
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_PREFIX;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = super::Aes256Gcm::CIPHERTEXT_OVERHEAD_SUFFIX;
 
-    fn new(encryption_key: EncryptionKey<Self::KeySize>) -> Self {
+    fn new(encryption_key: EncryptionKey) -> Result<Self> {
+        ensure!(
+            encryption_key.as_bytes().len() == 32,
+            "Expected key size of 32 bytes, but got {} bytes",
+            encryption_key.as_bytes().len()
+        );
+
         init_libsodium();
 
         let cipher = _Aes256Gcm::new().expect("Hardware doesn't support the instructions needed for this implementation. Please check is_available() before calling new().");
-        Self {
+        Ok(Self {
             cipher,
             encryption_key,
-        }
+        })
     }
 
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
@@ -111,7 +115,7 @@ impl Cipher for Aes256Gcm {
     }
 }
 
-fn convert_key(key: &EncryptionKey<U32>) -> Key {
+fn convert_key(key: &EncryptionKey) -> Key {
     // Panic on error is ok because key size is hard coded and not dependent on input here
     Key::from_slice(key.as_bytes()).expect("Invalid key size")
 }
