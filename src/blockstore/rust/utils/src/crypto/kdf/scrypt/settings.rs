@@ -24,7 +24,8 @@ impl ScryptSettings {
     pub const TEST: Self = Self {
         log_n: 10,
         r: 1,
-        p: 1,
+        // Use p != r so we find serialization errors
+        p: 2,
         salt_len: 32,
     };
 }

@@ -88,4 +88,39 @@ impl KDFParameters for ScryptParams {
     }
 }
 
-// TODO Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generate() {
+        let params = ScryptParams::generate(&ScryptSettings {
+            log_n: 10,
+            r: 8,
+            p: 1,
+            salt_len: 53,
+        })
+        .unwrap();
+        assert_eq!(params.log_n, 10);
+        assert_eq!(params.r, 8);
+        assert_eq!(params.p, 1);
+        assert_eq!(params.salt.len(), 53);
+    }
+
+    #[test]
+    fn serialize() {
+        let params = ScryptParams::generate(&ScryptSettings {
+            log_n: 10,
+            r: 8,
+            p: 1,
+            salt_len: 53,
+        })
+        .unwrap();
+        let serialized = params.serialize();
+        let deserialized = ScryptParams::deserialize(&serialized).unwrap();
+        assert_eq!(deserialized.log_n, 10);
+        assert_eq!(deserialized.r, 8);
+        assert_eq!(deserialized.p, 1);
+        assert_eq!(deserialized.salt, params.salt);
+    }
+}

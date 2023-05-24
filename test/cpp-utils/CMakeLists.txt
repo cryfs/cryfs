@@ -1,8 +1,6 @@
 project (cpp-utils-test)
 
 set(SOURCES
-    crypto/kdf/SCryptTest.cpp
-    crypto/kdf/SCryptParametersTest.cpp
     crypto/hash/HashTest.cpp
     MacrosIncludeTest.cpp
     pointer/unique_ref_test.cpp

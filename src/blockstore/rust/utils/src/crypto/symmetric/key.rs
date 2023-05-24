@@ -55,6 +55,14 @@ impl EncryptionKey {
         })
     }
 
+    /// Create a hex string with the key data. This can be super helpful for test cases
+    /// but it circumvents the protection because the data gets copied to an unprotected
+    /// string. So we're making sure it's actually only available to test cases using cfg(test).
+    #[cfg(test)]
+    pub fn to_hex(&self) -> String {
+        hex::encode_upper(&self.key_data)
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         &self.key_data
     }
