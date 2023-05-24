@@ -5,11 +5,11 @@ use std::io::{Read, Seek, Write};
 use cryfs_utils::crypto::symmetric::{lookup_cipher_dyn, EncryptionKey};
 
 use super::super::cryconfig::CryConfig;
+use super::padding::{add_padding, remove_padding};
 
 const HEADER: &str = "cryfs.config.inner;0";
 
 // Inner config data is grown to this size before encryption to hide its actual size
-// TODO Actually do this, using the RandomPadding implementation from C++
 const CONFIG_SIZE: usize = 900;
 
 #[binrw]
@@ -45,8 +45,12 @@ impl InnerConfig {
             .with_context(|| format!("Trying to look up cipher {}", config.cipher))?;
 
         let plaintext = config.serialize().into_bytes();
+
+        let plaintext = add_padding(plaintext.into(), CONFIG_SIZE)
+            .context("Trying to add padding to InnerConfig")?;
+
         let encrypted_config = cipher
-            .encrypt(plaintext.into())
+            .encrypt(plaintext)
             .context("Trying to Cipher::encrypt InnerConfig")?;
 
         Ok(Self {
@@ -63,6 +67,8 @@ impl InnerConfig {
         let plaintext = cipher
             .decrypt(self.encrypted_config.into())
             .context("Trying to Cipher::decrypt InnerConfig")?;
+        let plaintext =
+            remove_padding(plaintext).context("Trying to remove padding from InnerConfig")?;
         let plaintext = String::from_utf8(plaintext.into_vec())
             .context("Trying to convert decrypted InnerConfig to UTF-8")?;
         let config = CryConfig::deserialize(&plaintext)?;

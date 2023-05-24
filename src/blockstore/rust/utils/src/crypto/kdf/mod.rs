@@ -1,7 +1,8 @@
 use super::symmetric::EncryptionKey;
 use anyhow::Result;
+use std::fmt::Debug;
 
-pub trait KDFParameters: Sized {
+pub trait KDFParameters: Sized + Debug {
     fn serialize(&self) -> Vec<u8>;
     fn deserialize(serialized: &[u8]) -> Result<Self>;
 }

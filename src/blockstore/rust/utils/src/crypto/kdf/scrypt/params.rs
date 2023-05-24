@@ -8,6 +8,7 @@ use super::ScryptSettings;
 
 #[binrw]
 #[brw(little)]
+#[derive(Debug)]
 pub struct ScryptParams {
     #[br(try_map = |x: u64| parse_log_n(x))]
     #[bw(map = |x: &u8| write_log_n(*x))]

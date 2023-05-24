@@ -8,10 +8,14 @@ use cryfs_utils::crypto::{
 };
 
 use super::inner::InnerConfig;
+use super::padding::{add_padding, remove_padding};
 
 const HEADER: &str = "cryfs.config;1;scrypt";
 
 pub type OuterCipher = cryfs_utils::crypto::symmetric::Aes256Gcm;
+
+// Outer config data is grown to this size before encryption to hide its actual size
+const CONFIG_SIZE: usize = 1024;
 
 #[binrw]
 #[brw(little)]
@@ -49,10 +53,12 @@ impl OuterConfig {
         config
             .serialize(&mut Cursor::new(&mut serialized_inner_config))
             .context("Trying to serialize InnerConfig")?;
+        let serialized_inner_config = add_padding(serialized_inner_config.into(), CONFIG_SIZE)
+            .context("Trying to add padding to OuterConfig")?;
         let cipher = OuterCipher::new(outer_encryption_key)
             .context("Trying to initialize OuterCipher instance")?;
         let encrypted_inner_config = cipher
-            .encrypt(serialized_inner_config.into())
+            .encrypt(serialized_inner_config)
             .context("Trying to Cipher::encrypt OuterConfig")?;
         Ok(Self {
             kdf_parameters_serialized: kdf_parameters.serialize(),
@@ -66,6 +72,8 @@ impl OuterConfig {
         let plaintext = cipher
             .decrypt(self.encrypted_inner_config.into())
             .context("Trying to Cipher::decrypt OuterConfig")?;
+        let plaintext =
+            remove_padding(plaintext).context("Trying to remove padding from OuterConfig")?;
         let inner_config = InnerConfig::deserialize(&mut Cursor::new(plaintext))
             .context("Trying to deserialize InnerConfig")?;
         Ok(inner_config)

@@ -10,9 +10,11 @@ use inner::InnerConfig;
 use outer::{OuterCipher, OuterConfig};
 
 // TODO Add a module level comment explaining our encryption scheme and why it is split into inner/outer
+// TODO Make sure we don't derive the key twice when we load a config file and then store modifications to it
 
 mod inner;
 mod outer;
+mod padding;
 
 pub fn encrypt<KDF: PasswordBasedKDF>(
     config: CryConfig,
@@ -20,10 +22,15 @@ pub fn encrypt<KDF: PasswordBasedKDF>(
     kdf_settings: &KDF::Settings,
     dest: &mut (impl Write + Seek),
 ) -> Result<()> {
+    log::info!("Deriving key from password...");
+
     let kdf_parameters =
         KDF::generate_parameters(kdf_settings).context("Trying to generate KDF parameters")?;
     let (outer_key, inner_key) =
         generate_keys::<KDF>(&kdf_parameters, password).context("Trying to generate keys")?;
+
+    log::info!("Deriving key from password...done");
+    log::info!("Encrypting config file...");
 
     let inner_config =
         InnerConfig::encrypt(config, inner_key).context("Trying to encrypt InnerConfig")?;
@@ -33,6 +40,8 @@ pub fn encrypt<KDF: PasswordBasedKDF>(
     outer_config
         .serialize(dest)
         .context("Trying to serialize outer config")?;
+
+    log::info!("Encrypting config file...done");
 
     Ok(())
 }
@@ -46,10 +55,18 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
     let outer_config =
         OuterConfig::deserialize(source).context("Trying to deserialize outer config")?;
 
+    log::info!("Deriving key from password...");
+
     let kdf_parameters = KDF::Parameters::deserialize(outer_config.kdf_parameters())
         .context("Trying to deserialize KDF parameters")?;
+
+    println!("KDF: {kdf_parameters:?}");
+
     let (outer_key, inner_key) =
         generate_keys::<KDF>(&kdf_parameters, password).context("Trying to generate keys")?;
+
+    log::info!("Deriving key from password...done");
+    log::info!("Decrypting config file...");
 
     let inner_config = outer_config
         .decrypt(outer_key)
@@ -57,6 +74,8 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
     let config = inner_config
         .decrypt(inner_key)
         .context("Trying to decrypt inner config")?;
+
+    log::info!("Decrypting config file...done");
 
     Ok(config)
 }

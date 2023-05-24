@@ -74,7 +74,7 @@ impl Data {
     /// Grow the subregion by adding more bytes to the beginning or end of the current region.
     /// This is the inverse of [Data::shrink_to_subregion].
     ///
-    /// This function does not copy and will only succeed if there is enough space in the storage.
+    /// If there isn't enough space in the storage, this function will reallocate the storage.
     // TODO Test
     pub fn grow_region(&mut self, add_prefix_bytes: usize, add_suffix_bytes: usize) {
         self.reserve(add_prefix_bytes, add_suffix_bytes);
@@ -83,6 +83,10 @@ impl Data {
             .expect("We just reserved enough prefix/suffix bytes but it still failed");
     }
 
+    /// Grow the subregion by adding more bytes to the beginning or end of the current region.
+    /// This is the inverse of [Data::shrink_to_subregion].
+    ///
+    /// This function does not copy and will only succeed if there is enough space in the storage.
     // TODO Test
     pub fn grow_region_fail_if_reallocation_necessary(
         &mut self,
