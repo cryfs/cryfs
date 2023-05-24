@@ -6,7 +6,7 @@ use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
-use super::{Cipher, CipherDef, EncryptionKey};
+use super::super::{Cipher, CipherDef, EncryptionKey};
 use crate::data::Data;
 
 // TODO The aes-gcm crate currently needs

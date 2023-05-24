@@ -38,7 +38,7 @@ fn bench_encrypt(c: &mut Criterion) {
 
     for size in [1, 1024, 16 * 1024, 1024 * 1024 /*, 100*1024*1024*/] {
         group.bench_with_input(
-            BenchmarkId::new("aes256gcm-auto", size),
+            BenchmarkId::new("aes256gcm-default", size),
             &size,
             |b, &size| {
                 let cipher = Aes256Gcm::new(make_key(Aes256Gcm::KEY_SIZE)).unwrap();
@@ -46,42 +46,89 @@ fn bench_encrypt(c: &mut Criterion) {
                 b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
             },
         );
-        if Aes256GcmHardwareAccelerated::is_available() {
+        if LibsodiumAes256Gcm::is_available() {
             group.bench_with_input(
-                BenchmarkId::new("aes256gcm-hardware", size),
+                BenchmarkId::new("aes256gcm-libsodium", size),
                 &size,
                 |b, &size| {
-                    let cipher = Aes256GcmHardwareAccelerated::new(make_key(
-                        Aes256GcmHardwareAccelerated::KEY_SIZE,
-                    ))
-                    .unwrap();
+                    let cipher =
+                        LibsodiumAes256Gcm::new(make_key(LibsodiumAes256Gcm::KEY_SIZE)).unwrap();
                     let plaintext = make_plaintext(&cipher, size);
                     b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
                 },
             );
         }
         group.bench_with_input(
-            BenchmarkId::new("aes256gcm-software", size),
+            BenchmarkId::new("aes256gcm-aead", size),
             &size,
             |b, &size| {
-                let cipher = Aes256GcmSoftwareImplemented::new(make_key(
-                    Aes256GcmSoftwareImplemented::KEY_SIZE,
-                ))
-                .unwrap();
+                let cipher = AeadAes256Gcm::new(make_key(AeadAes256Gcm::KEY_SIZE)).unwrap();
                 let plaintext = make_plaintext(&cipher, size);
                 b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
             },
         );
-        group.bench_with_input(BenchmarkId::new("aes128gcm", size), &size, |b, &size| {
-            let cipher = Aes128Gcm::new(make_key(Aes128Gcm::KEY_SIZE)).unwrap();
-            let plaintext = make_plaintext(&cipher, size);
-            b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
-        });
         group.bench_with_input(
-            BenchmarkId::new("xchacha20-poly1305", size),
+            BenchmarkId::new("aes256gcm-openssl", size),
+            &size,
+            |b, &size| {
+                let cipher = OpensslAes256Gcm::new(make_key(OpensslAes256Gcm::KEY_SIZE)).unwrap();
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("aes128gcm-default", size),
+            &size,
+            |b, &size| {
+                let cipher = Aes128Gcm::new(make_key(Aes128Gcm::KEY_SIZE)).unwrap();
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("aes128gcm-aead", size),
+            &size,
+            |b, &size| {
+                let cipher = AeadAes128Gcm::new(make_key(AeadAes128Gcm::KEY_SIZE)).unwrap();
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("aes128gcm-openssl", size),
+            &size,
+            |b, &size| {
+                let cipher = OpensslAes128Gcm::new(make_key(OpensslAes128Gcm::KEY_SIZE)).unwrap();
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20poly1305-default", size),
             &size,
             |b, &size| {
                 let cipher = XChaCha20Poly1305::new(make_key(XChaCha20Poly1305::KEY_SIZE)).unwrap();
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20poly1305-aead", size),
+            &size,
+            |b, &size| {
+                let cipher =
+                    AeadXChaCha20Poly1305::new(make_key(AeadXChaCha20Poly1305::KEY_SIZE)).unwrap();
+                let plaintext = make_plaintext(&cipher, size);
+                b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20poly1305-libsodium", size),
+            &size,
+            |b, &size| {
+                let cipher =
+                    LibsodiumXChaCha20Poly1305::new(make_key(LibsodiumXChaCha20Poly1305::KEY_SIZE))
+                        .unwrap();
                 let plaintext = make_plaintext(&cipher, size);
                 b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
             },
@@ -94,7 +141,7 @@ fn bench_decrypt(c: &mut Criterion) {
 
     for size in [1, 1024, 16 * 1024, 1024 * 1024 /*, 100*1024*1024*/] {
         group.bench_with_input(
-            BenchmarkId::new("aes256gcm-auto", size),
+            BenchmarkId::new("aes256gcm-default", size),
             &size,
             |b, &size| {
                 let cipher = Aes256Gcm::new(make_key(Aes256Gcm::KEY_SIZE)).unwrap();
@@ -102,42 +149,89 @@ fn bench_decrypt(c: &mut Criterion) {
                 b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
             },
         );
-        if Aes256GcmHardwareAccelerated::is_available() {
+        if LibsodiumAes256Gcm::is_available() {
             group.bench_with_input(
-                BenchmarkId::new("aes256gcm-hardware", size),
+                BenchmarkId::new("aes256gcm-libsodium", size),
                 &size,
                 |b, &size| {
-                    let cipher = Aes256GcmHardwareAccelerated::new(make_key(
-                        Aes256GcmHardwareAccelerated::KEY_SIZE,
-                    ))
-                    .unwrap();
+                    let cipher =
+                        LibsodiumAes256Gcm::new(make_key(LibsodiumAes256Gcm::KEY_SIZE)).unwrap();
                     let ciphertext = make_ciphertext(&cipher, size);
                     b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
                 },
             );
         }
         group.bench_with_input(
-            BenchmarkId::new("aes256gcm-software", size),
+            BenchmarkId::new("aes256gcm-aead", size),
             &size,
             |b, &size| {
-                let cipher = Aes256GcmSoftwareImplemented::new(make_key(
-                    Aes256GcmSoftwareImplemented::KEY_SIZE,
-                ))
-                .unwrap();
+                let cipher = AeadAes256Gcm::new(make_key(AeadAes256Gcm::KEY_SIZE)).unwrap();
                 let ciphertext = make_ciphertext(&cipher, size);
                 b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
             },
         );
-        group.bench_with_input(BenchmarkId::new("aes128gcm", size), &size, |b, &size| {
-            let cipher = Aes128Gcm::new(make_key(Aes128Gcm::KEY_SIZE)).unwrap();
-            let ciphertext = make_ciphertext(&cipher, size);
-            b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
-        });
         group.bench_with_input(
-            BenchmarkId::new("xchacha20-poly1305", size),
+            BenchmarkId::new("aes256gcm-openssl", size),
+            &size,
+            |b, &size| {
+                let cipher = OpensslAes256Gcm::new(make_key(OpensslAes256Gcm::KEY_SIZE)).unwrap();
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("aes128gcm-default", size),
+            &size,
+            |b, &size| {
+                let cipher = Aes128Gcm::new(make_key(Aes128Gcm::KEY_SIZE)).unwrap();
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("aes128gcm-aead", size),
+            &size,
+            |b, &size| {
+                let cipher = AeadAes128Gcm::new(make_key(AeadAes128Gcm::KEY_SIZE)).unwrap();
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("aes128gcm-openssl", size),
+            &size,
+            |b, &size| {
+                let cipher = OpensslAes128Gcm::new(make_key(OpensslAes128Gcm::KEY_SIZE)).unwrap();
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20poly1305-default", size),
             &size,
             |b, &size| {
                 let cipher = XChaCha20Poly1305::new(make_key(XChaCha20Poly1305::KEY_SIZE)).unwrap();
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20poly1305-aead", size),
+            &size,
+            |b, &size| {
+                let cipher =
+                    AeadXChaCha20Poly1305::new(make_key(AeadXChaCha20Poly1305::KEY_SIZE)).unwrap();
+                let ciphertext = make_ciphertext(&cipher, size);
+                b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new("xchacha20poly1305-libsodium", size),
+            &size,
+            |b, &size| {
+                let cipher =
+                    LibsodiumXChaCha20Poly1305::new(make_key(LibsodiumXChaCha20Poly1305::KEY_SIZE))
+                        .unwrap();
                 let ciphertext = make_ciphertext(&cipher, size);
                 b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
             },

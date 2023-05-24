@@ -5,9 +5,12 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 use lockable::InfallibleUnwrap;
 
 use super::aesgcm::{
-    Aes128Gcm, Aes256Gcm, Aes256GcmHardwareAccelerated, Aes256GcmSoftwareImplemented,
+    AeadAes128Gcm, AeadAes256Gcm, Aes128Gcm, Aes256Gcm, LibsodiumAes256Gcm, OpensslAes128Gcm,
+    OpensslAes256Gcm,
 };
-use super::XChaCha20Poly1305;
+use super::xchacha20poly1305::{
+    AeadXChaCha20Poly1305, LibsodiumXChaCha20Poly1305, XChaCha20Poly1305,
+};
 use super::{Cipher, CipherDef, EncryptionKey};
 use crate::data::Data;
 
@@ -94,26 +97,63 @@ mod enc_dec {
     #[instantiate_tests(<XChaCha20Poly1305, XChaCha20Poly1305>)]
     mod xchacha20poly1305 {}
 
+    #[instantiate_tests(<AeadXChaCha20Poly1305, AeadXChaCha20Poly1305>)]
+    mod xchacha20poly1305_aead {}
+
+    #[instantiate_tests(<LibsodiumXChaCha20Poly1305, LibsodiumXChaCha20Poly1305>)]
+    mod xchacha20poly1305_libsodium {}
+
     #[instantiate_tests(<Aes128Gcm, Aes128Gcm>)]
     mod aes128gcm {}
 
-    #[instantiate_tests(<Aes256GcmSoftwareImplemented, Aes256GcmSoftwareImplemented>)]
-    mod aes256gcm_software {}
+    #[instantiate_tests(<AeadAes128Gcm, AeadAes128Gcm>)]
+    mod aes128gcm_aead {}
 
-    #[instantiate_tests(<Aes256GcmHardwareAccelerated, Aes256GcmHardwareAccelerated>)]
+    #[instantiate_tests(<OpensslAes128Gcm, OpensslAes128Gcm>)]
+    mod aes128gcm_openssl {}
+
+    #[instantiate_tests(<AeadAes256Gcm, AeadAes256Gcm>)]
+    mod aes256gcm_aead {}
+
+    #[instantiate_tests(<OpensslAes256Gcm, OpensslAes256Gcm>)]
+    mod aes256gcm_openssl {}
+
+    #[instantiate_tests(<LibsodiumAes256Gcm, LibsodiumAes256Gcm>)]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
-    mod aes256gcm_hardware {}
+    mod aes256gcm_libsodium {}
 
     #[instantiate_tests(<Aes256Gcm, Aes256Gcm>)]
     mod aes256gcm {}
 
-    // Test interoperability (i.e. encrypting with one and decrypting with the other works)
-    #[instantiate_tests(<Aes256GcmHardwareAccelerated, Aes256GcmSoftwareImplemented>)]
+    // Test interoperability for XChaCha20Poly1305 (i.e. encrypting with one and decrypting with the other works)
+    #[instantiate_tests(<AeadXChaCha20Poly1305, LibsodiumXChaCha20Poly1305>)]
+    mod xchacha20poly1305_aead_libsodium {}
+    #[instantiate_tests(<LibsodiumXChaCha20Poly1305, AeadXChaCha20Poly1305>)]
+    mod xchacha20poly1305_libsodium_aead {}
+
+    // Test interoperability for AES-128-GCM (i.e. encrypting with one and decrypting with the other works)
+    #[instantiate_tests(<AeadAes128Gcm, OpensslAes128Gcm>)]
+    mod aes128gcm_aead_openssl {}
+    #[instantiate_tests(<OpensslAes128Gcm, AeadAes128Gcm>)]
+    mod aes128gcm_openssl_aead {}
+
+    // Test interoperability for AES-256-GCM (i.e. encrypting with one and decrypting with the other works)
+    #[instantiate_tests(<AeadAes256Gcm, OpensslAes256Gcm>)]
+    mod aes256gcm_aead_openssl {}
+    #[instantiate_tests(<OpensslAes256Gcm, AeadAes256Gcm>)]
+    mod aes256gcm_openssl_aead {}
+    #[instantiate_tests(<AeadAes256Gcm, LibsodiumAes256Gcm>)]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
-    mod aes256gcm_hardware_software {}
-    #[instantiate_tests(<Aes256GcmSoftwareImplemented, Aes256GcmHardwareAccelerated>)]
+    mod aes256gcm_aead_libsodium {}
+    #[instantiate_tests(<LibsodiumAes256Gcm, AeadAes256Gcm>)]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
-    mod aes256gcm_software_hardware {}
+    mod aes256gcm_libsodium_aead {}
+    #[instantiate_tests(<OpensslAes256Gcm, LibsodiumAes256Gcm>)]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
+    mod aes256gcm_openssl_libsodium {}
+    #[instantiate_tests(<LibsodiumAes256Gcm, OpensslAes256Gcm>)]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
+    mod aes256gcm_libsodium_openssl {}
 }
 
 #[generic_tests::define]
@@ -178,15 +218,30 @@ mod basics {
     #[instantiate_tests(<XChaCha20Poly1305>)]
     mod xchacha20poly1305 {}
 
+    #[instantiate_tests(<AeadXChaCha20Poly1305>)]
+    mod xchacha20poly1305_aead {}
+
+    #[instantiate_tests(<LibsodiumXChaCha20Poly1305>)]
+    mod xchacha20poly1305_libsodium {}
+
     #[instantiate_tests(<Aes128Gcm>)]
     mod aes128gcm {}
 
-    #[instantiate_tests(<Aes256GcmSoftwareImplemented>)]
-    mod aes256gcm_software {}
+    #[instantiate_tests(<AeadAes128Gcm>)]
+    mod aes128gcm_aead {}
 
-    #[instantiate_tests(<Aes256GcmHardwareAccelerated>)]
+    #[instantiate_tests(<OpensslAes128Gcm>)]
+    mod aes128gcm_openssl {}
+
+    #[instantiate_tests(<AeadAes256Gcm>)]
+    mod aes256gcm_aead {}
+
+    #[instantiate_tests(<OpensslAes256Gcm>)]
+    mod aes256gcm_openssl {}
+
+    #[instantiate_tests(<LibsodiumAes256Gcm>)]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
-    mod aes256gcm_hardware {}
+    mod aes256gcm_libsodium {}
 
     #[instantiate_tests(<Aes256Gcm>)]
     mod aes256gcm {}
@@ -196,9 +251,32 @@ mod xchacha20poly1305 {
     use super::*;
 
     #[test]
-    fn test_backward_compatibility() {
+    fn test_backward_compatibility_default() {
         // Test a preencrypted message to make sure we can still encrypt it
         let cipher = XChaCha20Poly1305::new(key(XChaCha20Poly1305::KEY_SIZE, 1)).unwrap();
+        let ciphertext = hex::decode("f75cbc1dfb19c7686a90deb76123d628b6ff74a38cdb3a899c9c1d4dc4558bfee4d9e9af7b289436999fe779b47b1a6b95b30f").unwrap();
+        assert_eq!(
+            b"Hello World",
+            &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
+        );
+    }
+
+    #[test]
+    fn test_backward_compatibility_aead() {
+        // Test a preencrypted message to make sure we can still encrypt it
+        let cipher = AeadXChaCha20Poly1305::new(key(AeadXChaCha20Poly1305::KEY_SIZE, 1)).unwrap();
+        let ciphertext = hex::decode("f75cbc1dfb19c7686a90deb76123d628b6ff74a38cdb3a899c9c1d4dc4558bfee4d9e9af7b289436999fe779b47b1a6b95b30f").unwrap();
+        assert_eq!(
+            b"Hello World",
+            &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
+        );
+    }
+
+    #[test]
+    fn test_backward_compatibility_libsodium() {
+        // Test a preencrypted message to make sure we can still encrypt it
+        let cipher =
+            LibsodiumXChaCha20Poly1305::new(key(LibsodiumXChaCha20Poly1305::KEY_SIZE, 1)).unwrap();
         let ciphertext = hex::decode("f75cbc1dfb19c7686a90deb76123d628b6ff74a38cdb3a899c9c1d4dc4558bfee4d9e9af7b289436999fe779b47b1a6b95b30f").unwrap();
         assert_eq!(
             b"Hello World",
@@ -211,9 +289,37 @@ mod aes_128_gcm {
     use super::*;
 
     #[test]
-    fn test_backward_compatibility() {
+    fn test_backward_compatibility_default() {
         // Test a preencrypted message to make sure we can still encrypt it
         let cipher = Aes128Gcm::new(key(Aes128Gcm::KEY_SIZE, 1)).unwrap();
+        let ciphertext = hex::decode(
+            "3d15d00e18d0bb55a5b7d37614e3621bef03f3758390b98be8d7b0e7a51b4fc07b5af9dc3e19bf",
+        )
+        .unwrap();
+        assert_eq!(
+            b"Hello World",
+            &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
+        );
+    }
+
+    #[test]
+    fn test_backward_compatibility_aead() {
+        // Test a preencrypted message to make sure we can still encrypt it
+        let cipher = AeadAes128Gcm::new(key(AeadAes128Gcm::KEY_SIZE, 1)).unwrap();
+        let ciphertext = hex::decode(
+            "3d15d00e18d0bb55a5b7d37614e3621bef03f3758390b98be8d7b0e7a51b4fc07b5af9dc3e19bf",
+        )
+        .unwrap();
+        assert_eq!(
+            b"Hello World",
+            &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
+        );
+    }
+
+    #[test]
+    fn test_backward_compatibility_openssl() {
+        // Test a preencrypted message to make sure we can still encrypt it
+        let cipher = OpensslAes128Gcm::new(key(OpensslAes128Gcm::KEY_SIZE, 1)).unwrap();
         let ciphertext = hex::decode(
             "3d15d00e18d0bb55a5b7d37614e3621bef03f3758390b98be8d7b0e7a51b4fc07b5af9dc3e19bf",
         )
@@ -229,11 +335,37 @@ mod aes_256_gcm {
     use super::*;
 
     #[test]
-    fn test_backward_compatibility_software() {
+    fn test_backward_compatibility_default() {
         // Test a preencrypted message to make sure we can still encrypt it
-        let cipher =
-            Aes256GcmSoftwareImplemented::new(key(Aes256GcmSoftwareImplemented::KEY_SIZE, 1))
-                .unwrap();
+        let cipher = Aes256Gcm::new(key(Aes256Gcm::KEY_SIZE, 1)).unwrap();
+        let ciphertext = hex::decode(
+            "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
+        )
+        .unwrap();
+        assert_eq!(
+            b"Hello World",
+            &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
+        );
+    }
+
+    #[test]
+    fn test_backward_compatibility_aead() {
+        // Test a preencrypted message to make sure we can still encrypt it
+        let cipher = AeadAes256Gcm::new(key(AeadAes256Gcm::KEY_SIZE, 1)).unwrap();
+        let ciphertext = hex::decode(
+            "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
+        )
+        .unwrap();
+        assert_eq!(
+            b"Hello World",
+            &cipher.decrypt(ciphertext.into()).unwrap().as_ref()
+        );
+    }
+
+    #[test]
+    fn test_backward_compatibility_openssl() {
+        // Test a preencrypted message to make sure we can still encrypt it
+        let cipher = OpensslAes256Gcm::new(key(OpensslAes256Gcm::KEY_SIZE, 1)).unwrap();
         let ciphertext = hex::decode(
             "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
         )
@@ -246,11 +378,9 @@ mod aes_256_gcm {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] // TODO Better aes-ni feature detection
     #[test]
-    fn test_backward_compatibility_hardware() {
+    fn test_backward_compatibility_libsodium() {
         // Test a preencrypted message to make sure we can still encrypt it
-        let cipher =
-            Aes256GcmHardwareAccelerated::new(key(Aes256GcmHardwareAccelerated::KEY_SIZE, 1))
-                .unwrap();
+        let cipher = LibsodiumAes256Gcm::new(key(LibsodiumAes256Gcm::KEY_SIZE, 1)).unwrap();
         let ciphertext = hex::decode(
             "b42e5713993597c702dd8f691402b3f43c65462fb478aca9791d53ea90bdc70e390064be2b94c5",
         )

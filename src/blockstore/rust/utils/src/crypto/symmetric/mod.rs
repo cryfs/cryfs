@@ -23,9 +23,7 @@ pub trait CipherDef: Cipher + Sized {
 // TODO https://github.com/shadowsocks/crypto2 looks pretty fast, maybe we can use them for faster implementations?
 // TODO Ring also looks pretty fast, see https://kerkour.com/rust-symmetric-encryption-aead-benchmark
 
-mod aead_crate_wrapper;
-mod aesgcm;
-mod cipher_crate_wrapper;
+mod backends;
 mod key;
 
 #[cfg(test)]
@@ -34,10 +32,14 @@ mod cipher_tests;
 pub use key::EncryptionKey;
 
 // export ciphers
+mod aesgcm;
 pub use aesgcm::{
-    Aes128Gcm, Aes256Gcm, Aes256GcmHardwareAccelerated, Aes256GcmSoftwareImplemented,
+    AeadAes128Gcm, AeadAes256Gcm, Aes128Gcm, Aes256Gcm, LibsodiumAes256Gcm, OpensslAes128Gcm,
+    OpensslAes256Gcm,
 };
-pub type XChaCha20Poly1305 = aead_crate_wrapper::AeadCipher<chacha20poly1305::XChaCha20Poly1305>;
+// TODO Is there an openssl implementation for XChaCha20Poly1305?
+mod xchacha20poly1305;
+pub use xchacha20poly1305::{AeadXChaCha20Poly1305, LibsodiumXChaCha20Poly1305, XChaCha20Poly1305};
 
 // The [MAX_KEY_SIZE] constant is relied upon in our scrypt key generation because we always generate max size keys, even if we need
 // only fewer bytes afterwards. If we change this constant, we need to make sure that scrypt still generates the same
