@@ -23,7 +23,7 @@ namespace cpputils {
     public:
         static constexpr SCryptSettings ParanoidSettings = SCryptSettings {32, 1048576, 8, 16};
         static constexpr SCryptSettings DefaultSettings = SCryptSettings {32, 1048576, 4, 8};
-        static constexpr SCryptSettings TestSettings = SCryptSettings {32, 1024, 1, 1};
+        static constexpr SCryptSettings TestSettings = SCryptSettings {32, 1024, 1, 2};
 
         explicit SCrypt(const SCryptSettings& settingsForNewKeys);
 
