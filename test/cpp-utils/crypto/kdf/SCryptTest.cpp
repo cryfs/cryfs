@@ -55,10 +55,17 @@ TEST_F(SCryptTest, BackwardsCompatibility_128) {
 }
 
 TEST_F(SCryptTest, GeneratedKeyIsReproductible_DefaultSettings) {
-    SCrypt scrypt(SCrypt::TestSettings);
-    auto derivedKey = scrypt.deriveNewKey(16, "mypassword");
-    auto rederivedKey = scrypt.deriveExistingKey(16, "mypassword", derivedKey.kdfParameters);
+    SCrypt scrypt(SCrypt::DefaultSettings);
+    auto derivedKey = scrypt.deriveNewKey(32, "mypassword");
+    auto rederivedKey = scrypt.deriveExistingKey(32, "mypassword", derivedKey.kdfParameters);
     EXPECT_TRUE(keyEquals(derivedKey.key, rederivedKey));
+}
+
+TEST_F(SCryptTest, BackwardsCompatibility_DefaultSettings) {
+    SCrypt scrypt(SCrypt::DefaultSettings);
+    auto kdfParameters = Data::FromString("00001000000000000400000008000000D04ACF9519113E1F4E4D7FB39EFBF257CD71CF8536A468B546C2F5A65C6B622C");
+    auto rederivedKey = scrypt.deriveExistingKey(32, "mypassword", kdfParameters);
+    EXPECT_EQ("AB70B1923F3EB9EB8A75C15FD665AC3494C5EBAB80323D864135DBB2911ECF59", rederivedKey.ToString());
 }
 
 TEST_F(SCryptTest, DifferentPasswordResultsInDifferentKey) {
