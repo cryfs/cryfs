@@ -1,6 +1,7 @@
 use anyhow::{ensure, Result};
 use binrw::{binrw, until_eof, BinRead, BinWrite};
 use rand::{thread_rng, RngCore};
+use std::fmt::Debug;
 use std::io::Cursor;
 
 use super::super::KDFParameters;
@@ -8,7 +9,6 @@ use super::ScryptSettings;
 
 #[binrw]
 #[brw(little)]
-#[derive(Debug)]
 pub struct ScryptParams {
     #[br(try_map = |x: u64| parse_log_n(x))]
     #[bw(map = |x: &u8| write_log_n(*x))]
@@ -85,6 +85,17 @@ impl KDFParameters for ScryptParams {
         let mut cursor = Cursor::new(serialized);
         let result = Self::read(&mut cursor)?;
         Ok(result)
+    }
+}
+
+impl Debug for ScryptParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ScryptParams")
+            .field("log_n", &self.log_n)
+            .field("r", &self.r)
+            .field("p", &self.p)
+            .field("salt", &hex::encode(&self.salt))
+            .finish()
     }
 }
 

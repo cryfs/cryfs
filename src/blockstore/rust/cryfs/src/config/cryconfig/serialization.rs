@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_with::{formats::Uppercase, hex::Hex, serde_as};
+use serde_with::{formats::Uppercase, hex::Hex, serde_as, DisplayFromStr};
 use thiserror::Error;
 use version_compare::Cmp;
 
@@ -33,13 +33,15 @@ pub fn serialize(config: CryConfig) -> String {
             filesystem_id: config.filesystem_id,
             exclusive_client_id: config.exclusive_client_id,
 
-            // This is a trigger to recognize old file systems that didn't have version numbers.
-            // In CryFS 0.10, it is expected to be present and set to true.
-            deprecated_has_version_numbers: Some(true),
+            migrations: Some(SerializableCryConfigInnerMigrations {
+                // This is a trigger to recognize old file systems that didn't have version numbers.
+                // In CryFS 0.10, it is expected to be present and set to true.
+                deprecated_has_version_numbers: Some(true),
 
-            // This is a trigger to recognize old file systems that didn't have version numbers.
-            // In CryFS 0.10, it is expected to be present and set to true.
-            deprecated_has_parent_pointers: Some(true),
+                // This is a trigger to recognize old file systems that didn't have version numbers.
+                // In CryFS 0.10, it is expected to be present and set to true.
+                deprecated_has_parent_pointers: Some(true),
+            }),
         },
     })
     .expect("Failed to serialize CryConfig")
@@ -50,7 +52,17 @@ pub fn deserialize(config: &str) -> Result<CryConfig, DeserializationError> {
 
     let version = check_format_version(&config.cryfs)?;
 
-    if config.cryfs.deprecated_has_version_numbers != Some(true) {
+    let migrations =
+        config
+            .cryfs
+            .migrations
+            .ok_or_else(|| DeserializationError::InvalidConfig {
+                message: format!(
+        "File system version is {version} but migrations are not set. This should be impossible.",
+    ),
+            })?;
+
+    if migrations.deprecated_has_version_numbers != Some(true) {
         return Err(
             DeserializationError::InvalidConfig{message: format!(
                 "File system version is {version} but hasVersionNumbers is not set to true. This should be impossible.",
@@ -58,7 +70,7 @@ pub fn deserialize(config: &str) -> Result<CryConfig, DeserializationError> {
         );
     }
 
-    if config.cryfs.deprecated_has_parent_pointers != Some(true) {
+    if migrations.deprecated_has_parent_pointers != Some(true) {
         return Err(
         DeserializationError::InvalidConfig{message: format!(
             "File system version is {version} but hasVersionNumbers is not set to true. This should be impossible.",
@@ -157,6 +169,7 @@ struct SerializableCryConfigInner {
     last_opened_with_version: Option<String>,
 
     #[serde(rename = "blocksizeBytes")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     blocksize_bytes: Option<u64>,
 
     #[serde(rename = "filesystemId")]
@@ -164,12 +177,21 @@ struct SerializableCryConfigInner {
     filesystem_id: [u8; 16],
 
     #[serde(rename = "exclusiveClientId")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     exclusive_client_id: Option<u32>,
 
+    migrations: Option<SerializableCryConfigInnerMigrations>,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize)]
+struct SerializableCryConfigInnerMigrations {
     #[serde(rename = "hasVersionNumbers")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     deprecated_has_version_numbers: Option<bool>,
 
     #[serde(rename = "hasParentPointers")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     deprecated_has_parent_pointers: Option<bool>,
 }
 

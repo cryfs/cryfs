@@ -4,7 +4,7 @@ pub const FILESYSTEM_FORMAT_VERSION: &str = "0.10";
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
 /// // TODO Do we need this to be clone?
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct CryConfig {
     /// Blob ID of the root directory
     pub root_blob: String,
