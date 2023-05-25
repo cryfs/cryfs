@@ -545,6 +545,7 @@ dependencies = [
  "cryfs-utils",
  "derive_more",
  "futures",
+ "hex",
  "log",
  "rand 0.8.5",
  "serde",

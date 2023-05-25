@@ -195,4 +195,5 @@ struct SerializableCryConfigInnerMigrations {
     deprecated_has_parent_pointers: Option<bool>,
 }
 
-// TODO Tests, including deserialization errors and different file system version numbers
+// TODO Tests, including deserialization errors and different file system version numbers.
+//      Also test that we can still read the JSON format as created by C++ in different scenarios.

@@ -21,3 +21,6 @@ serde_with = {version = "^3.0.0", features=["hex"]}
 rand = "^0.8.5"
 version-compare = "^0.1.1"
 log = "^0.4.17"
+
+[dev-dependencies]
+hex = "^0.4.3"

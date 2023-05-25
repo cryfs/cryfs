@@ -12,6 +12,8 @@ use super::padding::{add_padding, remove_padding};
 
 const HEADER: &str = "cryfs.config;1;scrypt";
 
+// TODO Add argon as an alternative to scrypt
+
 pub type OuterCipher = cryfs_utils::crypto::symmetric::Aes256Gcm;
 
 // Outer config data is grown to this size before encryption to hide its actual size
