@@ -4,7 +4,20 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
 
-use cryfs_utils::{crypto::symmetric::*, data::Data};
+use cryfs_utils::{
+    crypto::symmetric::{self, Cipher, CipherDef, EncryptionKey, LibsodiumAes256GcmNonce12},
+    data::Data,
+};
+
+type Aes256Gcm = symmetric::Aes256Gcm;
+type AeadAes256Gcm = symmetric::AeadAes256Gcm;
+type OpensslAes256Gcm = symmetric::OpensslAes256Gcm;
+type Aes128Gcm = symmetric::Aes128Gcm;
+type AeadAes128Gcm = symmetric::AeadAes128Gcm;
+type OpensslAes128Gcm = symmetric::OpensslAes128Gcm;
+type XChaCha20Poly1305 = symmetric::XChaCha20Poly1305;
+type AeadXChaCha20Poly1305 = symmetric::AeadXChaCha20Poly1305;
+type LibsodiumXChaCha20Poly1305 = symmetric::LibsodiumXChaCha20Poly1305;
 
 fn data(size: usize, seed: u64) -> Data {
     let mut rng = StdRng::seed_from_u64(seed);
@@ -46,13 +59,15 @@ fn bench_encrypt(c: &mut Criterion) {
                 b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
             },
         );
-        if LibsodiumAes256Gcm::is_available() {
+        if LibsodiumAes256GcmNonce12::is_available() {
             group.bench_with_input(
                 BenchmarkId::new("aes256gcm-libsodium", size),
                 &size,
                 |b, &size| {
-                    let cipher =
-                        LibsodiumAes256Gcm::new(make_key(LibsodiumAes256Gcm::KEY_SIZE)).unwrap();
+                    let cipher = LibsodiumAes256GcmNonce12::new(make_key(
+                        LibsodiumAes256GcmNonce12::KEY_SIZE,
+                    ))
+                    .unwrap();
                     let plaintext = make_plaintext(&cipher, size);
                     b.iter(|| black_box(cipher.encrypt(plaintext.clone()).unwrap()));
                 },
@@ -149,13 +164,15 @@ fn bench_decrypt(c: &mut Criterion) {
                 b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
             },
         );
-        if LibsodiumAes256Gcm::is_available() {
+        if LibsodiumAes256GcmNonce12::is_available() {
             group.bench_with_input(
                 BenchmarkId::new("aes256gcm-libsodium", size),
                 &size,
                 |b, &size| {
-                    let cipher =
-                        LibsodiumAes256Gcm::new(make_key(LibsodiumAes256Gcm::KEY_SIZE)).unwrap();
+                    let cipher = LibsodiumAes256GcmNonce12::new(make_key(
+                        LibsodiumAes256GcmNonce12::KEY_SIZE,
+                    ))
+                    .unwrap();
                     let ciphertext = make_ciphertext(&cipher, size);
                     b.iter(|| black_box(cipher.decrypt(ciphertext.clone()).unwrap()));
                 },
