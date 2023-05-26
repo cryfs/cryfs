@@ -73,6 +73,14 @@ impl<C: CipherType> CipherDef for AeadCipher<C> {
 }
 
 impl<C: CipherType> Cipher for AeadCipher<C> {
+    fn ciphertext_overhead_prefix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_PREFIX
+    }
+
+    fn ciphertext_overhead_suffix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_SUFFIX
+    }
+
     fn encrypt(&self, plaintext: Data) -> Result<Data> {
         // TODO Use binary-layout here?
         let ciphertext_size =

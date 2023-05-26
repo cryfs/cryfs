@@ -43,6 +43,14 @@ impl<C: KeyInit + AeadInPlace> CipherDef for AeadCipher<C> {
 }
 
 impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
+    fn ciphertext_overhead_prefix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_PREFIX
+    }
+
+    fn ciphertext_overhead_suffix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_SUFFIX
+    }
+
     fn encrypt(&self, mut plaintext: Data) -> Result<Data> {
         // TODO Move C::new_from_slice call to constructor so we don't have to do it every time?
         //      Is it actually expensive? Note that we have to somehow migrate the

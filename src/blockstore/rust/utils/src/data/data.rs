@@ -1,5 +1,6 @@
 use anyhow::{ensure, Result};
 use std::fmt::Debug;
+use std::io::Write;
 use std::ops::{Bound, Deref, DerefMut, Range, RangeBounds};
 
 /// An instance of data owns a block of data. It implements `AsRef<[u8]>` and `AsMut<[u8]>` to allow
@@ -21,6 +22,14 @@ pub struct Data {
 }
 
 impl Data {
+    // TODO Test allocate
+    pub fn allocate(prefix_bytes: usize, data_len: usize, suffix_bytes: usize) -> Self {
+        Self {
+            storage: vec![0; prefix_bytes + data_len + suffix_bytes],
+            region: prefix_bytes..(prefix_bytes + data_len),
+        }
+    }
+
     pub fn empty() -> Self {
         vec![].into()
     }
@@ -130,6 +139,12 @@ impl Data {
         }
     }
 
+    // TODO Use enum instead of bool for ALLOW_REALLOCATE
+    // TODO Test append_writer
+    pub fn append_writer<const ALLOW_REALLOCATE: bool>(&mut self) -> impl Write + '_ {
+        DataAppendWriter::<'_, ALLOW_REALLOCATE> { data: self }
+    }
+
     pub fn available_prefix_bytes(&self) -> usize {
         self.region.start
     }
@@ -214,6 +229,35 @@ impl PartialEq for Data {
 impl std::fmt::Debug for Data {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "Data({})", hex::encode_upper(self.as_ref()))
+    }
+}
+
+pub struct DataAppendWriter<'a, const ALLOW_REALLOCATE: bool> {
+    data: &'a mut Data,
+}
+
+impl<'a, const ALLOW_REALLOCATE: bool> Write for DataAppendWriter<'a, ALLOW_REALLOCATE> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let current_len = self.data.len();
+        if ALLOW_REALLOCATE {
+            self.data.grow_region(0, buf.len());
+        } else {
+            self.data
+                .grow_region_fail_if_reallocation_necessary(0, buf.len())
+                .map_err(|_| {
+                    std::io::Error::new(
+                        // TODO Switch to std::io::ErrorKind::StorageFull
+                        std::io::ErrorKind::Other,
+                        "Not enough suffix bytes available in Data instance",
+                    )
+                })?;
+        }
+        self.data[current_len..].copy_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 

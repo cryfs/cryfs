@@ -8,6 +8,9 @@ pub trait Cipher {
     fn encrypt(&self, data: Data) -> Result<Data>;
 
     fn decrypt(&self, data: Data) -> Result<Data>;
+
+    fn ciphertext_overhead_prefix(&self) -> usize;
+    fn ciphertext_overhead_suffix(&self) -> usize;
 }
 
 pub trait CipherDef: Cipher + Sized {

@@ -2,13 +2,16 @@ use anyhow::{ensure, Context, Result};
 use binrw::{binrw, until_eof, BinRead, BinWrite, NullString};
 use std::io::{Cursor, Read, Seek, Write};
 
-use cryfs_utils::crypto::{
-    kdf::KDFParameters,
-    symmetric::{Cipher, CipherDef, EncryptionKey},
+use cryfs_utils::{
+    crypto::{
+        kdf::KDFParameters,
+        symmetric::{Cipher, CipherDef, EncryptionKey},
+    },
+    data::Data,
 };
 
-use super::inner::InnerConfig;
 use super::padding::{add_padding, remove_padding};
+use super::{inner::InnerConfig, padding::PADDING_OVERHEAD_PREFIX};
 
 const HEADER: &str = "cryfs.config;1;scrypt";
 
@@ -30,6 +33,7 @@ struct OuterConfigLayout {
 
     #[br(parse_with = until_eof)]
     encrypted_inner_config: Vec<u8>,
+    // TODO Actually storing these Vecs in an `OuterConfigLayout` object means we have to allocate them during (de)serialization. This could be avoided. Maybe by using a `Serializer/Deserializer` system as C++ CryFS cpp-utils had it
 }
 
 /// Wraps an [InnerConfig] instance and encrypts it, then prepends the KDF parameters that were used
@@ -55,6 +59,13 @@ impl OuterConfig {
         config
             .serialize(&mut Cursor::new(&mut serialized_inner_config))
             .context("Trying to serialize InnerConfig")?;
+        let mut serialized_inner_config = Data::from(serialized_inner_config);
+        // TODO This `reserve` reallocates, avoid this.
+        serialized_inner_config.reserve(
+            PADDING_OVERHEAD_PREFIX + OuterCipher::CIPHERTEXT_OVERHEAD_PREFIX,
+            CONFIG_SIZE - PADDING_OVERHEAD_PREFIX - serialized_inner_config.len()
+                + OuterCipher::CIPHERTEXT_OVERHEAD_SUFFIX,
+        );
         let serialized_inner_config = add_padding(serialized_inner_config.into(), CONFIG_SIZE)
             .context("Trying to add padding to OuterConfig")?;
         let cipher = OuterCipher::new(outer_encryption_key)

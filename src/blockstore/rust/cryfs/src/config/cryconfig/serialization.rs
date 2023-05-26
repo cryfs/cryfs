@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{formats::Uppercase, hex::Hex, serde_as, DisplayFromStr};
+use std::io::{Read, Write};
 use thiserror::Error;
 use version_compare::Cmp;
 
@@ -20,35 +21,37 @@ pub enum DeserializationError {
     Json(#[from] serde_json::Error),
 }
 
-pub fn serialize(config: CryConfig) -> String {
-    serde_json::to_string(&SerializableCryConfig {
-        cryfs: SerializableCryConfigInner {
-            root_blob: config.root_blob,
-            enc_key: config.enc_key,
-            cipher: config.cipher,
-            version: Some(config.version),
-            created_with_version: Some(config.created_with_version),
-            last_opened_with_version: Some(config.last_opened_with_version),
-            blocksize_bytes: Some(config.blocksize_bytes),
-            filesystem_id: config.filesystem_id,
-            exclusive_client_id: config.exclusive_client_id,
+pub fn serialize(config: CryConfig, writer: impl Write) -> Result<(), serde_json::Error> {
+    serde_json::to_writer(
+        writer,
+        &SerializableCryConfig {
+            cryfs: SerializableCryConfigInner {
+                root_blob: config.root_blob,
+                enc_key: config.enc_key,
+                cipher: config.cipher,
+                version: Some(config.version),
+                created_with_version: Some(config.created_with_version),
+                last_opened_with_version: Some(config.last_opened_with_version),
+                blocksize_bytes: Some(config.blocksize_bytes),
+                filesystem_id: config.filesystem_id,
+                exclusive_client_id: config.exclusive_client_id,
 
-            migrations: Some(SerializableCryConfigInnerMigrations {
-                // This is a trigger to recognize old file systems that didn't have version numbers.
-                // In CryFS 0.10, it is expected to be present and set to true.
-                deprecated_has_version_numbers: Some(true),
+                migrations: Some(SerializableCryConfigInnerMigrations {
+                    // This is a trigger to recognize old file systems that didn't have version numbers.
+                    // In CryFS 0.10, it is expected to be present and set to true.
+                    deprecated_has_version_numbers: Some(true),
 
-                // This is a trigger to recognize old file systems that didn't have version numbers.
-                // In CryFS 0.10, it is expected to be present and set to true.
-                deprecated_has_parent_pointers: Some(true),
-            }),
+                    // This is a trigger to recognize old file systems that didn't have version numbers.
+                    // In CryFS 0.10, it is expected to be present and set to true.
+                    deprecated_has_parent_pointers: Some(true),
+                }),
+            },
         },
-    })
-    .expect("Failed to serialize CryConfig")
+    )
 }
 
-pub fn deserialize(config: &str) -> Result<CryConfig, DeserializationError> {
-    let config: SerializableCryConfig = serde_json::from_str(config)?;
+pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError> {
+    let config: SerializableCryConfig = serde_json::from_reader(reader)?;
 
     let version = check_format_version(&config.cryfs)?;
 

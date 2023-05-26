@@ -58,6 +58,14 @@ impl CipherDef for Aes256Gcm {
 }
 
 impl Cipher for Aes256Gcm {
+    fn ciphertext_overhead_prefix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_PREFIX
+    }
+
+    fn ciphertext_overhead_suffix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_SUFFIX
+    }
+
     fn encrypt(&self, plaintext: Data) -> Result<Data> {
         _encrypt::<
             { Self::CIPHERTEXT_OVERHEAD_PREFIX },
@@ -120,6 +128,14 @@ impl CipherDef for XChaCha20Poly1305 {
 }
 
 impl Cipher for XChaCha20Poly1305 {
+    fn ciphertext_overhead_prefix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_PREFIX
+    }
+
+    fn ciphertext_overhead_suffix(&self) -> usize {
+        Self::CIPHERTEXT_OVERHEAD_SUFFIX
+    }
+
     fn encrypt(&self, plaintext: Data) -> Result<Data> {
         _encrypt::<
             { Self::CIPHERTEXT_OVERHEAD_PREFIX },

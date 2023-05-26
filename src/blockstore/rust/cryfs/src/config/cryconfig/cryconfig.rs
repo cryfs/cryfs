@@ -1,3 +1,5 @@
+use std::io::{Read, Write};
+
 pub const FILESYSTEM_FORMAT_VERSION: &str = "0.10";
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
@@ -38,13 +40,13 @@ pub struct CryConfig {
 }
 
 impl CryConfig {
-    pub fn serialize(self) -> String {
-        super::serialization::serialize(self)
+    pub fn serialize(self, writer: impl Write) -> Result<(), serde_json::Error> {
+        super::serialization::serialize(self, writer)
     }
 
     pub fn deserialize(
-        serialized: &str,
+        reader: impl Read,
     ) -> Result<Self, super::serialization::DeserializationError> {
-        super::serialization::deserialize(serialized)
+        super::serialization::deserialize(reader)
     }
 }

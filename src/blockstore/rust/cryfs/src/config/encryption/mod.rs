@@ -99,12 +99,12 @@ fn generate_keys<KDF: PasswordBasedKDF>(
     Ok((outer_key, inner_key))
 }
 
-// TODO Tests, here and in submodules
+// TODO More Tests, here and in submodules
 
 #[cfg(test)]
 mod tests {
     use crate::config::CryConfig;
-    use cryfs_utils::crypto::kdf::scrypt::Scrypt;
+    use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptSettings};
     use std::io::Cursor;
 
     #[test]
@@ -134,5 +134,35 @@ mod tests {
                 exclusive_client_id: None,
             }
         );
+    }
+
+    #[test]
+    fn test_encrypt_decrypt() {
+        // Test that we can encrypt and then decrypt a config file and get the same result
+        let config = CryConfig {
+            root_blob: "6A3155A8017B5A8AC2B7847BAA5663DE".to_string(),
+            enc_key: "6B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772F8294D3955FF8CC0".to_string(),
+            cipher: "aes-256-gcm".to_string(),
+            version: "0.10".to_string(),
+            created_with_version: "0.10.2".to_string(),
+            last_opened_with_version: "0.11.1".to_string(),
+            blocksize_bytes: 16384,
+            filesystem_id: hex::decode("B364DB327ED401F22E99EB37E78FABDC")
+                .unwrap()
+                .try_into()
+                .unwrap(),
+            exclusive_client_id: None,
+        };
+        let mut encrypted = vec![];
+        super::encrypt::<Scrypt>(
+            config.clone(),
+            "some_password",
+            &ScryptSettings::TEST,
+            &mut Cursor::new(&mut encrypted),
+        )
+        .unwrap();
+        let decrypted_config =
+            super::decrypt::<Scrypt>(&mut Cursor::new(&encrypted), "some_password").unwrap();
+        assert_eq!(config, decrypted_config,);
     }
 }

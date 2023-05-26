@@ -20,7 +20,7 @@ impl ScryptSettings {
         salt_len: 32,
     };
 
-    #[cfg(test)]
+    // #[cfg(test)]
     pub const TEST: Self = Self {
         log_n: 10,
         r: 1,

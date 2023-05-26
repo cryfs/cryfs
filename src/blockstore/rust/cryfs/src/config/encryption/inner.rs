@@ -1,11 +1,14 @@
 use anyhow::{ensure, Context, Result};
 use binrw::{binrw, until_eof, BinRead, BinWrite, NullString};
-use std::io::{Read, Seek, Write};
+use std::io::{Cursor, Read, Seek, Write};
 
-use cryfs_utils::crypto::symmetric::{lookup_cipher_dyn, EncryptionKey};
+use cryfs_utils::{
+    crypto::symmetric::{lookup_cipher_dyn, EncryptionKey},
+    data::Data,
+};
 
 use super::super::cryconfig::CryConfig;
-use super::padding::{add_padding, remove_padding};
+use super::padding::{add_padding, remove_padding, PADDING_OVERHEAD_PREFIX};
 
 const HEADER: &str = "cryfs.config.inner;0";
 
@@ -19,6 +22,7 @@ struct InnerConfigLayout {
     cipher_name: NullString,
     #[br(parse_with = until_eof)]
     encrypted_config: Vec<u8>,
+    // TODO Actually storing these Vecs in an `InnerConfigLayout` object means we have to allocate them during (de)serialization. This could be avoided, maybe by using a `Serializer/Deserializer` system as C++ CryFS cpp-utils had it
 }
 
 /// Wraps a [CryConfig] instance and encrypts it, then prepends the used cipher name and a fixed header.
@@ -44,7 +48,19 @@ impl InnerConfig {
         let cipher = lookup_cipher_dyn(&cipher_name, inner_key)
             .with_context(|| format!("Trying to look up cipher {}", config.cipher))?;
 
-        let plaintext = config.serialize().into_bytes();
+        let padding_overhead_suffix = CONFIG_SIZE - PADDING_OVERHEAD_PREFIX;
+        let mut plaintext = Data::allocate(
+            PADDING_OVERHEAD_PREFIX + cipher.ciphertext_overhead_prefix(),
+            0,
+            CONFIG_SIZE + padding_overhead_suffix + cipher.ciphertext_overhead_suffix(),
+        );
+        config
+            .serialize(plaintext.append_writer::<false>())
+            .context("Trying to serialize CryConfig")?;
+        ensure!(
+            plaintext.len() <= CONFIG_SIZE,
+            "Plaintext is too large. We should increase `CONFIG_SIZE`."
+        );
 
         let plaintext = add_padding(plaintext.into(), CONFIG_SIZE)
             .context("Trying to add padding to InnerConfig")?;
@@ -69,9 +85,7 @@ impl InnerConfig {
             .context("Trying to Cipher::decrypt InnerConfig")?;
         let plaintext =
             remove_padding(plaintext).context("Trying to remove padding from InnerConfig")?;
-        let plaintext = String::from_utf8(plaintext.into_vec())
-            .context("Trying to convert decrypted InnerConfig to UTF-8")?;
-        let config = CryConfig::deserialize(&plaintext)?;
+        let config = CryConfig::deserialize(&mut Cursor::new(plaintext))?;
 
         ensure!(
             config.cipher == self.cipher_name,
