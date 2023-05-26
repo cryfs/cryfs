@@ -8,6 +8,7 @@ use thiserror::Error;
 use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptSettings};
 
 use super::cryconfig::{CryConfig, FILESYSTEM_FORMAT_VERSION};
+use super::password_provider::PasswordProvider;
 
 #[derive(Error, Debug)]
 pub enum CreateConfigFileError {
@@ -33,7 +34,12 @@ pub enum CreateConfigFileError {
     SerializationError(anyhow::Error),
 }
 
-pub fn create(
+// pub fn load_or_create(
+//     path: &Path,
+//     password_provider: impl PasswordProvider,
+// )
+
+pub fn create_new(
     path: &Path,
     config: CryConfig,
     password: &str,
