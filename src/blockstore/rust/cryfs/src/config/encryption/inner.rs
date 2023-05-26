@@ -2,12 +2,9 @@ use anyhow::{ensure, Context, Result};
 use binrw::{binrw, until_eof, BinRead, BinWrite, NullString};
 use std::io::{Cursor, Read, Seek, Write};
 
-use cryfs_utils::{
-    crypto::symmetric::{lookup_cipher_dyn, EncryptionKey},
-    data::Data,
-};
+use cryfs_utils::{crypto::symmetric::EncryptionKey, data::Data};
 
-use super::super::cryconfig::CryConfig;
+use super::super::{ciphers::lookup_cipher_dyn, cryconfig::CryConfig};
 use super::padding::{add_padding, remove_padding, PADDING_OVERHEAD_PREFIX};
 
 const HEADER: &str = "cryfs.config.inner;0";

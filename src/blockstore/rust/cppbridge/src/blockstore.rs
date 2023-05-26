@@ -14,9 +14,10 @@ use cryfs_blockstore::{
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore, RemoveResult, TryCreateResult,
     BLOCKID_LEN,
 };
+use cryfs_cryfs::config::ciphers::{self, AsyncCipherCallback};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::{self, Aes256Gcm, AsyncCipherCallback, CipherDef, EncryptionKey},
+    crypto::symmetric::{Aes256Gcm, CipherDef, DefaultNonceSize, EncryptionKey},
     data::Data,
 };
 
@@ -469,8 +470,11 @@ fn new_encrypted_inmemory_blockstore() -> Box<RustBlockStore2Bridge> {
         EncryptionKey::from_hex("9726ca3703940a918802953d8db5996c5fb25008a20c92cb95aa4b8fe92702d9")
             .unwrap();
     Box::new(RustBlockStore2Bridge(DynBlockStore::from(
-        EncryptedBlockStore::new(InMemoryBlockStore::new(), Aes256Gcm::new(key).unwrap())
-            .into_box(),
+        EncryptedBlockStore::new(
+            InMemoryBlockStore::new(),
+            Aes256Gcm::<DefaultNonceSize>::new(key).unwrap(),
+        )
+        .into_box(),
     )))
 }
 
@@ -562,7 +566,7 @@ async fn _new_locking_integrity_encrypted_blockstore(
     base_store: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync + 'static>,
 ) -> Result<Box<RustBlockStoreBridge>> {
     let on_integrity_violation = std::sync::Arc::new(std::sync::Mutex::new(on_integrity_violation));
-    symmetric::lookup_cipher_async(
+    ciphers::lookup_cipher_async(
         cipher_name,
         _BlockStoreCreator {
             integrity_file_path: Path::new(integrity_file_path).to_path_buf(),

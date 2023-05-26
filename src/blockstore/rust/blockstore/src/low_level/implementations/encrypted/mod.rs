@@ -262,7 +262,9 @@ mod tests {
     use crate::tests::{blockid, data, Fixture};
     use cryfs_utils::{
         async_drop::AsyncDropArc,
-        crypto::symmetric::{Aes128Gcm, Aes256Gcm, EncryptionKey, XChaCha20Poly1305},
+        crypto::symmetric::{
+            Aes128Gcm, Aes256Gcm, DefaultNonceSize, EncryptionKey, XChaCha20Poly1305,
+        },
     };
     // TODO Separate out InfallibleUnwrap from lockable and depend on that instead of on lockable
     use lockable::InfallibleUnwrap;
@@ -392,16 +394,20 @@ mod tests {
 
         _store(
             &inner,
-            key(Aes256Gcm::KEY_SIZE, 0),
+            key(Aes256Gcm::<DefaultNonceSize>::KEY_SIZE, 0),
             &blockid(0),
             &data(1024, 0),
         )
         .await;
         assert_eq!(
             Some(data(1024, 0)),
-            _load(&inner, key(Aes256Gcm::KEY_SIZE, 0), &blockid(0))
-                .await
-                .unwrap()
+            _load(
+                &inner,
+                key(Aes256Gcm::<DefaultNonceSize>::KEY_SIZE, 0),
+                &blockid(0)
+            )
+            .await
+            .unwrap()
         );
 
         inner.async_drop().await.unwrap();
@@ -413,14 +419,18 @@ mod tests {
 
         _store(
             &inner,
-            key(Aes256Gcm::KEY_SIZE, 0),
+            key(Aes256Gcm::<DefaultNonceSize>::KEY_SIZE, 0),
             &blockid(0),
             &data(1024, 0),
         )
         .await;
-        _load(&inner, key(Aes256Gcm::KEY_SIZE, 1), &blockid(0))
-            .await
-            .unwrap_err();
+        _load(
+            &inner,
+            key(Aes256Gcm::<DefaultNonceSize>::KEY_SIZE, 1),
+            &blockid(0),
+        )
+        .await
+        .unwrap_err();
 
         inner.async_drop().await.unwrap();
     }
@@ -431,15 +441,19 @@ mod tests {
 
         _store(
             &inner,
-            key(Aes256Gcm::KEY_SIZE, 0),
+            key(Aes256Gcm::<DefaultNonceSize>::KEY_SIZE, 0),
             &blockid(0),
             &data(1024, 0),
         )
         .await;
         _manipulate(&inner, &blockid(0)).await;
-        _load(&inner, key(Aes256Gcm::KEY_SIZE, 0), &blockid(0))
-            .await
-            .unwrap_err();
+        _load(
+            &inner,
+            key(Aes256Gcm::<DefaultNonceSize>::KEY_SIZE, 0),
+            &blockid(0),
+        )
+        .await
+        .unwrap_err();
 
         inner.async_drop().await.unwrap();
     }

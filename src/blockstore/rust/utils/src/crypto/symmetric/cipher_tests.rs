@@ -26,14 +26,10 @@ pub fn key(num_bytes: usize, seed: u64) -> EncryptionKey {
 
 // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext
 pub fn allocate_space_for_ciphertext<C: CipherDef>(plaintext: &[u8]) -> Data {
-    let mut result = Data::from(vec![
-        0;
-        C::CIPHERTEXT_OVERHEAD_PREFIX
-            + C::CIPHERTEXT_OVERHEAD_SUFFIX
-            + plaintext.len()
-    ]);
-    result.shrink_to_subregion(
-        C::CIPHERTEXT_OVERHEAD_PREFIX..(C::CIPHERTEXT_OVERHEAD_PREFIX + plaintext.len()),
+    let mut result = Data::allocate(
+        C::CIPHERTEXT_OVERHEAD_PREFIX,
+        plaintext.len(),
+        C::CIPHERTEXT_OVERHEAD_SUFFIX,
     );
     result.as_mut().copy_from_slice(plaintext);
     result
