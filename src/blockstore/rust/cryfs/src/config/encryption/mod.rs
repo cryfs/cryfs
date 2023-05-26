@@ -104,6 +104,7 @@ fn generate_keys<KDF: PasswordBasedKDF>(
 #[cfg(test)]
 mod tests {
     use crate::config::CryConfig;
+    use crate::config::FilesystemId;
     use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptSettings};
     use std::io::Cursor;
 
@@ -127,10 +128,7 @@ mod tests {
                 created_with_version: "0.11.2".to_string(),
                 last_opened_with_version: "0.11.3".to_string(),
                 blocksize_bytes: 16384,
-                filesystem_id: hex::decode("ABDCB364DB327ED401F22E99EB37E78F")
-                    .unwrap()
-                    .try_into()
-                    .unwrap(),
+                filesystem_id: FilesystemId::from_hex("ABDCB364DB327ED401F22E99EB37E78F").unwrap(),
                 exclusive_client_id: None,
             }
         );
@@ -147,10 +145,7 @@ mod tests {
             created_with_version: "0.10.2".to_string(),
             last_opened_with_version: "0.11.1".to_string(),
             blocksize_bytes: 16384,
-            filesystem_id: hex::decode("B364DB327ED401F22E99EB37E78FABDC")
-                .unwrap()
-                .try_into()
-                .unwrap(),
+            filesystem_id: FilesystemId::from_hex("B364DB327ED401F22E99EB37E78FABDC").unwrap(),
             exclusive_client_id: None,
         };
         let mut encrypted = vec![];

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::{ErrorKind, Write};
+use std::io::{BufWriter, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -73,7 +73,7 @@ fn write_config_to_file(
     password: &str,
     kdf_settings: &ScryptSettings,
 ) -> Result<(), CreateConfigFileError> {
-    super::encryption::encrypt::<Scrypt>(config, password, kdf_settings, &mut file)
+    super::encryption::encrypt::<Scrypt>(config, password, kdf_settings, &mut BufWriter::new(file))
         .context("Trying to write config to file")
         .map_err(CreateConfigFileError::SerializationError)?;
 

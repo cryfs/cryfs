@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
-use serde_with::{formats::Uppercase, hex::Hex, serde_as, DisplayFromStr};
+use serde_with::{serde_as, DisplayFromStr};
 use std::io::{Read, Write};
 use thiserror::Error;
 use version_compare::Cmp;
 
 use super::cryconfig::CryConfig;
+use super::filesystem_id::FilesystemId;
 
 #[derive(Error, Debug)]
 pub enum DeserializationError {
@@ -33,7 +34,7 @@ pub fn serialize(config: CryConfig, writer: impl Write) -> Result<(), serde_json
                 created_with_version: Some(config.created_with_version),
                 last_opened_with_version: Some(config.last_opened_with_version),
                 blocksize_bytes: Some(config.blocksize_bytes),
-                filesystem_id: config.filesystem_id,
+                filesystem_id: config.filesystem_id.to_hex(),
                 exclusive_client_id: config.exclusive_client_id,
 
                 migrations: Some(SerializableCryConfigInnerMigrations {
@@ -101,6 +102,15 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
         )}
     })?;
 
+    let filesystem_id = FilesystemId::from_hex(&config.cryfs.filesystem_id).map_err(|err| {
+        DeserializationError::InvalidConfig {
+            message: format!(
+                "File system id '{}' is invalid: {:?}",
+                config.cryfs.filesystem_id, err,
+            ),
+        }
+    })?;
+
     Ok(CryConfig {
         root_blob: config.cryfs.root_blob,
         enc_key: config.cryfs.enc_key,
@@ -109,7 +119,7 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
         created_with_version,
         last_opened_with_version,
         blocksize_bytes,
-        filesystem_id: config.cryfs.filesystem_id,
+        filesystem_id,
         exclusive_client_id: config.cryfs.exclusive_client_id,
     })
 }
@@ -176,8 +186,7 @@ struct SerializableCryConfigInner {
     blocksize_bytes: Option<u64>,
 
     #[serde(rename = "filesystemId")]
-    #[serde_as(as = "Hex<Uppercase>")]
-    filesystem_id: [u8; 16],
+    filesystem_id: String,
 
     #[serde(rename = "exclusiveClientId")]
     #[serde_as(as = "Option<DisplayFromStr>")]

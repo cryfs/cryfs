@@ -1,6 +1,7 @@
 use anyhow::{bail, ensure, Result};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
+use rand::{thread_rng, Rng};
 use std::collections::hash_map::{Entry, HashMap};
 use std::hash::Hash;
 use std::io::{Read, Seek, Write};
@@ -22,6 +23,16 @@ pub struct ClientId {
     #[br(parse_with = read_nonzerou32)]
     #[bw(write_with = write_nonzerou32)]
     pub id: NonZeroU32, // NonZeroU32 so we can efficiently store MaybeClientId
+}
+
+impl ClientId {
+    // TODO Test
+    pub fn generate_random() -> Self {
+        ClientId {
+            // TODO Is this ok or could this generate a zero?
+            id: thread_rng().gen(),
+        }
+    }
 }
 
 impl std::fmt::Debug for ClientId {

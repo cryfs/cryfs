@@ -1,5 +1,7 @@
 use std::io::{Read, Write};
 
+use super::filesystem_id::FilesystemId;
+
 pub const FILESYSTEM_FORMAT_VERSION: &str = "0.10";
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
@@ -32,7 +34,7 @@ pub struct CryConfig {
     pub blocksize_bytes: u64,
 
     /// Unique ID of the file system
-    pub filesystem_id: [u8; 16],
+    pub filesystem_id: FilesystemId,
 
     /// If the exclusive client Id is set, then additional integrity measures (i.e. treating missing blocks as integrity violations) are enabled.
     /// Because this only works in a single-client setting, only this one client Id is allowed to access the file system.
