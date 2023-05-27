@@ -12,6 +12,7 @@ binrw = "^0.11.1"
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-utils = {path = "../utils"}
+cryfs-rustfs = {path = "../rustfs"}
 derive_more = "^0.99.17"
 futures = "^0.3.25"
 thiserror = "^1.0.38"

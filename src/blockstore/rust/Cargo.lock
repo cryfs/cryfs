@@ -542,6 +542,7 @@ dependencies = [
  "binrw",
  "cryfs-blobstore",
  "cryfs-blockstore",
+ "cryfs-rustfs",
  "cryfs-utils",
  "derive_more",
  "futures",
@@ -563,7 +564,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "cryfs-cryfs",
  "cryfs-utils",
  "derive_more",
  "env_logger",
