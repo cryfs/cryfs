@@ -97,3 +97,11 @@ impl Drop for EncryptionKey {
         sodiumoxide::utils::memzero(&mut self.key_data);
     }
 }
+
+impl PartialEq for EncryptionKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.key_data == other.key_data
+    }
+}
+
+impl Eq for EncryptionKey {}

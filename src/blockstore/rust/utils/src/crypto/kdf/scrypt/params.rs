@@ -7,6 +7,7 @@ use std::io::Cursor;
 use super::super::KDFParameters;
 use super::ScryptSettings;
 
+#[derive(Clone, PartialEq, Eq)]
 #[binrw]
 #[brw(little)]
 pub struct ScryptParams {
