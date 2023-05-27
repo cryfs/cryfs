@@ -12,7 +12,13 @@ use cryfs_utils::crypto::{
 };
 
 use super::LocalStateDir;
-use crate::config::FilesystemId;
+use crate::config::{Console, FilesystemId};
+
+#[derive(Error, Debug)]
+pub enum FilesystemMetadataError {
+    #[error("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?")]
+    EncryptionKeyChanged,
+}
 
 /// Store metadata about file systems we know, e.g. our own client id
 /// and a hash of the encryption key so we can recognize if the file system
@@ -34,7 +40,8 @@ impl FilesystemMetadata {
         local_state_dir: &LocalStateDir,
         filesystem_id: &FilesystemId,
         encryption_key: &EncryptionKey,
-        allow_replaced_filesystem: bool,
+        console: &impl Console,
+        // TODO Return FilesystemMetadataError instead of anyhow::Error
     ) -> Result<Self> {
         let metadata_file_path = local_state_dir
             .for_filesystem_id(filesystem_id)
@@ -42,11 +49,12 @@ impl FilesystemMetadata {
             .join("metadata");
         match Self::_load(&metadata_file_path).context("Tried to load local filesystem metadata")? {
             Some(metadata) => {
-                if !allow_replaced_filesystem
-                    && hash(encryption_key.as_bytes(), metadata.encryption_key.salt)
-                        != metadata.encryption_key
+                if hash(encryption_key.as_bytes(), metadata.encryption_key.salt)
+                    != metadata.encryption_key
                 {
-                    return Err(FilesystemMetadataError::EncryptionKeyChanged.into());
+                    if !console.ask_allow_replaced_filesystem() {
+                        return Err(FilesystemMetadataError::EncryptionKeyChanged.into());
+                    }
                 }
                 Ok(metadata)
             }
@@ -85,12 +93,10 @@ impl FilesystemMetadata {
         serde_json::to_writer_pretty(BufWriter::new(file), self)?;
         Ok(())
     }
-}
 
-#[derive(Error, Debug)]
-pub enum FilesystemMetadataError {
-    #[error("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?")]
-    EncryptionKeyChanged,
+    pub fn my_client_id(&self) -> &ClientId {
+        &self.my_client_id
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

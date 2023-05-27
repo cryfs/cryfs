@@ -22,7 +22,7 @@ rand = "^0.8.5"
 version-compare = "^0.1.1"
 log = "^0.4.17"
 hex = "^0.4.3"
+lockable = "^0.0.6"
 
 [dev-dependencies]
 tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}
-lockable = "^0.0.6"

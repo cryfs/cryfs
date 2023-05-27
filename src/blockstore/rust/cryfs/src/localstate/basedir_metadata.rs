@@ -8,6 +8,9 @@ use thiserror::Error;
 use crate::config::FilesystemId;
 use crate::localstate::local_state_dir::LocalStateDir;
 
+// TODO Right now, BasedirMetadata is based on the basedir location and is checked in cryfs-cli.
+//      Instead, we should probably make it based on the config file location and check it in cryfs-cryfs.
+
 /// Store the list of all basedirs and their filesystem ids
 /// so we can recognize if a filesystem gets replaced with
 /// a different filesystem by an adversary

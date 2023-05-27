@@ -136,7 +136,7 @@ mod tests {
                 enc_key: "F8294D3955FF8CC06B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772"
                     .to_string(),
                 cipher: "xchacha20-poly1305".to_string(),
-                version: "0.10".to_string(),
+                format_version: "0.10".to_string(),
                 created_with_version: "0.11.2".to_string(),
                 last_opened_with_version: "0.11.3".to_string(),
                 blocksize_bytes: 16384,
@@ -153,7 +153,7 @@ mod tests {
             root_blob: "6A3155A8017B5A8AC2B7847BAA5663DE".to_string(),
             enc_key: "6B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772F8294D3955FF8CC0".to_string(),
             cipher: "aes-256-gcm".to_string(),
-            version: "0.10".to_string(),
+            format_version: "0.10".to_string(),
             created_with_version: "0.10.2".to_string(),
             last_opened_with_version: "0.11.1".to_string(),
             blocksize_bytes: 16384,

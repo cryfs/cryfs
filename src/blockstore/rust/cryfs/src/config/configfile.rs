@@ -101,6 +101,7 @@ pub struct CryConfigFile {
     access: Access,
     kdf_parameters: ScryptParams,
     config_encryption_key: ConfigEncryptionKey,
+    modified: bool,
 }
 
 impl CryConfigFile {
@@ -140,6 +141,7 @@ impl CryConfigFile {
             config_encryption_key,
             kdf_parameters,
             access: Access::ReadWrite,
+            modified: false,
         };
         result
             ._write(file)
@@ -177,10 +179,11 @@ impl CryConfigFile {
             config_encryption_key,
             kdf_parameters,
             access,
+            modified: false,
         })
     }
 
-    pub fn save(&self) -> Result<(), SaveConfigFileError> {
+    pub fn save(&mut self) -> Result<(), SaveConfigFileError> {
         let file = OpenOptions::new()
             .write(true)
             .truncate(true)
@@ -198,8 +201,20 @@ impl CryConfigFile {
         self._write(file)
             .context("Trying to write config to file")
             .map_err(SaveConfigFileError::SerializationError)?;
+        self.modified = false;
 
         Ok(())
+    }
+
+    pub fn save_if_modified_and_has_readwrite_access(&mut self) -> Result<(), SaveConfigFileError> {
+        if self.modified {
+            match self.access {
+                Access::ReadOnly => Ok(()),
+                Access::ReadWrite => self.save(),
+            }
+        } else {
+            Ok(())
+        }
     }
 
     fn _write(&self, file: File) -> Result<()> {
@@ -216,6 +231,19 @@ impl CryConfigFile {
             &mut BufWriter::new(file),
         )?;
         Ok(())
+    }
+
+    pub fn config(&self) -> &CryConfig {
+        &self.config
+    }
+
+    pub fn config_mut(&mut self) -> &mut CryConfig {
+        self.modified = true;
+        &mut self.config
+    }
+
+    pub fn into_config(self) -> CryConfig {
+        self.config
     }
 }
 

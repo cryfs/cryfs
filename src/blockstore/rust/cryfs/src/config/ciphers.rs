@@ -65,6 +65,15 @@ pub fn lookup_cipher_dyn(
     lookup_cipher_sync(cipher_name, DynCallback { encryption_key })?
 }
 
+pub fn cipher_is_supported(cipher_name: &str) -> bool {
+    struct DummyCallback;
+    impl SyncCipherCallback for DummyCallback {
+        type Result = ();
+        fn callback<C: CipherDef + Send + Sync + 'static>(self) {}
+    }
+    lookup_cipher_sync(cipher_name, DummyCallback).is_ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

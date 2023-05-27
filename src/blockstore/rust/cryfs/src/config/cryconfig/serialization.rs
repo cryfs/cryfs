@@ -30,7 +30,7 @@ pub fn serialize(config: CryConfig, writer: impl Write) -> Result<(), serde_json
                 root_blob: config.root_blob,
                 enc_key: config.enc_key,
                 cipher: config.cipher,
-                version: Some(config.version),
+                format_version: Some(config.format_version),
                 created_with_version: Some(config.created_with_version),
                 last_opened_with_version: Some(config.last_opened_with_version),
                 blocksize_bytes: Some(config.blocksize_bytes),
@@ -54,7 +54,7 @@ pub fn serialize(config: CryConfig, writer: impl Write) -> Result<(), serde_json
 pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError> {
     let config: SerializableCryConfig = serde_json::from_reader(reader)?;
 
-    let version = check_format_version(&config.cryfs)?;
+    let format_version = check_format_version(&config.cryfs)?;
 
     let migrations =
         config
@@ -62,14 +62,14 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
             .migrations
             .ok_or_else(|| DeserializationError::InvalidConfig {
                 message: format!(
-        "File system version is {version} but migrations are not set. This should be impossible.",
+        "File system version is {format_version} but migrations are not set. This should be impossible.",
     ),
             })?;
 
     if migrations.deprecated_has_version_numbers != Some(true) {
         return Err(
             DeserializationError::InvalidConfig{message: format!(
-                "File system version is {version} but hasVersionNumbers is not set to true. This should be impossible.",
+                "File system version is {format_version} but hasVersionNumbers is not set to true. This should be impossible.",
             )}
         );
     }
@@ -77,28 +77,28 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
     if migrations.deprecated_has_parent_pointers != Some(true) {
         return Err(
         DeserializationError::InvalidConfig{message: format!(
-            "File system version is {version} but hasVersionNumbers is not set to true. This should be impossible.",
+            "File system version is {format_version} but hasVersionNumbers is not set to true. This should be impossible.",
         )});
     }
 
     let created_with_version = config.cryfs.created_with_version.ok_or_else(|| {
         // In CryFS <= 0.9.2, we didn't have this field
         DeserializationError::InvalidConfig{message: format!(
-            "File system version is {version} but createdWithVersion is not set. This should be impossible.",
+            "File system version is {format_version} but createdWithVersion is not set. This should be impossible.",
         )}
     })?;
 
     let last_opened_with_version = config.cryfs.last_opened_with_version.ok_or_else(|| {
         // In CryFS <= 0.9.8, we didn't have this field
         DeserializationError::InvalidConfig{message:format!(
-            "File system version is {version} but lastOpenedWithVersion is not set. This should be impossible.",
+            "File system version is {format_version} but lastOpenedWithVersion is not set. This should be impossible.",
         )}
     })?;
 
     let blocksize_bytes = config.cryfs.blocksize_bytes.ok_or_else(|| {
         // CryFS <= 0.9.2 didn't have this field
         DeserializationError::InvalidConfig{message:format!(
-            "File system version is {version} but blocksizeBytes is not set. This should be impossible.",
+            "File system version is {format_version} but blocksizeBytes is not set. This should be impossible.",
         )}
     })?;
 
@@ -115,7 +115,7 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
         root_blob: config.cryfs.root_blob,
         enc_key: config.cryfs.enc_key,
         cipher: config.cryfs.cipher,
-        version,
+        format_version,
         created_with_version,
         last_opened_with_version,
         blocksize_bytes,
@@ -127,7 +127,7 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
 fn check_format_version(
     config: &SerializableCryConfigInner,
 ) -> Result<String, DeserializationError> {
-    let version = config.version.clone().ok_or_else(|| {
+    let version = config.format_version.clone().ok_or_else(|| {
         DeserializationError::VersionTooOld {
             // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
             read_version: "0.8".to_string(),
@@ -173,7 +173,7 @@ struct SerializableCryConfigInner {
     cipher: String,
 
     #[serde(rename = "version")]
-    version: Option<String>,
+    format_version: Option<String>,
 
     #[serde(rename = "createdWithVersion")]
     created_with_version: Option<String>,

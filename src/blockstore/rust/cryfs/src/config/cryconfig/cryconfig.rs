@@ -9,6 +9,7 @@ pub const FILESYSTEM_FORMAT_VERSION: &str = "0.10";
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CryConfig {
     /// Blob ID of the root directory
+    /// // TODO Store this as a BlobId struct instead of String
     pub root_blob: String,
 
     /// Encryption Key used for encrypting the blocks of the file system
@@ -18,10 +19,12 @@ pub struct CryConfig {
     pub enc_key: String,
 
     /// Cipher used for encrypting the blocks of the file system
+    /// TODO Store cipher as an enum instead of String
     pub cipher: String,
 
     /// Current version of the format of this file system
-    pub version: String,
+    /// TODO Store version numbers as a struct instead of String
+    pub format_version: String,
 
     /// Original version of the format of this file system.
     /// This may differ from [CryConfig::version] if the file system was migrated
@@ -38,6 +41,7 @@ pub struct CryConfig {
 
     /// If the exclusive client Id is set, then additional integrity measures (i.e. treating missing blocks as integrity violations) are enabled.
     /// Because this only works in a single-client setting, only this one client Id is allowed to access the file system.
+    /// TODO Store this as an instance of `ClientId` instead of `u32`
     pub exclusive_client_id: Option<u32>,
 }
 
