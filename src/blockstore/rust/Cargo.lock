@@ -578,6 +578,7 @@ dependencies = [
  "cryfs-cryfs",
  "cryfs-rustfs",
  "dirs",
+ "env_logger",
  "envtestkit",
  "pathdiff",
  "tempdir",

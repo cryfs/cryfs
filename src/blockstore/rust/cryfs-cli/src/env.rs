@@ -14,6 +14,7 @@ pub fn is_noninteractive() -> bool {
     }
 }
 
+#[cfg(feature = "check_for_updates")]
 pub fn no_update_check() -> bool {
     match std::env::var(NOUPDATECHECK_KEY) {
         Ok(val) => val == "true",
@@ -78,6 +79,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "check_for_updates")]
     mod no_update_check {
         use super::*;
 
