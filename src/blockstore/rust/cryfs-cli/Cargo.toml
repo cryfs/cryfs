@@ -4,7 +4,19 @@ edition = "2021"
 name = "cryfs-cli"
 version = "0.1.0"
 
+[[bin]]
+name = "cryfs"
+
 [dependencies]
 async-trait = "^0.1.60"
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
+clap = {version = "^4.3.0", features = ["derive"]}
+tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}
+anyhow = "^1.0.68"
+dirs = "^5.0.1"
+
+[dev-dependencies]
+envtestkit = "^1.1.2"
+tempdir = "^0.3.7"
+pathdiff = "^0.2.1"

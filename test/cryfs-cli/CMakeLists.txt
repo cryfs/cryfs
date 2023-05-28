@@ -9,7 +9,6 @@ set(SOURCES
     program_options/ProgramOptionsTest.cpp
     program_options/ParserTest.cpp
     CliTest_ShowingHelp.cpp
-    EnvironmentTest.cpp
     VersionCheckerTest.cpp
     CliTest_IntegrityCheck.cpp
     CryfsUnmountTest.cpp
