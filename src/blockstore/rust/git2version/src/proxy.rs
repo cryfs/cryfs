@@ -84,7 +84,7 @@ macro_rules! init_proxy_build {
 
 #[macro_export]
 macro_rules! init_proxy_lib {
-    ($proxy_crate_name:ident) => {
+    () => {
         pub use $crate::*;
 
         pub const GITINFO: Option<$crate::GitInfo> = if $crate::konst::unwrap_ctx!(

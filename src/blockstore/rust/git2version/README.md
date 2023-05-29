@@ -15,7 +15,7 @@ To use this, you need to setup a proxy-crate in your workspace.
 [workspace]
 
 [dependencies]
-version_proxy = {{path = "./version_proxy"}}
+version_proxy = {path = "./version_proxy"}
 ```
 
 2. Add these files to make up the proxy crate:
@@ -44,14 +44,13 @@ fn main() {
 
 **version_proxy/src/lib.rs**:
 ```rust
-git2version::init_proxy_lib!(version_proxy);
+git2version::init_proxy_lib!();
 ```
-`version_proxy` should be the name of your proxy crate.
 
 Usage
 --------------
 
-The `init_proxy_build!` macro in your proxy crate will generate something similar to the following:
+The `init_proxy_lib!` macro in your proxy crate will generate something similar to the following:
 ```rust
 pub const GITINFO: Option<git2version::GitInfo> =
     Some(git2version::GitInfo {
@@ -82,11 +81,12 @@ The advantages of `git2version` over `git-version` are as follows:
   In `git-version`, you have to parse that string yourself and it might not always contain all the information (e.g. `git describe --tags` doesn't output the commit id when you have the
   tag itself checked out). `git2version` always gives you the commit id.
 
-Another point of note is also that both crates use a different mechanism for change detection.
-* `git2version` uses the `rerun-if-changed` mechanism of `build.rs` to re-generate the version number whenever the git repository changes (e.g. new tags being added, `git fetch` being called, ...)
+Another point of note is that both crates use a different mechanism for change detection for incremental builds.
+* `git2version` uses the `cargo:rerun-if-changed` mechanism of `build.rs` to re-generate the version number whenever the git repository changes (e.g. new tags being added, `git fetch` being called, ...)
   and whenever files in the working copy change. The latter is important because it could cause a change to the `-modified` flag of the reported version.
 * `git-version` uses an `include_bytes!` mechanism to include bytes from your git repository data into the generated source code, which will cause cargo to detect it as a dependency and rerun the proc macro
-  when the git repository data changes. I have not tested how reliable or scalable that approach is.
+  when the git repository data changes. This sounds hacky but might work. I have not tested how reliable or scalable that approach is.
+`cargo:rerun-if-changed` is the officially supported way to do this kind of change detection, so I would expect it to be more reliable, but it only works for `build.rs` scripts, not for proc macros.
 
 Why is the proxy crate required?
 --------------------------------

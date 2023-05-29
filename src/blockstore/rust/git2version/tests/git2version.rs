@@ -373,7 +373,7 @@ fn main() {{
         &dir_path.join("version-proxy/src/lib.rs"),
         &format!(
             r#"
-            git2version::init_proxy_lib!(version_proxy);
+            git2version::init_proxy_lib!();
         "#
         ),
     );
