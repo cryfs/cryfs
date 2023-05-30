@@ -1,7 +1,6 @@
-use anyhow::{bail, Context, Result};
-use static_assertions::const_assert;
+use anyhow::{Context, Result};
 use std::num::NonZeroU32;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use thiserror::Error;
 
 use super::configfile::{
@@ -13,11 +12,11 @@ use super::password_provider::PasswordProvider;
 use super::CryConfig;
 use crate::localstate::{FilesystemMetadata, LocalStateDir};
 use cryfs_blockstore::ClientId;
-use cryfs_utils::crypto::{kdf::scrypt::ScryptSettings, symmetric::EncryptionKey};
-use cryfs_version::Version;
+use cryfs_utils::crypto::symmetric::EncryptionKey;
+use cryfs_version::{Version, VersionInfo};
 
 use crate::config::FILESYSTEM_FORMAT_VERSION;
-pub const CRYFS_VERSION: Version = crate::version::VERSION.version;
+pub const CRYFS_VERSION: VersionInfo = crate::version::CRYFS_VERSION;
 const MIN_SUPPORTED_FORMAT_VERSION: Version = konst::unwrap_ctx!(Version::parse_const("0.10"));
 const MAX_SUPPORTED_FORMAT_VERSION: Version = FILESYSTEM_FORMAT_VERSION;
 
@@ -31,7 +30,7 @@ pub enum ConfigLoadError {
         // TODO Store Version object instead of String
         actual_format_version: String,
         min_supported_format_version: Version<'static>,
-        cryfs_version: Version<'static>,
+        cryfs_version: VersionInfo<'static, 'static, 'static>,
     },
 
     #[error("This filesystem is for CryFS {actual_format_version} and would have to be migrated to {max_supported_format_version} to be used with CryFS {cryfs_version} but the migration was declined.")]
@@ -39,7 +38,7 @@ pub enum ConfigLoadError {
         // TODO Store Version object instead of String
         actual_format_version: String,
         max_supported_format_version: Version<'static>,
-        cryfs_version: Version<'static>,
+        cryfs_version: VersionInfo<'static, 'static, 'static>,
     },
 
     #[error("This filesystem is in the format of CryFS {actual_format_version} but you're running CryFS {cryfs_version}, which uses file system format {max_supported_format_version}. Please update your CryFS version.")]
@@ -47,7 +46,7 @@ pub enum ConfigLoadError {
         // TODO Store Version object instead of String
         actual_format_version: String,
         max_supported_format_version: Version<'static>,
-        cryfs_version: Version<'static>,
+        cryfs_version: VersionInfo<'static, 'static, 'static>,
     },
 
     #[error("Error loading config file: {0}")]
@@ -193,9 +192,9 @@ fn _check_version(config: &CryConfig, console: &impl Console) -> Result<(), Conf
         ))
     })?;
     // TODO Make these asserts const_assert
-    assert!(CRYFS_VERSION >= MAX_SUPPORTED_FORMAT_VERSION);
+    assert!(CRYFS_VERSION.version() >= MAX_SUPPORTED_FORMAT_VERSION);
     assert!(MAX_SUPPORTED_FORMAT_VERSION >= MIN_SUPPORTED_FORMAT_VERSION);
-    assert!(CRYFS_VERSION >= MIN_SUPPORTED_FORMAT_VERSION);
+    assert!(CRYFS_VERSION.version() >= MIN_SUPPORTED_FORMAT_VERSION);
 
     if actual_format_version < MIN_SUPPORTED_FORMAT_VERSION {
         return Err(ConfigLoadError::TooOldFilesystemFormat {
@@ -232,7 +231,7 @@ fn _update_version_in_config(config: &mut CryConfigFile) {
     if Version::parse(&config.config().format_version).unwrap() != FILESYSTEM_FORMAT_VERSION {
         config.config_mut().format_version = FILESYSTEM_FORMAT_VERSION.to_string();
     }
-    if Version::parse(&config.config().last_opened_with_version).unwrap() != CRYFS_VERSION {
+    if config.config().last_opened_with_version != CRYFS_VERSION.to_string() {
         config.config_mut().last_opened_with_version = CRYFS_VERSION.to_string();
     }
 }

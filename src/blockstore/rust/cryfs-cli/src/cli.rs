@@ -3,23 +3,26 @@ use clap::Parser;
 
 use super::env;
 use crate::args::Args;
-use cryfs_cryfs::config::{Console, PasswordProvider, CRYFS_VERSION};
+use cryfs_cryfs::config::{Console, PasswordProvider};
+use cryfs_version::VersionInfo;
+
+const CRYFS_VERSION: VersionInfo = cryfs_cryfs::CRYFS_VERSION;
 
 pub struct Cli {
     is_noninteractive: bool,
-    console: Box<dyn Console>,
-    password_provider: Box<dyn PasswordProvider>,
+    // console: Box<dyn Console>,
+    // password_provider: Box<dyn PasswordProvider>,
 }
 
 impl Cli {
     pub fn new() -> Self {
         let is_noninteractive = env::is_noninteractive();
-        let console = if is_noninteractive { todo!() } else { todo!() };
-        let password_provider = if is_noninteractive { todo!() } else { todo!() };
+        // let console = if is_noninteractive { todo!() } else { todo!() };
+        // let password_provider = if is_noninteractive { todo!() } else { todo!() };
         Self {
             is_noninteractive,
-            console,
-            password_provider,
+            // console,
+            // password_provider,
         }
     }
 

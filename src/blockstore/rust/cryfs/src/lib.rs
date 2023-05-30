@@ -4,3 +4,4 @@ pub mod filesystem;
 pub mod localstate;
 pub mod utils;
 mod version;
+pub use version::CRYFS_VERSION;
