@@ -34,15 +34,23 @@ impl Cli {
     }
 }
 
+// TODO (manually) test this
 fn _show_version() {
     println!("CryFS Version {}", CRYFS_VERSION);
-    // TODO Do the following things (taken from the C++ version)
-    //     if (gitversion::IsDevVersion()) {
-    //         cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
-    //         ". Please do not use in production!" << endl;
-    //     } else if (!gitversion::IsStableVersion()) {
-    //         cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
-    //     }
+    if let Some(gitinfo) = CRYFS_VERSION.gitinfo() {
+        if gitinfo.commits_since_tag > 0 {
+            println!(
+                "WARNING! This is a development version based on git commit {}. Please don't use in production.",
+                gitinfo.commit_id,
+            );
+        }
+        if gitinfo.modified {
+            println!("WARNING! There were uncommitted changes in the repository when building this version.");
+        }
+    }
+    if CRYFS_VERSION.version().prerelease.is_some() {
+        println!("WARNING! This is a prerelease version. Please backup your data frequently!");
+    }
 
     #[cfg(debug_assertions)]
     println!("WARNING! This is a debug build. Performance might be slow.");
