@@ -1,4 +1,5 @@
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
+use cryfs_version::Version;
 
 /// Interface for cryfs to interact with the user, e.g. ask questions and get answers on the terminal
 pub trait Console {
@@ -8,9 +9,9 @@ pub trait Console {
     fn ask_migrate_filesystem(
         &self,
         // TODO Pass in a version struct instead of strings
-        current_filesystem_format_version: &str,
-        new_filesystem_format_version: &str,
-        cryfs_version: &str,
+        current_filesystem_format_version: &Version,
+        new_filesystem_format_version: &Version,
+        cryfs_version: &Version,
     ) -> bool;
 
     /// We're in the process of opening a filesystem but the encryption key is different than the last time

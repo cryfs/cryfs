@@ -2,7 +2,7 @@
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
 edition = "2021"
 name = "cryfs-blobstore"
-version = "0.1.0"
+version = "0.11.0"
 
 [dependencies]
 anyhow = "^1.0.68"
@@ -13,6 +13,7 @@ binrw = "^0.11.1"
 conv = "^0.3.3"
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-utils = {path = "../utils"}
+cryfs-version = {path = "../cryfs-version"}
 divrem = "^1.0.0"
 futures = "^0.3.25"
 

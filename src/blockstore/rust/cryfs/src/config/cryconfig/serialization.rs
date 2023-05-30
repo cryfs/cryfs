@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
+use std::cmp::Ordering;
 use std::io::{Read, Write};
 use thiserror::Error;
-use version_compare::Cmp;
+
+use cryfs_version::Version;
 
 use super::cryconfig::CryConfig;
 use super::filesystem_id::FilesystemId;
@@ -10,10 +12,16 @@ use super::filesystem_id::FilesystemId;
 #[derive(Error, Debug)]
 pub enum DeserializationError {
     #[error("File system format is {read_version}, which is not supported anymore. Please use CryFS 0.10 or 0.11 to migrate it to a newer format.")]
-    VersionTooOld { read_version: String },
+    VersionTooOld {
+        // TODO Store as `Version` struct, not as String
+        read_version: String,
+    },
 
     #[error("File system format is {read_version}, which is not supported yet. Please use a newer version of CryFS to access it.")]
-    VersionTooNew { read_version: String },
+    VersionTooNew {
+        // TODO Store as `Version` struct, not as String
+        read_version: String,
+    },
 
     #[error("Invalid file system config file: {message}")]
     InvalidConfig { message: String },
@@ -115,7 +123,7 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
         root_blob: config.cryfs.root_blob,
         enc_key: config.cryfs.enc_key,
         cipher: config.cryfs.cipher,
-        format_version,
+        format_version: format_version.to_string(),
         created_with_version,
         last_opened_with_version,
         blocksize_bytes,
@@ -127,29 +135,28 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
 fn check_format_version(
     config: &SerializableCryConfigInner,
 ) -> Result<String, DeserializationError> {
-    let version = config.format_version.clone().ok_or_else(|| {
+    let format_version = config.format_version.as_ref().ok_or_else(|| {
         DeserializationError::VersionTooOld {
             // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
             read_version: "0.8".to_string(),
         }
     })?;
-
-    let version_cmp = version_compare::compare(&version, super::FILESYSTEM_FORMAT_VERSION)
-        .map_err(|()| DeserializationError::InvalidConfig {
-            message: format!("Invalid file system version: {version}"),
+    let format_version =
+        Version::parse(format_version).map_err(|err| DeserializationError::InvalidConfig {
+            message: format!("Invalid file system format version: {}", err),
         })?;
 
-    match version_cmp {
-        Cmp::Eq => Ok(version),
-        Cmp::Gt => Err(DeserializationError::VersionTooNew {
-            read_version: version,
-        }),
-        Cmp::Lt => Err(DeserializationError::VersionTooOld {
-            read_version: version,
-        }),
-        Cmp::Ge | Cmp::Le | Cmp::Ne => {
-            panic!("version_compare::compare returned unexpected result")
+    match format_version.cmp(&super::FILESYSTEM_FORMAT_VERSION) {
+        Ordering::Equal => {
+            // TODO Return version as `Version` object instead of String
+            Ok(format_version.to_string())
         }
+        Ordering::Greater => Err(DeserializationError::VersionTooNew {
+            read_version: format_version.to_string(),
+        }),
+        Ordering::Less => Err(DeserializationError::VersionTooOld {
+            read_version: format_version.to_string(),
+        }),
     }
 }
 

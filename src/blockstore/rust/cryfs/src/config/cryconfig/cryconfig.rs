@@ -1,8 +1,10 @@
 use std::io::{Read, Write};
 
+use cryfs_version::Version;
+
 use super::filesystem_id::FilesystemId;
 
-pub const FILESYSTEM_FORMAT_VERSION: &str = "0.10";
+pub const FILESYSTEM_FORMAT_VERSION: Version = konst::unwrap_ctx!(Version::parse_const("0.10"));
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
 /// // TODO Do we need this to be clone?

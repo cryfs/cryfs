@@ -7,7 +7,8 @@ pub mod data;
 pub mod path;
 pub mod periodic_task;
 pub mod stream;
-pub mod version;
 
 #[cfg(any(test, feature = "testutils"))]
 pub mod testutils;
+
+cryfs_version::assert_cargo_version_equals_git_version!();

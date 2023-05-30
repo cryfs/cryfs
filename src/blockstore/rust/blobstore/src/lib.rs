@@ -16,3 +16,5 @@ mod tests;
 #[cfg(test)]
 #[cfg(feature = "slow-tests-any")]
 use rstest_reuse;
+
+cryfs_version::assert_cargo_version_equals_git_version!();

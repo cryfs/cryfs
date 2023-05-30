@@ -1,0 +1,17 @@
+[package]
+name = "cryfs-version"
+edition = "2021"
+# The version field here is ignored, no need to change it
+version = "0.0.0"
+
+[dependencies]
+git2version = "^0.2.0"
+serde = {version = "^1.0.163", features = ["derive"]}
+konst = "^0.3.5"
+
+[build-dependencies]
+git2version = {version = "^0.2.0", features = ["build"]}
+
+[dev-dependencies]
+tempdir = "^0.3.7"
+serde_json = "^1.0.96"

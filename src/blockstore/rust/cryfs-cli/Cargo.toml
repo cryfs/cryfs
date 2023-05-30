@@ -2,7 +2,7 @@
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
 edition = "2021"
 name = "cryfs-cli"
-version = "0.1.0"
+version = "0.11.0"
 
 [[bin]]
 name = "cryfs"
@@ -11,6 +11,7 @@ name = "cryfs"
 async-trait = "^0.1.60"
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
+cryfs-version = {path = "../cryfs-version"}
 clap = {version = "^4.3.0", features = ["derive"]}
 tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}
 anyhow = "^1.0.68"

@@ -2,7 +2,7 @@
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
 edition = "2021"
 name = "cryfs-cryfs"
-version = "0.1.0"
+version = "0.11.0"
 
 [dependencies]
 anyhow = "^1.0.68"
@@ -13,6 +13,7 @@ cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-utils = {path = "../utils"}
 cryfs-rustfs = {path = "../rustfs"}
+cryfs-version = {path = "../cryfs-version"}
 derive_more = "^0.99.17"
 futures = "^0.3.25"
 thiserror = "^1.0.38"
@@ -20,10 +21,11 @@ serde = {version = "^1.0.163", features=["derive"]}
 serde_json = "^1.0.96"
 serde_with = {version = "^3.0.0", features=["hex"]}
 rand = "^0.8.5"
-version-compare = "^0.1.1"
 log = "^0.4.17"
 hex = "^0.4.3"
 lockable = "^0.0.6"
+konst = "^0.3.5"
+static_assertions = "^1.1.0"
 
 [dev-dependencies]
 tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}

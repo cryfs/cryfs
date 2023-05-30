@@ -20,3 +20,5 @@ pub use low_level::{ActionCounts, MockBlockStore, SharedBlockStore, TrackingBloc
 
 #[cfg(any(test, feature = "testutils"))]
 pub mod tests;
+
+cryfs_version::assert_cargo_version_equals_git_version!();

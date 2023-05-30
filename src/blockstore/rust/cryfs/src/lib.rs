@@ -3,3 +3,4 @@ pub mod config;
 pub mod filesystem;
 pub mod localstate;
 pub mod utils;
+mod version;
