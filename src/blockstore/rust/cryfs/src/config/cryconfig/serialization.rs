@@ -135,27 +135,28 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
 fn check_format_version(
     config: &SerializableCryConfigInner,
 ) -> Result<String, DeserializationError> {
-    let format_version = config.format_version.as_ref().ok_or_else(|| {
+    let format_version_string = config.format_version.as_ref().ok_or_else(|| {
         DeserializationError::VersionTooOld {
             // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
-            read_version: "0.8".to_string(),
+            read_version: "0.8".to_owned(),
         }
     })?;
-    let format_version =
-        Version::parse(format_version).map_err(|err| DeserializationError::InvalidConfig {
-            message: format!("Invalid file system format version: {}", err),
-        })?;
+    let format_version = Version::parse(format_version_string).map_err(|err| {
+        DeserializationError::InvalidConfig {
+            message: format!("Invalid file system format version {format_version_string}: {err}"),
+        }
+    })?;
 
     match format_version.cmp(&super::FILESYSTEM_FORMAT_VERSION) {
         Ordering::Equal => {
-            // TODO Return version as `Version` object instead of String
-            Ok(format_version.to_string())
+            // TODO Return version as `Version` object instead of String (but make sure we still only serialize major.minor, no patch version)
+            Ok(format_version_string.to_owned())
         }
         Ordering::Greater => Err(DeserializationError::VersionTooNew {
-            read_version: format_version.to_string(),
+            read_version: format_version_string.to_owned(),
         }),
         Ordering::Less => Err(DeserializationError::VersionTooOld {
-            read_version: format_version.to_string(),
+            read_version: format_version_string.to_owned(),
         }),
     }
 }
