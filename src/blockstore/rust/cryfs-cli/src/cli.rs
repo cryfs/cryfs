@@ -10,50 +10,56 @@ const CRYFS_VERSION: VersionInfo = cryfs_cryfs::CRYFS_VERSION;
 
 pub struct Cli {
     is_noninteractive: bool,
-    // console: Box<dyn Console>,
-    // password_provider: Box<dyn PasswordProvider>,
 }
 
 impl Cli {
     pub fn new() -> Self {
         let is_noninteractive = env::is_noninteractive();
-        // let console = if is_noninteractive { todo!() } else { todo!() };
-        // let password_provider = if is_noninteractive { todo!() } else { todo!() };
-        Self {
-            is_noninteractive,
-            // console,
-            // password_provider,
-        }
+        Self { is_noninteractive }
     }
 
     pub fn main(&self) -> Result<()> {
         _show_version();
 
         let args = Args::parse();
+
+        if args.version {
+            // No need to show version because we've already shown it, let's just exit
+            return Ok(());
+        }
+
+        if args.show_ciphers {
+            for cipher in cryfs_cryfs::config::ALL_CIPHERS {
+                println!("{}", cipher);
+            }
+            return Ok(());
+        }
+
+        println!("Basedir: {:?}\nMountdir: {:?}", args.basedir, args.mountdir,);
         Ok(())
     }
 }
 
 // TODO (manually) test this
 fn _show_version() {
-    println!("CryFS Version {}", CRYFS_VERSION);
+    eprintln!("CryFS Version {}", CRYFS_VERSION);
     if let Some(gitinfo) = CRYFS_VERSION.gitinfo() {
         if gitinfo.commits_since_tag > 0 {
-            println!(
+            eprintln!(
                 "WARNING! This is a development version based on git commit {}. Please don't use in production.",
                 gitinfo.commit_id,
             );
         }
         if gitinfo.modified {
-            println!("WARNING! There were uncommitted changes in the repository when building this version.");
+            eprintln!("WARNING! There were uncommitted changes in the repository when building this version.");
         }
     }
     if CRYFS_VERSION.version().prerelease.is_some() {
-        println!("WARNING! This is a prerelease version. Please backup your data frequently!");
+        eprintln!("WARNING! This is a prerelease version. Please backup your data frequently!");
     }
 
     #[cfg(debug_assertions)]
-    println!("WARNING! This is a debug build. Performance might be slow.");
+    eprintln!("WARNING! This is a debug build. Performance might be slow.");
 
     #[cfg(feature = "check_for_updates")]
     _check_for_updates();
@@ -62,11 +68,11 @@ fn _show_version() {
 #[cfg(feature = "check_for_updates")]
 fn _check_for_updates() {
     if env::no_update_check() {
-        println!("Automatic checking for security vulnerabilities and updates is disabled.");
+        eprintln!("Automatic checking for security vulnerabilities and updates is disabled.");
     } else if env::is_noninteractive() {
-        println!("Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode.");
+        eprintln!("Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode.");
     } else {
-        todo!()
+        // todo!()
     }
 }
 

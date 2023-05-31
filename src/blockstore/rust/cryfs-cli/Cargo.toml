@@ -17,11 +17,16 @@ tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}
 anyhow = "^1.0.68"
 dirs = "^5.0.1"
 env_logger = "^0.10.0"
+path-absolutize = "^3.1.0"
 
 [dev-dependencies]
 envtestkit = "^1.1.2"
 tempdir = "^0.3.7"
 pathdiff = "^0.2.1"
+assert_cmd = "^2.0.11"
+predicates = "^3.0.3"
+escargot = "^0.5.7"
+lazy_static = "^1.4.0"
 
 [features]
 default = ["check_for_updates"]

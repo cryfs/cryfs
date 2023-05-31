@@ -8,6 +8,7 @@ mod encryption;
 mod loader;
 mod password_provider;
 
+pub use ciphers::ALL_CIPHERS;
 pub use console::Console;
 pub use cryconfig::{CryConfig, FilesystemId, FILESYSTEM_FORMAT_VERSION};
 pub use loader::CRYFS_VERSION;

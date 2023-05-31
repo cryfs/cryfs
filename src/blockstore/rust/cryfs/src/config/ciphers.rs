@@ -12,6 +12,8 @@ use cryfs_utils::crypto::symmetric::{
 
 // TODO Should we support the other ciphers that were supported by the C++ version?
 
+pub const ALL_CIPHERS: &[&str] = &["xchacha20-poly1305", "aes-256-gcm", "aes-128-gcm"];
+
 // offer a way to lookup ciphers at runtime while statically binding its type
 #[async_trait]
 pub trait AsyncCipherCallback {

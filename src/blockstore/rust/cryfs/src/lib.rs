@@ -4,4 +4,5 @@ pub mod filesystem;
 pub mod localstate;
 pub mod utils;
 mod version;
+pub use config::ALL_CIPHERS;
 pub use version::CRYFS_VERSION;
