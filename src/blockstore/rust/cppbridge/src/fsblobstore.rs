@@ -976,7 +976,7 @@ fn new_locking_integrity_encrypted_inmemory_fsblobstore(
     log_errors(|| {
         TOKIO_RUNTIME.block_on(async {
             let blockstore =
-                super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore(
+                super::blockstore::new_locking_integrity_encrypted_inmemory_blockstore_async(
                     integrity_file_path,
                     my_client_id,
                     allow_integrity_violations,
@@ -984,7 +984,8 @@ fn new_locking_integrity_encrypted_inmemory_fsblobstore(
                     on_integrity_violation,
                     cipher_name,
                     encryption_key_hex,
-                )?;
+                )
+                .await?;
             Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
                 BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
             ))))
@@ -1009,7 +1010,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(
     log_errors(|| {
         TOKIO_RUNTIME.block_on(async {
             let blockstore =
-                super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore(
+                super::blockstore::new_locking_integrity_encrypted_readonly_ondisk_blockstore_async(
                     integrity_file_path,
                     my_client_id,
                     allow_integrity_violations,
@@ -1018,7 +1019,7 @@ fn new_locking_integrity_encrypted_readonly_ondisk_fsblobstore(
                     cipher_name,
                     encryption_key_hex,
                     basedir,
-                )?;
+                ).await?;
             Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
                 BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
             ))))
@@ -1042,16 +1043,18 @@ fn new_locking_integrity_encrypted_ondisk_fsblobstore(
 
     log_errors(|| {
         TOKIO_RUNTIME.block_on(async {
-            let blockstore = super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore(
-                integrity_file_path,
-                my_client_id,
-                allow_integrity_violations,
-                missing_block_is_integrity_violation,
-                on_integrity_violation,
-                cipher_name,
-                encryption_key_hex,
-                basedir,
-            )?;
+            let blockstore =
+                super::blockstore::new_locking_integrity_encrypted_ondisk_blockstore_async(
+                    integrity_file_path,
+                    my_client_id,
+                    allow_integrity_violations,
+                    missing_block_is_integrity_violation,
+                    on_integrity_violation,
+                    cipher_name,
+                    encryption_key_hex,
+                    basedir,
+                )
+                .await?;
             Ok(Box::new(RustFsBlobStoreBridge(FsBlobStore::new(
                 BlobStoreOnBlocks::new(blockstore.extract(), block_size_bytes).await?,
             ))))
