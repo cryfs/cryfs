@@ -78,6 +78,9 @@ pub enum ConfigLoadError {
 
     #[error("File system is in single-client mode and can only be used from the client that created it.")]
     FilesystemInSingleClientMode,
+
+    #[error("Error interacting with the user: {0}")]
+    InteractionError(anyhow::Error),
 }
 
 pub struct ConfigLoadResult {
@@ -97,14 +100,16 @@ pub struct CommandLineFlags<'a> {
 
 pub fn load_or_create(
     filename: PathBuf,
-    password: impl PasswordProvider,
-    console: &impl Console,
+    password: &(impl PasswordProvider + ?Sized),
+    console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     if filename.exists() {
         // TODO Protect password similar to how we protect EncryptionKey
-        let password = password.password_for_existing_filesystem();
+        let password = password
+            .password_for_existing_filesystem()
+            .map_err(ConfigLoadError::InteractionError)?;
         load(
             filename,
             &password,
@@ -115,7 +120,9 @@ pub fn load_or_create(
         )
     } else {
         // TODO Protect password similar to how we protect EncryptionKey
-        let password = password.password_for_new_filesystem();
+        let password = password
+            .password_for_new_filesystem()
+            .map_err(ConfigLoadError::InteractionError)?;
         _create(
             filename,
             &password,
@@ -129,7 +136,7 @@ pub fn load_or_create(
 fn _create(
     filename: PathBuf,
     password: &str,
-    console: &impl Console,
+    console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
@@ -138,7 +145,9 @@ fn _create(
         filename,
         config.config.clone(),
         password,
-        &console.ask_scrypt_settings_for_new_filesystem(),
+        &console
+            .ask_scrypt_settings_for_new_filesystem()
+            .map_err(ConfigLoadError::InteractionError)?,
     )?;
     Ok(ConfigLoadResult {
         old_config: config.config,
@@ -150,7 +159,7 @@ fn _create(
 pub fn load(
     filename: PathBuf,
     password: &str,
-    console: &impl Console,
+    console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
     access: Access,
@@ -184,7 +193,10 @@ pub fn load(
     })
 }
 
-fn _check_version(config: &CryConfig, console: &impl Console) -> Result<(), ConfigLoadError> {
+fn _check_version(
+    config: &CryConfig,
+    console: &(impl Console + ?Sized),
+) -> Result<(), ConfigLoadError> {
     let actual_format_version = Version::parse(&config.format_version).map_err(|_| {
         ConfigLoadError::InvalidConfig(anyhow::anyhow!(
             "Could not parse format version number {} from config file",
@@ -211,11 +223,14 @@ fn _check_version(config: &CryConfig, console: &impl Console) -> Result<(), Conf
         });
     }
     if actual_format_version < MAX_SUPPORTED_FORMAT_VERSION {
-        if !console.ask_migrate_filesystem(
-            &actual_format_version,
-            &MAX_SUPPORTED_FORMAT_VERSION,
-            &CRYFS_VERSION,
-        ) {
+        let allow_migration = console
+            .ask_migrate_filesystem(
+                &actual_format_version,
+                &MAX_SUPPORTED_FORMAT_VERSION,
+                &CRYFS_VERSION,
+            )
+            .map_err(ConfigLoadError::InteractionError)?;
+        if !allow_migration {
             return Err(ConfigLoadError::TooOldFilesystemFormatDeclinedMigration {
                 actual_format_version: actual_format_version.to_string(),
                 max_supported_format_version: MAX_SUPPORTED_FORMAT_VERSION,
@@ -252,7 +267,7 @@ fn _check_missing_blocks_are_integrity_violations(
     config: &mut CryConfigFile,
     my_client_id: ClientId,
     command_line_flags: &CommandLineFlags,
-    console: &impl Console,
+    console: &(impl Console + ?Sized),
 ) -> Result<(), ConfigLoadError> {
     if command_line_flags.missing_block_is_integrity_violation == Some(true)
         && config.config().exclusive_client_id.is_none()
@@ -270,7 +285,10 @@ fn _check_missing_blocks_are_integrity_violations(
                 .map_err(|err| ConfigLoadError::InvalidConfig(err.into()))?,
         }) != my_client_id
         {
-            if !console.ask_disable_single_client_mode() {
+            let disable_single_client_mode = console
+                .ask_disable_single_client_mode()
+                .map_err(ConfigLoadError::InteractionError)?;
+            if !disable_single_client_mode {
                 return Err(ConfigLoadError::FilesystemInSingleClientMode);
             }
             config.config_mut().exclusive_client_id = None;

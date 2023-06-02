@@ -11,5 +11,7 @@ mod password_provider;
 pub use ciphers::ALL_CIPHERS;
 pub use console::Console;
 pub use cryconfig::{CryConfig, FilesystemId, FILESYSTEM_FORMAT_VERSION};
-pub use loader::CRYFS_VERSION;
+pub use loader::{
+    load_or_create, CommandLineFlags, ConfigLoadError, ConfigLoadResult, CRYFS_VERSION,
+};
 pub use password_provider::PasswordProvider;

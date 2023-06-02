@@ -3,6 +3,8 @@ use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;
 use std::path::PathBuf;
 
+// TODO Use indoc! for multiline strings
+
 lazy_static! {
     // Don't use escargot for getting the path of the executable built with same settings as the
     // test was built, because that one is already built by cargo and we don't need to re-build it.
@@ -35,9 +37,6 @@ fn cryfs_cmd_debug() -> Command {
 fn cryfs_cmd_release() -> Command {
     Command::new(&*CRYFS_CMD_PATH_RELEASE)
 }
-
-// TODO Test that invalid arguments show the usage info (but with an error exit code)
-// TODO Test that help shows environment var info
 
 mod help {
     use super::*;
@@ -88,8 +87,8 @@ mod version {
             .stderr(predicates::str::contains(
                 r#"
 error: the argument '--version' cannot be used with:
-  [BASEDIR]
-  [MOUNTDIR]
+  <BASEDIR>
+  <MOUNTDIR>
 "#,
             ));
     }
@@ -103,9 +102,31 @@ error: the argument '--version' cannot be used with:
             .stderr(predicates::str::contains(
                 r#"
 error: the argument '--version' cannot be used with:
-  [BASEDIR]
-  [MOUNTDIR]
+  <BASEDIR>
+  <MOUNTDIR>
 "#,
+            ));
+    }
+
+    #[test]
+    fn show_version_short_and_ciphers() {
+        cryfs_cmd()
+            .args(["-V", "--show-ciphers"])
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                r#"error: the argument '--version' cannot be used with '--show-ciphers'"#,
+            ));
+    }
+
+    #[test]
+    fn show_version_long_and_ciphers() {
+        cryfs_cmd()
+            .args(["--version", "--show-ciphers"])
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                r#"error: the argument '--version' cannot be used with '--show-ciphers'"#,
             ));
     }
 }
@@ -131,9 +152,31 @@ mod show_ciphers {
             .stderr(predicates::str::contains(
                 r#"
 error: the argument '--show-ciphers' cannot be used with:
-  [BASEDIR]
-  [MOUNTDIR]
+  <BASEDIR>
+  <MOUNTDIR>
 "#,
+            ));
+    }
+
+    #[test]
+    fn show_ciphers_and_version_short() {
+        cryfs_cmd()
+            .args(["--show-ciphers", "-V"])
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                r#"error: the argument '--show-ciphers' cannot be used with '--version'"#,
+            ));
+    }
+
+    #[test]
+    fn show_ciphers_and_version_long() {
+        cryfs_cmd()
+            .args(["--show-ciphers", "--version"])
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                r#"error: the argument '--show-ciphers' cannot be used with '--version'"#,
             ));
     }
 }
@@ -162,6 +205,10 @@ mod debug_build_warning {
     }
 }
 
+// TODO Test that invalid arguments show the usage info (but with an error exit code)
+//    - missing basedir/mountdir
+//    - ...
+// TODO Test that help shows environment var info
 // TODO Test cli shows version info when mounting a file system
 // TODO Test update checks
 //      and outputs:

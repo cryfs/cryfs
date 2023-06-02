@@ -40,7 +40,7 @@ impl FilesystemMetadata {
         local_state_dir: &LocalStateDir,
         filesystem_id: &FilesystemId,
         encryption_key: &EncryptionKey,
-        console: &impl Console,
+        console: &(impl Console + ?Sized),
         // TODO Return FilesystemMetadataError instead of anyhow::Error
     ) -> Result<Self> {
         let metadata_file_path = local_state_dir
@@ -48,13 +48,19 @@ impl FilesystemMetadata {
             .context("Tried to determine location for local filesystem metadata")?
             .join("metadata");
         match Self::_load(&metadata_file_path).context("Tried to load local filesystem metadata")? {
-            Some(metadata) => {
+            Some(mut metadata) => {
                 if hash(encryption_key.as_bytes(), metadata.encryption_key.salt)
                     != metadata.encryption_key
                 {
-                    if !console.ask_allow_replaced_filesystem() {
+                    let allow_replaced_file_system = console.ask_allow_replaced_filesystem()?;
+                    if !allow_replaced_file_system {
                         return Err(FilesystemMetadataError::EncryptionKeyChanged.into());
                     }
+                    metadata.encryption_key =
+                        hash(encryption_key.as_bytes(), Salt::generate_random());
+                    metadata
+                        ._save(&metadata_file_path)
+                        .context("Tried to save updated local filesystem metadata")?;
                 }
                 Ok(metadata)
             }

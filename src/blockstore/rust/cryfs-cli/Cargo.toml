@@ -10,6 +10,7 @@ name = "cryfs"
 [dependencies]
 async-trait = "^0.1.60"
 cryfs-cryfs = {path = "../cryfs"}
+cryfs-utils = {path = "../utils"}
 cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
 cryfs-version = {path = "../cryfs-version"}
 clap = {version = "^4.3.0", features = ["derive"]}
@@ -18,6 +19,8 @@ anyhow = "^1.0.68"
 dirs = "^5.0.1"
 env_logger = "^0.10.0"
 path-absolutize = "^3.1.0"
+rpassword = "^7.2"
+dialoguer = "^0.10.4"
 
 [dev-dependencies]
 envtestkit = "^1.1.2"

@@ -20,6 +20,9 @@ pub enum ConfigCreateError {
 
     #[error("Error checking the local state of the file system: {0}")]
     LocalStateError(anyhow::Error),
+
+    #[error("Error interacting with the user: {0}")]
+    InteractionError(anyhow::Error),
 }
 
 pub struct ConfigCreateResult {
@@ -28,11 +31,13 @@ pub struct ConfigCreateResult {
 }
 
 pub fn create(
-    console: &impl Console,
+    console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
 ) -> Result<ConfigCreateResult, ConfigCreateError> {
-    let cipher_name = console.ask_cipher_for_new_filesystem();
+    let cipher_name = console
+        .ask_cipher_for_new_filesystem()
+        .map_err(ConfigCreateError::InteractionError)?;
     let enc_key = _generate_encryption_key(&cipher_name)?;
     let filesystem_id = FilesystemId::new_random();
     let local_state =
@@ -40,8 +45,11 @@ pub fn create(
             .map_err(ConfigCreateError::LocalStateError)?;
     let my_client_id = *local_state.my_client_id();
     let exclusive_client_id =
-        _generate_exclusive_client_id(my_client_id, command_line_flags, console)
+        _generate_exclusive_client_id(my_client_id, command_line_flags, console)?
             .map(|id| id.id.get());
+    let blocksize_bytes = console
+        .ask_blocksize_bytes_for_new_filesystem()
+        .map_err(ConfigCreateError::InteractionError)?;
     let config = CryConfig {
         root_blob: _generate_root_blob_id().to_hex(),
         enc_key: enc_key.to_hex(),
@@ -50,7 +58,7 @@ pub fn create(
         created_with_version: CRYFS_VERSION.to_string(),
         last_opened_with_version: CRYFS_VERSION.to_string(),
         // TODO Check block size is valid (i.e. large enough)
-        blocksize_bytes: console.ask_blocksize_bytes_for_new_filesystem(),
+        blocksize_bytes,
         filesystem_id,
         exclusive_client_id,
     };
@@ -88,15 +96,18 @@ fn _generate_root_blob_id() -> BlobId {
 fn _generate_exclusive_client_id(
     my_client_id: ClientId,
     command_line_flags: &CommandLineFlags,
-    console: &impl Console,
-) -> Option<ClientId> {
-    let single_client_mode = command_line_flags
-        .missing_block_is_integrity_violation
-        .unwrap_or_else(|| console.ask_single_client_mode_for_new_filesystem());
+    console: &(impl Console + ?Sized),
+) -> Result<Option<ClientId>, ConfigCreateError> {
+    let single_client_mode = match command_line_flags.missing_block_is_integrity_violation {
+        Some(single_client_mode) => single_client_mode,
+        None => console
+            .ask_single_client_mode_for_new_filesystem()
+            .map_err(ConfigCreateError::InteractionError)?,
+    };
     if single_client_mode {
-        Some(my_client_id)
+        Ok(Some(my_client_id))
     } else {
-        None
+        Ok(None)
     }
 }
 
