@@ -93,7 +93,8 @@ impl OuterConfig {
     }
 
     pub fn deserialize(source: &mut (impl Read + Seek)) -> Result<Self> {
-        let layout = OuterConfigLayout::read(source)?;
+        let layout =
+            OuterConfigLayout::read(source).context("Trying to read config file content")?;
         let read_header: String = layout
             .header
             .try_into()

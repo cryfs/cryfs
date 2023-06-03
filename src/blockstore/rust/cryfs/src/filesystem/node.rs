@@ -6,14 +6,14 @@ use std::time::SystemTime;
 use crate::filesystem::fsblobstore::FsBlobStore;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
-use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryNode<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
 {
-    blobstore: Arc<FsBlobStore<B>>,
+    blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     blob_id: BlobId,
 }
 

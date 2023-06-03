@@ -5,8 +5,15 @@ fn main() -> Result<()> {
     // TODO Is env_logger the right logging library?
     env_logger::init();
 
+    // TODO Runtime settings
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_name("cryfs")
+        .enable_all()
+        .build()
+        .unwrap();
+
     if let Some(cli) = Cli::new()? {
-        cli.main()?;
+        runtime.block_on(cli.main())?;
     }
 
     Ok(())

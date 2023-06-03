@@ -622,6 +622,8 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "clap",
+ "cryfs-blobstore",
+ "cryfs-blockstore",
  "cryfs-cryfs",
  "cryfs-rustfs",
  "cryfs-utils",

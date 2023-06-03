@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
-use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, open_file::CryOpenFile, symlink::CrySymlink,
@@ -17,7 +17,23 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
 {
-    blobstore: Arc<FsBlobStore<B>>,
+    blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+}
+
+impl<B> CryDevice<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+{
+    pub fn new(blobstore: AsyncDropGuard<B>) -> Self
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    {
+        Self {
+            blobstore: AsyncDropArc::new(FsBlobStore::new(blobstore)),
+        }
+    }
 }
 
 #[async_trait]

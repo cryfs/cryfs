@@ -22,5 +22,9 @@ fn main() {
 
     let fs = |uid, gid| InMemoryDevice::new(uid, gid);
 
-    cryfs_rustfs::backend::fuse_mt::mount(fs, mountdir).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_name("rustfs")
+        .build()
+        .unwrap();
+    cryfs_rustfs::backend::fuse_mt::mount(fs, mountdir, runtime.handle().clone()).unwrap();
 }

@@ -96,9 +96,9 @@ impl ConfigEncryptionKey {
         self.combined_key.take_bytes(Self::OUTER_KEY_SIZE)
     }
 
-    pub fn inner_key(&self) -> impl Fn(usize) -> EncryptionKey {
+    pub fn inner_key(&self) -> impl Fn(usize) -> Result<EncryptionKey> {
         let inner_key = self.combined_key.skip_bytes(Self::OUTER_KEY_SIZE);
-        move |key_num_bytes| inner_key.take_bytes(key_num_bytes)
+        move |key_num_bytes| Ok(inner_key.take_bytes(key_num_bytes))
     }
 }
 

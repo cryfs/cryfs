@@ -17,28 +17,28 @@ use super::password_provider::PasswordProvider;
 
 #[derive(Error, Debug)]
 pub enum CreateConfigFileError {
-    #[error("Config file already exists: {path}\nError: {error}")]
+    #[error("Config file already exists: {path}\nError: {error:?}")]
     AlreadyExists {
         path: PathBuf,
         error: std::io::Error,
     },
 
-    #[error("A directory on the path to the config file doesn't exist: {path}\nError: {error}")]
+    #[error("A directory on the path to the config file doesn't exist: {path}\nError: {error:?}")]
     DirectoryComponentDoesntExist {
         path: PathBuf,
         error: std::io::Error,
     },
 
-    #[error("Permission to create the config file denied: {error}")]
+    #[error("Permission to create the config file denied: {error:?}")]
     PermissionDenied { error: std::io::Error },
 
-    #[error("IO Error trying to create config file: {0}")]
+    #[error("IO Error trying to create config file: {0:?}")]
     IoError(std::io::Error),
 
-    #[error("Error serializing the config file: {0}")]
+    #[error("Error serializing the config file: {0:?}")]
     SerializationError(anyhow::Error),
 
-    #[error("Error generating scrypt parameters: {0}")]
+    #[error("Error generating scrypt parameters: {0:?}")]
     ScryptError(anyhow::Error),
 }
 

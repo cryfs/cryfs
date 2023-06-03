@@ -19,6 +19,8 @@ pub use ondisk::OnDiskBlockStore;
 mod readonly;
 pub use readonly::ReadOnlyBlockStore;
 
+mod box_dyn;
+
 #[cfg(any(test, feature = "testutils"))]
 mod mock;
 #[cfg(any(test, feature = "testutils"))]

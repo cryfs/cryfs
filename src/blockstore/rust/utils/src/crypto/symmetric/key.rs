@@ -67,6 +67,10 @@ impl EncryptionKey {
         &self.key_data
     }
 
+    pub fn num_bytes(&self) -> usize {
+        self.key_data.len()
+    }
+
     /// Copies the first `num_bytes` bytes of the [EncryptionKey] into a new [EncryptionKey]
     pub fn take_bytes(&self, num_bytes: usize) -> EncryptionKey {
         Self::new(num_bytes, |data| {

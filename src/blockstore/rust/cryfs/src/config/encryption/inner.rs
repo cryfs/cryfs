@@ -39,7 +39,7 @@ impl InnerConfig {
     /// Take a [CryConfig] and encrypt it into an [InnerConfig] instance
     pub fn encrypt(
         config: CryConfig,
-        inner_key: impl FnOnce(usize) -> EncryptionKey,
+        inner_key: impl FnOnce(usize) -> Result<EncryptionKey>,
     ) -> Result<InnerConfig> {
         let cipher_name = config.cipher.clone();
         let cipher = lookup_cipher_dyn(&cipher_name, inner_key)
@@ -73,7 +73,10 @@ impl InnerConfig {
     }
 
     /// Decrypt an [InnerConfig] instance to get the contained [CryConfig] object
-    pub fn decrypt(self, inner_key: impl FnOnce(usize) -> EncryptionKey) -> Result<CryConfig> {
+    pub fn decrypt(
+        self,
+        inner_key: impl FnOnce(usize) -> Result<EncryptionKey>,
+    ) -> Result<CryConfig> {
         let cipher = lookup_cipher_dyn(&self.cipher_name, inner_key)
             .with_context(|| format!("Trying to look up cipher {}", self.cipher_name))?;
 

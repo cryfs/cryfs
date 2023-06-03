@@ -18,10 +18,10 @@ pub enum ConfigCreateError {
     #[error("The cipher '{cipher_name}' is not supported")]
     CipherNotSupported { cipher_name: String },
 
-    #[error("Error checking the local state of the file system: {0}")]
+    #[error("Error checking the local state of the file system: {0:?}")]
     LocalStateError(anyhow::Error),
 
-    #[error("Error interacting with the user: {0}")]
+    #[error("Error interacting with the user: {0:?}")]
     InteractionError(anyhow::Error),
 }
 

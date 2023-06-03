@@ -28,5 +28,9 @@ fn main() {
 
     let fs = |_uid: Uid, _gid: Gid| PassthroughDevice::new(basedir.into());
 
-    cryfs_rustfs::backend::fuse_mt::mount(fs, mountdir).unwrap();
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_name("rustfs")
+        .build()
+        .unwrap();
+    cryfs_rustfs::backend::fuse_mt::mount(fs, mountdir, runtime.handle().clone()).unwrap();
 }

@@ -9,8 +9,9 @@ use crate::low_level_api::{AsyncFilesystem, IntoFs};
 pub fn mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
+    runtime: tokio::runtime::Handle,
 ) -> std::io::Result<()> {
-    let fs = spawn_mount(fs, mountpoint)?;
+    let fs = spawn_mount(fs, mountpoint, runtime)?;
     fs.block_until_unmounted();
     Ok(())
 }
@@ -18,8 +19,9 @@ pub fn mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
 pub fn spawn_mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
+    runtime: tokio::runtime::Handle,
 ) -> std::io::Result<RunningFilesystem> {
-    let backend = BackendAdapter::new(fs.into_fs());
+    let backend = BackendAdapter::new(fs.into_fs(), runtime);
     let fs = FuseMT::new(backend, num_threads());
 
     // TODO Fuse args (e.g. filesystem name)

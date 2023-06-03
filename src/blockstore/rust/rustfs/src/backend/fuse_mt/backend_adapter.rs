@@ -30,17 +30,12 @@ use crate::low_level_api::{AsyncFilesystem, FileHandle};
 pub struct BackendAdapter<Fs: AsyncFilesystem> {
     fs: Fs,
 
-    runtime: Runtime,
+    runtime: tokio::runtime::Handle,
 }
 
 impl<Fs: AsyncFilesystem> BackendAdapter<Fs> {
-    pub fn new(fs: Fs) -> Self {
-        // TODO Runtime settings
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .thread_name("rustfs")
-            .build()
-            .unwrap();
-        Self { runtime, fs }
+    pub fn new(fs: Fs, runtime: tokio::runtime::Handle) -> Self {
+        Self { fs, runtime }
     }
 
     fn run_async<R, F>(&self, log_msg: &str, func: impl FnOnce() -> F) -> Result<R, libc::c_int>

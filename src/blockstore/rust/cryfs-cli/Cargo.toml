@@ -13,6 +13,8 @@ cryfs-cryfs = {path = "../cryfs"}
 cryfs-utils = {path = "../utils"}
 cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
 cryfs-version = {path = "../cryfs-version"}
+cryfs-blobstore = {path = "../blobstore"}
+cryfs-blockstore = {path = "../blockstore"}
 clap = {version = "^4.3.0", features = ["derive"]}
 tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}
 anyhow = "^1.0.68"

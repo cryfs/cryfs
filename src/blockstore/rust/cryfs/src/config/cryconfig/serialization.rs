@@ -26,7 +26,7 @@ pub enum DeserializationError {
     #[error("Invalid file system config file: {message}")]
     InvalidConfig { message: String },
 
-    #[error("Failed to deserialize JSON from config file: {0}")]
+    #[error("Failed to deserialize JSON from config file: {0:?}")]
     Json(#[from] serde_json::Error),
 }
 

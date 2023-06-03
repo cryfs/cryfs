@@ -52,15 +52,15 @@ where
 }
 pub fn lookup_cipher_dyn(
     cipher_name: &str,
-    encryption_key: impl FnOnce(usize) -> EncryptionKey,
+    encryption_key: impl FnOnce(usize) -> Result<EncryptionKey>,
 ) -> Result<Box<dyn Cipher>> {
-    struct DynCallback<K: FnOnce(usize) -> EncryptionKey> {
+    struct DynCallback<K: FnOnce(usize) -> Result<EncryptionKey>> {
         encryption_key: K,
     }
-    impl<K: FnOnce(usize) -> EncryptionKey> SyncCipherCallback for DynCallback<K> {
+    impl<K: FnOnce(usize) -> Result<EncryptionKey>> SyncCipherCallback for DynCallback<K> {
         type Result = Result<Box<dyn Cipher>>;
         fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
-            let encryption_key = (self.encryption_key)(C::KEY_SIZE);
+            let encryption_key = (self.encryption_key)(C::KEY_SIZE)?;
             Ok(Box::new(C::new(encryption_key)?))
         }
     }

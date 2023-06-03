@@ -22,7 +22,7 @@ const MAX_SUPPORTED_FORMAT_VERSION: Version = FILESYSTEM_FORMAT_VERSION;
 
 #[derive(Error, Debug)]
 pub enum ConfigLoadError {
-    #[error("Invalid data in config file: {0}")]
+    #[error("Invalid data in config file: {0:?}")]
     InvalidConfig(anyhow::Error),
 
     #[error("This filesystem is for CryFS {actual_format_version} but you're running CryFS {cryfs_version} which needs at least file system format version {min_supported_format_version}. Please migrate the file system to a supported version first by opening it with CryFS {min_supported_format_version}")]
@@ -49,16 +49,16 @@ pub enum ConfigLoadError {
         cryfs_version: VersionInfo<'static, 'static, 'static>,
     },
 
-    #[error("Error loading config file: {0}")]
+    #[error("Error loading config file: {0:?}")]
     LoadFileError(#[from] LoadConfigFileError),
 
-    #[error("Error saving config file modifications: {0}")]
+    #[error("Error saving config file modifications: {0:?}")]
     SaveFileError(#[from] SaveConfigFileError),
 
-    #[error("Error creating config: {0}")]
+    #[error("Error creating config: {0:?}")]
     ConfigCreateError(#[from] ConfigCreateError),
 
-    #[error("Error creating config file: {0}")]
+    #[error("Error creating config file: {0:?}")]
     CreateFileError(#[from] CreateConfigFileError),
 
     #[error("Wrong cipher: Expected {expected_cipher} but found {actual_cipher}")]
@@ -67,7 +67,7 @@ pub enum ConfigLoadError {
         actual_cipher: String,
     },
 
-    #[error("Error checking the local state of the file system: {0}")]
+    #[error("Error checking the local state of the file system: {0:?}")]
     LocalStateError(anyhow::Error),
 
     #[error("You specified on the command line to treat missing blocks as integrity violations, but the file system is not setup to do that.")]
@@ -79,7 +79,7 @@ pub enum ConfigLoadError {
     #[error("File system is in single-client mode and can only be used from the client that created it.")]
     FilesystemInSingleClientMode,
 
-    #[error("Error interacting with the user: {0}")]
+    #[error("Error interacting with the user: {0:?}")]
     InteractionError(anyhow::Error),
 }
 

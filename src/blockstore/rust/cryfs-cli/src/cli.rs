@@ -6,11 +6,17 @@ use std::path::Path;
 use super::console::InteractiveConsole;
 use super::env;
 use super::password_provider::{InteractivePasswordProvider, NoninteractivePasswordProvider};
+use super::runner::FilesystemRunner;
 use crate::args::CryfsArgs;
+use cryfs_blockstore::{
+    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation,
+};
 use cryfs_cryfs::{
+    config::ciphers::lookup_cipher_async,
     config::{
         CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, CryConfig, PasswordProvider,
     },
+    filesystem::CryDevice,
     localstate::LocalStateDir,
 };
 use cryfs_version::VersionInfo;
@@ -59,8 +65,8 @@ impl Cli {
         }))
     }
 
-    pub fn main(&self) -> Result<()> {
-        self.run_filesystem()?;
+    pub async fn main(&self) -> Result<()> {
+        self.run_filesystem().await?;
 
         println!(
             "Basedir: {:?}\nMountdir: {:?}",
@@ -70,70 +76,37 @@ impl Cli {
         Ok(())
     }
 
-    fn run_filesystem(&self) -> Result<()> {
+    async fn run_filesystem(&self) -> Result<()> {
         let config = self.load_or_create_config()?;
         print_config(&config);
 
-        // unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
-        // bool stoppedBecauseOfIntegrityViolation = false;
+        // TODO C++ code has lots more logic here, migrate that.
 
-        // auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
-        //     if (fuse.get() != nullptr) {
-        //     LOG(ERR, "Integrity violation detected after mounting. Unmounting.");
-        //     stoppedBecauseOfIntegrityViolation = true;
-        //     fuse->stop();
-        //     } else {
-        //     // Usually on an integrity violation, the file system is unmounted.
-        //     // Here, the file system isn't initialized yet, i.e. we failed in the initial steps when
-        //     // setting up _device before running initFilesystem.
-        //     // We can't unmount a not-mounted file system, but we can make sure it doesn't get mounted.
-        //     LOG(ERR, "Integrity violation detected before mounting. Not mounting.");
-        //     }
-        // };
-        // const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
-        // _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), options.baseDir(), std::move(localStateDir), config.myClientId, options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)));
-        // _sanityCheckFilesystem(_device->get());
+        let blobstore = lookup_cipher_async(
+            &config.config.config().cipher,
+            FilesystemRunner {
+                basedir: self.basedir().to_owned(),
+                mountdir: self.mountdir(),
+                config: &config,
+                local_state_dir: &self.local_state_dir,
+                // TODO Setup IntegrityConfig correctly
+                integrity_config: IntegrityConfig {
+                    allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                    missing_block_is_integrity_violation:
+                        MissingBlockIsIntegrityViolation::IsNotAViolation,
+                    on_integrity_violation: Box::new(|err| {}),
+                },
+            },
+        )
+        .await??;
 
-        // auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
-        //     ASSERT(_device != none, "File system not ready to be initialized. Was it already initialized before?");
-
-        //     //TODO Test auto unmounting after idle timeout
-        //     const boost::optional<double> idle_minutes = options.unmountAfterIdleMinutes();
-        //     _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes] {
-        //         LOG(INFO, "Unmounting because file system was idle for {} minutes", *idle_minutes);
-        //         fs->stop();
-        //     });
-        //     if (_idleUnmounter != none) {
-        //         (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
-        //     }
-
-        //     return make_shared<fspp::FilesystemImpl>(std::move(*_device));
-        // };
-
-        // fuse = make_unique<fspp::fuse::Fuse>(initFilesystem, std::move(onMounted), "cryfs", "cryfs@" + options.baseDir().string());
-
-        // _initLogfile(options);
-
-        // std::cout << "\nMounting filesystem. To unmount, call:\n$ cryfs-unmount " << options.mountDir() << "\n"
-        //             << std::endl;
-
-        // if (options.foreground()) {
-        //     fuse->runInForeground(options.mountDir(), options.fuseOptions());
-        // } else {
-        //     fuse->runInBackground(options.mountDir(), options.fuseOptions());
-        // }
-
-        // if (stoppedBecauseOfIntegrityViolation) {
-        //     throw CryfsException("Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation);
-        // }
-
-        todo!()
+        Ok(())
     }
 
     // TODO Test the console flows for opening an existing/creating a new file system
     fn load_or_create_config(&self) -> Result<ConfigLoadResult, ConfigLoadError> {
         // TODO Allow changing config file using args as C++ did
-        let config_file_location = self.basedir();
+        let config_file_location = self.basedir().join("cryfs.config");
         cryfs_cryfs::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
