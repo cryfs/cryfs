@@ -3,7 +3,7 @@ use std::fmt::{self, Debug};
 use std::sync::Arc;
 
 use crate::BlockId;
-use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
+use cryfs_utils::{async_drop::AsyncDropGuard, data::Data, safe_panic};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CacheEntryState {
@@ -114,13 +114,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Drop for B
         // User code never gets access to BlockCacheEntry by value, so they can't do this mistake.
         // If a dirty block is really dropped, it is our mistake.
         if self.dirty != CacheEntryState::Clean {
-            if std::thread::panicking() {
-                // We're already panicking, double panic wouldn't show a good error message anyways. Let's just log instead.
-                // A common scenario for this to happen is a failing test case.
-                log::error!("Tried to drop a dirty block. Please call flush() first");
-            } else {
-                panic!("Tried to drop a dirty block. Please call flush() first");
-            }
+            safe_panic!("Tried to drop a dirty block. Please call flush() first");
         }
     }
 }

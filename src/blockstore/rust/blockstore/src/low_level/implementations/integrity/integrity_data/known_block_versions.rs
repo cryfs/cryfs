@@ -11,7 +11,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::BlockId;
-use cryfs_utils::binary::{read_nonzerou32, write_nonzerou32, BinaryReadExt, BinaryWriteExt};
+use cryfs_utils::{
+    binary::{read_nonzerou32, write_nonzerou32, BinaryReadExt, BinaryWriteExt},
+    safe_panic,
+};
 
 use super::integrity_violation_error::IntegrityViolationError;
 use super::serialization::KnownBlockVersionsSerialized;
@@ -325,14 +328,7 @@ impl<'a> BlockVersionTransaction<'a> {
 impl<'a> Drop for BlockVersionTransaction<'a> {
     fn drop(&mut self) {
         if self.0.is_some() {
-            // The BlockVersionTransaction left scope without the user calling commit() or cancel() on it
-            if std::thread::panicking() {
-                // We're already panicking, double panic wouldn't show a good error message anyways. Let's just log instead.
-                // A common scenario for this to happen is a failing test case.
-                log::error!("Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
-            } else {
-                panic!("Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
-            }
+            safe_panic!("Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
         }
     }
 }

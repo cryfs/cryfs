@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 
 use super::AsyncDrop;
+use crate::safe_panic;
 
 /// [AsyncDropGuard] allows async dropping of the contained value with a safety check.
 ///
@@ -71,14 +72,7 @@ impl<T: Debug> Drop for AsyncDropGuard<T> {
     fn drop(&mut self) {
         match &self.0 {
             Some(v) => {
-                // The AsyncDropGuard left scope without the user calling async_drop on it
-                if std::thread::panicking() {
-                    // We're already panicking, double panic wouldn't show a good error message anyways. Let's just log instead.
-                    // A common scenario for this to happen is a failing test case.
-                    log::error!("Forgot to call async_drop on {:?}", v);
-                } else {
-                    panic!("Forgot to call async_drop on {:?}", v);
-                }
+                safe_panic!("Forgot to call async_drop on {:?}", v);
             }
             None => {
                 // Everything is ok

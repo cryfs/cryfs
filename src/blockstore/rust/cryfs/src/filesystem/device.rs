@@ -1,11 +1,13 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 use std::path::Path;
-use std::sync::Arc;
 
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    safe_panic,
+};
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, open_file::CryOpenFile, symlink::CrySymlink,
@@ -86,7 +88,7 @@ where
 {
     fn drop(&mut self) {
         if !self.blobstore.is_dropped() {
-            panic!("CryDevice dropped without calling destroy() first");
+            safe_panic!("CryDevice dropped without calling destroy() first");
         }
     }
 }

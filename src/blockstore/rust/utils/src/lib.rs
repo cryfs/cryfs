@@ -4,6 +4,7 @@ pub mod binary;
 pub mod containers;
 pub mod crypto;
 pub mod data;
+mod panic;
 pub mod path;
 pub mod periodic_task;
 pub mod stream;
