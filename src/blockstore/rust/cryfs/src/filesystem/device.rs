@@ -72,4 +72,21 @@ where
         // TODO Implement
         Err(FsError::NotImplemented)
     }
+
+    async fn destroy(mut self) {
+        // TODO Can we do this without unwrap?
+        self.blobstore.async_drop().await.unwrap();
+    }
+}
+
+impl<B> Drop for CryDevice<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+{
+    fn drop(&mut self) {
+        if !self.blobstore.is_dropped() {
+            panic!("CryDevice dropped without calling destroy() first");
+        }
+    }
 }

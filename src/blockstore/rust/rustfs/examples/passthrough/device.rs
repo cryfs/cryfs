@@ -64,6 +64,10 @@ impl Device for PassthroughDevice {
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
     }
+
+    async fn destroy(self) {
+        // Nothing to do
+    }
 }
 
 fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {

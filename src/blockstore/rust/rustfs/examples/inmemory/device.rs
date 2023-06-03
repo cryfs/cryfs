@@ -134,4 +134,8 @@ impl Device for InMemoryDevice {
     async fn statfs(&self) -> FsResult<Statfs> {
         todo!()
     }
+
+    async fn destroy(self) {
+        // Nothing to do
+    }
 }

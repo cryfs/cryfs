@@ -43,6 +43,10 @@ impl<T: Debug> AsyncDropGuard<T> {
     pub fn unsafe_into_inner_dont_drop(mut self) -> T {
         self.0.take().expect("Value already dropped")
     }
+
+    pub fn is_dropped(&self) -> bool {
+        self.0.is_none()
+    }
 }
 
 impl<T: Debug + AsyncDrop> AsyncDropGuard<T> {

@@ -18,4 +18,5 @@ pub trait Device {
     async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink>;
     async fn load_file(&self, path: &Path) -> FsResult<Self::File>;
     async fn statfs(&self) -> FsResult<Statfs>;
+    async fn destroy(self);
 }
