@@ -8,7 +8,8 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 mod fsblob;
 
 pub use fsblob::{
-    AtimeUpdateBehavior, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsError, SymlinkBlob,
+    AtimeUpdateBehavior, BlobType, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsError,
+    SymlinkBlob,
 };
 
 // TODO With an adapter we can run block store tests on this, similar to how we do it for BlobStore

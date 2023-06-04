@@ -8,6 +8,8 @@ use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::BlobId;
 use cryfs_utils::binary::{read_timespec, write_timespec};
 
+// TODO Unify this with the BlobType enum from this very same crate?
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BinRead, BinWrite)]
 #[brw(little, repr=u8)]
 pub enum EntryType {

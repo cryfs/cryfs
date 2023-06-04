@@ -1,16 +1,16 @@
 use async_trait::async_trait;
+use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
+use super::{open_file_list::OpenFileList, Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{DirEntry, FsError, FsResult, Gid, Mode, NumBytes, OpenFlags, Statfs, Uid};
-
 use crate::low_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, IntoFs, OpenResponse,
     OpendirResponse, RequestInfo,
 };
-
-use super::{open_file_list::OpenFileList, Device, Dir, File, Node, OpenFile, Symlink};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 
@@ -80,7 +80,7 @@ where
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
 
     // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
-    open_files: RwLock<OpenFileList<Fs::OpenFile>>,
+    open_files: tokio::sync::RwLock<AsyncDropGuard<OpenFileList<Fs::OpenFile>>>,
 }
 
 impl<Fs: Device> ObjectBasedFsAdapter<Fs>
@@ -88,14 +88,25 @@ where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
     Fs::OpenFile: Send + Sync,
 {
-    pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> Self {
-        let open_files = Default::default();
-        Self {
+    pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
+        let open_files = tokio::sync::RwLock::new(OpenFileList::new());
+        AsyncDropGuard::new(Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
                 Box::new(fs),
             )))),
             open_files,
-        }
+        })
+    }
+}
+
+impl<Fs: Device> Debug for ObjectBasedFsAdapter<Fs>
+where
+    Fs::OpenFile: Send + Sync,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ObjectBasedFsAdapter")
+            .field("open_files", &self.open_files)
+            .finish()
     }
 }
 
@@ -126,14 +137,15 @@ where
     ) -> FsResult<AttrResponse> {
         let attrs = if let Some(fh) = fh {
             // TODO No unwrap
-            let open_file_list = self.open_files.read().unwrap();
+            let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
                 log::error!("getattr: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
             open_file.getattr().await?
         } else {
-            let node = self.fs.read().unwrap().get().load_node(path).await?;
+            let fs = self.fs.read().unwrap();
+            let node = fs.get().load_node(path).await?;
             node.getattr().await?
         };
         Ok(AttrResponse {
@@ -151,14 +163,15 @@ where
     ) -> FsResult<()> {
         // TODO Make sure file/symlink/dir flags are correctly set by this
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().unwrap();
+            let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
                 log::error!("chmod: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
             open_file.chmod(mode).await?
         } else {
-            let node = self.fs.read().unwrap().get().load_node(path).await?;
+            let fs = self.fs.read().unwrap();
+            let node = fs.get().load_node(path).await?;
             node.chmod(mode).await?;
         };
         Ok(())
@@ -173,14 +186,15 @@ where
         gid: Option<Gid>,
     ) -> FsResult<()> {
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().unwrap();
+            let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
                 log::error!("chown: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
             open_file.chown(uid, gid).await?
         } else {
-            let node = self.fs.read().unwrap().get().load_node(path).await?;
+            let fs = self.fs.read().unwrap();
+            let node = fs.get().load_node(path).await?;
             node.chown(uid, gid).await?;
         }
 
@@ -195,14 +209,15 @@ where
         size: NumBytes,
     ) -> FsResult<()> {
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().unwrap();
+            let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
                 log::error!("truncate: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
             open_file.truncate(size).await?
         } else {
-            let file = self.fs.read().unwrap().get().load_file(path).await?;
+            let fs = self.fs.read().unwrap();
+            let file = fs.get().load_file(path).await?;
             file.truncate(size).await?
         };
         Ok(())
@@ -217,14 +232,15 @@ where
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().unwrap();
+            let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
                 log::error!("utimens: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
             open_file.utimens(atime, mtime).await?
         } else {
-            let node = self.fs.read().unwrap().get().load_node(path).await?;
+            let fs = self.fs.read().unwrap();
+            let node = fs.get().load_node(path).await?;
             node.utimens(atime, mtime).await?
         };
         Ok(())
@@ -245,7 +261,8 @@ where
     }
 
     async fn readlink(&self, _req: RequestInfo, path: &Path) -> FsResult<PathBuf> {
-        let link = self.fs.read().unwrap().get().load_symlink(path).await?;
+        let fs = self.fs.read().unwrap();
+        let link = fs.get().load_symlink(path).await?;
         link.target().await
     }
 
@@ -272,7 +289,8 @@ where
         let gid = Gid::from(req.gid);
         let mode = Mode::from(mode).add_dir_flag();
         // TODO Assert mode doesn't have file or symlink flags set
-        let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
+        let fs = self.fs.read().unwrap();
+        let parent_dir = fs.get().load_dir(parent).await?;
         let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
         Ok(AttrResponse {
             ttl: TTL_MKDIR,
@@ -281,13 +299,15 @@ where
     }
 
     async fn unlink(&self, _req: RequestInfo, parent: &Path, name: &str) -> FsResult<()> {
-        let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
+        let fs = self.fs.read().unwrap();
+        let parent_dir = fs.get().load_dir(parent).await?;
         parent_dir.remove_child_file_or_symlink(&name).await?;
         Ok(())
     }
 
     async fn rmdir(&self, _req: RequestInfo, parent: &Path, name: &str) -> FsResult<()> {
-        let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
+        let fs = self.fs.read().unwrap();
+        let parent_dir = fs.get().load_dir(parent).await?;
         parent_dir.remove_child_dir(&name).await?;
         Ok(())
     }
@@ -301,7 +321,8 @@ where
     ) -> FsResult<AttrResponse> {
         let uid = Uid::from(req.uid);
         let gid = Gid::from(req.gid);
-        let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
+        let fs = self.fs.read().unwrap();
+        let parent_dir = fs.get().load_dir(parent).await?;
         let new_symlink_attrs = parent_dir
             .create_child_symlink(&name, target, uid, gid)
             .await?;
@@ -319,7 +340,8 @@ where
         newparent: &Path,
         newname: &str,
     ) -> FsResult<()> {
-        let old_parent_dir = self.fs.read().unwrap().get().load_dir(oldparent).await?;
+        let fs = self.fs.read().unwrap();
+        let old_parent_dir = fs.get().load_dir(oldparent).await?;
         let new_path = newparent.join(&*newname);
         // TODO Should rename overwrite a potentially already existing target or not? Make sure we handle that the right way.
         old_parent_dir.rename_child(&oldname, &new_path).await?;
@@ -343,9 +365,10 @@ where
         path: &Path,
         flags: OpenFlags,
     ) -> FsResult<OpenResponse> {
-        let file = self.fs.read().unwrap().get().load_file(path).await?;
+        let fs = self.fs.read().unwrap();
+        let file = fs.get().load_file(path).await?;
         let open_file = file.open(flags).await?;
-        let fh = self.open_files.write().unwrap().add(open_file);
+        let fh = self.open_files.write().await.add(open_file);
         Ok(OpenResponse {
             fh: fh.into(),
             // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
@@ -364,7 +387,7 @@ where
     ) -> CallbackResult {
         let offset = NumBytes::from(offset);
         let size = NumBytes::from(u64::from(size));
-        let open_file_list = self.open_files.read().unwrap();
+        let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
             log::error!("read: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
@@ -396,7 +419,7 @@ where
     ) -> FsResult<NumBytes> {
         let data_len = data.len();
         let data = data.into();
-        let open_file_list = self.open_files.read().unwrap();
+        let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
             log::error!("write: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
@@ -413,7 +436,7 @@ where
         fh: FileHandle,
         _lock_owner: u64,
     ) -> FsResult<()> {
-        let open_file_list = self.open_files.read().unwrap();
+        let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
             log::error!("flush: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
@@ -432,7 +455,8 @@ where
         _flush: bool,
     ) -> FsResult<()> {
         // TODO No unwrap
-        self.open_files.write().unwrap().remove(fh.into());
+        let mut removed = self.open_files.write().await.remove(fh.into());
+        removed.async_drop().await?;
         Ok(())
     }
 
@@ -443,7 +467,7 @@ where
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
-        let open_file_list = self.open_files.read().unwrap();
+        let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
             log::error!("fsync: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
@@ -472,7 +496,8 @@ where
         path: &Path,
         _fh: FileHandle,
     ) -> FsResult<Vec<DirEntry>> {
-        let dir = self.fs.read().unwrap().get().load_dir(path).await?;
+        let fs = self.fs.read().unwrap();
+        let dir = fs.get().load_dir(path).await?;
         let entries = dir.entries().await?;
         Ok(entries)
     }
@@ -570,11 +595,12 @@ where
     ) -> FsResult<CreateResponse> {
         let mode = mode.add_file_flag();
         // TODO Assert that dir/symlink flags aren't set
-        let parent_dir = self.fs.read().unwrap().get().load_dir(parent).await?;
+        let fs = self.fs.read().unwrap();
+        let parent_dir = fs.get().load_dir(parent).await?;
         let (file_attrs, open_file) = parent_dir
             .create_and_open_file(&name, mode, req.uid, req.gid)
             .await?;
-        let fh = self.open_files.write().unwrap().add(open_file);
+        let fh = self.open_files.write().await.add(open_file);
         Ok(CreateResponse {
             ttl: TTL_CREATE,
             attrs: file_attrs,
@@ -591,7 +617,22 @@ where
     D: Device + Send + Sync,
     D::OpenFile: Send + Sync,
 {
-    fn into_fs(self) -> ObjectBasedFsAdapter<D> {
+    fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapter<D>> {
         ObjectBasedFsAdapter::new(self)
+    }
+}
+
+#[async_trait]
+impl<Fs> AsyncDrop for ObjectBasedFsAdapter<Fs>
+where
+    Fs: Device + Send + Sync,
+    Fs::OpenFile: Send + Sync,
+{
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        let mut v = self.open_files.write().await;
+        v.async_drop().await?;
+        Ok(())
     }
 }

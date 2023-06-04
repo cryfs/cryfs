@@ -32,8 +32,8 @@ pub trait Blob<'a>: Sized + Debug {
 
 #[async_trait]
 pub trait BlobStore {
-    // TODO Remove Send bound
-    type ConcreteBlob<'a>: Blob<'a> + Debug + Send
+    // TODO Remove Send+Sync bound
+    type ConcreteBlob<'a>: Blob<'a> + Debug + Send + Sync
     where
         Self: 'a;
 

@@ -7,20 +7,30 @@ use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{object_based_api::Symlink, FsError, FsResult};
 use cryfs_utils::async_drop::AsyncDrop;
 
-pub struct CrySymlink<B>
+pub struct CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     // TODO Do we need to store node here or can we just store the target directly?
-    node: CryNode<B>,
+    node: CryNode<'a, B>,
+}
+
+impl<'a, B> CrySymlink<'a, B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+{
+    pub fn new(node: CryNode<'a, B>) -> Self {
+        Self { node }
+    }
 }
 
 #[async_trait]
-impl<B> Symlink for CrySymlink<B>
+impl<'a, B> Symlink for CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     async fn target(&self) -> FsResult<PathBuf> {
         // TODO Implement

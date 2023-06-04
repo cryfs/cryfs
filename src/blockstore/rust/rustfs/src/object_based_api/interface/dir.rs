@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::path::Path;
 
 use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, Uid};
+use cryfs_utils::async_drop::AsyncDropGuard;
 
 #[async_trait]
 pub trait Dir {
@@ -33,7 +34,10 @@ pub trait Dir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::OpenFile)>;
+    ) -> FsResult<(
+        NodeAttrs,
+        AsyncDropGuard<<Self::Device as super::Device>::OpenFile>,
+    )>;
 
     async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()>;
 }

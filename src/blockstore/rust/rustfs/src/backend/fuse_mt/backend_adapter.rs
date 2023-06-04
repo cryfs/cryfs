@@ -5,17 +5,20 @@ use fuse_mt::{
 };
 use std::borrow::Cow;
 use std::ffi::OsStr;
+use std::fmt::Debug;
 use std::future::Future;
 use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::time::SystemTime;
-use tokio::runtime::Runtime;
 
 use crate::common::{
-    DirEntry, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Statfs, Uid,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Statfs, Uid,
 };
-
 use crate::low_level_api::{AsyncFilesystem, FileHandle};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    safe_panic,
+};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
@@ -27,15 +30,36 @@ use crate::low_level_api::{AsyncFilesystem, FileHandle};
 //  - "Set flag_nullpath_ok nonzero if your code can accept a NULL path argument (because it gets file information from fi->fh) for the following operations: fgetattr, flush, fsync, fsyncdir, ftruncate, lock, read, readdir, release, releasedir, and write. This will allow FUSE to run more efficiently."
 //  - Check function documentation and corner cases are as I expect them to be
 
-pub struct BackendAdapter<Fs: AsyncFilesystem> {
-    fs: Fs,
+pub struct BackendAdapter<Fs>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
+    // TODO RwLock is only needed for async drop. Can we remove it?
+    fs: tokio::sync::RwLock<AsyncDropGuard<Fs>>,
 
     runtime: tokio::runtime::Handle,
 }
 
-impl<Fs: AsyncFilesystem> BackendAdapter<Fs> {
-    pub fn new(fs: Fs, runtime: tokio::runtime::Handle) -> Self {
-        Self { fs, runtime }
+impl<Fs> Debug for BackendAdapter<Fs>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BackendAdapter")
+            .field("fs", &self.fs)
+            .finish()
+    }
+}
+
+impl<Fs> BackendAdapter<Fs>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
+    pub fn new(fs: AsyncDropGuard<Fs>, runtime: tokio::runtime::Handle) -> Self {
+        Self {
+            fs: tokio::sync::RwLock::new(fs),
+            runtime,
+        }
     }
 
     fn run_async<R, F>(&self, log_msg: &str, func: impl FnOnce() -> F) -> Result<R, libc::c_int>
@@ -60,31 +84,49 @@ impl<Fs: AsyncFilesystem> BackendAdapter<Fs> {
     }
 }
 
-impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
+impl<Fs> FilesystemMT for BackendAdapter<Fs>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
     fn init(&self, req: RequestInfo) -> ResultEmpty {
-        self.run_async(&format!("init"), move || self.fs.init(req.into()))
+        self.run_async(&format!("init"), move || async move {
+            let fs = self.fs.read().await;
+            fs.init(req.into()).await?;
+            Ok(())
+        })
     }
 
     fn destroy(&self) {
         self.run_async(&format!("destroy"), move || async move {
-            self.fs.destroy().await;
+            let mut fs = self.fs.write().await;
+            fs.destroy().await;
+            fs.async_drop().await?;
             Ok(())
         })
-        .expect("can't fail");
+        .expect("failed to drop file system");
+
         // TODO Is there a way to do the above without a call to expect()?
     }
 
     fn getattr(&self, req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
         self.run_async(&format!("getattr {path:?}"), move || async move {
-            let response = self.fs.getattr(req.into(), path, fh.into_fh()).await?;
+            let response = self
+                .fs
+                .read()
+                .await
+                .getattr(req.into(), path, fh.into_fh())
+                .await?;
             Ok((response.ttl, convert_node_attrs(response.attrs)))
         })
     }
 
     fn chmod(&self, req: RequestInfo, path: &Path, fh: Option<u64>, mode: u32) -> ResultEmpty {
-        self.run_async(&format!("chmod({path:?}, mode={mode})"), || {
+        self.run_async(&format!("chmod({path:?}, mode={mode})"), || async move {
             self.fs
+                .read()
+                .await
                 .chmod(req.into(), path, fh.into_fh(), Mode::from(mode))
+                .await
         })
     }
 
@@ -98,22 +140,29 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     ) -> ResultEmpty {
         self.run_async(
             &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
-            || {
-                self.fs.chown(
-                    req.into(),
-                    path,
-                    fh.into_fh(),
-                    uid.into_uid(),
-                    gid.into_gid(),
-                )
+            || async move {
+                self.fs
+                    .read()
+                    .await
+                    .chown(
+                        req.into(),
+                        path,
+                        fh.into_fh(),
+                        uid.into_uid(),
+                        gid.into_gid(),
+                    )
+                    .await
             },
         )
     }
 
     fn truncate(&self, req: RequestInfo, path: &Path, fh: Option<u64>, size: u64) -> ResultEmpty {
-        self.run_async(&format!("truncate({path:?}, {size})"), move || {
+        self.run_async(&format!("truncate({path:?}, {size})"), move || async move {
             self.fs
+                .read()
+                .await
                 .truncate(req.into(), path, fh.into_fh(), NumBytes::from(size))
+                .await
         })
     }
 
@@ -127,9 +176,12 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     ) -> ResultEmpty {
         self.run_async(
             &format!("utimens({path:?}, fh={fh:?}, atime={atime:?}, mtime={mtime:?})"),
-            || {
+            || async move {
                 self.fs
+                    .read()
+                    .await
                     .utimens(req.into(), path, fh.into_fh(), atime, mtime)
+                    .await
             },
         )
     }
@@ -145,12 +197,14 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
         bkuptime: Option<SystemTime>,
         flags: Option<u32>,
     ) -> ResultEmpty {
-        self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), || self.fs.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags))
+        self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), ||async move {
+            self.fs.read().await.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags).await
+        })
     }
 
     fn readlink(&self, req: RequestInfo, path: &Path) -> ResultData {
         self.run_async(&format!("readlink({path:?})"), move || async move {
-            let path = self.fs.readlink(req.into(), path).await?;
+            let path = self.fs.read().await.readlink(req.into(), path).await?;
             // TODO is OsStr the best way to convert our path to the return value?
             Ok(path.into_os_string().into_vec())
         })
@@ -169,6 +223,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .mknod(
                         req.into(),
                         parent,
@@ -188,6 +244,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .mkdir(req.into(), parent, &parse_node_name(name), Mode::from(mode))
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -197,16 +255,18 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
 
     fn unlink(&self, req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
         let name = &parse_node_name(name);
-        self.run_async(&format!("unlink({parent:?}, name={name:?})"), move || {
-            self.fs.unlink(req.into(), parent, &name)
-        })
+        self.run_async(
+            &format!("unlink({parent:?}, name={name:?})"),
+            move || async move { self.fs.read().await.unlink(req.into(), parent, &name).await },
+        )
     }
 
     fn rmdir(&self, req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
         let name = &parse_node_name(name);
-        self.run_async(&format!("rmdir({parent:?}, name={name:?})"), move || {
-            self.fs.rmdir(req.into(), parent, &name)
-        })
+        self.run_async(
+            &format!("rmdir({parent:?}, name={name:?})"),
+            move || async move { self.fs.read().await.rmdir(req.into(), parent, &name).await },
+        )
     }
 
     fn symlink(&self, req: RequestInfo, parent: &Path, name: &OsStr, target: &Path) -> ResultEntry {
@@ -215,6 +275,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .symlink(req.into(), parent, &parse_node_name(name), target)
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -236,14 +298,14 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             &format!(
                 "rename(oldparent={oldparent:?}, oldname={oldname:?}, newparent={newparent:?}, newname={newname:?})"
             ),
-            move || {
-                self.fs.rename(
+            move || async move {
+                self.fs.read().await.rename(
                     req.into(),
                     oldparent,
                     oldname,
                     newparent,
                     newname,
-                )
+                ).await
             },
         )
     }
@@ -260,6 +322,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .link(req.into(), path, newparent, &parse_node_name(newname))
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -275,6 +339,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .open(req.into(), path, parse_openflags(flags))
                     .await?;
                 // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
@@ -298,6 +364,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             let log_msg = format!("read({path:?}, fh={fh}, offset={offset}, size={size})");
             log::info!("{}...", log_msg);
             self.fs
+                .read()
+                .await
                 .read(
                     req.into(),
                     path,
@@ -338,6 +406,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .write(
                         req.into(),
                         path,
@@ -354,9 +424,12 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     }
 
     fn flush(&self, req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
-        self.run_async(&format!("flush({path:?}, fh={fh})"), || {
+        self.run_async(&format!("flush({path:?}, fh={fh})"), || async move {
             self.fs
+                .read()
+                .await
                 .flush(req.into(), path, FileHandle::from(fh), lock_owner)
+                .await
         })
     }
 
@@ -375,15 +448,19 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             &format!(
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
             ),
-            || {
-                self.fs.release(
-                    req.into(),
-                    path,
-                    FileHandle::from(fh),
-                    parse_openflags(flags),
-                    lock_owner,
-                    flush,
-                )
+            || async move {
+                self.fs
+                    .read()
+                    .await
+                    .release(
+                        req.into(),
+                        path,
+                        FileHandle::from(fh),
+                        parse_openflags(flags),
+                        lock_owner,
+                        flush,
+                    )
+                    .await
             },
         )
     }
@@ -391,9 +468,12 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     fn fsync(&self, req: RequestInfo, path: &Path, fh: u64, datasync: bool) -> ResultEmpty {
         self.run_async(
             &format!("fsync({path:?}, fh={fh}, datasync={datasync})"),
-            || {
+            || async move {
                 self.fs
+                    .read()
+                    .await
                     .fsync(req.into(), path, FileHandle::from(fh), datasync)
+                    .await
             },
         )
     }
@@ -402,7 +482,12 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
         self.run_async(
             &format!("opendir({path:?}, flags={flags})"),
             move || async move {
-                let response = self.fs.opendir(req.into(), path, flags).await?;
+                let response = self
+                    .fs
+                    .read()
+                    .await
+                    .opendir(req.into(), path, flags)
+                    .await?;
                 Ok((response.fh.0, response.flags))
             },
         )
@@ -412,6 +497,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
         self.run_async(&format!("readdir({path:?}, fh={fh})"), move || async move {
             let entries = self
                 .fs
+                .read()
+                .await
                 .readdir(req.into(), path, FileHandle::from(fh))
                 .await?;
             Ok(convert_dir_entries(entries))
@@ -421,9 +508,12 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     fn releasedir(&self, req: RequestInfo, path: &Path, fh: u64, flags: u32) -> ResultEmpty {
         self.run_async(
             &format!("releasedir({path:?}, fh={fh}, flags={flags})"),
-            || {
+            || async move {
                 self.fs
+                    .read()
+                    .await
                     .releasedir(req.into(), path, FileHandle::from(fh), flags)
+                    .await
             },
         )
     }
@@ -431,16 +521,19 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
     fn fsyncdir(&self, req: RequestInfo, path: &Path, fh: u64, datasync: bool) -> ResultEmpty {
         self.run_async(
             &format!("fsyncdir({path:?}, fh={fh}, datasync={datasync})"),
-            || {
+            || async move {
                 self.fs
+                    .read()
+                    .await
                     .fsyncdir(req.into(), path, FileHandle::from(fh), datasync)
+                    .await
             },
         )
     }
 
     fn statfs(&self, req: RequestInfo, path: &Path) -> ResultStatfs {
         self.run_async(&format!("statfs({path:?})"), move || async move {
-            let response = self.fs.statfs(req.into(), path).await?;
+            let response = self.fs.read().await.statfs(req.into(), path).await?;
             Ok(convert_statfs(response))
         })
     }
@@ -460,15 +553,15 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
                 "setxattr({path:?}, name={name:?}, value=[{value_len} bytes], flags={flags}, position={position})",
                 value_len = value.len(),
             ),
-            || {
-                self.fs.setxattr(
+            || async move {
+                self.fs.read().await.setxattr(
                     req.into(),
                     path,
                     name,
                     value,
                     flags,
                     position,
-                )
+                ).await
             },
         )
     }
@@ -481,12 +574,19 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
                 let name = parse_node_name(name);
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
                 if 0 == size {
-                    let response = self.fs.getxattr_numbytes(req, path, &name).await?;
+                    let response = self
+                        .fs
+                        .read()
+                        .await
+                        .getxattr_numbytes(req, path, &name)
+                        .await?;
                     // TODO No unwrap
                     Ok(Xattr::Size(u32::try_from(u64::from(response)).unwrap()))
                 } else {
                     let response = self
                         .fs
+                        .read()
+                        .await
                         .getxattr_data(req, path, &name, NumBytes::from(u64::from(size)))
                         .await?;
                     Ok(Xattr::Data(response))
@@ -502,12 +602,14 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
                 let req = req.into();
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
                 if 0 == size {
-                    let response = self.fs.listxattr_numbytes(req, path).await?;
+                    let response = self.fs.read().await.listxattr_numbytes(req, path).await?;
                     // TODO No unwrap
                     Ok(Xattr::Size(u32::try_from(u64::from(response)).unwrap()))
                 } else {
                     let response = self
                         .fs
+                        .read()
+                        .await
                         .listxattr_data(req, path, NumBytes::from(u64::from(size)))
                         .await?;
                     Ok(Xattr::Data(response))
@@ -518,14 +620,21 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
 
     fn removexattr(&self, req: RequestInfo, path: &Path, name: &OsStr) -> ResultEmpty {
         let name = &parse_node_name(name);
-        self.run_async(&format!("removexattr({path:?}, name={name:?})"), || {
-            self.fs.removexattr(req.into(), path, name)
-        })
+        self.run_async(
+            &format!("removexattr({path:?}, name={name:?})"),
+            || async move {
+                self.fs
+                    .read()
+                    .await
+                    .removexattr(req.into(), path, name)
+                    .await
+            },
+        )
     }
 
     fn access(&self, req: RequestInfo, path: &Path, mask: u32) -> ResultEmpty {
-        self.run_async(&format!("access({path:?}, mask={mask})"), || {
-            self.fs.access(req.into(), path, mask)
+        self.run_async(&format!("access({path:?}, mask={mask})"), || async move {
+            self.fs.read().await.access(req.into(), path, mask).await
         })
     }
 
@@ -543,6 +652,8 @@ impl<Fs: AsyncFilesystem> FilesystemMT for BackendAdapter<Fs> {
             move || async move {
                 let response = self
                     .fs
+                    .read()
+                    .await
                     .create(
                         req.into(),
                         parent,
@@ -582,6 +693,18 @@ fn convert_node_attrs(attrs: NodeAttrs) -> FileAttr {
         rdev: 0, // TODO What to do about this?
         /// Flags (macOS only; see chflags(2))
         flags: 0, // TODO What to do about this?
+    }
+}
+
+impl<Fs> Drop for BackendAdapter<Fs>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
+    fn drop(&mut self) {
+        // TODO
+        // if !self.fs.read().await.is_dropped() {
+        //     safe_panic!("BackendAdapter dropped without calling destroy() first");
+        // }
     }
 }
 

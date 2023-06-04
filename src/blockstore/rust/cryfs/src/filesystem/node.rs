@@ -3,26 +3,45 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use crate::filesystem::fsblobstore::FsBlobStore;
+use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
-pub struct CryNode<B>
+pub struct CryNode<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    blobstore: &'a FsBlobStore<B>,
     blob_id: BlobId,
+    blob_type: BlobType,
+}
+
+impl<'a, B> CryNode<'a, B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+{
+    pub fn new(blobstore: &'a FsBlobStore<B>, blob_type: BlobType, blob_id: BlobId) -> Self {
+        Self {
+            blobstore,
+            blob_id,
+            blob_type,
+        }
+    }
+
+    pub fn node_type(&self) -> BlobType {
+        self.blob_type
+    }
 }
 
 #[async_trait]
-impl<B> Node for CryNode<B>
+impl<'a, B> Node for CryNode<'a, B>
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         // TODO Implement

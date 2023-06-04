@@ -5,21 +5,31 @@ use std::path::Path;
 use super::{device::CryDevice, node::CryNode, open_file::CryOpenFile};
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
-use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-pub struct CryDir<B>
+pub struct CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    node: CryNode<B>,
+    node: CryNode<'a, B>,
+}
+
+impl<'a, B> CryDir<'a, B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+{
+    pub fn new(node: CryNode<'a, B>) -> Self {
+        Self { node }
+    }
 }
 
 #[async_trait]
-impl<B> Dir for CryDir<B>
+impl<'a, B> Dir for CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     type Device = CryDevice<B>;
 
@@ -66,7 +76,7 @@ where
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, CryOpenFile<B>)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryOpenFile<B>>)> {
         // TODO Implement
         Err(FsError::NotImplemented)
     }

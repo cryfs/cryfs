@@ -27,28 +27,28 @@ impl PassthroughDevice {
 
 #[async_trait]
 impl Device for PassthroughDevice {
-    type Node = PassthroughNode;
-    type Dir = PassthroughDir;
-    type Symlink = PassthroughSymlink;
-    type File = PassthroughFile;
+    type Node<'a> = PassthroughNode;
+    type Dir<'a> = PassthroughDir;
+    type Symlink<'a> = PassthroughSymlink;
+    type File<'a> = PassthroughFile;
     type OpenFile = PassthroughOpenFile;
 
-    async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
+    async fn load_node(&self, path: &Path) -> FsResult<Self::Node<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughNode::new(path))
     }
 
-    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
+    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughDir::new(self.basedir.clone(), path))
     }
 
-    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink> {
+    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughSymlink::new(path))
     }
 
-    async fn load_file(&self, path: &Path) -> FsResult<Self::File> {
+    async fn load_file(&self, path: &Path) -> FsResult<Self::File<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughFile::new(path))
     }

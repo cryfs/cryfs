@@ -3,6 +3,7 @@ use cryfs_rustfs::{
     object_based_api::{Dir, Node},
     DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
 };
+use cryfs_utils::async_drop::AsyncDropGuard;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
@@ -131,7 +132,7 @@ impl Dir for PassthroughDir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, PassthroughOpenFile)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<PassthroughOpenFile>)> {
         let path = self.path.join(name);
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {

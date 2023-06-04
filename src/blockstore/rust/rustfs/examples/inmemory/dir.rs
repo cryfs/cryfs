@@ -3,6 +3,7 @@ use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
     OpenFlags, Uid,
 };
+use cryfs_utils::async_drop::AsyncDropGuard;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, Weak};
@@ -246,7 +247,7 @@ impl Dir for InMemoryDirRef {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, InMemoryOpenFileRef)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<InMemoryOpenFileRef>)> {
         let mut inode = self.inode.lock().unwrap();
         let file = InMemoryFileRef::new(mode, uid, gid);
         let openfile = file.open_sync(OpenFlags::ReadWrite);

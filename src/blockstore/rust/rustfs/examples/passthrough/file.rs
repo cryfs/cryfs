@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{object_based_api::File, FsError, FsResult, NumBytes, OpenFlags};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use std::path::PathBuf;
 
 use super::device::PassthroughDevice;
@@ -20,7 +21,7 @@ impl PassthroughFile {
 impl File for PassthroughFile {
     type Device = PassthroughDevice;
 
-    async fn open(&self, openflags: OpenFlags) -> FsResult<PassthroughOpenFile> {
+    async fn open(&self, openflags: OpenFlags) -> FsResult<AsyncDropGuard<PassthroughOpenFile>> {
         let mut options = tokio::fs::OpenOptions::new();
         match openflags {
             OpenFlags::Read => options.read(true),

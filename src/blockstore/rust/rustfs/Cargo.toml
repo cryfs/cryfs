@@ -20,6 +20,9 @@ thiserror = "^1.0.40"
 cryfs-utils = {path = "../utils"}
 anyhow = "^1.0.71"
 
+[dev-dependencies]
+tokio = {version="^1.23.0", features=["fs"]}
+
 [features]
 default = ["dep:fuse_mt", "fuse_mt"]
 fuse_mt = ["dep:fuse_mt_fuser"]

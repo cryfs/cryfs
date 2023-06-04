@@ -109,25 +109,25 @@ impl InMemoryDevice {
 
 #[async_trait]
 impl Device for InMemoryDevice {
-    type Node = InMemoryNodeRef;
-    type Dir = InMemoryDirRef;
-    type Symlink = InMemorySymlinkRef;
-    type File = InMemoryFileRef;
+    type Node<'a> = InMemoryNodeRef;
+    type Dir<'a> = InMemoryDirRef;
+    type Symlink<'a> = InMemorySymlinkRef;
+    type File<'a> = InMemoryFileRef;
     type OpenFile = InMemoryOpenFileRef;
 
-    async fn load_node(&self, path: &Path) -> FsResult<Self::Node> {
+    async fn load_node(&self, path: &Path) -> FsResult<Self::Node<'_>> {
         self.rootdir.load_node(path)
     }
 
-    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir> {
+    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir<'_>> {
         self.rootdir.load_dir(path)
     }
 
-    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink> {
+    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink<'_>> {
         self.rootdir.load_symlink(path)
     }
 
-    async fn load_file(&self, path: &Path) -> FsResult<Self::File> {
+    async fn load_file(&self, path: &Path) -> FsResult<Self::File<'_>> {
         self.rootdir.load_file(path)
     }
 

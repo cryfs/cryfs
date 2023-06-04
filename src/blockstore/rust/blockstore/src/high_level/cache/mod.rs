@@ -235,7 +235,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop 
             // Now we're the only task having access to this arc
             let cache = Arc::try_unwrap(cache)
                 .expect("This can't fail since we are the only task having access");
-            for_each_unordered(
+            for_each_unordered::<(BlockId, BlockCacheEntry<B>), anyhow::Error, _>(
                 cache.into_entries_unordered().await,
                 |(key, mut value)| async move {
                     value._flush_to_base_store(&key).await?;

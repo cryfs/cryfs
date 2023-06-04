@@ -14,7 +14,7 @@ mod fs_error;
 pub use fs_error::FsError;
 
 mod layout;
-use layout::BlobType;
+pub use layout::BlobType;
 
 mod base_blob;
 use base_blob::BaseBlob;
@@ -91,8 +91,17 @@ where
         }
     }
 
-    pub fn into_file(this: AsyncDropGuard<Self>) -> Result<FileBlob<'a, B>> {
+    pub fn blob_type(&self) -> BlobType {
+        match self {
+            Self::File(blob) => BlobType::File,
+            Self::Directory(blob) => BlobType::Dir,
+            Self::Symlink(blob) => BlobType::Symlink,
+        }
+    }
+
+    pub async fn into_file(mut this: AsyncDropGuard<Self>) -> Result<FileBlob<'a, B>> {
         if !matches!(*this, Self::File(_)) {
+            this.async_drop().await?;
             bail!("FsBlob is not a file");
         }
         // No need to call async_drop since we were a file
@@ -104,8 +113,11 @@ where
         Ok(blob)
     }
 
-    pub fn into_dir(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
+    pub async fn into_dir(
+        mut this: AsyncDropGuard<Self>,
+    ) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
         if !matches!(*this, Self::Directory(_)) {
+            this.async_drop().await?;
             bail!("FsBlob is not a directory");
         }
         // No need to call async_drop since we are going to return an AsyncDropGuard
@@ -117,8 +129,9 @@ where
         Ok(blob)
     }
 
-    pub fn into_symlink(this: AsyncDropGuard<Self>) -> Result<SymlinkBlob<'a, B>> {
+    pub async fn into_symlink(mut this: AsyncDropGuard<Self>) -> Result<SymlinkBlob<'a, B>> {
         if !matches!(*this, Self::Symlink(_)) {
+            this.async_drop().await?;
             bail!("FsBlob is not a symlink");
         }
         // No need to call async_drop since we were a file

@@ -1,26 +1,35 @@
 use fuse_mt::FuseMT;
+use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use super::{backend_adapter::BackendAdapter, RunningFilesystem};
+use crate::common::FsError;
 use crate::low_level_api::{AsyncFilesystem, IntoFs};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-pub fn mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
+pub fn mount<Fs>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
-) -> std::io::Result<()> {
+) -> std::io::Result<()>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
     let fs = spawn_mount(fs, mountpoint, runtime)?;
     fs.block_until_unmounted();
     Ok(())
 }
 
-pub fn spawn_mount<Fs: AsyncFilesystem + Send + Sync + 'static>(
+pub fn spawn_mount<Fs>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
-) -> std::io::Result<RunningFilesystem> {
+) -> std::io::Result<RunningFilesystem>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
+{
     let backend = BackendAdapter::new(fs.into_fs(), runtime);
     let fs = FuseMT::new(backend, num_threads());
 

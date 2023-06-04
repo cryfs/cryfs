@@ -11,3 +11,6 @@ pub use async_drop_arc::AsyncDropArc;
 mod sync_drop;
 #[cfg(any(test, feature = "testutils"))]
 pub use sync_drop::SyncDrop;
+
+mod hash_map;
+pub use hash_map::AsyncDropHashMap;

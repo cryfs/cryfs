@@ -20,6 +20,7 @@ use crate::safe_panic;
 /// exists without being wrapped in [AsyncDropGuard], the safety check will not run and
 /// call sites might forget to correctly drop `T`.
 #[derive(Debug)]
+#[must_use = "You have to call async_drop() on this value to drop it"]
 pub struct AsyncDropGuard<T: Debug>(Option<T>);
 
 impl<T: Debug> AsyncDropGuard<T> {
@@ -45,6 +46,7 @@ impl<T: Debug> AsyncDropGuard<T> {
         self.0.take().expect("Value already dropped")
     }
 
+    // TODO Test
     pub fn is_dropped(&self) -> bool {
         self.0.is_none()
     }

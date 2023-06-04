@@ -1,11 +1,13 @@
 use async_trait::async_trait;
-use cryfs_utils::data::Data;
-
-use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
+use std::fmt::Debug;
 use std::time::SystemTime;
 
+use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
+use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::data::Data;
+
 #[async_trait]
-pub trait OpenFile {
+pub trait OpenFile: Debug {
     async fn getattr(&self) -> FsResult<NodeAttrs>;
     async fn chmod(&self, mode: Mode) -> FsResult<()>;
     async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()>;

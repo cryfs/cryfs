@@ -1,14 +1,21 @@
-use super::AsyncFilesystem;
+use std::fmt::Debug;
 
-pub trait IntoFs<Fs: AsyncFilesystem> {
-    fn into_fs(self) -> Fs;
+use super::AsyncFilesystem;
+use crate::common::FsError;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+
+pub trait IntoFs<Fs>
+where
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug,
+{
+    fn into_fs(self) -> AsyncDropGuard<Fs>;
 }
 
-impl<Fs> IntoFs<Fs> for Fs
+impl<Fs> IntoFs<Fs> for AsyncDropGuard<Fs>
 where
-    Fs: AsyncFilesystem,
+    Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug,
 {
-    fn into_fs(self) -> Fs {
+    fn into_fs(self) -> Self {
         self
     }
 }

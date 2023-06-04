@@ -3,6 +3,8 @@ use cryfs_rustfs::{
     object_based_api::{File, OpenFile},
     Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags, Uid,
 };
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -99,11 +101,11 @@ impl InMemoryFileRef {
         }
     }
 
-    pub fn open_sync(&self, openflags: OpenFlags) -> InMemoryOpenFileRef {
-        InMemoryOpenFileRef {
+    pub fn open_sync(&self, openflags: OpenFlags) -> AsyncDropGuard<InMemoryOpenFileRef> {
+        AsyncDropGuard::new(InMemoryOpenFileRef {
             openflags,
             inode: Arc::clone(&self.inode),
-        }
+        })
     }
 
     pub fn metadata(&self) -> NodeAttrs {
@@ -131,7 +133,7 @@ impl InMemoryFileRef {
 impl File for InMemoryFileRef {
     type Device = InMemoryDevice;
 
-    async fn open(&self, openflags: OpenFlags) -> FsResult<InMemoryOpenFileRef> {
+    async fn open(&self, openflags: OpenFlags) -> FsResult<AsyncDropGuard<InMemoryOpenFileRef>> {
         Ok(self.open_sync(openflags))
     }
 
@@ -229,6 +231,24 @@ impl OpenFile for InMemoryOpenFileRef {
     async fn fsync(&self, _datasync: bool) -> FsResult<()> {
         // TODO Is fsync allowed when openflags are readonly?
         // No need to fsync because we're in-memory
+        Ok(())
+    }
+}
+
+impl Debug for InMemoryOpenFileRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InMemoryOpenFileRef")
+            .field("openflags", &self.openflags)
+            .finish()
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for InMemoryOpenFileRef {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
         Ok(())
     }
 }

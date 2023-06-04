@@ -3,10 +3,13 @@ use futures::{
     future,
     stream::{FuturesUnordered, Stream, StreamExt},
 };
+use std::fmt::Debug;
 use std::future::Future;
 
 /// Run the stream to completion and log all errors encountered, except one error which is returned
-pub async fn run_to_completion(stream: impl Stream<Item = Result<()>>) -> Result<()> {
+pub async fn run_to_completion<E: Debug>(
+    stream: impl Stream<Item = Result<(), E>>,
+) -> Result<(), E> {
     let errors = stream.filter_map(|result| match result {
         Ok(()) => future::ready(None),
         Err(err) => future::ready(Some(err)),
@@ -35,12 +38,13 @@ pub async fn run_to_completion(stream: impl Stream<Item = Result<()>>) -> Result
 /// If one item fails, the other items will still be run to completion
 /// and all errors will be logged in the end. This is different from
 /// [TryStreamExt::for_each_concurrent].
-pub async fn for_each_unordered<T, F>(
+pub async fn for_each_unordered<T, E, F>(
     items: impl Iterator<Item = T>,
     func: impl Fn(T) -> F,
-) -> Result<()>
+) -> Result<(), E>
 where
-    F: Future<Output = Result<()>>,
+    F: Future<Output = Result<(), E>>,
+    E: Debug,
 {
     let tasks: FuturesUnordered<_> = items.map(func).collect();
     run_to_completion(tasks).await

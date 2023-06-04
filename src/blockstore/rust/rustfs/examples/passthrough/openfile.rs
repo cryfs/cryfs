@@ -1,7 +1,9 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_rustfs::{
     object_based_api::OpenFile, Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
 };
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
@@ -9,13 +11,14 @@ use std::time::SystemTime;
 use super::errors::{IoResultExt, NixResultExt};
 use super::utils::{convert_metadata, convert_timespec};
 
+#[derive(Debug)]
 pub struct PassthroughOpenFile {
     open_file: tokio::fs::File,
 }
 
 impl PassthroughOpenFile {
-    pub fn new(open_file: tokio::fs::File) -> Self {
-        Self { open_file }
+    pub fn new(open_file: tokio::fs::File) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { open_file })
     }
 }
 
@@ -170,6 +173,16 @@ impl OpenFile for PassthroughOpenFile {
             // only sync data, not metadata
             self.open_file.sync_data().await.map_error()?;
         }
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for PassthroughOpenFile {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
         Ok(())
     }
 }
