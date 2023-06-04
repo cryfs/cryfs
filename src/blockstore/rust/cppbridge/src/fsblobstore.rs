@@ -551,21 +551,33 @@ impl<'a> RustFsBlobBridge<'a> {
     }
 
     fn to_file(&mut self) -> Result<Box<RustFileBlobBridge<'a>>> {
-        Ok(Box::new(RustFileBlobBridge(FsBlob::into_file(
-            self.0.take().expect("FsBlob already destructed"),
-        )?)))
+        log_errors(|| {
+            TOKIO_RUNTIME.block_on(async move {
+                Ok(Box::new(RustFileBlobBridge(
+                    FsBlob::into_file(self.0.take().expect("FsBlob already destructed")).await?,
+                )))
+            })
+        })
     }
 
     fn to_dir(&mut self) -> Result<Box<RustDirBlobBridge<'a>>> {
-        Ok(Box::new(RustDirBlobBridge(FsBlob::into_dir(
-            self.0.take().expect("FsBlob already destructed"),
-        )?)))
+        log_errors(|| {
+            TOKIO_RUNTIME.block_on(async move {
+                Ok(Box::new(RustDirBlobBridge(
+                    FsBlob::into_dir(self.0.take().expect("FsBlob already destructed")).await?,
+                )))
+            })
+        })
     }
 
     fn to_symlink(&mut self) -> Result<Box<RustSymlinkBlobBridge<'a>>> {
-        Ok(Box::new(RustSymlinkBlobBridge(FsBlob::into_symlink(
-            self.0.take().expect("FsBlob already destructed"),
-        )?)))
+        log_errors(|| {
+            TOKIO_RUNTIME.block_on(async move {
+                Ok(Box::new(RustSymlinkBlobBridge(
+                    FsBlob::into_symlink(self.0.take().expect("FsBlob already destructed")).await?,
+                )))
+            })
+        })
     }
 
     fn remove(&mut self) -> Result<()> {
