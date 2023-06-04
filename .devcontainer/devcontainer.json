@@ -4,6 +4,7 @@
 		"ghcr.io/devcontainers/features/rust:1": {
 			"version": "latest",
 			"profile": "default"
-		}
+		},
+		"ghcr.io/meaningful-ooo/devcontainer-features/fish:1": {}
 	}
 }
