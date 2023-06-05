@@ -14,7 +14,5 @@ wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.1/Hack.tar.x
 tar -xvf Hack.tar.xz
 rm Hack.tar.xz
 
-fish -c 'set -g theme_nerd_fonts yes'
+fish -c 'set -U theme_nerd_fonts yes'
 
-# You also need the following VS Code Setting:
-# "terminal.integrated.fontFamily": "'Hack Nerd Font Mono', monospace"

@@ -10,5 +10,13 @@
 		},
 		"ghcr.io/meaningful-ooo/devcontainer-features/fish:1": {}
 	},
-	"postCreateCommand": ".devcontainer/setup_fish.sh"
+	"postCreateCommand": ".devcontainer/setup_fish.sh",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				// OhMyFish needs a nerd font
+				"terminal.integrated.fontFamily": "'Hack Nerd Font Mono', monospace",
+			}
+		}
+	}
 }
