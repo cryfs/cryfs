@@ -14,3 +14,6 @@ pub use sync_drop::SyncDrop;
 
 mod hash_map;
 pub use hash_map::AsyncDropHashMap;
+
+mod with;
+pub use with::{with_async_drop, with_async_drop_err_map};

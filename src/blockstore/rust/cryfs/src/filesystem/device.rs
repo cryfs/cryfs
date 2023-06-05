@@ -1,11 +1,14 @@
 use async_trait::async_trait;
+use futures::future;
 use std::fmt::Debug;
 use std::path::Path;
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{
+        with_async_drop, with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard,
+    },
     safe_panic,
 };
 
@@ -70,36 +73,37 @@ where
         }
         for path_component in path {
             // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
-            let component = path_component.to_string_lossy();
+            let component = path_component.to_string_lossy().into_owned();
             // TODO This map_err is weird. Probably better to have into_dir return the right error type.
-            let mut dir_blob = FsBlob::into_dir(current_blob)
+            let dir_blob = FsBlob::into_dir(current_blob)
                 .await
                 .map_err(|_| FsError::NodeIsNotADirectory)?;
-            let entry = match dir_blob.entry_by_name(&component) {
-                Ok(Some(entry)) => entry,
-                Ok(None) => {
-                    dir_blob.async_drop().await.map_err(|_| {
-                        log::error!("Error dropping dir_blob");
-                        FsError::UnknownError
-                    })?;
-                    return Err(FsError::NodeDoesNotExist);
-                }
-                Err(err) => {
-                    log::error!("File system has a directory with a non-UTF8 entry: {err:?}");
-                    dir_blob.async_drop().await.map_err(|_| {
-                        log::error!("Error dropping dir_blob");
-                        FsError::UnknownError
-                    })?;
-                    return Err(FsError::Custom {
-                        error_code: libc::EIO,
-                    });
-                }
-            };
-            let entry = *entry.blob_id();
-            dir_blob.async_drop().await.map_err(|_| {
-                log::error!("Error dropping dir_blob");
-                FsError::UnknownError
-            })?;
+            let entry = with_async_drop_err_map(
+                dir_blob,
+                move |dir_blob| {
+                    let entry = match dir_blob.entry_by_name(&component) {
+                        Ok(Some(entry)) => {
+                            let blob_id = *entry.blob_id();
+                            Ok(blob_id)
+                        }
+                        Ok(None) => Err(FsError::NodeDoesNotExist),
+                        Err(err) => {
+                            log::error!(
+                                "File system has a directory with a non-UTF8 entry: {err:?}"
+                            );
+                            Err(FsError::Custom {
+                                error_code: libc::EIO,
+                            })
+                        }
+                    };
+                    future::ready(entry)
+                },
+                |err| {
+                    log::error!("Error dropping dir_blob: {err:?}");
+                    FsError::UnknownError
+                },
+            )
+            .await?;
             current_blob = self
                 .blobstore
                 .load(&entry)

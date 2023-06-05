@@ -454,8 +454,12 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
 {
     type Error = anyhow::Error;
     async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_block_store.async_drop().await?;
-        self.integrity_data.async_drop().await?;
+        let (drop1, drop2) = join!(
+            self.underlying_block_store.async_drop(),
+            self.integrity_data.async_drop(),
+        );
+        drop1?;
+        drop2?;
         Ok(())
     }
 }
