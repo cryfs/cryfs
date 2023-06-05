@@ -7,6 +7,8 @@ use thiserror::Error;
 //      an entry fails because we're not looking up the main entry the operation is about but something else that is supposed
 //      to be guaranteed to be there unless the file system is corrupt.
 
+// TODO Unify this with cryfs_rustfs::FsError
+
 #[derive(Error, Debug)]
 pub enum FsError {
     #[error("ENOENT: {msg}")]

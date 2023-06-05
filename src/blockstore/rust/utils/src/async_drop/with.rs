@@ -3,6 +3,10 @@ use std::future::Future;
 
 use super::{AsyncDrop, AsyncDropGuard};
 
+// TODO It seems that actually most of our call sites only use sync callbacks
+//      and have quite a hard time calling this because they need to wrap their callbacks into future::ready.
+//      Offer sync versions instead.
+
 pub async fn with_async_drop<T, R, E, F>(
     mut value: AsyncDropGuard<T>,
     f: impl FnOnce(&mut T) -> F,
@@ -25,6 +29,9 @@ pub async fn with_async_drop_err_map<T, R, E, F>(
 where
     T: AsyncDrop + Debug,
     F: Future<Output = Result<R, E>>,
+    <F as Future>::Output: 'static,
+    E: 'static,
+    R: 'static,
 {
     let result = f(&mut value).await;
     value.async_drop().await.map_err(err_map)?;

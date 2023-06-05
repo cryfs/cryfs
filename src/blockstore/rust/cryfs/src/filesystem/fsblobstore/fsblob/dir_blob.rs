@@ -45,7 +45,7 @@ where
         }))
     }
 
-    pub fn entries(&self) -> impl Iterator<Item = &DirEntry> {
+    pub fn entries(&self) -> impl Iterator<Item = &DirEntry> + ExactSizeIterator {
         self.entries.iter()
     }
 

@@ -1,12 +1,13 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::sync::Arc;
 use std::time::SystemTime;
 
+use super::fsblobstore::FsBlob;
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 pub struct CryNode<'a, B>
 where
@@ -33,6 +34,30 @@ where
 
     pub fn node_type(&self) -> BlobType {
         self.blob_type
+    }
+
+    pub(super) fn blobstore(&self) -> &'a FsBlobStore<B> {
+        self.blobstore
+    }
+
+    pub(super) fn blob_id(&self) -> &BlobId {
+        &self.blob_id
+    }
+
+    pub(super) async fn load_blob(&self) -> Result<AsyncDropGuard<FsBlob<'a, B>>, FsError> {
+        self.blobstore
+            .load(&self.blob_id)
+            .await
+            .map_err(|err| {
+                log::error!("Error loading blob {:?}: {:?}", &self.blob_id, err);
+                FsError::UnknownError
+            })?
+            .ok_or_else(|| {
+                log::error!("Blob {:?} not found", &self.blob_id);
+                FsError::CorruptedFilesystem {
+                    message: format!("Didn't find blob {:?}", self.blob_id),
+                }
+            })
     }
 }
 

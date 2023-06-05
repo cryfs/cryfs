@@ -1,7 +1,7 @@
 use binrw::{BinRead, BinWrite};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, From, Into};
 
-// TODO This should probably live in fspp not in cryfs
+// TODO Unify this with cryfs_rustfs types
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, BinRead, BinWrite, From, Into)]
 pub struct Uid(u32);

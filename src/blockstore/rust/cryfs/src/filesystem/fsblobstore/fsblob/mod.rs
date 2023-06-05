@@ -118,6 +118,7 @@ where
     ) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
         if !matches!(*this, Self::Directory(_)) {
             this.async_drop().await?;
+            // TODO These should probably return FsError instead of anyhow
             bail!("FsBlob is not a directory");
         }
         // No need to call async_drop since we are going to return an AsyncDropGuard

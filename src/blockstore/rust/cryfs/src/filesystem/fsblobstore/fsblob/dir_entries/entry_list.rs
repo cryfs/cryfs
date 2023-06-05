@@ -144,7 +144,7 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &DirEntry> {
+    pub fn iter(&self) -> impl Iterator<Item = &DirEntry> + ExactSizeIterator {
         self.entries.iter()
     }
 
