@@ -871,7 +871,11 @@ impl<'a> RustDirBlobBridge<'a> {
     }
 
     pub fn remove_entry_by_name(&mut self, name: &str) -> Box<FsResult> {
-        log_errors(|| self.0.remove_entry_by_name(name)).into()
+        log_errors(|| {
+            self.0.remove_entry_by_name(name)?;
+            Ok(())
+        })
+        .into()
     }
 
     pub fn remove_entry_by_id_if_exists(&mut self, blob_id: &FsBlobId) {

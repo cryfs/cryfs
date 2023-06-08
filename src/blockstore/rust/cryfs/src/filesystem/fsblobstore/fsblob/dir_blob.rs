@@ -15,6 +15,17 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
 
 const DIR_LSTAT_SIZE: u64 = 4096;
+pub const MODE_NEW_SYMLINK: Mode = Mode::zero()
+    .add_symlink_flag()
+    .add_user_read_flag()
+    .add_user_write_flag()
+    .add_user_exec_flag()
+    .add_group_read_flag()
+    .add_group_write_flag()
+    .add_group_exec_flag()
+    .add_other_read_flag()
+    .add_other_write_flag()
+    .add_other_exec_flag();
 
 pub struct DirBlob<'a, B>
 where
@@ -187,22 +198,11 @@ where
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
     ) -> Result<()> {
-        let mode = *Mode::zero()
-            .add_symlink_flag()
-            .add_user_read_flag()
-            .add_user_write_flag()
-            .add_user_exec_flag()
-            .add_group_read_flag()
-            .add_group_write_flag()
-            .add_group_exec_flag()
-            .add_other_read_flag()
-            .add_other_write_flag()
-            .add_other_exec_flag();
         self.entries.add(
             name,
             id,
             EntryType::Symlink,
-            mode,
+            MODE_NEW_SYMLINK,
             uid,
             gid,
             last_access_time,

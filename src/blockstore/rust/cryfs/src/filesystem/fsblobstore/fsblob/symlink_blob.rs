@@ -66,6 +66,10 @@ where
             .len() as u64)
     }
 
+    pub async fn flush(&mut self) -> Result<()> {
+        self.blob.flush().await
+    }
+
     pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         self.blob.all_blocks()
     }
