@@ -7,14 +7,14 @@ use super::fsblobstore::FsBlob;
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryNode<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    blobstore: &'a FsBlobStore<B>,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     blob_id: BlobId,
     blob_type: BlobType,
 }
@@ -24,7 +24,11 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    pub fn new(blobstore: &'a FsBlobStore<B>, blob_type: BlobType, blob_id: BlobId) -> Self {
+    pub fn new(
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        blob_type: BlobType,
+        blob_id: BlobId,
+    ) -> Self {
         Self {
             blobstore,
             blob_id,
@@ -36,7 +40,7 @@ where
         self.blob_type
     }
 
-    pub(super) fn blobstore(&self) -> &'a FsBlobStore<B> {
+    pub(super) fn blobstore(&self) -> &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>> {
         self.blobstore
     }
 

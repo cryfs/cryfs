@@ -24,6 +24,19 @@ where
     blob_id: BlobId,
 }
 
+impl<B> CryOpenFile<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+{
+    pub fn new(
+        blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        blob_id: BlobId,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { blobstore, blob_id })
+    }
+}
+
 impl<B> Debug for CryOpenFile<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
