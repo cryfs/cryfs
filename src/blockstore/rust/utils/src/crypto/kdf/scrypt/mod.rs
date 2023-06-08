@@ -6,8 +6,8 @@ pub use params::ScryptParams;
 mod settings;
 pub use settings::ScryptSettings;
 
-mod backends;
-pub use backends::scrypt::Scrypt;
+pub mod backends;
+pub type Scrypt = backends::scrypt::ScryptScrypt;
 
 #[cfg(test)]
 mod tests;

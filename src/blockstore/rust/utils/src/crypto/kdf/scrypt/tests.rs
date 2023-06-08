@@ -111,8 +111,8 @@ mod generic {
     #[instantiate_tests(<crate::crypto::kdf::scrypt::Scrypt>)]
     mod scrypt_default {}
 
-    #[instantiate_tests(<crate::crypto::kdf::scrypt::backends::scrypt::Scrypt>)]
-    mod scrypt {}
+    #[instantiate_tests(<crate::crypto::kdf::scrypt::backends::scrypt::ScryptScrypt>)]
+    mod scrypt_scrypt {}
 
     #[instantiate_tests(<crate::crypto::kdf::scrypt::backends::openssl::ScryptOpenssl>)]
     mod scrypt_openssl {}

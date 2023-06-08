@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct ScryptSettings {
     pub log_n: u8,
     pub r: u32,

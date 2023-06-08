@@ -7,9 +7,9 @@ use crate::crypto::kdf::scrypt::settings::ScryptSettings;
 use crate::crypto::kdf::PasswordBasedKDF;
 use crate::crypto::symmetric::EncryptionKey;
 
-pub struct Scrypt;
+pub struct ScryptScrypt;
 
-impl PasswordBasedKDF for Scrypt {
+impl PasswordBasedKDF for ScryptScrypt {
     type Settings = ScryptSettings;
     type Parameters = ScryptParams;
 
@@ -38,5 +38,3 @@ impl PasswordBasedKDF for Scrypt {
         ScryptParams::generate(settings)
     }
 }
-
-// TODO Benchmarks
