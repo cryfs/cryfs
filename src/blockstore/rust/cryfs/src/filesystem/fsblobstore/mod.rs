@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod fsblob;
@@ -87,7 +87,9 @@ where
         self.blobstore.load_block_depth(block_id).await
     }
 
-    // async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
+    pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult> {
+        self.blobstore.remove_by_id(id).await
+    }
 }
 
 #[async_trait]

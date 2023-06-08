@@ -40,19 +40,20 @@ impl ScryptParams {
         })
     }
 
-    pub fn salt(&self) -> &[u8] {
-        &self.salt
+    pub fn log_n(&self) -> u8 {
+        self.log_n
     }
 
-    pub fn params(&self) -> scrypt::Params {
-        scrypt::Params::new(
-            self.log_n,
-            self.r,
-            self.p,
-            // scrypt::Params::len is an ignored field so shouldn't really matter what we give it
-            scrypt::Params::RECOMMENDED_LEN,
-        )
-        .expect("Invalid scrypt parameters")
+    pub fn r(&self) -> u32 {
+        self.r
+    }
+
+    pub fn p(&self) -> u32 {
+        self.p
+    }
+
+    pub fn salt(&self) -> &[u8] {
+        &self.salt
     }
 }
 

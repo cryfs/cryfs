@@ -371,13 +371,16 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn remove_by_name(&mut self, name: &str) -> Result<()> {
-        let Some((index, _entry)) = self._get_by_name_with_index(name)? else {
-            bail!(FsError::ENOENT { msg: format!("Could not find entry with name {:?} in directory", name)});
+    pub fn remove_by_name(&mut self, name: &str) -> Result<DirEntry, cryfs_rustfs::FsError> {
+        let Some((index, _entry)) = self._get_by_name_with_index(name)
+        .map_err(|_err| {
+            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory blob has an entry with a non-utf8 name".to_string() }
+        })? else {
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
         self.dirty = true;
-        self.entries.remove(index);
-        Ok(())
+        let removed = self.entries.remove(index);
+        Ok(removed)
     }
 
     pub fn remove_by_id_if_exists(&mut self, blob_id: &BlobId) {

@@ -13,7 +13,9 @@ use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
 };
-use cryfs_utils::async_drop::{with_async_drop_err_map, AsyncDrop, AsyncDropGuard};
+use cryfs_utils::async_drop::{
+    with_async_drop, with_async_drop_err_map, AsyncDrop, AsyncDropGuard,
+};
 
 pub struct CryDir<'a, B>
 where
@@ -166,8 +168,36 @@ where
     }
 
     async fn remove_child_dir(&self, name: &str) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        let blob = self.load_blob().await?;
+        with_async_drop_err_map(
+            blob,
+            move |blob| async move {
+                // First remove the entry, then flush that change, and only then drop the blob.
+                // This is to make sure the file system doesn't end up in an invalid state
+                // where the blob is removed but the entry is still there.
+                let entry = blob.remove_entry_by_name(name).map_err(|utf8_err| {
+                    FsError::CorruptedFilesystem {
+                        message: "Directory entry has an entry name that is not utf-8".to_string(),
+                    }
+                })?;
+                blob.flush().await;
+                let blob_id = entry.blob_id();
+                self.node
+                    .blobstore()
+                    .remove_by_id(blob_id)
+                    .await
+                    .map_err(|err| {
+                        log::error!("Error removing blob: {err:?}");
+                        FsError::UnknownError
+                    })?;
+                Ok(())
+            },
+            |err| {
+                log::error!("Error dropping blob: {err:?}");
+                FsError::UnknownError
+            },
+        )
+        .await
     }
 
     async fn create_child_symlink(

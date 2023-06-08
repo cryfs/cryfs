@@ -183,6 +183,7 @@ impl DirEntry {
     }
 
     pub fn name(&self) -> Result<&str, std::str::Utf8Error> {
+        // TODO Instead of all these individual lookups failing, would be better to just check utf-8 once at loading time.
         std::str::from_utf8(&self.inner.name)
     }
 

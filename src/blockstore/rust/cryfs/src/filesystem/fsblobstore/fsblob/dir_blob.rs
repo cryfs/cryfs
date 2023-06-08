@@ -126,7 +126,7 @@ where
             .maybe_update_access_timestamp(blob_id, atime_update_behavior)
     }
 
-    pub fn remove_entry_by_name(&mut self, name: &str) -> Result<()> {
+    pub fn remove_entry_by_name(&mut self, name: &str) -> Result<DirEntry, cryfs_rustfs::FsError> {
         self.entries.remove_by_name(name)
     }
 
