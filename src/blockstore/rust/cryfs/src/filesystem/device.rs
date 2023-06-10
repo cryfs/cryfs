@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures::future;
 use std::fmt::Debug;
-use std::path::Path;
+use std::path::{Component, Path};
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
@@ -71,9 +71,33 @@ where
                 error_code: libc::EIO,
             });
         }
-        for path_component in path {
+        let mut components = path.components();
+        if Some(Component::RootDir) != components.next() {
+            log::error!("Path is not absolute: {path:?}");
+            current_blob.async_drop().await.map_err(|_| {
+                log::error!("Error dropping current_blob");
+                FsError::UnknownError
+            })?;
+            return Err(FsError::Custom {
+                error_code: libc::EIO,
+            });
+        }
+        for path_component in components {
+            let component = match path_component {
+                Component::Normal(path_component) => path_component,
+                _ => {
+                    log::error!("Path component is not a normal component");
+                    current_blob.async_drop().await.map_err(|_| {
+                        log::error!("Error dropping current_blob");
+                        FsError::UnknownError
+                    })?;
+                    return Err(FsError::Custom {
+                        error_code: libc::EIO,
+                    });
+                }
+            };
             // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
-            let component = path_component.to_string_lossy().into_owned();
+            let component = component.to_string_lossy().into_owned();
             // TODO This map_err is weird. Probably better to have into_dir return the right error type.
             let dir_blob = FsBlob::into_dir(current_blob)
                 .await
@@ -121,7 +145,6 @@ where
                     }
                 })?;
         }
-
         Ok(current_blob)
     }
 }
