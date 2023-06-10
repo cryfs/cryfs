@@ -21,7 +21,7 @@ enum NodeInfo {
     },
 }
 
-struct NodeDetails {
+struct BlobDetails {
     blob_id: BlobId,
     blob_type: BlobType,
 }
@@ -45,7 +45,7 @@ where
     // TODO Maybe it's actually ok to store a Blob here? Except for rename, all operations should just operate on one node
     //      and not depend on another node so we shouldn't cause any deadlocks. This would simplify what we're doing here
     //      and would also allow us to avoid potential double loads where [load_parent_blob] is called multiple times.
-    blob_details: OnceCell<NodeDetails>,
+    blob_details: OnceCell<BlobDetails>,
 }
 
 impl<'a, B> CryNode<'a, B>
@@ -79,11 +79,11 @@ where
         }
     }
 
-    async fn blob_info(&self) -> FsResult<&NodeDetails> {
+    async fn blob_details(&self) -> FsResult<&BlobDetails> {
         self.blob_details
             .get_or_try_init(|| async move {
                 match &self.node_info {
-                    NodeInfo::IsRootDir { root_blob_id } => Ok(NodeDetails {
+                    NodeInfo::IsRootDir { root_blob_id } => Ok(BlobDetails {
                         blob_id: *root_blob_id,
                         blob_type: BlobType::Dir,
                     }),
@@ -91,24 +91,9 @@ where
                         parent_blob_id,
                         name,
                     } => {
-                        let mut parent_blob = self.load_parent_blob(parent_blob_id).await?;
+                        let mut parent_blob = self.load_parent_blob(parent_blob_id, name).await?;
 
-                        let result = (|| async {
-                            let entry = parent_blob
-                                .entry_by_name(name)
-                                .map_err(|_| FsError::CorruptedFilesystem {
-                                    message: format!("Entry name isn't utf-8"),
-                                })?
-                                .ok_or_else(|| FsError::NodeDoesNotExist)?;
-                            let blob_id = *entry.blob_id();
-                            let blob_type = match entry.entry_type() {
-                                EntryType::File => BlobType::File,
-                                EntryType::Dir => BlobType::Dir,
-                                EntryType::Symlink => BlobType::Symlink,
-                            };
-                            Ok(NodeDetails { blob_id, blob_type })
-                        })()
-                        .await;
+                        let result = get_blob_details(&mut parent_blob, name);
                         parent_blob.async_drop().await.map_err(|err| {
                             // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
                             log::error!("Error dropping parent blob: {:?}", err);
@@ -121,7 +106,7 @@ where
             .await
     }
 
-    pub async fn load_parent_blob(
+    async fn _load_parent_blob(
         &self,
         parent_blob_id: &BlobId,
     ) -> FsResult<AsyncDropGuard<DirBlob<'a, B>>> {
@@ -148,8 +133,33 @@ where
             .map_err(|_err| FsError::NodeIsNotADirectory)
     }
 
+    pub async fn load_parent_blob(
+        &self,
+        parent_blob_id: &BlobId,
+        self_name: &str,
+    ) -> FsResult<AsyncDropGuard<DirBlob<'a, B>>> {
+        let mut parent_blob = self._load_parent_blob(parent_blob_id).await?;
+
+        // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
+        let blob_details = match get_blob_details(&parent_blob, self_name) {
+            Ok(blob_details) => blob_details,
+            Err(err) => {
+                parent_blob.async_drop().await.map_err(|err| {
+                    // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                return Err(err);
+            }
+        };
+        // It's ok if this fails because it means that another thread already set the blob_details
+        let _ = self.blob_details.set(blob_details);
+
+        Ok(parent_blob)
+    }
+
     pub async fn node_type(&self) -> FsResult<BlobType> {
-        Ok(self.blob_info().await?.blob_type)
+        Ok(self.blob_details().await?.blob_type)
     }
 
     pub(super) fn blobstore(&self) -> &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>> {
@@ -157,7 +167,7 @@ where
     }
 
     pub(super) async fn blob_id(&self) -> FsResult<&BlobId> {
-        Ok(&self.blob_info().await?.blob_id)
+        Ok(&self.blob_details().await?.blob_id)
     }
 
     pub(super) async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>> {
@@ -230,11 +240,13 @@ where
                 parent_blob_id,
                 name,
             } => {
-                // TODO This loads the parent blob twice, once in load_lstat_size, which calls load_blob to get the blob id, and then again in load_parent_blob. Avoid this.
-                // TODO We can load parent_blob and lstat_size concurrently, but that would currently cause a deadlock because lstat_size needs to load parent_blob.
-                let lstat_size = self.load_lstat_size().await?;
-                let mut parent_blob = self.load_parent_blob(parent_blob_id).await?;
-                let result = (|| {
+                // Loading parent_blob before loading lstat_size, because it already sets self.blob_details,
+                // which lstat_size can use and otherwise would have to itself load the parent blob again for.
+                // TODO Here and in other function, might be better to change self.load_parent_blob to return a TryLoadParentBlob::IsRootDir / TryLoadParentBlob::IsNotRootDir. That would mean
+                //      we don't have to weirdly pass in parent_blob_id and name here but could just replace the `match &self.node_info` above with the result of that call.
+                let mut parent_blob = self.load_parent_blob(parent_blob_id, name).await?;
+                let result = (|| async {
+                    let lstat_size = self.load_lstat_size().await?;
                     let entry = parent_blob
                         .entry_by_name(name)
                         .map_err(|_| FsError::CorruptedFilesystem {
@@ -242,7 +254,8 @@ where
                         })?
                         .ok_or_else(|| FsError::NodeDoesNotExist)?;
                     Ok(dir_entry_to_node_attrs(entry, lstat_size))
-                })();
+                })()
+                .await;
                 parent_blob.async_drop().await.map_err(|err| {
                     log::error!("Error dropping parent blob: {:?}", err);
                     FsError::UnknownError
@@ -270,6 +283,27 @@ where
         // TODO Implement
         Err(FsError::NotImplemented)
     }
+}
+
+fn get_blob_details<'a, B>(parent_blob: &DirBlob<'a, B>, name: &str) -> FsResult<BlobDetails>
+where
+    // TODO Do we really need B: 'static ?
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+{
+    let entry = parent_blob
+        .entry_by_name(name)
+        .map_err(|_| FsError::CorruptedFilesystem {
+            message: format!("Entry name isn't utf-8"),
+        })?
+        .ok_or_else(|| FsError::NodeDoesNotExist)?;
+    let blob_id = *entry.blob_id();
+    let blob_type = match entry.entry_type() {
+        EntryType::File => BlobType::File,
+        EntryType::Dir => BlobType::Dir,
+        EntryType::Symlink => BlobType::Symlink,
+    };
+    Ok(BlobDetails { blob_id, blob_type })
 }
 
 fn dir_entry_to_node_attrs(entry: &DirEntry, num_bytes: NumBytes) -> NodeAttrs {
