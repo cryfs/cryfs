@@ -23,7 +23,7 @@ mod file_blob;
 pub use file_blob::FileBlob;
 
 mod dir_blob;
-pub use dir_blob::{DirBlob, MODE_NEW_SYMLINK};
+pub use dir_blob::{DirBlob, DIR_LSTAT_SIZE, MODE_NEW_SYMLINK};
 
 mod symlink_blob;
 pub use symlink_blob::SymlinkBlob;

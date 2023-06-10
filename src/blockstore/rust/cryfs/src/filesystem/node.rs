@@ -1,18 +1,15 @@
 use async_trait::async_trait;
-use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::sync::OnceCell;
 
-use super::fsblobstore::{DirBlob, DirEntry, EntryType, FsBlob};
+use super::fsblobstore::{DirBlob, DirEntry, EntryType, FsBlob, DIR_LSTAT_SIZE};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
 };
-use cryfs_utils::async_drop::{
-    flatten_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard,
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 enum NodeInfo {
     IsRootDir {
@@ -211,20 +208,33 @@ where
             NodeInfo::IsRootDir { .. } => {
                 // We're the root dir
                 // TODO What should we do here?
-                panic!("getattr on rootdir not implemented");
+                Ok(NodeAttrs {
+                    nlink: 1,
+                    // TODO Remove those conversions
+                    mode: cryfs_rustfs::Mode::default()
+                        .add_dir_flag()
+                        .add_user_read_flag()
+                        .add_user_write_flag()
+                        .add_user_exec_flag(),
+                    uid: cryfs_rustfs::Uid::from(1000),
+                    gid: cryfs_rustfs::Gid::from(1000),
+                    num_bytes: cryfs_rustfs::NumBytes::from(DIR_LSTAT_SIZE),
+                    // Setting num_blocks to none means it'll be automatically calculated for us
+                    num_blocks: None,
+                    atime: SystemTime::now(),
+                    mtime: SystemTime::now(),
+                    ctime: SystemTime::now(),
+                })
             }
             NodeInfo::IsNotRootDir {
                 parent_blob_id,
                 name,
             } => {
                 // TODO This loads the parent blob twice, once in load_lstat_size, which calls load_blob to get the blob id, and then again in load_parent_blob. Avoid this.
-                let (parent_blob, lstat_size) = join!(
-                    self.load_parent_blob(parent_blob_id),
-                    self.load_lstat_size()
-                );
-                let mut parent_blob = parent_blob?;
-                let result = (|| async {
-                    let lstat_size = lstat_size?;
+                // TODO We can load parent_blob and lstat_size concurrently, but that would currently cause a deadlock because lstat_size needs to load parent_blob.
+                let lstat_size = self.load_lstat_size().await?;
+                let mut parent_blob = self.load_parent_blob(parent_blob_id).await?;
+                let result = (|| {
                     let entry = parent_blob
                         .entry_by_name(name)
                         .map_err(|_| FsError::CorruptedFilesystem {
@@ -232,8 +242,7 @@ where
                         })?
                         .ok_or_else(|| FsError::NodeDoesNotExist)?;
                     Ok(dir_entry_to_node_attrs(entry, lstat_size))
-                })()
-                .await;
+                })();
                 parent_blob.async_drop().await.map_err(|err| {
                     log::error!("Error dropping parent blob: {:?}", err);
                     FsError::UnknownError

@@ -9,7 +9,7 @@ mod fsblob;
 
 pub use fsblob::{
     AtimeUpdateBehavior, BlobType, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsError,
-    SymlinkBlob, MODE_NEW_SYMLINK,
+    SymlinkBlob, DIR_LSTAT_SIZE, MODE_NEW_SYMLINK,
 };
 
 // TODO With an adapter we can run block store tests on this, similar to how we do it for BlobStore

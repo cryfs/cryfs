@@ -14,7 +14,7 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
 
-const DIR_LSTAT_SIZE: u64 = 4096;
+pub const DIR_LSTAT_SIZE: u64 = 4096;
 pub const MODE_NEW_SYMLINK: Mode = Mode::zero()
     .add_symlink_flag()
     .add_user_read_flag()
