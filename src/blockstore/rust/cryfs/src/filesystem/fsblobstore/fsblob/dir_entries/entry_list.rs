@@ -9,6 +9,7 @@ use super::super::FsError;
 use super::entry::{DirEntry, EntryType};
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_rustfs::FsResult;
 
 #[derive(Debug)]
 pub struct DirEntryList {
@@ -58,6 +59,11 @@ impl DirEntryList {
             }
         }
         Ok(None)
+    }
+
+    // TODO Return FsResult and fix all call sites to not do map_err anymore
+    fn _get_index_by_name(&self, name: &str) -> Result<Option<usize>> {
+        Ok(self._get_by_name_with_index(name)?.map(|(index, _)| index))
     }
 
     fn _get_index_by_id(&self, id: &BlobId) -> Option<usize> {
@@ -286,7 +292,18 @@ impl DirEntryList {
 
     pub fn set_mode(&mut self, blob_id: &BlobId, mode: Mode) -> Result<()> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
+            // TODO Use FsError here and everywhere in `fsblobstore`
             bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
+        };
+        entry.set_mode(mode)?;
+        Ok(())
+    }
+
+    pub fn set_mode_by_name(&mut self, name: &str, mode: Mode) -> FsResult<()> {
+        let Some(entry) = self.get_by_name_mut(name).map_err(|err| {
+            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory has entry with non-utf name".to_string() }
+        })? else {
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
         entry.set_mode(mode)?;
         Ok(())
@@ -315,6 +332,31 @@ impl DirEntryList {
         Ok(())
     }
 
+    pub fn set_uid_gid_by_name(
+        &mut self,
+        name: &str,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()> {
+        let Some(found) = self._get_index_by_name(name).map_err(|err| {
+            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory has entry with non-utf name".to_string() }
+        })? else {
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
+        };
+
+        if let Some(uid) = uid {
+            self.entries[found].set_uid(uid);
+            self.dirty = true;
+        }
+
+        if let Some(gid) = gid {
+            self.entries[found].set_gid(gid);
+            self.dirty = true;
+        }
+
+        Ok(())
+    }
+
     pub fn set_access_times(
         &mut self,
         blob_id: &BlobId,
@@ -326,6 +368,31 @@ impl DirEntryList {
         };
         entry.set_last_access_time(last_access_time);
         entry.set_last_modification_time(last_modification_time);
+        Ok(())
+    }
+
+    pub fn set_access_times_by_name(
+        &mut self,
+        name: &str,
+        last_access_time: Option<SystemTime>,
+        last_modification_time: Option<SystemTime>,
+    ) -> FsResult<()> {
+        let Some(found) = self._get_index_by_name(name).map_err(|err| {
+            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory has entry with non-utf name".to_string() }
+        })? else {
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
+        };
+
+        if let Some(last_access_time) = last_access_time {
+            self.entries[found].set_last_access_time(last_access_time);
+            self.dirty = true;
+        }
+
+        if let Some(last_modification_time) = last_modification_time {
+            self.entries[found].set_last_modification_time(last_modification_time);
+            self.dirty = true;
+        }
+
         Ok(())
     }
 

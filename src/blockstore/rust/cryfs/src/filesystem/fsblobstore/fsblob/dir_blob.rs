@@ -10,6 +10,7 @@ use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
+use cryfs_rustfs::FsResult;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
@@ -109,6 +110,10 @@ where
         self.entries.set_mode(blob_id, mode)
     }
 
+    pub fn set_mode_of_entry_by_name(&mut self, name: &str, mode: Mode) -> FsResult<()> {
+        self.entries.set_mode_by_name(name, mode)
+    }
+
     pub fn set_uid_gid_of_entry(
         &mut self,
         blob_id: &BlobId,
@@ -116,6 +121,15 @@ where
         gid: Option<Gid>,
     ) -> Result<()> {
         self.entries.set_uid_gid(blob_id, uid, gid)
+    }
+
+    pub fn set_uid_gid_of_entry_by_name(
+        &mut self,
+        name: &str,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()> {
+        self.entries.set_uid_gid_by_name(name, uid, gid)
     }
 
     pub fn set_access_times_of_entry(
@@ -126,6 +140,16 @@ where
     ) -> Result<()> {
         self.entries
             .set_access_times(blob_id, last_access_time, last_modification_time)
+    }
+
+    pub fn set_access_times_of_entry_by_name(
+        &mut self,
+        name: &str,
+        last_access_time: Option<SystemTime>,
+        last_modification_time: Option<SystemTime>,
+    ) -> FsResult<()> {
+        self.entries
+            .set_access_times_by_name(name, last_access_time, last_modification_time)
     }
 
     pub fn maybe_update_access_timestamp_of_entry(

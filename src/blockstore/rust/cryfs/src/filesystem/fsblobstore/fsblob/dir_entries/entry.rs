@@ -6,6 +6,7 @@ use std::time::SystemTime;
 
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::BlobId;
+use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::binary::{read_timespec, write_timespec};
 
 // TODO Unify this with the BlobType enum from this very same crate?
@@ -108,7 +109,7 @@ impl DirEntry {
         self.inner.entry_type
     }
 
-    pub fn set_mode(&mut self, mode: Mode) -> Result<()> {
+    pub fn set_mode(&mut self, mode: Mode) -> FsResult<()> {
         let old_mode = self.inner.mode;
         let old_last_metadata_change_time = self.inner.last_metadata_change_time;
 
@@ -119,7 +120,8 @@ impl DirEntry {
             // Restore old values
             self.inner.mode = old_mode;
             self.inner.last_metadata_change_time = old_last_metadata_change_time;
-            e
+            log::error!("Mode validation failed: {:?}", e);
+            FsError::InvalidOperation
         })
     }
 

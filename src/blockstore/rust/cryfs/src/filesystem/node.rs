@@ -5,6 +5,7 @@ use tokio::sync::OnceCell;
 
 use super::fsblobstore::{DirBlob, DirEntry, EntryType, FsBlob, DIR_LSTAT_SIZE};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
+use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
@@ -266,13 +267,55 @@ where
     }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        match &self.node_info {
+            NodeInfo::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Err(FsError::InvalidOperation)
+            }
+            NodeInfo::IsNotRootDir {
+                parent_blob_id,
+                name,
+            } => {
+                let mut parent_blob = self.load_parent_blob(parent_blob_id, name).await?;
+                let result = parent_blob
+                    .set_mode_of_entry_by_name(name, fs_types::Mode::from(u32::from(mode)));
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result?;
+                Ok(())
+            }
+        }
     }
 
     async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        match &self.node_info {
+            NodeInfo::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Err(FsError::InvalidOperation)
+            }
+            NodeInfo::IsNotRootDir {
+                parent_blob_id,
+                name,
+            } => {
+                let mut parent_blob = self.load_parent_blob(parent_blob_id, name).await?;
+                let result = parent_blob.set_uid_gid_of_entry_by_name(
+                    name,
+                    // TODO Don't convert uid/gid
+                    uid.map(|uid| fs_types::Uid::from(u32::from(uid))),
+                    gid.map(|gid| fs_types::Gid::from(u32::from(gid))),
+                );
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result?;
+                Ok(())
+            }
+        }
     }
 
     async fn utimens(
@@ -280,8 +323,30 @@ where
         last_access: Option<SystemTime>,
         last_modification: Option<SystemTime>,
     ) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        match &self.node_info {
+            NodeInfo::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Err(FsError::InvalidOperation)
+            }
+            NodeInfo::IsNotRootDir {
+                parent_blob_id,
+                name,
+            } => {
+                let mut parent_blob = self.load_parent_blob(parent_blob_id, name).await?;
+                let result = parent_blob.set_access_times_of_entry_by_name(
+                    name,
+                    last_access,
+                    last_modification,
+                );
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result?;
+                Ok(())
+            }
+        }
     }
 }
 
