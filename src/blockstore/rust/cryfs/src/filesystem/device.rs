@@ -152,52 +152,57 @@ where
         match path.parent() {
             None => {
                 // We're being asked to load the root dir
-                Ok(CryNode::new(
-                    &self.blobstore,
-                    BlobType::Dir,
-                    self.root_blob_id,
-                ))
+                Ok(CryNode::new_rootdir(&self.blobstore, self.root_blob_id))
             }
             Some(parent) => {
-                let parent = self.load_blob(parent).await?;
-                let mut parent = FsBlob::into_dir(parent)
-                    .await
-                    .map_err(|_| FsError::NodeIsNotADirectory)?;
                 // TODO No unwrap. How do handle missing file_name?
-                let name = path.file_name().unwrap();
                 // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
-                let entry = parent
-                    .entry_by_name(&name.to_string_lossy())
-                    .map(|e| e.cloned());
-                parent.async_drop().await.map_err(|_| {
-                    log::error!("Error dropping parent");
-                    FsError::UnknownError
-                })?;
-                match entry {
-                    Ok(Some(child)) => {
-                        let blob_id = child.blob_id();
-                        let blob_type = match child.entry_type() {
-                            EntryType::Dir => BlobType::Dir,
-                            EntryType::File => BlobType::File,
-                            EntryType::Symlink => BlobType::Symlink,
-                        };
-                        Ok(CryNode::new(&self.blobstore, blob_type, *blob_id))
+                let node_name = path.file_name().unwrap().to_string_lossy().into_owned();
+                let parent_blob_id = match parent.parent() {
+                    None => {
+                        // We're being asked to load a node that is a direct child of the root dir
+                        Ok(self.root_blob_id)
                     }
-                    Ok(None) => Err(FsError::NodeDoesNotExist),
-                    Err(err) => {
-                        log::error!("File system has a directory with a non-UTF8 entry: {err:?}");
-                        Err(FsError::Custom {
-                            error_code: libc::EIO,
-                        })
+                    Some(grandparent) => {
+                        let grandparent = self.load_blob(grandparent).await?;
+                        let mut grandparent = FsBlob::into_dir(grandparent)
+                            .await
+                            .map_err(|_| FsError::NodeIsNotADirectory)?;
+                        // TODO No unwrap. How do handle missing file_name?
+                        let parent_name = parent.file_name().unwrap();
+                        // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
+                        let parent_entry = grandparent
+                            .entry_by_name(&parent_name.to_string_lossy())
+                            .map(|e| e.cloned());
+                        grandparent.async_drop().await.map_err(|_| {
+                            log::error!("Error dropping parent");
+                            FsError::UnknownError
+                        })?;
+                        match parent_entry {
+                            Ok(Some(parent_entry)) => {
+                                let parent_blob_id = parent_entry.blob_id();
+                                Ok(*parent_blob_id)
+                            }
+                            Ok(None) => Err(FsError::NodeDoesNotExist),
+                            Err(err) => {
+                                log::error!(
+                                    "File system has a directory with a non-UTF8 entry: {err:?}"
+                                );
+                                Err(FsError::Custom {
+                                    error_code: libc::EIO,
+                                })
+                            }
+                        }
                     }
-                }
+                }?;
+                Ok(CryNode::new(&self.blobstore, parent_blob_id, node_name))
             }
         }
     }
 
     async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir<'_>> {
         let node = self.load_node(path).await?;
-        if node.node_type() == BlobType::Dir {
+        if node.node_type().await? == BlobType::Dir {
             Ok(CryDir::new(node))
         } else {
             Err(FsError::NodeIsNotADirectory)
@@ -206,7 +211,7 @@ where
 
     async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink<'_>> {
         let node = self.load_node(path).await?;
-        if node.node_type() == BlobType::Symlink {
+        if node.node_type().await? == BlobType::Symlink {
             Ok(CrySymlink::new(node))
         } else {
             Err(FsError::NodeIsNotASymlink)
@@ -215,7 +220,7 @@ where
 
     async fn load_file(&self, path: &Path) -> FsResult<Self::File<'_>> {
         let node = self.load_node(path).await?;
-        match node.node_type() {
+        match node.node_type().await? {
             BlobType::File => Ok(CryFile::new(node)),
             BlobType::Symlink => {
                 // TODO What's the right error here?

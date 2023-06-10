@@ -14,7 +14,7 @@ use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
 };
 use cryfs_utils::async_drop::{
-    with_async_drop, AsyncDropArc, with_async_drop_err_map, AsyncDrop, AsyncDropGuard,
+    AsyncDropArc, with_async_drop_err_map, AsyncDrop, AsyncDropGuard,
 };
 
 pub struct CryDir<'a, B>
@@ -36,10 +36,11 @@ where
 
     async fn load_blob(&self) -> Result<AsyncDropGuard<DirBlob<'a, B>>, FsError> {
         let blob = self.node.load_blob().await?;
+        let blob_id = blob.blob_id();
         FsBlob::into_dir(blob).await.map_err(|err| {
             FsError::CorruptedFilesystem {
                 // TODO Add to message what it actually is
-                message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", self.node.blob_id()),
+                message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", blob_id),
             }
         })
     }
@@ -175,8 +176,9 @@ where
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
+        let blob_id = self.node.blob_id().await?;
         let (blob, new_dir_blob_id) =
-            join!(self.load_blob(), self.create_dir_blob(self.node.blob_id()));
+            join!(self.load_blob(), self.create_dir_blob(blob_id));
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -295,9 +297,11 @@ where
         // TODO What should NumBytes be? Also, no unwrap?
         let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
+        let blob_id = self.node.blob_id().await?;
+
         let (blob, new_symlink_blob_id) = join!(
             self.load_blob(),
-            self.create_symlink_blob(target, self.node.blob_id()),
+            self.create_symlink_blob(target, blob_id),
         );
         let blob = blob?;
         // TODO Is this possible without to_owned()?
@@ -408,9 +412,10 @@ where
         uid: Uid,
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryOpenFile<B>>)> {
+        let blob_id = self.node.blob_id().await?;
         let (blob, new_file_blob_id) = join!(
             self.load_blob(),
-            self.create_file_blob(self.node.blob_id()),
+            self.create_file_blob(blob_id),
         );
         let mut blob = blob?;
 
@@ -474,32 +479,5 @@ where
     async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()> {
         // TODO Implement
         Err(FsError::NotImplemented)
-    }
-}
-
-/// Flattens two Result values that contain AsyncDropGuards, making sure that we correctly drop things if errors happen.
-async fn flatten<E, T, E1, U, E2>(
-    first: Result<AsyncDropGuard<T>, E1>,
-    second: Result<AsyncDropGuard<U>, E2>,
-) -> Result<(AsyncDropGuard<T>, AsyncDropGuard<U>), E>
-where
-    T: AsyncDrop + Debug,
-    U: AsyncDrop + Debug,
-    E: From<<T as AsyncDrop>::Error> + From<<U as AsyncDrop>::Error> + From<E1> + From<E2>,
-{
-    match (first, second) {
-        (Ok(first), Ok(second)) => Ok((first, second)),
-        (Ok(mut first), Err(second)) => {
-            first.async_drop().await?;
-            Err(second.into())
-        }
-        (Err(first), Ok(mut second)) => {
-            second.async_drop().await?;
-            Err(first.into())
-        }
-        (Err(first), Err(second)) => {
-            // TODO Report both errors
-            Err(first.into())
-        }
     }
 }
