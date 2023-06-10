@@ -473,6 +473,12 @@ where
             AsyncDropArc::clone(self.node.blobstore()),
             new_file_blob_id,
         );
+        
+        blob.async_drop().await.map_err(|err| {
+            log::error!("Error dropping Arc<FsBlobstore>: {err:?}");
+            FsError::UnknownError
+        })?;
+
         Ok((attrs, open_file))
     }
 
