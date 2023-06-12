@@ -80,13 +80,20 @@ impl<'a> TryFrom<&'a str> for &'a PathComponent {
     }
 }
 
-impl<'a> TryFrom<&'a std::path::Path> for &'a PathComponent {
+impl<'a> TryFrom<&'a std::ffi::OsStr> for &'a PathComponent {
     type Error = ParsePathError;
 
     #[inline]
-    fn try_from(name: &'a std::path::Path) -> Result<Self, Self::Error> {
+    fn try_from(name: &'a std::ffi::OsStr) -> Result<Self, Self::Error> {
         let name = name.to_str().ok_or(ParsePathError::NotUtf8)?;
         PathComponent::try_from_str(name)
+    }
+}
+
+impl<'a> From<&'a PathComponent> for &'a std::ffi::OsStr {
+    #[inline]
+    fn from(component: &'a PathComponent) -> Self {
+        component.as_ref()
     }
 }
 
@@ -106,9 +113,9 @@ impl AsRef<str> for PathComponent {
     }
 }
 
-impl AsRef<std::path::Path> for PathComponent {
+impl AsRef<std::ffi::OsStr> for PathComponent {
     #[inline]
-    fn as_ref(&self) -> &std::path::Path {
+    fn as_ref(&self) -> &std::ffi::OsStr {
         self.name.as_ref()
     }
 }
@@ -162,16 +169,27 @@ impl TryFrom<String> for PathComponentBuf {
     }
 }
 
-impl TryFrom<std::path::PathBuf> for PathComponentBuf {
+impl TryFrom<std::ffi::OsString> for PathComponentBuf {
     type Error = ParsePathError;
 
     #[inline]
-    fn try_from(name: std::path::PathBuf) -> Result<Self, Self::Error> {
-        let name = name
-            .into_os_string()
-            .into_string()
-            .map_err(|_| ParsePathError::NotUtf8)?;
+    fn try_from(name: std::ffi::OsString) -> Result<Self, Self::Error> {
+        let name = name.into_string().map_err(|_| ParsePathError::NotUtf8)?;
         PathComponentBuf::try_from(name)
+    }
+}
+
+impl From<PathComponentBuf> for std::ffi::OsString {
+    #[inline]
+    fn from(component: PathComponentBuf) -> Self {
+        component.name.into()
+    }
+}
+
+impl From<PathComponentBuf> for String {
+    #[inline]
+    fn from(component: PathComponentBuf) -> Self {
+        component.name
     }
 }
 
@@ -181,13 +199,6 @@ impl FromStr for PathComponentBuf {
     #[inline]
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         Ok(PathComponent::try_from_str(name)?.to_owned())
-    }
-}
-
-impl From<PathComponentBuf> for String {
-    #[inline]
-    fn from(component: PathComponentBuf) -> Self {
-        component.name
     }
 }
 
@@ -216,8 +227,8 @@ mod tests {
             let result = <&PathComponent>::try_from(component);
             assert_eq!(expected, result);
 
-            // TryFrom<&std::path::Path> for PathComponent
-            let result = <&PathComponent>::try_from(std::path::Path::new(component));
+            // TryFrom<&std::ffi::OsStr> for PathComponent
+            let result = <&PathComponent>::try_from(std::ffi::OsStr::new(component));
             assert_eq!(expected, result);
 
             // AsRef<str> for PathComponent
@@ -227,11 +238,25 @@ mod tests {
                 assert_eq!(component, result);
             }
 
-            // AsRef<Path> for PathComponent
+            // AsRef<std::ffi::OsStr> for PathComponent
             if expected.is_ok() {
                 let result = PathComponent::try_from_str(component).unwrap();
-                let result: &std::path::Path = result.as_ref();
-                assert_eq!(std::path::Path::new(component), result);
+                let result: &std::ffi::OsStr = result.as_ref();
+                assert_eq!(std::ffi::OsStr::new(component), result);
+            }
+
+            // From<&PathComponent> for &OsStr
+            if expected.is_ok() {
+                let result = PathComponent::try_from_str(component).unwrap();
+                let result: &std::ffi::OsStr = <&std::ffi::OsStr>::from(result);
+                assert_eq!(std::ffi::OsStr::new(component), result);
+            }
+
+            // From<&PathComponent> for &str
+            if expected.is_ok() {
+                let result = PathComponent::try_from_str(component).unwrap();
+                let result: &str = <&str>::from(result);
+                assert_eq!(component, result);
             }
 
             // PathComponent::as_str
@@ -264,9 +289,8 @@ mod tests {
             let result = PathComponentBuf::try_from(component.to_string());
             assert_eq!(expected, result);
 
-            // TryFrom<std::path::PathBuf> for PathComponentBuf
-            let result =
-                PathComponentBuf::try_from(std::path::PathBuf::from_str(component).unwrap());
+            // TryFrom<std::ffi::OsStr> for PathComponentBuf
+            let result = PathComponentBuf::try_from(std::ffi::OsString::from(component.to_owned()));
             assert_eq!(expected, result);
 
             // FromStr for PathComponentBuf
@@ -277,6 +301,15 @@ mod tests {
             if expected.is_ok() {
                 let result = PathComponentBuf::from_str(component).unwrap();
                 assert_eq!(component, String::from(result));
+            }
+
+            // From<PathComponentBuf> for OsString
+            if expected.is_ok() {
+                let result = PathComponentBuf::from_str(component).unwrap();
+                assert_eq!(
+                    std::ffi::OsString::from(component.to_owned()),
+                    std::ffi::OsString::from(result),
+                );
             }
 
             // PathComponent::new_without_invariant_check
@@ -318,9 +351,9 @@ mod tests {
 
         fn test_non_utf8(component: &[u8]) {
             use std::os::unix::ffi::OsStrExt;
-            let component = std::path::Path::new(std::ffi::OsStr::from_bytes(component));
+            let component = std::ffi::OsStr::from_bytes(component);
 
-            // TryFrom<&std::path::Path> for PathComponent
+            // TryFrom<&std::ffi::OsStr> for PathComponent
             let result = <&PathComponent>::try_from(component);
             assert_eq!(Err(ParsePathError::NotUtf8), result);
 

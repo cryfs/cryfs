@@ -8,8 +8,6 @@ use super::component::PathComponent;
 use super::error::ParsePathError;
 use super::iter::ComponentIter;
 
-// TODO Check for usages of Path/PathBuf throughout the codebase and see if they should be replaced with AbsolutePath/AbsolutePathBuf
-
 /// An [AbsolutePath] is similar to [std::path::Path] but adds a few invariants, e.g. that the path must be absolute.
 ///
 /// Similar to [std::path::Path], this type is usually passed around by reference. The owned version of this type is [AbsolutePathBuf].
@@ -163,6 +161,13 @@ impl<'a> TryFrom<&'a std::path::Path> for &'a AbsolutePath {
     }
 }
 
+impl<'a> From<&'a AbsolutePath> for &'a std::path::Path {
+    #[inline]
+    fn from(path: &'a AbsolutePath) -> Self {
+        path.as_ref()
+    }
+}
+
 impl Deref for AbsolutePath {
     type Target = str;
 
@@ -270,19 +275,26 @@ impl TryFrom<std::path::PathBuf> for AbsolutePathBuf {
     }
 }
 
+impl From<AbsolutePathBuf> for std::path::PathBuf {
+    #[inline]
+    fn from(path: AbsolutePathBuf) -> Self {
+        path.path.into()
+    }
+}
+
+impl From<AbsolutePathBuf> for String {
+    #[inline]
+    fn from(path: AbsolutePathBuf) -> Self {
+        path.path
+    }
+}
+
 impl FromStr for AbsolutePathBuf {
     type Err = ParsePathError;
 
     #[inline]
     fn from_str(path: &str) -> Result<Self, Self::Err> {
         Ok(AbsolutePath::try_from_str(path)?.to_owned())
-    }
-}
-
-impl From<AbsolutePathBuf> for String {
-    #[inline]
-    fn from(component: AbsolutePathBuf) -> Self {
-        component.path
     }
 }
 
@@ -372,6 +384,20 @@ mod tests {
                 assert_eq!(std::path::Path::new(path), result);
             }
 
+            // From<&AbsolutePath> for &Path
+            if expected.is_ok() {
+                let result = AbsolutePath::try_from_str(path).unwrap();
+                let result: &std::path::Path = <&std::path::Path>::from(result);
+                assert_eq!(std::path::Path::new(path), result);
+            }
+
+            // From<&AbsolutePath> for &str
+            if expected.is_ok() {
+                let result = AbsolutePath::try_from_str(path).unwrap();
+                let result: &str = <&str>::from(result);
+                assert_eq!(path, result);
+            }
+
             // AbsolutePath::as_str
             if expected.is_ok() {
                 let result = AbsolutePath::try_from_str(path).unwrap();
@@ -414,6 +440,15 @@ mod tests {
             if expected.is_ok() {
                 let result = AbsolutePathBuf::from_str(path).unwrap();
                 assert_eq!(path, String::from(result));
+            }
+
+            // From<AbsolutePathBuf> for PathBuf
+            if expected.is_ok() {
+                let result = AbsolutePathBuf::from_str(path).unwrap();
+                assert_eq!(
+                    std::path::PathBuf::from(path.to_owned()),
+                    std::path::PathBuf::from(result),
+                );
             }
 
             // AbsolutePath::new_without_invariant_check

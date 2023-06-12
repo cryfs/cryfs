@@ -765,7 +765,7 @@ fn parse_absolute_path(path: &Path) -> FsResult<&AbsolutePath> {
 }
 
 fn parse_path_component(component: &OsStr) -> FsResult<&PathComponent> {
-    std::path::Path::new(component).try_into().map_err(|err| {
+    component.try_into().map_err(|err| {
         log::error!("Invalid path component '{component:?}': {err}");
         FsError::InvalidPath
     })
