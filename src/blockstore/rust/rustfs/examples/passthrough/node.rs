@@ -71,9 +71,9 @@ impl Node for PassthroughNode {
                     }
                     (atime, mtime) => {
                         // Either atime or mtime are not being overwritten, we need to load the previous values first.
-                        // TODO Use async for looking up metadata
-                        let metadata =
-                            std::path::Path::new(path.as_str()).metadata().map_error()?;
+                        let metadata = std::path::Path::new(self.path.as_str())
+                            .metadata()
+                            .map_error()?;
                         let atime = match atime {
                             Some(atime) => atime,
                             None => metadata.accessed().map_error()?,
