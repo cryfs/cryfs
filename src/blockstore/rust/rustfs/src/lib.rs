@@ -4,7 +4,8 @@ pub mod low_level_api;
 
 mod common;
 pub use common::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
+    NumBytes, OpenFlags, ParsePathError, PathComponent, PathComponentBuf, Statfs, Uid,
 };
 
 pub mod backend;

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
-use std::path::{Path, PathBuf};
+use cryfs_rustfs::{
+    object_based_api::Device, AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs,
+};
 
 use super::dir::PassthroughDir;
 use super::file::PassthroughFile;
@@ -9,19 +10,18 @@ use super::openfile::PassthroughOpenFile;
 use super::symlink::PassthroughSymlink;
 
 use super::errors::NixResultExt;
-use super::utils::apply_basedir;
 
 pub struct PassthroughDevice {
-    basedir: PathBuf,
+    basedir: AbsolutePathBuf,
 }
 
 impl PassthroughDevice {
-    pub fn new(basedir: PathBuf) -> Self {
+    pub fn new(basedir: AbsolutePathBuf) -> Self {
         Self { basedir }
     }
 
-    fn apply_basedir(&self, path: &Path) -> PathBuf {
-        apply_basedir(&self.basedir, path)
+    fn apply_basedir(&self, path: &AbsolutePath) -> AbsolutePathBuf {
+        self.basedir.clone().push_all(path)
     }
 }
 
@@ -33,22 +33,22 @@ impl Device for PassthroughDevice {
     type File<'a> = PassthroughFile;
     type OpenFile = PassthroughOpenFile;
 
-    async fn load_node(&self, path: &Path) -> FsResult<Self::Node<'_>> {
+    async fn load_node(&self, path: &AbsolutePath) -> FsResult<Self::Node<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughNode::new(path))
     }
 
-    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir<'_>> {
+    async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughDir::new(self.basedir.clone(), path))
     }
 
-    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink<'_>> {
+    async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughSymlink::new(path))
     }
 
-    async fn load_file(&self, path: &Path) -> FsResult<Self::File<'_>> {
+    async fn load_file(&self, path: &AbsolutePath) -> FsResult<Self::File<'_>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughFile::new(path))
     }
@@ -58,7 +58,7 @@ impl Device for PassthroughDevice {
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
                 // TODO Make this platform independent
-                let stat = nix::sys::statfs::statfs(&path).map_error()?;
+                let stat = nix::sys::statfs::statfs(path.as_str()).map_error()?;
                 Ok(convert_statfs(stat))
             })
             .await

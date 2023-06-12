@@ -1,4 +1,5 @@
 use super::error::ParsePathError;
+use derive_more::Display;
 use std::borrow::{Borrow, ToOwned};
 use std::ops::Deref;
 use std::str::FromStr;
@@ -13,7 +14,7 @@ use std::str::FromStr;
 /// - Must not be empty
 /// - Must not contain any '/', '\\' or '\0' characters
 /// - Must not be '.' or '..'
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug, Display)]
 #[repr(transparent)]
 pub struct PathComponent {
     name: str,
@@ -127,7 +128,7 @@ impl ToOwned for PathComponent {
 /// In the path `/foo/bar`, `foo` and `bar` are path components.
 ///
 /// This is the owned version of [PathComponent]. See there for invariants. If [PathComponent] is analogous to [std::path::Path], then [PathComponentBuf] is analogous to [std::path::PathBuf].
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 pub struct PathComponentBuf {
     name: String,
 }

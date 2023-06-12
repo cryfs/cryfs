@@ -1,7 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
-use std::path::PathBuf;
 
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
@@ -37,12 +36,12 @@ where
         self.blob.blob_id()
     }
 
-    pub async fn target(&mut self) -> Result<PathBuf> {
+    pub async fn target(&mut self) -> Result<String> {
         // TODO If blob.read_all() took &self instead of &mut self, we wouldn't have to make self "mut" in the parameter list above
         // TODO Should we cache the target and only read it once?
         let data = self.blob.read_all_data().await?;
-        let target = std::str::from_utf8(&data)?;
-        Ok(PathBuf::from(target))
+        let target = String::from_utf8(data.into_vec())?;
+        Ok(target)
     }
 
     pub fn parent(&self) -> BlobId {
@@ -58,12 +57,7 @@ where
     }
 
     pub async fn lstat_size(&mut self) -> Result<u64> {
-        Ok(self
-            .target()
-            .await?
-            .to_str()
-            .ok_or_else(|| anyhow!("Invalid UTF-8"))?
-            .len() as u64)
+        Ok(self.target().await?.len() as u64)
     }
 
     pub async fn flush(&mut self) -> Result<()> {

@@ -3,22 +3,18 @@ use fuse_mt::{
     ResultEmpty, ResultEntry, ResultOpen, ResultReaddir, ResultSlice, ResultStatfs, ResultWrite,
     ResultXattr, Xattr,
 };
-use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::future::Future;
-use std::os::unix::ffi::OsStringExt;
 use std::path::Path;
 use std::time::SystemTime;
 
 use crate::common::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
+    NumBytes, OpenFlags, PathComponent, Statfs, Uid,
 };
 use crate::low_level_api::{AsyncFilesystem, FileHandle};
-use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard},
-    safe_panic,
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
@@ -110,6 +106,7 @@ where
 
     fn getattr(&self, req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
         self.run_async(&format!("getattr {path:?}"), move || async move {
+            let path = parse_absolute_path(path)?;
             let response = self
                 .fs
                 .read()
@@ -122,6 +119,7 @@ where
 
     fn chmod(&self, req: RequestInfo, path: &Path, fh: Option<u64>, mode: u32) -> ResultEmpty {
         self.run_async(&format!("chmod({path:?}, mode={mode})"), || async move {
+            let path = parse_absolute_path(path)?;
             self.fs
                 .read()
                 .await
@@ -141,6 +139,7 @@ where
         self.run_async(
             &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
             || async move {
+                let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
                     .await
@@ -158,6 +157,7 @@ where
 
     fn truncate(&self, req: RequestInfo, path: &Path, fh: Option<u64>, size: u64) -> ResultEmpty {
         self.run_async(&format!("truncate({path:?}, {size})"), move || async move {
+            let path = parse_absolute_path(path)?;
             self.fs
                 .read()
                 .await
@@ -177,6 +177,7 @@ where
         self.run_async(
             &format!("utimens({path:?}, fh={fh:?}, atime={atime:?}, mtime={mtime:?})"),
             || async move {
+                let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
                     .await
@@ -198,15 +199,16 @@ where
         flags: Option<u32>,
     ) -> ResultEmpty {
         self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), ||async move {
+            let path = parse_absolute_path(path)?;
             self.fs.read().await.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags).await
         })
     }
 
     fn readlink(&self, req: RequestInfo, path: &Path) -> ResultData {
         self.run_async(&format!("readlink({path:?})"), move || async move {
-            let path = self.fs.read().await.readlink(req.into(), path).await?;
-            // TODO is OsStr the best way to convert our path to the return value?
-            Ok(path.into_os_string().into_vec())
+            let path = parse_absolute_path(path)?;
+            let target = self.fs.read().await.readlink(req.into(), path).await?;
+            Ok(target.into_bytes())
         })
     }
 
@@ -221,17 +223,12 @@ where
         self.run_async(
             &format!("mknod({parent:?}, name={name:?}, mode={mode}, rdev={rdev})"),
             move || async move {
+                let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
                     .fs
                     .read()
                     .await
-                    .mknod(
-                        req.into(),
-                        parent,
-                        &parse_node_name(name),
-                        Mode::from(mode),
-                        rdev,
-                    )
+                    .mknod(req.into(), &path, Mode::from(mode), rdev)
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
@@ -242,11 +239,12 @@ where
         self.run_async(
             &format!("mkdir({parent:?}, name={name:?}, mode={mode})"),
             move || async move {
+                let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
                     .fs
                     .read()
                     .await
-                    .mkdir(req.into(), parent, &parse_node_name(name), Mode::from(mode))
+                    .mkdir(req.into(), &path, Mode::from(mode))
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
@@ -254,18 +252,22 @@ where
     }
 
     fn unlink(&self, req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
-        let name = &parse_node_name(name);
         self.run_async(
             &format!("unlink({parent:?}, name={name:?})"),
-            move || async move { self.fs.read().await.unlink(req.into(), parent, &name).await },
+            move || async move {
+                let path = parse_absolute_path_with_last_component(parent, name)?;
+                self.fs.read().await.unlink(req.into(), &path).await
+            },
         )
     }
 
     fn rmdir(&self, req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
-        let name = &parse_node_name(name);
         self.run_async(
             &format!("rmdir({parent:?}, name={name:?})"),
-            move || async move { self.fs.read().await.rmdir(req.into(), parent, &name).await },
+            move || async move {
+                let path = parse_absolute_path_with_last_component(parent, name)?;
+                self.fs.read().await.rmdir(req.into(), &path).await
+            },
         )
     }
 
@@ -273,11 +275,18 @@ where
         self.run_async(
             &format!("symlink({parent:?}, parent={parent:?} name={name:?}, target={target:?})"),
             move || async move {
+                let path = parse_absolute_path_with_last_component(parent, name)?;
+                // TODO Use custom path type for target than can represent absolute-or-relative paths and enforces its invariants,
+                //      similar to how we have an `AbsolutePath` type. Then we won't need these manual checks here anymore.
+                let target = target.to_str().ok_or_else(|| {
+                    log::error!("Symlink target is not utf-8");
+                    FsError::InvalidPath
+                })?;
                 let response = self
                     .fs
                     .read()
                     .await
-                    .symlink(req.into(), parent, &parse_node_name(name), target)
+                    .symlink(req.into(), &path, target)
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
@@ -292,19 +301,17 @@ where
         newparent: &Path,
         newname: &OsStr,
     ) -> ResultEmpty {
-        let oldname = &parse_node_name(oldname);
-        let newname = &parse_node_name(newname);
         self.run_async(
             &format!(
                 "rename(oldparent={oldparent:?}, oldname={oldname:?}, newparent={newparent:?}, newname={newname:?})"
             ),
             move || async move {
+                let oldpath = parse_absolute_path_with_last_component(oldparent, oldname)?;
+                let newpath = parse_absolute_path_with_last_component(newparent, newname)?;
                 self.fs.read().await.rename(
                     req.into(),
-                    oldparent,
-                    oldname,
-                    newparent,
-                    newname,
+                    &oldpath,
+                    &newpath,
                 ).await
             },
         )
@@ -313,18 +320,20 @@ where
     fn link(
         &self,
         req: RequestInfo,
-        path: &Path,
+        oldpath: &Path,
         newparent: &Path,
         newname: &OsStr,
     ) -> ResultEntry {
         self.run_async(
-            &format!("link(path={path:?}, newparent={newparent:?}, newname={newname:?})"),
+            &format!("link(oldpath={oldpath:?}, newparent={newparent:?}, newname={newname:?})"),
             move || async move {
+                let oldpath = parse_absolute_path(oldpath)?;
+                let newpath = parse_absolute_path_with_last_component(newparent, newname)?;
                 let response = self
                     .fs
                     .read()
                     .await
-                    .link(req.into(), path, newparent, &parse_node_name(newname))
+                    .link(req.into(), &oldpath, &newpath)
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
@@ -337,6 +346,7 @@ where
         self.run_async(
             &format!("open({path:?}, flags={flags})"),
             move || async move {
+                let path = parse_absolute_path(path)?;
                 let response = self
                     .fs
                     .read()
@@ -363,29 +373,34 @@ where
         self.runtime.block_on(async move {
             let log_msg = format!("read({path:?}, fh={fh}, offset={offset}, size={size})");
             log::info!("{}...", log_msg);
-            self.fs
-                .read()
-                .await
-                .read(
-                    req.into(),
-                    path,
-                    FileHandle::from(fh),
-                    NumBytes::from(offset),
-                    NumBytes::from(u64::from(size)),
-                    move |slice| match slice {
-                        Ok(slice) => {
-                            let result = callback(Ok(slice));
-                            log::info!("{}...done", log_msg);
-                            result
-                        }
-                        Err(err) => {
-                            let result = callback(Err(err.system_error_code()));
-                            log::info!("{}...failed: {err:?}", log_msg);
-                            result
-                        }
-                    },
-                )
-                .await
+            match parse_absolute_path(path) {
+                Err(err) => callback(Err(err.system_error_code())),
+                Ok(path) => {
+                    self.fs
+                        .read()
+                        .await
+                        .read(
+                            req.into(),
+                            path,
+                            FileHandle::from(fh),
+                            NumBytes::from(offset),
+                            NumBytes::from(u64::from(size)),
+                            move |slice| match slice {
+                                Ok(slice) => {
+                                    let result = callback(Ok(slice));
+                                    log::info!("{}...done", log_msg);
+                                    result
+                                }
+                                Err(err) => {
+                                    let result = callback(Err(err.system_error_code()));
+                                    log::info!("{}...failed: {err:?}", log_msg);
+                                    result
+                                }
+                            },
+                        )
+                        .await
+                }
+            }
         })
     }
 
@@ -404,6 +419,7 @@ where
                 data_len = data.len(),
             ),
             move || async move {
+                let path = parse_absolute_path(path)?;
                 let response = self
                     .fs
                     .read()
@@ -425,6 +441,7 @@ where
 
     fn flush(&self, req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
         self.run_async(&format!("flush({path:?}, fh={fh})"), || async move {
+            let path = parse_absolute_path(path)?;
             self.fs
                 .read()
                 .await
@@ -449,6 +466,7 @@ where
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
             ),
             || async move {
+                let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
                     .await
@@ -469,6 +487,7 @@ where
         self.run_async(
             &format!("fsync({path:?}, fh={fh}, datasync={datasync})"),
             || async move {
+                let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
                     .await
@@ -482,6 +501,7 @@ where
         self.run_async(
             &format!("opendir({path:?}, flags={flags})"),
             move || async move {
+                let path = parse_absolute_path(path)?;
                 let response = self
                     .fs
                     .read()
@@ -495,6 +515,7 @@ where
 
     fn readdir(&self, req: RequestInfo, path: &Path, fh: u64) -> ResultReaddir {
         self.run_async(&format!("readdir({path:?}, fh={fh})"), move || async move {
+            let path = parse_absolute_path(path)?;
             let entries = self
                 .fs
                 .read()
@@ -509,6 +530,7 @@ where
         self.run_async(
             &format!("releasedir({path:?}, fh={fh}, flags={flags})"),
             || async move {
+                let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
                     .await
@@ -522,6 +544,7 @@ where
         self.run_async(
             &format!("fsyncdir({path:?}, fh={fh}, datasync={datasync})"),
             || async move {
+                let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
                     .await
@@ -533,6 +556,7 @@ where
 
     fn statfs(&self, req: RequestInfo, path: &Path) -> ResultStatfs {
         self.run_async(&format!("statfs({path:?})"), move || async move {
+            let path = parse_absolute_path(path)?;
             let response = self.fs.read().await.statfs(req.into(), path).await?;
             Ok(convert_statfs(response))
         })
@@ -547,20 +571,21 @@ where
         flags: u32,
         position: u32,
     ) -> ResultEmpty {
-        let name = &parse_node_name(name);
         self.run_async(
             &format!(
                 "setxattr({path:?}, name={name:?}, value=[{value_len} bytes], flags={flags}, position={position})",
                 value_len = value.len(),
             ),
             || async move {
+                let path = parse_absolute_path(path)?;
+                let name = parse_xattr_name(name)?;
                 self.fs.read().await.setxattr(
                     req.into(),
                     path,
                     name,
                     value,
                     flags,
-                    position,
+                    NumBytes::from(u64::from(position)),
                 ).await
             },
         )
@@ -571,7 +596,8 @@ where
             &format!("getxattr({path:?}, name={name:?}, size={size})"),
             move || async move {
                 let req = req.into();
-                let name = parse_node_name(name);
+                let path = parse_absolute_path(path)?;
+                let name = parse_xattr_name(name)?;
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
                 if 0 == size {
                     let response = self
@@ -600,6 +626,7 @@ where
             &format!("getxattr({path:?}, size={size})"),
             move || async move {
                 let req = req.into();
+                let path = parse_absolute_path(path)?;
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
                 if 0 == size {
                     let response = self.fs.read().await.listxattr_numbytes(req, path).await?;
@@ -619,10 +646,11 @@ where
     }
 
     fn removexattr(&self, req: RequestInfo, path: &Path, name: &OsStr) -> ResultEmpty {
-        let name = &parse_node_name(name);
         self.run_async(
             &format!("removexattr({path:?}, name={name:?})"),
             || async move {
+                let path = parse_absolute_path(path)?;
+                let name = parse_xattr_name(name)?;
                 self.fs
                     .read()
                     .await
@@ -634,6 +662,7 @@ where
 
     fn access(&self, req: RequestInfo, path: &Path, mask: u32) -> ResultEmpty {
         self.run_async(&format!("access({path:?}, mask={mask})"), || async move {
+            let path = parse_absolute_path(path)?;
             self.fs.read().await.access(req.into(), path, mask).await
         })
     }
@@ -650,17 +679,12 @@ where
         self.run_async(
             &format!("create({parent:?}, name={name:?}, mode={mode}, flags={flags})"),
             move || async move {
+                let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
                     .fs
                     .read()
                     .await
-                    .create(
-                        req.into(),
-                        parent,
-                        &parse_node_name(name),
-                        Mode::from(mode),
-                        flags,
-                    )
+                    .create(req.into(), &path, Mode::from(mode), flags)
                     .await?;
                 // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
                 let flags = response.flags as u32;
@@ -727,22 +751,41 @@ fn convert_dir_entries(entries: Vec<DirEntry>) -> Vec<fuse_mt::DirectoryEntry> {
     entries
         .into_iter()
         .map(|entry| fuse_mt::DirectoryEntry {
-            name: entry.name.into(), // TODO Is into() the best way to convert from String to OsString?
+            name: std::ffi::OsString::from(String::from(entry.name)),
             kind: convert_node_kind(entry.kind),
         })
         .collect()
 }
 
-fn parse_node_name(name: &OsStr) -> Cow<'_, str> {
-    let name = name.to_string_lossy(); // TODO Is to_string_lossy the best way to convert from OsString to String?
-    assert!(!name.contains('/'), "name must not contain '/': {name:?}");
-    assert!(
-        !name.contains('\0'),
-        "name must not contain the null byte: {name:?}"
-    );
-    assert!(name != ".", "name cannot be '.'");
-    assert!(name != "..", "name cannot be '..'");
-    name
+fn parse_absolute_path(path: &Path) -> FsResult<&AbsolutePath> {
+    path.try_into().map_err(|err| {
+        log::error!("Invalid path '{path:?}': {err}");
+        FsError::InvalidPath
+    })
+}
+
+fn parse_path_component(component: &OsStr) -> FsResult<&PathComponent> {
+    std::path::Path::new(component).try_into().map_err(|err| {
+        log::error!("Invalid path component '{component:?}': {err}");
+        FsError::InvalidPath
+    })
+}
+
+fn parse_absolute_path_with_last_component(
+    parent: &Path,
+    last_component: &OsStr,
+) -> FsResult<AbsolutePathBuf> {
+    let parent = parse_absolute_path(parent)?.to_owned();
+    Ok(parent.push(parse_path_component(last_component)?))
+}
+
+fn parse_xattr_name(name: &OsStr) -> FsResult<&str> {
+    // TODO We should probably introduce a custom wrapper type for XattrName, similar to how we have a PathComponent type, and enforce invariants there.
+    name.to_str().ok_or_else(|| {
+        log::error!("xattr name is not valid UTF-8");
+        // TODO Better error return type
+        FsError::UnknownError
+    })
 }
 
 fn parse_openflags(flags: i32) -> OpenFlags {

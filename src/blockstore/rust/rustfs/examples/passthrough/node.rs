@@ -1,18 +1,19 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
+use cryfs_rustfs::{
+    object_based_api::Node, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, Uid,
+};
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
 use std::time::SystemTime;
 
 use super::errors::{IoResultExt, NixResultExt};
 use super::utils::{convert_metadata, convert_timespec};
 
 pub struct PassthroughNode {
-    path: PathBuf,
+    path: AbsolutePathBuf,
 }
 
 impl PassthroughNode {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: AbsolutePathBuf) -> Self {
         Self { path }
     }
 }
@@ -25,7 +26,7 @@ impl Node for PassthroughNode {
     }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        let path = self.path.join(&self.path);
+        let path = self.path.clone().push_all(&self.path);
         let permissions = std::fs::Permissions::from_mode(mode.into());
         tokio::fs::set_permissions(path, permissions)
             .await
@@ -34,15 +35,15 @@ impl Node for PassthroughNode {
     }
 
     async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        let path = self.path.join(&self.path);
         let uid = uid.map(|uid| nix::unistd::Uid::from_raw(uid.into()));
         let gid = gid.map(|gid| nix::unistd::Gid::from_raw(gid.into()));
+        let path = self.path.clone();
         let _: () = tokio::runtime::Handle::current()
             .spawn_blocking(move || {
                 // TODO Make this platform independent
                 nix::unistd::fchownat(
                     None,
-                    &path,
+                    path.as_str(),
                     uid,
                     gid,
                     nix::unistd::FchownatFlags::NoFollowSymlink,
@@ -60,7 +61,7 @@ impl Node for PassthroughNode {
         last_access: Option<SystemTime>,
         last_modification: Option<SystemTime>,
     ) -> FsResult<()> {
-        let path = self.path.join(&self.path);
+        let path = self.path.clone();
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
                 let (atime, mtime) = match (last_access, last_modification) {
@@ -70,7 +71,9 @@ impl Node for PassthroughNode {
                     }
                     (atime, mtime) => {
                         // Either atime or mtime are not being overwritten, we need to load the previous values first.
-                        let metadata = path.metadata().map_error()?;
+                        // TODO Use async for looking up metadata
+                        let metadata =
+                            std::path::Path::new(path.as_str()).metadata().map_error()?;
                         let atime = match atime {
                             Some(atime) => atime,
                             None => metadata.accessed().map_error()?,
@@ -84,7 +87,7 @@ impl Node for PassthroughNode {
                 };
                 nix::sys::stat::utimensat(
                     None,
-                    &path,
+                    path.as_str(),
                     &convert_timespec(atime),
                     &convert_timespec(mtime),
                     nix::sys::stat::UtimensatFlags::NoFollowSymlink,

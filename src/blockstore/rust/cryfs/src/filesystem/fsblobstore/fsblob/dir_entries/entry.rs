@@ -1,13 +1,14 @@
 use anyhow::{ensure, Result};
-use binrw::{BinRead, BinWrite, NullString};
+use binrw::{BinRead, BinResult, BinWrite, Endian};
 use std::fmt::Debug;
-use std::io::{Read, Seek, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::num::NonZeroU8;
 use std::time::SystemTime;
 
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::BlobId;
-use cryfs_rustfs::{FsError, FsResult};
-use cryfs_utils::binary::{read_timespec, write_timespec};
+use cryfs_rustfs::{FsError, FsResult, PathComponent, PathComponentBuf};
+use cryfs_utils::binary::{read_null_string, read_timespec, write_null_string, write_timespec};
 
 // TODO Unify this with the BlobType enum from this very same crate?
 
@@ -35,7 +36,9 @@ pub struct DirEntryImpl {
     #[br(parse_with = read_timespec)]
     #[bw(write_with = write_timespec)]
     last_metadata_change_time: SystemTime,
-    name: NullString,
+    #[br(parse_with = read_path_component)]
+    #[bw(write_with = write_path_component)]
+    name: PathComponentBuf,
     blob_id: BlobId,
 }
 
@@ -49,9 +52,9 @@ pub struct DirEntry {
 impl DirEntry {
     pub fn new(
         entry_type: EntryType,
-        name: &str,
+        name: PathComponentBuf,
         blob_id: BlobId,
-        mut mode: Mode,
+        mode: Mode,
         uid: Uid,
         gid: Gid,
         last_access_time: SystemTime,
@@ -72,7 +75,7 @@ impl DirEntry {
                 last_access_time,
                 last_modification_time,
                 last_metadata_change_time,
-                name: name.into(),
+                name,
                 blob_id,
             },
         };
@@ -184,13 +187,12 @@ impl DirEntry {
         self.inner.last_metadata_change_time = SystemTime::now();
     }
 
-    pub fn name(&self) -> Result<&str, std::str::Utf8Error> {
-        // TODO Instead of all these individual lookups failing, would be better to just check utf-8 once at loading time.
-        std::str::from_utf8(&self.inner.name)
+    pub fn name(&self) -> &PathComponent {
+        &self.inner.name
     }
 
-    pub fn set_name(&mut self, name: &str) {
-        self.inner.name = name.into();
+    pub fn set_name(&mut self, name: PathComponentBuf) {
+        self.inner.name = name;
         self._update_metadata_change_time();
     }
 
@@ -202,4 +204,45 @@ impl DirEntry {
         self.inner.blob_id = blob_id;
         self._update_metadata_change_time();
     }
+}
+
+// TODO Tests
+fn read_path_component<R: Read + Seek>(
+    reader: &mut R,
+    endian: Endian,
+    _: (),
+) -> BinResult<PathComponentBuf> {
+    // TODO Direct implementation without going through an intermediate Vec<NonZeroU8> would be faster
+    let pos = reader.seek(SeekFrom::Current(0))?;
+    let read_str = read_null_string(reader, endian, ())?;
+    let read_str = read_str.into_iter().map(|v| v.get()).collect();
+    let read_str = String::from_utf8(read_str).map_err(|err| binrw::Error::AssertFail {
+        pos,
+        message: format!("{err:?}"),
+    })?;
+    let path =
+        PathComponentBuf::try_from_string(read_str).map_err(|err| binrw::Error::AssertFail {
+            pos,
+            message: format!("{err:?}"),
+        })?;
+    Ok(path)
+}
+
+// TODO Tests
+fn write_path_component(
+    v: &PathComponentBuf,
+    writer: &mut (impl Write + Seek),
+    endian: Endian,
+    args: (),
+) -> Result<(), binrw::Error> {
+    // TODO Direct implementation without going through an intermediate Vec<NonZeroU8> would be faster
+    let bytes: Vec<NonZeroU8> = v
+        .as_str()
+        .as_bytes()
+        .into_iter()
+        .map(|c| {
+            NonZeroU8::try_from(*c).expect("PathComponent ensures that there aren't any null bytes")
+        })
+        .collect();
+    write_null_string(&bytes, writer, endian, args)
 }

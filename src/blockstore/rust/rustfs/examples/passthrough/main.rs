@@ -26,7 +26,7 @@ fn main() {
     let mountdir = args.next().expect(USAGE);
     assert!(args.next().is_none(), "{}", USAGE);
 
-    let fs = |_uid: Uid, _gid: Gid| PassthroughDevice::new(basedir.into());
+    let fs = |_uid: Uid, _gid: Gid| PassthroughDevice::new(basedir.try_into().unwrap());
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .thread_name("rustfs")

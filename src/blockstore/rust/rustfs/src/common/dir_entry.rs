@@ -1,7 +1,8 @@
 use super::NodeKind;
+use crate::common::PathComponentBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirEntry {
-    pub name: String,
+    pub name: PathComponentBuf,
     pub kind: NodeKind,
 }

@@ -1,11 +1,14 @@
-use super::component::PathComponent;
-use super::error::ParsePathError;
+use derive_more::Display;
 use std::borrow::{Borrow, ToOwned};
 use std::iter::{DoubleEndedIterator, ExactSizeIterator, FusedIterator};
 use std::ops::Deref;
 use std::str::FromStr;
 
+use super::component::PathComponent;
+use super::error::ParsePathError;
 use super::iter::ComponentIter;
+
+// TODO Check for usages of Path/PathBuf throughout the codebase and see if they should be replaced with AbsolutePath/AbsolutePathBuf
 
 /// An [AbsolutePath] is similar to [std::path::Path] but adds a few invariants, e.g. that the path must be absolute.
 ///
@@ -18,7 +21,7 @@ use super::iter::ComponentIter;
 ///   - Must not contain any empty components (i.e. two slashes following each other)
 ///   - Must not contain any '.' or '..' components
 ///   - Must not contain any trailing slashes, except if it is the root path "/" itself
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug, Display)]
 #[repr(transparent)]
 pub struct AbsolutePath {
     path: str,
@@ -100,6 +103,45 @@ impl AbsolutePath {
         )?;
         Ok(())
     }
+
+    /// Split the path into its parent directory and the last component (e.g. file name).
+    ///
+    /// Returns `None` if it is called on the root path "/" because that path doesn't have a parent path.
+    ///
+    /// # Examples
+    /// ```
+    /// use cryfs_rustfs::AbsolutePath;
+    ///
+    /// let path = AbsolutePath::try_from_str("/foo/bar").unwrap();
+    ///
+    /// let (parent, child) = path.split_last().unwrap();
+    /// assert_eq!(parent.as_str(), "/foo");
+    /// assert_eq!(child.as_str(), "bar");
+    ///
+    /// let path = AbsolutePath::try_from_str("/").unwrap();
+    /// assert_eq!(None, path.split_last());
+    /// ```
+    pub fn split_last(&self) -> Option<(&AbsolutePath, &PathComponent)> {
+        if self.is_root() {
+            return None;
+        }
+
+        let index_of_last_separator = self
+            .path
+            .rfind('/')
+            .expect("Absolute paths must always have at least one slash");
+
+        if index_of_last_separator == 0 {
+            let parent = AbsolutePath::root();
+            let child = PathComponent::new_assert_invariants(&self.path[1..]);
+            return Some((parent, child));
+        }
+
+        let (parent, child) = self.path.split_at(index_of_last_separator);
+        let parent = AbsolutePath::new_assert_invariants(parent);
+        let child = PathComponent::new_assert_invariants(&child[1..]);
+        Some((parent, child))
+    }
 }
 
 impl<'a> TryFrom<&'a str> for &'a AbsolutePath {
@@ -155,7 +197,7 @@ impl ToOwned for AbsolutePath {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
 pub struct AbsolutePathBuf {
     path: String,
 }
@@ -183,6 +225,17 @@ impl AbsolutePathBuf {
             self.path.push('/');
         }
         self.path.push_str(component);
+        self
+    }
+
+    // TODO Test
+    #[inline]
+    pub fn push_all(mut self, components: &AbsolutePath) -> Self {
+        if self.is_root() {
+            self.path = components.path.to_owned();
+        } else {
+            self.path.push_str(&components.path);
+        }
         self
     }
 }
@@ -230,6 +283,13 @@ impl From<AbsolutePathBuf> for String {
     #[inline]
     fn from(component: AbsolutePathBuf) -> Self {
         component.path
+    }
+}
+
+impl AsRef<std::path::Path> for AbsolutePathBuf {
+    #[inline]
+    fn as_ref(&self) -> &std::path::Path {
+        self.path.as_ref()
     }
 }
 
@@ -383,6 +443,13 @@ mod tests {
                 let result = AbsolutePath::try_from_str(path).unwrap();
                 let result: AbsolutePathBuf = result.to_owned();
                 assert_eq!(expected, &result,);
+            }
+
+            // AsRef<Path> for AbsolutePathBuf
+            if expected.is_ok() {
+                let result = AbsolutePathBuf::try_from_string(path.to_owned()).unwrap();
+                let result: &std::path::Path = result.as_ref();
+                assert_eq!(std::path::Path::new(path), result);
             }
 
             // Deref for AbsolutePath
@@ -589,6 +656,52 @@ mod tests {
             test(Err(ParsePathError::InvalidFormat), "/foo\0/bar");
             test(Err(ParsePathError::InvalidFormat), "/foo\0bar/bar");
             test(Err(ParsePathError::InvalidFormat), "/\0bar/bar");
+        }
+    }
+
+    mod split_last {
+        use super::*;
+
+        #[test]
+        fn root_dir() {
+            let path = AbsolutePath::try_from_str("/").unwrap();
+            assert_eq!(None, path.split_last());
+        }
+
+        #[test]
+        fn single_component() {
+            let path = AbsolutePath::try_from_str("/foo").unwrap();
+            assert_eq!(
+                Some((
+                    AbsolutePath::try_from_str("/").unwrap(),
+                    "foo".try_into().unwrap(),
+                )),
+                path.split_last(),
+            );
+        }
+
+        #[test]
+        fn two_components() {
+            let path = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            assert_eq!(
+                Some((
+                    AbsolutePath::try_from_str("/foo").unwrap(),
+                    "bar".try_into().unwrap(),
+                )),
+                path.split_last(),
+            );
+        }
+
+        #[test]
+        fn three_components() {
+            let path = AbsolutePath::try_from_str("/foo/bar/baz").unwrap();
+            assert_eq!(
+                Some((
+                    AbsolutePath::try_from_str("/foo/bar").unwrap(),
+                    "baz".try_into().unwrap(),
+                )),
+                path.split_last(),
+            );
         }
     }
 }

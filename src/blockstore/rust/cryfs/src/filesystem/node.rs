@@ -8,7 +8,8 @@ use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
-    object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, PathComponent,
+    PathComponentBuf, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
@@ -18,7 +19,7 @@ enum NodeInfo {
     },
     IsNotRootDir {
         parent_blob_id: BlobId,
-        name: String,
+        name: PathComponentBuf,
     },
 }
 
@@ -57,7 +58,7 @@ where
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
         parent_blob_id: BlobId,
-        name: String,
+        name: PathComponentBuf,
     ) -> Self {
         Self {
             blobstore,
@@ -137,7 +138,7 @@ where
     pub async fn load_parent_blob(
         &self,
         parent_blob_id: &BlobId,
-        self_name: &str,
+        self_name: &PathComponent,
     ) -> FsResult<AsyncDropGuard<DirBlob<'a, B>>> {
         let mut parent_blob = self._load_parent_blob(parent_blob_id).await?;
 
@@ -250,9 +251,6 @@ where
                     let lstat_size = self.load_lstat_size().await?;
                     let entry = parent_blob
                         .entry_by_name(name)
-                        .map_err(|_| FsError::CorruptedFilesystem {
-                            message: format!("Entry name isn't utf-8"),
-                        })?
                         .ok_or_else(|| FsError::NodeDoesNotExist)?;
                     Ok(dir_entry_to_node_attrs(entry, lstat_size))
                 })()
@@ -279,6 +277,7 @@ where
             } => {
                 let mut parent_blob = self.load_parent_blob(parent_blob_id, name).await?;
                 let result = parent_blob
+                    // TODO No Mode conversion
                     .set_mode_of_entry_by_name(name, fs_types::Mode::from(u32::from(mode)));
                 parent_blob.async_drop().await.map_err(|err| {
                     log::error!("Error dropping parent blob: {:?}", err);
@@ -350,7 +349,10 @@ where
     }
 }
 
-fn get_blob_details<'a, B>(parent_blob: &DirBlob<'a, B>, name: &str) -> FsResult<BlobDetails>
+fn get_blob_details<'a, B>(
+    parent_blob: &DirBlob<'a, B>,
+    name: &PathComponent,
+) -> FsResult<BlobDetails>
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -358,9 +360,6 @@ where
 {
     let entry = parent_blob
         .entry_by_name(name)
-        .map_err(|_| FsError::CorruptedFilesystem {
-            message: format!("Entry name isn't utf-8"),
-        })?
         .ok_or_else(|| FsError::NodeDoesNotExist)?;
     let blob_id = *entry.blob_id();
     let blob_type = match entry.entry_type() {

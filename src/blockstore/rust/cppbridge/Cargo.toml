@@ -9,6 +9,7 @@ anyhow = "^1.0.68"
 async-trait = "^0.1.60"
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
+cryfs-rustfs = {path = "../rustfs"}
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-utils = {path = "../utils"}
 cxx = {version = "^1.0.85", features = ["c++14"]}

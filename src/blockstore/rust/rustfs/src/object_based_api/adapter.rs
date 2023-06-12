@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
 use super::{open_file_list::OpenFileList, Device, Dir, File, Node, OpenFile, Symlink};
-use crate::common::{DirEntry, FsError, FsResult, Gid, Mode, NumBytes, OpenFlags, Statfs, Uid};
+use crate::common::{
+    AbsolutePath, DirEntry, FsError, FsResult, Gid, Mode, NumBytes, OpenFlags, Statfs, Uid,
+};
 use crate::low_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, IntoFs, OpenResponse,
     OpendirResponse, RequestInfo,
@@ -132,7 +133,7 @@ where
     async fn getattr(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
     ) -> FsResult<AttrResponse> {
         let attrs = if let Some(fh) = fh {
@@ -157,7 +158,7 @@ where
     async fn chmod(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         mode: Mode,
     ) -> FsResult<()> {
@@ -180,7 +181,7 @@ where
     async fn chown(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         uid: Option<Uid>,
         gid: Option<Gid>,
@@ -204,7 +205,7 @@ where
     async fn truncate(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         size: NumBytes,
     ) -> FsResult<()> {
@@ -226,7 +227,7 @@ where
     async fn utimens(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
@@ -249,7 +250,7 @@ where
     async fn utimens_macos(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _fh: Option<FileHandle>,
         _crtime: Option<SystemTime>,
         _chgtime: Option<SystemTime>,
@@ -260,7 +261,7 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn readlink(&self, _req: RequestInfo, path: &Path) -> FsResult<PathBuf> {
+    async fn readlink(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<String> {
         let fs = self.fs.read().unwrap();
         let link = fs.get().load_symlink(path).await?;
         link.target().await
@@ -269,8 +270,7 @@ where
     async fn mknod(
         &self,
         _req: RequestInfo,
-        _parent: &Path,
-        _name: &str,
+        _path: &AbsolutePath,
         _mode: Mode,
         _rdev: u32,
     ) -> FsResult<AttrResponse> {
@@ -281,14 +281,19 @@ where
     async fn mkdir(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
+        path: &AbsolutePath,
         mode: Mode,
     ) -> FsResult<AttrResponse> {
         let uid = Uid::from(req.uid);
         let gid = Gid::from(req.gid);
         let mode = Mode::from(mode).add_dir_flag();
         // TODO Assert mode doesn't have file or symlink flags set
+        let (parent, name) = path.split_last().ok_or_else(|| {
+            assert!(path.is_root());
+            // TODO Here and throughout, use a consistent logging and decide how to log (1) things that are wrong in the file system vs (2) operations that are successful if returning errors, e.g. getattr on a non-existing path
+            log::error!("mkdir: called with root path");
+            FsError::InvalidOperation
+        })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().load_dir(parent).await?;
         let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
@@ -298,14 +303,24 @@ where
         })
     }
 
-    async fn unlink(&self, _req: RequestInfo, parent: &Path, name: &str) -> FsResult<()> {
+    async fn unlink(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<()> {
+        let (parent, name) = path.split_last().ok_or_else(|| {
+            assert!(path.is_root());
+            log::error!("unlink: called with root path");
+            FsError::InvalidOperation
+        })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().load_dir(parent).await?;
         parent_dir.remove_child_file_or_symlink(&name).await?;
         Ok(())
     }
 
-    async fn rmdir(&self, _req: RequestInfo, parent: &Path, name: &str) -> FsResult<()> {
+    async fn rmdir(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<()> {
+        let (parent, name) = path.split_last().ok_or_else(|| {
+            assert!(path.is_root());
+            log::error!("rmdir: called with root path");
+            FsError::InvalidOperation
+        })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().load_dir(parent).await?;
         parent_dir.remove_child_dir(&name).await?;
@@ -315,12 +330,17 @@ where
     async fn symlink(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
-        target: &Path,
+        path: &AbsolutePath,
+        // TODO Custom type for target that can be an absolute-or-relative path
+        target: &str,
     ) -> FsResult<AttrResponse> {
         let uid = Uid::from(req.uid);
         let gid = Gid::from(req.gid);
+        let (parent, name) = path.split_last().ok_or_else(|| {
+            assert!(path.is_root());
+            log::error!("symlink: called with root path");
+            FsError::InvalidOperation
+        })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().load_dir(parent).await?;
         let new_symlink_attrs = parent_dir
@@ -335,25 +355,30 @@ where
     async fn rename(
         &self,
         _req: RequestInfo,
-        oldparent: &Path,
-        oldname: &str,
-        newparent: &Path,
-        newname: &str,
+        oldpath: &AbsolutePath,
+        newpath: &AbsolutePath,
     ) -> FsResult<()> {
+        let (oldparent, oldname) = oldpath.split_last().ok_or_else(|| {
+            assert!(oldpath.is_root());
+            log::error!("rename: tried to rename the root directory into '{newpath}'");
+            FsError::InvalidOperation
+        })?;
+        if newpath.is_root() {
+            log::error!("rename: tried to rename '{oldpath}' into the root directory");
+            return Err(FsError::InvalidOperation);
+        };
         let fs = self.fs.read().unwrap();
         let old_parent_dir = fs.get().load_dir(oldparent).await?;
-        let new_path = newparent.join(&*newname);
         // TODO Should rename overwrite a potentially already existing target or not? Make sure we handle that the right way.
-        old_parent_dir.rename_child(&oldname, &new_path).await?;
+        old_parent_dir.rename_child(&oldname, newpath).await?;
         Ok(())
     }
 
     async fn link(
         &self,
         _req: RequestInfo,
-        _path: &Path,
-        _newparent: &Path,
-        _newname: &str,
+        _oldpath: &AbsolutePath,
+        _newpath: &AbsolutePath,
     ) -> FsResult<AttrResponse> {
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
@@ -362,7 +387,7 @@ where
     async fn open(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         flags: OpenFlags,
     ) -> FsResult<OpenResponse> {
         let fs = self.fs.read().unwrap();
@@ -379,7 +404,7 @@ where
     async fn read<CallbackResult>(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         fh: FileHandle,
         offset: NumBytes,
         size: NumBytes,
@@ -410,7 +435,7 @@ where
     async fn write(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         fh: FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
@@ -432,7 +457,7 @@ where
     async fn flush(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         fh: FileHandle,
         _lock_owner: u64,
     ) -> FsResult<()> {
@@ -448,7 +473,7 @@ where
     async fn release(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         fh: FileHandle,
         _flags: OpenFlags,
         _lock_owner: u64,
@@ -463,7 +488,7 @@ where
     async fn fsync(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
@@ -479,7 +504,7 @@ where
     async fn opendir(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         flags: u32,
     ) -> FsResult<OpendirResponse> {
         // TODO Do we need opendir? The path seems to be passed to readdir, but the fuse_mt comment
@@ -493,7 +518,7 @@ where
     async fn readdir(
         &self,
         _req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         _fh: FileHandle,
     ) -> FsResult<Vec<DirEntry>> {
         let fs = self.fs.read().unwrap();
@@ -505,7 +530,7 @@ where
     async fn releasedir(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _fh: FileHandle,
         _flags: u32,
     ) -> FsResult<()> {
@@ -516,25 +541,25 @@ where
     async fn fsyncdir(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _fh: FileHandle,
         _datasync: bool,
     ) -> FsResult<()> {
         Err(FsError::NotImplemented)
     }
 
-    async fn statfs(&self, _req: RequestInfo, _path: &Path) -> FsResult<Statfs> {
+    async fn statfs(&self, _req: RequestInfo, _path: &AbsolutePath) -> FsResult<Statfs> {
         self.fs.read().unwrap().get().statfs().await
     }
 
     async fn setxattr(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _name: &str,
         _value: &[u8],
         _flags: u32,
-        _position: u32,
+        _position: NumBytes,
     ) -> FsResult<()> {
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
@@ -543,7 +568,7 @@ where
     async fn getxattr_numbytes(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _name: &str,
     ) -> FsResult<NumBytes> {
         // TODO Should we implement this?
@@ -553,7 +578,7 @@ where
     async fn getxattr_data(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _name: &str,
         _size: NumBytes,
     ) -> FsResult<Vec<u8>> {
@@ -561,7 +586,11 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn listxattr_numbytes(&self, _req: RequestInfo, _path: &Path) -> FsResult<NumBytes> {
+    async fn listxattr_numbytes(
+        &self,
+        _req: RequestInfo,
+        _path: &AbsolutePath,
+    ) -> FsResult<NumBytes> {
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -569,18 +598,23 @@ where
     async fn listxattr_data(
         &self,
         _req: RequestInfo,
-        _path: &Path,
+        _path: &AbsolutePath,
         _size: NumBytes,
     ) -> FsResult<Vec<u8>> {
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
 
-    async fn removexattr(&self, _req: RequestInfo, _path: &Path, _name: &str) -> FsResult<()> {
+    async fn removexattr(
+        &self,
+        _req: RequestInfo,
+        _path: &AbsolutePath,
+        _name: &str,
+    ) -> FsResult<()> {
         Err(FsError::NotImplemented)
     }
 
-    async fn access(&self, _req: RequestInfo, _path: &Path, _mask: u32) -> FsResult<()> {
+    async fn access(&self, _req: RequestInfo, _path: &AbsolutePath, _mask: u32) -> FsResult<()> {
         // TODO Should we implement access?
         Ok(())
     }
@@ -588,13 +622,18 @@ where
     async fn create(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
+        path: &AbsolutePath,
         mode: Mode,
         flags: i32,
     ) -> FsResult<CreateResponse> {
         let mode = mode.add_file_flag();
         // TODO Assert that dir/symlink flags aren't set
+        let (parent, name) = path.split_last().ok_or_else(|| {
+            assert!(path.is_root());
+            // TODO Here and throughout, use a consistent logging and decide how to log (1) things that are wrong in the file system vs (2) operations that are successful if returning errors, e.g. getattr on a non-existing path
+            log::error!("create: called with root path");
+            FsError::InvalidOperation
+        })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().load_dir(parent).await?;
         let (file_attrs, open_file) = parent_dir

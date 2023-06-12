@@ -2,22 +2,15 @@ use anyhow::{ensure, Result};
 use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    BlockStore, EncryptedBlockStore, InMemoryBlockStore, IntegrityBlockStore, IntegrityConfig,
-    LockingBlockStore, OnDiskBlockStore,
+    EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig, LockingBlockStore, OnDiskBlockStore,
 };
-use cryfs_cryfs::config::{
-    ciphers::{lookup_cipher_async, AsyncCipherCallback},
-    ConfigLoadResult,
-};
+use cryfs_cryfs::config::{ciphers::AsyncCipherCallback, ConfigLoadResult};
 use cryfs_cryfs::filesystem::CryDevice;
 use cryfs_cryfs::localstate::LocalStateDir;
 use cryfs_rustfs::backend::fuse_mt;
-use cryfs_utils::{
-    async_drop::AsyncDropGuard,
-    crypto::symmetric::{CipherDef, EncryptionKey},
-};
+use cryfs_utils::crypto::symmetric::{CipherDef, EncryptionKey};
 
 pub struct FilesystemRunner<'m, 'c, 'l> {
     pub basedir: PathBuf,

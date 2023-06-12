@@ -3,7 +3,6 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 
 use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
-use cryfs_utils::async_drop::AsyncDrop;
 use cryfs_utils::data::Data;
 
 #[async_trait]

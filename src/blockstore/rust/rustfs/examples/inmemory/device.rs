@@ -1,6 +1,7 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Gid, Mode, Statfs, Uid};
-use std::path::{Component, Path};
+use cryfs_rustfs::{
+    object_based_api::Device, AbsolutePath, FsError, FsResult, Gid, Mode, Statfs, Uid,
+};
 use std::sync::{Arc, Mutex};
 
 use super::dir::{DirInode, InMemoryDirRef};
@@ -26,47 +27,25 @@ impl RootDir {
         })
     }
 
-    pub fn load_node(self: &Arc<Self>, path: &Path) -> FsResult<InMemoryNodeRef> {
+    pub fn load_node(self: &Arc<Self>, path: &AbsolutePath) -> FsResult<InMemoryNodeRef> {
         let mut current_node = InMemoryNodeRef::Dir(InMemoryDirRef::from_inode(
             Arc::downgrade(&self),
             Arc::clone(&self.rootdir),
         ));
-        let mut components = path.components();
-        if components.next() != Some(Component::RootDir) {
-            return Err(FsError::InvalidPath);
-        }
-        for component in components {
-            match component {
-                Component::Prefix(_) => {
-                    return Err(FsError::InvalidPath);
+        for component in path.iter() {
+            match &current_node {
+                InMemoryNodeRef::Dir(dir) => {
+                    current_node = dir.get_child(&component)?;
                 }
-                Component::RootDir => {
-                    return Err(FsError::InvalidPath);
-                }
-                Component::ParentDir => {
-                    return Err(FsError::InvalidPath);
-                }
-                Component::CurDir => {
-                    return Err(FsError::InvalidPath);
-                }
-                Component::Normal(name) => {
-                    // TODO Is this the right way to convert from OsStr?
-                    let name = name.to_string_lossy();
-                    match &current_node {
-                        InMemoryNodeRef::Dir(dir) => {
-                            current_node = dir.get_child(&name)?;
-                        }
-                        InMemoryNodeRef::Symlink(_) | InMemoryNodeRef::File(_) => {
-                            return Err(FsError::NodeIsNotADirectory);
-                        }
-                    }
+                InMemoryNodeRef::Symlink(_) | InMemoryNodeRef::File(_) => {
+                    return Err(FsError::NodeIsNotADirectory);
                 }
             }
         }
         Ok(current_node)
     }
 
-    pub fn load_dir(self: &Arc<Self>, path: &Path) -> FsResult<InMemoryDirRef> {
+    pub fn load_dir(self: &Arc<Self>, path: &AbsolutePath) -> FsResult<InMemoryDirRef> {
         let node = self.load_node(path)?;
         match node {
             InMemoryNodeRef::Dir(dir) => Ok(dir),
@@ -74,7 +53,7 @@ impl RootDir {
         }
     }
 
-    pub fn load_symlink(self: &Arc<Self>, path: &Path) -> FsResult<InMemorySymlinkRef> {
+    pub fn load_symlink(self: &Arc<Self>, path: &AbsolutePath) -> FsResult<InMemorySymlinkRef> {
         let node = self.load_node(path)?;
         match node {
             InMemoryNodeRef::Symlink(symlink) => Ok(symlink),
@@ -82,7 +61,7 @@ impl RootDir {
         }
     }
 
-    pub fn load_file(self: &Arc<Self>, path: &Path) -> FsResult<InMemoryFileRef> {
+    pub fn load_file(self: &Arc<Self>, path: &AbsolutePath) -> FsResult<InMemoryFileRef> {
         let node = self.load_node(path)?;
         match node {
             InMemoryNodeRef::File(file) => Ok(file),
@@ -115,19 +94,19 @@ impl Device for InMemoryDevice {
     type File<'a> = InMemoryFileRef;
     type OpenFile = InMemoryOpenFileRef;
 
-    async fn load_node(&self, path: &Path) -> FsResult<Self::Node<'_>> {
+    async fn load_node(&self, path: &AbsolutePath) -> FsResult<Self::Node<'_>> {
         self.rootdir.load_node(path)
     }
 
-    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir<'_>> {
+    async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
         self.rootdir.load_dir(path)
     }
 
-    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink<'_>> {
+    async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
         self.rootdir.load_symlink(path)
     }
 
-    async fn load_file(&self, path: &Path) -> FsResult<Self::File<'_>> {
+    async fn load_file(&self, path: &AbsolutePath) -> FsResult<Self::File<'_>> {
         self.rootdir.load_file(path)
     }
 

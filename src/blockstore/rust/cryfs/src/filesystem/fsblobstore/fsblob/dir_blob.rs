@@ -10,7 +10,7 @@ use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
-use cryfs_rustfs::FsResult;
+use cryfs_rustfs::{FsResult, PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
@@ -57,6 +57,7 @@ where
         }))
     }
 
+    // TODO DoubleEndedIterator + FusedIterator
     pub fn entries(&self) -> impl Iterator<Item = &DirEntry> + ExactSizeIterator {
         self.entries.iter()
     }
@@ -85,18 +86,18 @@ where
         self.entries.get_by_id(id)
     }
 
-    pub fn entry_by_name(&self, name: &str) -> Result<Option<&DirEntry>> {
+    pub fn entry_by_name(&self, name: &PathComponent) -> Option<&DirEntry> {
         self.entries.get_by_name(name)
     }
 
-    pub fn entry_by_name_mut(&mut self, name: &str) -> Result<Option<&mut DirEntry>> {
+    pub fn entry_by_name_mut(&mut self, name: &PathComponent) -> Option<&mut DirEntry> {
         self.entries.get_by_name_mut(name)
     }
 
     pub fn rename_entry(
         &mut self,
         blob_id: &BlobId,
-        new_name: &str,
+        new_name: PathComponentBuf,
         on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
     ) -> Result<()> {
         self.entries.rename(blob_id, new_name, on_overwritten)
@@ -110,7 +111,7 @@ where
         self.entries.set_mode(blob_id, mode)
     }
 
-    pub fn set_mode_of_entry_by_name(&mut self, name: &str, mode: Mode) -> FsResult<()> {
+    pub fn set_mode_of_entry_by_name(&mut self, name: &PathComponent, mode: Mode) -> FsResult<()> {
         self.entries.set_mode_by_name(name, mode)
     }
 
@@ -125,7 +126,7 @@ where
 
     pub fn set_uid_gid_of_entry_by_name(
         &mut self,
-        name: &str,
+        name: &PathComponent,
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
@@ -144,7 +145,7 @@ where
 
     pub fn set_access_times_of_entry_by_name(
         &mut self,
-        name: &str,
+        name: &PathComponent,
         last_access_time: Option<SystemTime>,
         last_modification_time: Option<SystemTime>,
     ) -> FsResult<()> {
@@ -161,7 +162,10 @@ where
             .maybe_update_access_timestamp(blob_id, atime_update_behavior)
     }
 
-    pub fn remove_entry_by_name(&mut self, name: &str) -> Result<DirEntry, cryfs_rustfs::FsError> {
+    pub fn remove_entry_by_name(
+        &mut self,
+        name: &PathComponent,
+    ) -> Result<DirEntry, cryfs_rustfs::FsError> {
         self.entries.remove_by_name(name)
     }
 
@@ -171,7 +175,7 @@ where
 
     pub fn add_entry_dir(
         &mut self,
-        name: &str,
+        name: PathComponentBuf,
         id: BlobId,
         mode: Mode,
         uid: Uid,
@@ -193,7 +197,7 @@ where
 
     pub fn add_entry_file(
         &mut self,
-        name: &str,
+        name: PathComponentBuf,
         id: BlobId,
         mode: Mode,
         uid: Uid,
@@ -215,7 +219,7 @@ where
 
     pub fn add_entry_symlink(
         &mut self,
-        name: &str,
+        name: PathComponentBuf,
         id: BlobId,
         uid: Uid,
         gid: Gid,
@@ -236,7 +240,7 @@ where
 
     pub fn add_or_overwrite_entry(
         &mut self,
-        name: &str,
+        name: PathComponentBuf,
         id: BlobId,
         entry_type: EntryType,
         mode: Mode,

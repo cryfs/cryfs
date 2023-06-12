@@ -13,10 +13,7 @@ use cryfs_blockstore::{
 };
 use cryfs_cryfs::{
     config::ciphers::lookup_cipher_async,
-    config::{
-        CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, CryConfig, PasswordProvider,
-    },
-    filesystem::CryDevice,
+    config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, PasswordProvider},
     localstate::LocalStateDir,
 };
 use cryfs_version::VersionInfo;

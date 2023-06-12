@@ -1,18 +1,19 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{object_based_api::File, FsError, FsResult, NumBytes, OpenFlags};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
-use std::path::PathBuf;
+use cryfs_rustfs::{
+    object_based_api::File, AbsolutePathBuf, FsError, FsResult, NumBytes, OpenFlags,
+};
+use cryfs_utils::async_drop::AsyncDropGuard;
 
 use super::device::PassthroughDevice;
 use super::errors::{IoResultExt, NixResultExt};
 use super::openfile::PassthroughOpenFile;
 
 pub struct PassthroughFile {
-    path: PathBuf,
+    path: AbsolutePathBuf,
 }
 
 impl PassthroughFile {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: AbsolutePathBuf) -> Self {
         Self { path }
     }
 }
@@ -36,7 +37,8 @@ impl File for PassthroughFile {
         let path = self.path.clone();
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
-                nix::unistd::truncate(&path, u64::from(new_size) as libc::off_t).map_error()?;
+                nix::unistd::truncate(path.as_str(), u64::from(new_size) as libc::off_t)
+                    .map_error()?;
                 Ok(())
             })
             .await

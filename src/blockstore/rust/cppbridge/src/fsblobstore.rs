@@ -7,6 +7,7 @@ use cryfs_cryfs::{
     },
     utils::fs_types::{Gid, Uid},
 };
+use cryfs_rustfs::{PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::AsyncDropGuard;
 use cxx::UniquePtr;
 use futures::{StreamExt, TryStreamExt};
@@ -118,7 +119,7 @@ mod ffi {
         fn entries(&self) -> Vec<RustDirEntryBridge>;
         fn flush(&mut self) -> Result<()>;
         fn entry_by_id(&self, id: &FsBlobId) -> Box<OptionRustDirEntryBridge>;
-        fn entry_by_name(&self, name: &str) -> Result<Box<OptionRustDirEntryBridge>>;
+        fn entry_by_name(&self, name: &str) -> Box<OptionRustDirEntryBridge>;
         fn rename_entry(
             &mut self,
             blob_id: &FsBlobId,
@@ -275,7 +276,7 @@ mod ffi {
         fn last_access_time(&self) -> RustTimespec;
         fn last_modification_time(&self) -> RustTimespec;
         fn last_metadata_change_time(&self) -> RustTimespec;
-        fn name(&self) -> Result<&str>;
+        fn name(&self) -> &str;
         fn blob_id(&self) -> Box<FsBlobId>;
     }
 
@@ -456,8 +457,8 @@ impl RustDirEntryBridge {
         self.0.last_metadata_change_time().into()
     }
 
-    fn name(&self) -> Result<&str> {
-        Ok(self.0.name()?)
+    fn name(&self) -> &str {
+        self.0.name()
     }
 
     fn blob_id(&self) -> Box<FsBlobId> {
@@ -695,14 +696,12 @@ impl<'a> RustDirBlobBridge<'a> {
         ))
     }
 
-    fn entry_by_name(&self, name: &str) -> Result<Box<OptionRustDirEntryBridge>> {
-        log_errors(|| {
-            Ok(Box::new(OptionRustDirEntryBridge(
-                self.0
-                    .entry_by_name(name)?
-                    .map(|v| RustDirEntryBridge(v.clone())),
-            )))
-        })
+    fn entry_by_name(&self, name: &str) -> Box<OptionRustDirEntryBridge> {
+        Box::new(OptionRustDirEntryBridge(
+            self.0
+                .entry_by_name(name.try_into().unwrap())
+                .map(|v| RustDirEntryBridge(v.clone())),
+        ))
     }
 
     fn rename_entry(
@@ -712,10 +711,14 @@ impl<'a> RustDirBlobBridge<'a> {
         on_overwritten: UniquePtr<ffi::CxxCallbackWithBlobId>,
     ) -> Box<FsResult> {
         log_errors(|| {
-            self.0.rename_entry(&blob_id.0, new_name, |id| {
-                on_overwritten.call(&FsBlobId(*id))?;
-                Ok(())
-            })
+            self.0.rename_entry(
+                &blob_id.0,
+                PathComponent::try_from_str(new_name).unwrap().to_owned(),
+                |id| {
+                    on_overwritten.call(&FsBlobId(*id))?;
+                    Ok(())
+                },
+            )
         })
         .into()
     }
@@ -781,7 +784,7 @@ impl<'a> RustDirBlobBridge<'a> {
     ) -> Box<FsResult> {
         log_errors(|| {
             self.0.add_entry_dir(
-                name,
+                PathComponentBuf::try_from_string(name.to_owned()).unwrap(),
                 id.0,
                 mode.into(),
                 Uid::from(uid),
@@ -805,7 +808,7 @@ impl<'a> RustDirBlobBridge<'a> {
     ) -> Box<FsResult> {
         log_errors(|| {
             self.0.add_entry_file(
-                name,
+                PathComponentBuf::try_from_string(name.to_owned()).unwrap(),
                 id.0,
                 mode.into(),
                 Uid::from(uid),
@@ -828,7 +831,7 @@ impl<'a> RustDirBlobBridge<'a> {
     ) -> Box<FsResult> {
         log_errors(|| {
             self.0.add_entry_symlink(
-                name,
+                PathComponentBuf::try_from_string(name.to_owned()).unwrap(),
                 id.0,
                 uid.into(),
                 gid.into(),
@@ -853,7 +856,7 @@ impl<'a> RustDirBlobBridge<'a> {
     ) -> Box<FsResult> {
         log_errors(|| {
             self.0.add_or_overwrite_entry(
-                name,
+                PathComponentBuf::try_from_string(name.to_owned()).unwrap(),
                 id.0,
                 entry_type.into(),
                 mode.into(),
@@ -872,7 +875,7 @@ impl<'a> RustDirBlobBridge<'a> {
 
     pub fn remove_entry_by_name(&mut self, name: &str) -> Box<FsResult> {
         log_errors(|| {
-            self.0.remove_entry_by_name(name)?;
+            self.0.remove_entry_by_name(name.try_into().unwrap())?;
             Ok(())
         })
         .into()
@@ -896,13 +899,7 @@ impl<'a> RustSymlinkBlobBridge<'a> {
 
     fn target(&mut self) -> Result<String> {
         // TODO Does self need to be mut?
-        log_errors(|| {
-            Ok(TOKIO_RUNTIME
-                .block_on(self.0.target())?
-                .to_str()
-                .ok_or_else(|| anyhow::anyhow!("Symlink target is not valid UTF-8"))?
-                .to_string())
-        })
+        log_errors(|| Ok(TOKIO_RUNTIME.block_on(self.0.target())?))
     }
 
     fn parent(&self) -> Box<FsBlobId> {

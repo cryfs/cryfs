@@ -27,7 +27,7 @@ where
             second.async_drop().await.map_err(err_map_u)?;
             Err(first.into())
         }
-        (Err(first), Err(second)) => {
+        (Err(first), Err(_second)) => {
             // TODO Report both errors
             Err(first.into())
         }

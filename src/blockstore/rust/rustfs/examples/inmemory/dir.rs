@@ -1,11 +1,11 @@
 use async_trait::async_trait;
+use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
-    OpenFlags, Uid,
+    OpenFlags, PathComponent, PathComponentBuf, Uid,
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::SystemTime;
 
@@ -23,7 +23,7 @@ mod inode {
 
     pub struct DirInode {
         metadata: NodeAttrs,
-        entries: HashMap<String, InMemoryNodeRef>,
+        entries: HashMap<PathComponentBuf, InMemoryNodeRef>,
     }
 
     impl DirInode {
@@ -65,7 +65,7 @@ mod inode {
             utimens(&mut self.metadata, last_access, last_modification);
         }
 
-        pub fn entries(&self) -> &HashMap<String, InMemoryNodeRef> {
+        pub fn entries(&self) -> &HashMap<PathComponentBuf, InMemoryNodeRef> {
             &self.entries
         }
 
@@ -73,7 +73,7 @@ mod inode {
         //      (e.g. metadata.num_bytes),
         //      we can't offer `entries_mut` as a function anymore because it could
         //      violate that invariant.
-        pub fn entries_mut(&mut self) -> &mut HashMap<String, InMemoryNodeRef> {
+        pub fn entries_mut(&mut self) -> &mut HashMap<PathComponentBuf, InMemoryNodeRef> {
             &mut self.entries
         }
     }
@@ -111,7 +111,7 @@ impl InMemoryDirRef {
         *inode.metadata()
     }
 
-    pub fn get_child(&self, name: &str) -> FsResult<InMemoryNodeRef> {
+    pub fn get_child(&self, name: &PathComponent) -> FsResult<InMemoryNodeRef> {
         let inode = self.inode.lock().unwrap();
         match inode.entries().get(name) {
             Some(node) => Ok(node.clone_ref()),
@@ -141,17 +141,7 @@ impl Dir for InMemoryDirRef {
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let inode = self.inode.lock().unwrap();
-        let basic_entries = [
-            DirEntry {
-                name: ".".to_string(),
-                kind: NodeKind::Dir,
-            },
-            DirEntry {
-                name: "..".to_string(),
-                kind: NodeKind::Dir,
-            },
-        ];
-        let real_entries = inode.entries().iter().map(|(name, node)| {
+        let entries = inode.entries().iter().map(|(name, node)| {
             let kind: NodeKind = match node {
                 InMemoryNodeRef::File(_) => NodeKind::File,
                 InMemoryNodeRef::Dir(_) => NodeKind::Dir,
@@ -162,12 +152,12 @@ impl Dir for InMemoryDirRef {
                 kind,
             }
         });
-        Ok(basic_entries.into_iter().chain(real_entries).collect())
+        Ok(entries.collect())
     }
 
     async fn create_child_dir(
         &self,
-        name: &str,
+        name: &PathComponent,
         mode: Mode,
         uid: Uid,
         gid: Gid,
@@ -176,7 +166,7 @@ impl Dir for InMemoryDirRef {
         let dir = InMemoryDirRef::new(Weak::clone(&self.rootdir), mode, uid, gid);
         let metadata = dir.metadata();
         // TODO Use try_insert once that is stable
-        match inode.entries_mut().entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_owned()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 return Err(FsError::NodeAlreadyExists);
             }
@@ -187,10 +177,10 @@ impl Dir for InMemoryDirRef {
         Ok(metadata)
     }
 
-    async fn remove_child_dir(&self, name: &str) -> FsResult<()> {
+    async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
         let mut inode = self.inode.lock().unwrap();
         // TODO Use try_insert once that is stable
-        match inode.entries_mut().entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_owned()) {
             std::collections::hash_map::Entry::Occupied(entry) => match entry.get() {
                 InMemoryNodeRef::File(_) | InMemoryNodeRef::Symlink(_) => {
                     return Err(FsError::NodeIsNotADirectory);
@@ -206,8 +196,8 @@ impl Dir for InMemoryDirRef {
 
     async fn create_child_symlink(
         &self,
-        name: &str,
-        target: &Path,
+        name: &PathComponent,
+        target: &str,
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
@@ -215,7 +205,7 @@ impl Dir for InMemoryDirRef {
         let symlink = InMemorySymlinkRef::new(target.to_owned(), uid, gid);
         let metadata = symlink.metadata();
         // TODO Use try_insert once that is stable
-        match inode.entries_mut().entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_owned()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 return Err(FsError::NodeAlreadyExists);
             }
@@ -226,10 +216,10 @@ impl Dir for InMemoryDirRef {
         Ok(metadata)
     }
 
-    async fn remove_child_file_or_symlink(&self, name: &str) -> FsResult<()> {
+    async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
         let mut inode = self.inode.lock().unwrap();
         // TODO Use try_insert once that is stable
-        match inode.entries_mut().entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_owned()) {
             std::collections::hash_map::Entry::Occupied(entry) => match entry.get() {
                 InMemoryNodeRef::File(_) | InMemoryNodeRef::Symlink(_) => {
                     entry.remove();
@@ -243,7 +233,7 @@ impl Dir for InMemoryDirRef {
 
     async fn create_and_open_file(
         &self,
-        name: &str,
+        name: &PathComponent,
         mode: Mode,
         uid: Uid,
         gid: Gid,
@@ -253,7 +243,7 @@ impl Dir for InMemoryDirRef {
         let openfile = file.open_sync(OpenFlags::ReadWrite);
         let metadata = file.metadata();
         // TODO Use try_insert once that is stable
-        match inode.entries_mut().entry(name.to_string()) {
+        match inode.entries_mut().entry(name.to_owned()) {
             std::collections::hash_map::Entry::Occupied(_) => {
                 return Err(FsError::NodeAlreadyExists);
             }
@@ -264,15 +254,20 @@ impl Dir for InMemoryDirRef {
         Ok((metadata, openfile))
     }
 
-    async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()> {
+    async fn rename_child(
+        &self,
+        old_name: &PathComponent,
+        new_path: &AbsolutePath,
+    ) -> FsResult<()> {
         // TODO Go through CryNode assertions (C++) and check if we should do them here too,
         //      - moving a directory into a subdirectory of itself
         //      - overwriting a directory with a non-directory
         //      - overwriten a non-empty dir (special case: making a directory into its own ancestor)
         // TODO No unwrap
-        let new_parent_path = new_path.parent().unwrap();
-        // TODO Is to_string_lossy the right way to convert from OsStr to &str?
-        let new_name: &str = &new_path.file_name().unwrap().to_string_lossy();
+        let Some((new_parent_path, new_name)) = new_path.split_last() else {
+            log::error!("Tried to rename '{old_name}' to the root directory");
+            return Err(FsError::InvalidPath);
+        };
         let new_parent = self
             .rootdir
             .upgrade()

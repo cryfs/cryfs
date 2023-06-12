@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use cryfs_rustfs::NumBytes;
 use futures::{future, join};
 use std::fmt::Debug;
-use std::path::Path;
 use std::time::SystemTime;
 
 use crate::utils::fs_types;
@@ -11,11 +10,10 @@ use super::fsblobstore::{DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
 use super::{device::CryDevice, node::CryNode, open_file::CryOpenFile};
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{
-    object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
+    object_based_api::Dir, AbsolutePath, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs,
+    NodeKind, PathComponent, Uid,
 };
-use cryfs_utils::async_drop::{
-    AsyncDropArc, with_async_drop_err_map, AsyncDrop, AsyncDropGuard,
-};
+use cryfs_utils::async_drop::{with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryDir<'a, B>
 where
@@ -143,14 +141,7 @@ where
 
                     let mut result = Vec::with_capacity(entries.len());
                     for entry in entries {
-                        let name = match entry.name() {
-                            Err(err) => {
-                                return Err(FsError::CorruptedFilesystem {
-                                    message: format!("Entry name is not valid UTF-8: {:?}", err),
-                                });
-                            }
-                            Ok(ok) => ok.to_owned(),
-                        };
+                        let name = entry.name().to_owned();
                         let kind = match entry.entry_type() {
                             EntryType::Dir => NodeKind::Dir,
                             EntryType::File => NodeKind::File,
@@ -171,14 +162,13 @@ where
 
     async fn create_child_dir(
         &self,
-        name: &str,
+        name: &PathComponent,
         mode: Mode,
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
         let blob_id = self.node.blob_id().await?;
-        let (blob, new_dir_blob_id) =
-            join!(self.load_blob(), self.create_dir_blob(blob_id));
+        let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(blob_id));
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -192,7 +182,7 @@ where
                     let mtime = atime;
 
                     let result = blob.add_entry_dir(
-                        &name,
+                        name,
                         new_dir_blob_id,
                         // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
                         fs_types::Mode::from(u32::from(mode)),
@@ -230,49 +220,37 @@ where
         .await
     }
 
-    async fn remove_child_dir(&self, name: &str) -> FsResult<()> {
+    async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
         let mut blob = self.load_blob().await?;
 
-        let result = async {
-            // TODO Check the entry is actually a dir before removing it
+        // TODO Check the entry is actually a dir before removing it
 
-            // First remove the entry, then flush that change, and only then remove the blob.
-            // This is to make sure the file system doesn't end up in an invalid state
-            // where the blob is removed but the entry is still there.
-            match blob.remove_entry_by_name(name) {
-                Err(_err) => {
-                    Err(FsError::CorruptedFilesystem {
-                        message: "Directory entry has an entry name that is not utf-8".to_string(),
-                    })
+        // First remove the entry, then flush that change, and only then remove the blob.
+        // This is to make sure the file system doesn't end up in an invalid state
+        // where the blob is removed but the entry is still there.
+        let result = match blob.remove_entry_by_name(name) {
+            Err(err) => Err(err),
+            Ok(entry) => match blob.flush().await {
+                Err(err) => {
+                    log::error!("Error flushing blob: {err:?}");
+                    Err(FsError::UnknownError)
                 }
-                Ok(entry) => {
-                    match blob.flush().await {
-                        Err(err) => {
-                            log::error!("Error flushing blob: {err:?}");
-                            Err(FsError::UnknownError)
-                        }
-                        Ok(()) => {
-                            let blob_id = entry.blob_id();
-                            let remove_result = self.node
-                                .blobstore()
-                                .remove_by_id(blob_id)
-                                .await;
-                            match remove_result {
-                                Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                                Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                                    Err(FsError::CorruptedFilesystem { message: format!("Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove") })
-                                }
-                                Err(err) => {
-                                    log::error!("Error removing blob: {err:?}");
-                                    Err(FsError::UnknownError)
-                                }
+                Ok(()) => {
+                    let blob_id = entry.blob_id();
+                    let remove_result = self.node.blobstore().remove_by_id(blob_id).await;
+                    match remove_result {
+                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                                Err(FsError::CorruptedFilesystem { message: format!("Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove") })
+                            }
+                            Err(err) => {
+                                log::error!("Error removing blob: {err:?}");
+                                Err(FsError::UnknownError)
                             }
                         }
-                    }
                 }
-            }
-        }
-        .await;
+            },
+        };
 
         blob.async_drop().await.map_err(|err| {
             log::error!("Error dropping blob: {err:?}");
@@ -284,25 +262,18 @@ where
 
     async fn create_child_symlink(
         &self,
-        name: &str,
-        target: &Path,
+        name: &PathComponent,
+        target: &str,
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
-        // TODO How to convert from &Path to &str? Is .to_str() good? Should we put this into a central place? Maybe introduce our own Path struct?
-        let target = target.to_str().ok_or_else(|| {
-            log::error!("Couldn't convert the path to utf-8");
-            FsError::UnknownError
-        })?;
         // TODO What should NumBytes be? Also, no unwrap?
         let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
         let blob_id = self.node.blob_id().await?;
 
-        let (blob, new_symlink_blob_id) = join!(
-            self.load_blob(),
-            self.create_symlink_blob(target, blob_id),
-        );
+        let (blob, new_symlink_blob_id) =
+            join!(self.load_blob(), self.create_symlink_blob(target, blob_id),);
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -316,7 +287,7 @@ where
                     let mtime = atime;
 
                     let result = blob.add_entry_symlink(
-                        &name,
+                        name,
                         new_symlink_blob_id,
                         // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
                         fs_types::Uid::from(u32::from(uid)),
@@ -353,34 +324,25 @@ where
         .await
     }
 
-    async fn remove_child_file_or_symlink(&self, name: &str) -> FsResult<()> {
+    async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
         let mut blob = self.load_blob().await?;
 
-        let result = async {
-            // TODO Check the entry is actually a file or symlink before removing it
-            
-            // First remove the entry, then flush that change, and only then remove the blob.
-            // This is to make sure the file system doesn't end up in an invalid state
-            // where the blob is removed but the entry is still there.
-            match blob.remove_entry_by_name(name) {
-                Err(_err) => {
-                    Err(FsError::CorruptedFilesystem {
-                        message: "Directory entry has an entry name that is not utf-8".to_string(),
-                    })
+        // TODO Check the entry is actually a file or symlink before removing it
+
+        // First remove the entry, then flush that change, and only then remove the blob.
+        // This is to make sure the file system doesn't end up in an invalid state
+        // where the blob is removed but the entry is still there.
+        let result = match blob.remove_entry_by_name(name) {
+            Err(err) => Err(err),
+            Ok(entry) => match blob.flush().await {
+                Err(err) => {
+                    log::error!("Error flushing blob: {err:?}");
+                    Err(FsError::UnknownError)
                 }
-                Ok(entry) => {
-                    match blob.flush().await {
-                        Err(err) => {
-                            log::error!("Error flushing blob: {err:?}");
-                            Err(FsError::UnknownError)
-                        }
-                        Ok(()) => {
-                            let blob_id = entry.blob_id();
-                            let remove_result = self.node
-                                .blobstore()
-                                .remove_by_id(blob_id)
-                                .await;
-                            match remove_result {
+                Ok(()) => {
+                    let blob_id = entry.blob_id();
+                    let remove_result = self.node.blobstore().remove_by_id(blob_id).await;
+                    match remove_result {
                                 Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
                                 Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
                                     Err(FsError::CorruptedFilesystem { message: format!("Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove") })
@@ -390,12 +352,9 @@ where
                                     Err(FsError::UnknownError)
                                 }
                             }
-                        }
-                    }
                 }
-            }
-        }
-        .await;
+            },
+        };
 
         blob.async_drop().await.map_err(|err| {
             log::error!("Error dropping blob: {err:?}");
@@ -407,16 +366,13 @@ where
 
     async fn create_and_open_file(
         &self,
-        name: &str,
+        name: &PathComponent,
         mode: Mode,
         uid: Uid,
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryOpenFile<B>>)> {
         let blob_id = self.node.blob_id().await?;
-        let (blob, new_file_blob_id) = join!(
-            self.load_blob(),
-            self.create_file_blob(blob_id),
-        );
+        let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(blob_id),);
         let mut blob = blob?;
 
         let new_file_blob_id = match new_file_blob_id {
@@ -434,7 +390,7 @@ where
         let mtime = atime;
 
         let result = blob.add_entry_file(
-            &name,
+            name.to_owned(),
             new_file_blob_id,
             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
             fs_types::Mode::from(u32::from(mode)),
@@ -469,11 +425,9 @@ where
             ctime: mtime,
         };
 
-        let open_file = CryOpenFile::new(
-            AsyncDropArc::clone(self.node.blobstore()),
-            new_file_blob_id,
-        );
-        
+        let open_file =
+            CryOpenFile::new(AsyncDropArc::clone(self.node.blobstore()), new_file_blob_id);
+
         blob.async_drop().await.map_err(|err| {
             log::error!("Error dropping Arc<FsBlobstore>: {err:?}");
             FsError::UnknownError
@@ -482,7 +436,11 @@ where
         Ok((attrs, open_file))
     }
 
-    async fn rename_child(&self, old_name: &str, new_path: &Path) -> FsResult<()> {
+    async fn rename_child(
+        &self,
+        old_name: &PathComponent,
+        new_path: &AbsolutePath,
+    ) -> FsResult<()> {
         // TODO Implement
         Err(FsError::NotImplemented)
     }

@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{object_based_api::Symlink, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
-use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -11,11 +10,11 @@ mod inode {
 
     pub struct SymlinkInode {
         metadata: NodeAttrs,
-        target: PathBuf,
+        target: String,
     }
 
     impl SymlinkInode {
-        pub fn new(target: PathBuf, uid: Uid, gid: Gid) -> Self {
+        pub fn new(target: String, uid: Uid, gid: Gid) -> Self {
             Self {
                 metadata: NodeAttrs {
                     // TODO What are the right symlink attributes here?
@@ -47,7 +46,7 @@ mod inode {
             &self.metadata
         }
 
-        pub fn target(&self) -> &Path {
+        pub fn target(&self) -> &str {
             &self.target
         }
 
@@ -75,7 +74,7 @@ pub struct InMemorySymlinkRef {
 }
 
 impl InMemorySymlinkRef {
-    pub fn new(target: PathBuf, uid: Uid, gid: Gid) -> Self {
+    pub fn new(target: String, uid: Uid, gid: Gid) -> Self {
         Self {
             inode: Arc::new(Mutex::new(SymlinkInode::new(target, uid, gid))),
         }
@@ -110,7 +109,7 @@ impl InMemorySymlinkRef {
 
 #[async_trait]
 impl Symlink for InMemorySymlinkRef {
-    async fn target(&self) -> FsResult<PathBuf> {
+    async fn target(&self) -> FsResult<String> {
         Ok(self.inode.lock().unwrap().target().to_owned())
     }
 }

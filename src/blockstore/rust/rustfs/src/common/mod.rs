@@ -29,4 +29,4 @@ mod uid;
 pub use uid::Uid;
 
 mod path;
-pub use path::PathComponent;
+pub use path::{AbsolutePath, AbsolutePathBuf, ParsePathError, PathComponent, PathComponentBuf};

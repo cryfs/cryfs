@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use derive_more::{From, Into};
-use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
-use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags, Statfs, Uid};
+use crate::common::{
+    AbsolutePath, DirEntry, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags, Statfs, Uid,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct RequestInfo {
@@ -63,7 +64,7 @@ pub trait AsyncFilesystem {
     async fn getattr(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
     ) -> FsResult<AttrResponse>;
 
@@ -74,7 +75,7 @@ pub trait AsyncFilesystem {
     async fn chmod(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         mode: Mode,
     ) -> FsResult<()>;
@@ -87,7 +88,7 @@ pub trait AsyncFilesystem {
     async fn chown(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         uid: Option<Uid>,
         gid: Option<Gid>,
@@ -100,7 +101,7 @@ pub trait AsyncFilesystem {
     async fn truncate(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         size: NumBytes,
     ) -> FsResult<()>;
@@ -113,7 +114,7 @@ pub trait AsyncFilesystem {
     async fn utimens(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
@@ -123,7 +124,7 @@ pub trait AsyncFilesystem {
     async fn utimens_macos(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: Option<FileHandle>,
         crtime: Option<SystemTime>,
         chgtime: Option<SystemTime>,
@@ -133,19 +134,18 @@ pub trait AsyncFilesystem {
     ) -> FsResult<()>;
 
     /// Read a symbolic link.
-    async fn readlink(&self, req: RequestInfo, path: &Path) -> FsResult<PathBuf>;
+    /// TODO Use custom type for absolute-or-relative paths as the return type
+    async fn readlink(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<String>;
 
     /// Create a special file.
     ///
-    /// * `parent`: path to the directory to make the entry under.
-    /// * `name`: name of the entry.
+    /// * `path`: path of the file to create
     /// * `mode`: mode for the new entry.
     /// * `rdev`: if mode has the bits `S_IFCHR` or `S_IFBLK` set, this is the major and minor numbers for the device file. Otherwise it should be ignored.
     async fn mknod(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
+        path: &AbsolutePath,
         mode: Mode,
         // TODO What to do with rdev? Should we wrap it into a custom type?
         rdev: u32,
@@ -153,68 +153,57 @@ pub trait AsyncFilesystem {
 
     /// Create a directory.
     ///
-    /// * `parent`: path to the directory to make the directory under.
-    /// * `name`: name of the directory.
+    /// * `path`: path of the directory to create
     /// * `mode`: permissions for the new directory.
     async fn mkdir(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
+        path: &AbsolutePath,
         mode: Mode,
     ) -> FsResult<AttrResponse>;
 
     /// Remove a file.
     ///
-    /// * `parent`: path to the directory containing the file to delete.
-    /// * `name`: name of the file to delete.
-    async fn unlink(&self, req: RequestInfo, parent: &Path, name: &str) -> FsResult<()>;
+    /// * `path`: path of the file or symlink to delete
+    async fn unlink(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<()>;
 
     /// Remove a directory.
     ///
-    /// * `parent`: path to the directory containing the directory to delete.
-    /// * `name`: name of the directory to delete.
-    async fn rmdir(&self, req: RequestInfo, parent: &Path, name: &str) -> FsResult<()>;
+    /// * `path`: path of the directory to delete
+    async fn rmdir(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<()>;
 
     /// Create a symbolic link.
     ///
-    /// * `parent`: path to the directory to make the link in.
-    /// * `name`: name of the symbolic link.
+    /// * `path`: path of the symlink to create
     /// * `target`: path (may be relative or absolute) to the target of the link.
     async fn symlink(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
-        target: &Path,
+        path: &AbsolutePath,
+        // TODO We may want to introduce a separate `Path` type for paths that can be either relative or absolute
+        target: &str,
     ) -> FsResult<AttrResponse>;
 
     /// Rename a filesystem entry.
     ///
-    /// * `parent`: path to the directory containing the existing entry.
-    /// * `name`: name of the existing entry.
-    /// * `newparent`: path to the directory it should be renamed into (may be the same as `parent`).
-    /// * `newname`: name of the new entry.
+    /// * `oldpath`: path to the existing entry
+    /// * `newpath`: path the entry should be reachable at after the rename/move operation
     async fn rename(
         &self,
         req: RequestInfo,
-        oldparent: &Path,
-        oldname: &str,
-        newparent: &Path,
-        newname: &str,
+        oldpath: &AbsolutePath,
+        newpath: &AbsolutePath,
     ) -> FsResult<()>;
 
     /// Create a hard link.
     ///
     /// * `path`: path to an existing file.
-    /// * `newparent`: path to the directory for the new link.
-    /// * `newname`: name for the new link.
+    /// * `newpath`: path to the new hardlink under which the file should now also be reachable.
     async fn link(
         &self,
         req: RequestInfo,
-        path: &Path,
-        newparent: &Path,
-        newname: &str,
+        oldpath: &AbsolutePath,
+        newpath: &AbsolutePath,
     ) -> FsResult<AttrResponse>;
 
     /// Open a file.
@@ -225,8 +214,12 @@ pub trait AsyncFilesystem {
     /// Return a struct with file handle and flags. The file handle will be passed to any subsequent
     /// calls that operate on the file, and can be any value you choose, though it should allow
     /// your filesystem to identify the file opened even without any path info.
-    async fn open(&self, req: RequestInfo, path: &Path, flags: OpenFlags)
-        -> FsResult<OpenResponse>;
+    async fn open(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+        flags: OpenFlags,
+    ) -> FsResult<OpenResponse>;
 
     /// Read from a file.
     ///
@@ -245,7 +238,7 @@ pub trait AsyncFilesystem {
     async fn read<CallbackResult>(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         offset: NumBytes,
         size: NumBytes,
@@ -264,7 +257,7 @@ pub trait AsyncFilesystem {
     async fn write(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
@@ -286,7 +279,7 @@ pub trait AsyncFilesystem {
     async fn flush(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         lock_owner: u64,
     ) -> FsResult<()>;
@@ -305,7 +298,7 @@ pub trait AsyncFilesystem {
     async fn release(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         flags: OpenFlags,
         // TODO What to do with lock_owner in flush and release? Wrap into a custom type?
@@ -323,7 +316,7 @@ pub trait AsyncFilesystem {
     async fn fsync(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()>;
@@ -339,8 +332,12 @@ pub trait AsyncFilesystem {
     /// calls that operate on the directory, and can be any value you choose, though it should
     /// allow your filesystem to identify the directory opened even without any path info.
     /// // TODO Wrap flags into some custom type instead of using u32
-    async fn opendir(&self, req: RequestInfo, path: &Path, flags: u32)
-        -> FsResult<OpendirResponse>;
+    async fn opendir(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+        flags: u32,
+    ) -> FsResult<OpendirResponse>;
 
     /// Get the entries of a directory.
     ///
@@ -352,7 +349,7 @@ pub trait AsyncFilesystem {
     async fn readdir(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
     ) -> FsResult<Vec<DirEntry>>;
 
@@ -367,7 +364,7 @@ pub trait AsyncFilesystem {
     async fn releasedir(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         flags: u32,
     ) -> FsResult<()>;
@@ -378,7 +375,7 @@ pub trait AsyncFilesystem {
     async fn fsyncdir(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()>;
@@ -388,7 +385,7 @@ pub trait AsyncFilesystem {
     /// * `path`: path to some folder in the filesystem.
     ///
     /// See the `Statfs` struct for more details.
-    async fn statfs(&self, req: RequestInfo, path: &Path) -> FsResult<Statfs>;
+    async fn statfs(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<Statfs>;
 
     /// Set a file extended attribute.
     ///
@@ -400,12 +397,13 @@ pub trait AsyncFilesystem {
     async fn setxattr(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
+        // TODO Use a wrapper type for attribute names that ensures its invariants (e.g. allowed characters)
         name: &str,
         value: &[u8],
         // TODO flags/position should be wrapped into a custom types instead of using u32
         flags: u32,
-        position: u32,
+        position: NumBytes,
     ) -> FsResult<()>;
 
     /// Get the size of a file extended attribute.
@@ -415,7 +413,7 @@ pub trait AsyncFilesystem {
     async fn getxattr_numbytes(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         name: &str,
     ) -> FsResult<NumBytes>;
 
@@ -429,7 +427,7 @@ pub trait AsyncFilesystem {
     async fn getxattr_data(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         name: &str,
         size: NumBytes,
     ) -> FsResult<Vec<u8>>;
@@ -441,7 +439,8 @@ pub trait AsyncFilesystem {
     ///
     /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
     /// See [Self::listxattr_data] for a definition of what it returns.
-    async fn listxattr_numbytes(&self, req: RequestInfo, path: &Path) -> FsResult<NumBytes>;
+    async fn listxattr_numbytes(&self, req: RequestInfo, path: &AbsolutePath)
+        -> FsResult<NumBytes>;
 
     /// List extended attributes for a file.
     ///
@@ -453,7 +452,7 @@ pub trait AsyncFilesystem {
     async fn listxattr_data(
         &self,
         req: RequestInfo,
-        path: &Path,
+        path: &AbsolutePath,
         size: NumBytes,
     ) -> FsResult<Vec<u8>>;
 
@@ -461,7 +460,7 @@ pub trait AsyncFilesystem {
     ///
     /// * `path`: path to the file.
     /// * `name`: name of the attribute to remove.
-    async fn removexattr(&self, req: RequestInfo, path: &Path, name: &str) -> FsResult<()>;
+    async fn removexattr(&self, req: RequestInfo, path: &AbsolutePath, name: &str) -> FsResult<()>;
 
     /// Check for access to a file.
     ///
@@ -471,12 +470,11 @@ pub trait AsyncFilesystem {
     /// Return `Ok(())` if all requested permissions are allowed, otherwise return `Err(EACCES)`
     /// or other error code as appropriate (e.g. `ENOENT` if the file doesn't exist).
     /// TODO Wrap mask into a custom type instead of using u32
-    async fn access(&self, req: RequestInfo, path: &Path, mask: u32) -> FsResult<()>;
+    async fn access(&self, req: RequestInfo, path: &AbsolutePath, mask: u32) -> FsResult<()>;
 
     /// Create and open a new file.
     ///
-    /// * `parent`: path to the directory to create the file in.
-    /// * `name`: name of the file to be created.
+    /// * `path`: path of the file to create
     /// * `mode`: the mode to set on the new file.
     /// * `flags`: flags like would be passed to `open`.
     ///
@@ -485,8 +483,7 @@ pub trait AsyncFilesystem {
     async fn create(
         &self,
         req: RequestInfo,
-        parent: &Path,
-        name: &str,
+        path: &AbsolutePath,
         mode: Mode,
         // TODO What with flags? Wrap into a custom type instead of using u32? Also, the fuse-mt function not only takes but also returns flags. Is this necessary? What are these flags?
         flags: i32,

@@ -1,26 +1,9 @@
 use cryfs_rustfs::{FsResult, NodeAttrs, NumBytes};
 use std::fs::Metadata;
 use std::os::linux::fs::MetadataExt;
-use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::errors::IoResultExt;
-
-pub fn apply_basedir(basedir: &Path, path: &Path) -> PathBuf {
-    assert!(path.is_absolute());
-    let path = path.strip_prefix("/").unwrap();
-    assert!(!path.is_absolute());
-    let node_path = basedir.join(path);
-    // Assert node_path doesn't escape the basedir
-    // TODO Assert is probably a bad choice here. What should we do instead? Return an error?
-    assert!(
-        node_path.starts_with(&basedir),
-        "Path {} escaped basedir {}",
-        node_path.display(),
-        basedir.display()
-    );
-    node_path
-}
 
 pub fn convert_metadata(metadata: Metadata) -> FsResult<NodeAttrs> {
     Ok(NodeAttrs {

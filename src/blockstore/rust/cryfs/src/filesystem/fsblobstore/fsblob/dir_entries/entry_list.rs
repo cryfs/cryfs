@@ -9,7 +9,7 @@ use super::super::FsError;
 use super::entry::{DirEntry, EntryType};
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::FsResult;
+use cryfs_rustfs::{FsResult, PathComponent, PathComponentBuf};
 
 #[derive(Debug)]
 pub struct DirEntryList {
@@ -31,39 +31,39 @@ impl DirEntryList {
         }
     }
 
-    pub fn get_by_name(&self, name: &str) -> Result<Option<&DirEntry>> {
+    pub fn get_by_name(&self, name: &PathComponent) -> Option<&DirEntry> {
         // TODO Instead of linear search, we could use a HashMap
         for entry in &self.entries {
-            if entry.name()? == name {
-                return Ok(Some(entry));
+            if entry.name() == name {
+                return Some(entry);
             }
         }
-        Ok(None)
+        None
     }
 
-    pub fn get_by_name_mut(&mut self, name: &str) -> Result<Option<&mut DirEntry>> {
+    pub fn get_by_name_mut(&mut self, name: &PathComponent) -> Option<&mut DirEntry> {
         for entry in &mut self.entries {
-            if entry.name()? == name {
+            if entry.name() == name {
                 self.dirty = true;
-                return Ok(Some(entry));
+                return Some(entry);
             }
         }
-        Ok(None)
+        None
     }
 
-    fn _get_by_name_with_index(&self, name: &str) -> Result<Option<(usize, &DirEntry)>> {
+    fn _get_by_name_with_index(&self, name: &PathComponent) -> Option<(usize, &DirEntry)> {
         // TODO Instead of linear search, we could use a HashMap
         for (index, entry) in self.entries.iter().enumerate() {
-            if entry.name()? == name {
-                return Ok(Some((index, entry)));
+            if entry.name() == name {
+                return Some((index, entry));
             }
         }
-        Ok(None)
+        None
     }
 
     // TODO Return FsResult and fix all call sites to not do map_err anymore
-    fn _get_index_by_name(&self, name: &str) -> Result<Option<usize>> {
-        Ok(self._get_by_name_with_index(name)?.map(|(index, _)| index))
+    fn _get_index_by_name(&self, name: &PathComponent) -> Option<usize> {
+        self._get_by_name_with_index(name).map(|(index, _)| index)
     }
 
     fn _get_index_by_id(&self, id: &BlobId) -> Option<usize> {
@@ -150,6 +150,7 @@ impl DirEntryList {
         Ok(())
     }
 
+    // TODO FusedIterator, DoubleEndedIterator
     pub fn iter(&self) -> impl Iterator<Item = &DirEntry> + ExactSizeIterator {
         self.entries.iter()
     }
@@ -160,7 +161,7 @@ impl DirEntryList {
 
     pub fn add(
         &mut self,
-        name: &str,
+        name: PathComponentBuf,
         id: BlobId,
         entry_type: EntryType,
         mode: Mode,
@@ -169,7 +170,7 @@ impl DirEntryList {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
     ) -> Result<()> {
-        if self.get_by_name(name)?.is_some() {
+        if self.get_by_name(&name).is_some() {
             bail!(FsError::EEXIST {
                 msg: format!("Entry with name {:?} already exists", name)
             });
@@ -196,7 +197,7 @@ impl DirEntryList {
 
     pub fn add_or_overwrite(
         &mut self,
-        name: &str,
+        name: PathComponentBuf,
         id: BlobId,
         entry_type: EntryType,
         mode: Mode,
@@ -206,6 +207,7 @@ impl DirEntryList {
         last_modification_time: SystemTime,
         on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
     ) -> Result<()> {
+        let already_exists = self._get_by_name_with_index(&name);
         let entry = DirEntry::new(
             entry_type,
             name,
@@ -217,7 +219,7 @@ impl DirEntryList {
             last_modification_time,
             SystemTime::now(),
         )?;
-        if let Some((index, old_entry)) = self._get_by_name_with_index(name)? {
+        if let Some((index, old_entry)) = already_exists {
             on_overwritten(old_entry.blob_id())?;
             self._overwrite(index, entry)?;
         } else {
@@ -227,10 +229,10 @@ impl DirEntryList {
     }
 
     fn _overwrite(&mut self, index: usize, entry: DirEntry) -> Result<()> {
-        assert_eq!(self.entries[index].name()?, entry.name()?);
+        assert_eq!(self.entries[index].name(), entry.name());
         Self::_check_allowed_overwrite(
             self.entries[index].entry_type(),
-            entry.name()?,
+            entry.name(),
             entry.entry_type(),
         )?;
 
@@ -248,7 +250,7 @@ impl DirEntryList {
     pub fn rename(
         &mut self,
         blob_id: &BlobId,
-        new_name: &str,
+        new_name: PathComponentBuf,
         on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
     ) -> Result<()> {
         let Some(mut source_index) = self._get_index_by_id(blob_id) else {
@@ -256,19 +258,19 @@ impl DirEntryList {
         };
 
         if let Some((found_same_name_index, found_same_name)) =
-            self._get_by_name_with_index(new_name)?
+            self._get_by_name_with_index(&new_name)
         {
             if found_same_name.blob_id() == blob_id {
                 // If the current name holder is already our source blob, we don't need to rename it
                 assert_eq!(source_index, found_same_name_index);
-                assert_eq!(self.entries[source_index].name()?, new_name);
+                assert_eq!(self.entries[source_index].name(), &*new_name);
                 return Ok(());
             }
 
             let source = &self.entries[source_index];
             Self::_check_allowed_overwrite(
                 found_same_name.entry_type(),
-                new_name,
+                &new_name,
                 source.entry_type(),
             )?;
             on_overwritten(found_same_name.blob_id())?;
@@ -299,10 +301,8 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn set_mode_by_name(&mut self, name: &str, mode: Mode) -> FsResult<()> {
-        let Some(entry) = self.get_by_name_mut(name).map_err(|err| {
-            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory has entry with non-utf name".to_string() }
-        })? else {
+    pub fn set_mode_by_name(&mut self, name: &PathComponent, mode: Mode) -> FsResult<()> {
+        let Some(entry) = self.get_by_name_mut(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
         entry.set_mode(mode)?;
@@ -334,13 +334,11 @@ impl DirEntryList {
 
     pub fn set_uid_gid_by_name(
         &mut self,
-        name: &str,
+        name: &PathComponent,
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
-        let Some(found) = self._get_index_by_name(name).map_err(|err| {
-            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory has entry with non-utf name".to_string() }
-        })? else {
+        let Some(found) = self._get_index_by_name(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
 
@@ -373,13 +371,11 @@ impl DirEntryList {
 
     pub fn set_access_times_by_name(
         &mut self,
-        name: &str,
+        name: &PathComponent,
         last_access_time: Option<SystemTime>,
         last_modification_time: Option<SystemTime>,
     ) -> FsResult<()> {
-        let Some(found) = self._get_index_by_name(name).map_err(|err| {
-            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory has entry with non-utf name".to_string() }
-        })? else {
+        let Some(found) = self._get_index_by_name(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
 
@@ -438,11 +434,11 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn remove_by_name(&mut self, name: &str) -> Result<DirEntry, cryfs_rustfs::FsError> {
-        let Some((index, _entry)) = self._get_by_name_with_index(name)
-        .map_err(|_err| {
-            cryfs_rustfs::FsError::CorruptedFilesystem { message: "Directory blob has an entry with a non-utf8 name".to_string() }
-        })? else {
+    pub fn remove_by_name(
+        &mut self,
+        name: &PathComponent,
+    ) -> Result<DirEntry, cryfs_rustfs::FsError> {
+        let Some((index, _entry)) = self._get_by_name_with_index(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
         self.dirty = true;
@@ -466,7 +462,7 @@ impl DirEntryList {
 
     fn _check_allowed_overwrite(
         prev_dest_type: EntryType,
-        name: &str,
+        name: &PathComponent,
         source_type: EntryType,
     ) -> Result<(), FsError> {
         if prev_dest_type != source_type {

@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::path::PathBuf;
 
 use super::node::CryNode;
 use cryfs_blobstore::BlobStore;
@@ -32,7 +31,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    async fn target(&self) -> FsResult<PathBuf> {
+    async fn target(&self) -> FsResult<String> {
         // TODO Implement
         Err(FsError::NotImplemented)
     }

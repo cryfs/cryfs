@@ -93,9 +93,9 @@ where
 
     pub fn blob_type(&self) -> BlobType {
         match self {
-            Self::File(blob) => BlobType::File,
-            Self::Directory(blob) => BlobType::Dir,
-            Self::Symlink(blob) => BlobType::Symlink,
+            Self::File(_) => BlobType::File,
+            Self::Directory(_) => BlobType::Dir,
+            Self::Symlink(_) => BlobType::Symlink,
         }
     }
 

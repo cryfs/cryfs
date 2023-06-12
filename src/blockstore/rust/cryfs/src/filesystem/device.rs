@@ -1,21 +1,17 @@
 use async_trait::async_trait;
-use futures::future;
 use std::fmt::Debug;
-use std::path::{Component, Path};
 
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{object_based_api::Device, FsError, FsResult, Statfs};
+use cryfs_rustfs::{object_based_api::Device, AbsolutePath, FsError, FsResult, Statfs};
 use cryfs_utils::{
-    async_drop::{
-        with_async_drop, with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard,
-    },
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     safe_panic,
 };
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, open_file::CryOpenFile, symlink::CrySymlink,
 };
-use crate::filesystem::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, FsBlobStore};
+use crate::filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore};
 
 pub struct CryDevice<B>
 where
@@ -44,7 +40,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
-    async fn load_blob(&self, path: &Path) -> FsResult<AsyncDropGuard<FsBlob<'_, B>>> {
+    async fn load_blob(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<FsBlob<'_, B>>> {
         let mut current_blob = self
             .blobstore
             .load(&self.root_blob_id)
@@ -71,63 +67,24 @@ where
                 error_code: libc::EIO,
             });
         }
-        let mut components = path.components();
-        if Some(Component::RootDir) != components.next() {
-            log::error!("Path is not absolute: {path:?}");
-            current_blob.async_drop().await.map_err(|_| {
-                log::error!("Error dropping current_blob");
-                FsError::UnknownError
-            })?;
-            return Err(FsError::Custom {
-                error_code: libc::EIO,
-            });
-        }
-        for path_component in components {
-            let component = match path_component {
-                Component::Normal(path_component) => path_component,
-                _ => {
-                    log::error!("Path component is not a normal component");
-                    current_blob.async_drop().await.map_err(|_| {
-                        log::error!("Error dropping current_blob");
-                        FsError::UnknownError
-                    })?;
-                    return Err(FsError::Custom {
-                        error_code: libc::EIO,
-                    });
-                }
-            };
-            // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
-            let component = component.to_string_lossy().into_owned();
+
+        for path_component in path.iter() {
             // TODO This map_err is weird. Probably better to have into_dir return the right error type.
-            let dir_blob = FsBlob::into_dir(current_blob)
+            let mut dir_blob = FsBlob::into_dir(current_blob)
                 .await
                 .map_err(|_| FsError::NodeIsNotADirectory)?;
-            let entry = with_async_drop_err_map(
-                dir_blob,
-                move |dir_blob| {
-                    let entry = match dir_blob.entry_by_name(&component) {
-                        Ok(Some(entry)) => {
-                            let blob_id = *entry.blob_id();
-                            Ok(blob_id)
-                        }
-                        Ok(None) => Err(FsError::NodeDoesNotExist),
-                        Err(err) => {
-                            log::error!(
-                                "File system has a directory with a non-UTF8 entry: {err:?}"
-                            );
-                            Err(FsError::Custom {
-                                error_code: libc::EIO,
-                            })
-                        }
-                    };
-                    future::ready(entry)
-                },
-                |err| {
-                    log::error!("Error dropping dir_blob: {err:?}");
-                    FsError::UnknownError
-                },
-            )
-            .await?;
+            let entry = match dir_blob.entry_by_name(path_component) {
+                Some(entry) => {
+                    let blob_id = *entry.blob_id();
+                    Ok(blob_id)
+                }
+                None => Err(FsError::NodeDoesNotExist),
+            };
+            dir_blob.async_drop().await.map_err(|_| {
+                log::error!("Error dropping dir_blob");
+                FsError::UnknownError
+            })?;
+            let entry = entry?;
             current_blob = self
                 .blobstore
                 .load(&entry)
@@ -161,69 +118,47 @@ where
     type File<'a> = CryFile<'a, B>;
     type OpenFile = CryOpenFile<B>;
 
-    async fn load_node(&self, path: &Path) -> FsResult<Self::Node<'_>> {
-        assert!(path.is_absolute(), "Path must be absolute: {path:?}");
-        assert!(path.has_root(), "Path must have root: {path:?}");
-        assert!(
-            path.components()
-                .next()
-                .map(|c| !matches!(c, std::path::Component::Prefix(_)))
-                .unwrap_or(true),
-            // TODO Is Component::Prefix actually the correct check here?
-            "Path must not have a device specifier on windows: {path:?}"
-        );
-        match path.parent() {
+    async fn load_node(&self, path: &AbsolutePath) -> FsResult<Self::Node<'_>> {
+        match path.split_last() {
             None => {
                 // We're being asked to load the root dir
                 Ok(CryNode::new_rootdir(&self.blobstore, self.root_blob_id))
             }
-            Some(parent) => {
-                // TODO No unwrap. How do handle missing file_name?
-                // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
-                let node_name = path.file_name().unwrap().to_string_lossy().into_owned();
-                let parent_blob_id = match parent.parent() {
+            Some((parent, node_name)) => {
+                let parent_blob_id = match parent.split_last() {
                     None => {
                         // We're being asked to load a node that is a direct child of the root dir
                         Ok(self.root_blob_id)
                     }
-                    Some(grandparent) => {
+                    Some((grandparent, parent_name)) => {
                         let grandparent = self.load_blob(grandparent).await?;
                         let mut grandparent = FsBlob::into_dir(grandparent)
                             .await
                             .map_err(|_| FsError::NodeIsNotADirectory)?;
-                        // TODO No unwrap. How do handle missing file_name?
-                        let parent_name = parent.file_name().unwrap();
-                        // TODO Is to_string_lossy the right thing to do here? Seems entry_by_name has its own error handling for if it's not utf-8.
-                        let parent_entry = grandparent
-                            .entry_by_name(&parent_name.to_string_lossy())
-                            .map(|e| e.cloned());
+                        let parent_entry = grandparent.entry_by_name(parent_name).cloned();
                         grandparent.async_drop().await.map_err(|_| {
                             log::error!("Error dropping parent");
                             FsError::UnknownError
                         })?;
                         match parent_entry {
-                            Ok(Some(parent_entry)) => {
+                            Some(parent_entry) => {
                                 let parent_blob_id = parent_entry.blob_id();
                                 Ok(*parent_blob_id)
                             }
-                            Ok(None) => Err(FsError::NodeDoesNotExist),
-                            Err(err) => {
-                                log::error!(
-                                    "File system has a directory with a non-UTF8 entry: {err:?}"
-                                );
-                                Err(FsError::Custom {
-                                    error_code: libc::EIO,
-                                })
-                            }
+                            None => Err(FsError::NodeDoesNotExist),
                         }
                     }
                 }?;
-                Ok(CryNode::new(&self.blobstore, parent_blob_id, node_name))
+                Ok(CryNode::new(
+                    &self.blobstore,
+                    parent_blob_id,
+                    node_name.to_owned(),
+                ))
             }
         }
     }
 
-    async fn load_dir(&self, path: &Path) -> FsResult<Self::Dir<'_>> {
+    async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
         let node = self.load_node(path).await?;
         if node.node_type().await? == BlobType::Dir {
             Ok(CryDir::new(node))
@@ -232,7 +167,7 @@ where
         }
     }
 
-    async fn load_symlink(&self, path: &Path) -> FsResult<Self::Symlink<'_>> {
+    async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
         let node = self.load_node(path).await?;
         if node.node_type().await? == BlobType::Symlink {
             Ok(CrySymlink::new(node))
@@ -241,7 +176,7 @@ where
         }
     }
 
-    async fn load_file(&self, path: &Path) -> FsResult<Self::File<'_>> {
+    async fn load_file(&self, path: &AbsolutePath) -> FsResult<Self::File<'_>> {
         let node = self.load_node(path).await?;
         match node.node_type().await? {
             BlobType::File => Ok(CryFile::new(node)),
