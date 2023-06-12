@@ -6,3 +6,5 @@ pub mod utils;
 mod version;
 pub use config::ALL_CIPHERS;
 pub use version::CRYFS_VERSION;
+
+// TODO Throughout the whole codebase, check for short functions that should be `#[inline]`

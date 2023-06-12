@@ -27,3 +27,6 @@ pub use statfs::Statfs;
 
 mod uid;
 pub use uid::Uid;
+
+mod path;
+pub use path::PathComponent;
