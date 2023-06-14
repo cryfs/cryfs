@@ -143,6 +143,22 @@ impl File for InMemoryFileRef {
     }
 }
 
+impl Debug for InMemoryFileRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InMemoryFileRef").finish()
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for InMemoryFileRef {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
+        Ok(())
+    }
+}
+
 pub struct InMemoryOpenFileRef {
     openflags: OpenFlags,
     inode: Arc<Mutex<FileInode>>,

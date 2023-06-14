@@ -391,14 +391,24 @@ where
         flags: OpenFlags,
     ) -> FsResult<OpenResponse> {
         let fs = self.fs.read().unwrap();
-        let file = fs.get().load_file(path).await?;
-        let open_file = file.open(flags).await?;
-        let fh = self.open_files.write().await.add(open_file);
-        Ok(OpenResponse {
-            fh: fh.into(),
-            // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
-            flags,
-        })
+        let mut file = fs.get().load_file(path).await?;
+        let result = match file.open(flags).await {
+            Err(err) => Err(err),
+            Ok(open_file) => {
+                let fh = self.open_files.write().await.add(open_file);
+                Ok(OpenResponse {
+                    fh: fh.into(),
+                    // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
+                    flags,
+                })
+            }
+        };
+        file.async_drop().await.map_err(|err| {
+            log::error!("open: failed to drop file: {}", err);
+            // TODO InternalError is probably a better one to use here and otherwhere
+            FsError::UnknownError
+        })?;
+        result
     }
 
     async fn read<CallbackResult>(

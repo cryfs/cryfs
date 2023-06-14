@@ -1,8 +1,10 @@
 use async_trait::async_trait;
+use std::sync::{Arc, Mutex};
+
 use cryfs_rustfs::{
     object_based_api::Device, AbsolutePath, FsError, FsResult, Gid, Mode, Statfs, Uid,
 };
-use std::sync::{Arc, Mutex};
+use cryfs_utils::async_drop::AsyncDropGuard;
 
 use super::dir::{DirInode, InMemoryDirRef};
 use super::file::{InMemoryFileRef, InMemoryOpenFileRef};
@@ -61,10 +63,13 @@ impl RootDir {
         }
     }
 
-    pub fn load_file(self: &Arc<Self>, path: &AbsolutePath) -> FsResult<InMemoryFileRef> {
+    pub fn load_file(
+        self: &Arc<Self>,
+        path: &AbsolutePath,
+    ) -> FsResult<AsyncDropGuard<InMemoryFileRef>> {
         let node = self.load_node(path)?;
         match node {
-            InMemoryNodeRef::File(file) => Ok(file),
+            InMemoryNodeRef::File(file) => Ok(AsyncDropGuard::new(file)),
             InMemoryNodeRef::Dir(_) => Err(FsError::NodeIsADirectory),
             InMemoryNodeRef::Symlink(_) => {
                 // TODO What's the right error here?
@@ -106,7 +111,7 @@ impl Device for InMemoryDevice {
         self.rootdir.load_symlink(path)
     }
 
-    async fn load_file(&self, path: &AbsolutePath) -> FsResult<Self::File<'_>> {
+    async fn load_file(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::File<'_>>> {
         self.rootdir.load_file(path)
     }
 

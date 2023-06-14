@@ -5,10 +5,9 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::sync::OnceCell;
 
-use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
+use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, FsBlobStore, MODE_NEW_SYMLINK};
 use super::{
     device::CryDevice,
-    node::CryNode,
     node_info::{BlobDetails, NodeInfo},
     open_file::CryOpenFile,
 };
@@ -25,7 +24,9 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    node: CryNode<'a, B>,
+    // TODO Here and in others, can we just store &FsBlobStore instead of &AsyncDropGuard?
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    node_info: NodeInfo,
 }
 
 impl<'a, B> CryDir<'a, B>
@@ -33,12 +34,18 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    pub fn new(node: CryNode<'a, B>) -> Self {
-        Self { node }
+    pub fn new(
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        node_info: NodeInfo,
+    ) -> Self {
+        Self {
+            blobstore,
+            node_info,
+        }
     }
 
     async fn load_blob(&self) -> Result<AsyncDropGuard<DirBlob<'a, B>>, FsError> {
-        let blob = self.node.load_blob().await?;
+        let blob = self.node_info.load_blob(self.blobstore).await?;
         let blob_id = blob.blob_id();
         FsBlob::into_dir(blob).await.map_err(|err| {
             FsError::CorruptedFilesystem {
@@ -50,8 +57,7 @@ where
 
     async fn create_dir_blob(&self, parent: &BlobId) -> Result<BlobId, FsError> {
         let mut blob = self
-            .node
-            .blobstore()
+            .blobstore
             .create_dir_blob(parent)
             .await
             .map_err(|err| {
@@ -79,8 +85,7 @@ where
 
     async fn create_file_blob(&self, parent: &BlobId) -> Result<BlobId, FsError> {
         let mut blob = self
-            .node
-            .blobstore()
+            .blobstore
             .create_file_blob(parent)
             .await
             .map_err(|err| {
@@ -104,8 +109,7 @@ where
 
     async fn create_symlink_blob(&self, target: &str, parent: &BlobId) -> Result<BlobId, FsError> {
         let mut blob = self
-            .node
-            .blobstore()
+            .blobstore
             .create_symlink_blob(parent, target)
             .await
             .map_err(|err| {
@@ -172,7 +176,7 @@ where
         uid: Uid,
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
-        let blob_id = self.node.blob_id().await?;
+        let blob_id = self.node_info.blob_id(&self.blobstore).await?;
         let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(&blob_id));
         let blob = blob?;
         // TODO Is this possible without to_owned()?
@@ -242,7 +246,7 @@ where
                 }
                 Ok(()) => {
                     let blob_id = entry.blob_id();
-                    let remove_result = self.node.blobstore().remove_by_id(blob_id).await;
+                    let remove_result = self.blobstore.remove_by_id(blob_id).await;
                     match remove_result {
                             Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
                             Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
@@ -275,7 +279,7 @@ where
         // TODO What should NumBytes be? Also, no unwrap?
         let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
-        let blob_id = self.node.blob_id().await?;
+        let blob_id = self.node_info.blob_id(&self.blobstore).await?;
 
         let (blob, new_symlink_blob_id) =
             join!(self.load_blob(), self.create_symlink_blob(target, &blob_id),);
@@ -346,7 +350,7 @@ where
                 }
                 Ok(()) => {
                     let blob_id = entry.blob_id();
-                    let remove_result = self.node.blobstore().remove_by_id(blob_id).await;
+                    let remove_result = self.blobstore.remove_by_id(blob_id).await;
                     match remove_result {
                                 Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
                                 Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
@@ -376,7 +380,7 @@ where
         uid: Uid,
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryOpenFile<B>>)> {
-        let blob_id = self.node.blob_id().await?;
+        let blob_id = self.node_info.blob_id(&self.blobstore).await?;
         let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(&blob_id),);
         let mut blob = blob?;
 
@@ -431,7 +435,7 @@ where
         };
 
         let open_file = CryOpenFile::new(
-            AsyncDropArc::clone(self.node.blobstore()),
+            AsyncDropArc::clone(self.blobstore),
             NodeInfo::IsNotRootDir {
                 parent_blob_id: blob_id,
                 name: name.to_owned(),

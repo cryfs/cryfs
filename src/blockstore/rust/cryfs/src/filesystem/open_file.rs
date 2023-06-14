@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{
     object_based_api::OpenFile, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
 };
@@ -11,10 +11,7 @@ use cryfs_utils::{
     data::Data,
 };
 
-use super::{
-    fsblobstore::{DirBlob, FileBlob, FsBlob},
-    node_info::NodeInfo,
-};
+use super::node_info::NodeInfo;
 use crate::filesystem::fsblobstore::FsBlobStore;
 
 // TODO Make sure we don't keep a lock on the file blob, or keep the lock in an Arc that is shared between all File, Node and OpenFile instances of the same file

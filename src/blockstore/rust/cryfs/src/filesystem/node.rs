@@ -1,13 +1,12 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 use std::time::SystemTime;
-use tokio::sync::OnceCell;
 
 use super::fsblobstore::FsBlob;
 use super::node_info::NodeInfo;
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{object_based_api::Node, FsResult, Gid, Mode, NodeAttrs, PathComponentBuf, Uid};
+use cryfs_rustfs::{object_based_api::Node, FsResult, Gid, Mode, NodeAttrs, Uid};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryNode<'a, B>
@@ -48,16 +47,11 @@ where
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        parent_blob_id: BlobId,
-        name: PathComponentBuf,
+        node_info: NodeInfo,
     ) -> Self {
         Self {
             blobstore,
-            node_info: NodeInfo::IsNotRootDir {
-                parent_blob_id,
-                name,
-                blob_details: OnceCell::default(),
-            },
+            node_info,
         }
     }
 
@@ -67,12 +61,8 @@ where
     ) -> Self {
         Self {
             blobstore,
-            node_info: NodeInfo::IsRootDir { root_blob_id },
+            node_info: NodeInfo::new_rootdir(root_blob_id),
         }
-    }
-
-    pub(super) fn blobstore(&self) -> &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>> {
-        self.blobstore
     }
 }
 

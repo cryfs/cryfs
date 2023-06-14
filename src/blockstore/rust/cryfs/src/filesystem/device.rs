@@ -9,7 +9,8 @@ use cryfs_utils::{
 };
 
 use super::{
-    dir::CryDir, file::CryFile, node::CryNode, open_file::CryOpenFile, symlink::CrySymlink,
+    dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
+    symlink::CrySymlink,
 };
 use crate::filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore};
 
@@ -104,25 +105,12 @@ where
         }
         Ok(current_blob)
     }
-}
 
-#[async_trait]
-impl<B> Device for CryDevice<B>
-where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
-{
-    type Node<'a> = CryNode<'a, B>;
-    type Dir<'a> = CryDir<'a, B>;
-    type Symlink<'a> = CrySymlink<'a, B>;
-    type File<'a> = CryFile<'a, B>;
-    type OpenFile = CryOpenFile<B>;
-
-    async fn load_node(&self, path: &AbsolutePath) -> FsResult<Self::Node<'_>> {
+    async fn load_node_info(&self, path: &AbsolutePath) -> FsResult<NodeInfo> {
         match path.split_last() {
             None => {
                 // We're being asked to load the root dir
-                Ok(CryNode::new_rootdir(&self.blobstore, self.root_blob_id))
+                Ok(NodeInfo::new_rootdir(self.root_blob_id))
             }
             Some((parent, node_name)) => {
                 let parent_blob_id = match parent.split_last() {
@@ -149,37 +137,51 @@ where
                         }
                     }
                 }?;
-                Ok(CryNode::new(
-                    &self.blobstore,
-                    parent_blob_id,
-                    node_name.to_owned(),
-                ))
+                Ok(NodeInfo::new(parent_blob_id, node_name.to_owned()))
             }
         }
     }
+}
+
+#[async_trait]
+impl<B> Device for CryDevice<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+{
+    type Node<'a> = CryNode<'a, B>;
+    type Dir<'a> = CryDir<'a, B>;
+    type Symlink<'a> = CrySymlink<'a, B>;
+    type File<'a> = CryFile<B>;
+    type OpenFile = CryOpenFile<B>;
+
+    async fn load_node<'a>(&'a self, path: &AbsolutePath) -> FsResult<Self::Node<'a>> {
+        let node_info = self.load_node_info(path).await?;
+        Ok(CryNode::new(&self.blobstore, node_info))
+    }
 
     async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
-        let node = self.load_node(path).await?;
-        if node.node_type().await? == BlobType::Dir {
-            Ok(CryDir::new(node))
+        let node = self.load_node_info(path).await?;
+        if node.node_type(&self.blobstore).await? == BlobType::Dir {
+            Ok(CryDir::new(&self.blobstore, node))
         } else {
             Err(FsError::NodeIsNotADirectory)
         }
     }
 
     async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
-        let node = self.load_node(path).await?;
-        if node.node_type().await? == BlobType::Symlink {
-            Ok(CrySymlink::new(node))
+        let node = self.load_node_info(path).await?;
+        if node.node_type(&self.blobstore).await? == BlobType::Symlink {
+            Ok(CrySymlink::new(&self.blobstore, node))
         } else {
             Err(FsError::NodeIsNotASymlink)
         }
     }
 
-    async fn load_file(&self, path: &AbsolutePath) -> FsResult<Self::File<'_>> {
-        let node = self.load_node(path).await?;
-        match node.node_type().await? {
-            BlobType::File => Ok(CryFile::new(node)),
+    async fn load_file(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::File<'_>>> {
+        let node = self.load_node_info(path).await?;
+        match node.node_type(&self.blobstore).await? {
+            BlobType::File => Ok(CryFile::new(AsyncDropArc::clone(&self.blobstore), node)),
             BlobType::Symlink => {
                 // TODO What's the right error here?
                 Err(FsError::UnknownError)

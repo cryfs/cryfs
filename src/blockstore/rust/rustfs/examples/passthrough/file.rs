@@ -1,20 +1,22 @@
 use async_trait::async_trait;
+
 use cryfs_rustfs::{
     object_based_api::File, AbsolutePathBuf, FsError, FsResult, NumBytes, OpenFlags,
 };
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::device::PassthroughDevice;
 use super::errors::{IoResultExt, NixResultExt};
 use super::openfile::PassthroughOpenFile;
 
+#[derive(Debug)]
 pub struct PassthroughFile {
     path: AbsolutePathBuf,
 }
 
 impl PassthroughFile {
-    pub fn new(path: AbsolutePathBuf) -> Self {
-        Self { path }
+    pub fn new(path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { path })
     }
 }
 
@@ -43,5 +45,15 @@ impl File for PassthroughFile {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for PassthroughFile {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
+        Ok(())
     }
 }

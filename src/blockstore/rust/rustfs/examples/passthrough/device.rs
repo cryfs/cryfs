@@ -1,15 +1,16 @@
 use async_trait::async_trait;
+
 use cryfs_rustfs::{
     object_based_api::Device, AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs,
 };
+use cryfs_utils::async_drop::AsyncDropGuard;
 
 use super::dir::PassthroughDir;
+use super::errors::NixResultExt;
 use super::file::PassthroughFile;
 use super::node::PassthroughNode;
 use super::openfile::PassthroughOpenFile;
 use super::symlink::PassthroughSymlink;
-
-use super::errors::NixResultExt;
 
 pub struct PassthroughDevice {
     basedir: AbsolutePathBuf,
@@ -48,7 +49,7 @@ impl Device for PassthroughDevice {
         Ok(PassthroughSymlink::new(path))
     }
 
-    async fn load_file(&self, path: &AbsolutePath) -> FsResult<Self::File<'_>> {
+    async fn load_file(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::File<'_>>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughFile::new(path))
     }
