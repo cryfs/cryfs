@@ -3,11 +3,16 @@ use cryfs_rustfs::NumBytes;
 use futures::{future, join};
 use std::fmt::Debug;
 use std::time::SystemTime;
+use tokio::sync::OnceCell;
 
+use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
+use super::{
+    device::CryDevice,
+    node::CryNode,
+    node_info::{BlobDetails, NodeInfo},
+    open_file::CryOpenFile,
+};
 use crate::utils::fs_types;
-
-use super::fsblobstore::{DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
-use super::{device::CryDevice, node::CryNode, open_file::CryOpenFile};
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{
     object_based_api::Dir, AbsolutePath, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs,
@@ -168,7 +173,7 @@ where
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
         let blob_id = self.node.blob_id().await?;
-        let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(blob_id));
+        let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(&blob_id));
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -273,7 +278,7 @@ where
         let blob_id = self.node.blob_id().await?;
 
         let (blob, new_symlink_blob_id) =
-            join!(self.load_blob(), self.create_symlink_blob(target, blob_id),);
+            join!(self.load_blob(), self.create_symlink_blob(target, &blob_id),);
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -372,7 +377,7 @@ where
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryOpenFile<B>>)> {
         let blob_id = self.node.blob_id().await?;
-        let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(blob_id),);
+        let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(&blob_id),);
         let mut blob = blob?;
 
         let new_file_blob_id = match new_file_blob_id {
@@ -425,8 +430,17 @@ where
             ctime: mtime,
         };
 
-        let open_file =
-            CryOpenFile::new(AsyncDropArc::clone(self.node.blobstore()), new_file_blob_id);
+        let open_file = CryOpenFile::new(
+            AsyncDropArc::clone(self.node.blobstore()),
+            NodeInfo::IsNotRootDir {
+                parent_blob_id: blob_id,
+                name: name.to_owned(),
+                blob_details: OnceCell::new_with(Some(BlobDetails {
+                    blob_id: new_file_blob_id,
+                    blob_type: BlobType::File,
+                })),
+            },
+        );
 
         blob.async_drop().await.map_err(|err| {
             log::error!("Error dropping Arc<FsBlobstore>: {err:?}");

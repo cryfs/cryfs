@@ -1,0 +1,388 @@
+use std::fmt::Debug;
+use std::time::SystemTime;
+use tokio::sync::OnceCell;
+
+use super::fsblobstore::{DirBlob, DirEntry, EntryType, FsBlob, DIR_LSTAT_SIZE};
+use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
+use crate::utils::fs_types;
+use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_rustfs::{
+    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, PathComponent, PathComponentBuf, Uid,
+};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+
+#[derive(Debug, Clone, Copy)]
+pub struct BlobDetails {
+    pub blob_id: BlobId,
+    pub blob_type: BlobType,
+}
+
+#[derive(Debug, Clone)]
+pub enum NodeInfo {
+    IsRootDir {
+        root_blob_id: BlobId,
+    },
+    IsNotRootDir {
+        parent_blob_id: BlobId,
+        name: PathComponentBuf,
+
+        // While fields in [parent_blob_id] and [name] are always set, a [CryNode]/[NodeInfo] object can exist even before we
+        // actually looked it up from the parent directory. In that case, [blob_details] is not initialized yet.
+        // Once it was looked up, this will be initialized.
+        // The reason for this is that we cannot hold a reference to the loaded parent blob in here because that would
+        // lock it and prevent other threads from loading it, potentially leading to a deadlock. But some operations in here
+        // (e.g. getattr, chmod, chown) need to load the parent blob. To prevent loading it multiple times, we avoid loading
+        // the parent blob before instantiating the [CryNode]/[NodeInfo] instance.
+        // TODO Check if any of the Mutex'es used in the whole repository could be replaced by OnceCell, Cell, RefCell or similar
+        // TODO Maybe it's actually ok to store a Blob here? Except for rename, all operations should just operate on one node
+        //      and not depend on another node so we shouldn't cause any deadlocks. This would simplify what we're doing here
+        //      and would also allow us to avoid potential double loads where [load_parent_blob] is called multiple times.
+        blob_details: OnceCell<BlobDetails>,
+    },
+}
+
+enum LoadParentBlobResult<'a, 'b, B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'c> <B as BlobStore>::ConcreteBlob<'c>: Send + Sync,
+{
+    IsRootDir {
+        root_blob: BlobId,
+    },
+    IsNotRootDir {
+        parent_blob: AsyncDropGuard<DirBlob<'b, B>>,
+        name: &'a PathComponent,
+        blob_details: &'a BlobDetails,
+    },
+}
+
+impl NodeInfo {
+    pub async fn blob_details<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobDetails>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        match self.load_parent_blob(blobstore).await? {
+            LoadParentBlobResult::IsRootDir { root_blob } => Ok(BlobDetails {
+                blob_id: root_blob,
+                blob_type: BlobType::Dir,
+            }),
+            LoadParentBlobResult::IsNotRootDir {
+                mut parent_blob,
+                blob_details,
+                ..
+            } => {
+                parent_blob.async_drop().await.map_err(|err| {
+                    // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                Ok(*blob_details)
+            }
+        }
+    }
+
+    async fn _load_parent_blob<'a, B>(
+        blobstore: &'a FsBlobStore<B>,
+        parent_blob_id: &BlobId,
+    ) -> FsResult<AsyncDropGuard<DirBlob<'a, B>>>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let parent_blob = blobstore
+            .load(parent_blob_id)
+            .await
+            .map_err(|err| {
+                log::error!("Error loading blob {:?}: {:?}", parent_blob_id, err);
+                FsError::UnknownError
+            })?
+            .ok_or_else(|| {
+                log::error!("Parent blob {:?} not found", parent_blob_id);
+                FsError::CorruptedFilesystem {
+                    message: format!("Didn't find parent blob {:?}", parent_blob_id),
+                }
+            })?;
+        FsBlob::into_dir(parent_blob)
+            .await
+            .map_err(|_err| FsError::NodeIsNotADirectory)
+    }
+
+    async fn load_parent_blob<'a, 'b, B>(
+        &'a self,
+        blobstore: &'b FsBlobStore<B>,
+    ) -> FsResult<LoadParentBlobResult<'a, 'b, B>>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'c> <B as BlobStore>::ConcreteBlob<'c>: Send + Sync,
+    {
+        match self {
+            Self::IsRootDir { root_blob_id } => Ok(LoadParentBlobResult::IsRootDir {
+                root_blob: *root_blob_id,
+            }),
+            Self::IsNotRootDir {
+                parent_blob_id,
+                name,
+                blob_details,
+            } => {
+                let mut parent_blob = Self::_load_parent_blob(blobstore, parent_blob_id).await?;
+
+                // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
+                let blob_details = blob_details
+                    .get_or_try_init(|| async { get_blob_details(&mut parent_blob, name) })
+                    .await;
+                let blob_details = match blob_details {
+                    Ok(blob_details) => Ok(blob_details),
+                    Err(err) => {
+                        parent_blob.async_drop().await.map_err(|err| {
+                            // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
+                            log::error!("Error dropping parent blob: {:?}", err);
+                            FsError::UnknownError
+                        })?;
+                        Err(err)
+                    }
+                }?;
+
+                Ok(LoadParentBlobResult::IsNotRootDir {
+                    parent_blob,
+                    name,
+                    blob_details,
+                })
+            }
+        }
+    }
+
+    pub async fn load_blob<'a, B>(
+        &self,
+        blobstore: &'a FsBlobStore<B>,
+    ) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let blob_id = self.blob_details(blobstore).await?.blob_id;
+        blobstore
+            .load(&blob_id)
+            .await
+            .map_err(|err| {
+                log::error!("Error loading blob {:?}: {:?}", blob_id, err);
+                FsError::UnknownError
+            })?
+            .ok_or_else(|| {
+                log::error!("Blob {:?} not found", blob_id);
+                FsError::CorruptedFilesystem {
+                    message: format!("Didn't find blob {:?}", blob_id),
+                }
+            })
+    }
+
+    async fn load_lstat_size<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NumBytes>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let mut blob = self.load_blob(blobstore).await?;
+        let result = match blob.lstat_size().await {
+            // TODO Return NumBytes from blob.lstat_size() instead of converting it here
+            Ok(size) => Ok(NumBytes::from(size)),
+            Err(err) => {
+                log::error!("Error getting lstat size: {:?}", err);
+                Err(FsError::UnknownError)
+            }
+        };
+        blob.async_drop().await.map_err(|err| {
+            // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
+            log::error!("Error dropping blob: {:?}", err);
+            FsError::UnknownError
+        })?;
+        result
+    }
+
+    pub async fn getattr<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NodeAttrs>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        match self.load_parent_blob(blobstore).await? {
+            LoadParentBlobResult::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Ok(NodeAttrs {
+                    nlink: 1,
+                    // TODO Remove those conversions
+                    mode: cryfs_rustfs::Mode::default()
+                        .add_dir_flag()
+                        .add_user_read_flag()
+                        .add_user_write_flag()
+                        .add_user_exec_flag(),
+                    uid: cryfs_rustfs::Uid::from(1000),
+                    gid: cryfs_rustfs::Gid::from(1000),
+                    num_bytes: cryfs_rustfs::NumBytes::from(DIR_LSTAT_SIZE),
+                    // Setting num_blocks to none means it'll be automatically calculated for us
+                    num_blocks: None,
+                    atime: SystemTime::now(),
+                    mtime: SystemTime::now(),
+                    ctime: SystemTime::now(),
+                })
+            }
+            LoadParentBlobResult::IsNotRootDir {
+                name,
+                mut parent_blob,
+                ..
+            } => {
+                let result = (|| async {
+                    let lstat_size = self.load_lstat_size(blobstore).await?;
+                    let entry = parent_blob
+                        .entry_by_name(name)
+                        .ok_or_else(|| FsError::NodeDoesNotExist)?;
+                    Ok(dir_entry_to_node_attrs(entry, lstat_size))
+                })()
+                .await;
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result
+            }
+        }
+    }
+
+    pub async fn chmod<B>(&self, blobstore: &FsBlobStore<B>, mode: Mode) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        match self.load_parent_blob(blobstore).await? {
+            LoadParentBlobResult::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Err(FsError::InvalidOperation)
+            }
+            LoadParentBlobResult::IsNotRootDir {
+                name,
+                mut parent_blob,
+                ..
+            } => {
+                let result = parent_blob
+                    // TODO No Mode conversion
+                    .set_mode_of_entry_by_name(name, fs_types::Mode::from(u32::from(mode)));
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn chown<B>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        match self.load_parent_blob(blobstore).await? {
+            LoadParentBlobResult::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Err(FsError::InvalidOperation)
+            }
+            LoadParentBlobResult::IsNotRootDir {
+                name,
+                mut parent_blob,
+                ..
+            } => {
+                let result = parent_blob.set_uid_gid_of_entry_by_name(
+                    name,
+                    // TODO Don't convert uid/gid
+                    uid.map(|uid| fs_types::Uid::from(u32::from(uid))),
+                    gid.map(|gid| fs_types::Gid::from(u32::from(gid))),
+                );
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn utimens<B>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+        last_access: Option<SystemTime>,
+        last_modification: Option<SystemTime>,
+    ) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        match self.load_parent_blob(blobstore).await? {
+            LoadParentBlobResult::IsRootDir { .. } => {
+                // We're the root dir
+                // TODO What should we do here?
+                Err(FsError::InvalidOperation)
+            }
+            LoadParentBlobResult::IsNotRootDir {
+                name,
+                mut parent_blob,
+                ..
+            } => {
+                let result = parent_blob.set_access_times_of_entry_by_name(
+                    name,
+                    last_access,
+                    last_modification,
+                );
+                parent_blob.async_drop().await.map_err(|err| {
+                    log::error!("Error dropping parent blob: {:?}", err);
+                    FsError::UnknownError
+                })?;
+                result?;
+                Ok(())
+            }
+        }
+    }
+}
+
+fn get_blob_details<'a, B>(
+    parent_blob: &DirBlob<'a, B>,
+    name: &PathComponent,
+) -> FsResult<BlobDetails>
+where
+    // TODO Do we really need B: 'static ?
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+{
+    let entry = parent_blob
+        .entry_by_name(name)
+        .ok_or_else(|| FsError::NodeDoesNotExist)?;
+    let blob_id = *entry.blob_id();
+    let blob_type = match entry.entry_type() {
+        EntryType::File => BlobType::File,
+        EntryType::Dir => BlobType::Dir,
+        EntryType::Symlink => BlobType::Symlink,
+    };
+    Ok(BlobDetails { blob_id, blob_type })
+}
+
+fn dir_entry_to_node_attrs(entry: &DirEntry, num_bytes: NumBytes) -> NodeAttrs {
+    NodeAttrs {
+        nlink: 1,
+        // TODO Remove those conversions
+        mode: cryfs_rustfs::Mode::from(u32::from(entry.mode())),
+        uid: cryfs_rustfs::Uid::from(u32::from(entry.uid())),
+        gid: cryfs_rustfs::Gid::from(u32::from(entry.gid())),
+        num_bytes,
+        // Setting num_blocks to none means it'll be automatically calculated for us
+        num_blocks: None,
+        atime: entry.last_access_time(),
+        mtime: entry.last_modification_time(),
+        ctime: entry.last_metadata_change_time(),
+    }
+}

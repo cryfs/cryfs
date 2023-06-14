@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use crate::filesystem::fsblobstore::FsBlobStore;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     object_based_api::OpenFile, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
@@ -12,6 +11,12 @@ use cryfs_utils::{
     data::Data,
 };
 
+use super::{
+    fsblobstore::{DirBlob, FileBlob, FsBlob},
+    node_info::NodeInfo,
+};
+use crate::filesystem::fsblobstore::FsBlobStore;
+
 // TODO Make sure we don't keep a lock on the file blob, or keep the lock in an Arc that is shared between all File, Node and OpenFile instances of the same file
 
 pub struct CryOpenFile<B>
@@ -19,9 +24,8 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
-    // TODO Deduplicate with CryNode
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-    blob_id: BlobId,
+    node_info: NodeInfo,
 }
 
 impl<B> CryOpenFile<B>
@@ -31,9 +35,12 @@ where
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        blob_id: BlobId,
+        node_info: NodeInfo,
     ) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self { blobstore, blob_id })
+        AsyncDropGuard::new(Self {
+            blobstore,
+            node_info,
+        })
     }
 }
 
@@ -44,7 +51,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CryOpenFile")
-            .field("blob_id", &self.blob_id)
+            .field("node_info", &self.node_info)
             .finish()
     }
 }
@@ -56,18 +63,15 @@ where
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        self.node_info.getattr(&self.blobstore).await
     }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        self.node_info.chmod(&self.blobstore, mode).await
     }
 
     async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        self.node_info.chown(&self.blobstore, uid, gid).await
     }
 
     async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
@@ -80,8 +84,9 @@ where
         last_access: Option<SystemTime>,
         last_modification: Option<SystemTime>,
     ) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        self.node_info
+            .utimens(&self.blobstore, last_access, last_modification)
+            .await
     }
 
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {

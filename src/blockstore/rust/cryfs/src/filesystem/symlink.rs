@@ -7,7 +7,7 @@ use super::{
 };
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{object_based_api::Symlink, FsError, FsResult};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::async_drop::AsyncDrop;
 
 pub struct CrySymlink<'a, B>
 where
