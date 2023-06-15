@@ -41,7 +41,7 @@ pub enum NodeInfo {
     },
 }
 
-enum LoadParentBlobResult<'a, 'b, B>
+pub enum LoadParentBlobResult<'a, 'b, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'c> <B as BlobStore>::ConcreteBlob<'c>: Send + Sync,
@@ -95,7 +95,7 @@ impl NodeInfo {
             .map_err(|_err| FsError::NodeIsNotADirectory)
     }
 
-    async fn load_parent_blob<'a, 'b, B>(
+    pub async fn load_parent_blob<'a, 'b, B>(
         &'a self,
         blobstore: &'b FsBlobStore<B>,
     ) -> FsResult<LoadParentBlobResult<'a, 'b, B>>

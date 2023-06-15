@@ -51,8 +51,7 @@ where
     }
 
     async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        super::open_file::truncate_file(&self.blobstore, &self.node_info, new_size).await
     }
 }
 
