@@ -1,3 +1,4 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
@@ -28,10 +29,27 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
-    pub fn new(blobstore: AsyncDropGuard<B>, root_blob_id: BlobId) -> Self {
+    pub fn load_filesystem(blobstore: AsyncDropGuard<B>, root_blob_id: BlobId) -> Self {
         Self {
             blobstore: AsyncDropArc::new(FsBlobStore::new(blobstore)),
             root_blob_id,
+        }
+    }
+
+    pub async fn create_new_filesystem(
+        blobstore: AsyncDropGuard<B>,
+        root_blob_id: BlobId,
+    ) -> Result<Self> {
+        let mut fsblobstore = FsBlobStore::new(blobstore);
+        match fsblobstore.create_root_dir_blob(&root_blob_id).await {
+            Ok(()) => Ok(Self {
+                blobstore: AsyncDropArc::new(fsblobstore),
+                root_blob_id,
+            }),
+            Err(err) => {
+                fsblobstore.async_drop().await?;
+                Err(err)
+            }
         }
     }
 }

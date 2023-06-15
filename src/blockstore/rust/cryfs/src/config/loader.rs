@@ -90,6 +90,9 @@ pub struct ConfigLoadResult {
     pub config: CryConfigFile,
 
     pub my_client_id: ClientId,
+
+    // True if this config file / file system was just created and wasn't opened from an existing config file
+    pub first_time_access: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -153,6 +156,7 @@ fn _create(
         old_config: config.config,
         config: file,
         my_client_id: config.my_client_id,
+        first_time_access: true,
     })
 }
 
@@ -190,6 +194,7 @@ pub fn load(
         old_config,
         config: configfile,
         my_client_id,
+        first_time_access: false,
     })
 }
 

@@ -2,7 +2,7 @@ use anyhow::{ensure, Result};
 use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
     EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig, LockingBlockStore, OnDiskBlockStore,
 };
@@ -60,7 +60,11 @@ impl<'m, 'c, 'l> AsyncCipherCallback for FilesystemRunner<'m, 'c, 'l> {
 
         let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob)?;
 
-        let device = CryDevice::new(blobstore, root_blob_id);
+        let device = if self.config.first_time_access {
+            CryDevice::create_new_filesystem(blobstore, root_blob_id).await?
+        } else {
+            CryDevice::load_filesystem(blobstore, root_blob_id)
+        };
 
         let fs = |_uid, _gid| device;
         fuse_mt::mount(fs, self.mountdir, tokio::runtime::Handle::current())?;

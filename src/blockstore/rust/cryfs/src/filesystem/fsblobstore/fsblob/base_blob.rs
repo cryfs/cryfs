@@ -34,24 +34,33 @@ where
         Ok(Self { blob, header_cache })
     }
 
+    pub async fn try_create_with_id(
+        blob_id: &BlobId,
+        blobstore: &'a B,
+        blob_type: layout::BlobType,
+        parent: &BlobId,
+        data: &[u8],
+    ) -> Result<Option<<B as BlobStore>::ConcreteBlob<'a>>> {
+        let blob_data = create_data_for_new_blob(blob_type, parent, data);
+
+        // TODO Directly creating the blob with the data would probably be faster
+        // than first creating it empty and then writing to it
+        let Some(mut blob) = blobstore
+            .try_create(blob_id)
+            .await? else {
+                return Ok(None);
+            };
+        blob.write(&blob_data, 0).await?;
+        Ok(Some(blob))
+    }
+
     pub async fn create(
         blobstore: &'a B,
         blob_type: layout::BlobType,
         parent: &BlobId,
         data: &[u8],
     ) -> Result<BaseBlob<'a, B>> {
-        // TODO No need to zero-fill header
-        let blob_data: Data = vec![0; layout::fsblob_header::SIZE.unwrap() + data.len()].into();
-        let mut view = layout::fsblob::View::new(blob_data);
-        view.header_mut()
-            .format_version_header_mut()
-            .write(layout::FORMAT_VERSION_HEADER);
-        view.header_mut().blob_type_mut().write(blob_type);
-        view.header_mut()
-            .parent_mut()
-            .copy_from_slice(parent.data());
-        view.data_mut().copy_from_slice(data);
-        let blob_data = view.into_storage();
+        let blob_data = create_data_for_new_blob(blob_type, parent, data);
 
         // TODO Directly creating the blob with the data would probably be faster
         // than first creating it empty and then writing to it
@@ -139,4 +148,19 @@ where
     pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         self.blob.all_blocks()
     }
+}
+
+fn create_data_for_new_blob(blob_type: layout::BlobType, parent: &BlobId, data: &[u8]) -> Data {
+    // TODO No need to zero-fill header
+    let blob_data: Data = vec![0; layout::fsblob_header::SIZE.unwrap() + data.len()].into();
+    let mut view = layout::fsblob::View::new(blob_data);
+    view.header_mut()
+        .format_version_header_mut()
+        .write(layout::FORMAT_VERSION_HEADER);
+    view.header_mut().blob_type_mut().write(blob_type);
+    view.header_mut()
+        .parent_mut()
+        .copy_from_slice(parent.data());
+    view.data_mut().copy_from_slice(data);
+    view.into_storage()
 }

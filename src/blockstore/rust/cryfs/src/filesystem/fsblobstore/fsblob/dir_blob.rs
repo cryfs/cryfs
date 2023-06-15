@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -8,7 +8,7 @@ use super::atime_update_behavior::AtimeUpdateBehavior;
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::{Blob, BlobId, BlobStore, BLOBID_LEN};
 use cryfs_blockstore::BlockId;
 use cryfs_rustfs::{FsResult, PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -55,6 +55,20 @@ where
             blob: BaseBlob::create(blobstore, BlobType::Dir, parent, &[]).await?,
             entries: DirEntryList::empty(),
         }))
+    }
+
+    pub async fn create_root_dir_blob(blobstore: &'a B, root_blob_id: &BlobId) -> Result<()> {
+        let mut blob = BaseBlob::try_create_with_id(
+            root_blob_id,
+            blobstore,
+            BlobType::Dir,
+            &BlobId::from_slice(&[0; BLOBID_LEN]).unwrap(),
+            &[],
+        )
+        .await?
+        .ok_or_else(|| anyhow!("Root blob {:?} already exists", root_blob_id))?;
+        blob.flush().await?;
+        Ok(())
     }
 
     // TODO DoubleEndedIterator + FusedIterator
