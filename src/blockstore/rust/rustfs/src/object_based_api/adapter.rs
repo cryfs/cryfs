@@ -215,11 +215,16 @@ where
                 log::error!("truncate: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
-            open_file.truncate(size).await?
+            open_file.truncate(size).await?;
         } else {
             let fs = self.fs.read().unwrap();
-            let file = fs.get().load_file(path).await?;
-            file.truncate(size).await?
+            let mut file = fs.get().load_file(path).await?;
+            let result = file.truncate(size).await;
+            file.async_drop().await.map_err(|e| {
+                log::error!("truncate: failed to drop file: {}", e);
+                e
+            })?;
+            result?;
         };
         Ok(())
     }
