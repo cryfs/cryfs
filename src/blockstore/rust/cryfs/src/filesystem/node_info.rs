@@ -164,22 +164,29 @@ impl NodeInfo {
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
-        match self.load_parent_blob(blobstore).await? {
-            LoadParentBlobResult::IsRootDir { root_blob } => Ok(BlobDetails {
-                blob_id: root_blob,
+        match self {
+            Self::IsRootDir { root_blob_id } => Ok(BlobDetails {
+                blob_id: root_blob_id.clone(),
                 blob_type: BlobType::Dir,
             }),
-            LoadParentBlobResult::IsNotRootDir {
-                mut parent_blob,
+            Self::IsNotRootDir {
+                parent_blob_id,
+                name,
                 blob_details,
-                ..
             } => {
-                parent_blob.async_drop().await.map_err(|err| {
-                    // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
-                    log::error!("Error dropping parent blob: {:?}", err);
-                    FsError::UnknownError
-                })?;
-                Ok(*blob_details)
+                Ok(*blob_details
+                    .get_or_try_init(|| async {
+                        let mut parent_blob =
+                            Self::_load_parent_blob(blobstore, parent_blob_id).await?;
+                        let blob_details = get_blob_details(&mut parent_blob, name);
+                        parent_blob.async_drop().await.map_err(|err| {
+                            // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
+                            log::error!("Error dropping parent blob: {:?}", err);
+                            FsError::UnknownError
+                        })?;
+                        blob_details
+                    })
+                    .await?)
             }
         }
     }
