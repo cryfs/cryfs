@@ -71,6 +71,7 @@ impl<T: Debug + AsyncDrop> AsyncDropGuard<T> {
 }
 
 impl<T: Debug> Drop for AsyncDropGuard<T> {
+    #[track_caller]
     fn drop(&mut self) {
         match &self.0 {
             Some(v) => {
