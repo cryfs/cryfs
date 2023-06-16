@@ -428,6 +428,33 @@ mod tests {
         }
 
         #[test]
+        fn allowed_special_characters() {
+            fn test_special_component(component: &str) {
+                test(
+                    Ok(&PathComponent::try_from_str(component).unwrap()),
+                    component,
+                );
+            }
+            fn test_special_character(character: char) {
+                if character != '.' {
+                    test_special_component(&format!("{character}"));
+                    test_special_component(&format!("{character}{character}"));
+                }
+                test_special_component(&format!("foo{character}"));
+                test_special_component(&format!("foo{character}bar"));
+                test_special_component(&format!("{character}bar"));
+            }
+            for character in "`~!@#$%^&*()-_=+[{]}|;:'\",<.>? ".chars() {
+                test_special_character(character);
+            }
+
+            // And test some non-ascii utf8 characters
+            for character in "äöü☕🍕".chars() {
+                test_special_character(character);
+            }
+        }
+
+        #[test]
         fn non_utf8() {
             test_non_utf8(b"\xFF");
             test_non_utf8(b"foo\xFF");

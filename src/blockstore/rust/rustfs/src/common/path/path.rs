@@ -72,7 +72,7 @@ impl AbsolutePath {
             return Ok(());
         }
 
-        let mut chars = path.chars().enumerate();
+        let mut chars = path.char_indices();
         if chars.next() != Some((0, '/')) {
             if path.is_empty() {
                 return Err(ParsePathError::EmptyComponent);
@@ -623,6 +623,11 @@ mod tests {
                 test_special_component(&format!("{character}bar"));
             }
             for character in "`~!@#$%^&*()-_=+[{]}|;:'\",<.>? ".chars() {
+                test_special_character(character);
+            }
+
+            // And test some non-ascii utf8 characters
+            for character in "äöü☕🍕".chars() {
                 test_special_character(character);
             }
         }

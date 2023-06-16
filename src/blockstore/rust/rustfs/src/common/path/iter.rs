@@ -113,6 +113,7 @@ mod tests {
     #[case("/foo", &["foo"])]
     #[case("/foo/bar", &["foo", "bar"])]
     #[case("/foo/bar/baz", &["foo", "bar", "baz"])]
+    #[case("/ä/☕/🍕", &["ä", "☕", "🍕"])]
     fn parameters(#[case] path: &str, #[case] expected_components: &[&str]) {}
 
     #[apply(parameters)]
