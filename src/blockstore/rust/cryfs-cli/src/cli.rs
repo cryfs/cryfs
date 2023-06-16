@@ -74,16 +74,24 @@ impl Cli {
     }
 
     async fn run_filesystem(&self) -> Result<()> {
+        // TODO C++ code has lots more logic here, migrate that.
+        let basedir = self.basedir().to_owned();
+        if !basedir.exists() {
+            std::fs::create_dir(&basedir)?;
+        }
+        let mountdir = self.mountdir();
+        if !mountdir.exists() {
+            std::fs::create_dir(mountdir)?;
+        }
+
         let config = self.load_or_create_config()?;
         print_config(&config);
 
-        // TODO C++ code has lots more logic here, migrate that.
-
-        let blobstore = lookup_cipher_async(
+        lookup_cipher_async(
             &config.config.config().cipher,
             FilesystemRunner {
-                basedir: self.basedir().to_owned(),
-                mountdir: self.mountdir(),
+                basedir,
+                mountdir,
                 config: &config,
                 local_state_dir: &self.local_state_dir,
                 // TODO Setup IntegrityConfig correctly
