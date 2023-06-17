@@ -130,6 +130,13 @@ where
         Ok(blob)
     }
 
+    pub fn as_dir(&self) -> Result<&'_ DirBlob<'a, B>> {
+        match self {
+            Self::Directory(blob) => Ok(blob),
+            _ => bail!("FsBlob is not a directory"),
+        }
+    }
+
     pub async fn into_symlink(mut this: AsyncDropGuard<Self>) -> Result<SymlinkBlob<'a, B>> {
         if !matches!(*this, Self::Symlink(_)) {
             this.async_drop().await?;

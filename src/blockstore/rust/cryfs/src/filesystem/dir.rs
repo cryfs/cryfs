@@ -14,8 +14,8 @@ use super::{
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{
-    object_based_api::Dir, AbsolutePath, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs,
-    NodeKind, PathComponent, Uid,
+    object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
+    PathComponent, Uid,
 };
 use cryfs_utils::async_drop::{with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
@@ -452,14 +452,5 @@ where
         })?;
 
         Ok((attrs, open_file))
-    }
-
-    async fn rename_child(
-        &self,
-        old_name: &PathComponent,
-        new_path: &AbsolutePath,
-    ) -> FsResult<()> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
     }
 }

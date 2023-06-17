@@ -44,6 +44,15 @@ pub enum FsError {
     #[error("The file system node is not a symlink")]
     NodeIsNotASymlink,
 
+    #[error("Cannot overwrite directory with non-directory")]
+    CannotOverwriteDirectoryWithNonDirectory,
+
+    #[error("Cannot overwrite non-directory with directory")]
+    CannotOverwriteNonDirectoryWithDirectory,
+
+    #[error("Cannot overwrite a non-empty directory with a rename operation")]
+    CannotOverwriteNonEmptyDirectory,
+
     #[error("The path is invalid")]
     InvalidPath,
 
@@ -67,6 +76,9 @@ impl FsError {
             FsError::InvalidPath => libc::EINVAL,
             FsError::InvalidOperation => libc::EINVAL,
             FsError::UnknownError => libc::EIO,
+            FsError::CannotOverwriteDirectoryWithNonDirectory => libc::EISDIR,
+            FsError::CannotOverwriteNonDirectoryWithDirectory => libc::ENOTDIR,
+            FsError::CannotOverwriteNonEmptyDirectory => libc::ENOTEMPTY,
             FsError::CorruptedFilesystem { .. } => libc::EIO,
         }
     }

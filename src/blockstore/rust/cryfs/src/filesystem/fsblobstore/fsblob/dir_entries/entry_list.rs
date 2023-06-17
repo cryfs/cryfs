@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use std::fmt::Debug;
+use std::future::Future;
 use std::io::Cursor;
 use std::time::SystemTime;
 
@@ -195,7 +196,7 @@ impl DirEntryList {
         self.dirty = true;
     }
 
-    pub fn add_or_overwrite(
+    pub async fn add_or_overwrite<F>(
         &mut self,
         name: PathComponentBuf,
         id: BlobId,
@@ -205,8 +206,12 @@ impl DirEntryList {
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-        on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
-    ) -> Result<()> {
+        // TODO Return overwritten entry instead of taking an on_overwritten callback
+        on_overwritten: impl FnOnce(&BlobId) -> F,
+    ) -> Result<()>
+    where
+        F: Future<Output = FsResult<()>>,
+    {
         let already_exists = self._get_by_name_with_index(&name);
         let entry = DirEntry::new(
             entry_type,
@@ -220,7 +225,7 @@ impl DirEntryList {
             SystemTime::now(),
         )?;
         if let Some((index, old_entry)) = already_exists {
-            on_overwritten(old_entry.blob_id())?;
+            on_overwritten(old_entry.blob_id()).await?;
             self._overwrite(index, entry)?;
         } else {
             self._add(entry);
@@ -244,25 +249,27 @@ impl DirEntryList {
         Ok(())
     }
 
-    // TODO If we add hard links, we can have multiple entries with the same blob id.
-    //      rename() will have to take old_name instead of blob_id
-    //      for the source blob and this whole implementation will have to change.
-    pub fn rename(
+    pub async fn rename_by_name<F>(
         &mut self,
-        blob_id: &BlobId,
+        old_name: &PathComponent,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
-    ) -> Result<()> {
-        let Some(mut source_index) = self._get_index_by_id(blob_id) else {
-            bail!(FsError::ENOENT { msg: format!("Could not find entry with {:?} in directory", blob_id)});
+        on_overwritten: impl FnOnce(&BlobId) -> F,
+    ) -> cryfs_rustfs::FsResult<()>
+    where
+        F: Future<Output = FsResult<()>>,
+    {
+        let Some((mut source_index, source_entry)) = self._get_by_name_with_index(old_name) else {
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
+        let source_blob_id = *source_entry.blob_id();
 
         if let Some((found_same_name_index, found_same_name)) =
             self._get_by_name_with_index(&new_name)
         {
-            if found_same_name.blob_id() == blob_id {
+            if *found_same_name.blob_id() == source_blob_id {
                 // If the current name holder is already our source blob, we don't need to rename it
                 assert_eq!(source_index, found_same_name_index);
+                assert_eq!(old_name, &*new_name);
                 assert_eq!(self.entries[source_index].name(), &*new_name);
                 return Ok(());
             }
@@ -273,7 +280,7 @@ impl DirEntryList {
                 &new_name,
                 source.entry_type(),
             )?;
-            on_overwritten(found_same_name.blob_id())?;
+            on_overwritten(found_same_name.blob_id()).await?;
 
             self.dirty = true;
             self.entries.remove(found_same_name_index);
@@ -284,12 +291,53 @@ impl DirEntryList {
             if source_index >= found_same_name_index {
                 source_index -= 1;
             }
-            assert_eq!(self.entries[source_index].blob_id(), blob_id);
+            assert_eq!(*self.entries[source_index].blob_id(), source_blob_id);
         }
 
         self.dirty = true;
         self.entries[source_index].set_name(new_name);
         Ok(())
+    }
+
+    // TODO If we add hard links, we can have multiple entries with the same blob id.
+    //      This function should be removed and call sites should use [Self::rename_by_name] instead.
+    pub async fn rename(
+        &mut self,
+        blob_id: &BlobId,
+        new_name: PathComponentBuf,
+        on_overwritten: impl FnOnce(&BlobId) -> FsResult<()>,
+    ) -> Result<()> {
+        let Some(old_entry) = self.get_by_id(blob_id) else {
+            bail!(FsError::ENOENT { msg: format!("Could not find entry with {:?} in directory", blob_id)});
+        };
+        let old_name = old_entry.name().to_owned();
+        Ok(self
+            .rename_by_name(&old_name, new_name, |b| {
+                futures::future::ready(on_overwritten(b))
+            })
+            .await
+            .map_err(|err| -> anyhow::Error {
+                match err {
+                    // TODO Don't map the error here, instead use FsError everywhere
+                    cryfs_rustfs::FsError::NodeDoesNotExist => FsError::ENOENT {
+                        msg: format!("Could not find entry with {:?} in directory", blob_id),
+                    }
+                    .into(),
+                    cryfs_rustfs::FsError::CannotOverwriteDirectoryWithNonDirectory => {
+                        FsError::ENOTDIR {
+                            msg: format!("Cannot overwrite directory with non-directory"),
+                        }
+                    }
+                    .into(),
+                    cryfs_rustfs::FsError::CannotOverwriteNonDirectoryWithDirectory => {
+                        FsError::EISDIR {
+                            msg: format!("Cannot overwrite non-directory with directory"),
+                        }
+                    }
+                    .into(),
+                    err => err.into(),
+                }
+            })?)
     }
 
     pub fn set_mode(&mut self, blob_id: &BlobId, mode: Mode) -> Result<()> {
@@ -464,18 +512,15 @@ impl DirEntryList {
         prev_dest_type: EntryType,
         name: &PathComponent,
         source_type: EntryType,
-    ) -> Result<(), FsError> {
+    ) -> FsResult<()> {
         if prev_dest_type != source_type {
             if prev_dest_type == EntryType::Dir {
                 // new path is an existing directory, but old path is not a directory
-                return Err(FsError::EISDIR {
-                    msg: format!("Cannot overwrite a directory with a non-directory during a rename operation. Dest: {:?}", name),
-                });
+                return Err(cryfs_rustfs::FsError::CannotOverwriteDirectoryWithNonDirectory);
             }
             if source_type == EntryType::Dir {
                 // oldpath is a directory, and newpath exists but is not a directory.
-                return Err(FsError::ENOTDIR {
-                    msg: format!("Cannot overwrite a non-directory with a directory during a rename operation. Dest: {:?}", name),});
+                return Err(cryfs_rustfs::FsError::CannotOverwriteNonDirectoryWithDirectory);
             }
         }
         Ok(())

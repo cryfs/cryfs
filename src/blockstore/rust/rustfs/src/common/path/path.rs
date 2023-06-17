@@ -58,13 +58,22 @@ impl AbsolutePath {
         &self.path
     }
 
+    // TODO Test is_ancestor_of, including the case that "/fo" is not an ancestor of "/foo"
+    #[inline]
+    pub fn is_ancestor_of(&self, other: &AbsolutePath) -> bool {
+        match other.path.strip_prefix(&self.path) {
+            Some(remaining) => remaining.starts_with('/'),
+            None => false,
+        }
+    }
+
     // Tests for [Self::iter] are in the [super::iter] module
     #[inline]
     pub fn iter(
         &self,
     ) -> impl Iterator<Item = &PathComponent> + DoubleEndedIterator + FusedIterator + ExactSizeIterator
     {
-        ComponentIter::new(self)
+        self.into_iter()
     }
 
     fn check_invariants(path: &str) -> Result<(), ParsePathError> {
@@ -199,6 +208,17 @@ impl ToOwned for AbsolutePath {
         AbsolutePathBuf {
             path: self.path.to_owned(),
         }
+    }
+}
+
+// TODO IntoIterator for AbsolutePathBuf could take ownership
+impl<'a> IntoIterator for &'a AbsolutePath {
+    type Item = &'a PathComponent;
+    type IntoIter = ComponentIter<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        ComponentIter::new(self)
     }
 }
 
@@ -741,6 +761,154 @@ mod tests {
                     "baz".try_into().unwrap(),
                 )),
                 path.split_last(),
+            );
+        }
+    }
+
+    mod iter {
+        use super::*;
+
+        // More iterator tests are in [super::iter]
+
+        #[test]
+        fn absolutepath_root_dir() {
+            let path = AbsolutePath::try_from_str("/").unwrap();
+            assert_eq!(
+                vec![PathComponent::try_from_str("").unwrap()],
+                path.iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepath_single_component() {
+            let path = AbsolutePath::try_from_str("/foo").unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                ],
+                path.iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepath_two_components() {
+            let path = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                    PathComponent::try_from_str("bar").unwrap(),
+                ],
+                path.iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepathbuf_root_dir() {
+            let path = AbsolutePathBuf::try_from_string("/".to_string()).unwrap();
+            assert_eq!(
+                vec![PathComponent::try_from_str("").unwrap()],
+                path.iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepathbuf_single_component() {
+            let path = AbsolutePathBuf::try_from_string("/foo".to_string()).unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                ],
+                path.iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepathbuf_two_components() {
+            let path = AbsolutePathBuf::try_from_string("/foo/bar".to_string()).unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                    PathComponent::try_from_str("bar").unwrap(),
+                ],
+                path.iter().collect::<Vec<_>>()
+            );
+        }
+    }
+
+    mod into_iter {
+        use super::*;
+
+        // More iterator tests are in [super::iter]
+
+        #[test]
+        fn absolutepath_root_dir() {
+            let path = AbsolutePath::try_from_str("/").unwrap();
+            assert_eq!(
+                vec![PathComponent::try_from_str("").unwrap()],
+                path.into_iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepath_single_component() {
+            let path = AbsolutePath::try_from_str("/foo").unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                ],
+                path.into_iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepath_two_components() {
+            let path = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                    PathComponent::try_from_str("bar").unwrap(),
+                ],
+                path.into_iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepathbuf_root_dir() {
+            let path = AbsolutePathBuf::try_from_string("/".to_string()).unwrap();
+            assert_eq!(
+                vec![PathComponent::try_from_str("").unwrap()],
+                path.into_iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepathbuf_single_component() {
+            let path = AbsolutePathBuf::try_from_string("/foo".to_string()).unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                ],
+                path.into_iter().collect::<Vec<_>>()
+            );
+        }
+
+        #[test]
+        fn absolutepathbuf_two_components() {
+            let path = AbsolutePathBuf::try_from_string("/foo/bar".to_string()).unwrap();
+            assert_eq!(
+                vec![
+                    PathComponent::try_from_str("").unwrap(),
+                    PathComponent::try_from_str("foo").unwrap(),
+                    PathComponent::try_from_str("bar").unwrap(),
+                ],
+                path.into_iter().collect::<Vec<_>>()
             );
         }
     }

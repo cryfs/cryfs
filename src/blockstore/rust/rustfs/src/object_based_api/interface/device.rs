@@ -29,6 +29,7 @@ pub trait Device {
         &'a self,
         path: &AbsolutePath,
     ) -> FsResult<AsyncDropGuard<Self::File<'a>>>;
+    async fn rename(&self, from: &AbsolutePath, to: &AbsolutePath) -> FsResult<()>;
     async fn statfs(&self) -> FsResult<Statfs>;
     async fn destroy(self);
 }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::common::{AbsolutePath, DirEntry, FsResult, Gid, Mode, NodeAttrs, PathComponent, Uid};
+use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, PathComponent, Uid};
 use cryfs_utils::async_drop::AsyncDropGuard;
 
 #[async_trait]
@@ -40,7 +40,4 @@ pub trait Dir {
         NodeAttrs,
         AsyncDropGuard<<Self::Device as super::Device>::OpenFile>,
     )>;
-
-    async fn rename_child(&self, old_name: &PathComponent, new_path: &AbsolutePath)
-        -> FsResult<()>;
 }

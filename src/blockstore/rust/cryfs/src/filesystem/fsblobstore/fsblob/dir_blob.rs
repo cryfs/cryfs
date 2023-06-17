@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
+use std::future::Future;
 use std::time::SystemTime;
 
 use super::atime_update_behavior::AtimeUpdateBehavior;
@@ -108,13 +109,28 @@ where
         self.entries.get_by_name_mut(name)
     }
 
-    pub fn rename_entry(
+    pub async fn rename_entry(
         &mut self,
         blob_id: &BlobId,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
+        on_overwritten: impl FnOnce(&BlobId) -> FsResult<()>,
     ) -> Result<()> {
-        self.entries.rename(blob_id, new_name, on_overwritten)
+        self.entries.rename(blob_id, new_name, on_overwritten).await
+    }
+
+    pub async fn rename_entry_by_name<F>(
+        &mut self,
+        old_name: &PathComponent,
+        new_name: PathComponentBuf,
+        // TODO Instead of passing in on_overwritten, would be better to return the overwritten blob id with #[must_use]
+        on_overwritten: impl FnOnce(&BlobId) -> F,
+    ) -> FsResult<()>
+    where
+        F: Future<Output = FsResult<()>>,
+    {
+        self.entries
+            .rename_by_name(old_name, new_name, on_overwritten)
+            .await
     }
 
     pub fn update_modification_timestamp_of_entry(&mut self, blob_id: &BlobId) -> Result<()> {
@@ -252,7 +268,7 @@ where
         )
     }
 
-    pub fn add_or_overwrite_entry(
+    pub async fn add_or_overwrite_entry<F>(
         &mut self,
         name: PathComponentBuf,
         id: BlobId,
@@ -262,19 +278,24 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-        on_overwritten: impl FnOnce(&BlobId) -> Result<()>,
-    ) -> Result<()> {
-        self.entries.add_or_overwrite(
-            name,
-            id,
-            entry_type,
-            mode,
-            uid,
-            gid,
-            last_access_time,
-            last_modification_time,
-            on_overwritten,
-        )
+        on_overwritten: impl FnOnce(&BlobId) -> F,
+    ) -> Result<()>
+    where
+        F: Future<Output = FsResult<()>>,
+    {
+        self.entries
+            .add_or_overwrite(
+                name,
+                id,
+                entry_type,
+                mode,
+                uid,
+                gid,
+                last_access_time,
+                last_modification_time,
+                on_overwritten,
+            )
+            .await
     }
 
     pub async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {

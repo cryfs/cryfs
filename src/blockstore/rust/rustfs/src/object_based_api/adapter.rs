@@ -363,19 +363,17 @@ where
         oldpath: &AbsolutePath,
         newpath: &AbsolutePath,
     ) -> FsResult<()> {
-        let (oldparent, oldname) = oldpath.split_last().ok_or_else(|| {
-            assert!(oldpath.is_root());
+        if oldpath.is_root() {
             log::error!("rename: tried to rename the root directory into '{newpath}'");
-            FsError::InvalidOperation
-        })?;
+            return Err(FsError::InvalidOperation);
+        }
         if newpath.is_root() {
             log::error!("rename: tried to rename '{oldpath}' into the root directory");
             return Err(FsError::InvalidOperation);
         };
         let fs = self.fs.read().unwrap();
-        let old_parent_dir = fs.get().load_dir(oldparent).await?;
         // TODO Should rename overwrite a potentially already existing target or not? Make sure we handle that the right way.
-        old_parent_dir.rename_child(&oldname, newpath).await?;
+        fs.get().rename(oldpath, newpath).await?;
         Ok(())
     }
 

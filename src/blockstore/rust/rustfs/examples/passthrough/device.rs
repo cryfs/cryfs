@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 
+use super::errors::{IoResultExt, NixResultExt};
 use cryfs_rustfs::{
     object_based_api::Device, AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs,
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 
 use super::dir::PassthroughDir;
-use super::errors::NixResultExt;
 use super::file::PassthroughFile;
 use super::node::PassthroughNode;
 use super::openfile::PassthroughOpenFile;
@@ -41,7 +41,7 @@ impl Device for PassthroughDevice {
 
     async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
         let path = self.apply_basedir(path);
-        Ok(PassthroughDir::new(self.basedir.clone(), path))
+        Ok(PassthroughDir::new(path))
     }
 
     async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
@@ -52,6 +52,15 @@ impl Device for PassthroughDevice {
     async fn load_file(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::File<'_>>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughFile::new(path))
+    }
+
+    async fn rename(&self, from_path: &AbsolutePath, to_path: &AbsolutePath) -> FsResult<()> {
+        // TODO Build AbsolutePathBuf::join(&self, &AbsolutePath) and join_all, which can be more efficient because clone+push likely causes two reallocations.
+        //      Then grep the codebase for the clone().push{_all} pattern and replate it
+        let old_path = self.basedir.clone().push_all(from_path);
+        let new_path = self.basedir.clone().push_all(to_path);
+        tokio::fs::rename(old_path, new_path).await.map_error()?;
+        Ok(())
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {

@@ -689,6 +689,7 @@ dependencies = [
  "libc",
  "lockable 0.0.6",
  "log",
+ "maybe-owned",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -1654,6 +1655,12 @@ checksum = "b823e83b2affd8f40a9ee8c29dbc56404c1e34cd2710921f2801e2cf29527afa"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "maybe-owned"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
 
 [[package]]
 name = "memchr"

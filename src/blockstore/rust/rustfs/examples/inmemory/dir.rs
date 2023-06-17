@@ -1,21 +1,19 @@
 use async_trait::async_trait;
-use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
     OpenFlags, PathComponent, PathComponentBuf, Uid,
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use super::device::{InMemoryDevice, RootDir};
+use super::device::InMemoryDevice;
 use super::file::InMemoryFileRef;
 use super::file::InMemoryOpenFileRef;
 use super::inode_metadata::{chmod, chown, utimens};
 use super::node::InMemoryNodeRef;
 use super::symlink::InMemorySymlinkRef;
-use crate::utils::lock_in_ptr_order;
 
 // Inode is in separate module so we can ensure class invariant through public/private boundaries
 mod inode {
@@ -76,33 +74,46 @@ mod inode {
         pub fn entries_mut(&mut self) -> &mut HashMap<PathComponentBuf, InMemoryNodeRef> {
             &mut self.entries
         }
+
+        pub fn rename(&mut self, from: &PathComponent, to: &PathComponent) -> FsResult<()> {
+            if self.entries.contains_key(to) {
+                // TODO Some forms of overwriting are actually ok, we don't need to block them all
+                Err(FsError::NodeAlreadyExists)
+            } else {
+                let old_entry = match self.entries.remove(from) {
+                    Some(node) => node,
+                    None => {
+                        return Err(FsError::NodeDoesNotExist);
+                    }
+                };
+                // TODO Use try_insert once stable
+                let insert_result = self.entries.insert(to.to_owned(), old_entry);
+                assert!(insert_result.is_none(), "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail.");
+                Ok(())
+            }
+        }
     }
 }
 pub use inode::DirInode;
 
 pub struct InMemoryDirRef {
     inode: Arc<Mutex<DirInode>>,
-
-    // weak to avoid reference cycles
-    rootdir: Weak<RootDir>,
 }
 
 impl InMemoryDirRef {
-    pub fn new(rootdir: Weak<RootDir>, mode: Mode, uid: Uid, gid: Gid) -> Self {
+    pub fn new(mode: Mode, uid: Uid, gid: Gid) -> Self {
         Self {
             inode: Arc::new(Mutex::new(DirInode::new(mode, uid, gid))),
-            rootdir,
         }
     }
 
-    pub fn from_inode(rootdir: Weak<RootDir>, inode: Arc<Mutex<DirInode>>) -> Self {
-        Self { inode, rootdir }
+    pub fn from_inode(inode: Arc<Mutex<DirInode>>) -> Self {
+        Self { inode }
     }
 
     pub fn clone_ref(&self) -> Self {
         Self {
             inode: Arc::clone(&self.inode),
-            rootdir: Weak::clone(&self.rootdir),
         }
     }
 
@@ -132,6 +143,15 @@ impl InMemoryDirRef {
             .lock()
             .unwrap()
             .utimens(last_access, last_modification);
+    }
+
+    pub fn rename(&self, from: &PathComponent, to: &PathComponent) -> FsResult<()> {
+        self.inode.lock().unwrap().rename(from, to)
+    }
+
+    // TODO Don't let `Arc` escape here, rather return `&Mutex`
+    pub(super) fn inode(&self) -> &Arc<Mutex<DirInode>> {
+        &self.inode
     }
 }
 
@@ -163,7 +183,7 @@ impl Dir for InMemoryDirRef {
         gid: Gid,
     ) -> FsResult<NodeAttrs> {
         let mut inode = self.inode.lock().unwrap();
-        let dir = InMemoryDirRef::new(Weak::clone(&self.rootdir), mode, uid, gid);
+        let dir = InMemoryDirRef::new(mode, uid, gid);
         let metadata = dir.metadata();
         // TODO Use try_insert once that is stable
         match inode.entries_mut().entry(name.to_owned()) {
@@ -252,69 +272,5 @@ impl Dir for InMemoryDirRef {
             }
         }
         Ok((metadata, openfile))
-    }
-
-    async fn rename_child(
-        &self,
-        old_name: &PathComponent,
-        new_path: &AbsolutePath,
-    ) -> FsResult<()> {
-        // TODO Go through CryNode assertions (C++) and check if we should do them here too,
-        //      - moving a directory into a subdirectory of itself
-        //      - overwriting a directory with a non-directory
-        //      - overwriten a non-empty dir (special case: making a directory into its own ancestor)
-        // TODO No unwrap
-        let Some((new_parent_path, new_name)) = new_path.split_last() else {
-            log::error!("Tried to rename '{old_name}' to the root directory");
-            return Err(FsError::InvalidPath);
-        };
-        let new_parent = self
-            .rootdir
-            .upgrade()
-            .expect("RootDir cannot be gone when we still have `self` as a InMemoryDir instance")
-            .load_dir(new_parent_path)?;
-        if Arc::as_ptr(&self.inode) == Arc::as_ptr(&new_parent.inode) {
-            // TODO Deduplicate logic in the then-branch and the else-branch of this if statement
-            // We're just renaming it within one directory
-            // TODO Check if this actually works or if there is some deadlock because we're loading the same directory twice
-            let mut inode = self.inode.lock().unwrap();
-            let entries = inode.entries_mut();
-            if entries.contains_key(new_name) {
-                // TODO Some forms of overwriting are actually ok, we don't need to block them all
-                Err(FsError::NodeAlreadyExists)
-            } else {
-                let old_entry = match entries.remove(old_name) {
-                    Some(node) => node,
-                    None => {
-                        return Err(FsError::NodeDoesNotExist);
-                    }
-                };
-                // TODO Use try_insert once stable
-                let insert_result = entries.insert(new_name.to_owned(), old_entry);
-                assert!(insert_result.is_none(), "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail.");
-                Ok(())
-            }
-        } else {
-            // We're moving it to another directory
-            let (mut source_inode, mut target_inode) =
-                lock_in_ptr_order(&self.inode, &new_parent.inode);
-            let source_entries = source_inode.entries_mut();
-            let target_entries = target_inode.entries_mut();
-            if target_entries.contains_key(new_name) {
-                // TODO Some forms of overwriting are actually ok, we don't need to block them all
-                Err(FsError::NodeAlreadyExists)
-            } else {
-                let old_entry = match source_entries.remove(old_name) {
-                    Some(node) => node,
-                    None => {
-                        return Err(FsError::NodeDoesNotExist);
-                    }
-                };
-                // TODO Use try_insert once stable
-                let insert_result = target_entries.insert(new_name.to_owned(), old_entry);
-                assert!(insert_result.is_none(), "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail.");
-                Ok(())
-            }
-        }
     }
 }

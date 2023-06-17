@@ -711,14 +711,17 @@ impl<'a> RustDirBlobBridge<'a> {
         on_overwritten: UniquePtr<ffi::CxxCallbackWithBlobId>,
     ) -> Box<FsResult> {
         log_errors(|| {
-            self.0.rename_entry(
+            TOKIO_RUNTIME.block_on(self.0.rename_entry(
                 &blob_id.0,
                 PathComponent::try_from_str(new_name).unwrap().to_owned(),
                 |id| {
-                    on_overwritten.call(&FsBlobId(*id))?;
+                    on_overwritten.call(&FsBlobId(*id)).map_err(|err| {
+                        log::error!("Error in on_overwritten: {err:?}");
+                        cryfs_rustfs::FsError::UnknownError
+                    })?;
                     Ok(())
                 },
-            )
+            ))
         })
         .into()
     }
@@ -855,7 +858,7 @@ impl<'a> RustDirBlobBridge<'a> {
         on_overwritten: UniquePtr<ffi::CxxCallbackWithBlobId>,
     ) -> Box<FsResult> {
         log_errors(|| {
-            self.0.add_or_overwrite_entry(
+            TOKIO_RUNTIME.block_on(self.0.add_or_overwrite_entry(
                 PathComponentBuf::try_from_string(name.to_owned()).unwrap(),
                 id.0,
                 entry_type.into(),
@@ -864,11 +867,14 @@ impl<'a> RustDirBlobBridge<'a> {
                 gid.into(),
                 last_access_time.into(),
                 last_modification_time.into(),
-                |id| {
-                    on_overwritten.call(&FsBlobId(*id))?;
-                    Ok(())
+                |id| match on_overwritten.call(&FsBlobId(*id)) {
+                    Ok(()) => futures::future::ready(Ok(())),
+                    Err(e) => {
+                        log::error!("Error in on_overwritten: {e:?}");
+                        futures::future::ready(Err(cryfs_rustfs::FsError::UnknownError))
+                    }
                 },
-            )
+            ))
         })
         .into()
     }

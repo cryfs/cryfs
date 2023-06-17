@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
     object_based_api::{Dir, Node},
-    AbsolutePath, AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
-    PathComponent, Uid,
+    AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, PathComponent,
+    Uid,
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::os::unix::fs::OpenOptionsExt;
@@ -14,13 +14,12 @@ use super::openfile::PassthroughOpenFile;
 use super::utils::convert_metadata;
 
 pub struct PassthroughDir {
-    basedir: AbsolutePathBuf,
     path: AbsolutePathBuf,
 }
 
 impl PassthroughDir {
-    pub fn new(basedir: AbsolutePathBuf, path: AbsolutePathBuf) -> Self {
-        Self { basedir, path }
+    pub fn new(path: AbsolutePathBuf) -> Self {
+        Self { path }
     }
 }
 
@@ -168,18 +167,5 @@ impl Dir for PassthroughDir {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
-    }
-
-    async fn rename_child(
-        &self,
-        old_name: &PathComponent,
-        new_path: &AbsolutePath,
-    ) -> FsResult<()> {
-        // TODO Build AbsolutePathBuf::join(&self, &AbsolutePath) and join_all, which can be more efficient because clone+push likely causes two reallocations.
-        //      Then grep the codebase for the clone().push{_all} pattern and replate it
-        let old_path = self.path.clone().push(old_name);
-        let new_path = self.basedir.clone().push_all(new_path);
-        tokio::fs::rename(old_path, new_path).await.map_error()?;
-        Ok(())
     }
 }
