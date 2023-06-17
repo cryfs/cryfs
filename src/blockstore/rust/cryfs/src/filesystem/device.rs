@@ -209,8 +209,30 @@ where
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {
-        // TODO Implement
-        Err(FsError::NotImplemented)
+        let num_used_blocks = self.blobstore.num_blocks().await.map_err(|err| {
+            log::error!("Failed to get num_blocks: {err:?}");
+            FsError::UnknownError
+        })?;
+        let num_free_blocks = self
+            .blobstore
+            .estimate_space_for_num_blocks_left()
+            .map_err(|err| {
+                log::error!("Failed to get num_free_blocks: {err:?}");
+                FsError::UnknownError
+            })?;
+        let num_total_blocks = num_used_blocks + num_free_blocks;
+        let max_filename_length = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
+        let blocksize = self.blobstore.virtual_block_size_bytes();
+
+        Ok(Statfs {
+            max_filename_length,
+            blocksize,
+            num_total_blocks,
+            num_free_blocks,
+            num_available_blocks: num_free_blocks,
+            num_total_inodes: num_total_blocks,
+            num_free_inodes: num_free_blocks,
+        })
     }
 
     async fn destroy(mut self) {
