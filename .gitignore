@@ -1,15 +1,1 @@
-umltest.inner.sh
-umltest.status
-/build
-/cmake
-/cmake-build-*
-/.idea
-*~
-
-src/gitversion/*.pyc
-src/gitversion/__pycache__
-cmake-build-debug
-cmake-build-release
-cmake-build-test
-
-**/rust/target
+target
