@@ -33,7 +33,7 @@ jobs:
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
-    name: crates individually testable
+    name: check
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
