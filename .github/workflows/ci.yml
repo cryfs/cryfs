@@ -30,6 +30,29 @@ jobs:
         with:
           command: ${{ matrix.command }}
           args: ${{ matrix.features }} ${{ matrix.profile }}
+  crates_individually_testable:
+    # This job tests that each crate can be built and tested individually.
+    # We don't actually run any tests because those are being run as part of other CI jobs already.
+    name: crates individually testable
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: ["blobstore", "blockstore", "cryfs", "cryfs-cli", "cryfs-version", "rustfs", "utils"]
+        targets: ["", "--tests", "--examples", "--benches"]
+        features: ["", "--no-default-features", "--all-features"]
+        profile: ["", "--release"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: sudo apt-get install -y fuse3 libfuse3-dev
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+      - name: cargo check
+        working-directory: ./${{ matrix.crate }}
+        run: cargo check ${{ matrix.profile }} ${{ matrix.features }} ${{matrix.targets}}
   # clippy_check:
   #   name: Linter (clippy)
   #   runs-on: ubuntu-latest
