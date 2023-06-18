@@ -11,20 +11,18 @@ fuse_mt_fuser = {package = "fuser", version = "^0.11.0", optional = true}
 libc = "^0.2.146"
 log = "^0.4.19"
 tokio = "^1.28.2"
-# TODO env_logger is only needed for the passthrough example
-env_logger = "^0.10.0"
-# TODO nix is only needed for the passthrough example
-nix = "^0.26.2"
 derive_more = "^0.99.17"
 thiserror = "^1.0.40"
 cryfs-utils = {path = "../utils"}
 anyhow = "^1.0.71"
-camino = "^1.1.4"
 
 [dev-dependencies]
 tokio = {version="^1.28.2", features=["fs"]}
 rstest = "^0.17.0"
 rstest_reuse = "^0.5.0"
+# TODO env_logger and nix are only needed for the passthrough example
+env_logger = "^0.10.0"
+nix = "^0.26.2"
 
 [features]
 default = ["dep:fuse_mt", "fuse_mt"]
