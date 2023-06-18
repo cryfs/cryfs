@@ -152,11 +152,13 @@ impl Cli {
 fn _show_version() {
     eprintln!("CryFS Version {}", CRYFS_VERSION);
     if let Some(gitinfo) = CRYFS_VERSION.gitinfo() {
-        if gitinfo.commits_since_tag > 0 {
-            eprintln!(
-                "WARNING! This is a development version based on git commit {}. Please don't use in production.",
-                gitinfo.commit_id,
-            );
+        if let Some(tag_info) = gitinfo.tag_info {
+            if tag_info.commits_since_tag > 0 {
+                eprintln!(
+                    "WARNING! This is a development version based on git commit {}. Please don't use in production.",
+                    gitinfo.commit_id,
+                );
+            }
         }
         if gitinfo.modified {
             eprintln!("WARNING! There were uncommitted changes in the repository when building this version.");

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug, Display, Formatter};
 
 use super::version::Version;
-use crate::GitInfo;
+use git2version::GitInfo;
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(bound(deserialize = "'de: 'a + 'b + 'c"))]
@@ -15,18 +15,23 @@ impl<'a, 'b, 'c> VersionInfo<'a, 'b, 'c> {
     #[track_caller]
     pub const fn new(version: Version<'a>, gitinfo: Option<GitInfo<'b, 'c>>) -> Self {
         if let Some(gitinfo) = gitinfo {
-            let git_version = konst::unwrap_ctx!(Version::parse_const(gitinfo.tag));
-
-            if !version.eq_const(&git_version) {
-                panic!("Version mismatch: The version in the git tag does not match the version in Cargo.toml");
-                // TODO Enable the following once `const_format_args` is stable
-                // panic!(
-                //     "Version mismatch: The version in the git tag ({}) does not match the version \
-                //     in Cargo.toml ({})",
-                //     gitinfo.tag,
-                //     RESULT.version,
-                // );
-            }
+            match gitinfo.tag_info {
+                Some(tag_info) => {
+                    let git_version = konst::unwrap_ctx!(Version::parse_const(tag_info.tag));
+                    if !version.eq_const(&git_version) {
+                        panic!("Version mismatch: The version in the git tag does not match the version in Cargo.toml");
+                        // TODO Enable the following once `const_format_args` is stable
+                        // panic!(
+                        //     "Version mismatch: The version in the git tag ({}) does not match the version \
+                        //     in Cargo.toml ({})",
+                        //     gitinfo.tag,
+                        //     RESULT.version,
+                        // );
+                    }
+                    Some(git_version)
+                }
+                None => None,
+            };
         }
 
         Self { version, gitinfo }
@@ -56,8 +61,9 @@ impl<'a, 'b, 'c> Display for VersionInfo<'a, 'b, 'c> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.version)?;
         if let Some(gitinfo) = self.gitinfo {
-            if gitinfo.commits_since_tag > 0 {
-                write!(f, "+{}.g{}", gitinfo.commits_since_tag, gitinfo.commit_id)?;
+            let commits_since_tag = gitinfo.tag_info.map(|t| t.commits_since_tag).unwrap_or(0);
+            if commits_since_tag > 0 {
+                write!(f, "+{}.g{}", commits_since_tag, gitinfo.commit_id)?;
                 if gitinfo.modified {
                     write!(f, ".modified")?;
                 }
@@ -74,6 +80,8 @@ impl<'a, 'b, 'c> Display for VersionInfo<'a, 'b, 'c> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use git2version::TagInfo;
 
     mod display {
         use super::*;
@@ -118,8 +126,10 @@ mod tests {
                     prerelease: None,
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 10,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 10,
+                    }),
                     commit_id: "abcdef",
                     modified: false,
                 }),
@@ -138,8 +148,10 @@ mod tests {
                     prerelease: Some("alpha"),
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 10,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 10,
+                    }),
                     commit_id: "abcdef",
                     modified: false,
                 }),
@@ -158,8 +170,10 @@ mod tests {
                     prerelease: None,
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 10,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 10,
+                    }),
                     commit_id: "abcdef",
                     modified: true,
                 }),
@@ -178,8 +192,10 @@ mod tests {
                     prerelease: Some("alpha"),
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 10,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 10,
+                    }),
                     commit_id: "abcdef",
                     modified: true,
                 }),
@@ -198,8 +214,10 @@ mod tests {
                     prerelease: None,
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 0,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 0,
+                    }),
                     commit_id: "abcdef",
                     modified: false,
                 }),
@@ -218,8 +236,10 @@ mod tests {
                     prerelease: Some("alpha"),
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 0,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 0,
+                    }),
                     commit_id: "abcdef",
                     modified: false,
                 }),
@@ -238,8 +258,10 @@ mod tests {
                     prerelease: None,
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 0,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 0,
+                    }),
                     commit_id: "abcdef",
                     modified: true,
                 }),
@@ -258,8 +280,10 @@ mod tests {
                     prerelease: Some("alpha"),
                 },
                 gitinfo: Some(GitInfo {
-                    tag: "a.b.c",
-                    commits_since_tag: 0,
+                    tag_info: Some(TagInfo {
+                        tag: "a.b.c",
+                        commits_since_tag: 0,
+                    }),
                     commit_id: "abcdef",
                     modified: true,
                 }),

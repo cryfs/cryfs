@@ -8,7 +8,10 @@ use cryfs_version::Version;
 
 const OUR_GITVERSION: Option<Version> = match cryfs_version::GITINFO {
     None => None,
-    Some(gitinfo) => Some(konst::unwrap_ctx!(Version::parse_const(gitinfo.tag))),
+    Some(gitinfo) => match gitinfo.tag_info {
+        Some(tag_info) => Some(konst::unwrap_ctx!(Version::parse_const(tag_info.tag))),
+        None => None,
+    },
 };
 
 mod test_macro_package_version {
@@ -36,11 +39,13 @@ mod test_macro_package_version {
 
     #[test]
     fn doesnt_match_git_version() {
-        let project_dir = make_version_test_project("1.2.3");
-        run_version_test_project_expect_error(
-            project_dir.path(),
-            "Version mismatch: The version in the git tag does not match the version in Cargo.toml",
-        );
+        if let Some(_our_gitversion) = OUR_GITVERSION {
+            let project_dir = make_version_test_project("1.2.3");
+            run_version_test_project_expect_error(
+                project_dir.path(),
+                "Version mismatch: The version in the git tag does not match the version in Cargo.toml",
+            );
+        }
     }
 
     fn make_version_test_project(version: &str) -> TempDir {

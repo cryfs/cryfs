@@ -1283,9 +1283,9 @@ dependencies = [
 
 [[package]]
 name = "git2version"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10fc879458784bcaf815e5bdfab5bb9bcf5c718085d70bd8189ddc02ddcc7abd"
+checksum = "ed6d9d10ba5e896f41f0661acedbb871a32f21087cf2deaa4cb8a42e75258505"
 dependencies = [
  "git2",
  "konst",

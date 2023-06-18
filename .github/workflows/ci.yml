@@ -17,9 +17,11 @@ jobs:
         command: ["test"]
         profile: ["", "--release"]
         features: ["", "--no-default-features", "--all-features"]
-        toolchain: ["stable", "nightly", "1.65"]
+        toolchain: ["stable", "nightly", "1.67"]
     steps:
       - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: sudo apt-get install -y fuse3 libfuse3-dev
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -35,6 +37,8 @@ jobs:
   #     checks: write
   #   steps:
   #     - uses: actions/checkout@v3
+  #     - name: Install Dependencies
+  #       run: sudo apt-get install -y fuse3 libfuse3-dev
   #     - uses: actions-rs/toolchain@v1
   #       with:
   #         toolchain: stable
@@ -71,6 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Install Dependencies
+      run: sudo apt-get install -y fuse3 libfuse3-dev
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
@@ -81,6 +87,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: sudo apt-get install -y fuse3 libfuse3-dev
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
