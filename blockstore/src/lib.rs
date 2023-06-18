@@ -1,3 +1,5 @@
+// TODO #![deny(missing_docs)]
+
 mod block_id;
 pub use block_id::{BlockId, BLOCKID_LEN};
 

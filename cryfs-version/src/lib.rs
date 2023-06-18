@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+// TODO #![deny(missing_docs)]
+
 git2version::init_proxy_lib!();
 
 mod version;

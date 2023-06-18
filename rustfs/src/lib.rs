@@ -1,3 +1,5 @@
+// TODO #![deny(missing_docs)]
+
 pub mod object_based_api;
 
 pub mod low_level_api;

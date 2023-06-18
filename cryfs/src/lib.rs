@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+// TODO #![deny(missing_docs)]
+
 // TODO Figure out what the public API of this module should be
 pub mod config;
 pub mod filesystem;

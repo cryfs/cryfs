@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+// TODO #![deny(missing_docs)]
+
 mod args;
 mod env;
 

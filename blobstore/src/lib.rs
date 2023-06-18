@@ -1,3 +1,8 @@
+// TODO Figure out which functions actually should or shouldn't be #[inline]
+
+#![forbid(unsafe_code)]
+// TODO #![deny(missing_docs)]
+
 mod blob_id;
 pub use blob_id::BlobId;
 

@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+// TODO #![deny(missing_docs)]
+
 pub mod async_drop;
 pub mod at_exit;
 pub mod binary;

@@ -250,7 +250,7 @@ pub fn read_null_string<R: Read + Seek>(
     let data: BinResult<Vec<NonZeroU8>> = reader
         .by_ref()
         .peeking_take_while(|x| !matches!(x, Ok(0)))
-        .map(|x| Ok(x.map(|byte| unsafe { NonZeroU8::new_unchecked(byte) })?))
+        .map(|x| Ok(x.map(|byte| NonZeroU8::new(byte).unwrap())?))
         .collect();
     let data = data?;
 
