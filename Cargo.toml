@@ -1,5 +1,5 @@
 [workspace]
-members = ["blockstore", "blobstore", "cryfs", "cryfs-cli", "rustfs", "cryfs-version"]
+members = ["crates/blockstore", "crates/blobstore", "crates/cryfs", "crates/cryfs-cli", "crates/rustfs", "crates/cryfs-version"]
 resolver = "2"
 
 [profile.release]

@@ -51,7 +51,7 @@ jobs:
           toolchain: stable
           default: true
       - name: cargo check
-        working-directory: ./${{ matrix.crate }}
+        working-directory: ./crates/${{ matrix.crate }}
         run: cargo check ${{ matrix.profile }} ${{ matrix.features }} ${{matrix.targets}}
   # clippy_check:
   #   name: Linter (clippy)
