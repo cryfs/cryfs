@@ -1,5 +1,6 @@
 [workspace]
 members = ["blockstore", "blobstore", "cryfs", "cryfs-cli", "rustfs", "cryfs-version"]
+resolver = "2"
 
 [profile.release]
 lto = "fat"
