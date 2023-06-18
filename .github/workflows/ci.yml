@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        command: ["test"]
+        profile: ["", "--release"]
+        features: ["", "--no-default-features", "--all-features"]
+        toolchain: ["stable", "nightly", "1.65"]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: ${{ matrix.command }}
+          args: ${{ matrix.features }} ${{ matrix.profile }}
+  # clippy_check:
+  #   name: Linter (clippy)
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     checks: write
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         components: clippy
+  #         default: true
+  #     - uses: actions-rs/clippy-check@v1
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         args: --all-features --all-targets -- -D warnings
+  code_format:
+    name: Code Formatter (rustfmt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          default: true
+      - uses: mbrobbel/rustfmt-check@0.5.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+  # sync_readme:
+  #   name: Sync README.md (cargo sync-readme)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - run: cargo install cargo-rdme
+  #   - run: ./gen_readme.sh
+  #   # Fail job if gen_readme.sh introduced changes. If this fails, then we need to run gen_readme.sh locally and add it to the commit.
+  #   - run: git diff --exit-code
+  dead_doc_links:
+    name: Find dead doc links
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        default: true
+    - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --no-fail-fast
+        env:
+          # Setup taken from https://github.com/actions-rs/grcov/tree/d9881ad44979aa34f846a82abb764b2b8cfbd715
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
+      - uses: codecov/codecov-action@v3
+        with:
+          #token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ${{ steps.coverage.outputs.report }}
+          fail_ci_if_error: true
+          verbose: true
