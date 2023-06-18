@@ -29,3 +29,11 @@ rstest_reuse = "^0.5.0"
 [features]
 default = ["dep:fuse_mt", "fuse_mt"]
 fuse_mt = ["dep:fuse_mt_fuser"]
+
+[[example]]
+name = "inmemory"
+required-features = ["fuse_mt"]
+
+[[example]]
+name = "passthrough"
+required-features = ["fuse_mt"]
