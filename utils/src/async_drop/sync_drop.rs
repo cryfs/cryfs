@@ -6,7 +6,7 @@ use super::{AsyncDrop, AsyncDropGuard};
 /// SyncDrop wraps an [AsyncDropGuard] and calls `AsyncDropGuard::async_drop` on it in its
 /// synchronous [Drop] destructor.
 ///
-/// WARNING: This can cause deadlocks, see https://stackoverflow.com/questions/71541765/rust-async-drop
+/// WARNING: This can cause deadlocks, see <https://stackoverflow.com/questions/71541765/rust-async-drop>
 ///          That's why we're restricting this to test code
 #[cfg(any(test, feature = "testutils"))]
 pub struct SyncDrop<T: Debug + AsyncDrop>(Option<AsyncDropGuard<T>>);

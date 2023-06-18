@@ -37,7 +37,7 @@ pub async fn run_to_completion<E: Debug>(
 /// Run the given async func concurrently on each item of the iterator.
 /// If one item fails, the other items will still be run to completion
 /// and all errors will be logged in the end. This is different from
-/// [TryStreamExt::for_each_concurrent].
+/// [TryStreamExt::try_for_each_concurrent](futures::stream::TryStreamExt::try_for_each_concurrent).
 pub async fn for_each_unordered<T, E, F>(
     items: impl Iterator<Item = T>,
     func: impl Fn(T) -> F,

@@ -21,7 +21,7 @@ use cryfs_utils::{async_drop::AsyncDropGuard, testutils::asserts::assert_data_ra
 mod block_store_adapter;
 pub use block_store_adapter::TestFixtureAdapter;
 
-/// Based on a [crate::low_level::tests::Fixture], we define a [LockingBlockStoreFixture]
+/// Based on a [crate::tests::Fixture], we define a [LockingBlockStoreFixture]
 /// that uses the underlying fixture and wraps its blockstore into a [LockingBlockStore]
 /// to run LockingBlockStore tests on it.
 #[async_trait]
@@ -455,7 +455,7 @@ macro_rules! _instantiate_highlevel_blockstore_tests {
 }
 
 /// This macro instantiates all LockingBlockStore tests for a given blockstore.
-/// See [crate::low_level::tests::Fixture] and [LockingBlockStoreFixture] for how to invoke it.
+/// See [crate::tests::Fixture] and [LockingBlockStoreFixture] for how to invoke it.
 #[macro_export]
 macro_rules! instantiate_highlevel_blockstore_tests {
     ($target: ty) => {

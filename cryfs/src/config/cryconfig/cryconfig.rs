@@ -29,7 +29,7 @@ pub struct CryConfig {
     pub format_version: String,
 
     /// Original version of the format of this file system.
-    /// This may differ from [CryConfig::version] if the file system was migrated
+    /// This may differ from [CryConfig::format_version] if the file system was migrated
     pub created_with_version: String,
 
     /// Version of the last CryFS instance that opened this file system

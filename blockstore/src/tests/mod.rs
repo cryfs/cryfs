@@ -1,12 +1,12 @@
 //! This module defines a common set of unit tests to be run on a [BlockStore] implementation.
-//! To use it, implement [Fixture] for your block store and call [instantiate_blockstore_tests!].
+//! To use it, implement [Fixture] for your block store and call [instantiate_blockstore_tests!](crate::instantiate_blockstore_tests!).
 
 use async_trait::async_trait;
 
 use crate::{low_level::BlockStore, BlockId};
 use cryfs_utils::{async_drop::AsyncDropGuard, data::Data, testutils::data_fixture::DataFixture};
 
-/// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests] macro,
+/// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests!](crate::instantiate_blockstore_tests!) macro,
 /// our suite of block store tests is instantiated for a given block store.
 ///
 /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources

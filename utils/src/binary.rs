@@ -9,7 +9,7 @@ use std::num::{NonZeroU32, NonZeroU8};
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-// TODO Re-enable doc tests
+// TODO Re-enable doc tests. They're likely broken.
 
 /// Extension trait to deserialize an object from a stream
 pub trait BinaryReadExt: Sized {
@@ -106,11 +106,11 @@ where
     }
 }
 
-/// Deserialize a bool field with [binread].
+/// Deserialize a bool field with [binrw].
 ///
 /// # Examples
 /// ```ignore
-/// use binread::BinRead;
+/// use binrw::BinRead;
 /// use cryfs_blockstore::utils::binary::read_bool;
 ///
 /// #[derive(BinRead)]
@@ -136,11 +136,11 @@ pub fn read_bool<R: Read + Seek>(reader: &mut R, endian: Endian, _: ()) -> BinRe
     }
 }
 
-/// Serialize a bool field with [binwrite].
+/// Serialize a bool field with [binrw].
 ///
 /// # Examples
 /// ```ignore
-/// use binwrite::BinWrite;
+/// use binrw::BinWrite;
 /// use cryfs_blockstore::utils::binary::write_bool;
 ///
 /// #[derive(BinWrite)]
@@ -160,11 +160,11 @@ pub fn write_bool(
     u8::write_options(&v, writer, endian, args)
 }
 
-/// Deserialize a hashmap with [binread].
+/// Deserialize a hashmap with [binrw].
 ///
 /// # Examples
 /// ```ignore
-/// use binread::BinRead;
+/// use binrw::BinRead;
 /// use std::collections::HashMap;
 /// use cryfs_blockstore::utils::binary::read_hashmap;
 ///
@@ -190,11 +190,11 @@ where
         .collect()
 }
 
-/// Serialize a hashmap with [binwrite].
+/// Serialize a hashmap with [binrw].
 ///
 /// # Examples
 /// ```ignore
-/// use binwrite::BinWrite;
+/// use binrw::BinWrite;
 /// use std::collections::HashMap;
 /// use cryfs_blockstore::utils::binary::write_hashmap;
 ///
@@ -223,15 +223,15 @@ where
     Ok(())
 }
 
-/// Deerialize a [String] with [binwrite].
+/// Deerialize a [String] with [binrw].
 ///
-/// [binread] offers [NullString] which is similar, but [NullString]
+/// [binrw] offers [NullString](binrw::NullString) which is similar, but [NullString](binrw::NullString)
 /// succeeds on reading a string even if it is terminated by EOF instead
 /// of NULL. This function is more strict and always expects a NULL in the end.
 ///
 /// # Examples
 /// ```ignore
-/// use binread::BinRead;
+/// use binrw::BinRead;
 /// use cryfs_blockstore::utils::binary::read_null_string;
 ///
 /// #[derive(BinRead)]
@@ -266,15 +266,15 @@ pub fn read_null_string<R: Read + Seek>(
     }
 }
 
-/// Serialize a [String] with [binwrite].
+/// Serialize a [String] with [binrw].
 ///
-/// [NullString] is a class provided by [binread] but
-/// [binwrite] doesn't natively offer a way to serialize it.
+/// [NullString](binrw::NullString) is a class provided by [binrw] but
+/// [binrw] doesn't natively offer a way to serialize it.
 /// You can use this helper to serialize it.
 ///
 /// # Examples
 /// ```ignore
-/// use binwrite::BinWrite;
+/// use binrw::BinWrite;
 /// use cryfs_blockstore::utils::binary::write_null_string;
 ///
 /// #[derive(BinWrite)]

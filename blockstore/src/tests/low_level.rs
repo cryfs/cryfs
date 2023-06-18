@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-//! This module contains common test cases for the low level [BlockStore] API
+//! This module contains common test cases for the low level [BlockStore](crate::BlockStore) API
 
 use futures::stream::TryStreamExt;
 use std::ops::Deref;

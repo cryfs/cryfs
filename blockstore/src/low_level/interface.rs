@@ -38,7 +38,7 @@ pub trait OptimizedBlockStoreWriter {
     /// In-memory representation of the data of a block. This can be allocated using [OptimizedBlockStoreWriter::allocate]
     /// and then can be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
     ///
-    /// The reason we use this class and don't use just [crate::data::Data] or `&[u8]` is for optimizations purposes.
+    /// The reason we use this class and don't use just [cryfs_utils::data::Data] or `&[u8]` is for optimizations purposes.
     /// Some blockstores prepend header to the data before storing and require the block data to be set up in a way
     /// that makes sure that data can be prepended without having to copy the block data.
     type BlockData: block_data::IBlockData + Send;
