@@ -5,12 +5,12 @@ name = "cryfs-rustfs"
 version = "0.1.0"
 
 [dependencies]
-async-trait = "^0.1.60"
+async-trait = "^0.1.68"
 fuse_mt = {version = "^0.6.0", optional = true}
 fuse_mt_fuser = {package = "fuser", version = "^0.11.0", optional = true}
-libc = "^0.2.139"
-log = "^0.4.17"
-tokio = "^1.23.0"
+libc = "^0.2.146"
+log = "^0.4.19"
+tokio = "^1.28.2"
 # TODO env_logger is only needed for the passthrough example
 env_logger = "^0.10.0"
 # TODO nix is only needed for the passthrough example
@@ -22,7 +22,7 @@ anyhow = "^1.0.71"
 camino = "^1.1.4"
 
 [dev-dependencies]
-tokio = {version="^1.23.0", features=["fs"]}
+tokio = {version="^1.28.2", features=["fs"]}
 rstest = "^0.17.0"
 rstest_reuse = "^0.5.0"
 

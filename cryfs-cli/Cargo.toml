@@ -8,16 +8,16 @@ version = "0.11.0"
 name = "cryfs"
 
 [dependencies]
-async-trait = "^0.1.60"
+async-trait = "^0.1.68"
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-utils = {path = "../utils"}
 cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
 cryfs-version = {path = "../cryfs-version"}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
-clap = {version = "^4.3.0", features = ["derive"]}
-tokio = {version = "^1.23.0", features = ["rt-multi-thread", "macros"]}
-anyhow = "^1.0.68"
+clap = {version = "^4.3.4", features = ["derive"]}
+tokio = {version = "^1.28.2", features = ["rt-multi-thread", "macros"]}
+anyhow = "^1.0.71"
 dirs = "^5.0.1"
 env_logger = "^0.10.0"
 path-absolutize = "^3.1.0"
