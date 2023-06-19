@@ -256,7 +256,7 @@ jobs:
           if [[ "${{matrix.os}}" == "ubuntu-18.04" ]]; then
             python3 -m pip install setuptools
           fi
-          python3 -m pip install conan==1.59
+          python3 -m pip install conan==1.60.1
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{github.event_name == 'push' }}
@@ -461,7 +461,7 @@ jobs:
         shell: bash
         run: |
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
-          python3 -m pip install conan==1.59
+          python3 -m pip install conan==1.60.1
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{github.event_name == 'push' }}

@@ -99,15 +99,15 @@ You can use the following commands to install these requirements
 
         # Ubuntu
         $ sudo apt install git g++ cmake make pkg-config libcurl4-openssl-dev libssl-dev libfuse-dev python3 python3-pip
-        $ sudo pip3 install conan==1.59
+        $ sudo pip3 install conan==1.60.1
 
         # Fedora
         $ sudo dnf install git gcc-c++ cmake make pkgconf libcurl-devel openssl-devel fuse-devel python3 python3-pip
-        $ sudo pip3 install conan==1.59
+        $ sudo pip3 install conan==1.60.1
 
         # Macintosh
         $ brew install cmake pkg-config openssl libomp macfuse
-        $ sudo pip3 install conan==1.59
+        $ sudo pip3 install conan==1.60.1
 
 Build & Install
 ---------------
