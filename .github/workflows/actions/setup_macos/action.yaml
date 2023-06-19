@@ -10,4 +10,4 @@ runs:
     - name: Install macOS dependencies
       shell: bash
       run: |
-        brew install ninja macfuse libomp ccache md5sha1sum ${{inputs.extra_homebrew_packages}}
+        brew install ninja macfuse libomp ccache md5sha1sum pkg-config ${{inputs.extra_homebrew_packages}}
