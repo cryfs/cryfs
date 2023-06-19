@@ -16,6 +16,7 @@ binary-layout.workspace = true
 binrw.workspace = true
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
+derive_more = {workspace = true, optional = true}
 errno.workspace = true
 futures.workspace = true
 hex.workspace = true
@@ -23,7 +24,6 @@ lockable.workspace = true
 log.workspace = true
 lzzzz.workspace = true
 mockall = {workspace = true, optional = true}
-derive_more = {workspace = true, optional = true}
 rand.workspace = true
 sysinfo.workspace = true
 thiserror.workspace = true
@@ -38,8 +38,8 @@ winapi = {workspace = true, features = ["fileapi"]}
 
 [dev-dependencies]
 common_macros.workspace = true
-derive_more.workspace = true
 cryfs-utils = {path = "../utils", features = ["testutils"]}
+derive_more.workspace = true
 generic-array.workspace = true
 mockall.workspace = true
 tempdir.workspace = true
