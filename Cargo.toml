@@ -5,12 +5,13 @@ resolver = "2"
 [workspace.package]
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
 edition = "2021"
+rust-version = "1.67"
 homepage = "https://www.cryfs.org"
 repository = "https://github.com/cryfs/cryfs"
 license = "LGPL-3.0-or-later"
 readme = "README.md"
 version = "0.11.0"
-# TODO Set rust-version, categories, keywords, documentation, description (and then make sure to link the crates/*/Cargo.toml to it)
+# TODO Set categories, keywords, documentation, description (and then make sure to link the crates/*/Cargo.toml to it)
 # TODO look at whether we want to add [badges], see https://doc.rust-lang.org/cargo/reference/manifest.html#the-badges-section
 
 [workspace.dependencies]
