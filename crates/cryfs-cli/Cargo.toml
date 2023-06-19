@@ -1,37 +1,41 @@
 [package]
-authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2021"
 name = "cryfs-cli"
-version = "0.11.0"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
 
 [[bin]]
 name = "cryfs"
 
 [dependencies]
-async-trait = "^0.1.68"
-cryfs-cryfs = {path = "../cryfs"}
-cryfs-utils = {path = "../utils"}
-cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
-cryfs-version = {path = "../cryfs-version"}
+anyhow.workspace = true
+async-trait.workspace = true
+clap = {workspace = true, features = ["derive"]}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
-clap = {version = "^4.3.4", features = ["derive"]}
-tokio = {version = "^1.28.2", features = ["rt-multi-thread", "macros"]}
-anyhow = "^1.0.71"
-dirs = "^5.0.1"
-env_logger = "^0.10.0"
-path-absolutize = "^3.1.0"
-rpassword = "^7.2"
-dialoguer = "^0.10.4"
+cryfs-cryfs = {path = "../cryfs"}
+cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
+cryfs-utils = {path = "../utils"}
+cryfs-version = {path = "../cryfs-version"}
+dialoguer.workspace = true
+dirs.workspace = true
+env_logger.workspace = true
+path-absolutize.workspace = true
+rpassword.workspace = true
+tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
 
 [dev-dependencies]
-envtestkit = "^1.1.2"
-tempdir = "^0.3.7"
-pathdiff = "^0.2.1"
-assert_cmd = "^2.0.11"
-predicates = "^3.0.3"
-escargot = "^0.5.7"
-lazy_static = "^1.4.0"
+assert_cmd.workspace = true
+envtestkit.workspace = true
+escargot.workspace = true
+lazy_static.workspace = true
+pathdiff.workspace = true
+predicates.workspace = true
+tempdir.workspace = true
 
 [features]
 default = ["check_for_updates"]

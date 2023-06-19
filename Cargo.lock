@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-rustfs"
-version = "0.1.0"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-version"
-version = "0.0.0"
+version = "0.11.0"
 dependencies = [
  "git2version",
  "konst",

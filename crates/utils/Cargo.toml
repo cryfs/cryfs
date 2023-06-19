@@ -1,44 +1,48 @@
 [package]
-authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2021"
 name = "cryfs-utils"
-version = "0.11.0"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
 
 [dependencies]
-aead = "^0.5.2"
-aes-gcm = {version = "^0.10.2", features = ["std"]}
-anyhow = "^1.0.71"
-async-trait = "^0.1.68"
-binrw = "^0.11.2"
-chacha20poly1305 = "^0.10.1"
+aead.workspace = true
+aes-gcm = {workspace = true, features = ["std"]}
+anyhow.workspace = true
+async-trait.workspace = true
+binrw.workspace = true
+chacha20poly1305.workspace = true
 cryfs-version = {path = "../cryfs-version"}
-divrem = {version = "^1.0.0", optional = true}
-futures = "^0.3.28"
-generic-array = "^0.14.7"
-hex = "^0.4.3"
-itertools = "^0.10.5"
-lockable = "^0.0.6"
-log = "^0.4.19"
-openssl = {version = "^0.10.54", features = ["vendored"]}
-rand = "^0.8.5"
-rayon = {version = "^1.7.0", optional = true}
-region = "^3.0.0"
-scrypt = {version = "^0.11.0", default-features = false}
-signal-hook = "^0.3.15"
-sodiumoxide = "^0.2.7"
-static_assertions = "^1.1.0"
-tokio = {version = "^1.28.2", features = ["rt-multi-thread", "macros", "time"]}
-tokio-util = "^0.7.8"
+divrem = {workspace = true, optional = true}
+futures.workspace = true
+generic-array.workspace = true
+hex.workspace = true
+itertools.workspace = true
+lockable.workspace = true
+log.workspace = true
+openssl = {workspace = true, features = ["vendored"]}
+rand.workspace = true
+rayon = {workspace = true, optional = true}
+region.workspace = true
+scrypt = {workspace = true, default-features = false}
+signal-hook.workspace = true
+sodiumoxide.workspace = true
+static_assertions.workspace = true
+tokio = {workspace = true, features = ["rt-multi-thread", "macros", "time"]}
+tokio-util.workspace = true
 
 [dev-dependencies]
-criterion = "^0.5.1"
-divrem = "^1.0.0"
-generic-tests = "^0.1.2"
-rand = {version = "^0.8.5", features = ["small_rng"]}
-rayon = "^1.7.0"
-rstest = "^0.17.0"
-tempdir = "^0.3.7"
-common_macros = "^0.1.1"
+common_macros.workspace = true
+criterion.workspace = true
+divrem.workspace = true
+generic-tests.workspace = true
+rand = {workspace = true, features = ["small_rng"]}
+rayon.workspace = true
+rstest.workspace = true
+tempdir.workspace = true
 
 [features]
 testutils = ["divrem", "rand/small_rng", "rayon"]
