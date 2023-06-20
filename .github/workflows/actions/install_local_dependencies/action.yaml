@@ -15,7 +15,7 @@ runs:
         echo Download range-v3
         cd ~
         wget https://github.com/ericniebler/range-v3/archive/0.12.0.tar.gz -O range-v3-0.12.0.tar.gz
-        if [ $(sha512sum range-v3-0.11.0.tar.gz | awk '{print $1;}') == "b8b632b8e0f2a3234ef61813212c237f648cd741e816ca57bd86f82f6459f7d755e2b70361d2aa43847874fb546a31a792ab1c3ba90292818ae7313438dc62d0" ]; then
+        if [ $(sha512sum range-v3-0.12.0.tar.gz | awk '{print $1;}') == "b8b632b8e0f2a3234ef61813212c237f648cd741e816ca57bd86f82f6459f7d755e2b70361d2aa43847874fb546a31a792ab1c3ba90292818ae7313438dc62d0" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
