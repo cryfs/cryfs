@@ -157,11 +157,6 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), FsError> {
-        self.blobstore.async_drop().await.map_err(|err| {
-            log::error!("Failed to drop blobstore: {err:?}");
-            FsError::Custom {
-                error_code: libc::EIO,
-            }
-        })
+        self.blobstore.async_drop().await
     }
 }

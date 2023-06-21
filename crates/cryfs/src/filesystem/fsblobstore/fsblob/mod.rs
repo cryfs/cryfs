@@ -5,13 +5,11 @@ use std::fmt::Debug;
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
+use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod atime_update_behavior;
 pub use atime_update_behavior::AtimeUpdateBehavior;
-
-mod fs_error;
-pub use fs_error::FsError;
 
 mod layout;
 pub use layout::BlobType;
@@ -174,10 +172,9 @@ where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
-    // TODO We changed this to FsError, which should eliminate a couple of map_err calls. Actually eliminate them.
-    type Error = cryfs_rustfs::FsError;
+    type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> cryfs_rustfs::FsResult<()> {
+    async fn async_drop_impl(&mut self) -> FsResult<()> {
         match &mut self {
             Self::File(_blob) => { /* do nothing */ }
             Self::Directory(blob) => {

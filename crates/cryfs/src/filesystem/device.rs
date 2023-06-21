@@ -10,7 +10,7 @@ use cryfs_rustfs::{
     object_based_api::Device, AbsolutePath, FsError, FsResult, PathComponent, Statfs,
 };
 use cryfs_utils::{
-    async_drop::{flatten_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{flatten_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
     safe_panic, with_async_drop_2,
 };
 
@@ -86,10 +86,7 @@ where
             })?;
         if root_blob.blob_type() != BlobType::Dir {
             log::error!("Root blob is not a directory");
-            root_blob.async_drop().await.map_err(|_| {
-                log::error!("Error dropping current_blob");
-                FsError::UnknownError
-            })?;
+            root_blob.async_drop().await?;
             return Err(FsError::Custom {
                 error_code: libc::EIO,
             });
@@ -123,10 +120,7 @@ where
                 Ok(dir_blob) => Ok(dir_blob),
                 Err(err) => {
                     if let Some(current_blob) = current_blob.as_mut() {
-                        current_blob.async_drop().await.map_err(|err| {
-                            log::error!("Error dropping current_blob: {err:?}");
-                            FsError::UnknownError
-                        })?;
+                        current_blob.async_drop().await?;
                     } else {
                         // current_blob is borrowed. No need to drop it
                     }
@@ -142,10 +136,7 @@ where
                 None => Err(FsError::NodeDoesNotExist),
             };
             if let Some(current_blob) = current_blob.as_mut() {
-                current_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping current_blob: {err:?}");
-                    FsError::UnknownError
-                })?;
+                current_blob.async_drop().await?;
             } else {
                 // current_blob is borrowed. No need to drop it
             }
@@ -195,43 +186,28 @@ where
         );
         match (blob1, blob2) {
             (Err(err1), Err(err2)) => {
-                shared_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping shared_blob: {err:?}");
-                    FsError::UnknownError
-                })?;
+                shared_blob.async_drop().await?;
                 // TODO Report both errors
                 Err(err1)
             }
             (Err(err1), Ok(mut blob2)) => {
                 // TODO async_drop blob2 and shared_blob concurrently
                 if let Some(blob2) = blob2.as_mut() {
-                    blob2.async_drop().await.map_err(|err| {
-                        log::error!("Error dropping blob2: {err:?}");
-                        FsError::UnknownError
-                    })?;
+                    blob2.async_drop().await?;
                 } else {
                     // blob2 is borrowed. No need to drop it
                 }
-                shared_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping shared_blob: {err:?}");
-                    FsError::UnknownError
-                })?;
+                shared_blob.async_drop().await?;
                 Err(err1)
             }
             (Ok(mut blob1), Err(err2)) => {
                 // TODO async_drop blob1 and shared_blob concurrently
                 if let Some(blob1) = blob1.as_mut() {
-                    blob1.async_drop().await.map_err(|err| {
-                        log::error!("Error dropping blob1: {err:?}");
-                        FsError::UnknownError
-                    })?;
+                    blob1.async_drop().await?;
                 } else {
                     // blob1 is borrowed. No need to drop it
                 }
-                shared_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping shared_blob: {err:?}");
-                    FsError::UnknownError
-                })?;
+                shared_blob.async_drop().await?;
                 Err(err2)
             }
             (Ok(MaybeOwned::Borrowed(blob1)), Ok(MaybeOwned::Borrowed(blob2))) => {
@@ -244,10 +220,7 @@ where
                 // Both blobs are owned, this means that neither relative path was empty
                 assert!(relative_path1_len > 0);
                 assert!(relative_path2_len > 0);
-                shared_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping shared_blob: {err:?}");
-                    FsError::UnknownError
-                })?;
+                shared_blob.async_drop().await?;
                 Ok(LoadTwoBlobsResult::AreDifferentBlobs { blob1, blob2 })
             }
             (Ok(MaybeOwned::Borrowed(blob1)), Ok(MaybeOwned::Owned(blob2))) => {
@@ -388,10 +361,7 @@ where
                 parent
                     .rename_entry_by_name(source_name, dest_name.to_owned(), on_overwritten)
                     .await?;
-                parent.async_drop().await.map_err(|_| {
-                    log::error!("Error dropping parent");
-                    FsError::UnknownError
-                })?;
+                parent.async_drop().await?;
                 Ok(())
             }
             LoadTwoBlobsResult::AreDifferentBlobs {
@@ -413,22 +383,13 @@ where
                 // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
                 let (mut source_parent, mut dest_parent) =
                     // TODO Use flatten_async_drop instead of flatten_async_drop_err_map
-                    flatten_async_drop_err_map(source_parent, dest_parent, |err| err, |err| err)
-                        .await
-                        // TODO No map_err
-                        .map_err(|err| FsError::NodeIsNotADirectory)?;
+                    flatten_async_drop(source_parent, dest_parent).await?;
                 let entry = match source_parent.entry_by_name(source_name) {
                     Some(entry) => entry,
                     None => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         return Err(FsError::NodeDoesNotExist);
                     }
                 };
@@ -440,26 +401,14 @@ where
                     Ok(Some(self_blob)) => self_blob,
                     Ok(None) => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         return Err(FsError::NodeDoesNotExist);
                     }
                     Err(err) => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         log::error!("Error loading blob: {:?}", err);
                         return Err(FsError::UnknownError);
                     }
@@ -481,14 +430,8 @@ where
                     Ok(()) => (),
                     Err(err) => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         return Err(err);
                     }
                 }
@@ -498,14 +441,8 @@ where
                     Ok(entry) => entry,
                     Err(err) => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         log::error!("Error in add_or_overwrite_entry: {err:?}");
                         return Err(FsError::UnknownError);
                     }
@@ -527,14 +464,8 @@ where
                     Ok(()) => (),
                     Err(err) => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         log::error!("Error in add_or_overwrite_entry: {err:?}");
                         return Err(FsError::UnknownError);
                     }
@@ -545,31 +476,16 @@ where
                     Ok(()) => (),
                     Err(err) => {
                         // TODO Drop concurrently
-                        source_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
-                        dest_parent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping parent");
-                            FsError::UnknownError
-                        })?;
+                        source_parent.async_drop().await?;
+                        dest_parent.async_drop().await?;
                         log::error!("Error setting parent: {err:?}");
                         return Err(FsError::UnknownError);
                     }
                 }
                 // TODO async_drop concurrently
-                self_blob.async_drop().await.map_err(|_| {
-                    log::error!("Error dropping blob");
-                    FsError::UnknownError
-                })?;
-                source_parent.async_drop().await.map_err(|_| {
-                    log::error!("Error dropping source parent");
-                    FsError::UnknownError
-                })?;
-                dest_parent.async_drop().await.map_err(|_| {
-                    log::error!("Error dropping dest parent");
-                    FsError::UnknownError
-                })?;
+                self_blob.async_drop().await?;
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
                 Ok(())
 
                 // TODO We need to update timestamps of the parent directories in the grandparent blobs.

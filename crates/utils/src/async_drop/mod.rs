@@ -16,7 +16,7 @@ mod hash_map;
 pub use hash_map::AsyncDropHashMap;
 
 mod with;
-pub use with::{with_async_drop, with_async_drop_err_map};
+pub use with::with_async_drop;
 
 mod flatten;
-pub use flatten::flatten_async_drop_err_map;
+pub use flatten::flatten_async_drop;

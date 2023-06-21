@@ -70,10 +70,7 @@ where
                     log::error!("Failed to fsync parent blob: {err:?}");
                     FsError::UnknownError
                 })?;
-                parent_blob.async_drop().await.map_err(|err| {
-                    log::error!("Failed to drop parent blob: {err:?}");
-                    FsError::UnknownError
-                })?;
+                parent_blob.async_drop().await?;
             }
         }
         Ok(())
@@ -176,12 +173,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), FsError> {
-        self.blobstore.async_drop().await.map_err(|err| {
-            log::error!("Failed to drop blobstore: {err:?}");
-            FsError::Custom {
-                error_code: libc::EIO,
-            }
-        })
+        self.blobstore.async_drop().await
     }
 }
 

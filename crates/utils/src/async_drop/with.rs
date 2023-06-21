@@ -35,21 +35,4 @@ where
     result
 }
 
-pub async fn with_async_drop_err_map<T, R, E, F>(
-    mut value: AsyncDropGuard<T>,
-    f: impl FnOnce(&mut T) -> F + 'static,
-    err_map: impl FnOnce(<T as AsyncDrop>::Error) -> E,
-) -> Result<R, E>
-where
-    T: AsyncDrop + Debug,
-    F: Future<Output = Result<R, E>>,
-    <F as Future>::Output: 'static,
-    E: 'static,
-    R: 'static,
-{
-    let result = f(&mut value).await;
-    value.async_drop().await.map_err(err_map)?;
-    result
-}
-
 // TODO Tests

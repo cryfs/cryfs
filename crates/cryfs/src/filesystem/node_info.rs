@@ -121,11 +121,7 @@ impl NodeInfo {
                 let blob_details = match blob_details {
                     Ok(blob_details) => Ok(blob_details),
                     Err(err) => {
-                        parent_blob.async_drop().await.map_err(|err| {
-                            // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
-                            log::error!("Error dropping parent blob: {:?}", err);
-                            FsError::UnknownError
-                        })?;
+                        parent_blob.async_drop().await?;
                         Err(err)
                     }
                 }?;
@@ -173,21 +169,15 @@ impl NodeInfo {
                 parent_blob_id,
                 name,
                 blob_details,
-            } => {
-                Ok(*blob_details
-                    .get_or_try_init(|| async {
-                        let mut parent_blob =
-                            Self::_load_parent_blob(blobstore, parent_blob_id).await?;
-                        let blob_details = get_blob_details(&mut parent_blob, name);
-                        parent_blob.async_drop().await.map_err(|err| {
-                            // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
-                            log::error!("Error dropping parent blob: {:?}", err);
-                            FsError::UnknownError
-                        })?;
-                        blob_details
-                    })
-                    .await?)
-            }
+            } => Ok(*blob_details
+                .get_or_try_init(|| async {
+                    let mut parent_blob =
+                        Self::_load_parent_blob(blobstore, parent_blob_id).await?;
+                    let blob_details = get_blob_details(&mut parent_blob, name);
+                    parent_blob.async_drop().await?;
+                    blob_details
+                })
+                .await?),
         }
     }
 
@@ -229,11 +219,7 @@ impl NodeInfo {
                 Err(FsError::UnknownError)
             }
         };
-        blob.async_drop().await.map_err(|err| {
-            // TODO We might not need with_async_drop_err_map if we change all the AsyncDrop's to Error=FsError.
-            log::error!("Error dropping blob: {:?}", err);
-            FsError::UnknownError
-        })?;
+        blob.async_drop().await?;
         result
     }
 
@@ -277,10 +263,7 @@ impl NodeInfo {
                     Ok(dir_entry_to_node_attrs(entry, lstat_size))
                 })()
                 .await;
-                parent_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping parent blob: {:?}", err);
-                    FsError::UnknownError
-                })?;
+                parent_blob.async_drop().await?;
                 result
             }
         }
@@ -305,10 +288,7 @@ impl NodeInfo {
                 let result = parent_blob
                     // TODO No Mode conversion
                     .set_mode_of_entry_by_name(name, fs_types::Mode::from(u32::from(mode)));
-                parent_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping parent blob: {:?}", err);
-                    FsError::UnknownError
-                })?;
+                parent_blob.async_drop().await?;
                 result?;
                 Ok(())
             }
@@ -342,10 +322,7 @@ impl NodeInfo {
                     uid.map(|uid| fs_types::Uid::from(u32::from(uid))),
                     gid.map(|gid| fs_types::Gid::from(u32::from(gid))),
                 );
-                parent_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping parent blob: {:?}", err);
-                    FsError::UnknownError
-                })?;
+                parent_blob.async_drop().await?;
                 result?;
                 Ok(())
             }
@@ -378,10 +355,7 @@ impl NodeInfo {
                     last_access,
                     last_modification,
                 );
-                parent_blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping parent blob: {:?}", err);
-                    FsError::UnknownError
-                })?;
+                parent_blob.async_drop().await?;
                 result?;
                 Ok(())
             }

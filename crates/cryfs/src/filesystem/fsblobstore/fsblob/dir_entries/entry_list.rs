@@ -62,7 +62,6 @@ impl DirEntryList {
         None
     }
 
-    // TODO Return FsResult and fix all call sites to not do map_err anymore
     fn _get_index_by_name(&self, name: &PathComponent) -> Option<usize> {
         self._get_by_name_with_index(name).map(|(index, _)| index)
     }
@@ -170,11 +169,9 @@ impl DirEntryList {
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         if self.get_by_name(&name).is_some() {
-            bail!(FsError::EEXIST {
-                msg: format!("Entry with name {:?} already exists", name)
-            });
+            return Err(FsError::NodeAlreadyExists);
         }
         self._add(DirEntry::new(
             entry_type,
@@ -306,44 +303,21 @@ impl DirEntryList {
         blob_id: &BlobId,
         new_name: PathComponentBuf,
         on_overwritten: impl FnOnce(&BlobId) -> FsResult<()>,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         let Some(old_entry) = self.get_by_id(blob_id) else {
-            bail!(FsError::ENOENT { msg: format!("Could not find entry with {:?} in directory", blob_id)});
+            return Err(FsError::NodeDoesNotExist);
         };
         let old_name = old_entry.name().to_owned();
-        Ok(self
-            .rename_by_name(&old_name, new_name, |b| {
-                futures::future::ready(on_overwritten(b))
-            })
-            .await
-            .map_err(|err| -> anyhow::Error {
-                match err {
-                    // TODO Don't map the error here, instead use FsError everywhere
-                    cryfs_rustfs::FsError::NodeDoesNotExist => FsError::ENOENT {
-                        msg: format!("Could not find entry with {:?} in directory", blob_id),
-                    }
-                    .into(),
-                    cryfs_rustfs::FsError::CannotOverwriteDirectoryWithNonDirectory => {
-                        FsError::ENOTDIR {
-                            msg: format!("Cannot overwrite directory with non-directory"),
-                        }
-                    }
-                    .into(),
-                    cryfs_rustfs::FsError::CannotOverwriteNonDirectoryWithDirectory => {
-                        FsError::EISDIR {
-                            msg: format!("Cannot overwrite non-directory with directory"),
-                        }
-                    }
-                    .into(),
-                    err => err.into(),
-                }
-            })?)
+        self.rename_by_name(&old_name, new_name, |b| {
+            futures::future::ready(on_overwritten(b))
+        })
+        .await
     }
 
-    pub fn set_mode(&mut self, blob_id: &BlobId, mode: Mode) -> Result<()> {
+    pub fn set_mode(&mut self, blob_id: &BlobId, mode: Mode) -> FsResult<()> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
             // TODO Use FsError here and everywhere in `fsblobstore`
-            bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
+            return Err(FsError::NodeDoesNotExist);
         };
         entry.set_mode(mode)?;
         Ok(())
@@ -362,9 +336,9 @@ impl DirEntryList {
         blob_id: &BlobId,
         uid: Option<Uid>,
         gid: Option<Gid>,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         let Some(found) = self._get_index_by_id(blob_id) else {
-            bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
+            return Err(FsError::NodeDoesNotExist);
         };
 
         if let Some(uid) = uid {
@@ -408,9 +382,9 @@ impl DirEntryList {
         blob_id: &BlobId,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
-            bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
+            return Err(FsError::NodeDoesNotExist);
         };
         entry.set_last_access_time(last_access_time);
         entry.set_last_modification_time(last_modification_time);
@@ -444,9 +418,9 @@ impl DirEntryList {
         &mut self,
         blob_id: &BlobId,
         atime_update_behavior: AtimeUpdateBehavior,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         let Some(index) = self._get_index_by_id(blob_id) else {
-            bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
+            return Err(FsError::NodeDoesNotExist);
         };
         let entry = &self.entries[index];
         let last_access_time = entry.last_access_time();
@@ -474,18 +448,15 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn update_modification_timestamp(&mut self, blob_id: &BlobId) -> Result<()> {
+    pub fn update_modification_timestamp(&mut self, blob_id: &BlobId) -> FsResult<()> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
-            bail!(FsError::ENOENT{msg: format!("Could not find entry with {:?} in directory", blob_id)});
+            return Err(FsError::NodeDoesNotExist);
         };
         entry.update_modification_time();
         Ok(())
     }
 
-    pub fn remove_by_name(
-        &mut self,
-        name: &PathComponent,
-    ) -> Result<DirEntry, cryfs_rustfs::FsError> {
+    pub fn remove_by_name(&mut self, name: &PathComponent) -> FsResult<DirEntry> {
         let Some((index, _entry)) = self._get_by_name_with_index(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };

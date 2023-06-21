@@ -60,7 +60,7 @@ impl DirEntry {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
         last_metadata_change_time: SystemTime,
-    ) -> Result<Self> {
+    ) -> FsResult<Self> {
         match entry_type {
             EntryType::File => mode.add_file_flag(),
             EntryType::Dir => mode.add_dir_flag(),
@@ -79,7 +79,9 @@ impl DirEntry {
                 blob_id,
             },
         };
-        result.validate()?;
+        result
+            .validate()
+            .map_err(|error| FsError::InternalError { error })?;
         Ok(result)
     }
 

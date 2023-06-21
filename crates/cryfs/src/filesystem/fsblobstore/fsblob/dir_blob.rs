@@ -11,7 +11,7 @@ use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{Blob, BlobId, BlobStore, BLOBID_LEN};
 use cryfs_blockstore::BlockId;
-use cryfs_rustfs::{FsResult, PathComponent, PathComponentBuf};
+use cryfs_rustfs::{FsError, FsResult, PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
@@ -43,6 +43,8 @@ where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
+    // TODO Some of the functions in here (and possibly in other blobs) were only needed for the cxx.rs bindings. Check which ones we can delete now since we're rust only.
+
     pub(super) async fn new(mut blob: BaseBlob<'a, B>) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
         let entries = DirEntryList::deserialize(&mut blob).await?;
         Ok(AsyncDropGuard::new(Self { blob, entries }))
@@ -114,7 +116,7 @@ where
         blob_id: &BlobId,
         new_name: PathComponentBuf,
         on_overwritten: impl FnOnce(&BlobId) -> FsResult<()>,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries.rename(blob_id, new_name, on_overwritten).await
     }
 
@@ -133,11 +135,11 @@ where
             .await
     }
 
-    pub fn update_modification_timestamp_of_entry(&mut self, blob_id: &BlobId) -> Result<()> {
+    pub fn update_modification_timestamp_of_entry(&mut self, blob_id: &BlobId) -> FsResult<()> {
         self.entries.update_modification_timestamp(blob_id)
     }
 
-    pub fn set_mode_of_entry(&mut self, blob_id: &BlobId, mode: Mode) -> Result<()> {
+    pub fn set_mode_of_entry(&mut self, blob_id: &BlobId, mode: Mode) -> FsResult<()> {
         self.entries.set_mode(blob_id, mode)
     }
 
@@ -150,7 +152,7 @@ where
         blob_id: &BlobId,
         uid: Option<Uid>,
         gid: Option<Gid>,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries.set_uid_gid(blob_id, uid, gid)
     }
 
@@ -168,7 +170,7 @@ where
         blob_id: &BlobId,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries
             .set_access_times(blob_id, last_access_time, last_modification_time)
     }
@@ -187,7 +189,7 @@ where
         &mut self,
         blob_id: &BlobId,
         atime_update_behavior: AtimeUpdateBehavior,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries
             .maybe_update_access_timestamp(blob_id, atime_update_behavior)
     }
@@ -212,7 +214,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries.add(
             name,
             id,
@@ -234,7 +236,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries.add(
             name,
             id,
@@ -255,7 +257,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> Result<()> {
+    ) -> FsResult<()> {
         self.entries.add(
             name,
             id,
@@ -333,15 +335,12 @@ where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
-    // TODO We converted this to FsError, which should eliminate some map_err calls. Actually eliminate them.
-    type Error = cryfs_rustfs::FsError;
+    type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.flush()
-            .await
-            .map_err(|err| cryfs_rustfs::FsError::InternalError {
-                // TODO Instead of map_err, have flush return FsError
-                error: err.context("Error in DirBlob::async_drop_impl"),
-            })
+        self.flush().await.map_err(|err| FsError::InternalError {
+            // TODO Instead of map_err, have flush return FsError
+            error: err.context("Error in DirBlob::async_drop_impl"),
+        })
     }
 }

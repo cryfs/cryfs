@@ -3,28 +3,25 @@ use std::fmt::Debug;
 use super::{AsyncDrop, AsyncDropGuard};
 
 /// Flattens two Result values that contain AsyncDropGuards, making sure that we correctly drop things if errors happen.
-pub async fn flatten_async_drop_err_map<E, T, E1, U, E2>(
+pub async fn flatten_async_drop<E, T, E1, U, E2>(
     first: Result<AsyncDropGuard<T>, E1>,
     second: Result<AsyncDropGuard<U>, E2>,
-    // TODO Remove err_map_t and err_map_u, they're currently only needed because we aren't using FsError everywhere yet
-    err_map_t: impl FnOnce(<T as AsyncDrop>::Error) -> E,
-    err_map_u: impl FnOnce(<U as AsyncDrop>::Error) -> E,
 ) -> Result<(AsyncDropGuard<T>, AsyncDropGuard<U>), E>
 where
     T: AsyncDrop + Debug,
     U: AsyncDrop + Debug,
-    E: From<E1> + From<E2>,
+    E: From<E1> + From<E2> + From<<T as AsyncDrop>::Error> + From<<U as AsyncDrop>::Error>,
 {
     match (first, second) {
         (Ok(first), Ok(second)) => Ok((first, second)),
         (Ok(mut first), Err(second)) => {
             // TODO Report both errors if async_drop fails
-            first.async_drop().await.map_err(err_map_t)?;
+            first.async_drop().await?;
             Err(second.into())
         }
         (Err(first), Ok(mut second)) => {
             // TODO Report both errors if async_drop fails
-            second.async_drop().await.map_err(err_map_u)?;
+            second.async_drop().await?;
             Err(first.into())
         }
         (Err(first), Err(_second)) => {

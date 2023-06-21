@@ -3,13 +3,14 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
+use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod fsblob;
 
 pub use fsblob::{
-    AtimeUpdateBehavior, BlobType, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, FsError,
-    SymlinkBlob, DIR_LSTAT_SIZE, MODE_NEW_SYMLINK,
+    AtimeUpdateBehavior, BlobType, DirBlob, DirEntry, EntryType, FileBlob, FsBlob, SymlinkBlob,
+    DIR_LSTAT_SIZE, MODE_NEW_SYMLINK,
 };
 
 // TODO With an adapter we can run block store tests on this, similar to how we do it for BlobStore
@@ -102,9 +103,12 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
 {
-    type Error = anyhow::Error;
+    type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blobstore.async_drop().await
+    async fn async_drop_impl(&mut self) -> FsResult<()> {
+        self.blobstore
+            .async_drop()
+            .await
+            .map_err(|error| FsError::InternalError { error })
     }
 }

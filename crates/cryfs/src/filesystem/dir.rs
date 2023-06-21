@@ -19,7 +19,7 @@ use cryfs_rustfs::{
     PathComponent, Uid,
 };
 use cryfs_utils::{
-    async_drop::{with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
     with_async_drop_2,
 };
 
@@ -80,10 +80,7 @@ where
             FsError::UnknownError
         })?;
 
-        blob.async_drop().await.map_err(|err| {
-            log::error!("Error dropping blob: {err:?}");
-            FsError::UnknownError
-        })?;
+        blob.async_drop().await?;
         Ok(blob_id)
     }
 
@@ -146,30 +143,23 @@ where
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let blob = self.load_blob().await?;
-        with_async_drop_err_map(
-            blob,
-            |blob| {
-                future::ready((move || {
-                    let entries = blob.entries();
+        with_async_drop(blob, |blob| {
+            future::ready((move || {
+                let entries = blob.entries();
 
-                    let mut result = Vec::with_capacity(entries.len());
-                    for entry in entries {
-                        let name = entry.name().to_owned();
-                        let kind = match entry.entry_type() {
-                            EntryType::Dir => NodeKind::Dir,
-                            EntryType::File => NodeKind::File,
-                            EntryType::Symlink => NodeKind::Symlink,
-                        };
-                        result.push(cryfs_rustfs::DirEntry { name, kind });
-                    }
-                    Ok(result)
-                })())
-            },
-            |err| {
-                log::error!("Error dropping blob: {err:?}");
-                FsError::UnknownError
-            },
-        )
+                let mut result = Vec::with_capacity(entries.len());
+                for entry in entries {
+                    let name = entry.name().to_owned();
+                    let kind = match entry.entry_type() {
+                        EntryType::Dir => NodeKind::Dir,
+                        EntryType::File => NodeKind::File,
+                        EntryType::Symlink => NodeKind::Symlink,
+                    };
+                    result.push(cryfs_rustfs::DirEntry { name, kind });
+                }
+                Ok(result)
+            })())
+        })
         .await
     }
 
@@ -185,51 +175,43 @@ where
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
-        with_async_drop_err_map(
-            blob,
-            move |blob| {
-                future::ready((move || {
-                    let new_dir_blob_id = new_dir_blob_id?;
+        with_async_drop(blob, move |blob| {
+            future::ready((move || {
+                let new_dir_blob_id = new_dir_blob_id?;
 
-                    let atime = SystemTime::now();
-                    let mtime = atime;
+                let atime = SystemTime::now();
+                let mtime = atime;
 
-                    let result = blob.add_entry_dir(
-                        name,
-                        new_dir_blob_id,
-                        // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                        fs_types::Mode::from(u32::from(mode)),
-                        fs_types::Uid::from(u32::from(uid)),
-                        fs_types::Gid::from(u32::from(gid)),
-                        atime,
-                        mtime,
-                    );
+                blob.add_entry_dir(
+                    name,
+                    new_dir_blob_id,
+                    // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
+                    fs_types::Mode::from(u32::from(mode)),
+                    fs_types::Uid::from(u32::from(uid)),
+                    fs_types::Gid::from(u32::from(gid)),
+                    atime,
+                    mtime,
+                )
+                .map_err(|err| {
+                    log::error!("Error adding dir entry: {err:?}");
+                    FsError::UnknownError
+                })?;
 
-                    result.map_err(|err| {
-                        log::error!("Error adding dir entry: {err:?}");
-                        FsError::UnknownError
-                    })?;
-
-                    // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
-                    Ok(NodeAttrs {
-                        nlink: 1,
-                        mode,
-                        uid,
-                        gid,
-                        // TODO What should NumBytes be?
-                        num_bytes: NumBytes::from(0),
-                        num_blocks: None,
-                        atime,
-                        mtime,
-                        ctime: mtime,
-                    })
-                })())
-            },
-            |err| {
-                log::error!("Error dropping blob: {err:?}");
-                FsError::UnknownError
-            },
-        )
+                // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
+                Ok(NodeAttrs {
+                    nlink: 1,
+                    mode,
+                    uid,
+                    gid,
+                    // TODO What should NumBytes be?
+                    num_bytes: NumBytes::from(0),
+                    num_blocks: None,
+                    atime,
+                    mtime,
+                    ctime: mtime,
+                })
+            })())
+        })
         .await
     }
 
@@ -265,10 +247,7 @@ where
             },
         };
 
-        blob.async_drop().await.map_err(|err| {
-            log::error!("Error dropping blob: {err:?}");
-            FsError::UnknownError
-        })?;
+        blob.async_drop().await?;
 
         result
     }
@@ -290,50 +269,43 @@ where
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
-        with_async_drop_err_map(
-            blob,
-            move |blob| {
-                future::ready((move || {
-                    let new_symlink_blob_id = new_symlink_blob_id?;
+        with_async_drop(blob, move |blob| {
+            future::ready((move || {
+                let new_symlink_blob_id = new_symlink_blob_id?;
 
-                    let atime = SystemTime::now();
-                    let mtime = atime;
+                let atime = SystemTime::now();
+                let mtime = atime;
 
-                    let result = blob.add_entry_symlink(
-                        name,
-                        new_symlink_blob_id,
-                        // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                        fs_types::Uid::from(u32::from(uid)),
-                        fs_types::Gid::from(u32::from(gid)),
-                        atime,
-                        mtime,
-                    );
+                let result = blob.add_entry_symlink(
+                    name,
+                    new_symlink_blob_id,
+                    // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
+                    fs_types::Uid::from(u32::from(uid)),
+                    fs_types::Gid::from(u32::from(gid)),
+                    atime,
+                    mtime,
+                );
 
-                    result.map_err(|err| {
-                        log::error!("Error adding dir entry: {err:?}");
-                        FsError::UnknownError
-                    })?;
+                result.map_err(|err| {
+                    log::error!("Error adding dir entry: {err:?}");
+                    FsError::UnknownError
+                })?;
 
-                    // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-                    Ok(NodeAttrs {
-                        nlink: 1,
-                        // TODO Don't convert mode but unify both classes
-                        mode: cryfs_rustfs::Mode::from(u32::from(MODE_NEW_SYMLINK)),
-                        uid,
-                        gid,
-                        num_bytes,
-                        num_blocks: None,
-                        atime,
-                        mtime,
-                        ctime: mtime,
-                    })
-                })())
-            },
-            |err| {
-                log::error!("Error dropping blob: {err:?}");
-                FsError::UnknownError
-            },
-        )
+                // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
+                Ok(NodeAttrs {
+                    nlink: 1,
+                    // TODO Don't convert mode but unify both classes
+                    mode: cryfs_rustfs::Mode::from(u32::from(MODE_NEW_SYMLINK)),
+                    uid,
+                    gid,
+                    num_bytes,
+                    num_blocks: None,
+                    atime,
+                    mtime,
+                    ctime: mtime,
+                })
+            })())
+        })
         .await
     }
 
@@ -369,10 +341,7 @@ where
             },
         };
 
-        blob.async_drop().await.map_err(|err| {
-            log::error!("Error dropping blob: {err:?}");
-            FsError::UnknownError
-        })?;
+        blob.async_drop().await?;
 
         result
     }
