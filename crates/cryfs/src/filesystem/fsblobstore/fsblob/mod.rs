@@ -174,9 +174,10 @@ where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
-    type Error = anyhow::Error;
+    // TODO We changed this to FsError, which should eliminate a couple of map_err calls. Actually eliminate them.
+    type Error = cryfs_rustfs::FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(&mut self) -> cryfs_rustfs::FsResult<()> {
         match &mut self {
             Self::File(_blob) => { /* do nothing */ }
             Self::Directory(blob) => {

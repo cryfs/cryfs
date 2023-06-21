@@ -18,7 +18,10 @@ use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
     PathComponent, Uid,
 };
-use cryfs_utils::async_drop::{with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{with_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    with_async_drop_2,
+};
 
 pub struct CryDir<'a, B>
 where
@@ -385,73 +388,53 @@ where
         let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(&blob_id),);
         let mut blob = blob?;
 
-        let new_file_blob_id = match new_file_blob_id {
-            Ok(ok) => ok,
-            Err(err) => {
-                blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping Arc<FsBlobstore>: {err:?}");
-                    FsError::UnknownError
-                })?;
-                return Err(err);
-            }
-        };
+        with_async_drop_2!(blob, {
+            let new_file_blob_id = new_file_blob_id?;
 
-        let atime = SystemTime::now();
-        let mtime = atime;
+            let atime = SystemTime::now();
+            let mtime = atime;
 
-        let result = blob.add_entry_file(
-            name.to_owned(),
-            new_file_blob_id,
-            // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-            fs_types::Mode::from(u32::from(mode)),
-            fs_types::Uid::from(u32::from(uid)),
-            fs_types::Gid::from(u32::from(gid)),
-            atime,
-            mtime,
-        );
-
-        match result {
-            Ok(()) => (),
-            Err(err) => {
+            blob.add_entry_file(
+                name.to_owned(),
+                new_file_blob_id,
+                // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
+                fs_types::Mode::from(u32::from(mode)),
+                fs_types::Uid::from(u32::from(uid)),
+                fs_types::Gid::from(u32::from(gid)),
+                atime,
+                mtime,
+            )
+            .map_err(|err| {
                 log::error!("Error adding dir entry: {err:?}");
-                blob.async_drop().await.map_err(|err| {
-                    log::error!("Error dropping Arc<FsBlobstore>: {err:?}");
-                    FsError::UnknownError
-                })?;
-                return Err(FsError::UnknownError);
-            }
-        }
+                FsError::UnknownError
+            })?;
 
-        // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-        let attrs = NodeAttrs {
-            nlink: 1,
-            mode,
-            uid,
-            gid,
-            num_bytes: NumBytes::from(0),
-            num_blocks: None,
-            atime,
-            mtime,
-            ctime: mtime,
-        };
+            // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
+            let attrs = NodeAttrs {
+                nlink: 1,
+                mode,
+                uid,
+                gid,
+                num_bytes: NumBytes::from(0),
+                num_blocks: None,
+                atime,
+                mtime,
+                ctime: mtime,
+            };
 
-        let open_file = CryOpenFile::new(
-            AsyncDropArc::clone(self.blobstore),
-            Arc::new(NodeInfo::IsNotRootDir {
-                parent_blob_id: blob_id,
-                name: name.to_owned(),
-                blob_details: OnceCell::new_with(Some(BlobDetails {
-                    blob_id: new_file_blob_id,
-                    blob_type: BlobType::File,
-                })),
-            }),
-        );
+            let open_file = CryOpenFile::new(
+                AsyncDropArc::clone(self.blobstore),
+                Arc::new(NodeInfo::IsNotRootDir {
+                    parent_blob_id: blob_id,
+                    name: name.to_owned(),
+                    blob_details: OnceCell::new_with(Some(BlobDetails {
+                        blob_id: new_file_blob_id,
+                        blob_type: BlobType::File,
+                    })),
+                }),
+            );
 
-        blob.async_drop().await.map_err(|err| {
-            log::error!("Error dropping Arc<FsBlobstore>: {err:?}");
-            FsError::UnknownError
-        })?;
-
-        Ok((attrs, open_file))
+            Ok((attrs, open_file))
+        })
     }
 }

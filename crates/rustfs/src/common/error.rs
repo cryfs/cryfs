@@ -4,7 +4,7 @@ use thiserror::Error;
 
 // TODO Is there a better way for error reporting, e.g. having custom error types for each interface function and mapping them to system error codes in the fuse_mt backend adapter?
 
-#[derive(Error, Clone, Debug)]
+#[derive(Error, Debug)]
 pub enum FsError {
     // TODO We should probably get rid of Custom and instead use more specific error types, or at least minimize its use
     #[error("Error code: {error_code}")]
@@ -16,6 +16,9 @@ pub enum FsError {
     // TODO Remove UnknownError and do better reporting for those cases
     #[error("Unknown Error")]
     UnknownError,
+
+    #[error("Internal Error: {error}")]
+    InternalError { error: anyhow::Error },
 
     #[error("There is an error in the file system data. Maybe it is corrupted. {message}")]
     CorruptedFilesystem { message: String },
@@ -80,6 +83,7 @@ impl FsError {
             FsError::CannotOverwriteNonDirectoryWithDirectory => libc::ENOTDIR,
             FsError::CannotOverwriteNonEmptyDirectory => libc::ENOTEMPTY,
             FsError::CorruptedFilesystem { .. } => libc::EIO,
+            FsError::InternalError { .. } => libc::EIO,
         }
     }
 }

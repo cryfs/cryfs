@@ -1,9 +1,9 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cryfs_blockstore::RemoveResult;
 use futures::join;
 use maybe_owned::MaybeOwned;
-use std::fmt::Debug;
+use std::{convert::Infallible, fmt::Debug};
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
@@ -11,7 +11,7 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::{
     async_drop::{flatten_async_drop_err_map, AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    safe_panic,
+    safe_panic, with_async_drop_2,
 };
 
 use super::{
@@ -285,13 +285,13 @@ where
                     }
                     Some((grandparent, parent_name)) => {
                         let grandparent = self.load_blob(grandparent).await?;
-                        let mut grandparent = FsBlob::into_dir(grandparent)
+                        let grandparent = FsBlob::into_dir(grandparent)
                             .await
                             .map_err(|_| FsError::NodeIsNotADirectory)?;
-                        let parent_entry = grandparent.entry_by_name(parent_name).cloned();
-                        grandparent.async_drop().await.map_err(|_| {
-                            log::error!("Error dropping grandparent");
-                            FsError::UnknownError
+                        let parent_entry = with_async_drop_2!(grandparent, {
+                            Result::<_, FsError>::Ok(
+                                grandparent.entry_by_name(parent_name).cloned(),
+                            )
                         })?;
                         match parent_entry {
                             Some(parent_entry) => {
@@ -400,9 +400,19 @@ where
             } => {
                 let (source_parent, dest_parent) = join!(
                     FsBlob::into_dir(source_parent_blob),
-                    FsBlob::into_dir(dest_parent_blob)
+                    FsBlob::into_dir(dest_parent_blob),
                 );
+                let source_parent = source_parent.map_err(|err| {
+                    // TODO No map_err but instead have into_dir return the right error
+                    FsError::NodeIsNotADirectory
+                });
+                let dest_parent = dest_parent.map_err(|err| {
+                    // TODO No map_err but instead have into_dir return the right error
+                    FsError::NodeIsNotADirectory
+                });
+                // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
                 let (mut source_parent, mut dest_parent) =
+                    // TODO Use flatten_async_drop instead of flatten_async_drop_err_map
                     flatten_async_drop_err_map(source_parent, dest_parent, |err| err, |err| err)
                         .await
                         // TODO No map_err

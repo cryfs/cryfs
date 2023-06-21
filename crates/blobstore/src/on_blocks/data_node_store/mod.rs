@@ -41,6 +41,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
             match Self::_block_size_bytes(&block_store, physical_block_size_bytes) {
                 Ok(ok) => ok,
                 Err(err) => {
+                    // TODO Can something like AsyncDropGuard::try_map make this nicer without a manual drop in the middle?
                     block_store.async_drop().await?;
                     return Err(err);
                 }
