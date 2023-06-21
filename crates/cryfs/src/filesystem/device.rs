@@ -314,45 +314,18 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
-    type Node<'a> = CryNode<'a, B>;
+    type Node = CryNode<B>;
     type Dir<'a> = CryDir<'a, B>;
     type Symlink<'a> = CrySymlink<'a, B>;
-    type File<'a> = CryFile<B>;
+    type File<'a> = CryFile<'a, B>;
     type OpenFile = CryOpenFile<B>;
 
-    async fn load_node<'a>(&'a self, path: &AbsolutePath) -> FsResult<Self::Node<'a>> {
+    async fn lookup<'a>(&'a self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>> {
         let node_info = self.load_node_info(path).await?;
-        Ok(CryNode::new(&self.blobstore, node_info))
-    }
-
-    async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
-        let node = self.load_node_info(path).await?;
-        if node.node_type(&self.blobstore).await? == BlobType::Dir {
-            Ok(CryDir::new(&self.blobstore, node))
-        } else {
-            Err(FsError::NodeIsNotADirectory)
-        }
-    }
-
-    async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
-        let node = self.load_node_info(path).await?;
-        if node.node_type(&self.blobstore).await? == BlobType::Symlink {
-            Ok(CrySymlink::new(&self.blobstore, node))
-        } else {
-            Err(FsError::NodeIsNotASymlink)
-        }
-    }
-
-    async fn load_file(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::File<'_>>> {
-        let node = self.load_node_info(path).await?;
-        match node.node_type(&self.blobstore).await? {
-            BlobType::File => Ok(CryFile::new(AsyncDropArc::clone(&self.blobstore), node)),
-            BlobType::Symlink => {
-                // TODO What's the right error here?
-                Err(FsError::UnknownError)
-            }
-            BlobType::Dir => Err(FsError::NodeIsADirectory),
-        }
+        Ok(CryNode::new(
+            AsyncDropArc::clone(&self.blobstore),
+            node_info,
+        ))
     }
 
     async fn rename(&self, source_path: &AbsolutePath, dest_path: &AbsolutePath) -> FsResult<()> {

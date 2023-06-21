@@ -1,25 +1,45 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{
-    object_based_api::Node, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, Uid,
-};
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
+use cryfs_rustfs::{
+    object_based_api::Node, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, Uid,
+};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+
 use super::errors::{IoResultExt, NixResultExt};
 use super::utils::{convert_metadata, convert_timespec};
+use super::{
+    dir::PassthroughDir, file::PassthroughFile, symlink::PassthroughSymlink, PassthroughDevice,
+};
 
+#[derive(Debug)]
 pub struct PassthroughNode {
     path: AbsolutePathBuf,
 }
 
 impl PassthroughNode {
-    pub fn new(path: AbsolutePathBuf) -> Self {
-        Self { path }
+    pub fn new(path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { path })
     }
 }
 
 #[async_trait]
 impl Node for PassthroughNode {
+    type Device = PassthroughDevice;
+
+    async fn as_file(&self) -> FsResult<PassthroughFile> {
+        Ok(PassthroughFile::new(self.path.clone()))
+    }
+
+    async fn as_dir(&self) -> FsResult<PassthroughDir> {
+        Ok(PassthroughDir::new(self.path.clone()))
+    }
+
+    async fn as_symlink(&self) -> FsResult<PassthroughSymlink> {
+        Ok(PassthroughSymlink::new(self.path.clone()))
+    }
+
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         let metadata = tokio::fs::symlink_metadata(&self.path).await.map_error()?;
         convert_metadata(metadata)
@@ -96,6 +116,16 @@ impl Node for PassthroughNode {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for PassthroughNode {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
         Ok(())
     }
 }

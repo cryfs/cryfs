@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use cryfs_rustfs::NumBytes;
 use futures::{future, join};
 use std::fmt::Debug;
+use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::OnceCell;
 
@@ -26,7 +27,7 @@ where
 {
     // TODO Here and in others, can we just store &FsBlobStore instead of &AsyncDropGuard?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-    node_info: NodeInfo,
+    node_info: Arc<NodeInfo>,
 }
 
 impl<'a, B> CryDir<'a, B>
@@ -36,7 +37,7 @@ where
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        node_info: NodeInfo,
+        node_info: Arc<NodeInfo>,
     ) -> Self {
         Self {
             blobstore,
@@ -436,14 +437,14 @@ where
 
         let open_file = CryOpenFile::new(
             AsyncDropArc::clone(self.blobstore),
-            NodeInfo::IsNotRootDir {
+            Arc::new(NodeInfo::IsNotRootDir {
                 parent_blob_id: blob_id,
                 name: name.to_owned(),
                 blob_details: OnceCell::new_with(Some(BlobDetails {
                     blob_id: new_file_blob_id,
                     blob_type: BlobType::File,
                 })),
-            },
+            }),
         );
 
         blob.async_drop().await.map_err(|err| {

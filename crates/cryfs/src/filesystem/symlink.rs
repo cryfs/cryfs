@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use super::{
     fsblobstore::{FsBlob, FsBlobStore, SymlinkBlob},
@@ -16,7 +17,7 @@ where
 {
     // TODO Do we need to store blobstore + node_info here or can we just store the target directly?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-    node_info: NodeInfo,
+    node_info: Arc<NodeInfo>,
 }
 
 impl<'a, B> CrySymlink<'a, B>
@@ -26,7 +27,7 @@ where
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        node_info: NodeInfo,
+        node_info: Arc<NodeInfo>,
     ) -> Self {
         Self {
             blobstore,

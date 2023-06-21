@@ -28,30 +28,15 @@ impl PassthroughDevice {
 
 #[async_trait]
 impl Device for PassthroughDevice {
-    type Node<'a> = PassthroughNode;
+    type Node = PassthroughNode;
     type Dir<'a> = PassthroughDir;
     type Symlink<'a> = PassthroughSymlink;
     type File<'a> = PassthroughFile;
     type OpenFile = PassthroughOpenFile;
 
-    async fn load_node(&self, path: &AbsolutePath) -> FsResult<Self::Node<'_>> {
+    async fn lookup(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>> {
         let path = self.apply_basedir(path);
         Ok(PassthroughNode::new(path))
-    }
-
-    async fn load_dir(&self, path: &AbsolutePath) -> FsResult<Self::Dir<'_>> {
-        let path = self.apply_basedir(path);
-        Ok(PassthroughDir::new(path))
-    }
-
-    async fn load_symlink(&self, path: &AbsolutePath) -> FsResult<Self::Symlink<'_>> {
-        let path = self.apply_basedir(path);
-        Ok(PassthroughSymlink::new(path))
-    }
-
-    async fn load_file(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::File<'_>>> {
-        let path = self.apply_basedir(path);
-        Ok(PassthroughFile::new(path))
     }
 
     async fn rename(&self, from_path: &AbsolutePath, to_path: &AbsolutePath) -> FsResult<()> {

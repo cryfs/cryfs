@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use futures::join;
 use std::fmt::Debug;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use cryfs_blobstore::BlobStore;
@@ -23,7 +24,7 @@ where
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-    node_info: NodeInfo,
+    node_info: Arc<NodeInfo>,
 }
 
 impl<B> CryOpenFile<B>
@@ -33,7 +34,7 @@ where
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        node_info: NodeInfo,
+        node_info: Arc<NodeInfo>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,
@@ -42,7 +43,7 @@ where
     }
 
     async fn load_blob<'a>(&self) -> FsResult<FileBlob<'_, B>> {
-        load_file_blob(&self.blobstore, &self.node_info).await
+        load_file_blob(&self.blobstore, &*self.node_info).await
     }
 
     async fn flush_file_contents(&self) -> FsResult<()> {
@@ -110,7 +111,7 @@ where
     }
 
     async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        truncate_file(&self.blobstore, &self.node_info, new_size).await
+        truncate_file(&self.blobstore, &*self.node_info, new_size).await
     }
 
     async fn utimens(

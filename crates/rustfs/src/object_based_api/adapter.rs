@@ -11,7 +11,10 @@ use crate::low_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, IntoFs, OpenResponse,
     OpendirResponse, RequestInfo,
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{with_async_drop, AsyncDrop, AsyncDropGuard},
+    with_async_drop_2,
+};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 
@@ -146,8 +149,8 @@ where
             open_file.getattr().await?
         } else {
             let fs = self.fs.read().unwrap();
-            let node = fs.get().load_node(path).await?;
-            node.getattr().await?
+            let node = fs.get().lookup(path).await?;
+            with_async_drop_2!(node, { node.getattr().await })?
         };
         Ok(AttrResponse {
             ttl: TTL_GETATTR,
@@ -172,8 +175,8 @@ where
             open_file.chmod(mode).await?
         } else {
             let fs = self.fs.read().unwrap();
-            let node = fs.get().load_node(path).await?;
-            node.chmod(mode).await?;
+            let node = fs.get().lookup(path).await?;
+            with_async_drop_2!(node, { node.chmod(mode).await })?;
         };
         Ok(())
     }
@@ -195,8 +198,8 @@ where
             open_file.chown(uid, gid).await?
         } else {
             let fs = self.fs.read().unwrap();
-            let node = fs.get().load_node(path).await?;
-            node.chown(uid, gid).await?;
+            let node = fs.get().lookup(path).await?;
+            with_async_drop_2!(node, { node.chown(uid, gid).await })?
         }
 
         Ok(())
@@ -218,13 +221,8 @@ where
             open_file.truncate(size).await?;
         } else {
             let fs = self.fs.read().unwrap();
-            let mut file = fs.get().load_file(path).await?;
-            let result = file.truncate(size).await;
-            file.async_drop().await.map_err(|e| {
-                log::error!("truncate: failed to drop file: {}", e);
-                e
-            })?;
-            result?;
+            let node = fs.get().lookup(path).await?;
+            with_async_drop_2!(node, { node.as_file().await?.truncate(size).await })?;
         };
         Ok(())
     }
@@ -246,8 +244,8 @@ where
             open_file.utimens(atime, mtime).await?
         } else {
             let fs = self.fs.read().unwrap();
-            let node = fs.get().load_node(path).await?;
-            node.utimens(atime, mtime).await?
+            let node = fs.get().lookup(path).await?;
+            with_async_drop_2!(node, { node.utimens(atime, mtime).await })?
         };
         Ok(())
     }
@@ -268,8 +266,11 @@ where
 
     async fn readlink(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<String> {
         let fs = self.fs.read().unwrap();
-        let link = fs.get().load_symlink(path).await?;
-        link.target().await
+        let link = fs.get().lookup(path).await?;
+        with_async_drop_2!(link, {
+            let link = link.as_symlink().await?;
+            link.target().await
+        })
     }
 
     async fn mknod(
@@ -300,11 +301,14 @@ where
             FsError::InvalidOperation
         })?;
         let fs = self.fs.read().unwrap();
-        let parent_dir = fs.get().load_dir(parent).await?;
-        let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
-        Ok(AttrResponse {
-            ttl: TTL_MKDIR,
-            attrs: new_dir_attrs,
+        let parent_dir = fs.get().lookup(parent).await?;
+        with_async_drop_2!(parent_dir, {
+            let parent_dir = parent_dir.as_dir().await?;
+            let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
+            Ok(AttrResponse {
+                ttl: TTL_MKDIR,
+                attrs: new_dir_attrs,
+            })
         })
     }
 
@@ -315,9 +319,12 @@ where
             FsError::InvalidOperation
         })?;
         let fs = self.fs.read().unwrap();
-        let parent_dir = fs.get().load_dir(parent).await?;
-        parent_dir.remove_child_file_or_symlink(&name).await?;
-        Ok(())
+        let parent_dir = fs.get().lookup(parent).await?;
+        with_async_drop_2!(parent_dir, {
+            let parent_dir = parent_dir.as_dir().await?;
+            parent_dir.remove_child_file_or_symlink(&name).await?;
+            Ok(())
+        })
     }
 
     async fn rmdir(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<()> {
@@ -327,9 +334,12 @@ where
             FsError::InvalidOperation
         })?;
         let fs = self.fs.read().unwrap();
-        let parent_dir = fs.get().load_dir(parent).await?;
-        parent_dir.remove_child_dir(&name).await?;
-        Ok(())
+        let parent_dir = fs.get().lookup(parent).await?;
+        with_async_drop_2!(parent_dir, {
+            let parent_dir = parent_dir.as_dir().await?;
+            parent_dir.remove_child_dir(&name).await?;
+            Ok(())
+        })
     }
 
     async fn symlink(
@@ -347,13 +357,16 @@ where
             FsError::InvalidOperation
         })?;
         let fs = self.fs.read().unwrap();
-        let parent_dir = fs.get().load_dir(parent).await?;
-        let new_symlink_attrs = parent_dir
-            .create_child_symlink(&name, target, uid, gid)
-            .await?;
-        Ok(AttrResponse {
-            ttl: TTL_SYMLINK,
-            attrs: new_symlink_attrs,
+        let parent_dir = fs.get().lookup(parent).await?;
+        with_async_drop_2!(parent_dir, {
+            let parent_dir = parent_dir.as_dir().await?;
+            let new_symlink_attrs = parent_dir
+                .create_child_symlink(&name, target, uid, gid)
+                .await?;
+            Ok(AttrResponse {
+                ttl: TTL_SYMLINK,
+                attrs: new_symlink_attrs,
+            })
         })
     }
 
@@ -394,24 +407,22 @@ where
         flags: OpenFlags,
     ) -> FsResult<OpenResponse> {
         let fs = self.fs.read().unwrap();
-        let mut file = fs.get().load_file(path).await?;
-        let result = match file.open(flags).await {
-            Err(err) => Err(err),
-            Ok(open_file) => {
-                let fh = self.open_files.write().await.add(open_file);
-                Ok(OpenResponse {
-                    fh: fh.into(),
-                    // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
-                    flags,
-                })
-            }
-        };
-        file.async_drop().await.map_err(|err| {
-            log::error!("open: failed to drop file: {}", err);
-            // TODO InternalError is probably a better one to use here and otherwhere
-            FsError::UnknownError
-        })?;
-        result
+        let file = fs.get().lookup(path).await?;
+        with_async_drop_2!(file, {
+            let file = file.as_file().await?;
+            let result = match file.open(flags).await {
+                Err(err) => Err(err),
+                Ok(open_file) => {
+                    let fh = self.open_files.write().await.add(open_file);
+                    Ok(OpenResponse {
+                        fh: fh.into(),
+                        // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
+                        flags,
+                    })
+                }
+            };
+            result
+        })
     }
 
     async fn read<CallbackResult>(
@@ -535,9 +546,12 @@ where
         _fh: FileHandle,
     ) -> FsResult<Vec<DirEntry>> {
         let fs = self.fs.read().unwrap();
-        let dir = fs.get().load_dir(path).await?;
-        let entries = dir.entries().await?;
-        Ok(entries)
+        let dir = fs.get().lookup(path).await?;
+        with_async_drop_2!(dir, {
+            let dir = dir.as_dir().await?;
+            let entries = dir.entries().await?;
+            Ok(entries)
+        })
     }
 
     async fn releasedir(
@@ -648,17 +662,20 @@ where
             FsError::InvalidOperation
         })?;
         let fs = self.fs.read().unwrap();
-        let parent_dir = fs.get().load_dir(parent).await?;
-        let (file_attrs, open_file) = parent_dir
-            .create_and_open_file(&name, mode, req.uid, req.gid)
-            .await?;
-        let fh = self.open_files.write().await.add(open_file);
-        Ok(CreateResponse {
-            ttl: TTL_CREATE,
-            attrs: file_attrs,
-            fh,
-            // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
-            flags,
+        let parent_dir = fs.get().lookup(parent).await?;
+        with_async_drop_2!(parent_dir, {
+            let parent_dir = parent_dir.as_dir().await?;
+            let (file_attrs, open_file) = parent_dir
+                .create_and_open_file(&name, mode, req.uid, req.gid)
+                .await?;
+            let fh = self.open_files.write().await.add(open_file);
+            Ok(CreateResponse {
+                ttl: TTL_CREATE,
+                attrs: file_attrs,
+                fh,
+                // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
+                flags,
+            })
         })
     }
 }

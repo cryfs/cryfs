@@ -5,6 +5,7 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -272,5 +273,12 @@ impl Dir for InMemoryDirRef {
             }
         }
         Ok((metadata, openfile))
+    }
+}
+
+impl Debug for InMemoryDirRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let inode = self.inode.lock().unwrap();
+        f.debug_struct("InMemoryDirRef").finish()
     }
 }

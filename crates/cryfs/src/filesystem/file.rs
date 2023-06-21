@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use super::fsblobstore::FsBlobStore;
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
@@ -7,33 +8,33 @@ use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{object_based_api::File, FsError, FsResult, NumBytes, OpenFlags};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
-pub struct CryFile<B>
+pub struct CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
-    blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-    node_info: NodeInfo,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    node_info: Arc<NodeInfo>,
 }
 
-impl<B> CryFile<B>
+impl<'a, B> CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     pub fn new(
-        blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        node_info: NodeInfo,
-    ) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self {
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        node_info: Arc<NodeInfo>,
+    ) -> Self {
+        Self {
             blobstore,
             node_info,
-        })
+        }
     }
 }
 
 #[async_trait]
-impl<B> File for CryFile<B>
+impl<'a, B> File for CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
@@ -46,41 +47,23 @@ where
         // TODO Handle flags
         Ok(CryOpenFile::new(
             AsyncDropArc::clone(&self.blobstore),
-            self.node_info.clone(),
+            Arc::clone(&self.node_info),
         ))
     }
 
     async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        super::open_file::truncate_file(&self.blobstore, &self.node_info, new_size).await
+        super::open_file::truncate_file(&self.blobstore, &*self.node_info, new_size).await
     }
 }
 
-impl<B> Debug for CryFile<B>
+impl<'a, B> Debug for CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CryFile")
             .field("node_info", &self.node_info)
             .finish()
-    }
-}
-
-#[async_trait]
-impl<B> AsyncDrop for CryFile<B>
-where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
-{
-    type Error = FsError;
-
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
-        self.blobstore.async_drop().await.map_err(|err| {
-            log::error!("Failed to drop blobstore: {err:?}");
-            FsError::Custom {
-                error_code: libc::EIO,
-            }
-        })
     }
 }

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{object_based_api::Symlink, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
+use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -111,5 +112,12 @@ impl InMemorySymlinkRef {
 impl Symlink for InMemorySymlinkRef {
     async fn target(&self) -> FsResult<String> {
         Ok(self.inode.lock().unwrap().target().to_owned())
+    }
+}
+
+impl Debug for InMemorySymlinkRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let inode = self.inode.lock().unwrap();
+        f.debug_struct("InMemorySymlinkRef").finish()
     }
 }
