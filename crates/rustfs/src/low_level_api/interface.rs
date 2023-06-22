@@ -1,14 +1,15 @@
 use async_trait::async_trait;
-use derive_more::{From, Into};
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    AbsolutePath, DirEntry, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags, Statfs, Uid,
+    AbsolutePath, DirEntry, FileHandle, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags,
+    Statfs, Uid,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct RequestInfo {
     /// The unique ID assigned to this request by FUSE.
+    /// TODO Rename to request_id or id?
     pub unique: u64,
     /// The user ID of the process making the request.
     pub uid: Uid,
@@ -18,9 +19,6 @@ pub struct RequestInfo {
     /// // TODO Make a Pid type instead of using u32
     pub pid: u32,
 }
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, From, Into)]
-pub struct FileHandle(pub u64);
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct AttrResponse {
@@ -52,10 +50,12 @@ pub struct CreateResponse {
 
 #[async_trait(?Send)]
 pub trait AsyncFilesystem {
-    /// Called on mount, before any other function.
+    /// Initialize filesystem.
+    /// Called before any other filesystem method.
     async fn init(&self, req: RequestInfo) -> FsResult<()>;
 
-    /// Called on filesystem unmount.
+    /// Clean up filesystem.
+    /// Called on filesystem exit.
     async fn destroy(&self);
 
     /// Get the attributes of a filesystem entry.

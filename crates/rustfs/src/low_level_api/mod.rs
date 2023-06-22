@@ -1,7 +1,6 @@
 mod interface;
 pub use interface::{
-    AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, OpenResponse, OpendirResponse,
-    RequestInfo,
+    AsyncFilesystem, AttrResponse, CreateResponse, OpenResponse, OpendirResponse, RequestInfo,
 };
 
 mod into_fs;

@@ -50,6 +50,7 @@ impl RunningFilesystem {
                 return;
             }
             std::mem::drop(session);
+            // TODO Use condition variable instead of busy waiting
             thread::sleep(Duration::from_millis(100));
         }
     }

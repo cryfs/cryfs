@@ -10,10 +10,10 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
-    NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FsError, FsResult, Gid, Mode, NodeAttrs,
+    NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
 };
-use crate::low_level_api::{AsyncFilesystem, FileHandle};
+use crate::low_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute

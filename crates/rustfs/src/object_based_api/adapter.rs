@@ -3,13 +3,14 @@ use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
-use super::{open_file_list::OpenFileList, Device, Dir, File, Node, OpenFile, Symlink};
+use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FsError, FsResult, Gid, Mode, NumBytes, OpenFlags, Statfs, Uid,
+    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NumBytes,
+    OpenFlags, Statfs, Uid,
 };
 use crate::low_level_api::{
-    AsyncFilesystem, AttrResponse, CreateResponse, FileHandle, IntoFs, OpenResponse,
-    OpendirResponse, RequestInfo,
+    AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
+    RequestInfo,
 };
 use cryfs_utils::{
     async_drop::{with_async_drop, AsyncDrop, AsyncDropGuard},
@@ -84,7 +85,7 @@ where
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
 
     // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
-    open_files: tokio::sync::RwLock<AsyncDropGuard<OpenFileList<Fs::OpenFile>>>,
+    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<Fs::OpenFile>>>,
 }
 
 impl<Fs: Device> ObjectBasedFsAdapter<Fs>
@@ -93,7 +94,7 @@ where
     Fs::OpenFile: Send + Sync,
 {
     pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
-        let open_files = tokio::sync::RwLock::new(OpenFileList::new());
+        let open_files = tokio::sync::RwLock::new(HandleMap::new());
         AsyncDropGuard::new(Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
                 Box::new(fs),

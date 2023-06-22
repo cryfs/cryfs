@@ -30,3 +30,6 @@ pub use uid::Uid;
 
 mod path;
 pub use path::{AbsolutePath, AbsolutePathBuf, ParsePathError, PathComponent, PathComponentBuf};
+
+mod handles;
+pub use handles::{FileHandle, HandleMap, HandlePool};
