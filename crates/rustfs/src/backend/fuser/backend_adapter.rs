@@ -51,11 +51,14 @@ where
         fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
         runtime: tokio::runtime::Handle,
     ) -> Self {
+        let mut inodes = HandleMap::new();
+        // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
+        inodes.block_handle(FileHandle(fuser::FUSE_ROOT_ID));
         Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
                 Box::new(fs),
             )))),
-            inodes: HandleMap::new(),
+            inodes,
             runtime,
         }
     }
@@ -136,12 +139,17 @@ where
 
     /// Look up a directory entry by name and get its attributes.
     fn lookup(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEntry) {
-        log::warn!(
-            "[Not Implemented] lookup(parent: {:#x?}, name {:?})",
-            parent,
-            name
-        );
-        reply.error(ENOSYS);
+        if parent == fuser::FUSE_ROOT_ID {
+            todo!()
+        } else {
+            todo!()
+        }
+        // log::warn!(
+        //     "[Not Implemented] lookup(parent: {:#x?}, name {:?})",
+        //     parent,
+        //     name
+        // );
+        // reply.error(ENOSYS);
     }
 
     /// Forget about an inode.

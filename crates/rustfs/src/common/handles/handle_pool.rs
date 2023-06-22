@@ -34,6 +34,23 @@ impl HandlePool {
         }
     }
 
+    /// Acquires a handle with a given value. If the handle is already acquired, this will panic.
+    pub fn acquire_specific(&mut self, handle: FileHandle) {
+        if handle.0 >= self.next_handle.0 {
+            let inbetween_handles = (self.next_handle.0..handle.0).map(FileHandle);
+            self.released_handles.extend(inbetween_handles);
+            self.next_handle = FileHandle(handle.0 + 1);
+        } else {
+            if let Some(pos_in_released_handles) =
+                self.released_handles.iter().position(|h| *h == handle)
+            {
+                self.released_handles.swap_remove(pos_in_released_handles);
+            } else {
+                panic!("Tried to acquire a specific handle but it was already acquired");
+            }
+        }
+    }
+
     pub fn release(&mut self, handle: FileHandle) {
         self.released_handles.push(handle);
     }

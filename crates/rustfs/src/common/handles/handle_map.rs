@@ -30,6 +30,12 @@ where
         })
     }
 
+    /// Blocks the given handle from being used for new entries.
+    /// Panics if the handle is already used for an entry.
+    pub fn block_handle(&mut self, handle: FileHandle) {
+        self.available_handles.acquire_specific(handle);
+    }
+
     pub fn add(&mut self, file: AsyncDropGuard<T>) -> FileHandle {
         let handle = self.available_handles.acquire();
         self.objects
