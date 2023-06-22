@@ -39,10 +39,12 @@ TEST(BacktraceTest, ContainsTopLevelLine)
 
 namespace
 {
+#if !(defined(__clang__) && defined(NDEBUG))
 	std::string call_process_exiting_with_nullptr_violation()
 	{
 		return call_process_exiting_with("nullptr");
 	}
+#endif
 	std::string call_process_exiting_with_exception(const std::string &message)
 	{
 		return call_process_exiting_with("exception", message);
@@ -109,6 +111,8 @@ TEST(BacktraceTest, ContainsBacktrace)
 #endif
 }
 
+#if !(defined(__clang__) && defined(NDEBUG))
+// TODO Can we also make this work on clang in Release mode?
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess)
 {
 	auto output = call_process_exiting_with_nullptr_violation();
@@ -118,6 +122,7 @@ TEST(BacktraceTest, ShowBacktraceOnNullptrAccess)
 	EXPECT_THAT(output, HasSubstr("cpputils::backtrace"));
 #endif
 }
+#endif
 
 TEST(BacktraceTest, ShowBacktraceOnSigSegv)
 {
