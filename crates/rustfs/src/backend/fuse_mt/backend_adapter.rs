@@ -16,6 +16,7 @@ use crate::common::{
 use crate::low_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
+// (all these TODOs apply to here and to the fuser backend)
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 // TODO Check which of the logging statements parameters actually need :? formatting
 // TODO Decide for logging whether we want parameters in parentheses or not, currently it's inconsistent

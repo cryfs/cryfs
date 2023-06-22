@@ -671,7 +671,8 @@ dependencies = [
  "derive_more",
  "env_logger",
  "fuse_mt",
- "fuser",
+ "fuser 0.11.1",
+ "fuser 0.12.0",
  "libc",
  "log",
  "nix",
@@ -1012,7 +1013,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6fb32ee97853a470831e058c0340955c9c773c8a1885aab99b37a2d3131fc06"
 dependencies = [
- "fuser",
+ "fuser 0.11.1",
  "libc",
  "log",
  "threadpool",
@@ -1023,6 +1024,22 @@ name = "fuser"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "104ed58f182bc2975062cd3fab229e82b5762de420e26cf5645f661402694599"
+dependencies = [
+ "libc",
+ "log",
+ "memchr",
+ "page_size",
+ "pkg-config",
+ "smallvec",
+ "users",
+ "zerocopy",
+]
+
+[[package]]
+name = "fuser"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5910691a0ececcc6eba8bb14029025c2d123e96a53db1533f6a4602861a5aaf7"
 dependencies = [
  "libc",
  "log",

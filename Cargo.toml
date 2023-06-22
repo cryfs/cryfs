@@ -40,6 +40,7 @@ errno = "^0.3.1"
 escargot = "^0.5.7"
 fuse_mt = "^0.6.0"
 fuse_mt_fuser = {package = "fuser", version = "^0.11.0"}
+fuser = "^0.12.0"
 futures = "^0.3.28"
 generic-array = "^0.14.7"
 generic-tests = "^0.1.2"

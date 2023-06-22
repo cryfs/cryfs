@@ -25,7 +25,7 @@ const TTL_MKDIR: Duration = Duration::from_secs(1);
 const TTL_SYMLINK: Duration = Duration::from_secs(1);
 const TTL_CREATE: Duration = Duration::from_secs(1);
 
-enum MaybeInitializedFs<Fs: Device> {
+pub enum MaybeInitializedFs<Fs: Device> {
     Uninitialized(Option<Box<dyn FnOnce(Uid, Gid) -> Fs + Send + Sync>>),
     Initialized(Fs),
     Destroyed,

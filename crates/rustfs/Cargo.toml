@@ -16,6 +16,7 @@ cryfs-utils = {path = "../utils"}
 derive_more.workspace = true
 fuse_mt = {workspace = true, optional = true}
 fuse_mt_fuser = {workspace = true, optional = true}
+fuser = {workspace = true, optional = true}
 libc.workspace = true
 log.workspace = true
 thiserror.workspace = true
@@ -30,13 +31,14 @@ env_logger.workspace = true
 nix.workspace = true
 
 [features]
-default = ["dep:fuse_mt", "fuse_mt"]
-fuse_mt = ["dep:fuse_mt_fuser"]
+default = ["fuser"]
+fuse_mt = ["dep:fuse_mt", "dep:fuse_mt_fuser"]
+fuser = ["dep:fuser"]
 
 [[example]]
 name = "inmemory"
-required-features = ["fuse_mt"]
+required-features = ["fuser"]
 
 [[example]]
 name = "passthrough"
-required-features = ["fuse_mt"]
+required-features = ["fuser"]
