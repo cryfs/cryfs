@@ -75,7 +75,7 @@ impl Dir for PassthroughDir {
                 // TODO Don't use unwrap
                 nix::unistd::mkdir(
                     path_clone.as_str(),
-                    nix::sys::stat::Mode::from_bits(mode.into()).unwrap(),
+                    convert_mode(mode.into()),
                 )
                 .map_error()?;
                 nix::unistd::chown(
@@ -168,4 +168,15 @@ impl Dir for PassthroughDir {
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
     }
+}
+
+#[cfg(target_os="macos")]
+fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
+    let mode = u16::try_from(mode).unwrap();
+    nix::sys::stat::Mode::from_bits(mode.into()).unwrap()
+}
+
+#[cfg(not(target_os="macos"))]
+fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
+    nix::sys::stat::Mode::from_bits(mode.into()).unwrap()
 }

@@ -3,6 +3,8 @@ use fuser::{
     ReplyDirectoryPlus, ReplyEmpty, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen,
     ReplyStatfs, ReplyWrite, ReplyXattr, Request, TimeOrNow,
 };
+#[cfg(target_os = "macos")]
+use fuser::ReplyXTimes;
 use libc::{c_int, ENOSYS, EPERM};
 use std::ffi::OsStr;
 use std::fmt::Debug;

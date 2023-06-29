@@ -65,10 +65,27 @@ impl Device for PassthroughDevice {
     }
 }
 
+#[cfg(not(target_os="macos"))]
 fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
     Statfs {
         // TODO Don't use unwrap
         max_filename_length: u32::try_from(stat.maximum_name_length()).unwrap(),
+        blocksize: u32::try_from(stat.block_size()).unwrap(),
+        num_total_blocks: stat.blocks(),
+        num_free_blocks: stat.blocks_free(),
+        num_available_blocks: stat.blocks_available(),
+        num_total_inodes: stat.files(),
+        num_free_inodes: stat.files_free(),
+    }
+}
+
+
+#[cfg(target_os="macos")]
+fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
+    Statfs {
+        // TODO Don't use unwrap
+        // TODO What max_filename_length to set in macos?
+        max_filename_length: 255,
         blocksize: u32::try_from(stat.block_size()).unwrap(),
         num_total_blocks: stat.blocks(),
         num_free_blocks: stat.blocks_free(),
