@@ -65,7 +65,7 @@ impl Device for PassthroughDevice {
     }
 }
 
-#[cfg(not(target_os="macos"))]
+#[cfg(not(target_os = "macos"))]
 fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
     Statfs {
         // TODO Don't use unwrap
@@ -79,8 +79,7 @@ fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
     }
 }
 
-
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 fn convert_statfs(stat: nix::sys::statfs::Statfs) -> Statfs {
     Statfs {
         // TODO Don't use unwrap

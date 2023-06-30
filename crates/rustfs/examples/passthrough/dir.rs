@@ -73,11 +73,7 @@ impl Dir for PassthroughDir {
             .spawn_blocking(move || {
                 // TODO Make this platform independent
                 // TODO Don't use unwrap
-                nix::unistd::mkdir(
-                    path_clone.as_str(),
-                    convert_mode(mode.into()),
-                )
-                .map_error()?;
+                nix::unistd::mkdir(path_clone.as_str(), convert_mode(mode.into())).map_error()?;
                 nix::unistd::chown(
                     path_clone.as_str(),
                     Some(nix::unistd::Uid::from_raw(uid.into())),
@@ -170,13 +166,9 @@ impl Dir for PassthroughDir {
     }
 }
 
-#[cfg(target_os="macos")]
 fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
-    let mode = u16::try_from(mode).unwrap();
-    nix::sys::stat::Mode::from_bits(mode.into()).unwrap()
-}
-
-#[cfg(not(target_os="macos"))]
-fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
-    nix::sys::stat::Mode::from_bits(mode.into()).unwrap()
+    use nix::sys::stat::{mode_t, Mode};
+    // Most systems seems ot use u32 for [mode_t], but MacOS seems to use u16.
+    let mode = mode_t::try_from(mode).unwrap();
+    Mode::from_bits(mode.into()).unwrap()
 }

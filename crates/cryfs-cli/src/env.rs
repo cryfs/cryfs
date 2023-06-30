@@ -117,6 +117,7 @@ mod tests {
 
     mod local_state_dir {
         use super::*;
+        use std::fs::canonicalize;
         use tempdir::TempDir;
 
         #[test]
@@ -129,7 +130,7 @@ mod tests {
             let local_state_dir = local_state_dir().unwrap();
             assert_eq!(
                 dirs::data_local_dir().unwrap().join("cryfs"),
-                local_state_dir
+                local_state_dir,
             );
         }
 
@@ -156,7 +157,10 @@ mod tests {
             let tmpdir = TempDir::new("some_path").unwrap();
             let _var = set_env(LOCALSTATEDIR_KEY.into(), tmpdir.path());
             let local_state_dir = local_state_dir().unwrap();
-            assert_eq!(tmpdir.path(), local_state_dir);
+            assert_eq!(
+                canonicalize(tmpdir.path()).unwrap(),
+                canonicalize(local_state_dir).unwrap(),
+            );
         }
 
         #[test]
@@ -184,7 +188,10 @@ mod tests {
                 pathdiff::diff_paths(tmpdir.path(), std::env::current_dir().unwrap()).unwrap();
             let _var = set_env(LOCALSTATEDIR_KEY.into(), relative_path);
             let local_state_dir = local_state_dir().unwrap();
-            assert_eq!(tmpdir.path(), local_state_dir);
+            assert_eq!(
+                canonicalize(tmpdir.path()).unwrap(),
+                canonicalize(local_state_dir).unwrap(),
+            );
         }
 
         #[test]
@@ -218,7 +225,10 @@ mod tests {
             );
             let _var = set_env(LOCALSTATEDIR_KEY.into(), relative_path);
             let local_state_dir = local_state_dir().unwrap();
-            assert_eq!(tmpdir.path(), local_state_dir);
+            assert_eq!(
+                canonicalize(tmpdir.path()).unwrap(),
+                canonicalize(local_state_dir).unwrap(),
+            );
         }
     }
 }
