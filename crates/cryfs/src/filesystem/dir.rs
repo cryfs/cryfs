@@ -9,6 +9,7 @@ use tokio::sync::OnceCell;
 use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, FsBlobStore, MODE_NEW_SYMLINK};
 use super::{
     device::CryDevice,
+    node::CryNode,
     node_info::{BlobDetails, NodeInfo},
     open_file::CryOpenFile,
 };
@@ -140,6 +141,16 @@ where
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
     type Device = CryDevice<B>;
+
+    fn as_node(&self) -> AsyncDropGuard<CryNode<B>> {
+        CryNode::new_internal(AsyncDropArc::clone(&self.blobstore), Arc::clone(&self.node_info))
+    }
+
+    async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
+        let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+        let node_info = NodeInfo::new(self_blob_id, name.to_owned());
+        Ok(CryNode::new(AsyncDropArc::clone(&self.blobstore), node_info))
+    }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let blob = self.load_blob().await?;

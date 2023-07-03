@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use cryfs_blockstore::RemoveResult;
 use futures::join;
 use maybe_owned::MaybeOwned;
+use std::sync::Arc;
 use std::{convert::Infallible, fmt::Debug};
 
 use cryfs_blobstore::{BlobId, BlobStore};
@@ -243,42 +244,6 @@ where
             }
         }
     }
-
-    async fn load_node_info(&self, path: &AbsolutePath) -> FsResult<NodeInfo> {
-        match path.split_last() {
-            None => {
-                // We're being asked to load the root dir
-                Ok(NodeInfo::new_rootdir(self.root_blob_id))
-            }
-            Some((parent, node_name)) => {
-                let parent_blob_id = match parent.split_last() {
-                    None => {
-                        // We're being asked to load a node that is a direct child of the root dir
-                        Ok(self.root_blob_id)
-                    }
-                    Some((grandparent, parent_name)) => {
-                        let grandparent = self.load_blob(grandparent).await?;
-                        let grandparent = FsBlob::into_dir(grandparent)
-                            .await
-                            .map_err(|_| FsError::NodeIsNotADirectory)?;
-                        let parent_entry = with_async_drop_2!(grandparent, {
-                            Result::<_, FsError>::Ok(
-                                grandparent.entry_by_name(parent_name).cloned(),
-                            )
-                        })?;
-                        match parent_entry {
-                            Some(parent_entry) => {
-                                let parent_blob_id = parent_entry.blob_id();
-                                Ok(*parent_blob_id)
-                            }
-                            None => Err(FsError::NodeDoesNotExist),
-                        }
-                    }
-                }?;
-                Ok(NodeInfo::new(parent_blob_id, node_name.to_owned()))
-            }
-        }
-    }
 }
 
 #[async_trait]
@@ -293,12 +258,9 @@ where
     type File<'a> = CryFile<'a, B>;
     type OpenFile = CryOpenFile<B>;
 
-    async fn lookup<'a>(&'a self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>> {
-        let node_info = self.load_node_info(path).await?;
-        Ok(CryNode::new(
-            AsyncDropArc::clone(&self.blobstore),
-            node_info,
-        ))
+    async fn rootdir(&self) -> FsResult<Self::Dir<'_>> {
+        let node_info = NodeInfo::new_rootdir(self.root_blob_id);
+        Ok(CryDir::new(&self.blobstore,Arc::new(node_info)))
     }
 
     async fn rename(&self, source_path: &AbsolutePath, dest_path: &AbsolutePath) -> FsResult<()> {

@@ -31,12 +31,15 @@ impl RootDir {
         })
     }
 
+    fn _node(&self) -> InMemoryDirRef {
+        InMemoryDirRef::from_inode(Arc::clone(&self.rootdir))
+    }
+
     pub fn load_node(
         self: &Arc<Self>,
         path: &AbsolutePath,
     ) -> FsResult<AsyncDropGuard<InMemoryNodeRef>> {
-        let mut current_node =
-            InMemoryNodeRef::Dir(InMemoryDirRef::from_inode(Arc::clone(&self.rootdir)));
+        let mut current_node = InMemoryNodeRef::Dir(self._node());
         for component in path.iter() {
             match &current_node {
                 InMemoryNodeRef::Dir(dir) => {
@@ -71,8 +74,8 @@ impl Device for InMemoryDevice {
     type File<'a> = InMemoryFileRef;
     type OpenFile = InMemoryOpenFileRef;
 
-    async fn lookup(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>> {
-        self.rootdir.load_node(path)
+    async fn rootdir(&self) -> FsResult<InMemoryDirRef> {
+        Ok(self.rootdir._node())
     }
 
     async fn rename(&self, from_path: &AbsolutePath, to_path: &AbsolutePath) -> FsResult<()> {

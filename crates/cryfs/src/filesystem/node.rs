@@ -57,19 +57,16 @@ where
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
         node_info: NodeInfo,
     ) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self {
-            blobstore,
-            node_info: Arc::new(node_info),
-        })
+        Self::new_internal(blobstore, Arc::new(node_info))
     }
 
-    pub fn new_rootdir(
+    pub(super) fn new_internal(
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-        root_blob_id: BlobId,
+        node_info: Arc<NodeInfo>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,
-            node_info: Arc::new(NodeInfo::new_rootdir(root_blob_id)),
+            node_info,
         })
     }
 }

@@ -27,6 +27,17 @@ impl PassthroughDir {
 impl Dir for PassthroughDir {
     type Device = PassthroughDevice;
 
+    fn as_node(&self) -> AsyncDropGuard<PassthroughNode> {
+        PassthroughNode::new(self.path.clone())
+    }
+
+    async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<PassthroughNode>> {
+        // TODO cloning path and then pushing is inefficient. Allow a way to do this with just one allocation.
+        let path = self.path.clone();
+        let path = path.push(name);
+        Ok(PassthroughNode::new(path))
+    }
+
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let mut entries = Vec::new();
         let mut dir = tokio::fs::read_dir(&self.path).await.map_error()?;

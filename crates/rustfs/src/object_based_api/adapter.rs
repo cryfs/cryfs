@@ -118,8 +118,8 @@ where
 #[async_trait(?Send)]
 impl<Fs> AsyncFilesystem for ObjectBasedFsAdapter<Fs>
 where
-    // TODO Are these Send+Sync bounds only needed because fuse_mt goes multi threaded or would it also be required for fuser?
-    Fs: Device + Send + Sync,
+    // TODO Are these Send+Sync bounds only needed because fuse_mt goes multi threaded or would it also be required for fuser? And do we really need the 'static?
+    Fs: Device + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     async fn init(&self, req: RequestInfo) -> FsResult<()> {
@@ -684,7 +684,7 @@ where
 impl<Fn, D> IntoFs<ObjectBasedFsAdapter<D>> for Fn
 where
     Fn: FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
-    D: Device + Send + Sync,
+    D: Device + Send + Sync + 'static,
     D::OpenFile: Send + Sync,
 {
     fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapter<D>> {

@@ -10,6 +10,7 @@ env:
 jobs:
   test:
     name: test
+    # TODO Add macos to CI
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

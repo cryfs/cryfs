@@ -160,6 +160,14 @@ impl InMemoryDirRef {
 impl Dir for InMemoryDirRef {
     type Device = InMemoryDevice;
 
+    fn as_node(&self) -> AsyncDropGuard<InMemoryNodeRef> {
+        AsyncDropGuard::new(InMemoryNodeRef::Dir(self.clone_ref()))
+    }
+
+    async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<InMemoryNodeRef>> {
+        Ok(AsyncDropGuard::new(self.get_child(name)?))
+    }
+
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let inode = self.inode.lock().unwrap();
         let entries = inode.entries().iter().map(|(name, node)| {
