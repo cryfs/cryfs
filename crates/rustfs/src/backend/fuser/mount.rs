@@ -14,7 +14,7 @@ pub fn mount<Fs>(
 ) -> std::io::Result<()>
 where
     Fs: Device + Send + Sync + 'static,
-    <Fs as Device>::Node: Send,
+    <Fs as Device>::Node: Send + Sync,
 {
     let fs = spawn_mount(fs, mountpoint, runtime)?;
     fs.block_until_unmounted();
@@ -28,7 +28,7 @@ pub fn spawn_mount<Fs>(
 ) -> std::io::Result<RunningFilesystem>
 where
     Fs: Device + Send + Sync + 'static,
-    <Fs as Device>::Node: Send,
+    <Fs as Device>::Node: Send + Sync,
 {
     let backend = BackendAdapter::new(fs, runtime);
 

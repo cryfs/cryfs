@@ -164,7 +164,10 @@ impl Dir for InMemoryDirRef {
         AsyncDropGuard::new(InMemoryNodeRef::Dir(self.clone_ref()))
     }
 
-    async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<InMemoryNodeRef>> {
+    async fn lookup_child(
+        &self,
+        name: &PathComponent,
+    ) -> FsResult<AsyncDropGuard<InMemoryNodeRef>> {
         Ok(AsyncDropGuard::new(self.get_child(name)?))
     }
 

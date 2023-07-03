@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::pin::Pin;
 use std::future::Future;
+use std::pin::Pin;
 
-use crate::common::{AbsolutePath, FsError, FsResult, Statfs};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use super::dir::Dir;
 use super::node::Node;
+use crate::common::{AbsolutePath, FsError, FsResult, Statfs};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO We only call this `Device` because that's the historical name from the c++ Cryfs version. We should probably rename this to `Filesystem`.
 #[async_trait]
@@ -35,9 +35,11 @@ pub trait Device {
     async fn lookup(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>>
     where
         // TODO Why is Self: 'static needed?
-        Self: 'static
+        Self: 'static,
     {
-        let rootdir = self.rootdir().await?
+        let rootdir = self
+            .rootdir()
+            .await?
             // TODO Can we do this without first converting `rootdir` to `Node` by calling `.as_node()`, and then immediately calling `.as_dir()` in the loop below?
             .as_node();
 
@@ -58,9 +60,7 @@ pub trait Device {
                                 let child = dir.lookup_child(component);
                                 child.await
                             }
-                            Err(err) => {
-                                Err(err)
-                            }
+                            Err(err) => Err(err),
                         }
                     };
                     currentnode.async_drop().await?;
@@ -74,9 +74,7 @@ pub trait Device {
                             let child = dir.lookup_child(node_name);
                             child.await
                         }
-                        Err(err) => {
-                            Err(err)
-                        }
+                        Err(err) => Err(err),
                     }
                 };
                 currentnode.async_drop().await?;

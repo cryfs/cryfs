@@ -673,6 +673,7 @@ dependencies = [
  "fuse_mt",
  "fuser 0.11.1",
  "fuser 0.12.0",
+ "futures",
  "libc",
  "log",
  "nix",

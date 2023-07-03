@@ -5,39 +5,44 @@ use fuser::{
     ReplyDirectoryPlus, ReplyEmpty, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen,
     ReplyStatfs, ReplyWrite, ReplyXattr, Request, TimeOrNow,
 };
+use futures::join;
 use libc::{c_int, ENOSYS, EPERM};
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::future::Future;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
+use tokio::sync::RwLock;
 
 use crate::common::{
     AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap,
-    HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs, Uid,
 };
-use crate::object_based_api::{adapter::MaybeInitializedFs, Device};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use crate::object_based_api::{adapter::MaybeInitializedFs, Device, Dir, Node};
+use cryfs_utils::{stream::for_each_unordered, async_drop::{AsyncDrop, AsyncDropGuard}};
+
+const TTL_LOOKUP: Duration = Duration::from_secs(1);
 
 pub struct BackendAdapter<Fs>
 where
-    Fs: Device,
-    <Fs as Device>::Node: Send,
+    Fs: Device + Send + Sync + 'static,
+    <Fs as Device>::Node: Send + Sync,
 {
     // TODO RwLock is only needed for initialize, destroy and async drop. Can we remove it?
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
 
-    inodes: AsyncDropGuard<HandleMap<Fs::Node>>,
+    // TODO Do we need Arc for inodes?
+    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<Fs::Node>>>>,
 
     runtime: tokio::runtime::Handle,
 }
 
 impl<Fs> Debug for BackendAdapter<Fs>
 where
-    Fs: Device,
-    <Fs as Device>::Node: Send,
+    Fs: Device + Send + Sync + 'static,
+    <Fs as Device>::Node: Send + Sync,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BackendAdapter").finish()
@@ -46,8 +51,8 @@ where
 
 impl<Fs> BackendAdapter<Fs>
 where
-    Fs: Device,
-    <Fs as Device>::Node: Send,
+    Fs: Device + Send + Sync + 'static,
+    <Fs as Device>::Node: Send + Sync,
 {
     pub fn new(
         fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
@@ -56,6 +61,7 @@ where
         let mut inodes = HandleMap::new();
         // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
         inodes.block_handle(FileHandle(fuser::FUSE_ROOT_ID));
+        let inodes = Arc::new(RwLock::new(inodes));
         Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
                 Box::new(fs),
@@ -90,18 +96,19 @@ where
         })
     }
 
-    fn run_async_reply_entry<F>(
-        &self,
+    fn run_async_reply_entry(
+        runtime: &tokio::runtime::Handle,
         log_msg: String,
         reply: ReplyEntry,
-        func: impl Future<Output = FsResult<(Duration, NodeAttrs, u64)>> + Send + 'static,
+        func: impl Future<Output = FsResult<(Duration, NodeAttrs, FileHandle)>> + Send + 'static,
     ) {
-        self.runtime.spawn(async move {
+        runtime.spawn(async move {
             log::info!("{}...", log_msg);
             match func.await {
+                // TODO Is the third member of the tuple a inode number or a generation number?
                 Ok((ttl, attrs, generation)) => {
                     log::info!("{}...done", log_msg);
-                    reply.entry(&ttl, &convert_node_attrs(attrs), generation);
+                    reply.entry(&ttl, &convert_node_attrs(attrs), generation.into());
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
@@ -114,14 +121,15 @@ where
 
 impl<Fs> Filesystem for BackendAdapter<Fs>
 where
-    Fs: Device,
-    <Fs as Device>::Node: Send,
+    // TODO Is both Send + Sync needed here?
+    Fs: Device + Send + Sync + 'static,
+    <Fs as Device>::Node: Send + Sync,
 {
     fn init(&mut self, req: &Request<'_>, _config: &mut KernelConfig) -> Result<(), c_int> {
         Self::run_blocking(&self.runtime, &format!("init"), || async {
             self.fs
                 .write()
-                .unwrap()
+                .await
                 .initialize(Uid::from(req.uid()), Gid::from(req.gid()));
             Ok(())
         })
@@ -129,9 +137,9 @@ where
 
     fn destroy(&mut self) {
         Self::run_blocking(&self.runtime, &format!("destroy"), || async {
-            let fs = self.fs.write().unwrap().take();
+            self.inodes.write().await.async_drop().await.unwrap();
+            let fs = self.fs.write().await.take();
             fs.destroy().await;
-            self.inodes.async_drop().await.unwrap();
             Ok(())
         })
         .expect("failed to drop file system");
@@ -139,38 +147,88 @@ where
         // TODO Is there a way to do the above without a call to expect()?
     }
 
-    /// Look up a directory entry by name and get its attributes.
     fn lookup(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEntry) {
-        if parent == fuser::FUSE_ROOT_ID {
-            todo!()
-        } else {
-            todo!()
-        }
-        // log::warn!(
-        //     "[Not Implemented] lookup(parent: {:#x?}, name {:?})",
-        //     parent,
-        //     name
-        // );
-        // reply.error(ENOSYS);
+        // TODO Is this possible without name.to_owned()?
+        // TODO Is this possible without the Arc::clone here?
+        let name = name.to_owned();
+        let fs = Arc::clone(&self.fs);
+        let inodes = Arc::clone(&self.inodes);
+        Self::run_async_reply_entry(
+            &self.runtime,
+            format!("lookup(parent={parent}, name={name:?}"),
+            reply,
+            async move {
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    FsError::InvalidPath
+                })?;
+
+                let mut child = if parent == fuser::FUSE_ROOT_ID {
+                    let fs = fs.read().await;
+                    let fs = fs.get();
+                    let parent = fs.rootdir().await?;
+                    let child = parent.lookup_child(&name);
+                    child.await?
+                } else {
+                    let inodes = inodes.read().await;
+                    let parent = inodes
+                        .get(FileHandle::from(parent))
+                        .expect("Error: Inode number unassigned")
+                        .as_dir()
+                        .await
+                        .expect("Error: Inode number is not a directory");
+                    let child = parent.lookup_child(&name);
+                    child.await?
+                };
+                match child.getattr().await {
+                    Ok(attrs) => {
+                        let ino = inodes.write().await.add(child);
+                        Ok((TTL_LOOKUP, attrs, ino))
+                    }
+                    Err(err) => {
+                        child.async_drop().await?;
+                        Err(err)
+                    }
+                }
+            },
+        )
     }
 
-    /// Forget about an inode.
-    /// The nlookup parameter indicates the number of lookups previously performed on
-    /// this inode. If the filesystem implements inode lifetimes, it is recommended that
-    /// inodes acquire a single reference on each lookup, and lose nlookup references on
-    /// each forget. The filesystem may ignore forget calls, if the inodes don't need to
-    /// have a limited lifetime. On unmount it is not guaranteed, that all referenced
-    /// inodes will receive a forget message.
-    fn forget(&mut self, _req: &Request<'_>, _ino: u64, _nlookup: u64) {}
-
-    /// Like forget, but take multiple forget requests at once for performance. The default
-    /// implementation will fallback to forget.
-    #[cfg(feature = "abi-7-16")]
-    fn batch_forget(&mut self, req: &Request<'_>, nodes: &[fuse_forget_one]) {
-        for node in nodes {
-            self.forget(req, node.nodeid, node.nlookup);
-        }
+    fn forget(&mut self, _req: &Request<'_>, ino: u64, nlookup: u64) {
+        // From the fuser documentation:
+        // ```
+        // The nlookup parameter indicates the number of lookups previously performed on
+        // this inode. If the filesystem implements inode lifetimes, it is recommended that
+        // inodes acquire a single reference on each lookup, and lose nlookup references on
+        // each forget. The filesystem may ignore forget calls, if the inodes don't need to
+        // have a limited lifetime. On unmount it is not guaranteed, that all referenced
+        // inodes will receive a forget message.
+        // ```
+        // But we don't reuse inode numbers so nlookup should always be 1.
+        assert_eq!(1, nlookup, "We don't reuse inode numbers so nlookup should always be 1");
+        Self::run_blocking(&self.runtime, &format!("forget(ino={ino})"), || async {
+            let mut entry = self.inodes.write().await.remove(ino.into());
+            entry.async_drop().await?;
+            Ok(())
+        })
+        .expect("failed to forget about an inode");
     }
+
+    // TODO Do we want this? It seems to be gated by an "abi-7-16" feature but what is that?
+    // fn batch_forget(&mut self, req: &Request<'_>, nodes: &[fuse_forget_one]) {
+    //     assert_eq!(1, nlookup, "We don't reuse inode numbers so nlookup should always be 1");
+    //     Self::run_blocking(&self.runtime, &format!("batch_forget({nodes:?})"), || async {
+    //         let inodes = self.inodes.write().await;
+    //         for_each_unordered(
+    //             nodes,
+    //             |node| {
+    //                 let mut entry = inodes.remove(node.into());
+    //                 entry.async_drop()
+    //             }
+    //         ).await?;
+    //         Ok(())
+    //     })
+    //     .expect("failed to forget about an inode");
+    // }
 
     /// Get file attributes.
     fn getattr(&mut self, _req: &Request<'_>, ino: u64, reply: ReplyAttr) {

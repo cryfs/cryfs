@@ -17,6 +17,7 @@ derive_more.workspace = true
 fuse_mt = {workspace = true, optional = true}
 fuse_mt_fuser = {workspace = true, optional = true}
 fuser = {workspace = true, optional = true}
+futures.workspace = true
 libc.workspace = true
 log.workspace = true
 thiserror.workspace = true

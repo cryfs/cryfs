@@ -14,7 +14,10 @@ pub trait Dir {
     // If the child doesn't exist, it's ok to either immediately fail with [FsError::NodeDoesNotExist]
     // or to return a [Node] object that throws [FsError::NodeDoesNotExist] when any of its members that
     // require existence are called.
-    async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Node>>;
+    async fn lookup_child(
+        &self,
+        name: &PathComponent,
+    ) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Node>>;
 
     async fn create_child_dir(
         &self,

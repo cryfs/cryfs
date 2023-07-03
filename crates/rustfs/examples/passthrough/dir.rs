@@ -31,7 +31,10 @@ impl Dir for PassthroughDir {
         PassthroughNode::new(self.path.clone())
     }
 
-    async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<PassthroughNode>> {
+    async fn lookup_child(
+        &self,
+        name: &PathComponent,
+    ) -> FsResult<AsyncDropGuard<PassthroughNode>> {
         // TODO cloning path and then pushing is inefficient. Allow a way to do this with just one allocation.
         let path = self.path.clone();
         let path = path.push(name);
