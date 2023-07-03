@@ -20,10 +20,10 @@ use cryfs_utils::{
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute
 
 // TODO Set these TTLs to the fuse defaults
-const TTL_GETATTR: Duration = Duration::from_secs(1);
-const TTL_MKDIR: Duration = Duration::from_secs(1);
-const TTL_SYMLINK: Duration = Duration::from_secs(1);
-const TTL_CREATE: Duration = Duration::from_secs(1);
+const TTL_GETATTR: Duration = Duration::from_secs(0);
+const TTL_MKDIR: Duration = Duration::from_secs(0);
+const TTL_SYMLINK: Duration = Duration::from_secs(0);
+const TTL_CREATE: Duration = Duration::from_secs(0);
 
 pub enum MaybeInitializedFs<Fs: Device> {
     Uninitialized(Option<Box<dyn FnOnce(Uid, Gid) -> Fs + Send + Sync>>),
@@ -540,6 +540,19 @@ where
         })
     }
 
+    // TODO For some reason, there's a weird bug in readdir() with the fuse_mt backend:
+    // $ cd mountdir
+    // $ mkdir bla
+    // $ cd bla
+    // $ echo content > newfile
+    // $ ls
+    // [doesn't show `newfile`]
+    // $ cd ..
+    // $ cd bla
+    // $ ls
+    // [now shows `newfile`]
+    // Not sure if this is a bug in fuse_mt (check if it applies to inmemory/passthrough too) or our adapter.
+    // Not sure if this also happens for the fuser backend.
     async fn readdir(
         &self,
         _req: RequestInfo,
