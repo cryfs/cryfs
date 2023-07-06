@@ -260,7 +260,7 @@ where
 
     async fn rootdir(&self) -> FsResult<Self::Dir<'_>> {
         let node_info = NodeInfo::new_rootdir(self.root_blob_id);
-        Ok(CryDir::new(&self.blobstore,Arc::new(node_info)))
+        Ok(CryDir::new(&self.blobstore, Arc::new(node_info)))
     }
 
     async fn rename(&self, source_path: &AbsolutePath, dest_path: &AbsolutePath) -> FsResult<()> {

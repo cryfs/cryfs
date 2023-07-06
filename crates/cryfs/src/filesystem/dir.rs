@@ -143,13 +143,19 @@ where
     type Device = CryDevice<B>;
 
     fn as_node(&self) -> AsyncDropGuard<CryNode<B>> {
-        CryNode::new_internal(AsyncDropArc::clone(&self.blobstore), Arc::clone(&self.node_info))
+        CryNode::new_internal(
+            AsyncDropArc::clone(&self.blobstore),
+            Arc::clone(&self.node_info),
+        )
     }
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
         let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
         let node_info = NodeInfo::new(self_blob_id, name.to_owned());
-        Ok(CryNode::new(AsyncDropArc::clone(&self.blobstore), node_info))
+        Ok(CryNode::new(
+            AsyncDropArc::clone(&self.blobstore),
+            node_info,
+        ))
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {

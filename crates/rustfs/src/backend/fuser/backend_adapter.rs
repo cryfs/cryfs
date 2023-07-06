@@ -18,10 +18,14 @@ use tokio::sync::RwLock;
 
 use crate::common::{
     AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap,
-    HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs, Uid,
+    HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf,
+    Statfs, Uid,
 };
 use crate::object_based_api::{adapter::MaybeInitializedFs, Device, Dir, Node};
-use cryfs_utils::{stream::for_each_unordered, async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard}};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    stream::for_each_unordered,
+};
 
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
@@ -75,7 +79,12 @@ where
 
     // TODO &self instead of `fs`, `inodes`
     /// This function allows file system operations to abstract over whether a requested inode number is the root node or whether it is looked up from the inode table `inodes`.
-    async fn with_inode<Func, Fut, Ret>(fs: &RwLock<MaybeInitializedFs<Fs>>, inodes: &RwLock<AsyncDropGuard<HandleMap<AsyncDropArc<Fs::Node>>>>, ino: FileHandle, func: Func) -> FsResult<Ret>
+    async fn with_inode<Func, Fut, Ret>(
+        fs: &RwLock<MaybeInitializedFs<Fs>>,
+        inodes: &RwLock<AsyncDropGuard<HandleMap<AsyncDropArc<Fs::Node>>>>,
+        ino: FileHandle,
+        func: Func,
+    ) -> FsResult<Ret>
     where
         Func: FnOnce(AsyncDropGuard<AsyncDropArc<Fs::Node>>) -> Fut,
         Fut: Future<Output = FsResult<Ret>>,
@@ -92,9 +101,7 @@ where
             func(AsyncDropArc::new(node)).await
         } else {
             let inodes = inodes.read().await;
-            let node = inodes
-                .get(ino)
-                .expect("Error: Inode number unassigned");
+            let node = inodes.get(ino).expect("Error: Inode number unassigned");
             func(AsyncDropArc::clone(&node)).await
         }
     }
@@ -210,23 +217,28 @@ where
             format!("lookup(parent={parent:?}, name={name:?}"),
             reply,
             async move {
-                let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    FsError::InvalidPath
-                })?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 let name_clone = name.clone();
 
-                let mut child = Self::with_inode(&fs, &inodes, parent, |mut parent_node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
-                    let child = async {
-                        let parent_node_dir = parent_node
-                            .as_dir()
-                            .await
-                            .expect("Error: Inode number is not a directory");
-                        let child = parent_node_dir.lookup_child(&name);
-                        child.await
-                    }.await;
-                    parent_node.async_drop().await?;
-                    child
-                }).await?;
+                let mut child = Self::with_inode(
+                    &fs,
+                    &inodes,
+                    parent,
+                    |mut parent_node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
+                        let child = async {
+                            let parent_node_dir = parent_node
+                                .as_dir()
+                                .await
+                                .expect("Error: Inode number is not a directory");
+                            let child = parent_node_dir.lookup_child(&name);
+                            child.await
+                        }
+                        .await;
+                        parent_node.async_drop().await?;
+                        child
+                    },
+                )
+                .await?;
 
                 match child.getattr().await {
                     Ok(attrs) => {
@@ -254,7 +266,10 @@ where
         // inodes will receive a forget message.
         // ```
         // But we don't reuse inode numbers so nlookup should always be 1.
-        assert_eq!(1, nlookup, "We don't reuse inode numbers so nlookup should always be 1");
+        assert_eq!(
+            1, nlookup,
+            "We don't reuse inode numbers so nlookup should always be 1"
+        );
         Self::run_blocking(&self.runtime, &format!("forget(ino={ino})"), || async {
             let mut entry = self.inodes.write().await.remove(ino.into());
             entry.async_drop().await?;
@@ -288,13 +303,19 @@ where
             format!("getattr(ino={ino})"),
             reply,
             async move {
-                let mut attrs = Self::with_inode(&fs, &inodes, FileHandle::from(ino), |mut node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
-                    let attrs = node.getattr().await;
-                    node.async_drop().await?;
-                    attrs
-                }).await?;
+                let mut attrs = Self::with_inode(
+                    &fs,
+                    &inodes,
+                    FileHandle::from(ino),
+                    |mut node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
+                        let attrs = node.getattr().await;
+                        node.async_drop().await?;
+                        attrs
+                    },
+                )
+                .await?;
                 Ok((TTL_GETATTR, attrs))
-            }
+            },
         );
     }
 
