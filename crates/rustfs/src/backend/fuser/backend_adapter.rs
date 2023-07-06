@@ -79,30 +79,24 @@ where
 
     // TODO &self instead of `fs`, `inodes`
     /// This function allows file system operations to abstract over whether a requested inode number is the root node or whether it is looked up from the inode table `inodes`.
-    async fn with_inode<Func, Fut, Ret>(
+    async fn get_inode(
         fs: &RwLock<MaybeInitializedFs<Fs>>,
         inodes: &RwLock<AsyncDropGuard<HandleMap<AsyncDropArc<Fs::Node>>>>,
         ino: FileHandle,
-        func: Func,
-    ) -> FsResult<Ret>
-    where
-        Func: FnOnce(AsyncDropGuard<AsyncDropArc<Fs::Node>>) -> Fut,
-        Fut: Future<Output = FsResult<Ret>>,
-    {
-        // TODO Once async closures are stable, we can pass &Fs::Node to this callback and simplify all the call sites (e.g. don't require them to call async_drop on the argument anymore)
+    ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
+        // TODO Once async closures are stable, we can - instead of returning an AsyncDropArc - take a callback parameter and pass &Fs::Node to it.
+        //      That would simplify all the call sites (e.g. don't require them to call async_drop on the returned value anymore).
         //      See https://stackoverflow.com/questions/76625378/async-closure-holding-reference-over-await-point
         if ino == FileHandle::from(fuser::FUSE_ROOT_ID) {
-            let mut node = {
-                let fs = fs.read().await;
-                let fs = fs.get();
-                let node = fs.rootdir().await?;
-                node.as_node()
-            };
-            func(AsyncDropArc::new(node)).await
+            let fs = fs.read().await;
+            let fs = fs.get();
+            let node = fs.rootdir().await?;
+            Ok(AsyncDropArc::new(node.as_node()))
         } else {
             let inodes = inodes.read().await;
-            let node = inodes.get(ino).expect("Error: Inode number unassigned");
-            func(AsyncDropArc::clone(&node)).await
+            Ok(AsyncDropArc::clone(
+                inodes.get(ino).expect("Error: Inode number unassigned"),
+            ))
         }
     }
 
@@ -220,25 +214,18 @@ where
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 let name_clone = name.clone();
 
-                let mut child = Self::with_inode(
-                    &fs,
-                    &inodes,
-                    parent,
-                    |mut parent_node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
-                        let child = async {
-                            let parent_node_dir = parent_node
-                                .as_dir()
-                                .await
-                                .expect("Error: Inode number is not a directory");
-                            let child = parent_node_dir.lookup_child(&name);
-                            child.await
-                        }
-                        .await;
-                        parent_node.async_drop().await?;
-                        child
-                    },
-                )
-                .await?;
+                let mut parent_node = Self::get_inode(&fs, &inodes, parent).await?;
+                let child = async {
+                    let parent_node_dir = parent_node
+                        .as_dir()
+                        .await
+                        .expect("Error: Inode number is not a directory");
+                    let child = parent_node_dir.lookup_child(&name);
+                    child.await
+                }
+                .await;
+                parent_node.async_drop().await?;
+                let mut child = child?;
 
                 match child.getattr().await {
                     Ok(attrs) => {
@@ -303,17 +290,10 @@ where
             format!("getattr(ino={ino})"),
             reply,
             async move {
-                let mut attrs = Self::with_inode(
-                    &fs,
-                    &inodes,
-                    FileHandle::from(ino),
-                    |mut node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
-                        let attrs = node.getattr().await;
-                        node.async_drop().await?;
-                        attrs
-                    },
-                )
-                .await?;
+                let mut node = Self::get_inode(&fs, &inodes, FileHandle::from(ino)).await?;
+                let attrs = node.getattr().await;
+                node.async_drop().await?;
+                let attrs = attrs?;
                 Ok((TTL_GETATTR, attrs))
             },
         );
