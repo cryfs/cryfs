@@ -40,8 +40,8 @@ where
         self.map.remove(key)
     }
 
-    pub fn get(&self, key: &K) -> Option<&V> {
-        self.map.get(key).map(|value| &**value)
+    pub fn get(&self, key: &K) -> Option<&AsyncDropGuard<V>> {
+        self.map.get(key)
     }
 }
 

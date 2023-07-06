@@ -21,9 +21,11 @@ use crate::common::{
     HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs, Uid,
 };
 use crate::object_based_api::{adapter::MaybeInitializedFs, Device, Dir, Node};
-use cryfs_utils::{stream::for_each_unordered, async_drop::{AsyncDrop, AsyncDropGuard}};
+use cryfs_utils::{stream::for_each_unordered, async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard}};
 
+// TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
+const TTL_GETATTR: Duration = Duration::from_secs(1);
 
 pub struct BackendAdapter<Fs>
 where
@@ -34,7 +36,7 @@ where
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
 
     // TODO Do we need Arc for inodes?
-    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<Fs::Node>>>>,
+    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<AsyncDropArc<Fs::Node>>>>>,
 
     runtime: tokio::runtime::Handle,
 }
@@ -71,6 +73,32 @@ where
         }
     }
 
+    // TODO &self instead of `fs`, `inodes`
+    /// This function allows file system operations to abstract over whether a requested inode number is the root node or whether it is looked up from the inode table `inodes`.
+    async fn with_inode<Func, Fut, Ret>(fs: &RwLock<MaybeInitializedFs<Fs>>, inodes: &RwLock<AsyncDropGuard<HandleMap<AsyncDropArc<Fs::Node>>>>, ino: FileHandle, func: Func) -> FsResult<Ret>
+    where
+        Func: FnOnce(AsyncDropGuard<AsyncDropArc<Fs::Node>>) -> Fut,
+        Fut: Future<Output = FsResult<Ret>>,
+    {
+        // TODO Once async closures are stable, we can pass &Fs::Node to this callback and simplify all the call sites (e.g. don't require them to call async_drop on the argument anymore)
+        //      See https://stackoverflow.com/questions/76625378/async-closure-holding-reference-over-await-point
+        if ino == FileHandle::from(fuser::FUSE_ROOT_ID) {
+            let mut node = {
+                let fs = fs.read().await;
+                let fs = fs.get();
+                let node = fs.rootdir().await?;
+                node.as_node()
+            };
+            func(AsyncDropArc::new(node)).await
+        } else {
+            let inodes = inodes.read().await;
+            let node = inodes
+                .get(ino)
+                .expect("Error: Inode number unassigned");
+            func(AsyncDropArc::clone(&node)).await
+        }
+    }
+
     fn run_blocking<R, F>(
         runtime: &tokio::runtime::Handle,
         log_msg: &str,
@@ -96,6 +124,8 @@ where
         })
     }
 
+    // TODO Can we unify `run_async_reply_{entry,attr,...}` ?
+
     fn run_async_reply_entry(
         runtime: &tokio::runtime::Handle,
         log_msg: String,
@@ -109,6 +139,27 @@ where
                 Ok((ttl, attrs, generation)) => {
                     log::info!("{}...done", log_msg);
                     reply.entry(&ttl, &convert_node_attrs(attrs), generation.into());
+                }
+                Err(err) => {
+                    log::info!("{}...failed: {}", log_msg, err);
+                    reply.error(err.system_error_code())
+                }
+            }
+        });
+    }
+
+    fn run_async_reply_attr(
+        runtime: &tokio::runtime::Handle,
+        log_msg: String,
+        reply: ReplyAttr,
+        func: impl Future<Output = FsResult<(Duration, NodeAttrs)>> + Send + 'static,
+    ) {
+        runtime.spawn(async move {
+            log::info!("{}...", log_msg);
+            match func.await {
+                Ok((ttl, attrs)) => {
+                    log::info!("{}...done", log_msg);
+                    reply.attr(&ttl, &convert_node_attrs(attrs));
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
@@ -149,39 +200,38 @@ where
 
     fn lookup(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEntry) {
         // TODO Is this possible without name.to_owned()?
-        // TODO Is this possible without the Arc::clone here?
+        // TODO Is this possible without the Arc::clone here? Also in other functions below.
         let name = name.to_owned();
         let fs = Arc::clone(&self.fs);
         let inodes = Arc::clone(&self.inodes);
+        let parent = FileHandle::from(parent);
         Self::run_async_reply_entry(
             &self.runtime,
-            format!("lookup(parent={parent}, name={name:?}"),
+            format!("lookup(parent={parent:?}, name={name:?}"),
             reply,
             async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
                     FsError::InvalidPath
                 })?;
+                let name_clone = name.clone();
 
-                let mut child = if parent == fuser::FUSE_ROOT_ID {
-                    let fs = fs.read().await;
-                    let fs = fs.get();
-                    let parent = fs.rootdir().await?;
-                    let child = parent.lookup_child(&name);
-                    child.await?
-                } else {
-                    let inodes = inodes.read().await;
-                    let parent = inodes
-                        .get(FileHandle::from(parent))
-                        .expect("Error: Inode number unassigned")
-                        .as_dir()
-                        .await
-                        .expect("Error: Inode number is not a directory");
-                    let child = parent.lookup_child(&name);
-                    child.await?
-                };
+                let mut child = Self::with_inode(&fs, &inodes, parent, |mut parent_node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
+                    let child = async {
+                        let parent_node_dir = parent_node
+                            .as_dir()
+                            .await
+                            .expect("Error: Inode number is not a directory");
+                        let child = parent_node_dir.lookup_child(&name);
+                        child.await
+                    }.await;
+                    parent_node.async_drop().await?;
+                    child
+                }).await?;
+
                 match child.getattr().await {
                     Ok(attrs) => {
-                        let ino = inodes.write().await.add(child);
+                        let ino = inodes.write().await.add(AsyncDropArc::new(child));
+                        log::info!("New inode {ino:?}: parent={parent:?}, name={name_clone}");
                         Ok((TTL_LOOKUP, attrs, ino))
                     }
                     Err(err) => {
@@ -230,10 +280,22 @@ where
     //     .expect("failed to forget about an inode");
     // }
 
-    /// Get file attributes.
     fn getattr(&mut self, _req: &Request<'_>, ino: u64, reply: ReplyAttr) {
-        log::warn!("[Not Implemented] getattr(ino: {:#x?})", ino);
-        reply.error(ENOSYS);
+        let inodes = Arc::clone(&self.inodes);
+        let fs = Arc::clone(&self.fs);
+        Self::run_async_reply_attr(
+            &self.runtime,
+            format!("getattr(ino={ino})"),
+            reply,
+            async move {
+                let mut attrs = Self::with_inode(&fs, &inodes, FileHandle::from(ino), |mut node: AsyncDropGuard<AsyncDropArc<Fs::Node>>| async move {
+                    let attrs = node.getattr().await;
+                    node.async_drop().await?;
+                    attrs
+                }).await?;
+                Ok((TTL_GETATTR, attrs))
+            }
+        );
     }
 
     /// Set file attributes.

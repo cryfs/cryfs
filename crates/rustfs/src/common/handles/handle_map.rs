@@ -53,7 +53,7 @@ where
         file
     }
 
-    pub fn get(&self, handle: FileHandle) -> Option<&T> {
+    pub fn get(&self, handle: FileHandle) -> Option<&AsyncDropGuard<T>> {
         self.objects.get(&handle)
     }
 }
