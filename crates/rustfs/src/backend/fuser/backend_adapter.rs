@@ -375,16 +375,16 @@ where
         // TODO What to do with umask?
         let uid = Uid::from(req.uid());
         let gid = Gid::from(req.gid());
+        let mode = Mode::from(mode).add_dir_flag();
         let inodes = Arc::clone(&self.inodes);
         let fs = Arc::clone(&self.fs);
         let name = name.to_owned();
         Self::run_async_reply_entry(
             &self.runtime,
-            format!("mkdir(parent={parent}, name={name:?}, mode={mode})"),
+            format!("mkdir(parent={parent}, name={name:?}, mode={mode:?})"),
             reply,
             async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                let mode = Mode::from(mode);
 
                 let mut parent = Self::get_inode(&fs, &inodes, FileHandle::from(parent)).await?;
                 let res = {
