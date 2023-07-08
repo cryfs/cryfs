@@ -186,9 +186,9 @@ where
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs> {
-        let blob_id = self.node_info.blob_id(&self.blobstore).await?;
-        let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(&blob_id));
+    ) -> FsResult<(NodeAttrs, CryDir<'_, B>)> {
+        let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+        let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -200,7 +200,7 @@ where
                 let mtime = atime;
 
                 blob.add_entry_dir(
-                    name,
+                    name.clone(),
                     new_dir_blob_id,
                     // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
                     fs_types::Mode::from(u32::from(mode)),
@@ -215,7 +215,7 @@ where
                 })?;
 
                 // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
-                Ok(NodeAttrs {
+                let attrs = NodeAttrs {
                     nlink: 1,
                     mode,
                     uid,
@@ -226,7 +226,10 @@ where
                     atime,
                     mtime,
                     ctime: mtime,
-                })
+                };
+                let node =
+                    CryDir::new(&self.blobstore, Arc::new(NodeInfo::new(self_blob_id, name)));
+                Ok((attrs, node))
             })())
         })
         .await

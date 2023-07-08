@@ -305,7 +305,7 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let new_dir_attrs = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
+            let (new_dir_attrs, _) = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
             Ok(AttrResponse {
                 ttl: TTL_MKDIR,
                 attrs: new_dir_attrs,

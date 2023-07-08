@@ -365,21 +365,49 @@ where
     /// Create a directory.
     fn mkdir(
         &mut self,
-        _req: &Request<'_>,
+        req: &Request<'_>,
         parent: u64,
         name: &OsStr,
         mode: u32,
-        umask: u32,
+        _umask: u32,
         reply: ReplyEntry,
     ) {
-        log::debug!(
-            "[Not Implemented] mkdir(parent: {:#x?}, name: {:?}, mode: {}, umask: {:#x?})",
-            parent,
-            name,
-            mode,
-            umask
+        // TODO What to do with umask?
+        let uid = Uid::from(req.uid());
+        let gid = Gid::from(req.gid());
+        let inodes = Arc::clone(&self.inodes);
+        let fs = Arc::clone(&self.fs);
+        let name = name.to_owned();
+        Self::run_async_reply_entry(
+            &self.runtime,
+            format!("mkdir(parent={parent}, name={name:?}, mode={mode})"),
+            reply,
+            async move {
+                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let mode = Mode::from(mode);
+
+                let mut parent = Self::get_inode(&fs, &inodes, FileHandle::from(parent)).await?;
+                let res = {
+                    let parent_dir = parent.as_dir().await;
+                    match parent_dir {
+                        Ok(parent_dir) => {
+                            let child = parent_dir.create_child_dir(&name, mode, uid, gid);
+                            let child = child.await;
+                            match child {
+                                Ok((attrs, child)) => Ok((attrs, child.as_node())),
+                                Err(err) => Err(err),
+                            }
+                        }
+                        Err(err) => Err(err),
+                    }
+                };
+                parent.async_drop().await?;
+                let (attrs, child) = res?;
+                let ino = inodes.write().await.add(AsyncDropArc::new(child));
+                log::info!("New inode {ino:?}: parent={parent:?}, name={name}");
+                Ok((TTL_GETATTR, attrs, ino))
+            },
         );
-        reply.error(ENOSYS);
     }
 
     /// Remove a file.

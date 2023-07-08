@@ -80,7 +80,7 @@ impl Dir for PassthroughDir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs> {
+    ) -> FsResult<(NodeAttrs, PassthroughDir)> {
         let path = self.path.clone().push(name);
         let path_clone = path.clone();
         let _: () = tokio::runtime::Handle::current()
@@ -98,8 +98,10 @@ impl Dir for PassthroughDir {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
+        let node = PassthroughDir::new(path.clone());
         // TODO Return value directly without another call but make sure it returns the same value
-        PassthroughNode::new(path).getattr().await
+        let attrs = PassthroughNode::new(path).getattr().await?;
+        Ok((attrs, node))
     }
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {

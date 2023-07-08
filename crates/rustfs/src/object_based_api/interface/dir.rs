@@ -25,7 +25,7 @@ pub trait Dir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs>;
+    ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::Dir<'_>)>;
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()>;
 

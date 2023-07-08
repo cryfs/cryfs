@@ -193,7 +193,7 @@ impl Dir for InMemoryDirRef {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs> {
+    ) -> FsResult<(NodeAttrs, InMemoryDirRef)> {
         let mut inode = self.inode.lock().unwrap();
         let dir = InMemoryDirRef::new(mode, uid, gid);
         let metadata = dir.metadata();
@@ -203,10 +203,10 @@ impl Dir for InMemoryDirRef {
                 return Err(FsError::NodeAlreadyExists);
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(InMemoryNodeRef::Dir(dir));
+                entry.insert(InMemoryNodeRef::Dir(dir.clone_ref()));
             }
         }
-        Ok(metadata)
+        Ok((metadata, dir))
     }
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {

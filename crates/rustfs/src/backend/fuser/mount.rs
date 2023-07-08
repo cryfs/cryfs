@@ -1,11 +1,9 @@
-use std::fmt::Debug;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use super::{backend_adapter::BackendAdapter, RunningFilesystem};
-use crate::common::{FsError, Gid, Uid};
+use crate::common::{Gid, Uid};
 use crate::object_based_api::Device;
-use cryfs_utils::async_drop::AsyncDrop;
 
 pub fn mount<Fs>(
     fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
