@@ -18,6 +18,6 @@ unique_ref<OpenFileHandle> FuseFlushTest::OpenFile(const TempTestFS *fs, const s
 }
 
 void FuseFlushTest::CloseFile(int fd) {
-  int retval = ::close(fd);
+  const int retval = ::close(fd);
   EXPECT_EQ(0, retval);
 }

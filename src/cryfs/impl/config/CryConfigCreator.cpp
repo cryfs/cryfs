@@ -30,7 +30,7 @@ namespace cryfs {
         config.SetFilesystemId(_generateFilesystemID());
         auto encryptionKey = _generateEncKey(config.Cipher());
         auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey), allowReplacedFilesystem);
-        uint32_t myClientId = localState.myClientId();
+        const uint32_t myClientId = localState.myClientId();
         config.SetEncryptionKey(std::move(encryptionKey));
         config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));
 #ifndef CRYFS_NO_COMPATIBILITY

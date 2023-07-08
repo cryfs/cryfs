@@ -29,7 +29,7 @@ TEST_P(FuseFlushErrorTest, ReturnErrorFromFlush) {
   auto fs = TestFS();
   auto fd = OpenFile(fs.get(), FILENAME);
 
-  int close_result = ::close(fd->fd());
+  const int close_result = ::close(fd->fd());
   EXPECT_EQ(GetParam(), errno);
   EXPECT_EQ(-1, close_result);
   fd->release(); // don't close it again

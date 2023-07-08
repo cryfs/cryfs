@@ -23,7 +23,7 @@ TEST_F(BlobStoreTest, TwoCreatedBlobsHaveDifferentKeys) {
 
 TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteDirectly) {
   auto blob = blobStore->create();
-  BlockId blockId = blob->blockId();
+  const BlockId blockId = blob->blockId();
   blobStore->remove(std::move(blob));
   EXPECT_FALSE(static_cast<bool>(blobStore->load(blockId)));
 }
@@ -36,7 +36,7 @@ TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteByKey) {
 
 TEST_F(BlobStoreTest, BlobIsNotLoadableAfterDeletion_DeleteAfterLoading) {
   auto blob = blobStore->create();
-  BlockId blockId = blob->blockId();
+  const BlockId blockId = blob->blockId();
   reset(std::move(blob));
   blobStore->remove(loadBlob(blockId));
   EXPECT_FALSE(static_cast<bool>(blobStore->load(blockId)));

@@ -49,7 +49,7 @@ Data AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>::encrypt(const Cr
     Data ciphertext(ciphertextSize(plaintextSize));
 
     iv.ToBinary(ciphertext.data());
-    CryptoPP::ArraySource(plaintext, plaintextSize, true,
+    const CryptoPP::ArraySource _1(plaintext, plaintextSize, true,
       new CryptoPP::AuthenticatedEncryptionFilter(encryption,
         new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(ciphertext.data()) + IV_SIZE, ciphertext.size() - IV_SIZE),
         false, TAG_SIZE
@@ -73,7 +73,7 @@ boost::optional<Data> AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>:
     Data plaintext(plaintextSize(ciphertextSize));
 
     try {
-        CryptoPP::ArraySource(static_cast<const CryptoPP::byte*>(ciphertextData), ciphertextSize - IV_SIZE, true,
+        const CryptoPP::ArraySource _1(static_cast<const CryptoPP::byte*>(ciphertextData), ciphertextSize - IV_SIZE, true,
         new CryptoPP::AuthenticatedDecryptionFilter(decryption,
           new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(plaintext.data()), plaintext.size()),
           CryptoPP::AuthenticatedDecryptionFilter::DEFAULT_FLAGS, TAG_SIZE

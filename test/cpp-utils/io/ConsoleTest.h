@@ -49,7 +49,7 @@ public:
         std::string actual;
         std::getline(_output, actual, delimiter);
         EXPECT_EQ(expected, actual);
-        for (char expected_char : expected_after_delimiter) {
+        for (const char expected_char : expected_after_delimiter) {
             char actual_char = 0;
             _output.get(actual_char);
             EXPECT_EQ(expected_char, actual_char);

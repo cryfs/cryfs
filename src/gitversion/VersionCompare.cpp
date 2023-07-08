@@ -8,15 +8,15 @@ using std::string;
 namespace gitversion {
 
     bool VersionCompare::isOlderThan(const string &v1Str, const string &v2Str) {
-        VersionInfo v1 = Parser::parse(v1Str);
-        VersionInfo v2 = Parser::parse(v2Str);
-        unsigned long v1_major = std::stoul(v1.majorVersion);
-        unsigned long v2_major = std::stoul(v2.majorVersion);
-        unsigned long v1_minor = std::stoul(v1.minorVersion);
-        unsigned long v2_minor = std::stoul(v2.minorVersion);
-        unsigned long v1_hotfix = std::stoul(v1.hotfixVersion);
-        unsigned long v2_hotfix = std::stoul(v2.hotfixVersion);
-        int versionTagCompare = _versionTagCompare(v1.versionTag, v2.versionTag);
+        const VersionInfo v1 = Parser::parse(v1Str);
+        const VersionInfo v2 = Parser::parse(v2Str);
+        const unsigned long v1_major = std::stoul(v1.majorVersion);
+        const unsigned long v2_major = std::stoul(v2.majorVersion);
+        const unsigned long v1_minor = std::stoul(v1.minorVersion);
+        const unsigned long v2_minor = std::stoul(v2.minorVersion);
+        const unsigned long v1_hotfix = std::stoul(v1.hotfixVersion);
+        const unsigned long v2_hotfix = std::stoul(v2.hotfixVersion);
+        const int versionTagCompare = _versionTagCompare(v1.versionTag, v2.versionTag);
         return (v1_major < v2_major) || ((v1_major == v2_major) && (
                 (v1_minor < v2_minor) || ((v1_minor == v2_minor) && (
                  (v1_hotfix < v2_hotfix) || ((v1_hotfix == v2_hotfix) && (

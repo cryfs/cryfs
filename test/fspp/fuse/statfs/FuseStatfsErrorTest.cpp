@@ -17,13 +17,13 @@ INSTANTIATE_TEST_SUITE_P(FuseStatfsErrorTest, FuseStatfsErrorTest, Values(EACCES
 TEST_F(FuseStatfsErrorTest, ReturnNoError) {
   ReturnIsFileOnLstat(FILENAME);
   EXPECT_CALL(*fsimpl, statfs(testing::_)).Times(1).WillOnce(Return());
-  int error = StatfsReturnError(FILENAME);
+  const int error = StatfsReturnError(FILENAME);
   EXPECT_EQ(0, error);
 }
 
 TEST_P(FuseStatfsErrorTest, ReturnError) {
   ReturnIsFileOnLstat(FILENAME);
   EXPECT_CALL(*fsimpl, statfs(testing::_)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
-  int error = StatfsReturnError(FILENAME);
+  const int error = StatfsReturnError(FILENAME);
   EXPECT_EQ(GetParam(), error);
 }

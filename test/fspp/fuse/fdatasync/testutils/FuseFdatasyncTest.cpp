@@ -5,7 +5,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
 void FuseFdatasyncTest::FdatasyncFile(const char *filename) {
-  int error = FdatasyncFileReturnError(filename);
+  const int error = FdatasyncFileReturnError(filename);
   EXPECT_EQ(0, error);
 }
 
@@ -17,7 +17,7 @@ int FuseFdatasyncTest::FdatasyncFileReturnError(const char *filename) {
   // This is MacOSX, which doesn't know fdatasync
   int retval = fcntl(fd->fd(), F_FULLFSYNC);
 #else
-  int retval = ::fdatasync(fd->fd());
+  const int retval = ::fdatasync(fd->fd());
 #endif
   if (retval != -1) {
     return 0;

@@ -16,6 +16,6 @@ int main(int argc, char *argv[])
 		std::cout << argv[i] << "\n";
 	}
 
-	int exit_status = static_cast<int>(std::strtol(argv[1], nullptr, 10));
+	const int exit_status = static_cast<int>(std::strtol(argv[1], nullptr, 10));
 	return exit_status;
 }

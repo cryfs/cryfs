@@ -29,7 +29,7 @@ int FuseReadDirTest::ReadDirReturnError(const char *dirname) {
   }
 
   auto result = make_unique_ref<vector<string>>();
-  int error = readDirEntriesAllowError(dir, result.get());
+  const int error = readDirEntriesAllowError(dir, result.get());
   closeDir(dir);
   return error;
 }
@@ -46,19 +46,19 @@ DIR *FuseReadDirTest::openDirAllowError(TempTestFS *fs, const char *dirname) {
 }
 
 void FuseReadDirTest::readDirEntries(DIR *dir, vector<string> *result) {
-  int error = readDirEntriesAllowError(dir, result);
+  const int error = readDirEntriesAllowError(dir, result);
   EXPECT_EQ(0, error);
 }
 
 int FuseReadDirTest::readDirEntriesAllowError(DIR *dir, vector<string> *result) {
   struct dirent *entry = nullptr;
-  int error = readNextDirEntryAllowError(dir, &entry);
+  const int error = readNextDirEntryAllowError(dir, &entry);
   if (error != 0) {
     return error;
   }
   while(entry != nullptr) {
     result->push_back(entry->d_name);
-    int error = readNextDirEntryAllowError(dir, &entry);
+    const int error = readNextDirEntryAllowError(dir, &entry);
     if (error != 0) {
       return error;
     }
@@ -73,7 +73,7 @@ int FuseReadDirTest::readNextDirEntryAllowError(DIR *dir, struct dirent **result
 }
 
 void FuseReadDirTest::closeDir(DIR *dir) {
-  int retval = ::closedir(dir);
+  const int retval = ::closedir(dir);
   EXPECT_EQ(0, retval) << "Closing dir failed";
 }
 

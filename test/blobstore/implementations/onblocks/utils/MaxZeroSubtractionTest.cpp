@@ -78,13 +78,13 @@ TEST_F(MaxZeroSubtractionTest, SubtractFromZero3) {
 }
 
 TEST_F(MaxZeroSubtractionTest, 64bit_valid) {
-  uint64_t value = UINT64_C(1024)*1024*1024*1024;
+  const uint64_t value = UINT64_C(1024)*1024*1024*1024;
   EXPECT_GT(value, std::numeric_limits<uint32_t>::max());
   EXPECT_EQ(value*1024-value, maxZeroSubtraction(value*1024, value));
 }
 
 TEST_F(MaxZeroSubtractionTest, 64bit_zero) {
-  uint64_t value = UINT64_C(1024)*1024*1024*1024;
+  const uint64_t value = UINT64_C(1024)*1024*1024*1024;
   EXPECT_GT(value, std::numeric_limits<uint32_t>::max());
   EXPECT_EQ(0u, maxZeroSubtraction(value, value*1024));
 }

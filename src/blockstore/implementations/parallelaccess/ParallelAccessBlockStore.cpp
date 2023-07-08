@@ -60,7 +60,7 @@ unique_ref<Block> ParallelAccessBlockStore::overwrite(const BlockId &blockId, Da
 }
 
 void ParallelAccessBlockStore::remove(unique_ref<Block> block) {
-  BlockId blockId = block->blockId();
+  const BlockId blockId = block->blockId();
   auto block_ref = dynamic_pointer_move<BlockRef>(block);
   ASSERT(block_ref != none, "Block is not a BlockRef");
   return _parallelAccessStore.remove(blockId, std::move(*block_ref));

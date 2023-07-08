@@ -4,6 +4,8 @@
 
 #include <sys/stat.h>
 
+#include <cstddef>
+
 #include "testutils/FileTest.h"
 
 //TODO Restructure. FsppFileTest tests fspp::File interface. All tests for fspp::Node interface go to a FsppNodeTest.

@@ -15,7 +15,7 @@ public:
   int fileid, flags;
   bool destructed;
 
-  ~MockOpenFile() {destructed = true;}
+  ~MockOpenFile() override {destructed = true;}
 
   MOCK_METHOD(OpenFile::stat_info, stat, (), (const, override));
   MOCK_METHOD(void, truncate, (fspp::num_bytes_t), (const, override));
@@ -62,28 +62,28 @@ TEST_F(FuseOpenFileListTest, EmptyList2) {
 }
 
 TEST_F(FuseOpenFileListTest, InvalidId) {
-  int valid_id = open();
-  int invalid_id = valid_id + 1;
+  const int valid_id = open();
+  const int invalid_id = valid_id + 1;
   ASSERT_THROW(list.load(invalid_id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, Open1AndGet) {
-  int id = open(FILEID1, FLAGS1);
+  const int id = open(FILEID1, FLAGS1);
   check(id, FILEID1, FLAGS1);
 }
 
 TEST_F(FuseOpenFileListTest, Open2AndGet) {
-  int id1 = open(FILEID1, FLAGS1);
-  int id2 = open(FILEID2, FLAGS2);
+  const int id1 = open(FILEID1, FLAGS1);
+  const int id2 = open(FILEID2, FLAGS2);
 
   check(id1, FILEID1, FLAGS1);
   check(id2, FILEID2, FLAGS2);
 }
 
 TEST_F(FuseOpenFileListTest, Open3AndGet) {
-  int id1 = open(FILEID1, FLAGS1);
-  int id2 = open(FILEID2, FLAGS2);
-  int id3 = open(FILEID3, FLAGS3);
+  const int id1 = open(FILEID1, FLAGS1);
+  const int id2 = open(FILEID2, FLAGS2);
+  const int id3 = open(FILEID3, FLAGS3);
 
   check(id1, FILEID1, FLAGS1);
   check(id3, FILEID3, FLAGS3);
@@ -102,7 +102,7 @@ TEST_F(FuseOpenFileListTest, Open3AndGet) {
 }*/
 
 TEST_F(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
-  int id = open();
+  const int id = open();
 
   ASSERT_NO_THROW(list.load(id, [](OpenFile*) {}));
   list.close(id);
@@ -110,7 +110,7 @@ TEST_F(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
 }
 
 TEST_F(FuseOpenFileListTest, GetClosedItemOnNonEmptyList) {
-  int id = open();
+  const int id = open();
   open();
 
   ASSERT_NO_THROW(list.load(id, [](OpenFile*) {}));
@@ -127,7 +127,7 @@ TEST_F(FuseOpenFileListTest, CloseOnEmptyList2) {
 }
 
 TEST_F(FuseOpenFileListTest, RemoveInvalidId) {
-  int valid_id = open();
-  int invalid_id = valid_id + 1;
+  const int valid_id = open();
+  const int invalid_id = valid_id + 1;
   ASSERT_THROW(list.close(invalid_id), std::out_of_range);
 }

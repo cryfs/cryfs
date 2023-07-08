@@ -39,14 +39,14 @@ namespace cpputils {
     }
 
     inline size_t ThreadsafeRandomDataBuffer::size() const {
-        boost::unique_lock<boost::mutex> lock(_mutex);
+        const boost::unique_lock<boost::mutex> lock(_mutex);
         return _buffer.size();
     }
 
     inline void ThreadsafeRandomDataBuffer::get(void *target, size_t numBytes) {
         size_t alreadyGotten = 0;
         while (alreadyGotten < numBytes) {
-            size_t got = _get(static_cast<uint8_t*>(target)+alreadyGotten, numBytes);
+            const size_t got = _get(static_cast<uint8_t*>(target)+alreadyGotten, numBytes);
             alreadyGotten += got;
             ASSERT(alreadyGotten <= numBytes, "Got too many bytes");
         }
@@ -57,14 +57,14 @@ namespace cpputils {
         _dataAddedCv.wait(lock, [this] {
            return _buffer.size() > 0;
         });
-        size_t gettableBytes = (std::min)(_buffer.size(), numBytes);
+        const size_t gettableBytes = (std::min)(_buffer.size(), numBytes);
         _buffer.get(target, gettableBytes);
         _dataGottenCv.notify_all();
         return gettableBytes;
     }
 
     inline void ThreadsafeRandomDataBuffer::add(const Data& data) {
-        boost::unique_lock<boost::mutex> lock(_mutex);
+        const boost::unique_lock<boost::mutex> lock(_mutex);
         _buffer.add(data);
         _dataAddedCv.notify_all();
     }

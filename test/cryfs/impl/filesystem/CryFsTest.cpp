@@ -78,12 +78,12 @@ TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
     CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     dev.setContext(fspp::Context {fspp::relatime()});
   }
-  Data configAfterCreating = Data::LoadFromFile(config.path()).value();
+  const Data configAfterCreating = Data::LoadFromFile(config.path()).value();
   {
     CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
     dev.setContext(fspp::Context {fspp::relatime()});
   }
-  Data configAfterLoading = Data::LoadFromFile(config.path()).value();
+  const Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);
 }
 

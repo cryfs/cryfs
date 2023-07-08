@@ -2,7 +2,7 @@
 #include <cpp-utils/system/filetime.h>
 
 void FuseUtimensTest::Utimens(const char *filename, timespec lastAccessTime, timespec lastModificationTime) {
-  int error = UtimensReturnError(filename, lastAccessTime, lastModificationTime);
+  const int error = UtimensReturnError(filename, lastAccessTime, lastModificationTime);
   EXPECT_EQ(0, error);
 }
 

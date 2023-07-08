@@ -1,6 +1,5 @@
 #include "FsBlobView.h"
 
-using cpputils::Data;
 
 namespace cryfs {
     constexpr uint16_t FsBlobView::FORMAT_VERSION_HEADER;

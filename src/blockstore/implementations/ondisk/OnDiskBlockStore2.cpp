@@ -19,7 +19,7 @@ constexpr const char* ALLOWED_BLOCKID_CHARACTERS = "0123456789ABCDEF";
 }
 
 boost::filesystem::path OnDiskBlockStore2::_getFilepath(const BlockId &blockId) const {
-  std::string blockIdStr = blockId.ToString();
+  const std::string blockIdStr = blockId.ToString();
   return _rootDir / blockIdStr.substr(0, PREFIX_LENGTH) / blockIdStr.substr(PREFIX_LENGTH);
 }
 
@@ -66,7 +66,7 @@ bool OnDiskBlockStore2::remove(const BlockId &blockId) {
   if (!boost::filesystem::is_regular_file(filepath)) { // TODO Is this branch necessary?
     return false;
   }
-  bool retval = boost::filesystem::remove(filepath);
+  const bool retval = boost::filesystem::remove(filepath);
   if (!retval) {
     cpputils::logging::LOG(cpputils::logging::ERR, "Couldn't find block {} to remove", blockId.ToString());
     return false;
@@ -121,14 +121,14 @@ void OnDiskBlockStore2::forEachBlock(std::function<void (const BlockId &)> callb
       continue;
     }
 
-    std::string blockIdPrefix = prefixDir->path().filename().string();
+    const std::string blockIdPrefix = prefixDir->path().filename().string();
     if (blockIdPrefix.size() != PREFIX_LENGTH || std::string::npos != blockIdPrefix.find_first_not_of(ALLOWED_BLOCKID_CHARACTERS)) {
       // directory has wrong length or an invalid character
       continue;
     }
 
     for (auto block = boost::filesystem::directory_iterator(prefixDir->path()); block != boost::filesystem::directory_iterator(); ++block) {
-      std::string blockIdPostfix = block->path().filename().string();
+      const std::string blockIdPostfix = block->path().filename().string();
       if (blockIdPostfix.size() != POSTFIX_LENGTH || std::string::npos != blockIdPostfix.find_first_not_of(ALLOWED_BLOCKID_CHARACTERS)) {
         // filename has wrong length or an invalid character
         continue;

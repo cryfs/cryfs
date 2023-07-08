@@ -123,7 +123,7 @@ SignalCatcher::SignalCatcher(std::initializer_list<int> signals)
     //  - the _signal_occurred flag will not be destructed as long as the signal handler might be called (i.e. as long as _impls lives)
 
     _impls.reserve(signals.size());
-    for (int signal : signals) {
+    for (const int signal : signals) {
         _impls.emplace_back(make_unique<details::SignalCatcherImpl>(signal, &_signal_occurred));
     }
 }

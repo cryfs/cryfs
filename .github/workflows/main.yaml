@@ -180,9 +180,9 @@ jobs:
           - name: Local dependencies
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
             extra_cxxflags: ""
@@ -193,9 +193,9 @@ jobs:
           - name: Local dependencies
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
             extra_cxxflags: ""
@@ -218,9 +218,9 @@ jobs:
           - name: Werror clang
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: -DUSE_WERROR=on
             extra_cxxflags: ""
@@ -230,9 +230,9 @@ jobs:
           - name: No compatibility
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: ""
             extra_cxxflags: "-DCRYFS_NO_COMPATIBILITY"
@@ -241,12 +241,11 @@ jobs:
             run_build: true
             run_tests: true
           - name: ASAN
-            # TODO Update to ubuntu-22.04
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: Debug
             # OpenMP crashes under asan. Disable OpenMP.
             # TODO is it enough to replace this with omp_num_threads: 1 ?
@@ -257,12 +256,11 @@ jobs:
             run_build: true
             run_tests: true
           - name: UBSAN
-            # TODO Update to ubuntu-22.04
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: Debug
             # OpenMP crashes under ubsan. Disable OpenMP.
             # TODO is it enough to replace this with omp_num_threads: 1 ?
@@ -273,12 +271,11 @@ jobs:
             run_build: true
             run_tests: true
           - name: TSAN
-            # TODO Update to ubuntu-22.04
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 libomp5-15 libomp-15-dev
             build_type: Debug
             extra_cmake_flags: ""
             extra_cxxflags: "-O2 -fsanitize=thread -fno-omit-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
@@ -290,9 +287,9 @@ jobs:
           - name: clang-tidy
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 clang-tidy-11 libomp5-11 libomp-11-dev
+              cxx: clang++-15
+              cc: clang-15
+              apt_package: clang-15 clang-tidy-15 libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: ""
             extra_cxxflags: ""

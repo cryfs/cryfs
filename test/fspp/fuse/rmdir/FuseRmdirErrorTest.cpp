@@ -17,6 +17,6 @@ TEST_P(FuseRmdirErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, rmdir(Eq(DIRNAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = RmdirReturnError(DIRNAME);
+  const int error = RmdirReturnError(DIRNAME);
   EXPECT_EQ(GetParam(), error);
 }

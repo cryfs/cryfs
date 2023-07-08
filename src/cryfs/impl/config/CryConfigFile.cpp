@@ -74,7 +74,7 @@ void CryConfigFile::save() const {
     if (_access == Access::ReadOnly) {
         throw std::logic_error("Tried to save the cryfs.config file while being in read only mode");
     }
-    Data configData = _config.save();
+    const Data configData = _config.save();
     auto encrypted = _encryptor->encrypt(configData, _config.Cipher());
     encrypted.StoreToFile(_path);
 }

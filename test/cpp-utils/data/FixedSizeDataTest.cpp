@@ -34,32 +34,32 @@ public:
 constexpr size_t FixedSizeDataTest::SIZE;
 
 TEST_F(FixedSizeDataTest, EqualsTrue) {
-  FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
-  FixedSizeData<SIZE> DATA1_2 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> DATA1_2 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
 
   EXPECT_TRUE(DATA1_1 == DATA1_2);
   EXPECT_TRUE(DATA1_2 == DATA1_1);
 }
 
 TEST_F(FixedSizeDataTest, EqualsFalse) {
-  FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
-  FixedSizeData<SIZE> DATA2_1 = FixedSizeData<SIZE>::FromString(DATA2_AS_STRING);
+  const FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> DATA2_1 = FixedSizeData<SIZE>::FromString(DATA2_AS_STRING);
 
   EXPECT_FALSE(DATA1_1 == DATA2_1);
   EXPECT_FALSE(DATA2_1 == DATA1_1);
 }
 
 TEST_F(FixedSizeDataTest, NotEqualsFalse) {
-  FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
-  FixedSizeData<SIZE> DATA1_2 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> DATA1_2 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
 
   EXPECT_FALSE(DATA1_1 != DATA1_2);
   EXPECT_FALSE(DATA1_2 != DATA1_1);
 }
 
 TEST_F(FixedSizeDataTest, NotEqualsTrue) {
-  FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
-  FixedSizeData<SIZE> DATA2_1 = FixedSizeData<SIZE>::FromString(DATA2_AS_STRING);
+  const FixedSizeData<SIZE> DATA1_1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> DATA2_1 = FixedSizeData<SIZE>::FromString(DATA2_AS_STRING);
 
   EXPECT_TRUE(DATA1_1 != DATA2_1);
   EXPECT_TRUE(DATA2_1 != DATA1_1);
@@ -69,13 +69,13 @@ class FixedSizeDataTestWithStringParam: public FixedSizeDataTest, public WithPar
 INSTANTIATE_TEST_SUITE_P(FixedSizeDataTestWithStringParam, FixedSizeDataTestWithStringParam, Values("2898B4B8A13CA63CBE0F0278CCE465DB", "6FFEBAD90C0DAA2B79628F0627CE9841"));
 
 TEST_P(FixedSizeDataTestWithStringParam, FromAndToString) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromString(GetParam());
+  const FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromString(GetParam());
   EXPECT_EQ(GetParam(), data.ToString());
 }
 
 TEST_P(FixedSizeDataTestWithStringParam, ToAndFromString) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromString(GetParam());
-  FixedSizeData<SIZE> data2 = FixedSizeData<SIZE>::FromString(data.ToString());
+  const FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromString(GetParam());
+  const FixedSizeData<SIZE> data2 = FixedSizeData<SIZE>::FromString(data.ToString());
   EXPECT_EQ(data, data2);
 }
 
@@ -89,22 +89,22 @@ const Data FixedSizeDataTestWithBinaryParam::VALUE2(DataFixture::generate(SIZE, 
 INSTANTIATE_TEST_SUITE_P(FixedSizeDataTestWithBinaryParam, FixedSizeDataTestWithBinaryParam, Values(&FixedSizeDataTestWithBinaryParam::VALUE1, &FixedSizeDataTestWithBinaryParam::VALUE2));
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
+  const FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   EXPECT_DATA_EQ(*GetParam(), data);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, FromAndToBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
+  const FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   Data output(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(output.data());
   EXPECT_EQ(*GetParam(), output);
 }
 
 TEST_P(FixedSizeDataTestWithBinaryParam, ToAndFromBinary) {
-  FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
+  const FixedSizeData<SIZE> data = FixedSizeData<SIZE>::FromBinary(GetParam()->data());
   Data stored(FixedSizeData<SIZE>::BINARY_LENGTH);
   data.ToBinary(stored.data());
-  FixedSizeData<SIZE> loaded = FixedSizeData<SIZE>::FromBinary(stored.data());
+  const FixedSizeData<SIZE> loaded = FixedSizeData<SIZE>::FromBinary(stored.data());
   EXPECT_EQ(data, loaded);
 }
 
@@ -112,7 +112,7 @@ class FixedSizeDataTestWithParam: public FixedSizeDataTest, public WithParamInte
 INSTANTIATE_TEST_SUITE_P(FixedSizeDataTestWithParam, FixedSizeDataTestWithParam, Values(FixedSizeData<FixedSizeDataTest::SIZE>::FromString("2898B4B8A13CA63CBE0F0278CCE465DB"), FixedSizeData<FixedSizeDataTest::SIZE>::FromString("6FFEBAD90C0DAA2B79628F0627CE9841")));
 
 TEST_P(FixedSizeDataTestWithParam, CopyConstructor) {
-  FixedSizeData<SIZE> copy(GetParam());
+  const FixedSizeData<SIZE> copy(GetParam());
   EXPECT_EQ(GetParam(), copy);
 }
 
@@ -141,8 +141,8 @@ TEST_P(FixedSizeDataTestWithParam, Drop_One) {
 }
 
 TEST_P(FixedSizeDataTestWithParam, Take_Nothing) {
-  FixedSizeData<SIZE> source(GetParam());
-  FixedSizeData<0> taken = source.take<0>();
+  const FixedSizeData<SIZE> source(GetParam());
+  const FixedSizeData<0> taken = source.take<0>();
   (void)taken; // silence unused variable warning
 }
 
@@ -159,14 +159,14 @@ TEST_P(FixedSizeDataTestWithParam, Take_All) {
 }
 
 TEST_P(FixedSizeDataTestWithParam, Drop_All) {
-  FixedSizeData<SIZE> source(GetParam());
-  FixedSizeData<0> taken = source.drop<SIZE>();
+  const FixedSizeData<SIZE> source(GetParam());
+  const FixedSizeData<0> taken = source.drop<SIZE>();
   (void)taken; // silence unused variable warning
 }
 
 TEST_F(FixedSizeDataTest, CopyConstructorDoesntChangeSource) {
-  FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
-  FixedSizeData<SIZE> data2(data1);
+  const FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> data2(data1);
   EXPECT_EQ(DATA1_AS_STRING, data1.ToString());
   (void)data2; // silence unused variable warning
 }
@@ -179,7 +179,7 @@ TEST_P(FixedSizeDataTestWithParam, IsEqualAfterAssignment1) {
 }
 
 TEST_F(FixedSizeDataTest, AssignmentDoesntChangeSource) {
-  FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
+  const FixedSizeData<SIZE> data1 = FixedSizeData<SIZE>::FromString(DATA1_AS_STRING);
   FixedSizeData<SIZE> data2 = FixedSizeData<SIZE>::FromString(DATA2_AS_STRING);
   data2 = data1;
   EXPECT_EQ(DATA1_AS_STRING, data1.ToString());

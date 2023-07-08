@@ -56,23 +56,23 @@ public:
 TYPED_TEST_SUITE_P(BlockStore2Test);
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   EXPECT_FALSE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds) {
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   EXPECT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_thenSucceeds) {
   this->blockStore->create(cpputils::Data(512));
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   EXPECT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenLoadExistingBlock_thenSucceeds) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   EXPECT_NE(boost::none, this->blockStore->load(blockId));
 }
 
@@ -88,7 +88,7 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenLoadNonexistingBlock_t
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringExistingBlock_thenSucceeds) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   this->blockStore->store(blockId, cpputils::Data(1024));
 }
 
@@ -104,20 +104,20 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringNonexistingBloc
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingTwoBlocks_thenTheyGetDifferentKeys) {
-  blockstore::BlockId blockId1 = this->blockStore->create(cpputils::Data(1024));
-  blockstore::BlockId blockId2 = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId1 = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId2 = this->blockStore->create(cpputils::Data(1024));
   EXPECT_NE(blockId1, blockId2);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenOtherwiseEmptyBlockStore_whenRemovingBlock_thenBlockIsNotLoadableAnymore) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   EXPECT_NE(boost::none, this->blockStore->load(blockId));
   EXPECT_TRUE(this->blockStore->remove(blockId));
   EXPECT_EQ(boost::none, this->blockStore->load(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingBlock_thenBlockIsNotLoadableAnymore) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   this->blockStore->create(cpputils::Data(512));
   EXPECT_NE(boost::none, this->blockStore->load(blockId));
   EXPECT_TRUE(this->blockStore->remove(blockId));
@@ -125,12 +125,12 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingBlock_thenBloc
 }
 
 TYPED_TEST_P(BlockStore2Test, givenOtherwiseEmptyBlockStore_whenRemovingExistingBlock_thenSucceeds) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   EXPECT_TRUE(this->blockStore->remove(blockId));
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingExistingBlock_thenSucceeds) {
-  blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
+  const blockstore::BlockId blockId = this->blockStore->create(cpputils::Data(1024));
   this->blockStore->create(cpputils::Data(512));
   EXPECT_EQ(true, this->blockStore->remove(blockId));
 }
@@ -142,8 +142,8 @@ TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenRemovingNonexistingBlock_
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails) {
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
-  blockstore::BlockId differentKey = blockstore::BlockId::FromString("290AC2C7097274A389EE14B91B72B493");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  const blockstore::BlockId differentKey = blockstore::BlockId::FromString("290AC2C7097274A389EE14B91B72B493");
   ASSERT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(1024)));
   EXPECT_EQ(false, this->blockStore->remove(differentKey));
 }
@@ -162,7 +162,7 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCreatingAndLoadingEmpt
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   auto blockId = this->blockStore->create(data.copy());
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
@@ -170,21 +170,21 @@ TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenCreatingAndLoadingNonEmpt
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   auto blockId = this->blockStore->create(data.copy());
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
   ASSERT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(0)));
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(0u, loaded.size());
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
   this->blockStore->create(cpputils::Data(512));
   ASSERT_TRUE(this->blockStore->tryCreate(blockId, cpputils::Data(0)));
   auto loaded = this->blockStore->load(blockId).value();
@@ -192,17 +192,17 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingE
 }
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   ASSERT_TRUE(this->blockStore->tryCreate(blockId, data.copy()));
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
 }
 
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenTryCreatingAndLoadingNonEmptyBlock_thenCorrectBlockLoads) {
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772973");
   this->blockStore->create(cpputils::Data(512));
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   ASSERT_TRUE(this->blockStore->tryCreate(blockId, data.copy()));
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(loaded, data);
@@ -225,7 +225,7 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingNonEx
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingNonExistingNonEmptyBlock_thenCorrectBlockLoads) {
   const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   this->blockStore->store(blockId, data.copy());
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
@@ -234,7 +234,7 @@ TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingNonExist
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingNonExistingNonEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
   const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   this->blockStore->store(blockId, data.copy());
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
@@ -257,7 +257,7 @@ TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingExist
 
 TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingExistingNonEmptyBlock_thenCorrectBlockLoads) {
   auto blockId = this->blockStore->create(cpputils::Data(512));
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   this->blockStore->store(blockId, data.copy());
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
@@ -266,7 +266,7 @@ TYPED_TEST_P(BlockStore2Test, givenEmptyBlockStore_whenStoringAndLoadingExisting
 TYPED_TEST_P(BlockStore2Test, givenNonEmptyBlockStore_whenStoringAndLoadingExistingNonEmptyBlock_thenCorrectBlockLoads) {
   this->blockStore->create(cpputils::Data(512));
   auto blockId = this->blockStore->create(cpputils::Data(512));
-  cpputils::Data data = cpputils::DataFixture::generate(1024);
+  const cpputils::Data data = cpputils::DataFixture::generate(1024);
   this->blockStore->store(blockId, data.copy());
   auto loaded = this->blockStore->load(blockId).value();
   EXPECT_EQ(data, loaded);
@@ -296,7 +296,7 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterCreatingOneBlock) {
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingTheLastBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
+  const blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
   EXPECT_TRUE(blockStore->remove(blockId));
   EXPECT_EQ(0u, blockStore->numBlocks());
 }
@@ -310,7 +310,7 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterCreatingTwoBlocks) {
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterRemovingABlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
+  const blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
   blockStore->create(cpputils::Data(1));
   EXPECT_TRUE(blockStore->remove(blockId));
   EXPECT_EQ(1u, blockStore->numBlocks());
@@ -325,7 +325,7 @@ TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterStoringANewBlock) {
 
 TYPED_TEST_P(BlockStore2Test, NumBlocksIsCorrectAfterStoringAnExistingBlock) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
+  const blockstore::BlockId blockId = blockStore->create(cpputils::Data(1));
   blockStore->store(blockId, cpputils::Data(1));
   EXPECT_EQ(1u, blockStore->numBlocks());
 }
@@ -385,21 +385,21 @@ TYPED_TEST_P(BlockStore2Test, ForEachBlock_doesntListRemovedBlocks_twoblocks) {
 
 TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndSameSize) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
   EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }
 
 TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndDifferentSize) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
   EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(4096)));
 }
 
 TYPED_TEST_P(BlockStore2Test, TryCreateTwoBlocksWithSameBlockIdAndFirstNullSize) {
   auto blockStore = this->fixture.createBlockStore();
-  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   EXPECT_TRUE(blockStore->tryCreate(blockId, cpputils::Data(0)));
   EXPECT_FALSE(blockStore->tryCreate(blockId, cpputils::Data(1024)));
 }

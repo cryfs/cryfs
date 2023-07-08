@@ -18,21 +18,21 @@ TEST(TimeTest, DoesntCrash) {
 }
 
 TEST(TimeTest, IsLaterThanYear2010) {
-    struct timespec current_time = now();
+    const struct timespec current_time = now();
     constexpr time_t year_2010_timestamp = 1262304000;
     EXPECT_LT(year_2010_timestamp, current_time.tv_sec);
 }
 
 TEST(TimeTest, IsNondecreasing) {
-    uint64_t time1 = _to_nanos(now());
-    uint64_t time2 = _to_nanos(now());
+    const uint64_t time1 = _to_nanos(now());
+    const uint64_t time2 = _to_nanos(now());
     EXPECT_LE(time1, time2);
 }
 
 TEST(TimeTest, IsIncreasedAfterPause) {
-    uint64_t time1 = _to_nanos(now());
+    const uint64_t time1 = _to_nanos(now());
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    uint64_t time2 = _to_nanos(now());
+    const uint64_t time2 = _to_nanos(now());
     EXPECT_LT(time1, time2);
 }
 

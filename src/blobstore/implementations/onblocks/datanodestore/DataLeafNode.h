@@ -15,7 +15,7 @@ public:
   static cpputils::unique_ref<DataLeafNode> OverwriteNode(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, const blockstore::BlockId &blockId, cpputils::Data data);
 
   DataLeafNode(DataNodeView block);
-  ~DataLeafNode();
+  ~DataLeafNode() override;
 
   //Returning uint64_t, because calculations handling this probably need to be done in 64bit to support >4GB blobs.
   uint64_t maxStoreableBytes() const;

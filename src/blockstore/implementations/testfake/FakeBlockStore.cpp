@@ -23,7 +23,7 @@ BlockId FakeBlockStore::createBlockId() {
 }
 
 optional<unique_ref<Block>> FakeBlockStore::tryCreate(const BlockId &blockId, Data data) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   auto insert_result = _blocks.emplace(blockId, std::move(data));
 
   if (!insert_result.second) {
@@ -35,7 +35,7 @@ optional<unique_ref<Block>> FakeBlockStore::tryCreate(const BlockId &blockId, Da
 }
 
 unique_ref<Block> FakeBlockStore::overwrite(const BlockId &blockId, Data data) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   auto insert_result = _blocks.emplace(blockId, data.copy());
 
   if (!insert_result.second) {
@@ -50,7 +50,7 @@ unique_ref<Block> FakeBlockStore::overwrite(const BlockId &blockId, Data data) {
 }
 
 optional<unique_ref<Block>> FakeBlockStore::load(const BlockId &blockId) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   return _load(blockId);
 }
 
@@ -64,8 +64,8 @@ optional<unique_ref<Block>> FakeBlockStore::_load(const BlockId &blockId) {
 }
 
 void FakeBlockStore::remove(const BlockId &blockId) {
-  std::unique_lock<std::mutex> lock(_mutex);
-  int numRemoved = _blocks.erase(blockId);
+  const std::unique_lock<std::mutex> lock(_mutex);
+  const size_t numRemoved = _blocks.erase(blockId);
   ASSERT(numRemoved == 1, "Block not found");
 }
 
@@ -76,7 +76,7 @@ unique_ref<Block> FakeBlockStore::makeFakeBlockFromData(const BlockId &blockId, 
 }
 
 void FakeBlockStore::updateData(const BlockId &blockId, const Data &data) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
     auto insertResult = _blocks.emplace(blockId, data.copy());
@@ -88,7 +88,7 @@ void FakeBlockStore::updateData(const BlockId &blockId, const Data &data) {
 }
 
 uint64_t FakeBlockStore::numBlocks() const {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   return _blocks.size();
 }
 

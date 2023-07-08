@@ -1,3 +1,5 @@
+#include <cstddef>
+
 #include "testutils/FuseReadTest.h"
 
 #include "fspp/fs_interface/FuseErrnoException.h"

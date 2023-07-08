@@ -12,7 +12,7 @@ class CompressorTest: public ::testing::Test {
 public:
     void EXPECT_COMPRESS_AND_DECOMPRESS_IS_IDENTITY(const Data &data) {
         Data compressed = Compressor::Compress(data);
-        Data decompressed = Compressor::Decompress(compressed.data(), compressed.size());
+        const Data decompressed = Compressor::Decompress(compressed.data(), compressed.size());
         EXPECT_EQ(data, decompressed);
     }
 };
@@ -20,12 +20,12 @@ public:
 TYPED_TEST_SUITE_P(CompressorTest);
 
 TYPED_TEST_P(CompressorTest, Empty) {
-  Data empty(0);
+  const Data empty(0);
   this->EXPECT_COMPRESS_AND_DECOMPRESS_IS_IDENTITY(empty);
 }
 
 TYPED_TEST_P(CompressorTest, ArbitraryData) {
-  Data fixture = DataFixture::generate(10240);
+  const Data fixture = DataFixture::generate(10240);
   this->EXPECT_COMPRESS_AND_DECOMPRESS_IS_IDENTITY(fixture);
 }
 
@@ -53,7 +53,7 @@ TYPED_TEST_P(CompressorTest, RunsAndArbitrary) {
 
 TYPED_TEST_P(CompressorTest, LargeData) {
     // this is larger than what fits into 16bit (16bit are for example used as run length indicator in RunLengthEncoding)
-    Data fixture = DataFixture::generate(200000);
+    const Data fixture = DataFixture::generate(200000);
     this->EXPECT_COMPRESS_AND_DECOMPRESS_IS_IDENTITY(fixture);
 }
 

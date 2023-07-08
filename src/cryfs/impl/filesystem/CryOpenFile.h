@@ -12,7 +12,7 @@ class CryDevice;
 class CryOpenFile final: public fspp::OpenFile {
 public:
   explicit CryOpenFile(const CryDevice *device, std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> parent, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
-  ~CryOpenFile();
+  ~CryOpenFile() override;
 
   stat_info stat() const override;
   void truncate(fspp::num_bytes_t size) const override;

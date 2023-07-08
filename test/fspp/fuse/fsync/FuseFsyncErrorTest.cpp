@@ -18,6 +18,6 @@ TEST_P(FuseFsyncErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, fsync(0))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = FsyncFileReturnError(FILENAME);
+  const int error = FsyncFileReturnError(FILENAME);
   EXPECT_EQ(GetParam(), error);
 }

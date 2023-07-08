@@ -21,30 +21,30 @@ public:
 
 TEST_F(QueueMapTest_MoveConstructor, PushingAndPopping_MoveIntoMap) {
   map->push(MinimalKeyType::create(0), CopyableMovableValueType(2));
-  CopyableMovableValueType val = map->pop().value();
+  const CopyableMovableValueType val = map->pop().value();
   val.value(); //Access it to avoid the compiler optimizing the assignment away
   EXPECT_EQ(0, CopyableMovableValueType::numCopyConstructorCalled);
 }
 
 TEST_F(QueueMapTest_MoveConstructor, PushingAndPoppingPerKey_MoveIntoMap) {
   map->push(MinimalKeyType::create(0), CopyableMovableValueType(2));
-  CopyableMovableValueType val = map->pop(MinimalKeyType::create(0)).value();
+  const CopyableMovableValueType val = map->pop(MinimalKeyType::create(0)).value();
   val.value(); //Access it to avoid the compiler optimizing the assignment away
   EXPECT_EQ(0, CopyableMovableValueType::numCopyConstructorCalled);
 }
 
 TEST_F(QueueMapTest_MoveConstructor, PushingAndPopping_CopyIntoMap) {
-  CopyableMovableValueType value(2);
+  const CopyableMovableValueType value(2);
   map->push(MinimalKeyType::create(0), value);
-  CopyableMovableValueType val = map->pop().value();
+  const CopyableMovableValueType val = map->pop().value();
   val.value(); //Access it to avoid the compiler optimizing the assignment away
   EXPECT_EQ(1, CopyableMovableValueType::numCopyConstructorCalled);
 }
 
 TEST_F(QueueMapTest_MoveConstructor, PushingAndPoppingPerKey_CopyIntoMap) {
-  CopyableMovableValueType value(2);
+  const CopyableMovableValueType value(2);
   map->push(MinimalKeyType::create(0), value);
-  CopyableMovableValueType val = map->pop(MinimalKeyType::create(0)).value();
+  const CopyableMovableValueType val = map->pop(MinimalKeyType::create(0)).value();
   val.value(); //Access it to avoid the compiler optimizing the assignment away
   EXPECT_EQ(1, CopyableMovableValueType::numCopyConstructorCalled);
 }

@@ -13,7 +13,7 @@ namespace blockstore {
 namespace lowtohighlevel {
 
 optional<unique_ref<LowToHighLevelBlock>> LowToHighLevelBlock::TryCreateNew(BlockStore2 *baseBlockStore, const BlockId &blockId, Data data) {
-  bool success = baseBlockStore->tryCreate(blockId, data);
+  const bool success = baseBlockStore->tryCreate(blockId, data);
   if (!success) {
     return none;
   }
@@ -43,7 +43,7 @@ LowToHighLevelBlock::LowToHighLevelBlock(const BlockId &blockId, Data data, Bloc
 }
 
 LowToHighLevelBlock::~LowToHighLevelBlock() {
-  unique_lock<mutex> lock(_mutex);
+  const unique_lock<mutex> lock(_mutex);
   _storeToBaseBlock();
 }
 
@@ -58,7 +58,7 @@ void LowToHighLevelBlock::write(const void *source, uint64_t offset, uint64_t co
 }
 
 void LowToHighLevelBlock::flush() {
-  unique_lock<mutex> lock(_mutex);
+  const unique_lock<mutex> lock(_mutex);
   _storeToBaseBlock();
 }
 

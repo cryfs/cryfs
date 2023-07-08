@@ -24,29 +24,29 @@ public:
 };
 
 TEST_F(OuterConfigTest, SomeValues) {
-    Data serialized = OuterConfig{kdfParameters(), DataFixture::generate(1024), false}.serialize();
-    OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
+    const Data serialized = OuterConfig{kdfParameters(), DataFixture::generate(1024), false}.serialize();
+    const OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
     EXPECT_EQ(kdfParameters(), deserialized.kdfParameters);
     EXPECT_EQ(DataFixture::generate(1024), deserialized.encryptedInnerConfig);
 }
 
 TEST_F(OuterConfigTest, DataEmpty) {
-    Data serialized = OuterConfig{kdfParameters(), Data(0), false}.serialize();
-    OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
+    const Data serialized = OuterConfig{kdfParameters(), Data(0), false}.serialize();
+    const OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
     EXPECT_EQ(kdfParameters(), deserialized.kdfParameters);
     EXPECT_EQ(Data(0), deserialized.encryptedInnerConfig);
 }
 
 TEST_F(OuterConfigTest, KeyConfigEmpty) {
-    Data serialized = OuterConfig{Data(0), DataFixture::generate(1024), false}.serialize();
-    OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
+    const Data serialized = OuterConfig{Data(0), DataFixture::generate(1024), false}.serialize();
+    const OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
     EXPECT_EQ(Data(0), deserialized.kdfParameters);
     EXPECT_EQ(DataFixture::generate(1024), deserialized.encryptedInnerConfig);
 }
 
 TEST_F(OuterConfigTest, DataAndKeyConfigEmpty) {
-    Data serialized = OuterConfig{Data(0), Data(0), false}.serialize();
-    OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
+    const Data serialized = OuterConfig{Data(0), Data(0), false}.serialize();
+    const OuterConfig deserialized = OuterConfig::deserialize(serialized).value();
     EXPECT_EQ(Data(0), deserialized.kdfParameters);
     EXPECT_EQ(Data(0), deserialized.encryptedInnerConfig);
 }

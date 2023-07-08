@@ -31,7 +31,7 @@ public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
-    BlockId blockId = root->blockId();
+    const BlockId blockId = root->blockId();
     cpputils::destruct(std::move(root));
     return treeStore.load(blockId).value();
   }
@@ -111,9 +111,9 @@ public:
   }
 
   void GrowTree(DataTree *tree) {
-    uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
-    uint64_t offset = traversalBeginIndex * maxBytesPerLeaf;
-    uint64_t count = newNumberOfLeaves * maxBytesPerLeaf - offset;
+    const uint64_t maxBytesPerLeaf = tree->maxBytesPerLeaf();
+    const uint64_t offset = traversalBeginIndex * maxBytesPerLeaf;
+    const uint64_t count = newNumberOfLeaves * maxBytesPerLeaf - offset;
     Data data(count);
     data.FillWithZeroes();
     tree->writeBytes(data.data(), offset, count);
@@ -201,22 +201,22 @@ TEST_P(DataTreeTest_ResizeByTraversing_P, NumLeavesIsCorrect) {
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, DepthFlagsAreCorrect) {
   GrowTree(tree.get());
-  uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode()));
+  const uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeByTraversing::LAYOUT.maxChildrenPerInnerNode()));
   CHECK_DEPTH(depth, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, KeyDoesntChange) {
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   tree->flush();
   GrowTree(tree.get());
   EXPECT_EQ(blockId, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeByTraversing_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
+  const uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
 
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
   data.FillInto(nodeStore->load(blockId).get().get());
 

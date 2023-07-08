@@ -8,6 +8,6 @@ TEST(GetTotalMemoryTest, DoesntCrash) {
 }
 
 TEST(GetTotalMemoryTest, IsNotZero) {
-    uint64_t mem = get_total_memory();
+    const uint64_t mem = get_total_memory();
     EXPECT_LT(UINT64_C(0), mem);
 }

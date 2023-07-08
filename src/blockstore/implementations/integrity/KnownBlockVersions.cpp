@@ -23,25 +23,27 @@ constexpr uint32_t KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK;
 
 KnownBlockVersions::KnownBlockVersions(const bf::path &stateFilePath, uint32_t myClientId)
         :_integrityViolationOnPreviousRun(false), _knownVersions(), _lastUpdateClientId(), _stateFilePath(stateFilePath), _myClientId(myClientId), _mutex(), _valid(true) {
-    unique_lock<mutex> lock(_mutex);
+    const unique_lock<mutex> lock(_mutex);
     ASSERT(_myClientId != CLIENT_ID_FOR_DELETED_BLOCK, "This is not a valid client id");
     _loadStateFile();
 }
 
 KnownBlockVersions::KnownBlockVersions(KnownBlockVersions &&rhs) // NOLINT (intentionally not noexcept)
         : _integrityViolationOnPreviousRun(false), _knownVersions(), _lastUpdateClientId(), _stateFilePath(), _myClientId(0), _mutex(), _valid(true) {
-    unique_lock<mutex> rhsLock(rhs._mutex);
-    unique_lock<mutex> lock(_mutex);
+    const unique_lock<mutex> rhsLock(rhs._mutex);
+    const unique_lock<mutex> lock(_mutex);
+    // NOLINTBEGIN(cppcoreguidelines-prefer-member-initializer) -- we need to initialize those within the mutexes
     _integrityViolationOnPreviousRun = rhs._integrityViolationOnPreviousRun;
     _knownVersions = std::move(rhs._knownVersions);
     _lastUpdateClientId = std::move(rhs._lastUpdateClientId);
     _stateFilePath = std::move(rhs._stateFilePath);
     _myClientId = rhs._myClientId;
     rhs._valid = false;
+    // NOLINTEND(cppcoreguidelines-prefer-member-initializer)
 }
 
 KnownBlockVersions::~KnownBlockVersions() {
-    unique_lock<mutex> lock(_mutex);
+    const unique_lock<mutex> lock(_mutex);
     if (_valid) {
         _saveStateFile();
     }
@@ -56,7 +58,7 @@ bool KnownBlockVersions::integrityViolationOnPreviousRun() const {
 }
 
 bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const BlockId &blockId, uint64_t version) {
-    unique_lock<mutex> lock(_mutex);
+    const unique_lock<mutex> lock(_mutex);
     ASSERT(clientId != CLIENT_ID_FOR_DELETED_BLOCK, "This is not a valid client id");
 
     ASSERT(version > 0, "Version has to be >0"); // Otherwise we wouldn't handle notexisting entries correctly.
@@ -81,9 +83,9 @@ bool KnownBlockVersions::checkAndUpdateVersion(uint32_t clientId, const BlockId 
 }
 
 uint64_t KnownBlockVersions::incrementVersion(const BlockId &blockId) {
-    unique_lock<mutex> lock(_mutex);
+    const unique_lock<mutex> lock(_mutex);
     uint64_t &found = _knownVersions[{_myClientId, blockId}]; // If the entry doesn't exist, this creates it with value 0.
-    uint64_t newVersion = found + 1;
+    const uint64_t newVersion = found + 1;
     if (newVersion == std::numeric_limits<uint64_t>::max()) {
         // It's *very* unlikely we ever run out of version numbers in 64bit...but just to be sure...
         throw std::runtime_error("Version overflow");
@@ -138,7 +140,7 @@ void KnownBlockVersions::_saveStateFile() const {
 }
 
 std::unordered_map<ClientIdAndBlockId, uint64_t> KnownBlockVersions::_deserializeKnownVersions(Deserializer *deserializer) {
-    uint64_t numEntries = deserializer->readUint64();
+    const uint64_t numEntries = deserializer->readUint64();
     std::unordered_map<ClientIdAndBlockId, uint64_t> result;
     result.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
     for (uint64_t i = 0 ; i < numEntries; ++i) {
@@ -150,7 +152,7 @@ std::unordered_map<ClientIdAndBlockId, uint64_t> KnownBlockVersions::_deserializ
 }
 
 void KnownBlockVersions::_serializeKnownVersions(Serializer *serializer, const std::unordered_map<ClientIdAndBlockId, uint64_t>& knownVersions) {
-    uint64_t numEntries = knownVersions.size();
+    const uint64_t numEntries = knownVersions.size();
     serializer->writeUint64(numEntries);
 
     for (const auto &entry : knownVersions) {
@@ -159,9 +161,9 @@ void KnownBlockVersions::_serializeKnownVersions(Serializer *serializer, const s
 }
 
 pair<ClientIdAndBlockId, uint64_t> KnownBlockVersions::_deserializeKnownVersionsEntry(Deserializer *deserializer) {
-    uint32_t clientId = deserializer->readUint32();
-    BlockId blockId(deserializer->readFixedSizeData<BlockId::BINARY_LENGTH>());
-    uint64_t version = deserializer->readUint64();
+    const uint32_t clientId = deserializer->readUint32();
+    const BlockId blockId(deserializer->readFixedSizeData<BlockId::BINARY_LENGTH>());
+    const uint64_t version = deserializer->readUint64();
 
     return {{clientId, blockId}, version};
 };
@@ -173,7 +175,7 @@ void KnownBlockVersions::_serializeKnownVersionsEntry(Serializer *serializer, co
 }
 
 std::unordered_map<BlockId, uint32_t> KnownBlockVersions::_deserializeLastUpdateClientIds(Deserializer *deserializer) {
-    uint64_t numEntries = deserializer->readUint64();
+    const uint64_t numEntries = deserializer->readUint64();
     std::unordered_map<BlockId, uint32_t> result;
     result.reserve(static_cast<uint64_t>(1.2 * numEntries)); // Reserve for factor 1.2 more, so the file system doesn't immediately have to resize it on the first new block.
     for (uint64_t i = 0 ; i < numEntries; ++i) {
@@ -184,7 +186,7 @@ std::unordered_map<BlockId, uint32_t> KnownBlockVersions::_deserializeLastUpdate
 }
 
 void KnownBlockVersions::_serializeLastUpdateClientIds(Serializer *serializer, const std::unordered_map<BlockId, uint32_t>& lastUpdateClientId) {
-    uint64_t numEntries = lastUpdateClientId.size();
+    const uint64_t numEntries = lastUpdateClientId.size();
     serializer->writeUint64(numEntries);
 
     for (const auto &entry : lastUpdateClientId) {
@@ -193,8 +195,8 @@ void KnownBlockVersions::_serializeLastUpdateClientIds(Serializer *serializer, c
 }
 
 pair<BlockId, uint32_t> KnownBlockVersions::_deserializeLastUpdateClientIdEntry(Deserializer *deserializer) {
-    BlockId blockId(deserializer->readFixedSizeData<BlockId::BINARY_LENGTH>());
-    uint32_t clientId = deserializer->readUint32();
+    const BlockId blockId(deserializer->readFixedSizeData<BlockId::BINARY_LENGTH>());
+    const uint32_t clientId = deserializer->readUint32();
 
     return {blockId, clientId};
 };
@@ -209,7 +211,7 @@ uint32_t KnownBlockVersions::myClientId() const {
 }
 
 uint64_t KnownBlockVersions::getBlockVersion(uint32_t clientId, const BlockId &blockId) const {
-    unique_lock<mutex> lock(_mutex);
+    const unique_lock<mutex> lock(_mutex);
     return _knownVersions.at({clientId, blockId});
 }
 

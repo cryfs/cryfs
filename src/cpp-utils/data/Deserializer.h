@@ -44,7 +44,7 @@ namespace cpputils {
     }
 
     inline bool Deserializer::readBool() {
-        uint8_t read = readUint8();
+        const uint8_t read = readUint8();
         if (read == 1) {
             return true;
         } else if (read == 0) {
@@ -98,7 +98,7 @@ namespace cpputils {
     }
 
     inline Data Deserializer::readData() {
-        uint64_t size = readUint64();
+        const uint64_t size = readUint64();
         if (_pos + size > _source->size()) {
             throw std::runtime_error("Deserialization failed - size overflow");
         }
@@ -106,7 +106,7 @@ namespace cpputils {
     }
 
     inline Data Deserializer::readTailData() {
-        uint64_t size = _source->size() - _pos;
+        const uint64_t size = _source->size() - _pos;
         return _readData(size);
     }
 
@@ -134,7 +134,7 @@ namespace cpputils {
         if (nullbytepos == nullptr) {
             throw std::runtime_error("Deserialization failed - missing nullbyte for string termination");
         }
-        uint64_t size = static_cast<const uint8_t*>(nullbytepos) - static_cast<const uint8_t*>(_source->dataOffset(_pos));
+        const uint64_t size = static_cast<const uint8_t*>(nullbytepos) - static_cast<const uint8_t*>(_source->dataOffset(_pos));
         std::string result(static_cast<const char*>(_source->dataOffset(_pos)), size);
         _pos += size + 1;
         return result;

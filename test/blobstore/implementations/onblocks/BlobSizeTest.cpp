@@ -64,7 +64,7 @@ TEST_F(BlobSizeTest, ResizingToItself_Large) {
 }
 
 TEST_F(BlobSizeTest, EmptyBlobStaysEmptyWhenLoading) {
-  BlockId blockId = blob->blockId();
+  const BlockId blockId = blob->blockId();
   reset(std::move(blob));
   auto loaded = loadBlob(blockId);
   EXPECT_EQ(0u, loaded->size());
@@ -72,7 +72,7 @@ TEST_F(BlobSizeTest, EmptyBlobStaysEmptyWhenLoading) {
 
 TEST_F(BlobSizeTest, BlobSizeStaysIntactWhenLoading) {
   blob->resize(LARGE_SIZE);
-  BlockId blockId = blob->blockId();
+  const BlockId blockId = blob->blockId();
   reset(std::move(blob));
   auto loaded = loadBlob(blockId);
   EXPECT_EQ(LARGE_SIZE, loaded->size());

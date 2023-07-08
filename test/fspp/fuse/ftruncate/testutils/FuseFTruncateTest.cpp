@@ -4,7 +4,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
 void FuseFTruncateTest::FTruncateFile(const char *filename, fspp::num_bytes_t size) {
-  int error = FTruncateFileReturnError(filename, size);
+  const int error = FTruncateFileReturnError(filename, size);
   EXPECT_EQ(0, error);
 }
 
@@ -12,7 +12,7 @@ int FuseFTruncateTest::FTruncateFileReturnError(const char *filename, fspp::num_
   auto fs = TestFS();
 
   auto fd = OpenFile(fs.get(), filename);
-  int retval = ::ftruncate(fd->fd(), size.value());
+  const int retval = ::ftruncate(fd->fd(), size.value());
   if (0 == retval) {
     return 0;
   } else {

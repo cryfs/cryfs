@@ -11,7 +11,7 @@ void trigger(int signal) {
 }
 
 void raise_signal(int signal) {
-    int error = ::raise(signal);
+    const int error = ::raise(signal);
     if (error != 0) {
         throw std::runtime_error("Error raising signal");
     }
@@ -34,14 +34,14 @@ TEST(SignalHandlerTest, givenNoSignalHandler_whenRaisingSigterm_thenDies) {
 TEST(SignalHandlerTest, givenSigIntHandler_whenRaisingSigInt_thenCatches) {
     triggered = 0;
 
-    SignalHandlerRAII<&trigger> handler(SIGINT);
+    const SignalHandlerRAII<&trigger> handler(SIGINT);
 
     raise_signal(SIGINT);
     EXPECT_EQ(SIGINT, triggered);
 }
 
 TEST(SignalHandlerTest, givenSigIntHandler_whenRaisingSigTerm_thenDies) {
-    SignalHandlerRAII<&trigger> handler(SIGINT);
+    const SignalHandlerRAII<&trigger> handler(SIGINT);
 
     EXPECT_DEATH(
         raise_signal(SIGTERM),
@@ -52,14 +52,14 @@ TEST(SignalHandlerTest, givenSigIntHandler_whenRaisingSigTerm_thenDies) {
 TEST(SignalHandlerTest, givenSigTermHandler_whenRaisingSigTerm_thenCatches) {
     triggered = 0;
 
-    SignalHandlerRAII<&trigger> handler(SIGTERM);
+    const SignalHandlerRAII<&trigger> handler(SIGTERM);
 
     raise_signal(SIGTERM);
     EXPECT_EQ(SIGTERM, triggered);
 }
 
 TEST(SignalHandlerTest, givenSigTermHandler_whenRaisingSigInt_thenDies) {
-    SignalHandlerRAII<&trigger> handler(SIGTERM);
+    const SignalHandlerRAII<&trigger> handler(SIGTERM);
 
     EXPECT_DEATH(
         raise_signal(SIGINT),
@@ -70,8 +70,8 @@ TEST(SignalHandlerTest, givenSigTermHandler_whenRaisingSigInt_thenDies) {
 TEST(SignalHandlerTest, givenSigIntAndSigTermHandlers_whenRaising_thenCatchesCorrectSignal) {
     triggered = 0;
 
-    SignalHandlerRAII<&trigger> handler1(SIGINT);
-    SignalHandlerRAII<&trigger> handler2(SIGTERM);
+    const SignalHandlerRAII<&trigger> handler1(SIGINT);
+    const SignalHandlerRAII<&trigger> handler2(SIGTERM);
 
     raise_signal(SIGINT);
     EXPECT_EQ(SIGINT, triggered);
@@ -99,10 +99,10 @@ TEST(SignalHandlerTest, givenMultipleSigIntHandlers_whenRaising_thenCatchesCorre
     triggered_count_2 = 0;
 
     {
-        SignalHandlerRAII<&trigger1> handler1(SIGINT);
+        const SignalHandlerRAII<&trigger1> handler1(SIGINT);
 
         {
-            SignalHandlerRAII<&trigger2> handler2(SIGINT);
+            const SignalHandlerRAII<&trigger2> handler2(SIGINT);
 
             raise_signal(SIGINT);
             EXPECT_EQ(0, triggered_count_1);

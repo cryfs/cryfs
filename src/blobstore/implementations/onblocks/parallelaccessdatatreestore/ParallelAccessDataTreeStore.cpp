@@ -31,12 +31,12 @@ optional<unique_ref<DataTreeRef>> ParallelAccessDataTreeStore::load(const blocks
 
 unique_ref<DataTreeRef> ParallelAccessDataTreeStore::createNewTree() {
   auto dataTree = _dataTreeStore->createNewTree();
-  BlockId blockId = dataTree->blockId();
+  const BlockId blockId = dataTree->blockId();
   return _parallelAccessStore.add(blockId, std::move(dataTree));  // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
 }
 
 void ParallelAccessDataTreeStore::remove(unique_ref<DataTreeRef> tree) {
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   return _parallelAccessStore.remove(blockId, std::move(tree));
 }
 

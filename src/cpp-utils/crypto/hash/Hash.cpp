@@ -2,7 +2,6 @@
 #include <cpp-utils/random/Random.h>
 #include <vendor_cryptopp/sha.h>
 
-using cpputils::Random;
 using CryptoPP::SHA512;
 
 namespace cpputils {

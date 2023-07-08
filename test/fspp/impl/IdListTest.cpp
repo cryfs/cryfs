@@ -46,19 +46,19 @@ TEST_F(IdListTest, EmptyList2) {
 }
 
 TEST_F(IdListTest, InvalidId) {
-  int valid_id = add();
-  int invalid_id = valid_id + 1;
+  const int valid_id = add();
+  const int invalid_id = valid_id + 1;
   ASSERT_THROW(list.get(invalid_id), std::out_of_range);
 }
 
 TEST_F(IdListTest, GetRemovedItemOnEmptyList) {
-  int id = add();
+  const int id = add();
   list.remove(id);
   ASSERT_THROW(list.get(id), std::out_of_range);
 }
 
 TEST_F(IdListTest, GetRemovedItemOnNonEmptyList) {
-  int id = add();
+  const int id = add();
   add();
   list.remove(id);
   ASSERT_THROW(list.get(id), std::out_of_range);
@@ -73,36 +73,36 @@ TEST_F(IdListTest, RemoveOnEmptyList2) {
 }
 
 TEST_F(IdListTest, RemoveInvalidId) {
-  int valid_id = add();
-  int invalid_id = valid_id + 1;
+  const int valid_id = add();
+  const int invalid_id = valid_id + 1;
   ASSERT_THROW(list.remove(invalid_id), std::out_of_range);
 }
 
 TEST_F(IdListTest, Add1AndGet) {
-  int id = add(OBJ1);
+  const int id = add(OBJ1);
   check(id, OBJ1);
 }
 
 TEST_F(IdListTest, Add2AndGet) {
-  int id1 = add(OBJ1);
-  int id2 = add(OBJ2);
+  const int id1 = add(OBJ1);
+  const int id2 = add(OBJ2);
   check(id1, OBJ1);
   check(id2, OBJ2);
 }
 
 TEST_F(IdListTest, Add3AndGet) {
-  int id1 = add(OBJ1);
-  int id2 = add(OBJ2);
-  int id3 = add(OBJ3);
+  const int id1 = add(OBJ1);
+  const int id2 = add(OBJ2);
+  const int id3 = add(OBJ3);
   check(id1, OBJ1);
   check(id3, OBJ3);
   check(id2, OBJ2);
 }
 
 TEST_F(IdListTest, Add3AndConstGet) {
-  int id1 = add(OBJ1);
-  int id2 = add(OBJ2);
-  int id3 = add(OBJ3);
+  const int id1 = add(OBJ1);
+  const int id2 = add(OBJ2);
+  const int id3 = add(OBJ3);
   checkConst(id1, OBJ1);
   checkConst(id3, OBJ3);
   checkConst(id2, OBJ2);

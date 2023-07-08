@@ -12,7 +12,7 @@ namespace cryfs {
 class CryFile final: public fspp::File, public CryNode {
 public:
   CryFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);
-  ~CryFile();
+  ~CryFile() override;
 
   cpputils::unique_ref<fspp::OpenFile> open(fspp::openflags_t flags) override;
   void truncate(fspp::num_bytes_t size) override;

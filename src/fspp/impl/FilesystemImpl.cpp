@@ -313,7 +313,7 @@ void FilesystemImpl::utimens(const bf::path &path, timespec lastAccessTime, time
 
 void FilesystemImpl::statfs(struct ::statvfs *fsstat) {
   PROFILE(_statfsNanosec);
-  Device::statvfs stat = _device->statfs();
+  const Device::statvfs stat = _device->statfs();
 
   fsstat->f_bsize = stat.blocksize;
   fsstat->f_blocks = stat.num_total_blocks;
@@ -337,7 +337,7 @@ void FilesystemImpl::createSymlink(const bf::path &to, const bf::path &from, ::u
 
 void FilesystemImpl::readSymlink(const bf::path &path, char *buf, fspp::num_bytes_t size) {
   PROFILE(_readSymlinkNanosec);
-  string target = LoadSymlink(path)->target().string();
+  const string target = LoadSymlink(path)->target().string();
   PROFILE(_readSymlinkNanosec_withoutLoading);
   std::memcpy(buf, target.c_str(), std::min(static_cast<int64_t>(target.size()+1), size.value()));
   buf[size.value()-1] = '\0';

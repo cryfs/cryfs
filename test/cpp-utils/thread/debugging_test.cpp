@@ -13,14 +13,14 @@ TEST(ThreadDebuggingTest_ThreadName, givenMainThread_whenSettingAndGetting_thenD
 
 TEST(ThreadDebuggingTest_ThreadName, givenMainThread_whenGettingFromInside_thenIsCorrect) {
     set_thread_name("my_thread_name");
-    string name = get_thread_name();
+    const string name = get_thread_name();
     EXPECT_EQ("my_thread_name", name);
 }
 
 TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenGettingFromInside_thenIsCorrect) {
     std::thread child([] {
         set_thread_name("my_thread_name");
-        string name = get_thread_name();
+        const string name = get_thread_name();
         EXPECT_EQ("my_thread_name", name);
     });
     child.join();
@@ -57,7 +57,7 @@ TEST(ThreadDebuggingTest_ThreadName, givenChildThread_whenGettingFromOutside_the
 
     nameIsSet.wait();
     set_thread_name("outer_thread_name"); // just to make sure the next line doesn't read the outer thread name
-    string name = get_thread_name(&child);
+    const string name = get_thread_name(&child);
     EXPECT_EQ("my_thread_name", name);
 
     nameIsChecked.release();

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cstddef>
+
 #include "cpp-utils/data/Data.h"
 #include "cpp-utils/data/DataFixture.h"
 
@@ -12,35 +14,35 @@ class DataFixtureTest: public Test {
 };
 
 TEST_F(DataFixtureTest, CreateEmptyFixture) {
-  Data data = DataFixture::generate(0);
+  const Data data = DataFixture::generate(0);
   EXPECT_EQ(0u, data.size());
 }
 
 TEST_F(DataFixtureTest, CreateOneByteFixture) {
-  Data data = DataFixture::generate(1);
+  const Data data = DataFixture::generate(1);
   EXPECT_EQ(1u, data.size());
 }
 
 TEST_F(DataFixtureTest, CreateLargerFixture) {
-  Data data = DataFixture::generate(20 * 1024 * 1024);
+  const Data data = DataFixture::generate(20 * 1024 * 1024);
   EXPECT_EQ(20u * 1024u * 1024u, data.size());
 }
 
 TEST_F(DataFixtureTest, FixturesAreDeterministic_DefaultSeed) {
-  Data data1 = DataFixture::generate(1024 * 1024);
-  Data data2 = DataFixture::generate(1024 * 1024);
+  const Data data1 = DataFixture::generate(1024 * 1024);
+  const Data data2 = DataFixture::generate(1024 * 1024);
   EXPECT_EQ(data1, data2);
 }
 
 TEST_F(DataFixtureTest, FixturesAreDeterministic_SeedIs5) {
-  Data data1 = DataFixture::generate(1024 * 1024, 5);
-  Data data2 = DataFixture::generate(1024 * 1024, 5);
+  const Data data1 = DataFixture::generate(1024 * 1024, 5);
+  const Data data2 = DataFixture::generate(1024 * 1024, 5);
   EXPECT_EQ(data1, data2);
 }
 
 TEST_F(DataFixtureTest, DifferentSeedIsDifferentFixture) {
-  Data data1 = DataFixture::generate(1024 * 1024, 0);
-  Data data2 = DataFixture::generate(1024 * 1024, 1);
+  const Data data1 = DataFixture::generate(1024 * 1024, 0);
+  const Data data2 = DataFixture::generate(1024 * 1024, 1);
   EXPECT_NE(data1, data2);
 }
 

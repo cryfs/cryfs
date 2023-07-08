@@ -28,8 +28,8 @@ namespace cpputils {
 namespace cpputils {
 	namespace system {
 		uint64_t get_total_memory() {
-			long numRAMPages = sysconf(_SC_PHYS_PAGES);
-			long pageSize = sysconf(_SC_PAGESIZE);
+			const long numRAMPages = sysconf(_SC_PHYS_PAGES);
+			const long pageSize = sysconf(_SC_PAGESIZE);
 			return numRAMPages * pageSize;
 		}
 	}

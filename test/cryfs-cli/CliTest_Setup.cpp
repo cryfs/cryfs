@@ -15,7 +15,7 @@ TEST_F(CliTest_Setup, NoSpecialOptions) {
 }
 
 TEST_F(CliTest_Setup, NotexistingLogfileGiven) {
-    TempFile notexisting_logfile(false);
+    const TempFile notexisting_logfile(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--logfile", notexisting_logfile.path().string().c_str()}, mountdir);
@@ -36,14 +36,14 @@ TEST_F(CliTest_Setup, ConfigfileGiven) {
 }
 
 TEST_F(CliTest_Setup, AutocreateBasedir) {
-    TempFile notexisting_basedir(false);
+    const TempFile notexisting_basedir(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({notexisting_basedir.path().string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--create-missing-basedir"}, mountdir);
 }
 
 TEST_F(CliTest_Setup, AutocreateBasedirFail) {
-    TempFile notexisting_basedir(false);
+    const TempFile notexisting_basedir(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_ERROR(
@@ -54,14 +54,14 @@ TEST_F(CliTest_Setup, AutocreateBasedirFail) {
 }
 
 TEST_F(CliTest_Setup, AutocreateMountpoint) {
-    TempFile notexisting_mountpoint(false);
+    const TempFile notexisting_mountpoint(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({basedir.string().c_str(), notexisting_mountpoint.path().string().c_str(), "-f", "--cipher", "aes-256-gcm", "--create-missing-mountpoint"}, notexisting_mountpoint.path());
 }
 
 TEST_F(CliTest_Setup, AutocreateMountdirFail) {
-    TempFile notexisting_mountdir(false);
+    const TempFile notexisting_mountdir(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_ERROR(

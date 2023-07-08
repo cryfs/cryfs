@@ -24,7 +24,7 @@ namespace fspp {
     }
 
     inline Profiler::~Profiler() {
-        uint64_t timeDiff = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - _beginTime).count();
+        const uint64_t timeDiff = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - _beginTime).count();
         *_targetForAddingNanosec += timeDiff;
     }
 }

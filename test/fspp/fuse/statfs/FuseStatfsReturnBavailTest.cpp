@@ -18,6 +18,6 @@ INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBavailTest, FuseStatfsReturnBavailTest,
 ));
 
 TEST_P(FuseStatfsReturnBavailTest, ReturnedBavailIsCorrect) {
-  struct ::statvfs result = CallStatfsWithValue(GetParam());
+  const struct ::statvfs result = CallStatfsWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.f_bavail);
 }

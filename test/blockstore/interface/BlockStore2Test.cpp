@@ -78,7 +78,7 @@ TEST_F(BlockStore2Test, DataIsPassedThrough1024) {
 }
 
 TEST_F(BlockStore2Test, BlockIdIsCorrect) {
-    Data data = createDataWithSize(1024);
+    const Data data = createDataWithSize(1024);
     EXPECT_CALL(blockStoreMock, createBlockId()).WillOnce(Return(blockId1));
     EXPECT_CALL(blockStoreMock, tryCreate(blockId1, testing::_)).WillOnce(Return(true));
     EXPECT_EQ(blockId1, blockStore.create(data));
@@ -98,7 +98,7 @@ TEST_F(BlockStore2Test, TwoBlocksGetDifferentIds) {
                 return true;
             }));
 
-    Data data = createDataWithSize(1024);
+    const Data data = createDataWithSize(1024);
     EXPECT_EQ(blockId1, blockStore.create(data));
     EXPECT_EQ(blockId2, blockStore.create(data));
 }

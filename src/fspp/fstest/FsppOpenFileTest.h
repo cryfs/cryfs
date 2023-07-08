@@ -23,7 +23,7 @@ public:
     void EXPECT_NUMBYTES_READABLE(fspp::num_bytes_t expectedSize, fspp::OpenFile *openFile) {
         cpputils::Data data(expectedSize.value());
         //Try to read one byte more than the expected size
-        fspp::num_bytes_t readBytes = openFile->read(data.data(), expectedSize+fspp::num_bytes_t(1), fspp::num_bytes_t(0));
+        const fspp::num_bytes_t readBytes = openFile->read(data.data(), expectedSize+fspp::num_bytes_t(1), fspp::num_bytes_t(0));
         //and check that it only read the expected size (but also not less)
         EXPECT_EQ(expectedSize, readBytes);
     }

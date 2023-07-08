@@ -42,7 +42,7 @@ private:
         ASSERT(hex.size()%2 == 0, "Hex codes need to have two characters per byte");
         Data result(hex.size()/2);
         {
-            CryptoPP::StringSource _1(hex, true,
+            const CryptoPP::StringSource _1(hex, true,
                  new CryptoPP::HexDecoder(
                        new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result.data()), result.size())
                  )

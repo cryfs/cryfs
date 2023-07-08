@@ -39,9 +39,9 @@ void showBacktraceOnCrash() {
     // the signal handler RAII objects will be initialized on first call (which will register the signal handler)
     // and destroyed on program exit (which will unregister the signal handler)
 
-    static SignalHandlerRAII<&sigsegv_handler> segv(SIGSEGV);
-    static SignalHandlerRAII<&sigabrt_handler> abrt(SIGABRT);
-    static SignalHandlerRAII<&sigill_handler> ill(SIGILL);
+    static const SignalHandlerRAII<&sigsegv_handler> segv(SIGSEGV);
+    static const SignalHandlerRAII<&sigabrt_handler> abrt(SIGABRT);
+    static const SignalHandlerRAII<&sigill_handler> ill(SIGILL);
 }
 
 }

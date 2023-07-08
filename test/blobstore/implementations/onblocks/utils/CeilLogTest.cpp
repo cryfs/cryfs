@@ -26,7 +26,7 @@ TEST_F(CeilLogTest, Log3_4) {
 }
 
 TEST_F(CeilLogTest, 64bit) {
- uint64_t value = UINT64_C(1024)*1024*1024*1024;
+ const uint64_t value = UINT64_C(1024)*1024*1024*1024;
  EXPECT_GT(value, std::numeric_limits<uint32_t>::max());
  EXPECT_EQ(4u, ceilLog(UINT64_C(1024), value));
 }

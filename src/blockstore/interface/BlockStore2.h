@@ -33,7 +33,7 @@ public:
   BlockId create(const cpputils::Data& data) {
     while (true) {
       BlockId blockId = createBlockId();
-      bool success = tryCreate(blockId, data);
+      const bool success = tryCreate(blockId, data);
       if (success) {
         return blockId;
       }

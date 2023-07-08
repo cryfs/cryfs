@@ -19,9 +19,9 @@ namespace cryfs {
     }
 
     Data CryConfigEncryptor::encrypt(const Data &plaintext, const string &cipherName) const {
-        InnerConfig innerConfig = _innerEncryptor(cipherName)->encrypt(plaintext);
-        Data serializedInnerConfig = innerConfig.serialize();
-        OuterConfig outerConfig = _outerEncryptor()->encrypt(serializedInnerConfig);
+        const InnerConfig innerConfig = _innerEncryptor(cipherName)->encrypt(plaintext);
+        const Data serializedInnerConfig = innerConfig.serialize();
+        const OuterConfig outerConfig = _outerEncryptor()->encrypt(serializedInnerConfig);
         return outerConfig.serialize();
     }
 

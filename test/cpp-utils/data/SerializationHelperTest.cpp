@@ -193,7 +193,7 @@ static_assert(sizeof(OneByteStruct) == 1, "");
 
 TEST(SerializationHelperTest, onebytestruct) {
     Data data(1);
-    OneByteStruct fixture {5};
+    const OneByteStruct fixture {5};
     serialize<OneByteStruct>(data.data(), fixture);
     EXPECT_EQ(fixture.v, deserialize<OneByteStruct>(data.data()).v);
 }

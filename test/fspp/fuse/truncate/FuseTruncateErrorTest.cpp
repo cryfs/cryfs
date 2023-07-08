@@ -17,6 +17,6 @@ TEST_P(FuseTruncateErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, truncate(Eq(FILENAME), testing::_))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = TruncateFileReturnError(FILENAME, fspp::num_bytes_t(0));
+  const int error = TruncateFileReturnError(FILENAME, fspp::num_bytes_t(0));
   EXPECT_EQ(GetParam(), error);
 }

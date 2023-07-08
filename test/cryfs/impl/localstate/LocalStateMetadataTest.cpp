@@ -18,14 +18,14 @@ public:
 };
 
 TEST_F(LocalStateMetadataTest, myClientId_ValueIsConsistent) {
-    LocalStateMetadata metadata1 = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
-    LocalStateMetadata metadata2 = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
+    const LocalStateMetadata metadata1 = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
+    const LocalStateMetadata metadata2 = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
     EXPECT_EQ(metadata1.myClientId(), metadata2.myClientId());
 }
 
 TEST_F(LocalStateMetadataTest, myClientId_ValueIsRandomForNewClient) {
-    LocalStateMetadata metadata1 = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
-    LocalStateMetadata metadata2 = LocalStateMetadata::loadOrGenerate(stateDir2.path(), Data(0), false);
+    const LocalStateMetadata metadata1 = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
+    const LocalStateMetadata metadata2 = LocalStateMetadata::loadOrGenerate(stateDir2.path(), Data(0), false);
     EXPECT_NE(metadata1.myClientId(), metadata2.myClientId());
 }
 
@@ -35,7 +35,7 @@ TEST_F(LocalStateMetadataTest, myClientId_TakesLegacyValueIfSpecified) {
   file << 12345u;
   file.close();
 
-  LocalStateMetadata metadata = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
+  const LocalStateMetadata metadata = LocalStateMetadata::loadOrGenerate(stateDir.path(), Data(0), false);
   EXPECT_EQ(12345u, metadata.myClientId());
 }
 #endif

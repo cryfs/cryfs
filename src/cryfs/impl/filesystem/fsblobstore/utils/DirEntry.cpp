@@ -37,7 +37,7 @@ namespace cryfs {
 
             timespec deserializeTimeValue_(const char **pos) {
                 timespec value{};
-                value.tv_sec = deserialize_<uint64_t>(pos);
+                value.tv_sec = static_cast<time_t>(deserialize_<uint64_t>(pos));
                 value.tv_nsec = deserialize_<uint32_t>(pos);
                 return value;
             }
@@ -48,7 +48,7 @@ namespace cryfs {
             }
 
             string deserializeString_(const char **pos) {
-                size_t length = strlen(*pos);
+                const size_t length = strlen(*pos);
                 string value(*pos, length);
                 *pos += length + 1;
                 return value;
@@ -88,15 +88,15 @@ namespace cryfs {
         }
 
         const char *DirEntry::deserializeAndAddToVector(const char *pos, vector<DirEntry> *result) {
-            fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(deserialize_<uint8_t>(&pos));
-            fspp::mode_t mode = fspp::mode_t(deserialize_<uint32_t>(&pos));
-            fspp::uid_t uid = fspp::uid_t(deserialize_<uint32_t>(&pos));
-            fspp::gid_t gid = fspp::gid_t(deserialize_<uint32_t>(&pos));
-            timespec lastAccessTime = deserializeTimeValue_(&pos);
-            timespec lastModificationTime = deserializeTimeValue_(&pos);
-            timespec lastMetadataChangeTime = deserializeTimeValue_(&pos);
-            string name = deserializeString_(&pos);
-            BlockId blockId = deserializeBlockId_(&pos);
+            const fspp::Dir::EntryType type = static_cast<fspp::Dir::EntryType>(deserialize_<uint8_t>(&pos));
+            const fspp::mode_t mode = fspp::mode_t(deserialize_<uint32_t>(&pos));
+            const fspp::uid_t uid = fspp::uid_t(deserialize_<uint32_t>(&pos));
+            const fspp::gid_t gid = fspp::gid_t(deserialize_<uint32_t>(&pos));
+            const timespec lastAccessTime = deserializeTimeValue_(&pos);
+            const timespec lastModificationTime = deserializeTimeValue_(&pos);
+            const timespec lastMetadataChangeTime = deserializeTimeValue_(&pos);
+            const string name = deserializeString_(&pos);
+            const BlockId blockId = deserializeBlockId_(&pos);
 
             result->emplace_back(type, name, blockId, mode, uid, gid, lastAccessTime, lastModificationTime, lastMetadataChangeTime);
             return pos;

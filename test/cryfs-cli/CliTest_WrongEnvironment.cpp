@@ -93,7 +93,7 @@ TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
 
 bf::path make_relative(const bf::path &path) {
     bf::path result;
-    bf::path cwd = bf::current_path();
+    const bf::path cwd = bf::current_path();
     for(auto iter = ++cwd.begin(); iter!=cwd.end(); ++iter) {
         result /= "..";
     }
@@ -144,7 +144,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
 }
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
-    TempFile basedirfile;
+    const TempFile basedirfile;
     basedir = basedirfile.path();
     Test_Run_Error("Error 16: base directory is not a directory", ErrorCode::InaccessibleBaseDir);
 }
@@ -205,7 +205,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
-    TempFile mountdirfile;
+    const TempFile mountdirfile;
     mountdir = mountdirfile.path();
     Test_Run_Error("Error 17: mount directory is not a directory", ErrorCode::InaccessibleMountDir);
 }

@@ -92,7 +92,7 @@ namespace cryfs {
         }
 
         inline void CachingFsBlobStore::releaseForCache(cpputils::unique_ref<fsblobstore::FsBlob> baseBlob) {
-            blockstore::BlockId blockId = baseBlob->blockId();
+            const blockstore::BlockId blockId = baseBlob->blockId();
             _cache.push(blockId, std::move(baseBlob));
         }
 

@@ -15,13 +15,13 @@
 class QueueMapTest: public ::testing::Test {
 public:
   QueueMapTest();
-  ~QueueMapTest();
+  ~QueueMapTest() override;
 
   void push(int key, int value);
   boost::optional<int> pop();
   boost::optional<int> pop(int key);
   boost::optional<int> peek();
-  int size();
+  uint32_t size();
 
 private:
   cpputils::unique_ref<blockstore::caching::QueueMap<MinimalKeyType, MinimalValueType>> _map;

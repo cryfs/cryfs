@@ -5,8 +5,10 @@
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/data/Data.h>
-#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+
 #include "blobstore/implementations/onblocks/BlobOnBlocks.h"
+#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include <cstddef>
 
 using namespace blobstore;
 using namespace blobstore::onblocks;

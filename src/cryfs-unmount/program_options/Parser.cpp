@@ -30,13 +30,13 @@ vector<string> Parser::_argsToVector(int argc, const char **argv) {
 }
 
 ProgramOptions Parser::parse() const {
-	po::variables_map vm = _parseOptionsOrShowHelp(_options);
+	const po::variables_map vm = _parseOptionsOrShowHelp(_options);
 
 	if (!vm.count("mount-dir")) {
 		_showHelpAndExit("Please specify a mount directory.", ErrorCode::InvalidArguments);
 	}
 	bf::path mountDir = vm["mount-dir"].as<string>();
-	bool immediate = vm.count("immediate");
+	const bool immediate = vm.count("immediate");
 
 	return ProgramOptions(std::move(mountDir), immediate);
 }

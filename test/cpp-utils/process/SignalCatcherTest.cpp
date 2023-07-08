@@ -6,7 +6,7 @@ using cpputils::SignalCatcher;
 
 namespace {
 void raise_signal(int signal) {
-    int error = ::raise(signal);
+    const int error = ::raise(signal);
     if (error != 0) {
         throw std::runtime_error("Error raising signal");
     }
@@ -28,7 +28,7 @@ TEST(SignalCatcherTest, givenNoSignalCatcher_whenRaisingSigterm_thenDies) {
 }
 
 TEST(SignalCatcherTest, givenSigIntCatcher_whenRaisingSigInt_thenCatches) {
-    SignalCatcher catcher({SIGINT});
+    const SignalCatcher catcher({SIGINT});
 
     EXPECT_FALSE(catcher.signal_occurred());
     raise_signal(SIGINT);
@@ -40,7 +40,7 @@ TEST(SignalCatcherTest, givenSigIntCatcher_whenRaisingSigInt_thenCatches) {
 }
 
 TEST(SignalCatcherTest, givenSigTermCatcher_whenRaisingSigTerm_thenCatches) {
-    SignalCatcher catcher({SIGTERM});
+    const SignalCatcher catcher({SIGTERM});
 
     EXPECT_FALSE(catcher.signal_occurred());
     raise_signal(SIGTERM);
@@ -52,7 +52,7 @@ TEST(SignalCatcherTest, givenSigTermCatcher_whenRaisingSigTerm_thenCatches) {
 }
 
 TEST(SignalCatcherTest, givenSigIntAndSigTermCatcher_whenRaisingSigInt_thenCatches) {
-    SignalCatcher catcher({SIGINT, SIGTERM});
+    const SignalCatcher catcher({SIGINT, SIGTERM});
 
     EXPECT_FALSE(catcher.signal_occurred());
     raise_signal(SIGINT);
@@ -64,7 +64,7 @@ TEST(SignalCatcherTest, givenSigIntAndSigTermCatcher_whenRaisingSigInt_thenCatch
 }
 
 TEST(SignalCatcherTest, givenSigIntAndSigTermCatcher_whenRaisingSigTerm_thenCatches) {
-    SignalCatcher catcher({SIGINT, SIGTERM});
+    const SignalCatcher catcher({SIGINT, SIGTERM});
 
     EXPECT_FALSE(catcher.signal_occurred());
     raise_signal(SIGTERM);
@@ -76,7 +76,7 @@ TEST(SignalCatcherTest, givenSigIntAndSigTermCatcher_whenRaisingSigTerm_thenCatc
 }
 
 TEST(SignalCatcherTest, givenSigIntAndSigTermCatcher_whenRaisingSigIntAndSigTerm_thenCatches) {
-    SignalCatcher catcher({SIGINT, SIGTERM});
+    const SignalCatcher catcher({SIGINT, SIGTERM});
 
     EXPECT_FALSE(catcher.signal_occurred());
     raise_signal(SIGTERM);
@@ -87,8 +87,8 @@ TEST(SignalCatcherTest, givenSigIntAndSigTermCatcher_whenRaisingSigIntAndSigTerm
 }
 
 TEST(SignalCatcherTest, givenSigIntCatcherAndSigTermCatcher_whenRaisingSignalsInOrder_thenCorrectCatcherCatches) {
-    SignalCatcher sigintCatcher({SIGINT});
-    SignalCatcher sigtermCatcher({SIGTERM});
+    const SignalCatcher sigintCatcher({SIGINT});
+    const SignalCatcher sigtermCatcher({SIGTERM});
 
     EXPECT_FALSE(sigintCatcher.signal_occurred());
     raise_signal(SIGINT);
@@ -100,8 +100,8 @@ TEST(SignalCatcherTest, givenSigIntCatcherAndSigTermCatcher_whenRaisingSignalsIn
 }
 
 TEST(SignalCatcherTest, givenSigIntCatcherAndSigTermCatcher_whenRaisingSignalsInReverseOrder_thenCorrectCatcherCatches) {
-    SignalCatcher sigintCatcher({SIGINT});
-    SignalCatcher sigtermCatcher({SIGTERM});
+    const SignalCatcher sigintCatcher({SIGINT});
+    const SignalCatcher sigtermCatcher({SIGTERM});
 
     EXPECT_FALSE(sigtermCatcher.signal_occurred());
     raise_signal(SIGTERM);
@@ -113,16 +113,16 @@ TEST(SignalCatcherTest, givenSigIntCatcherAndSigTermCatcher_whenRaisingSignalsIn
 }
 
 TEST(SignalCatcherTest, givenNestedSigIntCatchers_whenRaisingSignals_thenCorrectCatcherCatches) {
-    SignalCatcher outerCatcher({SIGINT});
+    const SignalCatcher outerCatcher({SIGINT});
     {
-        SignalCatcher middleCatcher({SIGINT});
+        const SignalCatcher middleCatcher({SIGINT});
 
         EXPECT_FALSE(middleCatcher.signal_occurred());
         raise_signal(SIGINT);
         EXPECT_TRUE(middleCatcher.signal_occurred());
 
         {
-            SignalCatcher innerCatcher({SIGINT});
+            const SignalCatcher innerCatcher({SIGINT});
 
             EXPECT_FALSE(innerCatcher.signal_occurred());
             raise_signal(SIGINT);
@@ -137,7 +137,7 @@ TEST(SignalCatcherTest, givenNestedSigIntCatchers_whenRaisingSignals_thenCorrect
 
 TEST(SignalCatcherTest, givenExpiredSigIntCatcher_whenRaisingSigInt_thenDies) {
     {
-        SignalCatcher catcher({SIGINT});
+        const SignalCatcher catcher({SIGINT});
     }
 
     EXPECT_DEATH(
@@ -148,7 +148,7 @@ TEST(SignalCatcherTest, givenExpiredSigIntCatcher_whenRaisingSigInt_thenDies) {
 
 TEST(SignalCatcherTest, givenExpiredSigTermCatcher_whenRaisingSigTerm_thenDies) {
     {
-        SignalCatcher catcher({SIGTERM});
+        const SignalCatcher catcher({SIGTERM});
     }
 
     EXPECT_DEATH(
@@ -159,8 +159,8 @@ TEST(SignalCatcherTest, givenExpiredSigTermCatcher_whenRaisingSigTerm_thenDies) 
 
 TEST(SignalCatcherTest, givenExpiredSigIntCatcherAndSigTermCatcher_whenRaisingSigTerm_thenDies) {
     {
-        SignalCatcher sigIntCatcher({SIGTERM});
-        SignalCatcher sigTermCatcer({SIGTERM});
+        const SignalCatcher sigIntCatcher({SIGTERM});
+        const SignalCatcher sigTermCatcer({SIGTERM});
     }
 
     EXPECT_DEATH(
@@ -170,9 +170,9 @@ TEST(SignalCatcherTest, givenExpiredSigIntCatcherAndSigTermCatcher_whenRaisingSi
 }
 
 TEST(SignalCatcherTest, givenSigTermCatcherAndExpiredSigIntCatcher_whenRaisingSigTerm_thenCatches) {
-    SignalCatcher sigTermCatcher({SIGTERM});
+    const SignalCatcher sigTermCatcher({SIGTERM});
     {
-        SignalCatcher sigIntCatcher({SIGINT});
+        const SignalCatcher sigIntCatcher({SIGINT});
     }
 
     EXPECT_FALSE(sigTermCatcher.signal_occurred());
@@ -181,9 +181,9 @@ TEST(SignalCatcherTest, givenSigTermCatcherAndExpiredSigIntCatcher_whenRaisingSi
 }
 
 TEST(SignalCatcherTest, givenSigTermCatcherAndExpiredSigIntCatcher_whenRaisingSigInt_thenDies) {
-    SignalCatcher sigTermCacher({SIGTERM});
+    const SignalCatcher sigTermCacher({SIGTERM});
     {
-        SignalCatcher sigIntCatcher({SIGINT});
+        const SignalCatcher sigIntCatcher({SIGINT});
     }
 
     EXPECT_DEATH(

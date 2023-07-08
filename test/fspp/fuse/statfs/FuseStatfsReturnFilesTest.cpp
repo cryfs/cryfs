@@ -18,6 +18,6 @@ INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnFilesTest, FuseStatfsReturnFilesTest, V
 ));
 
 TEST_P(FuseStatfsReturnFilesTest, ReturnedFilesIsCorrect) {
-  struct ::statvfs result = CallStatfsWithValue(GetParam());
+  const struct ::statvfs result = CallStatfsWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.f_files);
 }

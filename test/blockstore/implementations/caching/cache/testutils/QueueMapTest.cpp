@@ -39,6 +39,6 @@ boost::optional<int> QueueMapTest::peek() {
   return elem.value().value();
 }
 
-int QueueMapTest::size() {
+uint32_t QueueMapTest::size() {
   return _map->size();
 }

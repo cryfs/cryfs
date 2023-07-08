@@ -18,7 +18,7 @@ namespace cryfs {
     const string OuterConfig::HEADER = "cryfs.config;1;scrypt";
 
     void OuterConfig::_checkHeader(Deserializer *deserializer) {
-        string header = deserializer->readString();
+        const string header = deserializer->readString();
         if (header != HEADER) {
             throw std::runtime_error("Invalid header");
         }
@@ -47,7 +47,7 @@ namespace cryfs {
         Deserializer deserializer(&data);
         try {
 #ifndef CRYFS_NO_COMPATIBILITY
-            string header = deserializer.readString();
+            const string header = deserializer.readString();
             if (header == OLD_HEADER) {
                 return _deserializeOldFormat(&deserializer);
             } else if (header == HEADER) {

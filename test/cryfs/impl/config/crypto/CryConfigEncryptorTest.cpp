@@ -56,49 +56,49 @@ private:
     }
 
     InnerConfig _decryptInnerConfig(const Data &data) {
-        OuterConfig outerConfig = OuterConfig::deserialize(data).value();
-        Data serializedInnerConfig = _outerEncryptor()->decrypt(outerConfig).value();
+        const OuterConfig outerConfig = OuterConfig::deserialize(data).value();
+        const Data serializedInnerConfig = _outerEncryptor()->decrypt(outerConfig).value();
         return InnerConfig::deserialize(serializedInnerConfig).value();
     }
 
     Data _encryptInnerConfig(const InnerConfig &innerConfig) {
-        Data serializedInnerConfig = innerConfig.serialize();
-        OuterConfig outerConfig = _outerEncryptor()->encrypt(serializedInnerConfig);
+        const Data serializedInnerConfig = innerConfig.serialize();
+        const OuterConfig outerConfig = _outerEncryptor()->encrypt(serializedInnerConfig);
         return outerConfig.serialize();
     }
 };
 
 TEST_F(CryConfigEncryptorTest, EncryptAndDecrypt_Data_AES) {
     auto encryptor = makeEncryptor();
-    Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
+    const Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
     auto decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(400), decrypted.data);
 }
 
 TEST_F(CryConfigEncryptorTest, EncryptAndDecrypt_Data_Twofish) {
     auto encryptor = makeEncryptor();
-    Data encrypted = encryptor->encrypt(DataFixture::generate(400), Twofish128_CFB::NAME);
+    const Data encrypted = encryptor->encrypt(DataFixture::generate(400), Twofish128_CFB::NAME);
     auto decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(400), decrypted.data);
 }
 
 TEST_F(CryConfigEncryptorTest, EncryptAndDecrypt_Cipher_AES) {
     auto encryptor = makeEncryptor();
-    Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
+    const Data encrypted = encryptor->encrypt(DataFixture::generate(400), AES256_GCM::NAME);
     auto decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(AES256_GCM::NAME, decrypted.cipherName);
 }
 
 TEST_F(CryConfigEncryptorTest, EncryptAndDecrypt_Cipher_Twofish) {
     auto encryptor = makeEncryptor();
-    Data encrypted = encryptor->encrypt(DataFixture::generate(400), Twofish128_CFB::NAME);
+    const Data encrypted = encryptor->encrypt(DataFixture::generate(400), Twofish128_CFB::NAME);
     auto decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(Twofish128_CFB::NAME, decrypted.cipherName);
 }
 
 TEST_F(CryConfigEncryptorTest, EncryptAndDecrypt_EmptyData) {
     auto encryptor = makeEncryptor();
-    Data encrypted = encryptor->encrypt(Data(0), AES256_GCM::NAME);
+    const Data encrypted = encryptor->encrypt(Data(0), AES256_GCM::NAME);
     auto decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(Data(0), decrypted.data);
 }
@@ -121,9 +121,9 @@ TEST_F(CryConfigEncryptorTest, DoesntEncryptWhenTooLarge) {
 
 TEST_F(CryConfigEncryptorTest, EncryptionIsFixedSize) {
     auto encryptor = makeEncryptor();
-    Data encrypted1 = encryptor->encrypt(DataFixture::generate(100), AES128_CFB::NAME);
-    Data encrypted2 = encryptor->encrypt(DataFixture::generate(200), Twofish256_GCM::NAME);
-    Data encrypted3 = encryptor->encrypt(Data(0), AES256_GCM::NAME);
+    const Data encrypted1 = encryptor->encrypt(DataFixture::generate(100), AES128_CFB::NAME);
+    const Data encrypted2 = encryptor->encrypt(DataFixture::generate(200), Twofish256_GCM::NAME);
+    const Data encrypted3 = encryptor->encrypt(Data(0), AES256_GCM::NAME);
 
     EXPECT_EQ(encrypted1.size(), encrypted2.size());
     EXPECT_EQ(encrypted1.size(), encrypted3.size());

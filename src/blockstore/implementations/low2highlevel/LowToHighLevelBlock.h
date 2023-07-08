@@ -28,7 +28,7 @@ public:
   static boost::optional<cpputils::unique_ref<LowToHighLevelBlock>> Load(BlockStore2 *baseBlockStore, const BlockId &blockId);
 
   LowToHighLevelBlock(const BlockId &blockId, cpputils::Data data, BlockStore2 *baseBlockStore);
-  ~LowToHighLevelBlock();
+  ~LowToHighLevelBlock() override;
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t count) override;

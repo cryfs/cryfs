@@ -14,7 +14,7 @@ class FakeBlockStore;
 class FakeBlock final: public Block {
 public:
   FakeBlock(FakeBlockStore *store, const BlockId &blockId, std::shared_ptr<cpputils::Data> data, bool dirty);
-  ~FakeBlock();
+  ~FakeBlock() override;
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;

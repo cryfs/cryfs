@@ -32,6 +32,6 @@ TEST_P(FuseFstatErrorTest, ReturnedErrorCodeIsCorrect) {
 
   auto fs = TestFS();
 
-  int error = CreateFileReturnError(fs.get(), FILENAME);
+  const int error = CreateFileReturnError(fs.get(), FILENAME);
   EXPECT_EQ(GetParam(), error);
 }

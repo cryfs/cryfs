@@ -17,7 +17,7 @@ class ParallelAccessDataTreeStore;
 class BlobStoreOnBlocks final: public BlobStore {
 public:
   BlobStoreOnBlocks(cpputils::unique_ref<blockstore::BlockStore> blockStore, uint64_t physicalBlocksizeBytes);
-  ~BlobStoreOnBlocks();
+  ~BlobStoreOnBlocks() override;
 
   cpputils::unique_ref<Blob> create() override;
   boost::optional<cpputils::unique_ref<Blob>> load(const blockstore::BlockId &blockId) override;

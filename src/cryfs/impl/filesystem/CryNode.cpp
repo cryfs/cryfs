@@ -108,7 +108,7 @@ void CryNode::rename(const bf::path &to) {
   if (old == boost::none) {
     throw FuseErrnoException(EIO);
   }
-  fsblobstore::DirEntry oldEntry = *old; // Copying this (instead of only keeping the reference) is necessary, because the operations below (i.e. RenameChild()) might make a reference invalid.
+  const fsblobstore::DirEntry oldEntry = *old; // Copying this (instead of only keeping the reference) is necessary, because the operations below (i.e. RenameChild()) might make a reference invalid.
   auto onOverwritten = [this] (const blockstore::BlockId &blockId) {
       device()->RemoveBlob(blockId);
   };
@@ -218,7 +218,7 @@ CryNode::stat_info CryNode::stat() const {
     result.size = fsblobstore::DirBlob::DIR_LSTAT_SIZE;
     //TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
     result.nlink = 1;
-    struct timespec now = cpputils::time::now();
+    const struct timespec now = cpputils::time::now();
     result.atime = now;
     result.mtime = now;
     result.ctime = now;

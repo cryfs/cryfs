@@ -18,12 +18,12 @@ INSTANTIATE_TEST_SUITE_P(LstatErrorCodes, FuseLstatErrorTest, Values(EACCES, EBA
 TEST_F(FuseLstatErrorTest, ReturnNoError) {
   EXPECT_CALL(*fsimpl, lstat(Eq(FILENAME), testing::_)).Times(AtLeast(1)).WillRepeatedly(ReturnIsFile);
   errno = 0;
-  int error = LstatPathReturnError(FILENAME);
+  const int error = LstatPathReturnError(FILENAME);
   EXPECT_EQ(0, error);
 }
 
 TEST_P(FuseLstatErrorTest, ReturnError) {
   EXPECT_CALL(*fsimpl, lstat(Eq(FILENAME), testing::_)).Times(AtLeast(1)).WillRepeatedly(Throw(FuseErrnoException(GetParam())));
-  int error = LstatPathReturnError(FILENAME);
+  const int error = LstatPathReturnError(FILENAME);
   EXPECT_EQ(GetParam(), error);
 }

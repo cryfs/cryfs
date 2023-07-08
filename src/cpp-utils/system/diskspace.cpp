@@ -11,7 +11,7 @@ namespace cpputils {
 
 uint64_t free_disk_space_in_bytes(const bf::path& location) {
 	struct statvfs stat {};
-	int result = ::statvfs(location.string().c_str(), &stat);
+	const int result = ::statvfs(location.string().c_str(), &stat);
 	if (0 != result) {
 		throw std::runtime_error("Error calling statvfs(). Errno: " + std::to_string(errno));
 	}

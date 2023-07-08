@@ -284,7 +284,7 @@ TEST(EitherTest, givenMultiParamMakeRight) {
 TEST(EitherTest, givenLeftCopyConstructedFromValue_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        string a = "4";
+        const string a = "4";
         either<string, int> b(a);
         test(b);
       }
@@ -297,7 +297,7 @@ TEST(EitherTest, givenLeftCopyConstructedFromValue_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         string a = "4";
-        either<string, int> b(a);
+        const either<string, int> b(a);
         test(a);
       }
     },
@@ -308,7 +308,7 @@ TEST(EitherTest, givenLeftCopyConstructedFromValue_thenOldIsCorrect) {
 TEST(EitherTest, givenRightCopyConstructedFromValue_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        string a = "4";
+        const string a = "4";
         either<int, string> b(a);
         test(b);
       }
@@ -321,7 +321,7 @@ TEST(EitherTest, givenRightCopyConstructedFromValue_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         string a = "4";
-        either<int, string> b(a);
+        const either<int, string> b(a);
         test(a);
       }
     },
@@ -345,7 +345,7 @@ TEST(EitherTest, givenLeftMoveConstructedFromValue_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         MovableOnly a(3);
-        either<MovableOnly, int> b(std::move(a));
+        const either<MovableOnly, int> b(std::move(a));
         test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
@@ -369,7 +369,7 @@ TEST(EitherTest, givenRightMoveConstructedFromValue_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         MovableOnly a(3);
-        either<int, MovableOnly> b(std::move(a));
+        const either<int, MovableOnly> b(std::move(a));
         test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
@@ -380,12 +380,12 @@ TEST(EitherTest, givenRightMoveConstructedFromValue_thenOldIsCorrect) {
 TEST(EitherTest, givenLeftCopyAssignedFromValue_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        string a = "4";
+        const string a = "4";
         either<string, int> b(2);
         b = a;
         test(b);
       }, [] (const auto& test) {
-        string a = "4";
+        const string a = "4";
         either<string, int> b("2");
         b = a;
         test(b);
@@ -416,12 +416,12 @@ TEST(EitherTest, givenLeftCopyAssignedFromValue_thenOldIsCorrect) {
 TEST(EitherTest, givenRightCopyAssignedFromValue_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        string a = "4";
+        const string a = "4";
         either<int, string> b(2);
         b = a;
         test(b);
       }, [] (const auto& test) {
-        string a = "4";
+        const string a = "4";
         either<int, string> b("2");
         b = a;
         test(b);
@@ -524,7 +524,7 @@ TEST(EitherTest, givenRightMoveAssignedFromValue_thenOldIsCorrect) {
 TEST(EitherTest, givenLeftCopyConstructed_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<string, int> a("4");
+        const either<string, int> a("4");
         either<string, int> b(a);
         test(b);
       }
@@ -537,7 +537,7 @@ TEST(EitherTest, givenLeftCopyConstructed_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<string, int> a("4");
-        either<string, int> b(a);
+        const either<string, int> b(a);
         test(a);
       }
     },
@@ -548,7 +548,7 @@ TEST(EitherTest, givenLeftCopyConstructed_thenOldIsCorrect) {
 TEST(EitherTest, givenLeftCopyConstructed_withSameType_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<string, string> a = make_left<string, string>("4");
+        const either<string, string> a = make_left<string, string>("4");
         either<string, string> b(a);
         test(b);
       }
@@ -561,7 +561,7 @@ TEST(EitherTest, givenLeftCopyConstructed_withSameType_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<string, string> a = make_left<string, string>("4");
-        either<string, string> b(a);
+        const either<string, string> b(a);
         test(a);
       }
     },
@@ -572,7 +572,7 @@ TEST(EitherTest, givenLeftCopyConstructed_withSameType_thenOldIsCorrect) {
 TEST(EitherTest, givenRightCopyConstructed_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<int, string> a("4");
+        const either<int, string> a("4");
         either<int, string> b(a);
         test(b);
       }
@@ -586,7 +586,7 @@ TEST(EitherTest, givenRightCopyConstructed_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<int, string> a("4");
-        either<int, string> b(a);
+        const either<int, string> b(a);
         test(a);
       }
     },
@@ -597,7 +597,7 @@ TEST(EitherTest, givenRightCopyConstructed_thenOldIsCorrect) {
 TEST(EitherTest, givenRightCopyConstructed_withSameType_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<string, string> a = make_right<string, string>("4");
+        const either<string, string> a = make_right<string, string>("4");
         either<string, string> b(a);
         test(b);
       }
@@ -611,7 +611,7 @@ TEST(EitherTest, givenRightCopyConstructed_withSameType_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<string, string> a = make_right<string, string>("4");
-        either<string, string> b(a);
+        const either<string, string> b(a);
         test(a);
       }
     },
@@ -635,7 +635,7 @@ TEST(EitherTest, givenLeftMoveConstructed_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<MovableOnly, int> a(MovableOnly(3));
-        either<MovableOnly, int> b(std::move(a));
+        const either<MovableOnly, int> b(std::move(a));
         test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
@@ -659,7 +659,7 @@ TEST(EitherTest, givenLeftMoveConstructed_withSameType_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<MovableOnly, MovableOnly> a = make_left<MovableOnly, MovableOnly>(MovableOnly(3));
-        either<MovableOnly, MovableOnly> b(std::move(a));
+        const either<MovableOnly, MovableOnly> b(std::move(a));
         test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
@@ -683,7 +683,7 @@ TEST(EitherTest, givenRightMoveConstructed_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<int, MovableOnly> a(MovableOnly(3));
-        either<int, MovableOnly> b(std::move(a));
+        const either<int, MovableOnly> b(std::move(a));
         test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
@@ -707,7 +707,7 @@ TEST(EitherTest, givenRightMoveConstructed_withSameType_thenOldIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
         either<MovableOnly, MovableOnly> a = make_right<MovableOnly, MovableOnly>(MovableOnly(3));
-        either<MovableOnly, MovableOnly> b(std::move(a));
+        const either<MovableOnly, MovableOnly> b(std::move(a));
         test(a);  // NOLINT(bugprone-use-after-move)
       }
     },
@@ -718,12 +718,12 @@ TEST(EitherTest, givenRightMoveConstructed_withSameType_thenOldIsCorrect) {
 TEST(EitherTest, givenLeftCopyAssigned_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<string, int> a("4");
+        const either<string, int> a("4");
         either<string, int> b(2);
         b = a;
         test(b);
       }, [] (const auto& test) {
-        either<string, int> a("4");
+        const either<string, int> a("4");
         either<string, int> b("2");
         b = a;
         test(b);
@@ -754,12 +754,12 @@ TEST(EitherTest, givenLeftCopyAssigned_thenOldIsCorrect) {
 TEST(EitherTest, givenLeftCopyAssigned_withSameType_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<string, string> a = make_left<string, string>("4");
+        const either<string, string> a = make_left<string, string>("4");
         either<string, string> b = make_right<string, string>("2");
         b = a;
         test(b);
       }, [] (const auto& test) {
-        either<string, string> a = make_left<string, string>("4");
+        const either<string, string> a = make_left<string, string>("4");
         either<string, string> b = make_left<string, string>("2");
         b = a;
         test(b);
@@ -790,12 +790,12 @@ TEST(EitherTest, givenLeftCopyAssigned_withSameType_thenOldIsCorrect) {
 TEST(EitherTest, givenRightCopyAssigned_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<int, string> a("4");
+        const either<int, string> a("4");
         either<int, string> b(2);
         b = a;
         test(b);
       }, [] (const auto& test) {
-        either<int, string> a("4");
+        const either<int, string> a("4");
         either<int, string> b("2");
         b = a;
         test(b);
@@ -826,12 +826,12 @@ TEST(EitherTest, givenRightCopyAssigned_thenOldIsCorrect) {
 TEST(EitherTest, givenRightCopyAssigned_withSameType_thenNewIsCorrect) {
   test_with_matrix({
       [] (const auto& test) {
-        either<string, string> a = make_right<string, string>("4");
+        const either<string, string> a = make_right<string, string>("4");
         either<string, string> b = make_left<string, string>("2");
         b = a;
         test(b);
       }, [] (const auto& test) {
-        either<string, string> a = make_right<string, string>("4");
+        const either<string, string> a = make_right<string, string>("4");
         either<string, string> b = make_right<string, string>("2");
         b = a;
         test(b);
@@ -1058,39 +1058,39 @@ TEST(EitherTest, canEmplaceConstructRight) {
 }
 
 TEST(EitherTest, givenEqualLefts_thenAreEqual) {
-  either<string, int> a("3");
-  either<string, int> b("3");
+  const either<string, int> a("3");
+  const either<string, int> b("3");
   EXPECT_TRUE(a == b);
 }
 
 TEST(EitherTest, givenEqualLefts_thenAreNotUnequal) {
-  either<string, int> a("3");
-  either<string, int> b("3");
+  const either<string, int> a("3");
+  const either<string, int> b("3");
   EXPECT_FALSE(a != b);
 }
 
 TEST(EitherTest, givenEqualRights_thenAreEqual) {
-  either<string, int> a(3);
-  either<string, int> b(3);
+  const either<string, int> a(3);
+  const either<string, int> b(3);
   EXPECT_TRUE(a == b);
 }
 
 TEST(EitherTest, givenEqualRights_thenAreNotUnequal) {
-  either<string, int> a(3);
-  either<string, int> b(3);
+  const either<string, int> a(3);
+  const either<string, int> b(3);
   EXPECT_FALSE(a != b);
 }
 
 TEST(EitherTest, givenLeftAndRight_thenAreNotEqual) {
-  either<string, int> a("3");
-  either<string, int> b(3);
+  const either<string, int> a("3");
+  const either<string, int> b(3);
   EXPECT_FALSE(a == b);
   EXPECT_FALSE(b == a);
 }
 
 TEST(EitherTest, givenLeftAndRight_thenAreUnequal) {
-  either<string, int> a("3");
-  either<string, int> b(3);
+  const either<string, int> a("3");
+  const either<string, int> b(3);
   EXPECT_TRUE(a != b);
   EXPECT_TRUE(b != a);
 }
@@ -1108,15 +1108,15 @@ TEST(EitherTest, OutputRight) {
 }
 
 TEST(EitherTest, givenLeftAndRightWithSameType_thenAreNotEqual) {
-  either<string, string> a = make_left<string, string>("3");
-  either<string, string> b = make_right<string, string>("3");
+  const either<string, string> a = make_left<string, string>("3");
+  const either<string, string> b = make_right<string, string>("3");
   EXPECT_FALSE(a == b);
   EXPECT_FALSE(b == a);
 }
 
 TEST(EitherTest, givenLeftAndRightWithSameType_thenAreUnequal) {
-  either<string, string> a = make_left<string, string>("3");
-  either<string, string> b = make_right<string, string>("3");
+  const either<string, string> a = make_left<string, string>("3");
+  const either<string, string> b = make_right<string, string>("3");
   EXPECT_TRUE(a != b);
   EXPECT_TRUE(b != a);
 }
@@ -1165,34 +1165,34 @@ TEST(EitherTest_Destructor, LeftDestructorIsCalled) {
     DestructorCallback destructorCallback;
     destructorCallback.EXPECT_CALLED(2);  //Once for the temp object, once when the either class destructs
 
-    ClassWithDestructorCallback temp(&destructorCallback);
-    either<ClassWithDestructorCallback, string> var = temp;
+    const ClassWithDestructorCallback temp(&destructorCallback);
+    const either<ClassWithDestructorCallback, string> var = temp;
 }
 
 TEST(EitherTest_Destructor, RightDestructorIsCalled) {
     DestructorCallback destructorCallback;
     destructorCallback.EXPECT_CALLED(2);  //Once for the temp object, once when the either class destructs
 
-    ClassWithDestructorCallback temp(&destructorCallback);
-    either<string, ClassWithDestructorCallback> var = temp;
+    const ClassWithDestructorCallback temp(&destructorCallback);
+    const either<string, ClassWithDestructorCallback> var = temp;
 }
 
 TEST(EitherTest_Destructor, LeftDestructorIsCalledAfterCopying) {
     DestructorCallback destructorCallback;
     destructorCallback.EXPECT_CALLED(3);  //Once for the temp object, once for var1 and once for var2
 
-    ClassWithDestructorCallback temp(&destructorCallback);
-    either<ClassWithDestructorCallback, string> var1 = temp;
-    either<ClassWithDestructorCallback, string> var2 = var1;
+    const ClassWithDestructorCallback temp(&destructorCallback);
+    const either<ClassWithDestructorCallback, string> var1 = temp;
+    const either<ClassWithDestructorCallback, string> var2 = var1;
 }
 
 TEST(EitherTest_Destructor, RightDestructorIsCalledAfterCopying) {
     DestructorCallback destructorCallback;
     destructorCallback.EXPECT_CALLED(3);  //Once for the temp object, once for var1 and once for var2
 
-    ClassWithDestructorCallback temp(&destructorCallback);
-    either<string, ClassWithDestructorCallback> var1 = temp;
-    either<string, ClassWithDestructorCallback> var2 = var1;
+    const ClassWithDestructorCallback temp(&destructorCallback);
+    const either<string, ClassWithDestructorCallback> var1 = temp;
+    const either<string, ClassWithDestructorCallback> var2 = var1;
 }
 
 TEST(EitherTest_Destructor, LeftDestructorIsCalledAfterMoving) {
@@ -1201,7 +1201,7 @@ TEST(EitherTest_Destructor, LeftDestructorIsCalledAfterMoving) {
 
     OnlyMoveableClassWithDestructorCallback temp(&destructorCallback);
     either<OnlyMoveableClassWithDestructorCallback, string> var1 = std::move(temp);
-    either<OnlyMoveableClassWithDestructorCallback, string> var2 = std::move(var1);
+    const either<OnlyMoveableClassWithDestructorCallback, string> var2 = std::move(var1);
 }
 
 TEST(EitherTest_Destructor, RightDestructorIsCalledAfterMoving) {
@@ -1210,7 +1210,7 @@ TEST(EitherTest_Destructor, RightDestructorIsCalledAfterMoving) {
 
     OnlyMoveableClassWithDestructorCallback temp(&destructorCallback);
     either<string, OnlyMoveableClassWithDestructorCallback> var1 = std::move(temp);
-    either<string, OnlyMoveableClassWithDestructorCallback> var2 = std::move(var1);
+    const either<string, OnlyMoveableClassWithDestructorCallback> var2 = std::move(var1);
 }
 
 TEST(EitherTest_Destructor, LeftDestructorIsCalledAfterAssignment) {
@@ -1219,10 +1219,10 @@ TEST(EitherTest_Destructor, LeftDestructorIsCalledAfterAssignment) {
     destructorCallback1.EXPECT_CALLED(2); //Once for the temp1 object, once at the assignment
     destructorCallback2.EXPECT_CALLED(3); //Once for the temp2 object, once in destructor of var2, once in destructor of var1
 
-    ClassWithDestructorCallback temp1(&destructorCallback1);
+    const ClassWithDestructorCallback temp1(&destructorCallback1);
     either<ClassWithDestructorCallback, string> var1 = temp1;
-    ClassWithDestructorCallback temp2(&destructorCallback2);
-    either<ClassWithDestructorCallback, string> var2 = temp2;
+    const ClassWithDestructorCallback temp2(&destructorCallback2);
+    const either<ClassWithDestructorCallback, string> var2 = temp2;
     var1 = var2;
 }
 
@@ -1232,10 +1232,10 @@ TEST(EitherTest_Destructor, RightDestructorIsCalledAfterAssignment) {
     destructorCallback1.EXPECT_CALLED(2); //Once for the temp1 object, once at the assignment
     destructorCallback2.EXPECT_CALLED(3); //Once for the temp2 object, once in destructor of var2, once in destructor of var1
 
-    ClassWithDestructorCallback temp1(&destructorCallback1);
+    const ClassWithDestructorCallback temp1(&destructorCallback1);
     either<string, ClassWithDestructorCallback> var1 = temp1;
-    ClassWithDestructorCallback temp2(&destructorCallback2);
-    either<string, ClassWithDestructorCallback> var2 = temp2;
+    const ClassWithDestructorCallback temp2(&destructorCallback2);
+    const either<string, ClassWithDestructorCallback> var2 = temp2;
     var1 = var2;
 }
 

@@ -15,11 +15,11 @@ INSTANTIATE_TEST_SUITE_P(FuseLstatReturnUidTest, FuseLstatReturnUidTest, Values(
 ));
 
 TEST_P(FuseLstatReturnUidTest, ReturnedFileUidIsCorrect) {
-  fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_uid);
 }
 
 TEST_P(FuseLstatReturnUidTest, ReturnedDirUidIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_uid);
 }

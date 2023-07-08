@@ -8,9 +8,9 @@ namespace cryfs {
 
     bf::path LocalStateDir::forFilesystemId(const CryConfig::FilesystemID &filesystemId) const {
       _createDirIfNotExists(_appDir);
-      bf::path filesystems_dir = _appDir / "filesystems";
+      const bf::path filesystems_dir = _appDir / "filesystems";
       _createDirIfNotExists(filesystems_dir);
-      bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
+      const bf::path this_filesystem_dir = filesystems_dir / filesystemId.ToString();
       _createDirIfNotExists(this_filesystem_dir);
       return this_filesystem_dir;
     }

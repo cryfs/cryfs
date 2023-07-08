@@ -12,7 +12,7 @@ namespace cryfs_cli {
     namespace program_options {
         pair<vector<string>, vector<string>> splitAtDoubleDash(const vector<string> &options) {
             auto doubleDashIterator = std::find(options.begin(), options.end(), string("--"));
-            vector<string> beforeDoubleDash(options.begin(), doubleDashIterator);
+            const vector<string> beforeDoubleDash(options.begin(), doubleDashIterator);
             vector<string> afterDoubleDash;
             if (doubleDashIterator != options.end() && doubleDashIterator + 1 != options.end()) {
                 afterDoubleDash.reserve(options.size() - beforeDoubleDash.size() - 1);

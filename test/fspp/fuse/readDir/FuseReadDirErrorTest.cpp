@@ -22,7 +22,7 @@ TEST_F(FuseReadDirErrorTest, NoError) {
   EXPECT_CALL(*fsimpl, readDir(Eq(DIRNAME)))
     .Times(1).WillOnce(ReturnDirEntries({}));
 
-  int error = ReadDirReturnError(DIRNAME);
+  const int error = ReadDirReturnError(DIRNAME);
   EXPECT_EQ(0, error);
 }
 
@@ -31,6 +31,6 @@ TEST_P(FuseReadDirErrorTest, ReturnedErrorCodeIsCorrect) {
   EXPECT_CALL(*fsimpl, readDir(Eq(DIRNAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = ReadDirReturnError(DIRNAME);
+  const int error = ReadDirReturnError(DIRNAME);
   EXPECT_EQ(GetParam(), error);
 }

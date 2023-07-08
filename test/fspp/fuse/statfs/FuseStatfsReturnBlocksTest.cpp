@@ -18,6 +18,6 @@ INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBlocksTest, FuseStatfsReturnBlocksTest,
 ));
 
 TEST_P(FuseStatfsReturnBlocksTest, ReturnedBlocksIsCorrect) {
-  struct ::statvfs result = CallStatfsWithValue(GetParam());
+  const struct ::statvfs result = CallStatfsWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.f_blocks);
 }

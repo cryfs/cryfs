@@ -315,7 +315,7 @@ TEST_F(CryConfigLoaderTest, FilesystemID_Create) {
 TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"), false)).Times(1).WillOnce(Return(true));
 
-    string version = newerVersion();
+    const string version = newerVersion();
     CreateWithVersion(version, version);
     EXPECT_TRUE(LoadOrCreate().is_right());
 }
@@ -323,7 +323,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerYes) {
 TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("should not be opened with older versions"), false)).Times(1).WillOnce(Return(false));
 
-    string version = newerVersion();
+    const string version = newerVersion();
     CreateWithVersion(version, version);
     try {
         LoadOrCreate();
@@ -336,7 +336,7 @@ TEST_F(CryConfigLoaderTest, AsksWhenLoadingNewerFilesystem_AnswerNo) {
 TEST_F(CryConfigLoaderTest, AsksWhenMigratingOlderFilesystem) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to attempt a migration now?"), false)).Times(1).WillOnce(Return(true));
 
-    string version = olderVersion();
+    const string version = olderVersion();
     CreateWithVersion(version, version);
     EXPECT_TRUE(LoadOrCreate().is_right());
 }
@@ -351,7 +351,7 @@ TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenCorrectVersion) {
 TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to attempt a migration now?"), false)).Times(1).WillOnce(Return(false));
 
-    string version = olderVersion();
+    const string version = olderVersion();
     CreateWithVersion(version, version);
     try {
         LoadOrCreate();
@@ -362,22 +362,22 @@ TEST_F(CryConfigLoaderTest, DontMigrateWhenAnsweredNo) {
 }
 
 TEST_F(CryConfigLoaderTest, MyClientIdIsIndeterministic) {
-    TempFile file1(false);
-    TempFile file2(false);
-    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path(), false, false).right().myClientId;
+    const TempFile file1(false);
+    const TempFile file2(false);
+    const uint32_t myClientId = loader("mypassword", true).loadOrCreate(file1.path(), false, false).right().myClientId;
     EXPECT_NE(myClientId, loader("mypassword", true).loadOrCreate(file2.path(), false, false).right().myClientId);
 }
 
 TEST_F(CryConfigLoaderTest, MyClientIdIsLoadedCorrectly) {
-    TempFile file(false);
-    uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path(), false, false).right().myClientId;
+    const TempFile file(false);
+    const uint32_t myClientId = loader("mypassword", true).loadOrCreate(file.path(), false, false).right().myClientId;
     EXPECT_EQ(myClientId, loader("mypassword", true).loadOrCreate(file.path(), false, false).right().myClientId);
 }
 
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_NoninteractiveMode) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), testing::_)).Times(0);
 
-    string version = olderVersion();
+    const string version = olderVersion();
     CreateWithVersion(version, version);
     EXPECT_TRUE(LoadOrCreate("mypassword", none, true, true).is_right());
 }
@@ -385,7 +385,7 @@ TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramAr
 TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramArguments_InteractiveMode) {
   EXPECT_CALL(*console, askYesNo(HasSubstr("migrate"), testing::_)).Times(0);
 
-  string version = olderVersion();
+  const string version = olderVersion();
   CreateWithVersion(version, version);
   EXPECT_TRUE(LoadOrCreate("mypassword", none, false, true).is_right());
 }
@@ -393,7 +393,7 @@ TEST_F(CryConfigLoaderTest, DoesNotAskForMigrationWhenUpgradesAllowedByProgramAr
 TEST_F(CryConfigLoaderTest, UpdatesConfigFileWithNewVersionWhenMigrated) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to attempt a migration now?"), false)).Times(1).WillOnce(Return(true));
 
-    string version = olderVersion(); // this triggers a migration which should cause it to modify the config file on load
+    const string version = olderVersion(); // this triggers a migration which should cause it to modify the config file on load
     CreateWithVersion(version, version);
 
     expectLoadingModifiesFile(CryConfigFile::Access::ReadWrite);
@@ -405,7 +405,7 @@ TEST_F(CryConfigLoaderTest, UpdatesConfigFileWithNewVersionWhenMigrated) {
 TEST_F(CryConfigLoaderTest, DoesntUpdatesConfigFileWithNewVersionWhenLoadingReadOnly) {
     EXPECT_CALL(*console, askYesNo(HasSubstr("Do you want to attempt a migration now?"), false)).Times(1).WillOnce(Return(true));
 
-    string version = olderVersion(); // this triggers a migration which usually would cause it to modify the config file on load
+    const string version = olderVersion(); // this triggers a migration which usually would cause it to modify the config file on load
     CreateWithVersion(version, version);
 
     expectLoadingDoesntModifyFile(CryConfigFile::Access::ReadOnly);

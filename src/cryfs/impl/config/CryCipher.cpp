@@ -100,6 +100,6 @@ vector<string> CryCiphers::_buildSupportedCipherNames() {
 }
 
 const vector<string>& CryCiphers::supportedCipherNames() {
-	static vector<string> supportedCipherNames = _buildSupportedCipherNames();
+	static const vector<string> supportedCipherNames = _buildSupportedCipherNames();
 	return supportedCipherNames;
 }

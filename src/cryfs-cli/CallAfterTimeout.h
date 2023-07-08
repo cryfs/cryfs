@@ -32,7 +32,7 @@ namespace cryfs_cli {
     }
 
     inline void CallAfterTimeout::resetTimer() {
-        std::unique_lock<std::mutex> lock(_mutex);
+        const std::unique_lock<std::mutex> lock(_mutex);
         _start = boost::chrono::steady_clock::now();
     }
 
@@ -42,12 +42,12 @@ namespace cryfs_cli {
     }
 
     inline boost::chrono::time_point<boost::chrono::steady_clock> CallAfterTimeout::_targetTime() {
-        std::unique_lock<std::mutex> lock(_mutex);
+        const std::unique_lock<std::mutex> lock(_mutex);
         return _start + _timeout;
     }
 
     inline bool CallAfterTimeout::_callCallbackIfTimeout() {
-        std::unique_lock<std::mutex> lock(_mutex);
+        const std::unique_lock<std::mutex> lock(_mutex);
         if (boost::chrono::steady_clock::now() >= _start + _timeout) {
             _callback();
             return false; // Stop thread

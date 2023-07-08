@@ -59,14 +59,14 @@ namespace cpputils {
           Data result(ciphertextSize(plaintextSize));
 
           //Add a random IV
-          uint64_t iv = std::uniform_int_distribution<uint64_t>()(random_);
+          const uint64_t iv = std::uniform_int_distribution<uint64_t>()(random_);
           serialize<uint64_t>(result.data(), iv);
 
           //Use xor chiffre on plaintext
           _xor(static_cast<CryptoPP::byte*>(result.dataOffset(sizeof(uint64_t))), plaintext, plaintextSize, encKey.value ^ iv);
 
           //Add checksum information
-          uint64_t checksum = _checksum(static_cast<const CryptoPP::byte*>(result.data()), encKey, plaintextSize + sizeof(uint64_t));
+          const uint64_t checksum = _checksum(static_cast<const CryptoPP::byte*>(result.data()), encKey, plaintextSize + sizeof(uint64_t));
           serialize<uint64_t>(result.dataOffset(plaintextSize + sizeof(uint64_t)), checksum);
 
           return result;
@@ -80,14 +80,14 @@ namespace cpputils {
           }
 
           //Check checksum
-          uint64_t expectedParity = _checksum(ciphertext, encKey, plaintextSize(ciphertextSize) + sizeof(uint64_t));
-          uint64_t actualParity = deserialize<uint64_t>(ciphertext + plaintextSize(ciphertextSize) + sizeof(uint64_t));
+          const uint64_t expectedParity = _checksum(ciphertext, encKey, plaintextSize(ciphertextSize) + sizeof(uint64_t));
+          const uint64_t actualParity = deserialize<uint64_t>(ciphertext + plaintextSize(ciphertextSize) + sizeof(uint64_t));
           if (expectedParity != actualParity) {
             return boost::none;
           }
 
           //Decrypt xor chiffre from ciphertext
-          uint64_t iv = deserialize<uint64_t>(ciphertext);
+          const uint64_t iv = deserialize<uint64_t>(ciphertext);
           Data result(plaintextSize(ciphertextSize));
           _xor(static_cast<CryptoPP::byte *>(result.data()), ciphertext + sizeof(uint64_t), plaintextSize(ciphertextSize), encKey.value ^ iv);
 

@@ -50,7 +50,7 @@ public:
   }
 
   void EXPECT_CREATE_LEAF(uint32_t leafIndex) {
-    uint64_t maxBytesPerLeaf = nodeStore->layout().maxBytesPerLeaf();
+    const uint64_t maxBytesPerLeaf = nodeStore->layout().maxBytesPerLeaf();
     EXPECT_CALL(traversor, calledCreateLeaf(Eq(leafIndex))).Times(1).WillOnce(Invoke([maxBytesPerLeaf] (uint32_t) {
         return make_shared<Data>(maxBytesPerLeaf);
     }));
@@ -256,7 +256,7 @@ TEST_F(LeafTraverserTest, TraverseFirstLeafOfThreelevelTree) {
 
 TEST_F(LeafTraverserTest, TraverseLastLeafOfThreelevelTree) {
   auto root = CreateThreeLevel();
-  uint32_t numLeaves = nodeStore->layout().maxChildrenPerInnerNode() * 5 + 3;
+  const uint32_t numLeaves = nodeStore->layout().maxChildrenPerInnerNode() * 5 + 3;
   EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readLastChild().blockId())->readLastChild().blockId(), true, numLeaves-1);
 
   TraverseLeaves(std::move(root), numLeaves-1, numLeaves, true);
@@ -264,7 +264,7 @@ TEST_F(LeafTraverserTest, TraverseLastLeafOfThreelevelTree) {
 
 TEST_F(LeafTraverserTest, TraverseMiddleLeafOfThreelevelTree) {
   auto root = CreateThreeLevel();
-  uint32_t wantedLeafIndex = nodeStore->layout().maxChildrenPerInnerNode() * 2 + 5;
+  const uint32_t wantedLeafIndex = nodeStore->layout().maxChildrenPerInnerNode() * 2 + 5;
   EXPECT_TRAVERSE_LEAF(LoadInnerNode(root->readChild(2).blockId())->readChild(5).blockId(), false, wantedLeafIndex);
 
   TraverseLeaves(std::move(root), wantedLeafIndex, wantedLeafIndex+1, true);

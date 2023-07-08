@@ -92,9 +92,9 @@ TYPED_TEST_SUITE(IdValueTypeTest, IdValueTypeTest_types);
 
 
 TYPED_TEST(IdValueTypeTest, Equality) {
-    TypeParam obj1(4);
-    TypeParam obj2(4);
-    TypeParam obj3(5);
+    const TypeParam obj1(4);
+    const TypeParam obj2(4);
+    const TypeParam obj3(5);
 
     EXPECT_TRUE(obj1 == obj2);
     EXPECT_TRUE(obj2 == obj1);;
@@ -108,25 +108,25 @@ TYPED_TEST(IdValueTypeTest, Equality) {
 }
 
 TYPED_TEST(IdValueTypeTest, Constructor) {
-    TypeParam obj(4);
+    const TypeParam obj(4);
     EXPECT_TRUE(obj == TypeParam(4));
 }
 
 TYPED_TEST(IdValueTypeTest, CopyConstructor) {
-    TypeParam obj(2);
-    TypeParam obj2(obj);
+    const TypeParam obj(2);
+    const TypeParam obj2(obj);
     EXPECT_TRUE(obj2 == TypeParam(2));
     EXPECT_TRUE(obj == obj2);
 }
 
 TYPED_TEST(IdValueTypeTest, MoveConstructor) {
     TypeParam obj(2);
-    TypeParam obj2(std::move(obj));
+    const TypeParam obj2(std::move(obj));
     EXPECT_TRUE(obj2 == TypeParam(2));
 }
 
 TYPED_TEST(IdValueTypeTest, CopyAssignment) {
-    TypeParam obj(3);
+    const TypeParam obj(3);
     TypeParam obj2(2);
     obj2 = obj;
     EXPECT_TRUE(obj2 == TypeParam(3));
@@ -134,7 +134,7 @@ TYPED_TEST(IdValueTypeTest, CopyAssignment) {
 }
 
 TYPED_TEST(IdValueTypeTest, CopyAssignment_Return) {
-    TypeParam obj(3);
+    const TypeParam obj(3);
     TypeParam obj2(2);
     EXPECT_TRUE((obj2 = obj) == TypeParam(3));
 }
@@ -153,8 +153,8 @@ TYPED_TEST(IdValueTypeTest, MoveAssignment_Return) {
 }
 
 TYPED_TEST(IdValueTypeTest, Hash) {
-    TypeParam obj(3);
-    TypeParam obj2(3);
+    const TypeParam obj(3);
+    const TypeParam obj2(3);
     EXPECT_EQ(std::hash<TypeParam>()(obj), std::hash<TypeParam>()(obj2));
 }
 
@@ -210,9 +210,9 @@ using OrderedIdValueTypeTest_types = testing::Types<MyOrderedIdValueType, MyQuan
 TYPED_TEST_SUITE(OrderedIdValueTypeTest, OrderedIdValueTypeTest_types);
 
 TYPED_TEST(OrderedIdValueTypeTest, LessThan) {
-    TypeParam a(3);
-    TypeParam b(3);
-    TypeParam c(4);
+    const TypeParam a(3);
+    const TypeParam b(3);
+    const TypeParam c(4);
     EXPECT_FALSE(a < a);
     EXPECT_FALSE(a < b);
     EXPECT_TRUE(a < c);
@@ -225,9 +225,9 @@ TYPED_TEST(OrderedIdValueTypeTest, LessThan) {
 }
 
 TYPED_TEST(OrderedIdValueTypeTest, GreaterThan) {
-    TypeParam a(3);
-    TypeParam b(3);
-    TypeParam c(4);
+    const TypeParam a(3);
+    const TypeParam b(3);
+    const TypeParam c(4);
     EXPECT_FALSE(a > a);
     EXPECT_FALSE(a > b);
     EXPECT_FALSE(a > c);
@@ -240,9 +240,9 @@ TYPED_TEST(OrderedIdValueTypeTest, GreaterThan) {
 }
 
 TYPED_TEST(OrderedIdValueTypeTest, LessOrEqualThan) {
-    TypeParam a(3);
-    TypeParam b(3);
-    TypeParam c(4);
+    const TypeParam a(3);
+    const TypeParam b(3);
+    const TypeParam c(4);
     EXPECT_TRUE(a <= a);
     EXPECT_TRUE(a <= b);
     EXPECT_TRUE(a <= c);
@@ -255,9 +255,9 @@ TYPED_TEST(OrderedIdValueTypeTest, LessOrEqualThan) {
 }
 
 TYPED_TEST(OrderedIdValueTypeTest, GreaterOrEqualThan) {
-    TypeParam a(3);
-    TypeParam b(3);
-    TypeParam c(4);
+    const TypeParam a(3);
+    const TypeParam b(3);
+    const TypeParam c(4);
     EXPECT_TRUE(a >= a);
     EXPECT_TRUE(a >= b);
     EXPECT_FALSE(a >= c);
@@ -441,7 +441,7 @@ TYPED_TEST_SUITE(FlagsValueTypeTest, FlagsValueType_types);
 
 TYPED_TEST(FlagsValueTypeTest, Invert) {
     TypeParam a(3);
-    TypeParam b(~3);
+    const TypeParam b(~3);
     EXPECT_EQ(b, ~a);
 
     a = ~a;
@@ -449,9 +449,9 @@ TYPED_TEST(FlagsValueTypeTest, Invert) {
 }
 
 TYPED_TEST(FlagsValueTypeTest, And) {
-    TypeParam a(3);
+    const TypeParam a(3);
     TypeParam b(5);
-    TypeParam c(3 & 5);
+    const TypeParam c(3 & 5);
     EXPECT_EQ(c, a & b);
 
     EXPECT_EQ(c, b &= a);
@@ -459,9 +459,9 @@ TYPED_TEST(FlagsValueTypeTest, And) {
 }
 
 TYPED_TEST(FlagsValueTypeTest, Or) {
-    TypeParam a(3);
+    const TypeParam a(3);
     TypeParam b(5);
-    TypeParam c(3 | 5);
+    const TypeParam c(3 | 5);
     EXPECT_EQ(c, a | b);
 
     EXPECT_EQ(c, b |= a);
@@ -469,9 +469,9 @@ TYPED_TEST(FlagsValueTypeTest, Or) {
 }
 
 TYPED_TEST(FlagsValueTypeTest, Xor) {
-    TypeParam a(3);
+    const TypeParam a(3);
     TypeParam b(5);
-    TypeParam c(3 ^ 5);
+    const TypeParam c(3 ^ 5);
     EXPECT_EQ(c, a ^ b);
 
     EXPECT_EQ(c, b ^= a);

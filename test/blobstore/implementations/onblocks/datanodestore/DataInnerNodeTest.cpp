@@ -114,7 +114,7 @@ private:
 constexpr uint32_t DataInnerNodeTest::BLOCKSIZE_BYTES;
 
 TEST_F(DataInnerNodeTest, CorrectKeyReturnedAfterLoading) {
-  BlockId blockId = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->blockId()})->blockId();
+  const BlockId blockId = DataInnerNode::CreateNewNode(blockStore, nodeStore->layout(), 1, {leaf->blockId()})->blockId();
 
   auto loaded = nodeStore->load(blockId).value();
   EXPECT_EQ(blockId, loaded->blockId());
@@ -143,7 +143,7 @@ TEST_F(DataInnerNodeTest, IsCorrectlyInitializedAfterLoading) {
 }
 
 TEST_F(DataInnerNodeTest, AddingASecondLeaf) {
-  BlockId leaf2_blockId = AddALeafTo(node.get());
+  const BlockId leaf2_blockId = AddALeafTo(node.get());
 
   EXPECT_EQ(2u, node->numChildren());
   EXPECT_EQ(leaf->blockId(), node->readChild(0).blockId());
@@ -179,7 +179,7 @@ TEST_F(DataInnerNodeTest, BuildingAThreeLevelTreeAndReload) {
 
 TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
   auto child = nodeStore->createNewLeafNode(Data(0));
-  BlockId node_blockId = node->blockId();
+  const BlockId node_blockId = node->blockId();
   unique_ref<DataInnerNode> converted = DataNode::convertToNewInnerNode(std::move(node), nodeStore->layout(), *child);
 
   EXPECT_EQ(1u, converted->numChildren());
@@ -188,7 +188,7 @@ TEST_F(DataInnerNodeTest, ConvertToInternalNode) {
 }
 
 TEST_F(DataInnerNodeTest, ConvertToInternalNodeZeroesOutChildrenRegion) {
-  BlockId blockId = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
+  const BlockId blockId = CreateNodeWithDataConvertItToInnerNodeAndReturnKey();
 
   auto block = blockStore->load(blockId).value();
   EXPECT_EQ(0, std::memcmp(ZEROES.data(), static_cast<const uint8_t*>(block->data())+DataNodeLayout::HEADERSIZE_BYTES+sizeof(DataInnerNode::ChildEntry), nodeStore->layout().maxBytesPerLeaf()-sizeof(DataInnerNode::ChildEntry)));
@@ -220,12 +220,12 @@ TEST_F(DataInnerNodeTest, LastChildWhenOneChild) {
 }
 
 TEST_F(DataInnerNodeTest, LastChildWhenTwoChildren) {
-  BlockId blockId = AddALeafTo(node.get());
+  const BlockId blockId = AddALeafTo(node.get());
   EXPECT_EQ(blockId, node->readLastChild().blockId());
 }
 
 TEST_F(DataInnerNodeTest, LastChildWhenThreeChildren) {
   AddALeafTo(node.get());
-  BlockId blockId = AddALeafTo(node.get());
+  const BlockId blockId = AddALeafTo(node.get());
   EXPECT_EQ(blockId, node->readLastChild().blockId());
 }

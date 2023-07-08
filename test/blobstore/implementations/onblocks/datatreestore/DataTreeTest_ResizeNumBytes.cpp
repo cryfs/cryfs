@@ -31,7 +31,7 @@ public:
   static constexpr DataNodeLayout LAYOUT = DataNodeLayout(BLOCKSIZE_BYTES);
 
   unique_ref<DataTree> CreateTree(unique_ref<DataNode> root) {
-    BlockId blockId = root->blockId();
+    const BlockId blockId = root->blockId();
     cpputils::destruct(std::move(root));
     return treeStore.load(blockId).value();
   }
@@ -199,21 +199,21 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, NumLeavesIsCorrect_FromCache) {
 TEST_P(DataTreeTest_ResizeNumBytes_P, DepthFlagsAreCorrect) {
   tree->resizeNumBytes(newSize);
   tree->flush();
-  uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeNumBytes::LAYOUT.maxChildrenPerInnerNode()) - 0.00000000001); // The subtraction takes care of double inaccuracies if newNumberOfLeaves == maxChildrenPerInnerNode
-  CHECK_DEPTH(depth, tree->blockId());
+  const uint32_t depth = ceil(log(newNumberOfLeaves)/log(DataTreeTest_ResizeNumBytes::LAYOUT.maxChildrenPerInnerNode()) - 0.00000000001); // The subtraction takes care of double inaccuracies if newNumberOfLeaves == maxChildrenPerInnerNode
+  CHECK_DEPTH(static_cast<int>(depth), tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, KeyDoesntChange) {
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   tree->flush();
   tree->resizeNumBytes(newSize);
   EXPECT_EQ(blockId, tree->blockId());
 }
 
 TEST_P(DataTreeTest_ResizeNumBytes_P, DataStaysIntact) {
-  uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
+  const uint32_t oldNumberOfLeaves = std::max(UINT64_C(1), ceilDivision(tree->numBytes(), static_cast<uint64_t>(nodeStore->layout().maxBytesPerLeaf())));
   TwoLevelDataFixture data(nodeStore, TwoLevelDataFixture::SizePolicy::Unchanged);
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
   data.FillInto(nodeStore->load(blockId).get().get());
 
@@ -244,7 +244,7 @@ TEST_P(DataTreeTest_ResizeNumBytes_P, UnneededBlocksGetDeletedWhenShrinking) {
 TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {
   auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
   tree->resizeNumBytes(0);
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   cpputils::destruct(std::move(tree));
   auto leaf = LoadLeafNode(blockId);
   EXPECT_EQ(0u, leaf->numBytes());
@@ -252,7 +252,7 @@ TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_NumBytesIsCorrect) {
 
 TEST_F(DataTreeTest_ResizeNumBytes, ResizeToZero_blockIdDoesntChange) {
   auto tree = CreateThreeLevelTreeWithThreeChildrenAndLastLeafSize(10u);
-  BlockId blockId = tree->blockId();
+  const BlockId blockId = tree->blockId();
   tree->resizeNumBytes(0);
   tree->flush();
   EXPECT_EQ(blockId, tree->blockId());

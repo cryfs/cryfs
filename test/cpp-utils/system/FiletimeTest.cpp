@@ -7,9 +7,9 @@ using cpputils::set_filetime;
 using cpputils::get_filetime;
 
 TEST(FiletimeTest, SetAndGetTime_ReturnsCorrectTime) {
-	TempFile file;
-	struct timespec accessTime       { 1535965242, 12345000 };
-	struct timespec modificationTime { 1435965242, 98765000 };
+	const TempFile file;
+	const struct timespec accessTime       { 1535965242, 12345000 };
+	const struct timespec modificationTime { 1435965242, 98765000 };
 	int retval = set_filetime(file.path().string().c_str(), accessTime, modificationTime);
 	EXPECT_EQ(0, retval);
 

@@ -9,16 +9,16 @@ using cpputils::Data;
 class DataTreeTest_Performance: public DataTreeTest {
 public:
     void TraverseByWriting(DataTree *tree, uint64_t beginIndex, uint64_t endIndex) {
-        uint64_t offset = beginIndex * maxBytesPerLeaf;
-        uint64_t count = endIndex * maxBytesPerLeaf - offset;
+        const uint64_t offset = beginIndex * maxBytesPerLeaf;
+        const uint64_t count = endIndex * maxBytesPerLeaf - offset;
         Data data(count);
         data.FillWithZeroes();
         tree->writeBytes(data.data(), offset, count);
     }
 
     void TraverseByReading(DataTree *tree, uint64_t beginIndex, uint64_t endIndex) {
-        uint64_t offset = beginIndex * maxBytesPerLeaf;
-        uint64_t count = endIndex * maxBytesPerLeaf - offset;
+        const uint64_t offset = beginIndex * maxBytesPerLeaf;
+        const uint64_t count = endIndex * maxBytesPerLeaf - offset;
         Data data(count);
         tree->readBytes(data.data(), offset, count);
     }

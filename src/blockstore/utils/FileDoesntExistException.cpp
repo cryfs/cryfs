@@ -2,7 +2,6 @@
 
 namespace bf = boost::filesystem;
 
-using std::runtime_error;
 using std::string;
 
 namespace blockstore {

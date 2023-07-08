@@ -177,8 +177,8 @@ TEST_F(CryConfigFileTest, CreatedWithVersion_SaveAndLoad) {
 
 //Test that the encrypted config file has the same size, no matter how big the plaintext config data.
 TEST_F(CryConfigFileTest, ConfigFileHasFixedSize) {
-    TempFile file1(false);
-    TempFile file2(false);
+    const TempFile file1(false);
+    const TempFile file2(false);
     //It is important to have different cipher name lengths here, because they're on the outer encryption level.
     //So this ensures that there also is a padding happening on the outer encryption level.
     CreateWithCipher("aes-128-gcm", file1); // Short cipher name and short key
@@ -202,7 +202,7 @@ TEST_F(CryConfigFileTest, FailsIfConfigFileIsEncryptedWithACipherDifferentToTheO
     auto encryptor = CryConfigEncryptorFactory::deriveNewKey(&keyProvider);
     auto config = Config();
     config.SetCipher("aes-256-gcm");
-    Data encrypted = encryptor->encrypt(config.save(), "aes-256-cfb");
+    const Data encrypted = encryptor->encrypt(config.save(), "aes-256-cfb");
     encrypted.StoreToFile(file.path());
     auto loaded = Load(keySeed);
     EXPECT_EQ(none, loaded);

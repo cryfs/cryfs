@@ -32,7 +32,7 @@ namespace cryfs {
         Deserializer deserializer(&data);
         try {
             _checkHeader(&deserializer);
-            string cipherName = deserializer.readString();
+            const string cipherName = deserializer.readString();
             auto result = deserializer.readTailData();
             deserializer.finished();
             return InnerConfig {cipherName, std::move(result)};
@@ -43,7 +43,7 @@ namespace cryfs {
     }
 
     void InnerConfig::_checkHeader(Deserializer *deserializer) {
-        string header = deserializer->readString();
+        const string header = deserializer->readString();
         if (header != HEADER) {
             throw std::runtime_error("Invalid header. Maybe this filesystem was created with a different version of CryFS?");
         }

@@ -20,13 +20,13 @@ void _showVersion() {
 
 void Cli::main(int argc, const char **argv) {
     _showVersion();
-    ProgramOptions options = Parser(argc, argv).parse();
+    const ProgramOptions options = Parser(argc, argv).parse();
 
     if (!boost::filesystem::exists(options.mountDir())) {
         throw cryfs::CryfsException("Given mountdir doesn't exist", cryfs::ErrorCode::InaccessibleMountDir);
     }
 
-    bool immediate = options.immediate();
+    bool immediate = options.immediate(); // NOLINT(misc-const-correctness) -- this cannot be const because it is modified in a platform-specific ifdef below
 #if defined(__APPLE__)
     if (options.immediate()) {
         std::cerr << "Warning: OSX doesn't support the --immediate flag. Ignoring it.";

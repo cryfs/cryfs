@@ -8,6 +8,7 @@ namespace cpputils {
     class RandomGenerator {
     public:
         RandomGenerator();
+        virtual ~RandomGenerator() = default;
 
         template<size_t SIZE> FixedSizeData<SIZE> getFixedSize();
         Data get(size_t size);

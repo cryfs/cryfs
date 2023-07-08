@@ -51,8 +51,8 @@ void IntegrityBlockStore2::_checkFormatHeader(const Data &data) const {
 }
 
 bool IntegrityBlockStore2::_checkVersionHeader(const BlockId &blockId, const Data &data) const {
-  uint32_t clientId = _readClientId(data);
-  uint64_t version = _readVersion(data);
+  const uint32_t clientId = _readClientId(data);
+  const uint64_t version = _readVersion(data);
 
   if(!_knownBlockVersions.checkAndUpdateVersion(clientId, blockId, version)) {
     integrityViolationDetected("The block version number is too low. Did an attacker try to roll back the block or to re-introduce a deleted block?");
@@ -65,7 +65,7 @@ bool IntegrityBlockStore2::_checkVersionHeader(const BlockId &blockId, const Dat
 bool IntegrityBlockStore2::_checkIdHeader(const BlockId &expectedBlockId, const Data &data) const {
   // The obvious reason for this is to prevent adversaries from renaming blocks, but storing the block id in this way also
   // makes the authenticated cipher more robust, see https://libsodium.gitbook.io/doc/secret-key_cryptography/aead#robustness
-  BlockId actualBlockId = _readBlockId(data);
+  const BlockId actualBlockId = _readBlockId(data);
   if (expectedBlockId != actualBlockId) {
     integrityViolationDetected("The block id is wrong. Did an attacker try to rename some blocks?");
     return false;
@@ -111,8 +111,8 @@ IntegrityBlockStore2::IntegrityBlockStore2(unique_ref<BlockStore2> baseBlockStor
 }
 
 bool IntegrityBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
-  uint64_t version = _knownBlockVersions.incrementVersion(blockId);
-  Data dataWithHeader = _prependHeaderToData(blockId, _knownBlockVersions.myClientId(), version, data);
+  const uint64_t version = _knownBlockVersions.incrementVersion(blockId);
+  const Data dataWithHeader = _prependHeaderToData(blockId, _knownBlockVersions.myClientId(), version, data);
   return _baseBlockStore->tryCreate(blockId, dataWithHeader);
 }
 
@@ -131,11 +131,11 @@ optional<Data> IntegrityBlockStore2::load(const BlockId &blockId) const {
   }
 #ifndef CRYFS_NO_COMPATIBILITY
   if (FORMAT_VERSION_HEADER_OLD == _readFormatHeader(*loaded)) {
-    Data migrated = _migrateBlock(blockId, *loaded);
+    const Data migrated = _migrateBlock(blockId, *loaded);
     if (!_checkHeader(blockId, migrated) && !_allowIntegrityViolations) {
       return optional<Data>(none);
     }
-    Data content = _removeHeader(migrated);
+    const Data content = _removeHeader(migrated);
     const_cast<IntegrityBlockStore2*>(this)->store(blockId, content);
     return optional<Data>(_removeHeader(migrated));
   }
@@ -158,8 +158,8 @@ Data IntegrityBlockStore2::_migrateBlock(const BlockId &blockId, const Data &dat
 #endif
 
 void IntegrityBlockStore2::store(const BlockId &blockId, const Data &data) {
-  uint64_t version = _knownBlockVersions.incrementVersion(blockId);
-  Data dataWithHeader = _prependHeaderToData(blockId, _knownBlockVersions.myClientId(), version, data);
+  const uint64_t version = _knownBlockVersions.incrementVersion(blockId);
+  const Data dataWithHeader = _prependHeaderToData(blockId, _knownBlockVersions.myClientId(), version, data);
   return _baseBlockStore->store(blockId, dataWithHeader);
 }
 
@@ -172,7 +172,7 @@ uint64_t IntegrityBlockStore2::estimateNumFreeBytes() const {
 }
 
 uint64_t IntegrityBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
-  uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+  const uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
   if (baseBlockSize <= HEADER_LENGTH) {
     return 0;
   }
@@ -225,9 +225,9 @@ void IntegrityBlockStore2::migrateBlockFromBlockstoreWithoutVersionNumbers(block
       return;
   }
 
-  uint64_t version = knownBlockVersions->incrementVersion(blockId);
-  cpputils::Data data = std::move(*data_);
-  cpputils::Data dataWithHeader = _prependHeaderToData(blockId, knownBlockVersions->myClientId(), version, data);
+  const uint64_t version = knownBlockVersions->incrementVersion(blockId);
+  const cpputils::Data data = std::move(*data_);
+  const cpputils::Data dataWithHeader = _prependHeaderToData(blockId, knownBlockVersions->myClientId(), version, data);
   baseBlockStore->store(blockId, dataWithHeader);
 }
 #endif

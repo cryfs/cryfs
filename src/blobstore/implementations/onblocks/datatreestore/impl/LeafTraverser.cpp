@@ -37,8 +37,8 @@ namespace blobstore {
                 //     beginIndex<numLeaves<endIndex, beginIndex=numLeaves<endIndex,
                 //     numLeaves<beginIndex<endIndex, numLeaves<beginIndex=endIndex
 
-                uint32_t maxLeavesForDepth = _maxLeavesForTreeDepth((*root)->depth());
-                bool increaseTreeDepth = endIndex > maxLeavesForDepth;
+                const uint32_t maxLeavesForDepth = _maxLeavesForTreeDepth((*root)->depth());
+                const bool increaseTreeDepth = endIndex > maxLeavesForDepth;
                 ASSERT(!_readOnlyTraversal || !increaseTreeDepth, "Tried to grow a tree on a read only traversal");
 
                 if ((*root)->depth() == 0) {
@@ -49,7 +49,7 @@ namespace blobstore {
                         leaf->resize(_nodeStore->layout().maxBytesPerLeaf());
                     }
                     if (beginIndex == 0 && endIndex >= 1) {
-                        bool isRightBorderLeaf = (endIndex == 1);
+                        const bool isRightBorderLeaf = (endIndex == 1);
                         onExistingLeaf(0, isRightBorderLeaf, LeafHandle(_nodeStore, leaf));
                     }
                 } else {
@@ -119,21 +119,21 @@ namespace blobstore {
 
                 //TODO Call callbacks for different leaves in parallel.
 
-                uint32_t leavesPerChild = _maxLeavesForTreeDepth(root->depth()-1);
-                uint32_t beginChild = beginIndex/leavesPerChild;
-                uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
+                const uint32_t leavesPerChild = _maxLeavesForTreeDepth(root->depth()-1);
+                const uint32_t beginChild = beginIndex/leavesPerChild;
+                const uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
                 ASSERT(endChild <= _nodeStore->layout().maxChildrenPerInnerNode(), "Traversal region would need increasing the tree depth. This should have happened before calling this function.");
-                uint32_t numChildren = root->numChildren();
+                const uint32_t numChildren = root->numChildren();
                 ASSERT(!growLastLeaf || endChild >= numChildren, "Can only grow last leaf if it exists");
                 ASSERT(!_readOnlyTraversal || endChild <= numChildren, "Can only traverse out of bounds in a read-only traversal");
-                bool shouldGrowLastExistingLeaf = growLastLeaf || endChild > numChildren;
+                const bool shouldGrowLastExistingLeaf = growLastLeaf || endChild > numChildren;
 
                 // If we traverse outside of the valid region (i.e. usually would only traverse to new leaves and not to the last leaf),
                 // we still have to descend to the last old child to fill it with leaves and grow the last old leaf.
                 if (isLeftBorderOfTraversal && beginChild >= numChildren) {
                     ASSERT(numChildren > 0, "Node doesn't have children.");
                     auto childBlockId = root->readLastChild().blockId();
-                    uint32_t childOffset = (numChildren-1) * leavesPerChild;
+                    const uint32_t childOffset = (numChildren-1) * leavesPerChild;
                     _traverseExistingSubtree(childBlockId, root->depth()-1, leavesPerChild, leavesPerChild, childOffset, true, false, true,
                                              [] (uint32_t /*index*/, bool /*isRightBorderNode*/, LeafHandle /*leaf*/) {ASSERT(false, "We don't actually traverse any leaves.");},
                                              [] (uint32_t /*index*/) -> Data {ASSERT(false, "We don't actually traverse any leaves.");},
@@ -143,12 +143,12 @@ namespace blobstore {
                 // Traverse existing children
                 for (uint32_t childIndex = beginChild; childIndex < std::min(endChild, numChildren); ++childIndex) {
                     auto childBlockId = root->readChild(childIndex).blockId();
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
-                    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
-                    bool isFirstChild = (childIndex == beginChild);
-                    bool isLastExistingChild = (childIndex == numChildren - 1);
-                    bool isLastChild = isLastExistingChild && (numChildren == endChild);
+                    const uint32_t childOffset = childIndex * leavesPerChild;
+                    const uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
+                    const uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+                    const bool isFirstChild = (childIndex == beginChild);
+                    const bool isLastExistingChild = (childIndex == numChildren - 1);
+                    const bool isLastChild = isLastExistingChild && (numChildren == endChild);
                     ASSERT(localEndIndex <= leavesPerChild, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
                     _traverseExistingSubtree(childBlockId, root->depth()-1, localBeginIndex, localEndIndex, leafOffset + childOffset, isLeftBorderOfTraversal && isFirstChild,
                                              isRightBorderNode && isLastChild, shouldGrowLastExistingLeaf && isLastExistingChild, onExistingLeaf, onCreateLeaf, onBacktrackFromSubtree);
@@ -158,9 +158,9 @@ namespace blobstore {
                 for (uint32_t childIndex = numChildren; childIndex < endChild; ++childIndex) {
                     ASSERT(!_readOnlyTraversal, "Can't create new children in a read-only traversal");
 
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    uint32_t localBeginIndex = std::min(leavesPerChild, utils::maxZeroSubtraction(beginIndex, childOffset));
-                    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+                    const uint32_t childOffset = childIndex * leavesPerChild;
+                    const uint32_t localBeginIndex = std::min(leavesPerChild, utils::maxZeroSubtraction(beginIndex, childOffset));
+                    const uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
                     auto leafCreator = (childIndex >= beginChild) ? onCreateLeaf : _createMaxSizeLeaf();
                     auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, root->depth() - 1, leafCreator, onBacktrackFromSubtree);
                     root->addChild(*child);
@@ -184,18 +184,18 @@ namespace blobstore {
                     return _nodeStore->createNewLeafNode(leafCreator(leafOffset));
                 }
 
-                uint8_t minNeededDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), static_cast<uint64_t>(endIndex));
+                const uint8_t minNeededDepth = utils::ceilLog(_nodeStore->layout().maxChildrenPerInnerNode(), static_cast<uint64_t>(endIndex));
                 ASSERT(depth >= minNeededDepth, "Given tree depth doesn't fit given number of leaves to create.");
-                uint32_t leavesPerChild = _maxLeavesForTreeDepth(depth-1);
-                uint32_t beginChild = beginIndex/leavesPerChild;
-                uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
+                const uint32_t leavesPerChild = _maxLeavesForTreeDepth(depth-1);
+                const uint32_t beginChild = beginIndex/leavesPerChild;
+                const uint32_t endChild = utils::ceilDivision(endIndex, leavesPerChild);
 
                 vector<blockstore::BlockId> children;
                 children.reserve(endChild);
                 // TODO Remove redundancy of following two for loops by using min/max for calculating the parameters of the recursive call.
                 // Create gap children (i.e. children before the traversal but after the current size)
                 for (uint32_t childIndex = 0; childIndex < beginChild; ++childIndex) {
-                    uint32_t childOffset = childIndex * leavesPerChild;
+                    const uint32_t childOffset = childIndex * leavesPerChild;
                     auto child = _createNewSubtree(leavesPerChild, leavesPerChild, leafOffset + childOffset, depth - 1,
                                                    [] (uint32_t /*index*/)->Data {ASSERT(false, "We're only creating gap leaves here, not traversing any.");},
                                                    [] (DataInnerNode* /*node*/) {});
@@ -204,9 +204,9 @@ namespace blobstore {
                 }
                 // Create new children that are traversed
                 for(uint32_t childIndex = beginChild; childIndex < endChild; ++childIndex) {
-                    uint32_t childOffset = childIndex * leavesPerChild;
-                    uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
-                    uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
+                    const uint32_t childOffset = childIndex * leavesPerChild;
+                    const uint32_t localBeginIndex = utils::maxZeroSubtraction(beginIndex, childOffset);
+                    const uint32_t localEndIndex = std::min(leavesPerChild, endIndex - childOffset);
                     auto child = _createNewSubtree(localBeginIndex, localEndIndex, leafOffset + childOffset, depth - 1, onCreateLeaf, onBacktrackFromSubtree);
                     ASSERT(child->depth() == depth-1, "Created child node has wrong depth");
                     children.push_back(child->blockId());
@@ -229,7 +229,7 @@ namespace blobstore {
             function<Data (uint32_t index)> LeafTraverser::_createMaxSizeLeaf() const {
                 ASSERT(!_readOnlyTraversal, "Can't create a new leaf in a read-only traversal");
 
-                uint64_t maxBytesPerLeaf = _nodeStore->layout().maxBytesPerLeaf();
+                const uint64_t maxBytesPerLeaf = _nodeStore->layout().maxBytesPerLeaf();
                 return [maxBytesPerLeaf] (uint32_t /*index*/) -> Data {
                    return Data(maxBytesPerLeaf).FillWithZeroes();
                 };

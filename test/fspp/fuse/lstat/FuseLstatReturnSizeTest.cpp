@@ -17,11 +17,11 @@ INSTANTIATE_TEST_SUITE_P(FuseLstatReturnSizeTest, FuseLstatReturnSizeTest, Value
 ));
 
 TEST_P(FuseLstatReturnSizeTest, ReturnedFileSizeIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), fspp::num_bytes_t(result.st_size));
 }
 
 TEST_P(FuseLstatReturnSizeTest, ReturnedDirSizeIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), fspp::num_bytes_t(result.st_size));
 }

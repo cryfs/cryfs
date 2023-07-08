@@ -17,6 +17,6 @@ TEST_P(FuseUnlinkErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, unlink(Eq(FILENAME)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = UnlinkReturnError(FILENAME);
+  const int error = UnlinkReturnError(FILENAME);
   EXPECT_EQ(GetParam(), error);
 }

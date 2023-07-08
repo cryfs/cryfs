@@ -26,9 +26,9 @@ void set_thread_name(const char* name) {
     name_.resize(MAX_NAME_LEN - 1);
   }
 #if defined(__APPLE__)
-  int result = pthread_setname_np(name_.c_str());
+  const int result = pthread_setname_np(name_.c_str());
 #else
-  int result = pthread_setname_np(pthread_self(), name_.c_str());
+  const int result = pthread_setname_np(pthread_self(), name_.c_str());
 #endif
   if (0 != result) {
     throw std::runtime_error("Error setting thread name with pthread_setname_np. Code: " + std::to_string(result));
@@ -73,9 +73,9 @@ int pthread_getname_np_gcompat(pthread_t thread, char *name, size_t len) {
 std::string get_thread_name(pthread_t thread) {
   std::array<char, MAX_NAME_LEN> name{};
 #if defined(__GLIBC__) || defined(__APPLE__)
-  int result = pthread_getname_np(thread, name.data(), MAX_NAME_LEN);
+  const int result = pthread_getname_np(thread, name.data(), MAX_NAME_LEN);
 #else
-  int result = pthread_getname_np_gcompat(thread, name.data(), MAX_NAME_LEN);
+  const int result = pthread_getname_np_gcompat(thread, name.data(), MAX_NAME_LEN);
 #endif
   if (0 != result) {
     throw std::runtime_error("Error getting thread name with pthread_getname_np. Code: " + std::to_string(result));

@@ -20,20 +20,22 @@ TEST(HomedirTest, AppDataDirIsValid) {
 }
 
 TEST(HomedirTest, FakeHomeDirectorySetsHomedirCorrectly) {
-    TempDir fakeHomeDir, fakeAppDataDir;
-    FakeHomeDirectoryRAII a(fakeHomeDir.path(), fakeAppDataDir.path());
+    const TempDir fakeHomeDir;
+    const TempDir fakeAppDataDir;
+    const FakeHomeDirectoryRAII a(fakeHomeDir.path(), fakeAppDataDir.path());
 
     EXPECT_EQ(fakeHomeDir.path(), HomeDirectory::get());
     EXPECT_EQ(fakeAppDataDir.path(), HomeDirectory::getXDGDataDir());
 }
 
 TEST(HomedirTest, FakeHomeDirectoryResetsHomedirCorrectly) {
-    bf::path actualHomeDir = HomeDirectory::get();
-    bf::path actualAppDataDir = HomeDirectory::getXDGDataDir();
+    const bf::path actualHomeDir = HomeDirectory::get();
+    const bf::path actualAppDataDir = HomeDirectory::getXDGDataDir();
 
     {
-        TempDir fakeHomeDir, fakeAppDataDir;
-        FakeHomeDirectoryRAII a(fakeHomeDir.path(), fakeAppDataDir.path());
+        const TempDir fakeHomeDir;
+        const TempDir fakeAppDataDir;
+        const FakeHomeDirectoryRAII a(fakeHomeDir.path(), fakeAppDataDir.path());
 
         EXPECT_NE(actualHomeDir, HomeDirectory::get());
         EXPECT_NE(actualAppDataDir, HomeDirectory::getXDGDataDir());
@@ -43,21 +45,21 @@ TEST(HomedirTest, FakeHomeDirectoryResetsHomedirCorrectly) {
 }
 
 TEST(HomedirTest, FakeTempHomeDirectorySetsHomedirCorrectly) {
-    bf::path actualHomeDir = HomeDirectory::get();
-    bf::path actualAppDataDir = HomeDirectory::getXDGDataDir();
+    const bf::path actualHomeDir = HomeDirectory::get();
+    const bf::path actualAppDataDir = HomeDirectory::getXDGDataDir();
 
-    FakeTempHomeDirectoryRAII a;
+    const FakeTempHomeDirectoryRAII a;
 
     EXPECT_NE(actualHomeDir, HomeDirectory::get());
     EXPECT_NE(actualAppDataDir, HomeDirectory::getXDGDataDir());
 }
 
 TEST(HomedirTest, FakeTempHomeDirectoryResetsHomedirCorrectly) {
-    bf::path actualHomeDir = HomeDirectory::get();
-    bf::path actualAppDataDir = HomeDirectory::getXDGDataDir();
+    const bf::path actualHomeDir = HomeDirectory::get();
+    const bf::path actualAppDataDir = HomeDirectory::getXDGDataDir();
 
     {
-        FakeTempHomeDirectoryRAII a;
+        const FakeTempHomeDirectoryRAII a;
 
         EXPECT_NE(actualHomeDir, HomeDirectory::get());
         EXPECT_NE(actualAppDataDir, HomeDirectory::getXDGDataDir());
@@ -67,7 +69,7 @@ TEST(HomedirTest, FakeTempHomeDirectoryResetsHomedirCorrectly) {
 }
 
 TEST(HomedirTest, FakeTempHomeDirectoryUsesDifferentDirsForHomedirAndAppdataDir) {
-    FakeTempHomeDirectoryRAII a;
+    const FakeTempHomeDirectoryRAII a;
 
     EXPECT_NE(HomeDirectory::get(), HomeDirectory::getXDGDataDir());
 }

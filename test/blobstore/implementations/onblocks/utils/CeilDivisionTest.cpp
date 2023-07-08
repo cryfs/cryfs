@@ -82,7 +82,7 @@ TEST_F(CeilDivisionTest, DivideLargeByItself) {
 }
 
 TEST_F(CeilDivisionTest, 64bit) {
-  uint64_t base = UINT64_C(1024)*1024*1024*1024;
+  const uint64_t base = UINT64_C(1024)*1024*1024*1024;
   EXPECT_GT(base, std::numeric_limits<uint32_t>::max());
   EXPECT_EQ(base/1024, ceilDivision(base, UINT64_C(1024)));
 }

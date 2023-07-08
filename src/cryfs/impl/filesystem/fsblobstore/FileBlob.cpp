@@ -22,7 +22,7 @@ unique_ref<FileBlob> FileBlob::InitializeEmptyFile(unique_ref<Blob> blob, const 
 }
 
 fspp::num_bytes_t FileBlob::read(void *target, fspp::num_bytes_t offset, fspp::num_bytes_t count) const {
-  return fspp::num_bytes_t(baseBlob().tryRead(target, offset.value(), count.value()));
+  return fspp::num_bytes_t(static_cast<int64_t>(baseBlob().tryRead(target, offset.value(), count.value())));
 }
 
 void FileBlob::write(const void *source, fspp::num_bytes_t offset, fspp::num_bytes_t count) {
@@ -42,7 +42,7 @@ fspp::num_bytes_t FileBlob::lstat_size() const {
 }
 
 fspp::num_bytes_t FileBlob::size() const {
-  return fspp::num_bytes_t(baseBlob().size());
+  return fspp::num_bytes_t(static_cast<int64_t>(baseBlob().size()));
 }
 
 }

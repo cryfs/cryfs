@@ -26,7 +26,7 @@ namespace cpputils {
         }
 
         void release() {
-            std::unique_lock<std::mutex> lock(_mutex);
+            const std::unique_lock<std::mutex> lock(_mutex);
             _triggered = true;
             _cv.notify_all();
         }

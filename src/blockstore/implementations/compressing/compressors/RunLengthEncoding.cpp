@@ -84,7 +84,7 @@ namespace blockstore {
         }
 
         Data RunLengthEncoding::_extractData(ostringstream *stream) {
-            string str = stream->str();
+            const string str = stream->str();
             Data data(str.size());
             std::memcpy(data.data(), str.c_str(), str.size());
             return data;

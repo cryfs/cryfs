@@ -4,5 +4,5 @@
 using cpputils::DontEchoStdinToStdoutRAII;
 
 TEST(DontEchoStdinToStdoutRAIITest, DoesntCrash) {
-    DontEchoStdinToStdoutRAII a;
+    const DontEchoStdinToStdoutRAII a;
 }

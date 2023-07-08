@@ -31,7 +31,7 @@ namespace
 
 TEST(BacktraceTest, ContainsTopLevelLine)
 {
-	string backtrace = cpputils::backtrace();
+	const string backtrace = cpputils::backtrace();
 	EXPECT_THAT(backtrace, HasSubstr("BacktraceTest"));
 	EXPECT_THAT(backtrace, HasSubstr("ContainsTopLevelLine"));
 }
@@ -103,7 +103,7 @@ TEST(BacktraceTest, DoesntCrashOnCaughtException)
 #if !(defined(_MSC_VER) && defined(NDEBUG))
 TEST(BacktraceTest, ContainsBacktrace)
 {
-	string backtrace = cpputils::backtrace();
+	const string backtrace = cpputils::backtrace();
 #if defined(_MSC_VER)
 	EXPECT_THAT(backtrace, HasSubstr("testing::Test::Run"));
 #else
@@ -111,8 +111,8 @@ TEST(BacktraceTest, ContainsBacktrace)
 #endif
 }
 
-#if !(defined(__clang__) && defined(NDEBUG))
-// TODO Can we also make this work on clang in Release mode?
+#if !(defined(__clang__))
+// TODO Can we also make this work on clang?
 TEST(BacktraceTest, ShowBacktraceOnNullptrAccess)
 {
 	auto output = call_process_exiting_with_nullptr_violation();

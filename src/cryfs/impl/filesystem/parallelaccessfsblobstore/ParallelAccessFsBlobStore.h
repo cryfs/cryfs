@@ -46,7 +46,7 @@ namespace cryfs {
         }
 
         inline void ParallelAccessFsBlobStore::remove(cpputils::unique_ref<FsBlobRef> blob) {
-            blockstore::BlockId blockId = blob->blockId();
+            const blockstore::BlockId blockId = blob->blockId();
             return _parallelAccessStore.remove(blockId, std::move(blob));
         }
 

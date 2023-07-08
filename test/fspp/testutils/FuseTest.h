@@ -18,7 +18,7 @@
 class MockFilesystem: public fspp::fuse::Filesystem {
 public:
   MockFilesystem();
-  virtual ~MockFilesystem();
+  ~MockFilesystem() override;
 
   MOCK_METHOD(void, setContext, (fspp::Context&&), (override));
   MOCK_METHOD(int, openFile, (const boost::filesystem::path&, int), (override));

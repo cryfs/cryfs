@@ -99,7 +99,7 @@ namespace cpputils {
                     this->d_condition.wait(lock);
                 }
                 if (&this->d_tmp[0] != this->d_current) {
-                    std::streamsize size(this->d_current - &this->d_tmp[0]);
+                    const std::streamsize size(this->d_current - &this->d_tmp[0]);
                     traits_type::copy(this->eback(), &this->d_tmp[0],
                                       this->d_current - &this->d_tmp[0]);
                     this->setg(this->eback(), this->eback(), this->eback() + size);
@@ -134,14 +134,14 @@ namespace cpputils {
                 this->d_condition.wait(lock);
             }
             if (this->d_current != end) {
-                std::streamsize size(std::min(end - d_current,
+                const std::streamsize size(std::min(end - d_current,
                                               this->pptr() - this->pbase()));
                 traits_type::copy(d_current, this->pbase(), size);
                 this->d_current += size;
-                std::streamsize remain((this->pptr() - this->pbase()) - size);
+                const std::streamsize remain((this->pptr() - this->pbase()) - size);
                 traits_type::move(this->pbase(), this->pptr(), remain);
                 this->setp(this->pbase(), this->epptr());
-                this->pbump(remain);
+                this->pbump(static_cast<int>(remain));
                 this->d_condition.notify_one();
                 return 0;
             }

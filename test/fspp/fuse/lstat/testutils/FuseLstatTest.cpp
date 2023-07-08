@@ -15,7 +15,7 @@ int FuseLstatTest::LstatPathReturnError(const std::string &path) {
 }
 
 void FuseLstatTest::LstatPath(const std::string &path, fspp::fuse::STAT *result) {
-  int error = LstatPathReturnError(path, result);
+  const int error = LstatPathReturnError(path, result);
   EXPECT_EQ(0, error) << "lstat syscall failed. errno: " << error;
 }
 
@@ -23,7 +23,7 @@ int FuseLstatTest::LstatPathReturnError(const std::string &path, fspp::fuse::STA
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  int retval = ::lstat(realpath.string().c_str(), result);
+  const int retval = ::lstat(realpath.string().c_str(), result);
   if (retval == 0) {
     return 0;
   } else {

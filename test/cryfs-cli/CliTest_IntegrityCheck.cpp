@@ -84,7 +84,7 @@ public:
 };
 
 TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
-  vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
   EXPECT_RUN_SUCCESS(args, mountdir);
   modifyFilesystemId();
@@ -96,7 +96,7 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
 }
 
 TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
-  vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
   EXPECT_RUN_SUCCESS(args, mountdir);
   modifyFilesystemKey();
@@ -109,7 +109,7 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
 
 // TODO Also enable this
 TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting_thenFails) {
-  vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS/EXPECT_RUN_ERROR can handle that
 
   // create a filesystem with one file
@@ -118,7 +118,7 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
   });
 
   // backup the base directory
-  TempDir backup;
+  const TempDir backup;
   recursive_copy(basedir, backup.path() / "basedir");
 
   // modify the file system contents
@@ -140,7 +140,7 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
 }
 
 TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) {
-  vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS/EXPECT_RUN_ERROR can handle that
 
   // create a filesystem with one file
@@ -149,7 +149,7 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
   });
 
   // backup the base directory
-  TempDir backup;
+  const TempDir backup;
   recursive_copy(basedir, backup.path() / "basedir");
 
   EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {

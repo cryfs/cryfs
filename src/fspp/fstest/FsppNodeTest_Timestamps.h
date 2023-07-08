@@ -14,9 +14,9 @@ public:
 
     void Test_Create() {
         this->testBuilder().withAnyAtimeConfig([&] {
-            timespec lowerBound = cpputils::time::now();
+            const timespec lowerBound = cpputils::time::now();
             auto node = this->CreateNode("/mynode");
-            timespec upperBound = cpputils::time::now();
+            const timespec upperBound = cpputils::time::now();
             this->EXPECT_ACCESS_TIMESTAMP_BETWEEN(lowerBound, upperBound, *node);
             this->EXPECT_MODIFICATION_TIMESTAMP_BETWEEN(lowerBound, upperBound, *node);
             this->EXPECT_METADATACHANGE_TIMESTAMP_BETWEEN(lowerBound, upperBound, *node);
@@ -38,7 +38,7 @@ public:
     void Test_Chmod() {
         auto operation = [this] {
             auto node = this->CreateNode("/mynode");
-            fspp::mode_t mode = this->stat(*node).mode;
+            const fspp::mode_t mode = this->stat(*node).mode;
             return [mode, node = std::move(node)] {
                 node->chmod(mode);
             };
@@ -51,8 +51,8 @@ public:
     void Test_Chown() {
         auto operation = [this] {
             auto node = this->CreateNode("/mynode");
-            fspp::uid_t uid = this->stat(*node).uid;
-            fspp::gid_t gid = this->stat(*node).gid;
+            const fspp::uid_t uid = this->stat(*node).uid;
+            const fspp::gid_t gid = this->stat(*node).gid;
             return [uid, gid, node = std::move(node)] {
                 node->chown(uid, gid);
             };
@@ -357,8 +357,8 @@ public:
     void Test_Utimens() {
         this->testBuilder().withAnyAtimeConfig([&] {
             auto node = this->CreateNode("/mynode");
-            timespec atime = this->xSecondsAgo(100);
-            timespec mtime = this->xSecondsAgo(200);
+            const timespec atime = this->xSecondsAgo(100);
+            const timespec mtime = this->xSecondsAgo(200);
             auto operation = [atime, mtime, &node] {
                 node->utimens(atime, mtime);
             };

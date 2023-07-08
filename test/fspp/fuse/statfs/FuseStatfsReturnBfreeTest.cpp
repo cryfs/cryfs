@@ -18,6 +18,6 @@ INSTANTIATE_TEST_SUITE_P(FuseStatfsReturnBfreeTest, FuseStatfsReturnBfreeTest, V
 ));
 
 TEST_P(FuseStatfsReturnBfreeTest, ReturnedBfreeIsCorrect) {
-  struct ::statvfs result = CallStatfsWithValue(GetParam());
+  const struct ::statvfs result = CallStatfsWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.f_bfree);
 }

@@ -109,7 +109,7 @@ namespace cryfs {
         static constexpr unsigned int HEADER_SIZE = sizeof(FORMAT_VERSION_HEADER) + sizeof(uint8_t) + blockstore::BlockId::BINARY_LENGTH;
 
         static void _checkHeader(const blobstore::Blob &blob) {
-            uint16_t actualFormatVersion = getFormatVersionHeader(blob);
+            const uint16_t actualFormatVersion = getFormatVersionHeader(blob);
             if (FORMAT_VERSION_HEADER != actualFormatVersion) {
                 throw std::runtime_error("This file system entity has the wrong format. Was it created with a newer version of CryFS?");
             }

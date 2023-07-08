@@ -26,13 +26,13 @@ DataLeafNode::~DataLeafNode() {
 
 unique_ref<DataLeafNode> DataLeafNode::CreateNewNode(BlockStore *blockStore, const DataNodeLayout &layout, Data data) {
   ASSERT(data.size() <= layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
-  uint32_t size = data.size();
+  const uint32_t size = data.size();
   return make_unique_ref<DataLeafNode>(DataNodeView::create(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, std::move(data)));
 }
 
 unique_ref<DataLeafNode> DataLeafNode::OverwriteNode(BlockStore *blockStore, const DataNodeLayout &layout, const BlockId &blockId, Data data) {
   ASSERT(data.size() == layout.maxBytesPerLeaf(), "Data passed in is too large for one leaf.");
-  uint32_t size = data.size();
+  const uint32_t size = data.size();
   return make_unique_ref<DataLeafNode>(DataNodeView::overwrite(blockStore, layout, DataNode::FORMAT_VERSION_HEADER, 0, size, blockId, std::move(data)));
 }
 
@@ -52,7 +52,7 @@ uint32_t DataLeafNode::numBytes() const {
 
 void DataLeafNode::resize(uint32_t new_size) {
   ASSERT(new_size <= maxStoreableBytes(), "Trying to resize to a size larger than the maximal size");
-  uint32_t old_size = node().Size();
+  const uint32_t old_size = node().Size();
   if (new_size < old_size) {
     fillDataWithZeroesFromTo(new_size, old_size);
   }

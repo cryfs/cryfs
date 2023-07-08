@@ -29,7 +29,7 @@ public:
         std::memset(&new_signal_handler, 0, sizeof(new_signal_handler));
         new_signal_handler.sa_handler = handler;  // NOLINT(cppcoreguidelines-pro-type-union-access)
         new_signal_handler.sa_flags = SA_RESTART;
-        int error = sigfillset(&new_signal_handler.sa_mask);  // block all signals while signal handler is running
+        const int error = sigfillset(&new_signal_handler.sa_mask);  // block all signals while signal handler is running
         if (0 != error) {
             throw std::runtime_error("Error calling sigfillset. Errno: " + std::to_string(errno));
         }
@@ -47,7 +47,7 @@ public:
 
 private:
     static void _sigaction(int signal, struct sigaction *new_handler, struct sigaction *old_handler) {
-        int error = sigaction(signal, new_handler, old_handler);
+        const int error = sigaction(signal, new_handler, old_handler);
         if (0 != error) {
             throw std::runtime_error("Error calling sigaction. Errno: " + std::to_string(errno));
         }

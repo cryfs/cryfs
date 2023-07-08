@@ -19,6 +19,6 @@ TEST_P(FuseAccessErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, access(Eq(FILENAME), testing::_))
     .Times(AtLeast(1)).WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
-  int error = AccessFileReturnError(FILENAME, 0);
+  const int error = AccessFileReturnError(FILENAME, 0);
   EXPECT_EQ(GetParam(), error);
 }

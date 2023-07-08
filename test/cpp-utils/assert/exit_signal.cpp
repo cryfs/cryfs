@@ -18,8 +18,11 @@ void handle_exit_signal(char **argv) {
 		DWORD code = std::atoll(argv[2]);
 		::RaiseException(code, EXCEPTION_NONCONTINUABLE, 0, NULL);
 #else
-		int code = static_cast<int>(std::strtol(argv[2], nullptr, 10));
-		::raise(code);
+		const int code = static_cast<int>(std::strtol(argv[2], nullptr, 10));
+		const int success = ::raise(code);
+		if (success != 0) {
+			throw std::runtime_error("Failed to raise signal");
+		}
 #endif
 	}
 }

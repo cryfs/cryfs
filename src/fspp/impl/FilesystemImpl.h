@@ -22,7 +22,7 @@ class OpenFile;
 class FilesystemImpl final: public fuse::Filesystem {
 public:
   explicit FilesystemImpl(cpputils::unique_ref<Device> device);
-	virtual ~FilesystemImpl();
+	~FilesystemImpl() override;
 
     void setContext(Context&& context) override;
 

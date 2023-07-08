@@ -17,24 +17,24 @@ public:
   typename Cipher::EncryptionKey encKey = createKeyFixture();
 
   static typename Cipher::EncryptionKey createKeyFixture(int seed = 0) {
-    Data data = DataFixture::generate(Cipher::KEYSIZE, seed);
+    const Data data = DataFixture::generate(Cipher::KEYSIZE, seed);
     return Cipher::EncryptionKey::FromString(data.ToString());
   }
 
   void CheckEncryptThenDecryptIsIdentity(const Data &plaintext) {
-    Data ciphertext = Encrypt(plaintext);
-    Data decrypted = Decrypt(ciphertext);
+    const Data ciphertext = Encrypt(plaintext);
+    const Data decrypted = Decrypt(ciphertext);
     EXPECT_EQ(plaintext, decrypted);
   }
 
   void CheckEncryptIsIndeterministic(const Data &plaintext) {
-    Data ciphertext = Encrypt(plaintext);
-    Data ciphertext2 = Encrypt(plaintext);
+    const Data ciphertext = Encrypt(plaintext);
+    const Data ciphertext2 = Encrypt(plaintext);
     EXPECT_NE(ciphertext, ciphertext2);
   }
 
   void CheckEncryptedSize(const Data &plaintext) {
-    Data ciphertext = Encrypt(plaintext);
+    const Data ciphertext = Encrypt(plaintext);
     EXPECT_EQ(Cipher::ciphertextSize(plaintext.size()), ciphertext.size());
   }
 
@@ -73,53 +73,53 @@ TYPED_TEST_P(CipherTest, Size) {
 
 TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Zeroes) {
   for (auto size: SIZES) {
-    Data plaintext = this->CreateZeroes(size);
+    const Data plaintext = this->CreateZeroes(size);
     this->CheckEncryptThenDecryptIsIdentity(plaintext);
   }
 }
 
 TYPED_TEST_P(CipherTest, EncryptThenDecrypt_Data) {
   for (auto size: SIZES) {
-    Data plaintext = this->CreateData(size);
+    const Data plaintext = this->CreateData(size);
     this->CheckEncryptThenDecryptIsIdentity(plaintext);
   }
 }
 
 TYPED_TEST_P(CipherTest, EncryptIsIndeterministic_Zeroes) {
   for (auto size: SIZES) {
-    Data plaintext = this->CreateZeroes(size);
+    const Data plaintext = this->CreateZeroes(size);
     this->CheckEncryptIsIndeterministic(plaintext);
   }
 }
 
 TYPED_TEST_P(CipherTest, EncryptIsIndeterministic_Data) {
   for (auto size: SIZES) {
-    Data plaintext = this->CreateData(size);
+    const Data plaintext = this->CreateData(size);
     this->CheckEncryptIsIndeterministic(plaintext);
   }
 }
 
 TYPED_TEST_P(CipherTest, EncryptedSize) {
   for (auto size: SIZES) {
-    Data plaintext = this->CreateData(size);
+    const Data plaintext = this->CreateData(size);
     this->CheckEncryptedSize(plaintext);
   }
 }
 
 TYPED_TEST_P(CipherTest, TryDecryptDataThatIsTooSmall) {
-  Data tooSmallCiphertext(TypeParam::ciphertextSize(0) - 1);
+  const Data tooSmallCiphertext(TypeParam::ciphertextSize(0) - 1);
   this->ExpectDoesntDecrypt(tooSmallCiphertext);
 }
 
 TYPED_TEST_P(CipherTest, TryDecryptDataThatIsMuchTooSmall_0) {
   static_assert(TypeParam::ciphertextSize(0) > 0, "If this fails, the test case doesn't make sense.");
-  Data tooSmallCiphertext(0);
+  const Data tooSmallCiphertext(0);
   this->ExpectDoesntDecrypt(tooSmallCiphertext);
 }
 
 TYPED_TEST_P(CipherTest, TryDecryptDataThatIsMuchTooSmall_1) {
   static_assert(TypeParam::ciphertextSize(0) > 1, "If this fails, the test case doesn't make sense.");
-  Data tooSmallCiphertext(1);
+  const Data tooSmallCiphertext(1);
   this->ExpectDoesntDecrypt(tooSmallCiphertext);
 }
 

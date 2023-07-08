@@ -9,7 +9,6 @@ using cpputils::Data;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 using boost::optional;
-using boost::none;
 using std::unique_lock;
 using std::mutex;
 
@@ -27,7 +26,7 @@ CachingBlockStore2::CachedBlock::~CachedBlock() {
     _blockStore->_baseBlockStore->store(_blockId, _data);
   }
   // remove it from the list of blocks not in the base store, if it's on it
-  unique_lock<mutex> lock(_blockStore->_cachedBlocksNotInBaseStoreMutex);
+  const unique_lock<mutex> lock(_blockStore->_cachedBlocksNotInBaseStoreMutex);
   _blockStore->_cachedBlocksNotInBaseStore.erase(_blockId);
 }
 
@@ -57,7 +56,7 @@ bool CachingBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
     return false;
   } else {
     _cache.push(blockId, make_unique_ref<CachingBlockStore2::CachedBlock>(this, blockId, data.copy(), true));
-    unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
+    const unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
     _cachedBlocksNotInBaseStore.insert(blockId);
     return true;
   }
@@ -69,7 +68,7 @@ bool CachingBlockStore2::remove(const BlockId &blockId) {
   if (popped != boost::none) {
     // Remove from base store if it exists in the base store
     {
-      unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
+      const unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
       if (_cachedBlocksNotInBaseStore.count(blockId) == 0) {
           const bool existedInBaseStore = _baseBlockStore->remove(blockId);
           if (!existedInBaseStore) {
@@ -125,7 +124,7 @@ void CachingBlockStore2::store(const BlockId &blockId, const Data &data) {
 uint64_t CachingBlockStore2::numBlocks() const {
   uint64_t numInCacheButNotInBaseStore = 0;
   {
-    unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
+    const unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
     numInCacheButNotInBaseStore = _cachedBlocksNotInBaseStore.size();
   }
   return _baseBlockStore->numBlocks() + numInCacheButNotInBaseStore;
@@ -141,7 +140,7 @@ uint64_t CachingBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize) 
 
 void CachingBlockStore2::forEachBlock(std::function<void (const BlockId &)> callback) const {
   {
-    unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
+    const unique_lock<mutex> lock(_cachedBlocksNotInBaseStoreMutex);
     for (const BlockId &blockId : _cachedBlocksNotInBaseStore) {
       callback(blockId);
     }

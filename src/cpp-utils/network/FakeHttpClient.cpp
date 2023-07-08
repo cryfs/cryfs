@@ -2,7 +2,6 @@
 
 using std::string;
 using boost::optional;
-using boost::none;
 
 namespace cpputils {
     FakeHttpClient::FakeHttpClient(): _sites() {

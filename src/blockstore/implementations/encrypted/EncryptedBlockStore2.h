@@ -71,7 +71,7 @@ inline EncryptedBlockStore2<Cipher>::EncryptedBlockStore2(cpputils::unique_ref<B
 
 template<class Cipher>
 inline bool EncryptedBlockStore2<Cipher>::tryCreate(const BlockId &blockId, const cpputils::Data &data) {
-  cpputils::Data encrypted = _encrypt(data);
+  const cpputils::Data encrypted = _encrypt(data);
   return _baseBlockStore->tryCreate(blockId, encrypted);
 }
 
@@ -92,7 +92,7 @@ inline boost::optional<cpputils::Data> EncryptedBlockStore2<Cipher>::load(const 
 
 template<class Cipher>
 inline void EncryptedBlockStore2<Cipher>::store(const BlockId &blockId, const cpputils::Data &data) {
-  cpputils::Data encrypted = _encrypt(data);
+  const cpputils::Data encrypted = _encrypt(data);
   return _baseBlockStore->store(blockId, encrypted);
 }
 
@@ -108,7 +108,7 @@ inline uint64_t EncryptedBlockStore2<Cipher>::estimateNumFreeBytes() const {
 
 template<class Cipher>
 inline uint64_t EncryptedBlockStore2<Cipher>::blockSizeFromPhysicalBlockSize(uint64_t blockSize) const {
-  uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
+  const uint64_t baseBlockSize = _baseBlockStore->blockSizeFromPhysicalBlockSize(blockSize);
   if (baseBlockSize <= Cipher::ciphertextSize(0) + sizeof(FORMAT_VERSION_HEADER)) {
     return 0;
   }
@@ -122,7 +122,7 @@ inline void EncryptedBlockStore2<Cipher>::forEachBlock(std::function<void (const
 
 template<class Cipher>
 inline cpputils::Data EncryptedBlockStore2<Cipher>::_encrypt(const cpputils::Data &data) const {
-  cpputils::Data encrypted = Cipher::encrypt(static_cast<const CryptoPP::byte*>(data.data()), data.size(), _encKey);
+  const cpputils::Data encrypted = Cipher::encrypt(static_cast<const CryptoPP::byte*>(data.data()), data.size(), _encKey);
   return _prependFormatHeaderToData(encrypted);
 }
 

@@ -42,7 +42,7 @@ function<optional<unsigned int>(const string &input)> IOStreamConsole::_parseUIn
         if (parsed == none) {
             return optional<unsigned int>(none);
         }
-        unsigned int value = static_cast<unsigned int>(*parsed);
+        const unsigned int value = static_cast<unsigned int>(*parsed);
         if (value < min || value > max) {
             return optional<unsigned int>(none);
         }
@@ -70,7 +70,7 @@ unsigned int IOStreamConsole::ask(const string &question, const vector<string> &
     for (size_t i = 0; i < options.size(); ++i) {
         _output << " [" << (i+1) << "] " << options[i] << "\n";
     }
-    int choice = _askForChoice("Your choice [1-" + std::to_string(options.size()) + "]: ", _parseUIntWithMinMax(1, options.size()));
+    const int choice = _askForChoice("Your choice [1-" + std::to_string(options.size()) + "]: ", _parseUIntWithMinMax(1, options.size()));
     return choice-1;
 }
 
@@ -98,7 +98,7 @@ void IOStreamConsole::print(const string &output) {
 }
 
 string IOStreamConsole::askPassword(const string &question) {
-    DontEchoStdinToStdoutRAII _stdin_input_is_hidden_as_long_as_this_is_in_scope;
+    const DontEchoStdinToStdoutRAII _stdin_input_is_hidden_as_long_as_this_is_in_scope;
 
     _output << question << std::flush;
     string result;

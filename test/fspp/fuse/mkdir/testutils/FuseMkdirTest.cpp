@@ -4,7 +4,7 @@ using ::testing::Action;
 using ::testing::Invoke;
 
 void FuseMkdirTest::Mkdir(const char *dirname, mode_t mode) {
-  int error = MkdirReturnError(dirname, mode);
+  const int error = MkdirReturnError(dirname, mode);
   EXPECT_EQ(0, error);
 }
 
@@ -12,7 +12,7 @@ int FuseMkdirTest::MkdirReturnError(const char *dirname, mode_t mode) {
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / dirname;
-  int retval = ::mkdir(realpath.string().c_str(), mode);
+  const int retval = ::mkdir(realpath.string().c_str(), mode);
   if (retval == 0) {
     return 0;
   } else {

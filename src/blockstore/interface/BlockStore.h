@@ -34,7 +34,7 @@ public:
   virtual void forEachBlock(std::function<void (const BlockId &)> callback) const = 0;
 
   virtual void remove(cpputils::unique_ref<Block> block) {
-    BlockId blockId = block->blockId();
+    const BlockId blockId = block->blockId();
     cpputils::destruct(std::move(block));
     remove(blockId);
   }

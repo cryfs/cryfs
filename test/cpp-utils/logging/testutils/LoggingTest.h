@@ -40,7 +40,7 @@ public:
         return testing::internal::GetCapturedStderr();
     }
 
-    ~LoggingTest() {
+    ~LoggingTest() override {
         cpputils::logging::reset();
     }
 

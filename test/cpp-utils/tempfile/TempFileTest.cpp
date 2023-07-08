@@ -21,51 +21,51 @@ public:
   bf::path filepath_sample;
 
   void CreateFile(const bf::path &path) {
-    ofstream file(path.string().c_str());
+    const ofstream file(path.string().c_str());
   }
 };
 
 TEST_F(TempFileTest, FileIsCreated) {
-  TempFile file;
+  const TempFile file;
   EXPECT_TRUE(bf::exists(file.path()));
   EXPECT_TRUE(bf::is_regular_file(file.path()));
 }
 
 TEST_F(TempFileTest, FileIsReadable) {
-  TempFile file;
-  ifstream opened(file.path().string().c_str());
+  const TempFile file;
+  const ifstream opened(file.path().string().c_str());
   EXPECT_TRUE(opened.good());
 }
 
 TEST_F(TempFileTest, FileIsCreatedEmpty) {
-  TempFile file;
+  const TempFile file;
   ifstream opened(file.path().string().c_str());
   opened.get();
   EXPECT_TRUE(opened.eof());
 }
 
 TEST_F(TempFileTest, FileIsWriteable) {
-  TempFile file;
-  ofstream opened(file.path().string().c_str());
+  const TempFile file;
+  const ofstream opened(file.path().string().c_str());
   EXPECT_TRUE(opened.good());
 }
 
 TEST_F(TempFileTest, FileIsDeletedAfterUse) {
   bf::path filepath;
   {
-    TempFile file;
+    const TempFile file;
     filepath = file.path();
   }
   EXPECT_FALSE(bf::exists(filepath));
 }
 
 TEST_F(TempFileTest, DontCreateFileSpecified_FileIsNotCreated) {
-  TempFile file(false);
+  const TempFile file(false);
   EXPECT_FALSE(bf::exists(file.path()));
 }
 
 TEST_F(TempFileTest, DontCreateFileSpecified_FileIsCreatable) {
-  TempFile file(false);
+  const TempFile file(false);
   CreateFile(file.path());
   EXPECT_TRUE(bf::exists(file.path()));
 }
@@ -73,7 +73,7 @@ TEST_F(TempFileTest, DontCreateFileSpecified_FileIsCreatable) {
 TEST_F(TempFileTest, DontCreateFileSpecified_FileIsDeletedAfterUse) {
   bf::path filepath;
   {
-    TempFile file(false);
+    const TempFile file(false);
     CreateFile(file.path());
     filepath = file.path();
   }
@@ -81,36 +81,36 @@ TEST_F(TempFileTest, DontCreateFileSpecified_FileIsDeletedAfterUse) {
 }
 
 TEST_F(TempFileTest, PathGiven_FileIsCreatedAtGivenPath) {
-  TempFile file(filepath_sample);
+  const TempFile file(filepath_sample);
   EXPECT_EQ(filepath_sample, file.path());
 }
 
 TEST_F(TempFileTest, PathGiven_FileIsCreatedAndAccessible) {
-  TempFile file(filepath_sample);
+  const TempFile file(filepath_sample);
   EXPECT_TRUE(bf::exists(filepath_sample));
 }
 
 TEST_F(TempFileTest, PathGiven_FileIsDeletedAfterUse) {
   {
-    TempFile file(filepath_sample);
+    const TempFile file(filepath_sample);
   }
   EXPECT_FALSE(bf::exists(filepath_sample));
 }
 
 TEST_F(TempFileTest, PathGiven_DontCreateFileSpecified_FileIsNotCreated) {
-  TempFile file(filepath_sample, false);
+  const TempFile file(filepath_sample, false);
   EXPECT_FALSE(bf::exists(filepath_sample));
 }
 
 TEST_F(TempFileTest, PathGiven_DontCreateFileSpecified_FileIsCreatable) {
-  TempFile file(filepath_sample, false);
+  const TempFile file(filepath_sample, false);
   CreateFile(filepath_sample);
   EXPECT_TRUE(bf::exists(filepath_sample));
 }
 
 TEST_F(TempFileTest, PathGiven_DontCreateFileSpecified_FileIsDeletedAfterUse) {
   {
-    TempFile file(filepath_sample, false);
+    const TempFile file(filepath_sample, false);
     CreateFile(filepath_sample);
   }
   EXPECT_FALSE(bf::exists(filepath_sample));

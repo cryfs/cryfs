@@ -18,14 +18,14 @@ public:
   T getOrCompute(std::function<T ()> compute) {
     boost::upgrade_lock<boost::shared_mutex> readLock(_mutex);
     if (_cache == boost::none) {
-      boost::upgrade_to_unique_lock<boost::shared_mutex> writeLock(readLock);
+      const boost::upgrade_to_unique_lock<boost::shared_mutex> writeLock(readLock);
       _cache = compute();
     }
     return *_cache;
   }
 
   void update(std::function<void (boost::optional<T>*)> func) {
-    boost::unique_lock<boost::shared_mutex> writeLock(_mutex);
+    const boost::unique_lock<boost::shared_mutex> writeLock(_mutex);
     func(&_cache);
   }
 

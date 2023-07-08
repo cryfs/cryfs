@@ -21,7 +21,7 @@ class DataTreeRef;
 class BlobOnBlocks final: public Blob {
 public:
   BlobOnBlocks(cpputils::unique_ref<parallelaccessdatatreestore::DataTreeRef> datatree);
-  ~BlobOnBlocks();
+  ~BlobOnBlocks() override;
 
   const blockstore::BlockId &blockId() const override;
 

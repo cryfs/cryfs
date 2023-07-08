@@ -12,7 +12,7 @@ template<class Compressor>
 class CompressingBlockStore final: public BlockStore {
 public:
     CompressingBlockStore(cpputils::unique_ref<BlockStore> baseBlockStore);
-    ~CompressingBlockStore();
+    ~CompressingBlockStore() override;
 
     BlockId createBlockId() override;
     boost::optional<cpputils::unique_ref<Block>> tryCreate(const BlockId &blockId, cpputils::Data data) override;

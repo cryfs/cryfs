@@ -14,7 +14,7 @@ int set_filetime(const char *filepath, timespec lastAccessTime, timespec lastMod
 	std::array<struct timeval, 2> casted_times{};
 	TIMESPEC_TO_TIMEVAL(&casted_times[0], &lastAccessTime);
 	TIMESPEC_TO_TIMEVAL(&casted_times[1], &lastModificationTime);
-	int retval = ::utimes(filepath, casted_times.data());
+	const int retval = ::utimes(filepath, casted_times.data());
 	if (0 == retval) {
 		return 0;
 	} else {
@@ -24,7 +24,7 @@ int set_filetime(const char *filepath, timespec lastAccessTime, timespec lastMod
 
 int get_filetime(const char *filepath, timespec* lastAccessTime, timespec* lastModificationTime) {
 	struct ::stat attrib{};
-	int retval = ::stat(filepath, &attrib);
+	const int retval = ::stat(filepath, &attrib);
 	if (retval != 0) {
 		return errno;
 	}

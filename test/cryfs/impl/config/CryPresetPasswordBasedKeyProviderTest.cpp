@@ -51,7 +51,7 @@ TEST(CryPresetPasswordBasedKeyProviderTest, requestKeyForExistingFilesystem) {
     }));
 
     CryPresetPasswordBasedKeyProvider keyProvider(password, std::move(kdf));
-    EncryptionKey returned_key = keyProvider.requestKeyForExistingFilesystem(keySize, kdfParameters);
+    const EncryptionKey returned_key = keyProvider.requestKeyForExistingFilesystem(keySize, kdfParameters);
 
     EXPECT_EQ(key.ToString(), returned_key.ToString());
 }

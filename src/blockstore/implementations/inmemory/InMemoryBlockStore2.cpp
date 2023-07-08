@@ -9,7 +9,6 @@ using std::make_pair;
 using std::vector;
 using cpputils::Data;
 using boost::optional;
-using boost::none;
 
 namespace blockstore {
 namespace inmemory {
@@ -18,7 +17,7 @@ InMemoryBlockStore2::InMemoryBlockStore2()
  : _blocks() {}
 
 bool InMemoryBlockStore2::tryCreate(const BlockId &blockId, const Data &data) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   return _tryCreate(blockId, data);
 }
 
@@ -28,7 +27,7 @@ bool InMemoryBlockStore2::_tryCreate(const BlockId &blockId, const Data &data) {
 }
 
 bool InMemoryBlockStore2::remove(const BlockId &blockId) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
     // BlockId not found
@@ -40,7 +39,7 @@ bool InMemoryBlockStore2::remove(const BlockId &blockId) {
 }
 
 optional<Data> InMemoryBlockStore2::load(const BlockId &blockId) const {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
     return boost::none;
@@ -49,10 +48,10 @@ optional<Data> InMemoryBlockStore2::load(const BlockId &blockId) const {
 }
 
 void InMemoryBlockStore2::store(const BlockId &blockId, const Data &data) {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   auto found = _blocks.find(blockId);
   if (found == _blocks.end()) {
-    bool success = _tryCreate(blockId, data);
+    const bool success = _tryCreate(blockId, data);
     if (!success) {
       throw std::runtime_error("Could neither save nor create the block in InMemoryBlockStore::store()");
     }
@@ -63,7 +62,7 @@ void InMemoryBlockStore2::store(const BlockId &blockId, const Data &data) {
 }
 
 uint64_t InMemoryBlockStore2::numBlocks() const {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   return _blocks.size();
 }
 
@@ -76,7 +75,7 @@ uint64_t InMemoryBlockStore2::blockSizeFromPhysicalBlockSize(uint64_t blockSize)
 }
 
 vector<BlockId> InMemoryBlockStore2::_allBlockIds() const {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   vector<BlockId> result;
   result.reserve(_blocks.size());
   for (const auto &entry : _blocks) {

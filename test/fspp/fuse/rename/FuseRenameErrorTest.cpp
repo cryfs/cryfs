@@ -18,6 +18,6 @@ TEST_P(FuseRenameErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, rename(Eq(FILENAME1), Eq(FILENAME2)))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = RenameReturnError(FILENAME1, FILENAME2);
+  const int error = RenameReturnError(FILENAME1, FILENAME2);
   EXPECT_EQ(GetParam(), error);
 }

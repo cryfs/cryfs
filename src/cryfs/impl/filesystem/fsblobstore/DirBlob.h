@@ -23,7 +23,7 @@ namespace cryfs {
 
             DirBlob(cpputils::unique_ref<blobstore::Blob> blob);
 
-            ~DirBlob();
+            ~DirBlob() override;
 
             void AppendChildrenTo(std::vector<fspp::Dir::Entry> *result) const;
 

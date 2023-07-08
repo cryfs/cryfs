@@ -28,7 +28,7 @@ public:
   }
 
   void TestWriteAndReadAfterLoading() {
-    blockstore::BlockId blockId = CreateBlockWriteToItAndReturnKey(foregroundData);
+    const blockstore::BlockId blockId = CreateBlockWriteToItAndReturnKey(foregroundData);
 
     auto loaded_block = blockStore->load(blockId).value();
     EXPECT_DATA_READS_AS(foregroundData, *loaded_block, testData.offset, testData.count);

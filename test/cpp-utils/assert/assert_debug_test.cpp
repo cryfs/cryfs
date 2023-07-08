@@ -22,7 +22,7 @@ TEST(AssertTest_DebugBuild, DiesIfFalse) {
 }
 
 TEST(AssertTest_DebugBuild, whenDisablingAbort_thenThrowsIfFalse) {
-    cpputils::_assert::DisableAbortOnFailedAssertionRAII _disableAbort;
+    const cpputils::_assert::DisableAbortOnFailedAssertionRAII _disableAbort;
     EXPECT_THROW(
         ASSERT(false, "bla"),
         cpputils::AssertFailed

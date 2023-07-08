@@ -7,6 +7,8 @@
 #include <cpp-utils/data/Data.h>
 #include <cpp-utils/data/DataFixture.h>
 
+#include <cstddef>
+
 class BlockStoreSizeParameterizedTest {
 public:
   BlockStoreSizeParameterizedTest(cpputils::unique_ref<blockstore::BlockStore> blockStore_, size_t size_): blockStore(std::move(blockStore_)), size(size_) {}
@@ -17,7 +19,7 @@ public:
   }
 
   void TestLoadingUnchangedBlockHasCorrectSize() {
-    blockstore::BlockId blockId = CreateBlock()->blockId();
+    const blockstore::BlockId blockId = CreateBlock()->blockId();
     auto loaded_block = blockStore->load(blockId).value();
     EXPECT_EQ(size, loaded_block->size());
   }
@@ -30,7 +32,7 @@ public:
 
   void TestLoadingUnchangedBlockData() {
     cpputils::Data data = cpputils::DataFixture::generate(size);
-    blockstore::BlockId blockId = blockStore->create(data)->blockId();
+    const blockstore::BlockId blockId = blockStore->create(data)->blockId();
     auto loaded_block = blockStore->load(blockId).value();
     EXPECT_EQ(0, std::memcmp(data.data(), loaded_block->data(), size));
   }
@@ -50,7 +52,7 @@ public:
   }
 
   void TestAfterCreate_FlushingDoesntChangeBlock() {
-    cpputils::Data randomData = cpputils::DataFixture::generate(size);
+    const cpputils::Data randomData = cpputils::DataFixture::generate(size);
     auto block =  CreateBlock();
     WriteDataToBlock(block.get(), randomData);
     block->flush();
@@ -59,7 +61,7 @@ public:
   }
 
   void TestAfterLoad_FlushingDoesntChangeBlock() {
-    cpputils::Data randomData = cpputils::DataFixture::generate(size);
+    const cpputils::Data randomData = cpputils::DataFixture::generate(size);
     auto block =  CreateBlockAndLoadIt();
     WriteDataToBlock(block.get(), randomData);
     block->flush();
@@ -68,7 +70,7 @@ public:
   }
 
   void TestAfterCreate_FlushesWhenDestructed() {
-    cpputils::Data randomData = cpputils::DataFixture::generate(size);
+    const cpputils::Data randomData = cpputils::DataFixture::generate(size);
     blockstore::BlockId blockId = blockstore::BlockId::Null();
     {
       auto block = blockStore->create(cpputils::Data(size));
@@ -80,7 +82,7 @@ public:
   }
 
   void TestAfterLoad_FlushesWhenDestructed() {
-    cpputils::Data randomData = cpputils::DataFixture::generate(size);
+    const cpputils::Data randomData = cpputils::DataFixture::generate(size);
     blockstore::BlockId blockId = blockstore::BlockId::Null();
     {
       blockId = CreateBlock()->blockId();
@@ -107,7 +109,7 @@ private:
   }
 
   cpputils::unique_ref<blockstore::Block> StoreDataToBlockAndLoadIt(const cpputils::Data &data) {
-    blockstore::BlockId blockId = StoreDataToBlockAndGetKey(data);
+    const blockstore::BlockId blockId = StoreDataToBlockAndGetKey(data);
     return blockStore->load(blockId).value();
   }
 
@@ -122,7 +124,7 @@ private:
   }
 
   cpputils::unique_ref<blockstore::Block> CreateBlockAndLoadIt() {
-    blockstore::BlockId blockId = CreateBlock()->blockId();
+    const blockstore::BlockId blockId = CreateBlock()->blockId();
     return blockStore->load(blockId).value();
   }
 

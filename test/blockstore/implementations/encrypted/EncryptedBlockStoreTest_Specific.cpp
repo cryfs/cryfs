@@ -6,6 +6,8 @@
 #include "../../testutils/gtest_printers.h"
 #include <cpp-utils/data/DataFixture.h>
 
+#include <cstddef>
+
 using ::testing::Test;
 
 using cpputils::DataFixture;

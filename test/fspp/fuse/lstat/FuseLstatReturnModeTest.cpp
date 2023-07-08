@@ -19,6 +19,6 @@ INSTANTIATE_TEST_SUITE_P(FuseLstatReturnModeTest, FuseLstatReturnModeTest, Value
 ));
 
 TEST_P(FuseLstatReturnModeTest, ReturnedModeIsCorrect) {
-  fspp::fuse::STAT result = CallLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_mode);
 }

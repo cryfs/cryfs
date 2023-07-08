@@ -90,102 +90,102 @@ TEST_F(ProgramOptionsParserTest, ShowCiphers) {
 }
 
 TEST_F(ProgramOptionsParserTest, BaseDir_Absolute) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(basedir, options.baseDir());
 }
 
 TEST_F(ProgramOptionsParserTest, Basedir_Relative) {
-    ProgramOptions options = parse({"./myExecutable", "baseDir", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", "baseDir", mountdir});
     EXPECT_EQ(bf::current_path() / "baseDir", options.baseDir());
 }
 
 TEST_F(ProgramOptionsParserTest, MountDir_Absolute) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(mountdir, options.mountDir());
 }
 
 TEST_F(ProgramOptionsParserTest, MountDir_Relative) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "mountDir"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "mountDir"});
     EXPECT_EQ(bf::current_path() / "mountDir", options.mountDir());
 }
 
 TEST_F(ProgramOptionsParserTest, Foreground_False) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
     EXPECT_FALSE(options.foreground());
 }
 
 TEST_F(ProgramOptionsParserTest, Foreground_True) {
-    ProgramOptions options = parse({"./myExecutable", "-f", basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", "-f", basedir, "mountdir"});
     EXPECT_TRUE(options.foreground());
 }
 
 TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_False) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
     EXPECT_FALSE(options.allowFilesystemUpgrade());
 }
 
 TEST_F(ProgramOptionsParserTest, AllowFilesystemUpgrade_True) {
-    ProgramOptions options = parse({"./myExecutable", "--allow-filesystem-upgrade", basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", "--allow-filesystem-upgrade", basedir, "mountdir"});
     EXPECT_TRUE(options.allowFilesystemUpgrade());
 }
 
 TEST_F(ProgramOptionsParserTest, CreateMissingBasedir_False) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
     EXPECT_FALSE(options.createMissingBasedir());
 }
 
 TEST_F(ProgramOptionsParserTest, CreateMissingBasedir_True) {
-    ProgramOptions options = parse({"./myExecutable", "--create-missing-basedir",  basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", "--create-missing-basedir",  basedir, "mountdir"});
     EXPECT_TRUE(options.createMissingBasedir());
 }
 
 TEST_F(ProgramOptionsParserTest, CreateMissingMountpoint_False) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
     EXPECT_FALSE(options.createMissingMountpoint());
 }
 
 TEST_F(ProgramOptionsParserTest, CreateMissingMountpoint_True) {
-    ProgramOptions options = parse({"./myExecutable", "--create-missing-mountpoint",  basedir, "mountdir"});
+    const ProgramOptions options = parse({"./myExecutable", "--create-missing-mountpoint",  basedir, "mountdir"});
     EXPECT_TRUE(options.createMissingMountpoint());
 }
 
 TEST_F(ProgramOptionsParserTest, LogfileGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--logfile", logfile, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--logfile", logfile, mountdir});
     EXPECT_EQ(logfile, options.logFile().value());
 }
 
 TEST_F(ProgramOptionsParserTest, LogfileGiven_RelativePath) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--logfile", "mylogfile", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--logfile", "mylogfile", mountdir});
     EXPECT_EQ(bf::current_path() / "mylogfile", options.logFile().value());
 }
 
 TEST_F(ProgramOptionsParserTest, LogfileNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(none, options.logFile());
 }
 
 TEST_F(ProgramOptionsParserTest, ConfigfileGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--config", configfile, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--config", configfile, mountdir});
     EXPECT_EQ(configfile, options.configFile().value());
 }
 
 TEST_F(ProgramOptionsParserTest, ConfigfileGiven_RelativePath) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--config", "myconfigfile", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--config", "myconfigfile", mountdir});
     EXPECT_EQ(bf::current_path() / "myconfigfile", options.configFile().value());
 }
 
 TEST_F(ProgramOptionsParserTest, ConfigfileNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(none, options.configFile());
 }
 
 TEST_F(ProgramOptionsParserTest, CipherGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--cipher", "aes-256-gcm", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--cipher", "aes-256-gcm", mountdir});
     EXPECT_EQ("aes-256-gcm", options.cipher().value());
 }
 
 TEST_F(ProgramOptionsParserTest, CipherNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(none, options.cipher());
 }
 
@@ -200,92 +200,92 @@ TEST_F(ProgramOptionsParserTest, InvalidCipher) {
 }
 
 TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--unmount-idle", "10", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--unmount-idle", "10", mountdir});
     EXPECT_EQ(10, options.unmountAfterIdleMinutes().value());
 }
 
 TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesGiven_Float) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--unmount-idle", "0.5", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--unmount-idle", "0.5", mountdir});
     EXPECT_EQ(0.5, options.unmountAfterIdleMinutes().value());
 }
 
 TEST_F(ProgramOptionsParserTest, UnmountAfterIdleMinutesNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(none, options.unmountAfterIdleMinutes());
 }
 
 TEST_F(ProgramOptionsParserTest, BlocksizeGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--blocksize", "10240", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--blocksize", "10240", mountdir});
     EXPECT_EQ(10240u, options.blocksizeBytes().value());
 }
 
 TEST_F(ProgramOptionsParserTest, BlocksizeNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(none, options.blocksizeBytes());
 }
 
 TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationGiven_True) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--missing-block-is-integrity-violation", "true", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--missing-block-is-integrity-violation", "true", mountdir});
     EXPECT_TRUE(options.missingBlockIsIntegrityViolation().value());
 }
 
 TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationGiven_False) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--missing-block-is-integrity-violation", "false", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--missing-block-is-integrity-violation", "false", mountdir});
     EXPECT_FALSE(options.missingBlockIsIntegrityViolation().value());
 }
 
 TEST_F(ProgramOptionsParserTest, AllowIntegrityViolations_True) {
-    ProgramOptions options = parse({"./myExecutable", basedir, "--allow-integrity-violations", mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, "--allow-integrity-violations", mountdir});
     EXPECT_TRUE(options.allowIntegrityViolations());
 }
 
 TEST_F(ProgramOptionsParserTest, AllowIntegrityViolations_False) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_FALSE(options.allowIntegrityViolations());
 }
 
 TEST_F(ProgramOptionsParserTest, MissingBlockIsIntegrityViolationNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(none, options.missingBlockIsIntegrityViolation());
 }
 
 TEST_F(ProgramOptionsParserTest, FuseOptionGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "--", "-f"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "--", "-f"});
     EXPECT_EQ(basedir, options.baseDir());
     EXPECT_EQ(mountdir, options.mountDir());
     EXPECT_VECTOR_EQ({"-f"}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, FuseOptionGiven_Empty) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "--"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "--"});
     EXPECT_EQ(basedir, options.baseDir());
     EXPECT_EQ(mountdir, options.mountDir());
     EXPECT_VECTOR_EQ({}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, FuseOptionNotGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir});
     EXPECT_EQ(basedir, options.baseDir());
     EXPECT_EQ(mountdir, options.mountDir());
     EXPECT_VECTOR_EQ({}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, DirectFuseOptionsGiven_AfterPositionalOptions) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "-o", "my_opt"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "-o", "my_opt"});
     EXPECT_VECTOR_EQ({"-o", "my_opt"}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, DirectFuseOptionsGiven_BeforePositionalOptions) {
-    ProgramOptions options = parse({"./myExecutable", "-o", "my_opt", basedir, mountdir});
+    const ProgramOptions options = parse({"./myExecutable", "-o", "my_opt", basedir, mountdir});
     EXPECT_VECTOR_EQ({"-o", "my_opt"}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, DirectFuseOptionsGiven_BeforeAndAfterPositionalOptions) {
-    ProgramOptions options = parse({"./myExecutable", "-o", "first", "-o", "second", basedir, "-o", "third", "-o", "fourth", mountdir, "-o", "fifth", "-o", "sixth"});
+    const ProgramOptions options = parse({"./myExecutable", "-o", "first", "-o", "second", basedir, "-o", "third", "-o", "fourth", mountdir, "-o", "fifth", "-o", "sixth"});
     EXPECT_VECTOR_EQ({"-o", "first", "-o", "second", "-o", "third", "-o", "fourth", "-o", "fifth", "-o", "sixth"}, options.fuseOptions());
 }
 
 TEST_F(ProgramOptionsParserTest, DirectAndIndirectFuseOptionsGiven) {
-    ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "-o", "my_opt", "--", "-o", "other_opt"});
+    const ProgramOptions options = parse({"./myExecutable", basedir, mountdir, "-o", "my_opt", "--", "-o", "other_opt"});
     EXPECT_VECTOR_EQ({"-o", "other_opt", "-o", "my_opt"}, options.fuseOptions());
 }

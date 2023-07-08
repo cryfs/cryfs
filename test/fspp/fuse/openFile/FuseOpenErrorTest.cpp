@@ -18,13 +18,13 @@ TEST_F(FuseOpenErrorTest, ReturnNoError) {
   ReturnIsFileOnLstat(FILENAME);
   EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), testing::_)).Times(1).WillOnce(Return(1));
   errno = 0;
-  int error = OpenFileReturnError(FILENAME, O_RDONLY);
+  const int error = OpenFileReturnError(FILENAME, O_RDONLY);
   EXPECT_EQ(0, error);
 }
 
 TEST_P(FuseOpenErrorTest, ReturnError) {
   ReturnIsFileOnLstat(FILENAME);
   EXPECT_CALL(*fsimpl, openFile(Eq(FILENAME), testing::_)).Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
-  int error = OpenFileReturnError(FILENAME, O_RDONLY);
+  const int error = OpenFileReturnError(FILENAME, O_RDONLY);
   EXPECT_EQ(GetParam(), error);
 }

@@ -72,8 +72,8 @@ using gitversion::VersionCompare;
 namespace cryfs_cli {
 
     Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
-            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(false), _idleUnmounter(none), _device(none) {
-        _noninteractive = Environment::isNoninteractive();
+            _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(Environment::isNoninteractive()), _idleUnmounter(none), _device(none) {
+        
         if (_noninteractive) {
             _console = make_shared<NoninteractiveConsole>(console);
         } else {
@@ -108,7 +108,7 @@ namespace cryfs_cli {
     }
 
     void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
-        VersionChecker versionChecker(httpClient.get());
+        const VersionChecker versionChecker(httpClient.get());
         optional<string> newestVersion = versionChecker.newestVersion();
         if (newestVersion == none) {
             cout << "Could not check for updates." << endl;
@@ -161,7 +161,7 @@ namespace cryfs_cli {
     }
 
     bool Cli::_confirmPassword(cpputils::Console* console, const string &password) {
-        string confirmPassword = console->askPassword("Confirm Password: ");
+        const string confirmPassword = console->askPassword("Confirm Password: ");
         if (password != confirmPassword) {
             std::cout << "Passwords don't match" << std::endl;
             return false;
@@ -258,7 +258,7 @@ namespace cryfs_cli {
 
     void Cli::_runFilesystem(const ProgramOptions &options, std::function<void()> onMounted) {
         try {
-            LocalStateDir localStateDir(Environment::localStateDir());
+            const LocalStateDir localStateDir(Environment::localStateDir());
             auto blockStore = make_unique_ref<OnDiskBlockStore2>(options.baseDir());
             auto config = _loadOrCreateConfig(options, localStateDir);
             printConfig(config.oldConfig, *config.configFile->config());
@@ -340,7 +340,7 @@ namespace cryfs_cli {
         if (minutes == none) {
             return none;
         }
-        uint64_t millis = std::llround(60000 * (*minutes));
+        const uint64_t millis = std::llround(60000 * (*minutes));
         return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback, "idlecallback");
     }
 
@@ -407,7 +407,7 @@ namespace cryfs_cli {
         ASSERT(bf::equivalent(dir, tempfile->path().parent_path()), "This function should be called with a file inside the directory");
         try {
             bool found = false;
-            bf::directory_iterator end;
+            const bf::directory_iterator end;
             for (auto iter = bf::directory_iterator(dir); iter != end; ++iter) {
                 if (bf::equivalent(*iter, tempfile->path())) {
                     found = true;
@@ -429,7 +429,7 @@ namespace cryfs_cli {
     }
 
     bool Cli::_pathContains(const bf::path &parent, const bf::path &child) {
-        bf::path absParent = bf::canonical(parent);
+        const bf::path absParent = bf::canonical(parent);
         bf::path current = bf::canonical(child);
         if (absParent.empty() && current.empty()) {
             return true;
@@ -449,7 +449,7 @@ namespace cryfs_cli {
 
         try {
             _showVersion(std::move(httpClient));
-            ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
+            const ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
             _sanityChecks(options);
             _runFilesystem(options, std::move(onMounted));
         } catch (const CryfsException &e) {

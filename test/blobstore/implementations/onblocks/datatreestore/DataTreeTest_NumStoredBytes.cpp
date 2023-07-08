@@ -24,7 +24,7 @@ INSTANTIATE_TEST_SUITE_P(FullLastLeaf, DataTreeTest_NumStoredBytes_P, Values(sta
 //TODO Test numLeaves() and numNodes() also two configurations with same number of bytes but different number of leaves (last leaf has 0 bytes)
 
 TEST_P(DataTreeTest_NumStoredBytes_P, SingleLeaf) {
-  BlockId blockId = CreateLeafWithSize(GetParam())->blockId();
+  const BlockId blockId = CreateLeafWithSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(GetParam(), tree->numBytes());
   EXPECT_EQ(1, tree->numLeaves());
@@ -32,7 +32,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, SingleLeaf) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, TwoLeafTree) {
-  BlockId blockId = CreateTwoLeafWithSecondLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateTwoLeafWithSecondLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numBytes());
   EXPECT_EQ(2, tree->numLeaves());
@@ -40,7 +40,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, TwoLeafTree) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, FullTwolevelTree) {
-  BlockId blockId = CreateFullTwoLevelWithLastLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateFullTwoLevelWithLastLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*(nodeStore->layout().maxChildrenPerInnerNode()-1) + GetParam(), tree->numBytes());
   EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode(), tree->numLeaves());
@@ -48,7 +48,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, FullTwolevelTree) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithOneChild) {
-  BlockId blockId = CreateThreeLevelWithOneChildAndLastLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateThreeLevelWithOneChildAndLastLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numBytes());
   EXPECT_EQ(2, tree->numLeaves());
@@ -56,7 +56,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithOneChild) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithTwoChildren) {
-  BlockId blockId = CreateThreeLevelWithTwoChildrenAndLastLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateThreeLevelWithTwoChildrenAndLastLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numBytes());
   EXPECT_EQ(2 + nodeStore->layout().maxChildrenPerInnerNode(), tree->numLeaves());
@@ -64,7 +64,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithTwoChildren) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithThreeChildren) {
-  BlockId blockId = CreateThreeLevelWithThreeChildrenAndLastLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateThreeLevelWithThreeChildrenAndLastLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(2*nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode() + nodeStore->layout().maxBytesPerLeaf() + GetParam(), tree->numBytes());
   EXPECT_EQ(2 + 2*nodeStore->layout().maxChildrenPerInnerNode(), tree->numLeaves());
@@ -72,7 +72,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, ThreeLevelTreeWithThreeChildren) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, FullThreeLevelTree) {
-  BlockId blockId = CreateFullThreeLevelWithLastLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateFullThreeLevelWithLastLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode()*(nodeStore->layout().maxChildrenPerInnerNode()-1) + nodeStore->layout().maxBytesPerLeaf()*(nodeStore->layout().maxChildrenPerInnerNode()-1) + GetParam(), tree->numBytes());
   EXPECT_EQ(nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode(), tree->numLeaves());
@@ -80,7 +80,7 @@ TEST_P(DataTreeTest_NumStoredBytes_P, FullThreeLevelTree) {
 }
 
 TEST_P(DataTreeTest_NumStoredBytes_P, FourLevelMinDataTree) {
-  BlockId blockId = CreateFourLevelMinDataWithLastLeafSize(GetParam())->blockId();
+  const BlockId blockId = CreateFourLevelMinDataWithLastLeafSize(GetParam())->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf()*nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode() + GetParam(), tree->numBytes());
   EXPECT_EQ(1 + nodeStore->layout().maxChildrenPerInnerNode()*nodeStore->layout().maxChildrenPerInnerNode(), tree->numLeaves());

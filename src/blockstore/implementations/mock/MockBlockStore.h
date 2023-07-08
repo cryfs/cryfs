@@ -113,27 +113,27 @@ namespace blockstore {
 
         private:
             void _increaseNumCreatedBlocks() {
-                std::unique_lock<std::mutex> lock(_mutex);
+                const std::unique_lock<std::mutex> lock(_mutex);
                 _createdBlocks += 1;
             }
 
             void _increaseNumLoadedBlocks(const BlockId &blockId) {
-                std::unique_lock<std::mutex> lock(_mutex);
+                const std::unique_lock<std::mutex> lock(_mutex);
                 _loadedBlocks.push_back(blockId);
             }
 
             void _increaseNumRemovedBlocks(const BlockId &blockId) {
-                std::unique_lock<std::mutex> lock(_mutex);
+                const std::unique_lock<std::mutex> lock(_mutex);
                 _removedBlocks.push_back(blockId);
             }
 
             void _increaseNumResizedBlocks(const BlockId &blockId) {
-                std::unique_lock<std::mutex> lock(_mutex);
+                const std::unique_lock<std::mutex> lock(_mutex);
                 _resizedBlocks.push_back(blockId);
             }
 
             void _increaseNumWrittenBlocks(const BlockId &blockId) {
-                std::unique_lock<std::mutex> lock(_mutex);
+                const std::unique_lock<std::mutex> lock(_mutex);
                 _writtenBlocks.push_back(blockId);
             }
 

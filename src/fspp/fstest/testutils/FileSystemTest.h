@@ -2,12 +2,13 @@
 #ifndef MESSMER_FSPP_FSTEST_TESTUTILS_FILESYSTEMTEST_H_
 #define MESSMER_FSPP_FSTEST_TESTUTILS_FILESYSTEMTEST_H_
 
-#include <gtest/gtest.h>
-#include <type_traits>
 #include <boost/static_assert.hpp>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include <cpp-utils/system/stat.h>
+#include <cstddef>
+#include <gtest/gtest.h>
+#include <type_traits>
 
 #include "../../fs_interface/Device.h"
 #include "../../fs_interface/Node.h"

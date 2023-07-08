@@ -4,7 +4,7 @@ using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
 void FuseFsyncTest::FsyncFile(const char *filename) {
-  int error = FsyncFileReturnError(filename);
+  const int error = FsyncFileReturnError(filename);
   EXPECT_EQ(0, error);
 }
 
@@ -12,7 +12,7 @@ int FuseFsyncTest::FsyncFileReturnError(const char *filename) {
   auto fs = TestFS();
 
   auto fd = OpenFile(fs.get(), filename);
-  int retval = ::fsync(fd->fd());
+  const int retval = ::fsync(fd->fd());
   if (retval == 0) {
     return 0;
   } else {

@@ -67,13 +67,13 @@ TEST_F(BlobReadWriteTest, WritingCloseTo16ByteLimitDoesntDestroySize) {
 
 TEST_F(BlobReadWriteTest, givenEmptyBlob_whenTryReadInFirstLeaf_thenFails) {
   Data data(5);
-  size_t read = blob->tryRead(data.data(), 3, 5);
+  const size_t read = blob->tryRead(data.data(), 3, 5);
   EXPECT_EQ(0, read);
 }
 
 TEST_F(BlobReadWriteTest, givenEmptyBlob_whenTryReadInLaterLeaf_thenFails) {
   Data data(5);
-  size_t read = blob->tryRead(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5);
+  const size_t read = blob->tryRead(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5);
   EXPECT_EQ(0, read);
 }
 
@@ -92,7 +92,7 @@ TEST_F(BlobReadWriteTest, givenEmptyBlob_whenReadInLaterLeaf_thenFails) {
 }
 
 TEST_F(BlobReadWriteTest, givenEmptyBlob_whenReadAll_thenReturnsZeroSizedData) {
-  Data data = blob->readAll();
+  const Data data = blob->readAll();
   EXPECT_EQ(0, data.size());
 }
 
@@ -110,13 +110,13 @@ TEST_F(BlobReadWriteTest, givenEmptyBlob_whenWriteZeroBytes_thenDoesntGrow) {
 
 TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenTryReadInFirstLeaf_thenFails) {
   Data data(5);
-  size_t read = blob->tryRead(data.data(), 3, 5);
+  const size_t read = blob->tryRead(data.data(), 3, 5);
   EXPECT_EQ(0, read);
 }
 
 TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenTryReadInLaterLeaf_thenFails) {
   Data data(5);
-  size_t read = blob->tryRead(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5);
+  const size_t read = blob->tryRead(data.data(), 2*LAYOUT.maxBytesPerLeaf(), 5);
   EXPECT_EQ(0, read);
 }
 
@@ -135,7 +135,7 @@ TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenReadInLaterLeaf_thenFails) 
 }
 
 TEST_F(BlobReadWriteTest, givenBlobResizedToZero_whenReadAll_thenReturnsZeroSizedData) {
-  Data data = blob->readAll();
+  const Data data = blob->readAll();
   EXPECT_EQ(0, data.size());
 }
 

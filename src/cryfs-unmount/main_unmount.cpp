@@ -8,7 +8,6 @@
 #include <cpp-utils/assert/backtrace.h>
 #include "Cli.h"
 
-using std::cerr;
 using cryfs::ErrorCode;
 
 int main(int argc, const char *argv[]) {

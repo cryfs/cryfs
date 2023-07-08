@@ -18,7 +18,7 @@ TEST_F(FuseMkdirErrorTest, NoError) {
   EXPECT_CALL(*fsimpl, mkdir(Eq(DIRNAME), testing::_, testing::_, testing::_))
     .Times(1).WillOnce(FromNowOnReturnIsDirOnLstat());
 
-  int error = MkdirReturnError(DIRNAME, 0);
+  const int error = MkdirReturnError(DIRNAME, 0);
   EXPECT_EQ(0, error);
 }
 
@@ -27,6 +27,6 @@ TEST_P(FuseMkdirErrorTest, ReturnedErrorIsCorrect) {
   EXPECT_CALL(*fsimpl, mkdir(Eq(DIRNAME), testing::_, testing::_, testing::_))
     .Times(1).WillOnce(Throw(FuseErrnoException(GetParam())));
 
-  int error = MkdirReturnError(DIRNAME, 0);
+  const int error = MkdirReturnError(DIRNAME, 0);
   EXPECT_EQ(GetParam(), error);
 }

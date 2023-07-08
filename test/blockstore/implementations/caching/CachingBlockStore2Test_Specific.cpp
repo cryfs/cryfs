@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
+
 #include "blockstore/implementations/caching/CachingBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
+#include <cstddef>
 
 using ::testing::Test;
 

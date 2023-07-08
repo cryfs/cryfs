@@ -33,7 +33,7 @@ public:
         auto node = this->device->Load("/mynode");
 
         //Test that timestamps didn't change
-        fspp::Node::stat_info newStat = this->stat(*node.value());
+        const fspp::Node::stat_info newStat = this->stat(*node.value());
         EXPECT_EQ(oldStat.atime, newStat.atime);
         EXPECT_EQ(oldStat.mtime, newStat.mtime);
         EXPECT_EQ(oldStat.ctime, newStat.ctime);

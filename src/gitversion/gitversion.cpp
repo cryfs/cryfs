@@ -6,7 +6,7 @@ using std::string;
 namespace gitversion {
 
     const VersionInfo &parse() {
-        static VersionInfo versionInfo = Parser::parse(VersionString());
+        static const VersionInfo versionInfo = Parser::parse(VersionString());
         return versionInfo;
     }
 

@@ -17,7 +17,7 @@ public:
   using ChildEntry = DataInnerNode_ChildEntry;
 
   DataInnerNode(DataNodeView block);
-  ~DataInnerNode();
+  ~DataInnerNode() override;
 
   uint32_t maxStoreableChildren() const;
 

@@ -47,7 +47,7 @@ namespace cryfs_cli {
     }
 
     optional<ptree> VersionChecker::_getVersionInfo(HttpClient* httpClient) {
-        long timeoutMsec = 2000;
+        const long timeoutMsec = 2000;
 		string response;
 		try {
 			response = httpClient->get("https://www.cryfs.org/version_info.json", timeoutMsec);

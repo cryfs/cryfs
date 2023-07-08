@@ -2,6 +2,8 @@
 #include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include <cpp-utils/tempfile/TempDir.h>
 
+#include <cstddef>
+
 using ::testing::Test;
 
 using cpputils::TempDir;

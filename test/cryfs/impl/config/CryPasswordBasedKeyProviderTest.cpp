@@ -80,7 +80,7 @@ TEST_F(CryPasswordBasedKeyProviderTest, requestKeyForExistingFilesystem) {
     return key;
   }));
 
-  EncryptionKey returned_key = keyProvider.requestKeyForExistingFilesystem(keySize, kdfParameters);
+  const EncryptionKey returned_key = keyProvider.requestKeyForExistingFilesystem(keySize, kdfParameters);
 
   EXPECT_EQ(key.ToString(), returned_key.ToString());
 }

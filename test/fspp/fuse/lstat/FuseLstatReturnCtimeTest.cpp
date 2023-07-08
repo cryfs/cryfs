@@ -19,13 +19,13 @@ INSTANTIATE_TEST_SUITE_P(FuseLstatReturnCtimeTest, FuseLstatReturnCtimeTest, Val
 ));
 
 TEST_P(FuseLstatReturnCtimeTest, ReturnedFileCtimeIsCorrect) {
-  fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallFileLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_ctim.tv_sec);
   EXPECT_EQ(0, result.st_ctim.tv_nsec);
 }
 
 TEST_P(FuseLstatReturnCtimeTest, ReturnedDirCtimeIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_ctim.tv_sec);
   EXPECT_EQ(0, result.st_ctim.tv_nsec);
 }

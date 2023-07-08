@@ -148,7 +148,7 @@ class MyException : std::exception {};
 }
 
 TEST(LeftRightTest, whenReadThrowsException_thenThrowsThrough) {
-    LeftRight<int> obj;
+    const LeftRight<int> obj;
 
     EXPECT_THROW(
         obj.read([](auto&) {throw MyException();}),

@@ -2,15 +2,17 @@
 #ifndef MESSMER_FSPP_FSINTERFACE_CONTEXT_H_
 #define MESSMER_FSPP_FSINTERFACE_CONTEXT_H_
 
+#include <cpp-utils/system/time.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <cpp-utils/system/time.h>
 
 namespace fspp {
 
 namespace detail {
 class TimestampUpdateBehaviorBase {
 public:
+    virtual ~TimestampUpdateBehaviorBase() = default;
     virtual bool shouldUpdateATimeOnFileRead(timespec oldATime, timespec oldMTime, timespec newATime) const = 0;
     virtual bool shouldUpdateATimeOnDirectoryRead(timespec oldATime, timespec oldMTime, timespec newATime) const = 0;
 };
@@ -32,7 +34,7 @@ inline TimestampUpdateBehavior noatime() {
         }
     };
 
-    static std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
+    static const std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
     return singleton;
 }
 
@@ -48,7 +50,7 @@ inline TimestampUpdateBehavior strictatime() {
         }
     };
 
-    static std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
+    static const std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
     return singleton;
 }
 
@@ -70,7 +72,7 @@ inline TimestampUpdateBehavior relatime() {
         }
     };
 
-    static std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
+    static const std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
     return singleton;
 }
 
@@ -86,7 +88,7 @@ inline TimestampUpdateBehavior nodiratime_relatime() {
         }
     };
 
-    static std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
+    static const std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
     return singleton;
 }
 
@@ -102,7 +104,7 @@ inline TimestampUpdateBehavior nodiratime_strictatime() {
         }
     };
 
-    static std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
+    static const std::shared_ptr<BehaviorImpl> singleton = std::make_shared<BehaviorImpl>();
     return singleton;
 }
 

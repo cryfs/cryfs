@@ -60,7 +60,7 @@ TEST_F(OptionalOwnershipPointerTest, TestIsInitializedCorrectly) {
 
 TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnership_UniquePtr) {
   {
-    optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(obj.get()));
+    const optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(obj.get()));
     EXPECT_FALSE(obj.isDestructed());
     UNUSED(ptr);
   }
@@ -69,7 +69,7 @@ TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnership_UniquePtr) {
 
 TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnership_UniqueRef) {
   {
-    optional_ownership_ptr<TestObject> ptr = WithOwnership(cpputils::nullcheck(unique_ptr<TestObject>(obj.get())).value());
+    const optional_ownership_ptr<TestObject> ptr = WithOwnership(cpputils::nullcheck(unique_ptr<TestObject>(obj.get())).value());
     //EXPECT_FALSE(obj.isDestructed());
     //UNUSED(ptr);
   }
@@ -88,7 +88,7 @@ TEST_F(OptionalOwnershipPointerTest, DestructsWhenItHasOwnershipAfterAssignment)
 
 TEST_F(OptionalOwnershipPointerTest, DoesntDestructWhenItDoesntHaveOwnership) {
   {
-    optional_ownership_ptr<TestObject> ptr = WithoutOwnership(obj.get());
+    const optional_ownership_ptr<TestObject> ptr = WithoutOwnership(obj.get());
     UNUSED(ptr);
   }
   EXPECT_FALSE(obj.isDestructed());
@@ -110,16 +110,16 @@ TEST_F(OptionalOwnershipPointerTest, DestructsOnReassignmentWithNull) {
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptr1) {
-  optional_ownership_ptr<TestObject> ptr = null<TestObject>();
+  const optional_ownership_ptr<TestObject> ptr = null<TestObject>();
   UNUSED(ptr);
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptrWithoutOwnership) {
-  optional_ownership_ptr<TestObject> ptr = WithoutOwnership(static_cast<TestObject*>(nullptr));
+  const optional_ownership_ptr<TestObject> ptr = WithoutOwnership(static_cast<TestObject*>(nullptr));
   UNUSED(ptr);
 }
 
 TEST_F(OptionalOwnershipPointerTest, DoesntCrashWhenDestructingNullptrWithOwnership) {
-  optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(nullptr));
+  const optional_ownership_ptr<TestObject> ptr = WithOwnership(unique_ptr<TestObject>(nullptr));
   UNUSED(ptr);
 }

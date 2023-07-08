@@ -17,12 +17,12 @@ INSTANTIATE_TEST_SUITE_P(FuseLstatReturnNlinkTest, FuseLstatReturnNlinkTest, Val
 ));
 
 TEST_P(FuseLstatReturnNlinkTest, ReturnedFileNlinkIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_nlink);
 }
 
 TEST_P(FuseLstatReturnNlinkTest, ReturnedDirNlinkIsCorrect) {
-  fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
+  const fspp::fuse::STAT result = CallDirLstatWithValue(GetParam());
   EXPECT_EQ(GetParam(), result.st_nlink);
 }
 

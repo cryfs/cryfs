@@ -39,7 +39,7 @@ std::streampos Data::_getStreamSize(istream &stream) {
 
 Data Data::LoadFromStream(istream &stream, size_t size) {
   Data result(size);
-  stream.read(static_cast<char*>(result.data()), result.size());
+  stream.read(static_cast<char*>(result.data()), static_cast<std::streamsize>(result.size()));
   return result;
 }
 
@@ -47,7 +47,7 @@ Data Data::FromString(const std::string &data, unique_ref<Allocator> allocator) 
   ASSERT(data.size() % 2 == 0, "hex encoded data cannot have odd number of characters");
   Data result(data.size() / 2, std::move(allocator));
   {
-    CryptoPP::StringSource _1(data, true,
+    const CryptoPP::StringSource _1(data, true,
       new CryptoPP::HexDecoder(
         new CryptoPP::ArraySink(static_cast<CryptoPP::byte*>(result._data), result.size())
       )
@@ -59,7 +59,7 @@ Data Data::FromString(const std::string &data, unique_ref<Allocator> allocator) 
 std::string Data::ToString() const {
   std::string result;
   {
-    CryptoPP::ArraySource _1(static_cast<const CryptoPP::byte*>(_data), _size, true,
+    const CryptoPP::ArraySource _1(static_cast<const CryptoPP::byte*>(_data), _size, true,
       new CryptoPP::HexEncoder(
           new CryptoPP::StringSink(result)
       )

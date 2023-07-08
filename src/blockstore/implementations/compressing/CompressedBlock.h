@@ -21,7 +21,7 @@ public:
   static cpputils::unique_ref<CompressedBlock> Decompress(cpputils::unique_ref<Block> baseBlock);
 
   CompressedBlock(cpputils::unique_ref<Block> baseBlock, cpputils::Data decompressedData);
-  ~CompressedBlock();
+  ~CompressedBlock() override;
 
   const void *data() const override;
   void write(const void *source, uint64_t offset, uint64_t size) override;
@@ -80,7 +80,7 @@ CompressedBlock<Compressor>::CompressedBlock(cpputils::unique_ref<Block> baseBlo
 
 template<class Compressor>
 CompressedBlock<Compressor>::~CompressedBlock() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   _compressToBaseBlock();
 }
 
@@ -97,7 +97,7 @@ void CompressedBlock<Compressor>::write(const void *source, uint64_t offset, uin
 
 template<class Compressor>
 void CompressedBlock<Compressor>::flush() {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
   _compressToBaseBlock();
   return _baseBlock->flush();
 }

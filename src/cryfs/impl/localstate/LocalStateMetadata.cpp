@@ -111,9 +111,9 @@ LocalStateMetadata LocalStateMetadata::deserialize_(istream& stream) {
 		ptree pt;
 		read_json(stream, pt);
 
-		uint32_t myClientId = pt.get<uint32_t>("myClientId");
-		string encryptionKeySalt = pt.get<string>("encryptionKey.salt");
-		string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
+		const uint32_t myClientId = pt.get<uint32_t>("myClientId");
+		const string encryptionKeySalt = pt.get<string>("encryptionKey.salt");
+		const string encryptionKeyDigest = pt.get<string>("encryptionKey.hash");
 
 		return LocalStateMetadata(myClientId, Hash{
 			/*.digest = */ cpputils::hash::Digest::FromString(encryptionKeyDigest),

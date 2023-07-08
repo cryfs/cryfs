@@ -11,8 +11,8 @@ namespace cpputils {
 
 class CaptureStderrRAII final {
 public:
-  CaptureStderrRAII() {
-    _oldBuffer = std::cerr.rdbuf();
+  CaptureStderrRAII() : _oldBuffer(std::cerr.rdbuf()) {
+    
 
     // Capture stderr to _buffer
     std::cerr.rdbuf(_buffer.rdbuf());

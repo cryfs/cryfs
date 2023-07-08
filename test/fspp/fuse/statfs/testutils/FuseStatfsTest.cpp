@@ -14,7 +14,7 @@ int FuseStatfsTest::StatfsReturnError(const std::string &path) {
 }
 
 void FuseStatfsTest::Statfs(const std::string &path, struct ::statvfs *result) {
-  int error = StatfsReturnError(path, result);
+  const int error = StatfsReturnError(path, result);
   EXPECT_EQ(0, error) << "lstat syscall failed. errno: " << errno;
 }
 
@@ -22,7 +22,7 @@ int FuseStatfsTest::StatfsReturnError(const std::string &path, struct ::statvfs 
   auto fs = TestFS();
 
   auto realpath = fs->mountDir() / path;
-  int retval = ::statvfs(realpath.string().c_str(), result);
+  const int retval = ::statvfs(realpath.string().c_str(), result);
   if (retval == 0) {
     return 0;
   } else {

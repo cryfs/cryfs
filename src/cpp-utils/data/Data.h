@@ -184,7 +184,7 @@ inline void Data::StoreToFile(const boost::filesystem::path &filepath) const {
 }
 
 inline void Data::StoreToStream(std::ostream &stream) const {
-  stream.write(static_cast<const char*>(_data), _size);
+  stream.write(static_cast<const char*>(_data), static_cast<std::streamsize>(_size));
 }
 
 inline Data Data::LoadFromStream(std::istream &stream) {

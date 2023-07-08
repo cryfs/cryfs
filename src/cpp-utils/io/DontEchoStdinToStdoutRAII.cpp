@@ -71,7 +71,6 @@ namespace cpputils
 
 #endif
 
-using cpputils::make_unique_ref;
 
 namespace cpputils
 {

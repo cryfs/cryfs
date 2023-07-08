@@ -4,7 +4,9 @@
 #include "blockstore/utils/BlockStoreUtils.h"
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/tempfile/TempFile.h>
+
 #include "../../testutils/gtest_printers.h"
+#include <cstddef>
 
 using ::testing::Test;
 
@@ -15,7 +17,6 @@ using cpputils::make_unique_ref;
 using cpputils::TempFile;
 using cpputils::serialize;
 using cpputils::deserialize;
-using boost::none;
 using std::unique_ptr;
 
 using blockstore::inmemory::InMemoryBlockStore2;
@@ -90,7 +91,7 @@ public:
   void decreaseVersionNumber(const blockstore::BlockId &blockId) {
     auto baseBlock = baseBlockStore->load(blockId).value();
     void* versionPtr = static_cast<uint8_t*>(baseBlock.data()) + IntegrityBlockStore2::VERSION_HEADER_OFFSET;
-    uint64_t version = deserialize<uint64_t>(versionPtr);
+    const uint64_t version = deserialize<uint64_t>(versionPtr);
     ASSERT(version > 1, "Can't decrease the lowest allowed version number");
     serialize<uint64_t>(versionPtr, version-1);
     baseBlockStore->store(blockId, baseBlock);
@@ -99,7 +100,7 @@ public:
   void increaseVersionNumber(const blockstore::BlockId &blockId) {
     auto baseBlock = baseBlockStore->load(blockId).value();
     void* versionPtr = static_cast<uint8_t*>(baseBlock.data()) + IntegrityBlockStore2::VERSION_HEADER_OFFSET;
-    uint64_t version = deserialize<uint64_t>(versionPtr);
+    const uint64_t version = deserialize<uint64_t>(versionPtr);
     serialize<uint64_t>(versionPtr, version+1);
     baseBlockStore->store(blockId, baseBlock);
   }
@@ -107,7 +108,7 @@ public:
   void changeClientId(const blockstore::BlockId &blockId) {
     auto baseBlock = baseBlockStore->load(blockId).value();
     void* clientIdPtr = static_cast<uint8_t*>(baseBlock.data()) + IntegrityBlockStore2::CLIENTID_HEADER_OFFSET;
-    uint64_t clientId = deserialize<uint64_t>(clientIdPtr);
+    const uint64_t clientId = deserialize<uint64_t>(clientIdPtr);
     serialize<uint64_t>(clientIdPtr, clientId+1);
     baseBlockStore->store(blockId, baseBlock);
   }
@@ -135,7 +136,7 @@ constexpr uint32_t IntegrityBlockStoreTest<AllowIntegrityViolations, MissingBloc
 // Test that a decreasing version number is not allowed
 TEST_F(IntegrityBlockStoreTest_Default, RollbackPrevention_DoesntAllowDecreasingVersionNumberForSameClient_1) {
   auto blockId = CreateBlockReturnKey();
-  Data oldBaseBlock = loadBaseBlock(blockId);
+  const Data oldBaseBlock = loadBaseBlock(blockId);
   modifyBlock(blockId);
   rollbackBaseBlock(blockId, oldBaseBlock);
   EXPECT_EQ(boost::none, blockStore->load(blockId));
@@ -145,7 +146,7 @@ TEST_F(IntegrityBlockStoreTest_Default, RollbackPrevention_DoesntAllowDecreasing
 // Test that a decreasing version number is allowed if allowIntegrityViolations is set.
 TEST_F(IntegrityBlockStoreTest_AllowIntegrityViolations, RollbackPrevention_AllowsDecreasingVersionNumberForSameClient_1) {
   auto blockId = CreateBlockReturnKey();
-  Data oldBaseBlock = loadBaseBlock(blockId);
+  const Data oldBaseBlock = loadBaseBlock(blockId);
   modifyBlock(blockId);
   rollbackBaseBlock(blockId, oldBaseBlock);
   EXPECT_NE(boost::none, blockStore->load(blockId));
@@ -202,7 +203,7 @@ TEST_F(IntegrityBlockStoreTest_Default, RollbackPrevention_DoesntAllowSameVersio
   auto blockId = CreateBlockReturnKey();
   // Increase the version number
   modifyBlock(blockId);
-  Data oldBaseBlock = loadBaseBlock(blockId);
+  const Data oldBaseBlock = loadBaseBlock(blockId);
   // Fake a modification by a different client with lower version numbers
   changeClientId(blockId);
   loadBlock(blockId); // make the block store know about this other client's modification
@@ -217,7 +218,7 @@ TEST_F(IntegrityBlockStoreTest_AllowIntegrityViolations, RollbackPrevention_Allo
   auto blockId = CreateBlockReturnKey();
   // Increase the version number
   modifyBlock(blockId);
-  Data oldBaseBlock = loadBaseBlock(blockId);
+  const Data oldBaseBlock = loadBaseBlock(blockId);
   // Fake a modification by a different client with lower version numbers
   changeClientId(blockId);
   loadBlock(blockId); // make the block store know about this other client's modification
@@ -340,7 +341,7 @@ TEST_F(IntegrityBlockStoreTest_AllowIntegrityViolations_MissingBlockIsIntegrityV
 
 TEST_F(IntegrityBlockStoreTest_Default, LoadingWithDifferentBlockIdFails) {
   auto blockId = CreateBlockReturnKey();
-  blockstore::BlockId key2 = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId key2 = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   baseBlockStore->store(key2, baseBlockStore->load(blockId).value());
   EXPECT_EQ(boost::none, blockStore->load(key2));
   EXPECT_TRUE(onIntegrityViolation.wasCalled());
@@ -348,7 +349,7 @@ TEST_F(IntegrityBlockStoreTest_Default, LoadingWithDifferentBlockIdFails) {
 
 TEST_F(IntegrityBlockStoreTest_AllowIntegrityViolations, LoadingWithDifferentBlockIdDoesntFail) {
   auto blockId = CreateBlockReturnKey();
-  blockstore::BlockId key2 = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  const blockstore::BlockId key2 = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   baseBlockStore->store(key2, baseBlockStore->load(blockId).value());
   EXPECT_NE(boost::none, blockStore->load(key2));
   EXPECT_FALSE(onIntegrityViolation.wasCalled());

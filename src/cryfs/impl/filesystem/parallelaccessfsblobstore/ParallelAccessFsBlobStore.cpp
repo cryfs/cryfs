@@ -31,7 +31,7 @@ optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &b
 
 unique_ref<DirBlobRef> ParallelAccessFsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
     auto blob = _baseBlobStore->createDirBlob(parent);
-    BlockId blockId = blob->blockId();
+    const BlockId blockId = blob->blockId();
     return _parallelAccessStore.add<DirBlobRef>(blockId, std::move(blob), [] (cachingfsblobstore::FsBlobRef *resource) {
         auto dirBlob = dynamic_cast<cachingfsblobstore::DirBlobRef*>(resource);
         ASSERT(dirBlob != nullptr, "Wrong resource given");
@@ -41,7 +41,7 @@ unique_ref<DirBlobRef> ParallelAccessFsBlobStore::createDirBlob(const blockstore
 
 unique_ref<FileBlobRef> ParallelAccessFsBlobStore::createFileBlob(const blockstore::BlockId &parent) {
     auto blob = _baseBlobStore->createFileBlob(parent);
-    BlockId blockId = blob->blockId();
+    const BlockId blockId = blob->blockId();
     return _parallelAccessStore.add<FileBlobRef>(blockId, std::move(blob), [] (cachingfsblobstore::FsBlobRef *resource) {
         auto fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(resource);
         ASSERT(fileBlob != nullptr, "Wrong resource given");
@@ -51,7 +51,7 @@ unique_ref<FileBlobRef> ParallelAccessFsBlobStore::createFileBlob(const blocksto
 
 unique_ref<SymlinkBlobRef> ParallelAccessFsBlobStore::createSymlinkBlob(const bf::path &target, const blockstore::BlockId &parent) {
     auto blob = _baseBlobStore->createSymlinkBlob(target, parent);
-    BlockId blockId = blob->blockId();
+    const BlockId blockId = blob->blockId();
     return _parallelAccessStore.add<SymlinkBlobRef>(blockId, std::move(blob), [] (cachingfsblobstore::FsBlobRef *resource) {
         auto symlinkBlob = dynamic_cast<cachingfsblobstore::SymlinkBlobRef*>(resource);
         ASSERT(symlinkBlob != nullptr, "Wrong resource given");

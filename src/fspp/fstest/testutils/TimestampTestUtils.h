@@ -28,9 +28,9 @@ public:
     void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(std::function<fspp::Node::stat_info()> statOld, std::function<fspp::Node::stat_info()> statNew, Operation&& operation, std::initializer_list<TimestampUpdateExpectation> behaviorChecks) {
         auto oldStat = statOld();
         ensureNodeTimestampsAreOld(oldStat);
-        timespec timeBeforeOperation = cpputils::time::now();
+        const timespec timeBeforeOperation = cpputils::time::now();
         operation();
-        timespec timeAfterOperation = cpputils::time::now();
+        const timespec timeAfterOperation = cpputils::time::now();
         auto newStat = statNew();
         for (auto behaviorCheck : behaviorChecks) {
             behaviorCheck(oldStat, newStat, timeBeforeOperation, timeAfterOperation);

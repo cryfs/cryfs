@@ -17,29 +17,29 @@ namespace boost {
 #include <boost/optional/optional_io.hpp>
 
 TEST(InnerConfigTest, SomeValues) {
-    Data serialized = InnerConfig{"myciphername", DataFixture::generate(1024)}.serialize();
-    InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
+    const Data serialized = InnerConfig{"myciphername", DataFixture::generate(1024)}.serialize();
+    const InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
     EXPECT_EQ("myciphername", deserialized.cipherName);
     EXPECT_EQ(DataFixture::generate(1024), deserialized.encryptedConfig);
 }
 
 TEST(InnerConfigTest, DataEmpty) {
-    Data serialized = InnerConfig{"myciphername", Data(0)}.serialize();
-    InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
+    const Data serialized = InnerConfig{"myciphername", Data(0)}.serialize();
+    const InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
     EXPECT_EQ("myciphername", deserialized.cipherName);
     EXPECT_EQ(Data(0), deserialized.encryptedConfig);
 }
 
 TEST(InnerConfigTest, CipherNameEmpty) {
-    Data serialized = InnerConfig{"", DataFixture::generate(1024)}.serialize();
-    InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
+    const Data serialized = InnerConfig{"", DataFixture::generate(1024)}.serialize();
+    const InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
     EXPECT_EQ("", deserialized.cipherName);
     EXPECT_EQ(DataFixture::generate(1024), deserialized.encryptedConfig);
 }
 
 TEST(InnerConfigTest, DataAndCipherNameEmpty) {
-    Data serialized = InnerConfig{"", Data(0)}.serialize();
-    InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
+    const Data serialized = InnerConfig{"", Data(0)}.serialize();
+    const InnerConfig deserialized = InnerConfig::deserialize(serialized).value();
     EXPECT_EQ("", deserialized.cipherName);
     EXPECT_EQ(Data(0), deserialized.encryptedConfig);
 }

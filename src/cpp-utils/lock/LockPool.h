@@ -79,7 +79,7 @@ namespace cpputils {
 
     template<class LockName>
     inline void LockPool<LockName>::release(const LockName &lockName) {
-        std::unique_lock<std::mutex> mutexLock(_mutex);
+        const std::unique_lock<std::mutex> mutexLock(_mutex);
         auto found = std::find(_lockedLocks.begin(), _lockedLocks.end(), lockName);
         ASSERT(found != _lockedLocks.end(), "Lock given to release() was not locked");
         _lockedLocks.erase(found);

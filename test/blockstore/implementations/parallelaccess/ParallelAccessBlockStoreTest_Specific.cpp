@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
+
 #include "blockstore/implementations/parallelaccess/ParallelAccessBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include <cstddef>
 
 using ::testing::Test;
 

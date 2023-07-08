@@ -15,7 +15,7 @@ namespace cpputils {
     public:
         CurlHttpClient();
 
-        ~CurlHttpClient();
+        ~CurlHttpClient() override;
 
         std::string get(const std::string &url, boost::optional<long> timeoutMsec = boost::none) override;
 

@@ -78,7 +78,7 @@ unique_ref<parallelaccessfsblobstore::ParallelAccessFsBlobStore> CryDevice::Crea
 
 #ifndef CRYFS_NO_COMPATIBILITY
 unique_ref<fsblobstore::FsBlobStore> CryDevice::MigrateOrCreateFsBlobStore(unique_ref<BlobStore> blobStore, CryConfigFile *configFile) {
-  string rootBlobId = configFile->config()->RootBlob();
+  const string rootBlobId = configFile->config()->RootBlob();
   if ("" == rootBlobId) {
     return make_unique_ref<FsBlobStore>(std::move(blobStore));
   }
@@ -252,7 +252,7 @@ optional<CryDevice::BlobWithAncestors> CryDevice::LoadBlobWithAncestors(const bf
       // Child entry in directory not found
       return none;
     }
-    BlockId childId = childOpt->blockId();
+    const BlockId childId = childOpt->blockId();
     auto nextBlob = _fsBlobStore->load(childId);
     if (nextBlob == none) {
       throw FuseErrnoException(EIO); // Blob for directory entry not found
@@ -273,8 +273,8 @@ optional<CryDevice::BlobWithAncestors> CryDevice::LoadBlobWithAncestors(const bf
 CryDevice::statvfs CryDevice::statfs() {
   callFsActionCallbacks();
 
-  uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
-  uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();
+  const uint64_t numUsedBlocks = _fsBlobStore->numBlocks();
+  const uint64_t numFreeBlocks = _fsBlobStore->estimateSpaceForNumBlocksLeft();
 
   statvfs result;
   result.max_filename_length = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
@@ -322,7 +322,7 @@ void CryDevice::RemoveBlob(const blockstore::BlockId &blockId) {
 }
 
 BlockId CryDevice::GetOrCreateRootBlobId(CryConfigFile *configFile) {
-  string root_blockId = configFile->config()->RootBlob();
+  const string root_blockId = configFile->config()->RootBlob();
   if (root_blockId == "") { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
     auto new_blockId = CreateRootBlobAndReturnId();
     configFile->config()->SetRootBlob(new_blockId.ToString());

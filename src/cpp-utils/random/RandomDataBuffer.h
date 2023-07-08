@@ -39,7 +39,7 @@ namespace cpputils {
 
     inline void RandomDataBuffer::add(const Data& newData) {
         // Concatenate old and new random data
-        size_t oldSize = size();
+        const size_t oldSize = size();
         Data combined(oldSize + newData.size());
         get(combined.data(), oldSize);
         std::memcpy(combined.dataOffset(oldSize), newData.data(), newData.size());

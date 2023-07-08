@@ -30,7 +30,7 @@ TEST(AssertTest_ReleaseBuild, AssertMessage) {
     ASSERT(2==5, "my message");
     FAIL();
   } catch (const cpputils::AssertFailed &e) {
-	  std::string msg = e.what();
+	  const std::string msg = e.what();
 	  // For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
 	  /*EXPECT_THAT(e.what(), MatchesRegex(
 		  R"(Assertion \[2==5\] failed in .*assert_release_test.cpp:27: my message)"

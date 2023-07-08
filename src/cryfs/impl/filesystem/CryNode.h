@@ -12,7 +12,7 @@ namespace cryfs {
 
 class CryNode: public fspp::Node {
 public:
-  virtual ~CryNode();
+  ~CryNode() override;
 
   // TODO grandparent is only needed to set the timestamps of the parent directory on rename and remove. Delete grandparent parameter once we store timestamps in the blob itself instead of in the directory listing.
   CryNode(CryDevice *device, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> parent, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> grandparent, const blockstore::BlockId &blockId);

@@ -21,7 +21,7 @@ using namespace cpputils::logging;
 namespace cpputils {
 
 void daemonize() {
-    pid_t pid = fork();
+    const pid_t pid = fork();
     if (pid < 0) {
         exit(EXIT_FAILURE);
     }
@@ -34,7 +34,7 @@ void daemonize() {
     umask(0);
 
     // Create a new SID for the child process
-    pid_t sid = setsid();
+    const pid_t sid = setsid();
     if (sid < 0) {
         LOG(ERR, "Failed to get SID for daemon process");
         exit(EXIT_FAILURE);

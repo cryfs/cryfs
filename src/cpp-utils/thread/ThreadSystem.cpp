@@ -24,7 +24,7 @@ namespace cpputils {
     }
 
     ThreadSystem::Handle ThreadSystem::start(function<bool()> loopIteration, string threadName) {
-        boost::unique_lock<boost::mutex> lock(_mutex);
+        const boost::unique_lock<boost::mutex> lock(_mutex);
         auto thread = _startThread(loopIteration, threadName);
         _runningThreads.push_back(RunningThread{std::move(threadName), std::move(loopIteration), std::move(thread)});
         return std::prev(_runningThreads.end());

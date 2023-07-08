@@ -37,22 +37,22 @@ public:
 
 TEST_F(ConcreteInnerEncryptorTest, EncryptAndDecrypt_AES) {
     auto encryptor = makeInnerEncryptor<AES256_GCM>();
-    InnerConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
-    Data decrypted = encryptor->decrypt(encrypted).value();
+    const InnerConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
+    const Data decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(200), decrypted);
 }
 
 TEST_F(ConcreteInnerEncryptorTest, EncryptAndDecrypt_Twofish) {
     auto encryptor = makeInnerEncryptor<Twofish128_CFB>();
-    InnerConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
-    Data decrypted = encryptor->decrypt(encrypted).value();
+    const InnerConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
+    const Data decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(200), decrypted);
 }
 
 TEST_F(ConcreteInnerEncryptorTest, EncryptAndDecrypt_EmptyData) {
     auto encryptor = makeInnerEncryptor<AES256_GCM>();
-    InnerConfig encrypted = encryptor->encrypt(Data(0));
-    Data decrypted = encryptor->decrypt(encrypted).value();
+    const InnerConfig encrypted = encryptor->encrypt(Data(0));
+    const Data decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(Data(0), decrypted);
 }
 
@@ -82,9 +82,9 @@ TEST_F(ConcreteInnerEncryptorTest, DoesntEncryptWhenTooLarge) {
 
 TEST_F(ConcreteInnerEncryptorTest, EncryptionIsFixedSize) {
     auto encryptor = makeInnerEncryptor<AES256_GCM>();
-    InnerConfig encrypted1 = encryptor->encrypt(DataFixture::generate(100));
-    InnerConfig encrypted2 = encryptor->encrypt(DataFixture::generate(200));
-    InnerConfig encrypted3 = encryptor->encrypt(Data(0));
+    const InnerConfig encrypted1 = encryptor->encrypt(DataFixture::generate(100));
+    const InnerConfig encrypted2 = encryptor->encrypt(DataFixture::generate(200));
+    const InnerConfig encrypted3 = encryptor->encrypt(Data(0));
 
     EXPECT_EQ(encrypted1.encryptedConfig.size(), encrypted2.encryptedConfig.size());
     EXPECT_EQ(encrypted1.encryptedConfig.size(), encrypted3.encryptedConfig.size());

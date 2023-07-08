@@ -10,7 +10,7 @@ namespace parallelaccessfsblobstore {
 
 class FsBlobRef: public parallelaccessstore::ParallelAccessStore<cachingfsblobstore::FsBlobRef, FsBlobRef, blockstore::BlockId>::ResourceRefBase {
 public:
-    virtual ~FsBlobRef() {}
+    ~FsBlobRef() override {}
     virtual const blockstore::BlockId &blockId() const = 0;
     virtual fspp::num_bytes_t lstat_size() const = 0;
     virtual const blockstore::BlockId &parentPointer() const = 0;

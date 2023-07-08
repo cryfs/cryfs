@@ -14,7 +14,7 @@ class DataTreeStoreTest: public DataTreeTest {
 };
 
 TEST_F(DataTreeStoreTest, CorrectKeyReturned) {
-  BlockId blockId = treeStore.createNewTree()->blockId();
+  const BlockId blockId = treeStore.createNewTree()->blockId();
   auto tree = treeStore.load(blockId).value();
   EXPECT_EQ(blockId, tree->blockId());
 }
@@ -32,7 +32,7 @@ TEST_F(DataTreeStoreTest, NewTreeIsLeafOnly) {
 }
 
 TEST_F(DataTreeStoreTest, TreeIsNotLoadableAfterRemove_DeleteByTree) {
-  BlockId blockId = treeStore.createNewTree()->blockId();
+  const BlockId blockId = treeStore.createNewTree()->blockId();
   auto tree = treeStore.load(blockId);
   EXPECT_NE(none, tree);
   treeStore.remove(std::move(*tree));
@@ -40,7 +40,7 @@ TEST_F(DataTreeStoreTest, TreeIsNotLoadableAfterRemove_DeleteByTree) {
 }
 
 TEST_F(DataTreeStoreTest, TreeIsNotLoadableAfterRemove_DeleteByKey) {
-  BlockId blockId = treeStore.createNewTree()->blockId();
+  const BlockId blockId = treeStore.createNewTree()->blockId();
   treeStore.remove(blockId);
   EXPECT_EQ(none, treeStore.load(blockId));
 }

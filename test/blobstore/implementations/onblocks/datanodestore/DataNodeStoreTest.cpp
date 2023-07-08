@@ -49,7 +49,7 @@ TEST_F(DataNodeStoreTest, CreateInnerNodeCreatesInnerNode) {
 }
 
 TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
-  BlockId blockId = nodeStore->createNewLeafNode(Data(0))->blockId();
+  const BlockId blockId = nodeStore->createNewLeafNode(Data(0))->blockId();
 
   auto loaded_node = nodeStore->load(blockId).value();
 
@@ -58,7 +58,7 @@ TEST_F(DataNodeStoreTest, LeafNodeIsRecognizedAfterStoreAndLoad) {
 
 TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
   auto leaf = nodeStore->createNewLeafNode(Data(0));
-  BlockId blockId = nodeStore->createNewInnerNode(1, {leaf->blockId()})->blockId();
+  const BlockId blockId = nodeStore->createNewInnerNode(1, {leaf->blockId()})->blockId();
 
   auto loaded_node = nodeStore->load(blockId).value();
 
@@ -68,7 +68,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth1IsRecognizedAfterStoreAndLoad) {
 TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
   auto leaf = nodeStore->createNewLeafNode(Data(0));
   auto inner = nodeStore->createNewInnerNode(1, {leaf->blockId()});
-  BlockId blockId = nodeStore->createNewInnerNode(2, {inner->blockId()})->blockId();
+  const BlockId blockId = nodeStore->createNewInnerNode(2, {inner->blockId()})->blockId();
 
   auto loaded_node = nodeStore->load(blockId).value();
 
@@ -77,7 +77,7 @@ TEST_F(DataNodeStoreTest, InnerNodeWithDepth2IsRecognizedAfterStoreAndLoad) {
 
 TEST_F(DataNodeStoreTest, DataNodeCrashesOnLoadIfDepthIsTooHigh) {
   auto block = blockStore->create(Data(BLOCKSIZE_BYTES));
-  BlockId blockId = block->blockId();
+  const BlockId blockId = block->blockId();
   {
     DataNodeView view(std::move(block));
     view.setDepth(DataNodeStore::MAX_DEPTH + 1);

@@ -80,7 +80,7 @@ unique_ref<DataNode> DataNodeStore::overwriteNodeWith(unique_ref<DataNode> targe
 }
 
 void DataNodeStore::remove(unique_ref<DataNode> node) {
-  BlockId blockId = node->blockId();
+  const BlockId blockId = node->blockId();
   cpputils::destruct(std::move(node));
   remove(blockId);
 }

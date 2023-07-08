@@ -13,7 +13,7 @@ namespace {
 EncryptionKey _derive(size_t keySize, const std::string& password, const SCryptParameters& kdfParameters) {
     auto result = EncryptionKey::Null(keySize);
 
-    size_t status = CryptoPP::Scrypt().DeriveKey(
+    const size_t status = CryptoPP::Scrypt().DeriveKey(
         static_cast<uint8_t*>(result.data()), result.binaryLength(),
         reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
         static_cast<const uint8_t*>(kdfParameters.salt().data()), kdfParameters.salt().size(),
@@ -36,13 +36,13 @@ SCrypt::SCrypt(const SCryptSettings& settingsForNewKeys)
 }
 
 EncryptionKey SCrypt::deriveExistingKey(size_t keySize, const std::string& password, const Data& kdfParameters) {
-    SCryptParameters parameters = SCryptParameters::deserialize(kdfParameters);
+    const SCryptParameters parameters = SCryptParameters::deserialize(kdfParameters);
     auto key = _derive(keySize, password, parameters);
     return key;
 }
 
 SCrypt::KeyResult SCrypt::deriveNewKey(size_t keySize, const std::string& password) {
-    SCryptParameters kdfParameters = _createNewSCryptParameters(_settingsForNewKeys);
+    const SCryptParameters kdfParameters = _createNewSCryptParameters(_settingsForNewKeys);
     auto key = _derive(keySize, password, kdfParameters);
     return SCrypt::KeyResult {
         key,

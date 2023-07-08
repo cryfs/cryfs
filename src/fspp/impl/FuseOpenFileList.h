@@ -71,9 +71,9 @@ inline FuseOpenFileList::~FuseOpenFileList() {
 }
 
 inline int FuseOpenFileList::open(cpputils::unique_ref<OpenFile> file) {
-  std::lock_guard<std::mutex> lock(_mutex);
+  const std::lock_guard<std::mutex> lock(_mutex);
 
-  int descriptor = _open_files.add(std::move(file));
+  const int descriptor = _open_files.add(std::move(file));
   _refcounts.emplace(descriptor, 0);
   return descriptor;
 }
@@ -83,7 +83,7 @@ inline auto FuseOpenFileList::load(int descriptor, Func&& callback) {
   try {
     std::unique_lock<std::mutex> lock(_mutex);
 	_refcounts.at(descriptor) += 1;
-	detail::OnScopeExit _([&] {
+	const detail::OnScopeExit _([&] {
 		if (!lock.owns_lock()) { // own_lock can be true when _open_files.get() below fails before the lock is unlocked
 		  lock.lock();
 		}

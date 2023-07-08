@@ -67,7 +67,7 @@ public:
 
   static DataNodeView create(blockstore::BlockStore *blockStore, const DataNodeLayout &layout, uint16_t formatVersion, uint8_t depth, uint32_t size, cpputils::Data data) {
     ASSERT(data.size() <= layout.datasizeBytes(), "Data is too large for node");
-    cpputils::Data serialized = serialize_(layout, formatVersion, depth, size, std::move(data));
+    const cpputils::Data serialized = serialize_(layout, formatVersion, depth, size, std::move(data));
     ASSERT(serialized.size() == layout.blocksizeBytes(), "Wrong block size");
     auto block = blockStore->create(serialized);
     return DataNodeView(std::move(block));

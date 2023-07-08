@@ -37,15 +37,15 @@ public:
 
 TEST_F(OuterEncryptorTest, EncryptAndDecrypt) {
     auto encryptor = makeOuterEncryptor();
-    OuterConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
-    Data decrypted = encryptor->decrypt(encrypted).value();
+    const OuterConfig encrypted = encryptor->encrypt(DataFixture::generate(200));
+    const Data decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(DataFixture::generate(200), decrypted);
 }
 
 TEST_F(OuterEncryptorTest, EncryptAndDecrypt_EmptyData) {
     auto encryptor = makeOuterEncryptor();
-    OuterConfig encrypted = encryptor->encrypt(Data(0));
-    Data decrypted = encryptor->decrypt(encrypted).value();
+    const OuterConfig encrypted = encryptor->encrypt(Data(0));
+    const Data decrypted = encryptor->decrypt(encrypted).value();
     EXPECT_EQ(Data(0), decrypted);
 }
 
@@ -67,9 +67,9 @@ TEST_F(OuterEncryptorTest, DoesntEncryptWhenTooLarge) {
 
 TEST_F(OuterEncryptorTest, EncryptionIsFixedSize) {
     auto encryptor = makeOuterEncryptor();
-    OuterConfig encrypted1 = encryptor->encrypt(DataFixture::generate(200));
-    OuterConfig encrypted2 = encryptor->encrypt(DataFixture::generate(700));
-    OuterConfig encrypted3 = encryptor->encrypt(Data(0));
+    const OuterConfig encrypted1 = encryptor->encrypt(DataFixture::generate(200));
+    const OuterConfig encrypted2 = encryptor->encrypt(DataFixture::generate(700));
+    const OuterConfig encrypted3 = encryptor->encrypt(Data(0));
 
     EXPECT_EQ(encrypted1.encryptedInnerConfig.size(), encrypted2.encryptedInnerConfig.size());
     EXPECT_EQ(encrypted1.encryptedInnerConfig.size(), encrypted3.encryptedInnerConfig.size());
