@@ -58,8 +58,8 @@ runs:
 
         echo Download boost
         cd ~
-        wget -O boost.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.75.0/boost_1_75_0.tar.bz2/download
-        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "d86f060245e98dca5c7f3f831c98ea9ccbfa8310f20830dd913d9d4c939fbe7cb94accd35f1128e7c4faf6c27adb6f4bb54e5477a6bde983dfc7aa33c4eed03a" ]; then
+        wget -O boost.tar.bz2 https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2
+        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "70909e0561c213d10a1fdd692f9ae7b293d3cdc63e925bdc207da9e9bba6e86474341100e7ee5de6d94f9561196b1a3a1597055a7b7382babf8931131170a312" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
@@ -69,7 +69,7 @@ runs:
         echo Extracting boost
         tar -xf boost.tar.bz2
         rm boost.tar.bz2
-        cd boost_1_75_0
+        cd boost_1_79_0
 
         echo Install boost
         ./bootstrap.sh --with-libraries=filesystem,system,thread,chrono,program_options

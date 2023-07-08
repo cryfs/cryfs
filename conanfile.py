@@ -5,7 +5,7 @@ class CryFSConan(ConanFile):
 	requires = [
 		"range-v3/0.12.0",
 		"spdlog/1.8.5",
-		"boost/1.75.0",
+		"boost/1.79.0",
 	]
 	generators = "cmake"
 	default_options = {
@@ -36,6 +36,9 @@ class CryFSConan(ConanFile):
 		"boost/*:without_random": True,
 		"boost/*:without_regex": True,
 		"boost/*:without_serialization": False,  # needed by boost date_time
+		# Stacktrace is needed by CryFS. Stacktrace is a header-only library and linking against its static version actually **disables** stacktraces,
+		# see https://www.boost.org/doc/libs/1_65_0/doc/html/stacktrace/getting_started.html#stacktrace.getting_started.enabling_and_disabling_stacktrac
+		# This is why we need to **not** link against the static version of stacktrace.
 		"boost/*:without_stacktrace": True,
 		"boost/*:without_system": False,  # needed by CryFS
 		"boost/*:without_test": True,

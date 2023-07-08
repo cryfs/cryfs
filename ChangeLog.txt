@@ -5,6 +5,7 @@ Version 0.12.0 (unreleased)
 * Updated dependencies to
   * DokanY 1.3.0.1000
   * range-v3/0.12.0
+  * boost 1.79
 
 Version 0.11.4 (unreleased)
 ---------------

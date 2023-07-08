@@ -40,7 +40,7 @@ target_link_libraries(CryfsDependencies_range-v3 INTERFACE range-v3::range-v3)
 
 # Setup boost dependency
 set(Boost_USE_STATIC_LIBS OFF)
-find_package(Boost 1.65.1
+find_package(Boost 1.79.0
         REQUIRED
         COMPONENTS filesystem system thread chrono program_options)
 check_target_is_not_from_conan(Boost::boost)
