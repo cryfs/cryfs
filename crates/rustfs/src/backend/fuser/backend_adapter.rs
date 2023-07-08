@@ -224,6 +224,7 @@ where
                     child.await
                 }
                 .await;
+                // TODO async_drop concurrently with the child.getattr() call below.
                 parent_node.async_drop().await?;
                 let mut child = child?;
 
