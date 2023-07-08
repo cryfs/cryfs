@@ -553,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-blobstore"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -575,7 +575,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-blockstore"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -606,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-cli"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -634,7 +634,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-cryfs"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-rustfs"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -685,7 +685,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-utils"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-version"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 dependencies = [
  "git2version",
  "konst",

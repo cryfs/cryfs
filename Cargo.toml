@@ -10,7 +10,7 @@ homepage = "https://www.cryfs.org"
 repository = "https://github.com/cryfs/cryfs"
 license = "LGPL-3.0-or-later"
 readme = "README.md"
-version = "0.11.0"
+version = "2.0.0-alpha1"
 # TODO Set categories, keywords, documentation, description (and then make sure to link the crates/*/Cargo.toml to it)
 # TODO look at whether we want to add [badges], see https://doc.rust-lang.org/cargo/reference/manifest.html#the-badges-section
 
