@@ -7,8 +7,8 @@ runs:
       shell: bash
       run: |
         choco install -y ninja wget
-        wget https://github.com/dokan-dev/dokany/releases/download/v1.3.0.1000/Dokan_x64.msi
-        if [ $(sha512sum Dokan_x64.msi | awk '{print $1;}') == "2daec91599a331f21bd44a6f06727a1839ec7fca5ed448536c65c86f9808ed6fd8afa947a8b153233c4220e29463533f0665e4c62718599cec8a12e60f0adc39" ]; then
+        wget https://github.com/dokan-dev/dokany/releases/download/v1.5.1.1000/Dokan_x64.msi
+        if [ $(sha512sum Dokan_x64.msi | awk '{print $1;}') == "492f4560c1505ada9d5c79ad0c098159af473de7567048e7dc48559328c9970641cd5e2eb8f749ce04918a9a0bb1a0bd943915abd686ea8824191c0747fafe1f" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
