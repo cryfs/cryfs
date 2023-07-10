@@ -6,5 +6,17 @@ runs:
     - name: Install Windows dependencies
       shell: bash
       run: |
-        choco install -y ninja
-        choco install -y dokany --version 1.3.0.1000 --installargs INSTALLDEVFILES=1
+        choco install -y ninja wget
+        wget https://github.com/dokan-dev/dokany/releases/download/v1.3.0.1000/Dokan_x64.msi
+        if [ $(sha512sum Dokan_x64.msi | awk '{print $1;}') == "2daec91599a331f21bd44a6f06727a1839ec7fca5ed448536c65c86f9808ed6fd8afa947a8b153233c4220e29463533f0665e4c62718599cec8a12e60f0adc39" ]; then
+          echo Correct sha512sum
+        else
+          echo Wrong sha512sum
+          sha512sum Dokan_x64.msi
+          exit 1
+        fi
+        echo Installing DokanY
+        msiexec "-i" "Dokan_x64.msi" "-norestart" "-passive" INSTALLDEVFILES=1
+        # msiexec "-i" "Dokan_x64.msi" "-norestart" "-passive" "-lv*!" dokan-install-logfile.txt INSTALLDEVFILES=1
+        # cat dokan-install-logfile.txt
+        echo Installing DokanY finished
