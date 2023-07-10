@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+# CMake 3.21 required by cryptopp-cmake
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
 # TODO Perf test:
 #  - try if setting CRYPTOPP_NATIVE_ARCH=ON and adding -march=native to the compile commands for cryfs source files makes a difference
