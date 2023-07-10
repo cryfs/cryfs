@@ -136,11 +136,11 @@ Building on Windows (experimental)
 ----------------------------------
 
 1. Install conan. If you want to use "pip install conan", you may have to install Python first.
-2. Install DokanY 1.5.1.1000. Other versions may not work.
+2. Install DokanY 2.0.6.1000. Other versions may not work.
 3. Run CMake to generate Visual Studio 2019 project files (this may not be necessary, but it makes sure everything works as expected and you can see potential errors happening during this step)
 
 $ mkdir build && cd build
-$ cmake .. -G "Visual Studio 16 2019" -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-1.5.1"]
+$ cmake .. -G "Visual Studio 16 2019" -DDOKAN_PATH=[dokan library location, e.g. "C:\Program Files\Dokan\DokanLibrary-2.0.6"]
 
 4. Potentially modify CMakeSettings.json file to fit your needs
 5. Open the cryfs source folder with Visual Studio 2019, or alternatively build on command line using

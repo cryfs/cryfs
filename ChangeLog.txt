@@ -3,7 +3,7 @@ Version 0.12.0 (unreleased)
 * Added a man page for `cryfs-unmount`
 * Fixed small inaccuracy in calculation of free space in statvfs
 * Updated dependencies to
-  * DokanY 1.5.1.1000
+  * DokanY 2.0.6.1000
   * range-v3/0.12.0
   * boost 1.79
 
