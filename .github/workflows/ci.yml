@@ -10,19 +10,29 @@ env:
 jobs:
   test:
     name: test
-    # TODO Add macos to CI
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - macos-11
+          - macos-12
+          - macos-13
+          - ubuntu-20.04
+          - ubuntu-22.04
         command: ["test"]
         profile: ["", "--release"]
-        features: ["", "--no-default-features", "--all-features"]
+        # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
+        features: ["", "--no-default-features"]
         toolchain: ["stable", "nightly", "1.67"]
+    runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v3
-      - name: Install Dependencies
+      - name: Install Dependencies (Linux)
+        if: ${{ runner.os == 'Linux' }}
         run: sudo apt-get install -y fuse3 libfuse3-dev
+      - name: Install Dependencies (MacOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: brew install pkg-config macfuse
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.toolchain }}
@@ -120,7 +130,8 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features --no-fail-fast
+          # TODO --all-features for code coverage would be better but takes too long because of the blockstore tests
+          args: --no-fail-fast
         env:
           # Setup taken from https://github.com/actions-rs/grcov/tree/d9881ad44979aa34f846a82abb764b2b8cfbd715
           CARGO_INCREMENTAL: '0'
