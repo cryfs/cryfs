@@ -17,7 +17,6 @@ set(SOURCES
         tempfile/TempDir.cpp
         network/HttpClient.cpp
         network/CurlHttpClient.cpp
-		network/WinHttpClient.cpp
         network/FakeHttpClient.cpp
         io/Console.cpp
         io/DontEchoStdinToStdoutRAII.cpp
@@ -67,20 +66,12 @@ elseif (APPLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED)
 endif()
 
-if (NOT MSVC)
-  find_package(CURL REQUIRED)
-  target_include_directories(${PROJECT_NAME} PUBLIC ${CURL_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES})
-else()
-  target_link_libraries(${PROJECT_NAME} PUBLIC WinHttp)
-endif()
-
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_spdlog cryptopp CryfsDependencies_range-v3)
+target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_spdlog cryptopp CryfsDependencies_range-v3 CryfsDependencies_libcurl)
 
 target_add_boost(${PROJECT_NAME})
 target_enable_style_warnings(${PROJECT_NAME})

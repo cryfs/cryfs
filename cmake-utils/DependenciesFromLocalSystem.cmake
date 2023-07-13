@@ -59,3 +59,10 @@ find_package(spdlog REQUIRED)
 check_target_is_not_from_conan(spdlog::spdlog)
 add_library(CryfsDependencies_spdlog INTERFACE)
 target_link_libraries(CryfsDependencies_spdlog INTERFACE spdlog::spdlog)
+
+
+
+# Setup libcurl dependency
+find_package(CURL REQUIRED)
+add_library(CryfsDependencies_libcurl INTERFACE)
+target_link_libraries(CryfsDependencies_libcurl INTERFACE CURL::libcurl)

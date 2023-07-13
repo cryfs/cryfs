@@ -1,13 +1,11 @@
 #include "Cli.h"
 #include <cpp-utils/random/Random.h>
 #include <cpp-utils/io/IOStreamConsole.h>
+#include <cpp-utils/network/CurlHttpClient.h>
 #include <cryfs/impl/CryfsException.h>
 
 #if defined(_MSC_VER)
-#include <cpp-utils/network/WinHttpClient.h>
 #include <VersionHelpers.h>
-#else
-#include <cpp-utils/network/CurlHttpClient.h>
 #endif
 
 using namespace cryfs_cli;
@@ -28,11 +26,7 @@ int main(int argc, const char *argv[]) {
 
     try {
         auto &keyGenerator = Random::OSRandom();
-#if defined(_MSC_VER)
-        auto httpClient = make_unique_ref<cpputils::WinHttpClient>();
-#else
         auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
-#endif
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
             .main(argc, argv, std::move(httpClient), []{});
     } catch (const cryfs::CryfsException &e) {
