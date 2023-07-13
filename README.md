@@ -89,8 +89,6 @@ Requirements
   - CMake version >= 3.10
   - pkg-config (on Unix)
   - Conan package manager (version 1.x)
-  - libcurl4 (including development headers)
-  - SSL development libraries (including development headers, e.g. libssl-dev)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
   - Python >= 3.5
   - OpenMP
@@ -98,15 +96,15 @@ Requirements
 You can use the following commands to install these requirements
 
         # Ubuntu
-        $ sudo apt install git g++ cmake make pkg-config libcurl4-openssl-dev libssl-dev libfuse-dev python3 python3-pip
+        $ sudo apt install git g++ cmake make pkg-config libfuse-dev python3 python3-pip
         $ sudo pip3 install conan==1.60.1
 
         # Fedora
-        $ sudo dnf install git gcc-c++ cmake make pkgconf libcurl-devel openssl-devel fuse-devel python3 python3-pip
+        $ sudo dnf install git gcc-c++ cmake make pkgconf fuse-devel python3 python3-pip
         $ sudo pip3 install conan==1.60.1
 
         # Macintosh
-        $ brew install cmake pkg-config openssl libomp macfuse
+        $ brew install cmake pkg-config libomp macfuse
         $ sudo pip3 install conan==1.60.1
 
 Build & Install

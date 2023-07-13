@@ -2,8 +2,6 @@
 #ifndef MESSMER_CPPUTILS_NETWORK_CURLHTTPCLIENT_HPP
 #define MESSMER_CPPUTILS_NETWORK_CURLHTTPCLIENT_HPP
 
-#if !defined(_MSC_VER)
-
 #include "HttpClient.h"
 #include "../macros.h"
 #include <mutex>
@@ -42,7 +40,5 @@ namespace cpputils {
     };
 
 }
-
-#endif
 
 #endif
