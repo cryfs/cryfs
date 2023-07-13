@@ -20,3 +20,6 @@ target_link_libraries(CryfsDependencies_boost INTERFACE CONAN_PKG::boost)
 
 add_library(CryfsDependencies_libcurl INTERFACE)
 target_link_libraries(CryfsDependencies_libcurl INTERFACE CONAN_PKG::libcurl)
+
+add_library(CryfsDependencies_openssl INTERFACE)
+target_link_libraries(CryfsDependencies_openssl INTERFACE CONAN_PKG::openssl)

@@ -62,7 +62,15 @@ target_link_libraries(CryfsDependencies_spdlog INTERFACE spdlog::spdlog)
 
 
 
+
 # Setup libcurl dependency
 find_package(CURL REQUIRED)
 add_library(CryfsDependencies_libcurl INTERFACE)
 target_link_libraries(CryfsDependencies_libcurl INTERFACE CURL::libcurl)
+
+
+
+# Setup openssl dependency
+find_package(OpenSSL REQUIRED)
+add_library(CryfsDependencies_openssl INTERFACE)
+target_link_libraries(CryfsDependencies_openssl INTERFACE OpenSSL::SSL)

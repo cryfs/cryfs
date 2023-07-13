@@ -8,9 +8,6 @@ target_include_directories(cryptopp SYSTEM INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 target_compile_definitions(cryptopp INTERFACE $<$<CONFIG:Debug>:CRYPTOPP_DEBUG>) # add to all targets depending on this
 add_compile_options($<$<CONFIG:Debug>:-DCRYPTOPP_DEBUG>) # add to stuff built in subdirectories (like the actual library)
 
-if (NOT DISABLE_OPENMP)
-    set(USE_OPENMP ON CACHE BOOL "")
-endif()
 set(CRYPTOPP_BUILD_TESTING OFF CACHE BOOL "")
 set(BUILD_DOCUMENTATION OFF CACHE BOOL "")
 set(BUILD_SHARED OFF CACHE BOOL "")

@@ -1,5 +1,8 @@
 #include "Scrypt.h"
-#include <vendor_cryptopp/scrypt.h>
+#include <openssl/core_dispatch.h>
+#include <openssl/core_names.h>
+#include <openssl/params.h>
+#include <openssl/kdf.h>
 
 using std::string;
 
@@ -13,15 +16,34 @@ namespace {
 EncryptionKey _derive(size_t keySize, const std::string& password, const SCryptParameters& kdfParameters) {
     auto result = EncryptionKey::Null(keySize);
 
-    const size_t status = CryptoPP::Scrypt().DeriveKey(
-        static_cast<uint8_t*>(result.data()), result.binaryLength(),
-        reinterpret_cast<const uint8_t*>(password.c_str()), password.size(),
-        static_cast<const uint8_t*>(kdfParameters.salt().data()), kdfParameters.salt().size(),
-        kdfParameters.n(), kdfParameters.r(), kdfParameters.p()
-    );
-    if (status != 1) {
-        throw std::runtime_error("Error running scrypt key derivation. Error code: "+std::to_string(status));
+    EVP_KDF *kdf = EVP_KDF_fetch(nullptr, "SCRYPT", nullptr);
+    if (!kdf) {
+        throw std::runtime_error("EVP_KDF_fetch failed");
     }
+    EVP_KDF_CTX *kctx = EVP_KDF_CTX_new(kdf);
+    if (!kctx) {
+        throw std::runtime_error("EVP_KDF_CTX_new failed");
+    }
+    EVP_KDF_free(kdf);
+
+    OSSL_PARAM params[6], *par = params;
+    string password_clone = password;
+    Data salt_clone = kdfParameters.salt().copy();
+    uint64_t N = kdfParameters.n();
+    uint32_t r = kdfParameters.r();
+    uint32_t p = kdfParameters.p();
+    *par++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, const_cast<char*>(password_clone.data()), password.size());
+    *par++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, const_cast<void*>(salt_clone.data()), kdfParameters.salt().size());
+    *par++ = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, &N);
+    *par++ = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_SCRYPT_R, &r);
+    *par++ = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_SCRYPT_P, &p);
+    *par = OSSL_PARAM_construct_end();
+
+    if (EVP_KDF_derive(kctx, static_cast<unsigned char*>(result.data()), result.binaryLength(), params) <= 0) {
+        throw std::runtime_error("EVP_KDF_derive failed");
+    }
+
+    EVP_KDF_CTX_free(kctx);
 
     return result;
 }

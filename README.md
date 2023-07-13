@@ -91,7 +91,6 @@ Requirements
   - Conan package manager (version 1.x)
   - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
   - Python >= 3.5
-  - OpenMP
 
 You can use the following commands to install these requirements
 
@@ -161,25 +160,6 @@ On most systems, CMake should find the libraries automatically. However, that do
     Pass in the include path with
 
         PKG_CONFIG_PATH=/path-to-fuse-or-macFUSE/lib/pkgconfig cmake ..
-
-3. **Openssl headers not found**
-
-    Pass in the include path with
-
-        cmake .. -DCMAKE_C_FLAGS="-I/path/to/openssl/include"
-
-4. **OpenMP not found (osx)**
-
-    Either build it without OpenMP
-
-        cmake .. -DDISABLE_OPENMP=on
-
-    but this will cause slower file system mount times (performance after mounting will be unaffected).
-    If you installed OpenMP with homebrew or macports, it will be autodetected.
-    If that doesn't work for some reason (or you want to use a different installation than the autodetected one),
-    pass in these flags:
-
-        cmake .. -DOpenMP_CXX_FLAGS='-Xpreprocessor -fopenmp -I/path/to/openmp/include' -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=/path/to/libomp.dylib
 
 
 Using local dependencies

@@ -15,7 +15,6 @@ require_clang_version(7.0)
 # Default value is not to build test cases
 option(BUILD_TESTING "build test cases" OFF)
 option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
-option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
 
 # The following options are helpful for development and/or CI
 option(USE_WERROR "build with -Werror flag")

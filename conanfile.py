@@ -7,6 +7,7 @@ class CryFSConan(ConanFile):
 		"spdlog/1.11.0",
 		"boost/1.79.0",
 		"libcurl/8.1.2",
+		"openssl/3.1.1",
 	]
 	generators = "cmake"
 	default_options = {
