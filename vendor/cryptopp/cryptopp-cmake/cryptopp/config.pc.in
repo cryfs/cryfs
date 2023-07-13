@@ -1,0 +1,14 @@
+# Crypto++ package configuration file
+
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+datadir=${prefix}/@CMAKE_INSTALL_DATAROOTDIR@/cryptopp
+
+Name: Crypto++
+URL: https://cryptopp.com/
+Description: Crypto++ cryptographic library (built with CMake)
+Version: @cryptopp-cmake_VERSION@
+
+Cflags: -I${includedir}
+Libs: -L${libdir} @MODULE_LINK_LIBS@

@@ -1,0 +1,291 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "description": "Base preset",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "installDir": "${sourceDir}/out/install/${presetName}",
+            "environment": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            },
+            "cacheVariables": {
+                "CRYPTOPP_BUILD_TESTING": "ON",
+                "USE_CCACHE": "ON"
+            }
+        },
+        {
+            "name": "debug",
+            "description": "Debug build",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release",
+            "description": "Release build",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "x64",
+            "description": "64bit build (on windows)",
+            "hidden": true,
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "compiler-clang",
+            "hidden": true,
+            "description": "Use clang as the C/C++ compiler",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            },
+            "condition": {
+                "type": "inList",
+                "string": "${hostSystemName}",
+                "list": [
+                    "Linux",
+                    "Darwin"
+                ]
+            }
+        },
+        {
+            "name": "compiler-gcc",
+            "hidden": true,
+            "description": "Use GCC as the C/C++ compiler",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/gcc",
+                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
+            },
+            "condition": {
+                "type": "inList",
+                "string": "${hostSystemName}",
+                "list": [
+                    "Linux",
+                    "Darwin"
+                ]
+            }
+        },
+        {
+            "name": "dev-windows",
+            "description": "Default build in a dev environment",
+            "inherits": [
+                "base",
+                "debug",
+                "x64"
+            ]
+        },
+        {
+            "name": "dev-linux",
+            "description": "Default build in a dev environment",
+            "inherits": [
+                "base",
+                "debug",
+                "compiler-clang"
+            ]
+        },
+        {
+            "name": "dev-mac",
+            "description": "Default build in a dev environment",
+            "inherits": [
+                "base",
+                "debug",
+                "compiler-clang"
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "dev-clang",
+            "description": "Basic build in a dev environment using clang",
+            "inherits": [
+                "base",
+                "debug",
+                "compiler-clang"
+            ]
+        },
+        {
+            "name": "dev-gcc",
+            "description": "Basic build in a dev environment using clang",
+            "inherits": [
+                "base",
+                "debug",
+                "compiler-gcc"
+            ]
+        },
+        {
+            "name": "rel-windows",
+            "description": "Default build in a dev environment",
+            "inherits": [
+                "base",
+                "release",
+                "x64"
+            ]
+        },
+        {
+            "name": "rel-linux",
+            "description": "Default build in a dev environment",
+            "inherits": [
+                "base",
+                "release",
+                "compiler-clang"
+            ]
+        },
+        {
+            "name": "rel-mac",
+            "description": "Default build in a dev environment",
+            "inherits": [
+                "base",
+                "release",
+                "compiler-clang"
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev-base",
+            "hidden": true,
+            "jobs": 4,
+            "verbose": true
+        },
+        {
+            "name": "dev-windows",
+            "configurePreset": "dev-windows",
+            "inherits": [
+                "dev-base"
+            ]
+        },
+        {
+            "name": "dev-clang",
+            "configurePreset": "dev-clang",
+            "inherits": [
+                "dev-base"
+            ]
+        },
+        {
+            "name": "dev-linux",
+            "configurePreset": "dev-linux",
+            "inherits": [
+                "dev-clang"
+            ]
+        },
+        {
+            "name": "dev-mac",
+            "configurePreset": "dev-mac",
+            "inherits": [
+                "dev-clang"
+            ]
+        },
+        {
+            "name": "dev-gcc",
+            "configurePreset": "dev-gcc",
+            "inherits": [
+                "dev-base"
+            ]
+        },
+        {
+            "name": "rel-base",
+            "hidden": true,
+            "jobs": 4,
+            "verbose": true
+        },
+        {
+            "name": "rel-windows",
+            "configurePreset": "rel-windows",
+            "inherits": [
+                "rel-base"
+            ]
+        },
+        {
+            "name": "rel-linux",
+            "configurePreset": "rel-linux",
+            "inherits": [
+                "rel-base"
+            ]
+        },
+        {
+            "name": "rel-mac",
+            "configurePreset": "rel-mac",
+            "inherits": [
+                "rel-base"
+            ]
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "test-base",
+            "description": "Enable output on failure",
+            "hidden": true,
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "dev-test-windows",
+            "inherits": "test-base",
+            "configurePreset": "dev-windows"
+        },
+        {
+            "name": "rel-test-windows",
+            "inherits": "test-base",
+            "configurePreset": "rel-windows"
+        },
+        {
+            "name": "dev-test-linux",
+            "inherits": "test-base",
+            "configurePreset": "dev-linux"
+        },
+        {
+            "name": "rel-test-linux",
+            "inherits": "test-base",
+            "configurePreset": "rel-linux"
+        },
+        {
+            "name": "dev-test-mac",
+            "inherits": "test-base",
+            "configurePreset": "dev-mac"
+        },
+        {
+            "name": "rel-test-mac",
+            "inherits": "test-base",
+            "configurePreset": "rel-mac"
+        },
+        {
+            "name": "dev-test-clang",
+            "inherits": "test-base",
+            "configurePreset": "dev-clang"
+        },
+        {
+            "name": "dev-test-gcc",
+            "inherits": "test-base",
+            "configurePreset": "dev-gcc"
+        }
+    ]
+}

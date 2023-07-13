@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 #define MESSMER_CPPUTILS_DATA_FIXEDSIZEDATA_H_
 
-#include <vendor_cryptopp/hex.h>
+#include <cryptopp-vendor/hex.h>
 #include <string>
 #include <array>
 #include <cstring>

@@ -1,0 +1,25 @@
+name: Run commitlint on PR
+
+on:
+  pull_request:
+
+jobs:
+  run-commitlint-on-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+
+      - name: Install dependencies
+        run: npm install -g @commitlint/cli @commitlint/config-conventional
+
+      - name: Validate all commits from PR
+        run: |
+          npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose

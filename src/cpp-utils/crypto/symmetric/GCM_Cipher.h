@@ -3,7 +3,7 @@
 #define MESSMER_CPPUTILS_CRYPTO_SYMMETRIC_GCMCIPHER_H_
 
 #include "AEAD_Cipher.h"
-#include <vendor_cryptopp/gcm.h>
+#include <cryptopp-vendor/gcm.h>
 
 namespace cpputils {
 

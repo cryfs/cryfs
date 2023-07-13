@@ -1,5 +1,5 @@
 #include "Gzip.h"
-#include <vendor_cryptopp/gzip.h>
+#include <cryptopp-vendor/gzip.h>
 
 using cpputils::Data;
 

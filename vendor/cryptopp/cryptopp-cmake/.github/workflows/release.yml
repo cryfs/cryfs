@@ -1,0 +1,339 @@
+name: Release Matrix
+
+on:
+  release:
+    types: [published]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "windows-latest",
+              os: windows-latest,
+              artifact: "Windows-MSVC.7z",
+              build_type: "Release",
+              cc: "cl",
+              cxx: "cl",
+              environment_script: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat",
+              archiver: "7z a",
+              generators: "Visual Studio 17 2022",
+            }
+          - {
+              name: "ubuntu-latest",
+              os: ubuntu-latest,
+              artifact: "Linux.7z",
+              build_type: "Release",
+              cc: "gcc-10",
+              cxx: "g++-10",
+              archiver: "7z a",
+              generators: "Ninja",
+            }
+          - {
+              name: "macos-latest",
+              os: macos-latest,
+              artifact: "macOS.7z",
+              build_type: "Release",
+              cc: "clang",
+              cxx: "clang++",
+              archiver: "7za a",
+              generators: "Ninja",
+            }
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Print env
+        run: |
+          echo github.event.action: ${{ github.event.action }}
+          echo github.event_name: ${{ github.event_name }}
+
+      - name: Setup Ninja
+        uses: abdes/gha-setup-ninja@master
+        with:
+          version: 1.11.0
+
+      - name: Setup cmake
+        uses: jwlawson/actions-setup-cmake@v1.13
+        with:
+          cmake-version: 3.21.x
+
+      - name: Install ccache
+        shell: cmake -P {0}
+        run: |
+          if("${{ runner.os }}" STREQUAL "Windows")
+            # If ccache behaves badly on windows, skip this step
+            execute_process(COMMAND choco install ccache)
+          elseif("${{ runner.os }}" STREQUAL "macOS")
+            execute_process(COMMAND brew install ccache)
+          elseif("${{ runner.os }}" STREQUAL "Linux")
+            set(ccache_version "4.6.3")
+            set(ccache_dist "ccache-${ccache_version}-linux-x86_64")
+            set(ccache_url "https://github.com/ccache/ccache/releases/download/v${ccache_version}/${ccache_dist}.tar.xz")
+            file(DOWNLOAD "${ccache_url}" ./ccache.tar.xz SHOW_PROGRESS)
+            execute_process(COMMAND ${CMAKE_COMMAND} -E tar zxvf ./ccache.tar.xz)
+            # Add to PATH environment variable
+            file(TO_CMAKE_PATH "$ENV{GITHUB_WORKSPACE}/${ccache_dist}" ccache_dir)
+            set(path_separator ":")
+            file(APPEND "$ENV{GITHUB_PATH}" "$ENV{GITHUB_WORKSPACE}${path_separator}${ccache_dir}")
+          else()
+            message(FATAL_ERROR, "${{ runner.os }} is not supported")
+          endif()
+
+      - name: Setup ccache
+        # If ccache behaves badly on windows, skip this step
+        # if: runner.os != 'Windows'
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          install_ccache: false
+          update_packager_index: false
+          prepend_symlinks_to_path: false
+          windows_compile_environment: msvc # this field is required
+
+      - name: Configure
+        shell: cmake -P {0}
+        run: |
+          set(ENV{CC} ${{ matrix.config.cc }})
+          set(ENV{CXX} ${{ matrix.config.cxx }})
+
+          if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+            execute_process(
+              COMMAND "${{ matrix.config.environment_script }}" && set
+              OUTPUT_FILE environment_script_output.txt
+            )
+            file(STRINGS environment_script_output.txt output_lines)
+            foreach(line IN LISTS output_lines)
+              if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
+                set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
+              endif()
+            endforeach()
+          endif()
+
+          set(path_separator ":")
+          if ("${{ runner.os }}" STREQUAL "Windows")
+            set(path_separator ";")
+          endif()
+
+          set(ENV{PATH} "$ENV{GITHUB_WORKSPACE}${path_separator}$ENV{PATH}")
+          # If ccache shows some strange behavior on windows, you can easily
+          # disable it here by setting the variable to "OFF"
+          if (NOT "${{ runner.os }}" STREQUAL "Windows")
+            set(enable_ccache "ON")
+          else()
+            set(enable_ccache "ON")
+          endif()
+
+          if ("${{ matrix.config.name }}" STREQUAL "macos-latest-omp-homebrew" OR "${{ matrix.config.name }}" STREQUAL "macos-latest-omp-macports")
+            set(OMP "ON")
+          else()
+            set(OMP "OFF")
+          endif()
+
+          execute_process(
+            COMMAND cmake
+              -S .
+              -B build
+              -D CMAKE_BUILD_TYPE=$ENV{BUILD_TYPE}
+              -G Ninja
+              -D CMAKE_MAKE_PROGRAM=ninja
+              -D USE_CCACHE=${enable_ccache}
+              -D CMAKE_VERBOSE_MAKEFILE=ON
+              -D USE_OPENMP=${OMP}
+            RESULT_VARIABLE result
+          )
+          if (NOT result EQUAL 0)
+            message(FATAL_ERROR "Bad exit status")
+          endif()
+
+      - name: Build
+        shell: cmake -P {0}
+        run: |
+          set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")
+
+          if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+            file(STRINGS environment_script_output.txt output_lines)
+            foreach(line IN LISTS output_lines)
+              if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
+                set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
+              endif()
+            endforeach()
+          endif()
+
+          execute_process(
+            COMMAND cmake --build build --target all
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE output
+            ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
+          )
+          if (NOT result EQUAL 0)
+            string(REGEX MATCH "FAILED:.*$" error_message "${output}")
+            string(REPLACE "\n" "%0A" error_message "${error_message}")
+            message("::error::${error_message}")
+            message(FATAL_ERROR "Build failed")
+          endif()
+
+      - name: Run cryptest
+        shell: cmake -P {0}
+        run: |
+          # Do not run tests in parallel as we share things between them to
+          # speed up the build and enable caching. The benefit of caching is
+          # much higher than parallel tests.
+
+          set(ENV{CTEST_OUTPUT_ON_FAILURE} "ON")
+
+          execute_process(
+            COMMAND ctest "--verbose" "-R" "cryptest"
+            WORKING_DIRECTORY build
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE output
+            ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
+          )
+          if (NOT result EQUAL 0)
+            string(REGEX MATCH "[0-9]+% tests.*[0-9.]+ sec.*$" test_results "${output}")
+            string(REPLACE "\n" "%0A" test_results "${test_results}")
+            message("::error::${test_results}")
+            message(FATAL_ERROR "Running tests failed!")
+          endif()
+
+      - name: Run build tests
+        shell: cmake -P {0}
+        run: |
+          # Do not run tests in parallel as we share things between them to
+          # speed up the build and enable caching. The benefit of caching is
+          # much higher than parallel tests.
+          set(ENV{CC} ${{ matrix.config.cc }})
+          set(ENV{CXX} ${{ matrix.config.cxx }})
+          set(ENV{CTEST_OUTPUT_ON_FAILURE} "ON")
+
+          if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+            execute_process(
+              COMMAND "${{ matrix.config.environment_script }}" && set
+              OUTPUT_FILE environment_script_output.txt
+            )
+            file(STRINGS environment_script_output.txt output_lines)
+            foreach(line IN LISTS output_lines)
+              if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
+                set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
+              endif()
+            endforeach()
+          endif()
+
+          execute_process(
+            COMMAND ctest "-E" "cryptest"
+            WORKING_DIRECTORY build
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE output
+            ERROR_VARIABLE output
+            ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE
+          )
+          if (NOT result EQUAL 0)
+            string(REGEX MATCH "[0-9]+% tests.*[0-9.]+ sec.*$" test_results "${output}")
+            string(REPLACE "\n" "%0A" test_results "${test_results}")
+            message("::error::${test_results}")
+            message(FATAL_ERROR "Running tests failed!")
+          endif()
+
+      - name: Install Strip
+        run: cmake --install build --prefix instdir --strip
+
+      - name: Pack
+        working-directory: instdir
+        run: cmake -E tar cfv ../${{ matrix.config.artifact }} --format=7zip .
+
+      - name: Upload
+        if: ${{ !env.ACT }}
+        uses: actions/upload-artifact@v1
+        with:
+          path: ./${{ matrix.config.artifact }}
+          name: ${{ matrix.config.artifact }}
+
+  release:
+    if: contains(github.ref, 'tags/CRYPTOPP_')
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Store Release url
+        run: |
+          echo "${{ steps.create_release.outputs.upload_url }}" > ./upload_url
+
+      - uses: actions/upload-artifact@v1
+        with:
+          path: ./upload_url
+          name: upload_url
+
+  publish:
+    if: contains(github.ref, 'tags/CRYPTOPP_')
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "Windows Latest MSVC",
+              artifact: "Windows-MSVC.7z",
+              os: windows-latest,
+            }
+          - {
+              name: "Ubuntu Latest GCC",
+              artifact: "Linux.7z",
+              os: ubuntu-latest,
+            }
+          - {
+              name: "macOS Latest Clang",
+              artifact: "macOS.7z",
+              os: macos-latest,
+            }
+    needs: release
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: ${{ matrix.config.artifact }}
+          path: ./
+
+      - name: Download URL
+        uses: actions/download-artifact@v1
+        with:
+          name: upload_url
+          path: ./
+
+      - id: set_upload_url
+        shell: bash
+        run: |
+          upload_url=`cat ./upload_url`
+          echo "{upload_url}={$upload_url}" >> $GITHUB_OUTPUT
+
+      - name: Upload to Release
+        id: upload_to_release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
+          asset_path: ./${{ matrix.config.artifact }}
+          asset_name: ${{ matrix.config.artifact }}
+          asset_content_type: application/x-gtar
