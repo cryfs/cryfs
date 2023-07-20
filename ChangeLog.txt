@@ -1,4 +1,4 @@
-Version 0.11.4 (unreleased)
+Version 0.11.4
 ---------------
 * Fixed build issue with GCC 13 (see https://github.com/cryfs/cryfs/pull/448 )
 * Fixed build issue with Python 3.12 (see https://github.com/cryfs/cryfs/issues/459 )
