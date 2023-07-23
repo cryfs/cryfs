@@ -416,7 +416,7 @@ where
                 Ok(open_file) => {
                     let fh = self.open_files.write().await.add(open_file);
                     Ok(OpenResponse {
-                        fh: fh.into(),
+                        fh: fh.handle.into(),
                         // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
                         flags,
                     })
@@ -686,7 +686,7 @@ where
             Ok(CreateResponse {
                 ttl: TTL_CREATE,
                 attrs: file_attrs,
-                fh,
+                fh: fh.handle,
                 // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
                 flags,
             })

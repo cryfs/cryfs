@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::common::{FileHandle, HandlePool};
+use crate::common::{FileHandle, FileHandleWithGeneration, HandlePool};
 use crate::FsError;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 
@@ -36,10 +36,10 @@ where
         self.available_handles.acquire_specific(handle);
     }
 
-    pub fn add(&mut self, file: AsyncDropGuard<T>) -> FileHandle {
+    pub fn add(&mut self, file: AsyncDropGuard<T>) -> FileHandleWithGeneration {
         let handle = self.available_handles.acquire();
         self.objects
-            .try_insert(handle, file)
+            .try_insert(handle.handle, file)
             .expect("Tried to add a file to the HandleMap but the handle was already in use");
         handle
     }

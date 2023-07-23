@@ -17,9 +17,9 @@ use std::time::SystemTime;
 use tokio::sync::RwLock;
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap,
-    HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf,
-    Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FileHandleWithGeneration, FsError,
+    FsResult, Gid, HandleMap, HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags,
+    PathComponent, PathComponentBuf, Statfs, Uid,
 };
 use crate::object_based_api::{adapter::MaybeInitializedFs, Device, Dir, Node};
 use cryfs_utils::{
@@ -30,6 +30,10 @@ use cryfs_utils::{
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
 const TTL_GETATTR: Duration = Duration::from_secs(1);
+
+// TODO Fuse has a requirement that (inode, generation) tuples are unique throughout the lifetime of the filesystem, not just the lifetime of the mount.
+//      See https://github.com/libfuse/libfuse/blob/d92bf83c152ff88c2d92bd852752d4c326004400/include/fuse_lowlevel.h#L69-L81 and https://github.com/wfraser/fuse-mt/issues/19
+//      This means currently, CryFS can't be used over NFS. We should fix this.
 
 pub struct BackendAdapter<Fs>
 where
@@ -131,15 +135,16 @@ where
         runtime: &tokio::runtime::Handle,
         log_msg: String,
         reply: ReplyEntry,
-        func: impl Future<Output = FsResult<(Duration, NodeAttrs, FileHandle)>> + Send + 'static,
+        func: impl Future<Output = FsResult<(Duration, NodeAttrs, FileHandleWithGeneration)>>
+            + Send
+            + 'static,
     ) {
         runtime.spawn(async move {
             log::info!("{}...", log_msg);
             match func.await {
-                // TODO Is the third member of the tuple a inode number or a generation number?
-                Ok((ttl, attrs, generation)) => {
+                Ok((ttl, attrs, ino)) => {
                     log::info!("{}...done", log_msg);
-                    reply.entry(&ttl, &convert_node_attrs(attrs), generation.into());
+                    reply.entry(&ttl, &convert_node_attrs(attrs, ino.handle), ino.generation);
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
@@ -153,14 +158,14 @@ where
         runtime: &tokio::runtime::Handle,
         log_msg: String,
         reply: ReplyAttr,
-        func: impl Future<Output = FsResult<(Duration, NodeAttrs)>> + Send + 'static,
+        func: impl Future<Output = FsResult<(Duration, NodeAttrs, FileHandle)>> + Send + 'static,
     ) {
         runtime.spawn(async move {
             log::info!("{}...", log_msg);
             match func.await {
-                Ok((ttl, attrs)) => {
+                Ok((ttl, attrs, ino)) => {
                     log::info!("{}...done", log_msg);
-                    reply.attr(&ttl, &convert_node_attrs(attrs));
+                    reply.attr(&ttl, &convert_node_attrs(attrs, ino));
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
@@ -291,11 +296,12 @@ where
             format!("getattr(ino={ino})"),
             reply,
             async move {
-                let mut node = Self::get_inode(&fs, &inodes, FileHandle::from(ino)).await?;
+                let ino = FileHandle::from(ino);
+                let mut node = Self::get_inode(&fs, &inodes, ino).await?;
                 let attrs = node.getattr().await;
                 node.async_drop().await?;
                 let attrs = attrs?;
-                Ok((TTL_GETATTR, attrs))
+                Ok((TTL_GETATTR, attrs, ino))
             },
         );
     }
@@ -1055,9 +1061,10 @@ impl<'a> From<&fuser::Request<'a>> for crate::low_level_api::RequestInfo {
     }
 }
 
-fn convert_node_attrs(attrs: NodeAttrs) -> fuser::FileAttr {
+fn convert_node_attrs(attrs: NodeAttrs, ino: FileHandle) -> fuser::FileAttr {
     let size: u64 = attrs.num_bytes.into();
     fuser::FileAttr {
+        ino: ino.0,
         size,
         blocks: attrs.num_blocks.unwrap_or(size / 512),
         atime: attrs.atime,
@@ -1073,7 +1080,6 @@ fn convert_node_attrs(attrs: NodeAttrs) -> fuser::FileAttr {
         rdev: 0, // TODO What to do about this?
         /// Flags (macOS only; see chflags(2))
         flags: 0, // TODO What to do about this?
-        ino: 0,        // TODO What to do about this?
         blksize: 4096, // TODO What to do about this?
     }
 }
