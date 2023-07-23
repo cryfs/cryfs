@@ -1,5 +1,5 @@
 <CPackWiXPatch>
-  <CPackWiXFragment Id="CM_CP_bin.cryfs.exe">
+  <CPackWiXFragment Id="CM_CP_applications.bin.cryfs.exe">
     <Environment Id="MyPath" Action="set" Part="first"
 			Name="PATH" Value="[INSTALL_ROOT]bin"
 			System="yes"/>
