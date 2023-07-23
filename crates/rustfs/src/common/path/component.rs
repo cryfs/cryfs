@@ -1,6 +1,7 @@
 use super::error::ParsePathError;
 use derive_more::Display;
 use std::borrow::{Borrow, ToOwned};
+use std::ffi::OsStr;
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -211,6 +212,13 @@ impl Deref for PathComponentBuf {
     }
 }
 
+impl AsRef<OsStr> for PathComponentBuf {
+    #[inline]
+    fn as_ref(&self) -> &OsStr {
+        self.name.as_ref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -333,6 +341,13 @@ mod tests {
             // PathComponentBuf::new_without_invariant_check
             let result = PathComponentBuf::new_without_invariant_check(component.to_string());
             assert_eq!(component, result.as_str());
+
+            // AsRef<std::ffi::OsStr> for PathComponentBuf
+            if expected.is_ok() {
+                let result = PathComponentBuf::try_from_string(component.to_string()).unwrap();
+                let result: &std::ffi::OsStr = result.as_ref();
+                assert_eq!(std::ffi::OsStr::new(component), result);
+            }
 
             // ToOwned for PathComponent
             if let Ok(expected) = &expected {

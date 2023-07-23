@@ -12,8 +12,8 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 #[async_trait]
 pub trait Device {
     // TODO Do we need those Send bounds on Node and Dir?
-    type Node: super::Node<Device = Self> + AsyncDrop<Error = FsError> + Debug + Send;
-    type Dir<'a>: super::Dir<Device = Self> + Send
+    type Node: super::Node<Device = Self> + AsyncDrop<Error = FsError> + Debug + Send + Sync;
+    type Dir<'a>: super::Dir<Device = Self> + Send + Sync
     where
         Self: 'a;
     type Symlink<'a>: super::Symlink

@@ -1,3 +1,5 @@
+use cryfs_utils::async_drop::with_async_drop;
+use cryfs_utils::with_async_drop_2;
 #[cfg(target_os = "macos")]
 use fuser::ReplyXTimes;
 use fuser::{
@@ -6,6 +8,7 @@ use fuser::{
     ReplyStatfs, ReplyWrite, ReplyXattr, Request, TimeOrNow,
 };
 use futures::join;
+use futures::stream::{FuturesUnordered, StreamExt};
 use libc::{c_int, ENOSYS, EPERM};
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -39,6 +42,7 @@ pub struct BackendAdapter<Fs>
 where
     Fs: Device + Send + Sync + 'static,
     <Fs as Device>::Node: Send + Sync,
+    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
 {
     // TODO RwLock is only needed for initialize, destroy and async drop. Can we remove it?
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
@@ -53,6 +57,7 @@ impl<Fs> Debug for BackendAdapter<Fs>
 where
     Fs: Device + Send + Sync + 'static,
     <Fs as Device>::Node: Send + Sync,
+    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BackendAdapter").finish()
@@ -63,6 +68,7 @@ impl<Fs> BackendAdapter<Fs>
 where
     Fs: Device + Send + Sync + 'static,
     <Fs as Device>::Node: Send + Sync,
+    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
 {
     pub fn new(
         fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
@@ -174,6 +180,41 @@ where
             }
         });
     }
+
+    fn run_async_reply_directory<'a, I>(
+        runtime: &tokio::runtime::Handle,
+        log_msg: String,
+        mut reply: ReplyDirectory,
+        func: impl Future<Output = FsResult<(usize, I)>> + Send + 'static,
+    ) where
+        I: Iterator<Item = (FileHandle, DirEntry)> + Send,
+    {
+        runtime.spawn(async move {
+            log::info!("{}...", log_msg);
+            match func.await {
+                Ok((offset_base, entries)) => {
+                    log::info!("{}...done", log_msg);
+                    for (entry_offset, entry) in entries.enumerate() {
+                        let (handle, entry) = entry;
+                        let buffer_full = reply.add(
+                            handle.0,
+                            i64::try_from(entry_offset).unwrap(),
+                            convert_node_kind(entry.kind),
+                            entry.name,
+                        );
+                        if buffer_full {
+                            break;
+                        }
+                    }
+                    reply.ok();
+                }
+                Err(err) => {
+                    log::info!("{}...failed: {}", log_msg, err);
+                    reply.error(err.system_error_code())
+                }
+            }
+        });
+    }
 }
 
 impl<Fs> Filesystem for BackendAdapter<Fs>
@@ -181,6 +222,7 @@ where
     // TODO Is both Send + Sync needed here?
     Fs: Device + Send + Sync + 'static,
     <Fs as Device>::Node: Send + Sync,
+    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
 {
     fn init(&mut self, req: &Request<'_>, _config: &mut KernelConfig) -> Result<(), c_int> {
         Self::run_blocking(&self.runtime, &format!("init"), || async {
@@ -641,15 +683,11 @@ where
     /// anything in fh, though that makes it impossible to implement standard conforming
     /// directory stream operations in case the contents of the directory can change
     /// between opendir and releasedir.
+    /// TODO Make tis standard-confirming
     fn opendir(&mut self, _req: &Request<'_>, _ino: u64, _flags: i32, reply: ReplyOpen) {
         reply.opened(0, 0);
     }
 
-    /// Read directory.
-    /// Send a buffer filled using buffer.fill(), with size not exceeding the
-    /// requested size. Send an empty buffer on end of stream. fh will contain the
-    /// value set by the opendir method, or will be undefined if the opendir method
-    /// didn't set any value.
     fn readdir(
         &mut self,
         _req: &Request<'_>,
@@ -658,13 +696,48 @@ where
         offset: i64,
         reply: ReplyDirectory,
     ) {
-        log::warn!(
-            "[Not Implemented] readdir(ino: {:#x?}, fh: {}, offset: {})",
-            ino,
-            fh,
-            offset
+        // TODO Can we optimize this so we don't lookup all entries for every batch if fuse requests them in batches with `offset`?
+
+        let inodes = Arc::clone(&self.inodes);
+        let fs = Arc::clone(&self.fs);
+        Self::run_async_reply_directory(
+            &self.runtime,
+            format!("readdir(ino={ino}, fh={fh}, offset={offset})"),
+            reply,
+            async move {
+                let ino = FileHandle::from(ino);
+                let node = Self::get_inode(&fs, &inodes, ino).await?;
+                with_async_drop_2!(node, {
+                    let dir = node.as_dir().await?;
+                    let entries = dir.entries();
+                    let entries = entries.await?;
+                    let dir = Arc::new(dir);
+                    let offset = usize::try_from(offset).unwrap();
+                    let entries = entries.into_iter().skip(offset).map(move |entry| {
+                        // TODO Possible without Arc?
+                        let dir = Arc::clone(&dir);
+                        let inodes = Arc::clone(&inodes);
+                        async move {
+                            let child = dir.lookup_child(&entry.name);
+                            // TODO No unwrap
+                            let child = child.await.unwrap();
+                            // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
+                            let child_ino = inodes.write().await.add(AsyncDropArc::new(child));
+                            log::info!(
+                                "New inode {ino:?}: parent={ino:?}, name={name}",
+                                name = entry.name
+                            );
+                            (child_ino.handle, entry)
+                        }
+                    });
+                    // TODO Possible without collecting into a Vec, maybe by returning an iterator over futures?
+                    let entries: FuturesUnordered<_> = entries.collect();
+                    let entries: Vec<(FileHandle, DirEntry)> = entries.collect().await;
+
+                    Ok((offset, entries.into_iter()))
+                })
+            },
         );
-        reply.error(ENOSYS);
     }
 
     /// Read directory.

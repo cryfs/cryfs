@@ -13,6 +13,7 @@ pub fn mount<Fs>(
 where
     Fs: Device + Send + Sync + 'static,
     <Fs as Device>::Node: Send + Sync,
+    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
 {
     let fs = spawn_mount(fs, mountpoint, runtime)?;
     fs.block_until_unmounted();
@@ -27,6 +28,7 @@ pub fn spawn_mount<Fs>(
 where
     Fs: Device + Send + Sync + 'static,
     <Fs as Device>::Node: Send + Sync,
+    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
 {
     let backend = BackendAdapter::new(fs, runtime);
 
