@@ -200,10 +200,12 @@ where
                 Ok((offset_base, entries)) => {
                     log::info!("{}...done", log_msg);
                     for (entry_offset, entry) in entries.enumerate() {
+                        let offset = i64::try_from(offset_base + entry_offset).unwrap();
                         let (handle, entry) = entry;
                         let buffer_full = reply.add(
                             handle.0,
-                            i64::try_from(entry_offset).unwrap(),
+                            // Return offset + 1 because the fuse API expects this to be the offset of the **next** entry, see https://libfuse.github.io/doxygen/fuse__lowlevel_8h.html#ad1957bcc8ece8c90f16c42c4daf3053f
+                            offset + 1,
                             convert_node_kind(entry.kind),
                             entry.name,
                         );
@@ -730,7 +732,7 @@ where
                             // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
                             let child_ino = inodes.write().await.add(AsyncDropArc::new(child));
                             log::info!(
-                                "New inode {ino:?}: parent={ino:?}, name={name}",
+                                "New inode {child_ino:?}: parent={ino:?}, name={name}",
                                 name = entry.name
                             );
                             (child_ino.handle, entry)
