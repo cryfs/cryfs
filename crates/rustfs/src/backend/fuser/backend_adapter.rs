@@ -75,8 +75,13 @@ where
         runtime: tokio::runtime::Handle,
     ) -> Self {
         let mut inodes = HandleMap::new();
+        // We need to block zero because fuse seems to dislike it.
+        inodes.block_handle(FileHandle(0));
         // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
-        inodes.block_handle(FileHandle(fuser::FUSE_ROOT_ID));
+        if fuser::FUSE_ROOT_ID != 0 {
+            inodes.block_handle(FileHandle(fuser::FUSE_ROOT_ID));
+        }
+
         let inodes = Arc::new(RwLock::new(inodes));
         Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
@@ -415,7 +420,7 @@ where
     fn mkdir(
         &mut self,
         req: &Request<'_>,
-        parent: u64,
+        parent_ino: u64,
         name: &OsStr,
         mode: u32,
         _umask: u32,
@@ -430,12 +435,13 @@ where
         let name = name.to_owned();
         Self::run_async_reply_entry(
             &self.runtime,
-            format!("mkdir(parent={parent}, name={name:?}, mode={mode:?})"),
+            format!("mkdir(parent={parent_ino}, name={name:?}, mode={mode:?})"),
             reply,
             async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
 
-                let mut parent = Self::get_inode(&fs, &inodes, FileHandle::from(parent)).await?;
+                let mut parent =
+                    Self::get_inode(&fs, &inodes, FileHandle::from(parent_ino)).await?;
                 let res = {
                     let parent_dir = parent.as_dir().await;
                     match parent_dir {
@@ -453,7 +459,7 @@ where
                 parent.async_drop().await?;
                 let (attrs, child) = res?;
                 let ino = inodes.write().await.add(AsyncDropArc::new(child));
-                log::info!("New inode {ino:?}: parent={parent:?}, name={name}");
+                log::info!("New inode {ino:?}: parent={parent_ino:?}, name={name}");
                 Ok((TTL_GETATTR, attrs, ino))
             },
         );
