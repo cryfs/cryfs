@@ -730,6 +730,7 @@ where
                             // TODO No unwrap
                             let child = child.await.unwrap();
                             // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
+                            //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
                             let child_ino = inodes.write().await.add(AsyncDropArc::new(child));
                             log::info!(
                                 "New inode {child_ino:?}: parent={ino:?}, name={name}",
