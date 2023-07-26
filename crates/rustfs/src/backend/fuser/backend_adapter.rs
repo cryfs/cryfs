@@ -1132,7 +1132,7 @@ where
     }
 }
 
-impl<'a> From<&fuser::Request<'a>> for crate::low_level_api::RequestInfo {
+impl<'a> From<&fuser::Request<'a>> for crate::high_level_api::RequestInfo {
     fn from(value: &fuser::Request<'a>) -> Self {
         Self {
             unique: value.unique(),

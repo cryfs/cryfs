@@ -8,7 +8,7 @@ use crate::common::{
     AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NumBytes,
     OpenFlags, Statfs, Uid,
 };
-use crate::low_level_api::{
+use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
     RequestInfo,
 };

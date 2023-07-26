@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use super::{backend_adapter::BackendAdapter, RunningFilesystem};
 use crate::common::FsError;
-use crate::low_level_api::{AsyncFilesystem, IntoFs};
+use crate::high_level_api::{AsyncFilesystem, IntoFs};
 use cryfs_utils::async_drop::AsyncDrop;
 
 pub fn mount<Fs>(

@@ -13,7 +13,7 @@ use crate::common::{
     AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FsError, FsResult, Gid, Mode, NodeAttrs,
     NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
 };
-use crate::low_level_api::AsyncFilesystem;
+use crate::high_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // (all these TODOs apply to here and to the fuser backend)
@@ -824,7 +824,7 @@ fn convert_statfs(statfs: Statfs) -> fuse_mt::Statfs {
     }
 }
 
-impl From<fuse_mt::RequestInfo> for crate::low_level_api::RequestInfo {
+impl From<fuse_mt::RequestInfo> for crate::high_level_api::RequestInfo {
     fn from(value: fuse_mt::RequestInfo) -> Self {
         Self {
             unique: value.unique,
