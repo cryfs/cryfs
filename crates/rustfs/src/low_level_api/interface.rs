@@ -8,6 +8,8 @@ use crate::common::{
 // TODO Remove asterisk import
 use fuser::*;
 
+// TODO Can we deduplicate some of these Reply types with the high level Response types? Also, unify naming. Reply+Response are one name too many.
+
 #[derive(Clone, Copy)]
 pub struct ReplyEntry {
     pub ino: FileHandle,
@@ -142,7 +144,7 @@ pub trait AsyncFilesystemLL {
         &self,
         req: &RequestInfo,
         ino: FileHandle,
-        callback: impl for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
+        callback: impl Send + for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
     ) -> CallbackResult;
 
     /// Create file node.
@@ -255,7 +257,7 @@ pub trait AsyncFilesystemLL {
         // TODO What is lock_owner?
         lock_owner: Option<u64>,
         // TODO Here and in other places, add documentation saying that `CallbackResult` is just a way to ensure that the implementation actually calls callback.
-        callback: impl for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
+        callback: impl Send + for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
     ) -> CallbackResult;
 
     /// Write data.

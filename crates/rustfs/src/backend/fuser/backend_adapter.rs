@@ -23,7 +23,7 @@ use crate::common::{
     PathComponent, PathComponentBuf, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{self, AsyncFilesystemLL};
-use crate::object_based_api::{high_level_adapter::MaybeInitializedFs, Device, Dir, Node};
+use crate::object_based_api::{Device, Dir, Node};
 use cryfs_utils::async_drop::with_async_drop;
 use cryfs_utils::with_async_drop_2;
 use cryfs_utils::{
