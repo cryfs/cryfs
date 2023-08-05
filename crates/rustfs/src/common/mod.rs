@@ -33,3 +33,6 @@ pub use path::{AbsolutePath, AbsolutePathBuf, ParsePathError, PathComponent, Pat
 
 mod handles;
 pub use handles::{FileHandle, FileHandleWithGeneration, HandleMap, HandlePool};
+
+mod request_info;
+pub use request_info::RequestInfo;

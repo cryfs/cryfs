@@ -1,6 +1,7 @@
 use derive_more::{From, Into};
 use std::collections::HashMap;
 
+// TODO Different types for FileHandle and InodeNumber
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, From, Into)]
 pub struct FileHandle(pub u64);
 

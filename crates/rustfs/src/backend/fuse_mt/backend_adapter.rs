@@ -824,7 +824,7 @@ fn convert_statfs(statfs: Statfs) -> fuse_mt::Statfs {
     }
 }
 
-impl From<fuse_mt::RequestInfo> for crate::high_level_api::RequestInfo {
+impl From<fuse_mt::RequestInfo> for crate::common::RequestInfo {
     fn from(value: fuse_mt::RequestInfo) -> Self {
         Self {
             unique: value.unique,

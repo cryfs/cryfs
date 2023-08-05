@@ -2,18 +2,15 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use super::{backend_adapter::BackendAdapter, RunningFilesystem};
-use crate::common::{Gid, Uid};
-use crate::object_based_api::Device;
+use crate::low_level_api::AsyncFilesystemLL;
 
 pub fn mount<Fs>(
-    fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
+    fs: Fs,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
 ) -> std::io::Result<()>
 where
-    Fs: Device + Send + Sync + 'static,
-    <Fs as Device>::Node: Send + Sync,
-    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
+    Fs: AsyncFilesystemLL + Send + Sync + 'static,
 {
     let fs = spawn_mount(fs, mountpoint, runtime)?;
     fs.block_until_unmounted();
@@ -21,14 +18,12 @@ where
 }
 
 pub fn spawn_mount<Fs>(
-    fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
+    fs: Fs,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
 ) -> std::io::Result<RunningFilesystem>
 where
-    Fs: Device + Send + Sync + 'static,
-    <Fs as Device>::Node: Send + Sync,
-    for<'a> <Fs as Device>::Dir<'a>: Send + Sync,
+    Fs: AsyncFilesystemLL + Send + Sync + 'static,
 {
     let backend = BackendAdapter::new(fs, runtime);
 
