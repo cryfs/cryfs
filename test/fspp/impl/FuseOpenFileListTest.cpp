@@ -17,8 +17,6 @@ public:
 
   ~MockOpenFile() override {destructed = true;}
 
-  MOCK_METHOD(OpenFile::stat_info, stat, (), (const, override));
-  MOCK_METHOD(void, truncate, (fspp::num_bytes_t), (const, override));
   MOCK_METHOD(fspp::num_bytes_t, read, (void*, fspp::num_bytes_t, fspp::num_bytes_t), (const, override));
   MOCK_METHOD(void, write, (const void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
   MOCK_METHOD(void, flush, (), (override));

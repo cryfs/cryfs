@@ -29,7 +29,7 @@ Build changes
   Now the flag will fully remove the libcurl dependency from the build.
 
 Dependency Updates
-* Fuse 2.9
+* Fuse 3.0
 * DokanY 2.2.0.1000
 * Crypto++ 8.9
 * range-v3 0.12.0

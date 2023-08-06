@@ -1,6 +1,0 @@
-Cite from FUSE documentation on the fgetattr function:
-    Currently this is only called after the create() method if that is implemented (see above).
-    Later it may be called for invocations of fstat() too.
-So we need to issue a create to get our fstat called.
-Since fstat is currently only called after create, we can't call it directly.
-So we can't test the returned values.

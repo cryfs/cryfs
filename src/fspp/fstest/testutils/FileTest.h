@@ -30,15 +30,13 @@ public:
   std::unique_ptr<fspp::Node> file_nested_node;
 
   //TODO IN_STAT still needed after moving it to FsppNodeTest?
-  void IN_STAT(fspp::File *file, fspp::Node *node, std::function<void (const fspp::Node::stat_info&)> callback) {
+  void IN_STAT(fspp::Node *node, std::function<void (const fspp::Node::stat_info&)> callback) {
 	  auto st1 = node->stat();
 	  callback(st1);
-	  auto st2 = file->open(fspp::openflags_t::RDONLY())->stat();
-	  callback(st2);
   }
 
   void EXPECT_SIZE(fspp::num_bytes_t expectedSize, fspp::File *file, fspp::Node *node) {
-    IN_STAT(file, node, [expectedSize] (const fspp::Node::stat_info& st) {
+    IN_STAT(node, [expectedSize] (const fspp::Node::stat_info& st) {
       EXPECT_EQ(expectedSize, st.size);
     });
 
