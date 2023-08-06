@@ -6,14 +6,14 @@ use std::time::{Duration, SystemTime};
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NodeKind,
-    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NumBytes,
+    OpenFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
 };
 use cryfs_utils::{
-    async_drop::{with_async_drop, AsyncDrop, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropGuard},
     with_async_drop_2,
 };
 
@@ -34,7 +34,7 @@ where
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
 
     // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
-    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<Fs::OpenFile>>>,
+    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<FileHandle, Fs::OpenFile>>>,
 }
 
 impl<Fs: Device> ObjectBasedFsAdapter<Fs>

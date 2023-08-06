@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    FileHandle, FsResult, Gid, Mode, NodeAttrs, NumBytes, PathComponent, RequestInfo, Statfs, Uid,
+    FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs, NumBytes,
+    PathComponent, RequestInfo, Statfs, Uid,
 };
 
 // TODO Remove asterisk import
@@ -12,17 +13,14 @@ use fuser::*;
 
 #[derive(Clone, Copy)]
 pub struct ReplyEntry {
-    // TODO Combine ino and generation into FileHandleWithGeneration object?
-    pub ino: FileHandle,
+    pub ino: HandleWithGeneration<InodeNumber>,
     pub attr: NodeAttrs,
-    // TODO Wrapper type for Generation
-    pub generation: u64,
     pub ttl: Duration,
 }
 
 #[derive(Clone, Copy)]
 pub struct ReplyAttr {
-    pub ino: FileHandle,
+    pub ino: InodeNumber,
     pub attr: NodeAttrs,
     pub ttl: Duration,
 }
@@ -41,12 +39,9 @@ pub struct ReplyWrite {
 
 #[derive(Clone, Copy)]
 pub struct ReplyCreate {
-    // TODO Combine ino and generation into FileHandleWithGeneration object?
     pub ttl: Duration,
-    pub ino: FileHandle,
+    pub ino: HandleWithGeneration<InodeNumber>,
     pub attr: NodeAttrs,
-    // TODO Wrapper type for generation
-    pub generation: u64,
     pub fh: FileHandle,
     // TODO Wrapper type for flags
     pub flags: u32,
@@ -95,7 +90,7 @@ pub trait AsyncFilesystemLL {
     async fn lookup(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<ReplyEntry>;
 
@@ -106,7 +101,7 @@ pub trait AsyncFilesystemLL {
     /// each forget. The filesystem may ignore forget calls, if the inodes don't need to
     /// have a limited lifetime. On unmount it is not guaranteed, that all referenced
     /// inodes will receive a forget message.
-    async fn forget(&self, req: &RequestInfo, ino: FileHandle, nlookup: u64) -> FsResult<()>;
+    async fn forget(&self, req: &RequestInfo, ino: InodeNumber, nlookup: u64) -> FsResult<()>;
 
     // TODO Do we want this? It seems to be gated by an "abi-7-16" feature but what is that?
     // /// Like forget, but take multiple forget requests at once for performance. The default
@@ -119,13 +114,13 @@ pub trait AsyncFilesystemLL {
     // }
 
     /// Get file attributes.
-    async fn getattr(&self, req: &RequestInfo, ino: FileHandle) -> FsResult<ReplyAttr>;
+    async fn getattr(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr>;
 
     /// Set file attributes.
     async fn setattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         mode: Option<Mode>,
         uid: Option<Uid>,
         gid: Option<Gid>,
@@ -145,7 +140,7 @@ pub trait AsyncFilesystemLL {
     async fn readlink<CallbackResult>(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         callback: impl Send + for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
     ) -> CallbackResult;
 
@@ -154,7 +149,7 @@ pub trait AsyncFilesystemLL {
     async fn mknod(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
         mode: Mode,
         // TODO Which type for umask?
@@ -167,7 +162,7 @@ pub trait AsyncFilesystemLL {
     async fn mkdir(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
         mode: Mode,
         // TODO Which type for umask?
@@ -178,7 +173,7 @@ pub trait AsyncFilesystemLL {
     async fn unlink(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()>;
 
@@ -186,7 +181,7 @@ pub trait AsyncFilesystemLL {
     async fn rmdir(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()>;
 
@@ -194,7 +189,7 @@ pub trait AsyncFilesystemLL {
     async fn symlink(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
         link: &str,
     ) -> FsResult<ReplyEntry>;
@@ -203,9 +198,9 @@ pub trait AsyncFilesystemLL {
     async fn rename(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
-        newparent: FileHandle,
+        newparent: InodeNumber,
         newname: &PathComponent,
         // TODO Which type for flags?
         flags: u32,
@@ -215,8 +210,8 @@ pub trait AsyncFilesystemLL {
     async fn link(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
-        newparent: FileHandle,
+        ino: InodeNumber,
+        newparent: InodeNumber,
         newname: &PathComponent,
     ) -> FsResult<ReplyEntry>;
 
@@ -231,7 +226,7 @@ pub trait AsyncFilesystemLL {
     async fn open(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         // TODO Which type for flags?
         flags: i32,
     ) -> FsResult<ReplyOpen>;
@@ -249,7 +244,7 @@ pub trait AsyncFilesystemLL {
     async fn read<CallbackResult>(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO offset was i32 not u32 in fuser, why?
         offset: NumBytes,
@@ -277,7 +272,7 @@ pub trait AsyncFilesystemLL {
     async fn write(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO offset was i32 not u32 in fuser, why?
         offset: NumBytes,
@@ -303,7 +298,7 @@ pub trait AsyncFilesystemLL {
     async fn flush(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO What is lock_owner?
         lock_owner: u64,
@@ -320,7 +315,7 @@ pub trait AsyncFilesystemLL {
     async fn release(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO Wrapper type for flags
         flags: i32,
@@ -335,7 +330,7 @@ pub trait AsyncFilesystemLL {
     async fn fsync(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()>;
@@ -350,7 +345,7 @@ pub trait AsyncFilesystemLL {
     async fn opendir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         // TODO Wrapper type for flags
         flags: i32,
     ) -> FsResult<ReplyOpen>;
@@ -363,7 +358,7 @@ pub trait AsyncFilesystemLL {
     async fn readdir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO In fuser, offset was i64. Why?
         offset: NumBytes,
@@ -379,7 +374,7 @@ pub trait AsyncFilesystemLL {
     async fn readdirplus(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO In fuser, offset was i64. Why?
         offset: NumBytes,
@@ -394,7 +389,7 @@ pub trait AsyncFilesystemLL {
     async fn releasedir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO Wrapper type for flags
         flags: i32,
@@ -407,19 +402,19 @@ pub trait AsyncFilesystemLL {
     async fn fsyncdir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()>;
 
     /// Get file system statistics.
-    async fn statfs(&self, req: &RequestInfo, ino: FileHandle) -> FsResult<Statfs>;
+    async fn statfs(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<Statfs>;
 
     /// Set an extended attribute.
     async fn setxattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
         value: &[u8],
@@ -435,7 +430,7 @@ pub trait AsyncFilesystemLL {
     async fn getxattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
         size: NumBytes,
@@ -450,7 +445,7 @@ pub trait AsyncFilesystemLL {
     async fn listxattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         size: NumBytes,
         // TODO Return this instead of passing in a Reply type
         reply: ReplyXattr,
@@ -460,7 +455,7 @@ pub trait AsyncFilesystemLL {
     async fn removexattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
     ) -> FsResult<()>;
@@ -472,7 +467,7 @@ pub trait AsyncFilesystemLL {
     async fn access(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         // TODO Wrapper task for mask
         mask: i32,
     ) -> FsResult<()>;
@@ -490,7 +485,7 @@ pub trait AsyncFilesystemLL {
     async fn create(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
         mode: Mode,
         // TODO Wrapper type for umask
@@ -503,7 +498,7 @@ pub trait AsyncFilesystemLL {
     async fn getlk(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO What is lock_owner?
         lock_owner: u64,
@@ -524,7 +519,7 @@ pub trait AsyncFilesystemLL {
     async fn setlk(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO What is lock_owner?
         lock_owner: u64,
@@ -542,7 +537,7 @@ pub trait AsyncFilesystemLL {
     async fn bmap(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         blocksize: NumBytes,
         // TODO What is idx?
         idx: u64,
@@ -552,7 +547,7 @@ pub trait AsyncFilesystemLL {
     async fn ioctl(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO Wrapper types for remaining args
         flags: u32,
@@ -567,7 +562,7 @@ pub trait AsyncFilesystemLL {
     async fn fallocate(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO offset and length in fuser was i64. Why?
         offset: NumBytes,
@@ -579,7 +574,7 @@ pub trait AsyncFilesystemLL {
     async fn lseek(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         // TODO offset was i64 in fuser. Why?
         offset: NumBytes,
@@ -594,11 +589,11 @@ pub trait AsyncFilesystemLL {
     async fn copy_file_range(
         &self,
         req: &RequestInfo,
-        ino_in: FileHandle,
+        ino_in: InodeNumber,
         fh_in: FileHandle,
         // TODO offset_in was i64 in fuser. Why?
         offset_in: NumBytes,
-        ino_out: FileHandle,
+        ino_out: InodeNumber,
         fh_out: FileHandle,
         // TODO offset_out was i64 in fuser. Why?
         offset_out: NumBytes,
@@ -617,9 +612,9 @@ pub trait AsyncFilesystemLL {
     async fn exchange(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent: InodeNumber,
         name: &PathComponent,
-        newparent: FileHandle,
+        newparent: InodeNumber,
         newname: &PathComponent,
         // TODO Wrapper type for options
         options: u64,
@@ -628,5 +623,5 @@ pub trait AsyncFilesystemLL {
     /// macOS only: Query extended times (bkuptime and crtime). Set fuse_init_out.flags
     /// during init to FUSE_XTIMES to enable
     #[cfg(target_os = "macos")]
-    async fn getxtimes(&self, req: &RequestInfo, ino: FileHandle) -> FsResult<ReplyXTimes>;
+    async fn getxtimes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyXTimes>;
 }

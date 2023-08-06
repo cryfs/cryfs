@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::hash::Hash;
 
-use crate::common::{FileHandle, FileHandleWithGeneration, HandlePool};
+use super::{HandlePool, HandleWithGeneration};
 use crate::FsError;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 
@@ -9,18 +10,21 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 /// new objects to the map using [Self::insert], which will return the
 /// handle of the new entry for you.
 #[derive(Debug)]
-pub struct HandleMap<T>
+pub struct HandleMap<Handle, T>
 where
+    // TODO Instead of From<u64> + Into<u64>, `Step` would be better, but that's unstable.
+    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Send + Debug,
     T: AsyncDrop<Error = FsError> + Send + Debug,
 {
-    available_handles: HandlePool,
+    available_handles: HandlePool<Handle>,
 
     // We use a hashmap instead of Vec so that space gets reused when an object gets removed, even before the handle gets reused.
-    objects: AsyncDropGuard<AsyncDropHashMap<FileHandle, T>>,
+    objects: AsyncDropGuard<AsyncDropHashMap<Handle, T>>,
 }
 
-impl<T> HandleMap<T>
+impl<Handle, T> HandleMap<Handle, T>
 where
+    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Send + Debug,
     T: AsyncDrop<Error = FsError> + Send + Debug,
 {
     pub fn new() -> AsyncDropGuard<Self> {
@@ -32,19 +36,19 @@ where
 
     /// Blocks the given handle from being used for new entries.
     /// Panics if the handle is already used for an entry.
-    pub fn block_handle(&mut self, handle: FileHandle) {
+    pub fn block_handle(&mut self, handle: Handle) {
         self.available_handles.acquire_specific(handle);
     }
 
-    pub fn add(&mut self, file: AsyncDropGuard<T>) -> FileHandleWithGeneration {
+    pub fn add(&mut self, file: AsyncDropGuard<T>) -> HandleWithGeneration<Handle> {
         let handle = self.available_handles.acquire();
         self.objects
-            .try_insert(handle.handle, file)
+            .try_insert(handle.handle.clone(), file)
             .expect("Tried to add a file to the HandleMap but the handle was already in use");
         handle
     }
 
-    pub fn remove(&mut self, handle: FileHandle) -> AsyncDropGuard<T> {
+    pub fn remove(&mut self, handle: Handle) -> AsyncDropGuard<T> {
         let file = self
             .objects
             .remove(&handle)
@@ -53,14 +57,15 @@ where
         file
     }
 
-    pub fn get(&self, handle: FileHandle) -> Option<&AsyncDropGuard<T>> {
+    pub fn get(&self, handle: Handle) -> Option<&AsyncDropGuard<T>> {
         self.objects.get(&handle)
     }
 }
 
 #[async_trait]
-impl<T> AsyncDrop for HandleMap<T>
+impl<Handle, T> AsyncDrop for HandleMap<Handle, T>
 where
+    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Send + Debug,
     T: AsyncDrop<Error = FsError> + Send + Debug,
 {
     type Error = FsError;

@@ -32,7 +32,13 @@ mod path;
 pub use path::{AbsolutePath, AbsolutePathBuf, ParsePathError, PathComponent, PathComponentBuf};
 
 mod handles;
-pub use handles::{FileHandle, FileHandleWithGeneration, HandleMap, HandlePool};
+pub use handles::{HandleMap, HandlePool, HandleWithGeneration};
+
+mod file_handle;
+pub use file_handle::FileHandle;
+
+mod inode_number;
+pub use inode_number::InodeNumber;
 
 mod request_info;
 pub use request_info::RequestInfo;

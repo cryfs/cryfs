@@ -8,8 +8,8 @@ use tokio::sync::RwLock;
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FileHandleWithGeneration, FsError, FsResult, Gid,
-    HandleMap, Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration,
+    InodeNumber, Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{
     AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock,
@@ -20,6 +20,8 @@ use cryfs_utils::{
     with_async_drop_2,
 };
 use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
+
+const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
@@ -36,10 +38,10 @@ where
     fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
 
     // TODO Do we need Arc for inodes?
-    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<AsyncDropArc<Fs::Node>>>>>,
+    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, AsyncDropArc<Fs::Node>>>>>,
 
     // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
-    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<Fs::OpenFile>>>,
+    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<FileHandle, Fs::OpenFile>>>,
 }
 
 impl<Fs: Device> ObjectBasedFsAdapterLL<Fs>
@@ -50,10 +52,10 @@ where
     pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
         let mut inodes = HandleMap::new();
         // We need to block zero because fuse seems to dislike it.
-        inodes.block_handle(FileHandle(0));
+        inodes.block_handle(InodeNumber::from(0));
         // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
         if fuser::FUSE_ROOT_ID != 0 {
-            inodes.block_handle(FileHandle(fuser::FUSE_ROOT_ID));
+            inodes.block_handle(FUSE_ROOT_ID);
         }
         let open_files = tokio::sync::RwLock::new(HandleMap::new());
 
@@ -69,11 +71,14 @@ where
 
     // TODO &self instead of `fs`, `inodes`
     /// This function allows file system operations to abstract over whether a requested inode number is the root node or whether it is looked up from the inode table `inodes`.
-    async fn get_inode(&self, ino: FileHandle) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
+    async fn get_inode(
+        &self,
+        ino: InodeNumber,
+    ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
         // TODO Once async closures are stable, we can - instead of returning an AsyncDropArc - take a callback parameter and pass &Fs::Node to it.
         //      That would simplify all the call sites (e.g. don't require them to call async_drop on the returned value anymore).
         //      See https://stackoverflow.com/questions/76625378/async-closure-holding-reference-over-await-point
-        if ino == FileHandle::from(fuser::FUSE_ROOT_ID) {
+        if ino == FUSE_ROOT_ID {
             let fs = self.fs.read().await;
             let fs = fs.get();
             let node = fs.rootdir().await?;
@@ -88,10 +93,10 @@ where
 
     async fn add_inode(
         &self,
-        parent_ino: FileHandle,
+        parent_ino: InodeNumber,
         node: AsyncDropGuard<Fs::Node>,
         name: &PathComponent,
-    ) -> FileHandleWithGeneration {
+    ) -> HandleWithGeneration<InodeNumber> {
         let child_ino = self.inodes.write().await.add(AsyncDropArc::new(node));
         log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
         child_ino
@@ -122,11 +127,11 @@ where
     async fn lookup(
         &self,
         _req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<ReplyEntry> {
         // TODO Will lookup() be called multiple times with the same parent+name and is it ok to give the second call a different inode while the first call is still ongoing?
-        let parent_node = self.get_inode(parent).await?;
+        let parent_node = self.get_inode(parent_ino).await?;
         let mut child = with_async_drop_2!(parent_node, {
             let parent_node_dir = parent_node
                 .as_dir()
@@ -139,12 +144,11 @@ where
 
         match child.getattr().await {
             Ok(attr) => {
-                let ino = self.add_inode(parent, child, name).await;
+                let ino = self.add_inode(parent_ino, child, name).await;
                 Ok(ReplyEntry {
                     ttl: TTL_LOOKUP,
+                    ino,
                     attr,
-                    ino: ino.handle,
-                    generation: ino.generation,
                 })
             }
             Err(err) => {
@@ -154,7 +158,7 @@ where
         }
     }
 
-    async fn forget(&self, _req: &RequestInfo, ino: FileHandle, nlookup: u64) -> FsResult<()> {
+    async fn forget(&self, _req: &RequestInfo, ino: InodeNumber, nlookup: u64) -> FsResult<()> {
         // From the fuser documentation:
         // ```
         // The nlookup parameter indicates the number of lookups previously performed on
@@ -175,7 +179,7 @@ where
         Ok(())
     }
 
-    async fn getattr(&self, _req: &RequestInfo, ino: FileHandle) -> FsResult<ReplyAttr> {
+    async fn getattr(&self, _req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr> {
         let mut node = self.get_inode(ino).await?;
         let attr = node.getattr().await;
         node.async_drop().await?;
@@ -190,7 +194,7 @@ where
     async fn setattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         mode: Option<Mode>,
         uid: Option<Uid>,
         gid: Option<Gid>,
@@ -211,7 +215,7 @@ where
     async fn readlink<CallbackResult>(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         callback: impl Send + for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
     ) -> CallbackResult {
         // TODO
@@ -221,7 +225,7 @@ where
     async fn mknod(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
         mode: Mode,
         umask: u32,
@@ -234,7 +238,7 @@ where
     async fn mkdir(
         &self,
         req: &RequestInfo,
-        parent_ino: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
         mode: Mode,
         umask: u32,
@@ -252,15 +256,14 @@ where
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
             attr,
-            ino: ino.handle,
-            generation: ino.generation,
+            ino: ino,
         })
     }
 
     async fn unlink(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
         // TODO
@@ -270,7 +273,7 @@ where
     async fn rmdir(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
         // TODO
@@ -280,7 +283,7 @@ where
     async fn symlink(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
         link: &str,
     ) -> FsResult<ReplyEntry> {
@@ -291,9 +294,9 @@ where
     async fn rename(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
-        newparent: FileHandle,
+        newparent_ino: InodeNumber,
         newname: &PathComponent,
         flags: u32,
     ) -> FsResult<()> {
@@ -304,18 +307,18 @@ where
     async fn link(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
-        newparent: FileHandle,
+        ino: InodeNumber,
+        newparent_ino: InodeNumber,
         newname: &PathComponent,
     ) -> FsResult<ReplyEntry> {
         // TODO
         Err(FsError::NotImplemented)
     }
 
-    async fn open(&self, req: &RequestInfo, ino: FileHandle, flags: i32) -> FsResult<ReplyOpen> {
+    async fn open(&self, req: &RequestInfo, ino: InodeNumber, flags: i32) -> FsResult<ReplyOpen> {
         // TODO
         Ok(ReplyOpen {
-            fh: FileHandle(0),
+            fh: FileHandle::from(0),
             flags: 0,
         })
     }
@@ -323,7 +326,7 @@ where
     async fn read<CallbackResult>(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         size: NumBytes,
@@ -338,7 +341,7 @@ where
     async fn write(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         data: &[u8],
@@ -353,7 +356,7 @@ where
     async fn flush(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         lock_owner: u64,
     ) -> FsResult<()> {
@@ -364,7 +367,7 @@ where
     async fn release(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         flags: i32,
         lock_owner: Option<u64>,
@@ -377,7 +380,7 @@ where
     async fn fsync(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
@@ -385,10 +388,15 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn opendir(&self, req: &RequestInfo, ino: FileHandle, flags: i32) -> FsResult<ReplyOpen> {
+    async fn opendir(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        flags: i32,
+    ) -> FsResult<ReplyOpen> {
         // TODO
         Ok(ReplyOpen {
-            fh: FileHandle(0),
+            fh: FileHandle::from(0),
             flags: 0,
         })
     }
@@ -396,7 +404,7 @@ where
     async fn readdir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         reply: ReplyDirectory,
@@ -464,7 +472,7 @@ where
     async fn readdirplus(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         reply: ReplyDirectoryPlus,
@@ -476,7 +484,7 @@ where
     async fn releasedir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         flags: i32,
     ) -> FsResult<()> {
@@ -487,7 +495,7 @@ where
     async fn fsyncdir(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
@@ -495,7 +503,7 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn statfs(&self, req: &RequestInfo, ino: FileHandle) -> FsResult<Statfs> {
+    async fn statfs(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<Statfs> {
         // TODO
         Ok(Statfs {
             num_total_blocks: 0,
@@ -511,7 +519,7 @@ where
     async fn setxattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         name: &PathComponent,
         value: &[u8],
         flags: i32,
@@ -524,7 +532,7 @@ where
     async fn getxattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         name: &PathComponent,
         size: NumBytes,
         reply: ReplyXattr,
@@ -536,7 +544,7 @@ where
     async fn listxattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         size: NumBytes,
         reply: ReplyXattr,
     ) {
@@ -547,14 +555,14 @@ where
     async fn removexattr(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
         // TODO
         Err(FsError::NotImplemented)
     }
 
-    async fn access(&self, req: &RequestInfo, ino: FileHandle, mask: i32) -> FsResult<()> {
+    async fn access(&self, req: &RequestInfo, ino: InodeNumber, mask: i32) -> FsResult<()> {
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -562,7 +570,7 @@ where
     async fn create(
         &self,
         req: &RequestInfo,
-        parent_ino: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
         mode: Mode,
         umask: u32,
@@ -583,8 +591,7 @@ where
             Ok(ReplyCreate {
                 ttl: TTL_CREATE,
                 attr,
-                ino: child_ino.handle,
-                generation: child_ino.generation,
+                ino: child_ino,
                 fh: fh.handle,
                 // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
                 flags: u32::try_from(flags).unwrap(), // TODO No unwrap?
@@ -595,7 +602,7 @@ where
     async fn getlk(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         lock_owner: u64,
         start: u64,
@@ -610,7 +617,7 @@ where
     async fn setlk(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         lock_owner: u64,
         start: u64,
@@ -626,7 +633,7 @@ where
     async fn bmap(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         blocksize: NumBytes,
         idx: u64,
     ) -> FsResult<ReplyBmap> {
@@ -638,7 +645,7 @@ where
     async fn ioctl(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         flags: u32,
         cmd: u32,
@@ -653,7 +660,7 @@ where
     async fn fallocate(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         length: NumBytes,
@@ -666,7 +673,7 @@ where
     async fn lseek(
         &self,
         req: &RequestInfo,
-        ino: FileHandle,
+        ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         whence: i32,
@@ -678,10 +685,10 @@ where
     async fn copy_file_range(
         &self,
         req: &RequestInfo,
-        ino_in: FileHandle,
+        ino_in: InodeNumber,
         fh_in: FileHandle,
         offset_in: NumBytes,
-        ino_out: FileHandle,
+        ino_out: InodeNumber,
         fh_out: FileHandle,
         offset_out: NumBytes,
         len: NumBytes,
@@ -701,9 +708,9 @@ where
     async fn exchange(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: InodeNumber,
         name: &PathComponent,
-        newparent: FileHandle,
+        newparent_ino: InodeNumber,
         newname: &PathComponent,
         options: u64,
     ) -> FsResult<()> {
@@ -712,7 +719,7 @@ where
     }
 
     #[cfg(target_os = "macos")]
-    async fn getxtimes(&self, req: &RequestInfo, ino: FileHandle) -> FsResult<ReplyXTimes> {
+    async fn getxtimes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyXTimes> {
         // TODO
         Err(FsError::NotImplemented)
     }

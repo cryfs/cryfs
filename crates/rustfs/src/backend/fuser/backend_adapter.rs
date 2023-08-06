@@ -1,35 +1,25 @@
 #[cfg(target_os = "macos")]
 use fuser::ReplyXTimes;
 use fuser::{
-    Filesystem, KernelConfig, Reply, ReplyAttr, ReplyBmap, ReplyCreate, ReplyData, ReplyDirectory,
+    Filesystem, KernelConfig, ReplyAttr, ReplyBmap, ReplyCreate, ReplyData, ReplyDirectory,
     ReplyDirectoryPlus, ReplyEmpty, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen,
     ReplyStatfs, ReplyWrite, ReplyXattr, Request, TimeOrNow,
 };
-use futures::join;
-use futures::stream::{FuturesUnordered, StreamExt};
-use libc::{c_int, ENOSYS, EPERM};
+use libc::c_int;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 use std::time::SystemTime;
 use tokio::sync::RwLock;
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FileHandleWithGeneration, FsError,
-    FsResult, Gid, HandleMap, HandlePool, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags,
-    PathComponent, PathComponentBuf, RequestInfo, Statfs, Uid,
+    FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
+    PathComponentBuf, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{self, AsyncFilesystemLL};
-use crate::object_based_api::{Device, Dir, Node};
-use cryfs_utils::async_drop::with_async_drop;
-use cryfs_utils::with_async_drop_2;
-use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    stream::for_each_unordered,
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Fuse has a requirement that (inode, generation) tuples are unique throughout the lifetime of the filesystem, not just the lifetime of the mount.
 //      See https://github.com/libfuse/libfuse/blob/d92bf83c152ff88c2d92bd852752d4c326004400/include/fuse_lowlevel.h#L69-L81 and https://github.com/wfraser/fuse-mt/issues/19
@@ -154,8 +144,8 @@ where
                     log::info!("{}...done", log_msg);
                     fuser_reply.entry(
                         &reply.ttl,
-                        &convert_node_attrs(reply.attr, reply.ino),
-                        reply.generation,
+                        &convert_node_attrs(reply.attr, reply.ino.handle),
+                        reply.ino.generation,
                     );
                 }
                 Err(err) => {
@@ -204,7 +194,7 @@ where
             match func(fs).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
-                    fuser_reply.opened(reply.fh.0, reply.flags);
+                    fuser_reply.opened(reply.fh.into(), reply.flags);
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
@@ -287,9 +277,9 @@ where
                     log::info!("{}...done", log_msg);
                     fuser_reply.created(
                         &reply.ttl,
-                        &convert_node_attrs(reply.attr, reply.ino),
-                        reply.generation,
-                        reply.fh.0,
+                        &convert_node_attrs(reply.attr, reply.ino.handle),
+                        reply.ino.generation,
+                        reply.fh.into(),
                         reply.flags,
                     );
                 }
@@ -444,31 +434,32 @@ where
         // TODO Is there a way to do the above without a call to expect()?
     }
 
-    fn lookup(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: fuser::ReplyEntry) {
+    fn lookup(
+        &mut self,
+        req: &Request<'_>,
+        parent_ino: u64,
+        name: &OsStr,
+        reply: fuser::ReplyEntry,
+    ) {
         // TODO Is this possible without name.to_owned()?
         let req = RequestInfo::from(req);
         let name = name.to_owned();
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         self.run_async_reply_entry(
-            format!("lookup(parent={parent:?}, name={name:?}"),
+            format!("lookup(parent={parent_ino:?}, name={name:?}"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read()
-                    .await
-                    .lookup(&req, FileHandle::from(parent), &name)
-                    .await
+                fs.read().await.lookup(&req, parent_ino, &name).await
             },
         );
     }
 
     fn forget(&mut self, req: &Request, ino: u64, nlookup: u64) {
         let req = RequestInfo::from(req);
-        self.run_async_no_reply(format!("forget(ino={ino})"), move |fs| async move {
-            fs.read()
-                .await
-                .forget(&req, FileHandle::from(ino), nlookup)
-                .await
+        let ino = InodeNumber::from(ino);
+        self.run_async_no_reply(format!("forget(ino={ino:?})"), move |fs| async move {
+            fs.read().await.forget(&req, ino, nlookup).await
         });
     }
 
@@ -479,7 +470,7 @@ where
 
     fn getattr(&mut self, req: &Request<'_>, ino: u64, reply: ReplyAttr) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_attr(
             format!("getattr(ino={ino:?})"),
             reply,
@@ -506,7 +497,7 @@ where
         reply: ReplyAttr,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let mode = mode.map(Mode::from);
         let uid = uid.map(Uid::from);
         let gid = gid.map(Gid::from);
@@ -524,7 +515,7 @@ where
 
     fn readlink(&mut self, req: &Request<'_>, ino: u64, reply: ReplyData) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_data(
             format!("readlink(ino={ino:?})"),
             reply,
@@ -540,7 +531,7 @@ where
     fn mknod(
         &mut self,
         req: &Request<'_>,
-        parent: u64,
+        parent_ino: u64,
         name: &OsStr,
         mode: u32,
         umask: u32,
@@ -548,15 +539,15 @@ where
         reply: ReplyEntry,
     ) {
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         let mode = Mode::from(mode);
         self.run_async_reply_entry(
-            format!("mknod(parent={parent:?}, name={name:?}, mode={mode:?}, umask={umask:?}, rdev={rdev:?})"),
+            format!("mknod(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, rdev={rdev:?})"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.mknod(&req, parent, &name, mode, umask, rdev).await
+                fs.read().await.mknod(&req, parent_ino, &name, mode, umask, rdev).await
             },
         );
     }
@@ -572,7 +563,7 @@ where
     ) {
         // TODO Assert that file/symlink flags aren't set
         let req = RequestInfo::from(req);
-        let parent_ino = FileHandle::from(parent_ino);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         let mode = Mode::from(mode).add_dir_flag();
         self.run_async_reply_entry(
@@ -588,30 +579,30 @@ where
         );
     }
 
-    fn unlink(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
+    fn unlink(&mut self, req: &Request<'_>, parent_ino: u64, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         self.run_async_reply_empty(
-            format!("unlink(parent={parent:?}, name={name:?})"),
+            format!("unlink(parent={parent_ino:?}, name={name:?})"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.unlink(&req, parent, &name).await
+                fs.read().await.unlink(&req, parent_ino, &name).await
             },
         );
     }
 
-    fn rmdir(&mut self, req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
+    fn rmdir(&mut self, req: &Request<'_>, parent_ino: u64, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         self.run_async_reply_empty(
-            format!("rmdir(parent={parent:?}, name={name:?})"),
+            format!("rmdir(parent={parent_ino:?}, name={name:?})"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.rmdir(&req, parent, &name).await
+                fs.read().await.rmdir(&req, parent_ino, &name).await
             },
         );
     }
@@ -619,17 +610,17 @@ where
     fn symlink(
         &mut self,
         req: &Request<'_>,
-        parent: u64,
+        parent_ino: u64,
         name: &OsStr,
         link: &Path,
         reply: ReplyEntry,
     ) {
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         let link = link.to_owned();
         self.run_async_reply_entry(
-            format!("symlink(parent={parent:?}, name={name:?}, link={link:?})"),
+            format!("symlink(parent={parent_ino:?}, name={name:?}, link={link:?})"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
@@ -637,7 +628,10 @@ where
                     .into_os_string()
                     .into_string()
                     .map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.symlink(&req, parent, &name, &link).await
+                fs.read()
+                    .await
+                    .symlink(&req, parent_ino, &name, &link)
+                    .await
             },
         );
     }
@@ -645,7 +639,7 @@ where
     fn rename(
         &mut self,
         req: &Request<'_>,
-        parent: u64,
+        parent_ino: u64,
         name: &OsStr,
         newparent: u64,
         newname: &OsStr,
@@ -653,18 +647,18 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
-        let newparent = FileHandle::from(newparent);
+        let newparent = InodeNumber::from(newparent);
         let newname = newname.to_owned();
         self.run_async_reply_empty(
-            format!("rename(parent={parent:?}, name={name:?}, newparent={newparent:?}, newname={newname:?}, flags={flags:?})"),
+            format!("rename(parent={parent_ino:?}, name={name:?}, newparent={newparent:?}, newname={newname:?}, flags={flags:?})"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.rename(&req, parent, &name, newparent, &newname, flags)
+                fs.read().await.rename(&req, parent_ino, &name, newparent, &newname, flags)
                     .await
             },
         );
@@ -679,8 +673,8 @@ where
         reply: ReplyEntry,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
-        let newparent = FileHandle::from(newparent);
+        let ino = InodeNumber::from(ino);
+        let newparent = InodeNumber::from(newparent);
         let newname = newname.to_owned();
         self.run_async_reply_entry(
             format!("link(ino={ino:?}, newparent={newparent:?}, newname={newname:?})"),
@@ -695,7 +689,7 @@ where
 
     fn open(&mut self, req: &Request<'_>, ino: u64, flags: i32, reply: ReplyOpen) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_open(
             format!("open(ino={ino:?}, flags={flags:?})"),
             reply,
@@ -715,7 +709,7 @@ where
         reply: ReplyData,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let size = NumBytes::from(u64::from(size));
@@ -751,7 +745,7 @@ where
         reply: ReplyWrite,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let data = data.to_owned();
@@ -776,7 +770,7 @@ where
 
     fn flush(&mut self, req: &Request<'_>, ino: u64, fh: u64, lock_owner: u64, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("flush(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?})"),
@@ -796,7 +790,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("release(ino={ino:?}, fh={fh:?}, flags={flags:?}, lock_owner={lock_owner:?}, flush={flush:?})"),
@@ -807,7 +801,7 @@ where
 
     fn fsync(&mut self, req: &Request<'_>, ino: u64, fh: u64, datasync: bool, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("fsync(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
@@ -818,7 +812,7 @@ where
 
     fn opendir(&mut self, req: &Request<'_>, ino: u64, flags: i32, reply: ReplyOpen) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_open(
             format!("opendir(ino={ino:?}, flags={flags:?})"),
             reply,
@@ -835,7 +829,7 @@ where
         reply: ReplyDirectory,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_no_reply(
@@ -856,7 +850,7 @@ where
         reply: ReplyDirectoryPlus,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_no_reply(
@@ -873,7 +867,7 @@ where
 
     fn releasedir(&mut self, req: &Request<'_>, ino: u64, fh: u64, flags: i32, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("releasedir(ino={ino:?}, fh={fh:?}, flags={flags:?})"),
@@ -891,7 +885,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("fsyncdir(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
@@ -902,7 +896,7 @@ where
 
     fn statfs(&mut self, req: &Request<'_>, ino: u64, reply: ReplyStatfs) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_statfs(
             format!("statfs(ino={ino:?})"),
             reply,
@@ -921,7 +915,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let name = name.to_owned();
         let value = value.to_owned();
         let position = NumBytes::from(u64::from(position));
@@ -946,7 +940,7 @@ where
         reply: ReplyXattr,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let name = name.to_owned();
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
@@ -965,7 +959,7 @@ where
 
     fn listxattr(&mut self, req: &Request<'_>, ino: u64, size: u32, reply: ReplyXattr) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
             format!("listxattr(ino={ino:?}, size={size:?})"),
@@ -978,7 +972,7 @@ where
 
     fn removexattr(&mut self, _req: &Request<'_>, ino: u64, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(_req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let name = name.to_owned();
         self.run_async_reply_empty(
             format!("removexattr(ino={ino:?}, name={name:?})"),
@@ -993,7 +987,7 @@ where
 
     fn access(&mut self, req: &Request<'_>, ino: u64, mask: i32, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_empty(
             format!("access(ino={ino:?}, mask={mask:?})"),
             reply,
@@ -1004,7 +998,7 @@ where
     fn create(
         &mut self,
         req: &Request<'_>,
-        parent: u64,
+        parent_ino: u64,
         name: &OsStr,
         mode: u32,
         umask: u32,
@@ -1013,15 +1007,15 @@ where
     ) {
         // TODO Assert that dir/symlink flags aren't set
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         let mode = Mode::from(mode).add_file_flag();
         self.run_async_reply_create(
-            format!("create(parent={parent:?}, name={name:?}, mode={mode:?}, umask={umask:?}, flags={flags:?})"),
+            format!("create(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, flags={flags:?})"),
             reply,
             move |fs| async move {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.create(&req, parent, &name, mode, umask, flags)
+                fs.read().await.create(&req, parent_ino, &name, mode, umask, flags)
                     .await
             },
         );
@@ -1040,7 +1034,7 @@ where
         reply: ReplyLock,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_lock(
             format!("getlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?})"),
@@ -1066,7 +1060,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("setlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?}, sleep={sleep:?})"),
@@ -1080,7 +1074,7 @@ where
 
     fn bmap(&mut self, req: &Request<'_>, ino: u64, blocksize: u32, idx: u64, reply: ReplyBmap) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let blocksize = NumBytes::from(u64::from(blocksize));
         self.run_async_reply_bmap(
             format!("bmap(ino={ino:?}, blocksize={blocksize:?}, idx={idx:?})"),
@@ -1101,7 +1095,7 @@ where
         reply: ReplyIoctl,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let in_data = in_data.to_owned();
         self.run_async_no_reply(
@@ -1125,7 +1119,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let length = NumBytes::from(u64::try_from(length).unwrap()); // TODO No unwrap?
@@ -1152,7 +1146,7 @@ where
         reply: ReplyLseek,
     ) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_reply_lseek(
@@ -1176,10 +1170,10 @@ where
         reply: ReplyWrite,
     ) {
         let req = RequestInfo::from(req);
-        let ino_in = FileHandle::from(ino_in);
+        let ino_in = InodeNumber::from(ino_in);
         let fh_in = FileHandle::from(fh_in);
         let offset_in = NumBytes::from(u64::try_from(offset_in).unwrap()); // TODO No unwrap?
-        let ino_out = FileHandle::from(ino_out);
+        let ino_out = InodeNumber::from(ino_out);
         let fh_out = FileHandle::from(fh_out);
         let offset_out = NumBytes::from(u64::try_from(offset_out).unwrap()); // TODO No unwrap?
         let len = NumBytes::from(len);
@@ -1234,7 +1228,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let parent = FileHandle::from(parent);
+        let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
         let newparent = FileHandle::from(newparent);
         let newname = newname.to_owned();
@@ -1259,7 +1253,7 @@ where
     #[cfg(target_os = "macos")]
     fn getxtimes(&mut self, req: &Request<'_>, ino: u64, reply: ReplyXTimes) {
         let req = RequestInfo::from(req);
-        let ino = FileHandle::from(ino);
+        let ino = InodeNumber::from(ino);
         self.run_async_reply_xtimes(
             format!("getxtimes(ino={ino:?})"),
             reply,
@@ -1286,10 +1280,10 @@ fn parse_time(time: TimeOrNow) -> SystemTime {
     }
 }
 
-fn convert_node_attrs(attrs: NodeAttrs, ino: FileHandle) -> fuser::FileAttr {
+fn convert_node_attrs(attrs: NodeAttrs, ino: InodeNumber) -> fuser::FileAttr {
     let size: u64 = attrs.num_bytes.into();
     fuser::FileAttr {
-        ino: ino.0,
+        ino: ino.into(),
         size,
         blocks: attrs.num_blocks.unwrap_or(size / 512),
         atime: attrs.atime,

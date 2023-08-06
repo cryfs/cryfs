@@ -353,7 +353,7 @@ where
                     .await?;
                 // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
                 let flags = convert_openflags(response.flags.into()) as u32;
-                Ok((response.fh.0, flags))
+                Ok((response.fh.into(), flags))
             },
         )
     }
@@ -506,7 +506,7 @@ where
                     .await
                     .opendir(req.into(), path, flags)
                     .await?;
-                Ok((response.fh.0, response.flags))
+                Ok((response.fh.into(), response.flags))
             },
         )
     }
@@ -691,7 +691,7 @@ where
                 Ok(CreatedEntry {
                     ttl: response.ttl,
                     attr: convert_node_attrs(response.attrs),
-                    fh: response.fh.0,
+                    fh: response.fh.into(),
                     flags,
                 })
             },
