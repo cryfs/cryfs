@@ -79,7 +79,7 @@ where
 
     async fn destroy(&self) {
         log::info!("destroy");
-        let mut v = self.open_files.write().await.async_drop().await.unwrap();
+        self.open_files.write().await.async_drop().await.unwrap();
         self.fs.write().unwrap().take().destroy().await;
         // Nothing.
     }
