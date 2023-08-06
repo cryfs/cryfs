@@ -110,7 +110,8 @@ where
     Fs: Device + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
-    async fn init(&self, req: &RequestInfo, config: &mut KernelConfig) -> FsResult<()> {
+    async fn init(&self, req: &RequestInfo, _config: &mut KernelConfig) -> FsResult<()> {
+        // TODO Allow implementations to change KernelConfig? Or at least parts of it?
         log::info!("init");
         self.fs.write().await.initialize(req.uid, req.gid);
         Ok(())
@@ -403,12 +404,13 @@ where
 
     async fn readdir(
         &self,
-        req: &RequestInfo,
+        _req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         reply: ReplyDirectory,
     ) {
+        // TODO Allow readdir on fh instead of ino?
         let node = match self.get_inode(ino).await {
             Ok(node) => node,
             Err(err) => {
@@ -576,6 +578,7 @@ where
         umask: u32,
         flags: i32,
     ) -> FsResult<ReplyCreate> {
+        // TODO What should we do with umask?
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
