@@ -10,6 +10,7 @@ use std::time::SystemTime;
 
 use super::device::InMemoryDevice;
 use super::inode_metadata::{chmod, chown, utimens};
+use super::node::InMemoryNodeRef;
 
 // Inode is in separate module so we can ensure class invariant through public/private boundaries
 mod inode {
@@ -93,6 +94,10 @@ impl InMemoryFileRef {
         Self {
             inode: Arc::new(Mutex::new(FileInode::new(mode, uid, gid))),
         }
+    }
+
+    pub fn as_node(&self) -> AsyncDropGuard<InMemoryNodeRef> {
+        AsyncDropGuard::new(InMemoryNodeRef::File(self.clone_ref()))
     }
 
     pub fn clone_ref(&self) -> Self {

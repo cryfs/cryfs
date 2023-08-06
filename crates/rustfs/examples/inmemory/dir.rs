@@ -269,7 +269,11 @@ impl Dir for InMemoryDirRef {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, AsyncDropGuard<InMemoryOpenFileRef>)> {
+    ) -> FsResult<(
+        NodeAttrs,
+        AsyncDropGuard<InMemoryNodeRef>,
+        AsyncDropGuard<InMemoryOpenFileRef>,
+    )> {
         let mut inode = self.inode.lock().unwrap();
         let file = InMemoryFileRef::new(mode, uid, gid);
         let openfile = file.open_sync(OpenFlags::ReadWrite);
@@ -280,10 +284,10 @@ impl Dir for InMemoryDirRef {
                 return Err(FsError::NodeAlreadyExists);
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(InMemoryNodeRef::File(file));
+                entry.insert(InMemoryNodeRef::File(file.clone_ref()));
             }
         }
-        Ok((metadata, openfile))
+        Ok((metadata, file.as_node(), openfile))
     }
 }
 

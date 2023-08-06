@@ -372,7 +372,11 @@ where
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryOpenFile<B>>)> {
+    ) -> FsResult<(
+        NodeAttrs,
+        AsyncDropGuard<CryNode<B>>,
+        AsyncDropGuard<CryOpenFile<B>>,
+    )> {
         let blob_id = self.node_info.blob_id(&self.blobstore).await?;
         let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(&blob_id),);
         let mut blob = blob?;
@@ -411,19 +415,20 @@ where
                 ctime: mtime,
             };
 
-            let open_file = CryOpenFile::new(
-                AsyncDropArc::clone(self.blobstore),
-                Arc::new(NodeInfo::IsNotRootDir {
-                    parent_blob_id: blob_id,
-                    name: name.to_owned(),
-                    blob_details: OnceCell::new_with(Some(BlobDetails {
-                        blob_id: new_file_blob_id,
-                        blob_type: BlobType::File,
-                    })),
-                }),
-            );
+            let node_info = Arc::new(NodeInfo::IsNotRootDir {
+                parent_blob_id: blob_id,
+                name: name.to_owned(),
+                blob_details: OnceCell::new_with(Some(BlobDetails {
+                    blob_id: new_file_blob_id,
+                    blob_type: BlobType::File,
+                })),
+            });
 
-            Ok((attrs, open_file))
+            let node =
+                CryNode::new_internal(AsyncDropArc::clone(self.blobstore), Arc::clone(&node_info));
+            let open_file = CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
+
+            Ok((attrs, node, open_file))
         })
     }
 }

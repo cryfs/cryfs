@@ -24,6 +24,7 @@ use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyX
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
 const TTL_GETATTR: Duration = Duration::from_secs(1);
+const TTL_CREATE: Duration = Duration::from_secs(1);
 
 // TODO Can we share more code with [super::high_level_adapter::ObjectBasedFsAdapter]?
 pub struct ObjectBasedFsAdapterLL<Fs: Device>
@@ -553,14 +554,35 @@ where
     async fn create(
         &self,
         req: &RequestInfo,
-        parent: FileHandle,
+        parent_ino: FileHandle,
         name: &PathComponent,
         mode: Mode,
         umask: u32,
         flags: i32,
     ) -> FsResult<ReplyCreate> {
-        // TODO
-        Err(FsError::NotImplemented)
+        let parent = self.get_inode(parent_ino).await?;
+        with_async_drop_2!(parent, {
+            let parent_dir = parent.as_dir().await?;
+            let (attr, child_node, open_file) = parent_dir
+                .create_and_open_file(&name, mode, req.uid, req.gid)
+                .await?;
+
+            // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode. If not, we probably don't need to return the child_node from create_and_open_file.
+            //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
+            let child_ino = self.inodes.write().await.add(AsyncDropArc::new(child_node));
+            log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
+
+            let fh = self.open_files.write().await.add(open_file);
+            Ok(ReplyCreate {
+                ttl: TTL_CREATE,
+                attr,
+                ino: child_ino.handle,
+                generation: child_ino.generation,
+                fh: fh.handle,
+                // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
+                flags: u32::try_from(flags).unwrap(), // TODO No unwrap?
+            })
+        })
     }
 
     async fn getlk(

@@ -48,6 +48,8 @@ pub trait Dir {
         gid: Gid,
     ) -> FsResult<(
         NodeAttrs,
+        // TODO Should we return `File` instead of `Node`?
+        AsyncDropGuard<<Self::Device as super::Device>::Node>,
         AsyncDropGuard<<Self::Device as super::Device>::OpenFile>,
     )>;
 }

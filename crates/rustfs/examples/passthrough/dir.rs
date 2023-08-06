@@ -152,7 +152,11 @@ impl Dir for PassthroughDir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, AsyncDropGuard<PassthroughOpenFile>)> {
+    ) -> FsResult<(
+        NodeAttrs,
+        AsyncDropGuard<PassthroughNode>,
+        AsyncDropGuard<PassthroughOpenFile>,
+    )> {
         let path = self.path.clone().push(name);
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
@@ -174,6 +178,7 @@ impl Dir for PassthroughDir {
                 .map_error()?;
                 Ok((
                     convert_metadata(metadata)?,
+                    PassthroughNode::new(path),
                     PassthroughOpenFile::new(tokio::fs::File::from_std(open_file)),
                 ))
             })

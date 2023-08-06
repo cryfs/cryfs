@@ -621,9 +621,10 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (file_attrs, open_file) = parent_dir
+            let (file_attrs, mut node, open_file) = parent_dir
                 .create_and_open_file(&name, mode, req.uid, req.gid)
                 .await?;
+            node.async_drop().await?;
             let fh = self.open_files.write().await.add(open_file);
             Ok(CreateResponse {
                 ttl: TTL_CREATE,
