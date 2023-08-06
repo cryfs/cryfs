@@ -12,6 +12,7 @@ use fuser::*;
 
 #[derive(Clone, Copy)]
 pub struct ReplyEntry {
+    // TODO Combine ino and generation into FileHandleWithGeneration object?
     pub ino: FileHandle,
     pub attr: NodeAttrs,
     // TODO Wrapper type for Generation
@@ -40,6 +41,7 @@ pub struct ReplyWrite {
 
 #[derive(Clone, Copy)]
 pub struct ReplyCreate {
+    // TODO Combine ino and generation into FileHandleWithGeneration object?
     pub ttl: Duration,
     pub ino: FileHandle,
     pub attr: NodeAttrs,

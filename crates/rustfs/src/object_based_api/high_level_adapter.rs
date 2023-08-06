@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NumBytes,
-    OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NodeKind,
+    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
@@ -79,6 +79,7 @@ where
 
     async fn destroy(&self) {
         log::info!("destroy");
+        let mut v = self.open_files.write().await.async_drop().await.unwrap();
         self.fs.write().unwrap().take().destroy().await;
         // Nothing.
     }
@@ -654,6 +655,7 @@ where
     }
 }
 
+// TODO ObjectBasedFsAdapter doesn't need to be AsyncDrop
 #[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapter<Fs>
 where
@@ -663,8 +665,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let mut v = self.open_files.write().await;
-        v.async_drop().await?;
+        // TODO If the object was never used (e.g. destroy never called), we need to destroy members here.
         Ok(())
     }
 }
