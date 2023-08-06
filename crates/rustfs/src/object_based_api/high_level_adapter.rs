@@ -93,7 +93,7 @@ where
         let attrs = if let Some(fh) = fh {
             // TODO No unwrap
             let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+            let open_file = open_file_list.get(fh).ok_or_else(|| {
                 log::error!("getattr: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
@@ -119,7 +119,7 @@ where
         // TODO Make sure file/symlink/dir flags are correctly set by this
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+            let open_file = open_file_list.get(fh).ok_or_else(|| {
                 log::error!("chmod: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
@@ -142,7 +142,7 @@ where
     ) -> FsResult<()> {
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+            let open_file = open_file_list.get(fh).ok_or_else(|| {
                 log::error!("chown: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
@@ -165,7 +165,7 @@ where
     ) -> FsResult<()> {
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+            let open_file = open_file_list.get(fh).ok_or_else(|| {
                 log::error!("truncate: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
@@ -188,7 +188,7 @@ where
     ) -> FsResult<()> {
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+            let open_file = open_file_list.get(fh).ok_or_else(|| {
                 log::error!("utimens: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
@@ -241,9 +241,6 @@ where
         path: &AbsolutePath,
         mode: Mode,
     ) -> FsResult<AttrResponse> {
-        let uid = Uid::from(req.uid);
-        let gid = Gid::from(req.gid);
-        let mode = Mode::from(mode).add_dir_flag();
         // TODO Assert mode doesn't have file or symlink flags set
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
@@ -255,7 +252,9 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (new_dir_attrs, _) = parent_dir.create_child_dir(&name, mode, uid, gid).await?;
+            let (new_dir_attrs, _) = parent_dir
+                .create_child_dir(&name, mode, req.uid, req.gid)
+                .await?;
             Ok(AttrResponse {
                 ttl: TTL_MKDIR,
                 attrs: new_dir_attrs,
@@ -300,8 +299,6 @@ where
         // TODO Custom type for target that can be an absolute-or-relative path
         target: &str,
     ) -> FsResult<AttrResponse> {
-        let uid = Uid::from(req.uid);
-        let gid = Gid::from(req.gid);
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             log::error!("symlink: called with root path");
@@ -312,7 +309,7 @@ where
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
             let new_symlink_attrs = parent_dir
-                .create_child_symlink(&name, target, uid, gid)
+                .create_child_symlink(&name, target, req.uid, req.gid)
                 .await?;
             Ok(AttrResponse {
                 ttl: TTL_SYMLINK,
@@ -366,7 +363,7 @@ where
                 Ok(open_file) => {
                     let fh = self.open_files.write().await.add(open_file);
                     Ok(OpenResponse {
-                        fh: fh.handle.into(),
+                        fh: fh.handle,
                         // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
                         flags,
                     })
@@ -385,10 +382,8 @@ where
         size: NumBytes,
         callback: impl for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
     ) -> CallbackResult {
-        let offset = NumBytes::from(offset);
-        let size = NumBytes::from(u64::from(size));
         let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+        let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("read: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
         });
@@ -420,7 +415,7 @@ where
         let data_len = data.len();
         let data = data.into();
         let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+        let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("write: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
         })?;
@@ -437,7 +432,7 @@ where
         _lock_owner: u64,
     ) -> FsResult<()> {
         let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+        let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("flush: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
         })?;
@@ -455,7 +450,7 @@ where
         _flush: bool,
     ) -> FsResult<()> {
         // TODO No unwrap
-        let mut removed = self.open_files.write().await.remove(fh.into());
+        let mut removed = self.open_files.write().await.remove(fh);
         removed.async_drop().await?;
         Ok(())
     }
@@ -468,7 +463,7 @@ where
         datasync: bool,
     ) -> FsResult<()> {
         let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh.into()).ok_or_else(|| {
+        let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("fsync: no open file with handle {}", u64::from(fh));
             FsError::InvalidFileDescriptor { fh: u64::from(fh) }
         })?;
@@ -617,7 +612,6 @@ where
         mode: Mode,
         flags: i32,
     ) -> FsResult<CreateResponse> {
-        let mode = mode.add_file_flag();
         // TODO Assert that dir/symlink flags aren't set
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());

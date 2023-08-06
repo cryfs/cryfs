@@ -1013,7 +1013,7 @@ where
         let req = RequestInfo::from(req);
         let parent = FileHandle::from(parent);
         let name = name.to_owned();
-        let mode = Mode::from(mode);
+        let mode = Mode::from(mode).add_file_flag();
         self.run_async_reply_create(
             format!("create(parent={parent:?}, name={name:?}, mode={mode:?}, umask={umask:?}, flags={flags:?})"),
             reply,

@@ -237,16 +237,12 @@ where
     }
 
     fn mkdir(&self, req: RequestInfo, parent: &Path, name: &OsStr, mode: u32) -> ResultEntry {
+        let mode = Mode::from(mode).add_dir_flag();
         self.run_async(
-            &format!("mkdir({parent:?}, name={name:?}, mode={mode})"),
+            &format!("mkdir({parent:?}, name={name:?}, mode={mode:?})"),
             move || async move {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
-                let response = self
-                    .fs
-                    .read()
-                    .await
-                    .mkdir(req.into(), &path, Mode::from(mode))
-                    .await?;
+                let response = self.fs.read().await.mkdir(req.into(), &path, mode).await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
         )
@@ -677,15 +673,16 @@ where
         flags: u32,
     ) -> ResultCreate {
         let flags = flags as i32;
+        let mode = Mode::from(mode).add_file_flag();
         self.run_async(
-            &format!("create({parent:?}, name={name:?}, mode={mode}, flags={flags})"),
+            &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags})"),
             move || async move {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
                     .fs
                     .read()
                     .await
-                    .create(req.into(), &path, Mode::from(mode), flags)
+                    .create(req.into(), &path, mode, flags)
                     .await?;
                 // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
                 let flags = response.flags as u32;

@@ -24,7 +24,10 @@ pub enum FsError {
     CorruptedFilesystem { message: String },
 
     #[error("The file descriptor {fh} does not represent an open file")]
-    InvalidFileDescriptor { fh: u64 },
+    InvalidFileDescriptor {
+        // TODO Use FileHandle wrapper type
+        fh: u64,
+    },
 
     #[error("The file descriptor represents a file that is open for writing, but the file is not open for reading")]
     ReadOnWriteOnlyFileDescriptor,

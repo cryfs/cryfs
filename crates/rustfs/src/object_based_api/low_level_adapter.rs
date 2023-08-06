@@ -26,7 +26,6 @@ const TTL_LOOKUP: Duration = Duration::from_secs(1);
 const TTL_GETATTR: Duration = Duration::from_secs(1);
 
 // TODO Can we share more code with [super::high_level_adapter::ObjectBasedFsAdapter]?
-//      If the adapter struct fields are exactly the same, we could just merge the structs and implement both traits for the struct.
 pub struct ObjectBasedFsAdapterLL<Fs: Device>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
@@ -159,7 +158,7 @@ where
             "We don't reuse inode numbers so nlookup should always be 1"
         );
 
-        let mut entry = self.inodes.write().await.remove(ino.into());
+        let mut entry = self.inodes.write().await.remove(ino);
         entry.async_drop().await?;
         Ok(())
     }
