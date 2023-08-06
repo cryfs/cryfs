@@ -423,7 +423,6 @@ where
                     .map(move |(offset, entry)| {
                         // TODO Possible without Arc?
                         let dir = Arc::clone(&dir);
-                        let inodes = Arc::clone(&self.inodes);
                         async move {
                             let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
 
