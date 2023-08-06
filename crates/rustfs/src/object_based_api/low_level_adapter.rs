@@ -125,6 +125,7 @@ where
         parent: FileHandle,
         name: &PathComponent,
     ) -> FsResult<ReplyEntry> {
+        // TODO Will lookup() be called multiple times with the same parent+name and is it ok to give the second call a different inode while the first call is still ongoing?
         let parent_node = self.get_inode(parent).await?;
         let mut child = with_async_drop_2!(parent_node, {
             let parent_node_dir = parent_node
@@ -428,6 +429,9 @@ where
 
                             // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
                             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
+                            //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
+                            //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
+                            //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
                             let child_ino = self.add_inode(ino, child, &entry.name).await;
                             (offset, child_ino.handle, entry)
                         }
