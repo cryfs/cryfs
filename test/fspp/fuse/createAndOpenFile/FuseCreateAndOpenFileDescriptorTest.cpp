@@ -3,7 +3,7 @@
 using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
-using ::testing::Return;
+using ::testing::Invoke;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
@@ -32,12 +32,17 @@ private:
 INSTANTIATE_TEST_SUITE_P(FuseCreateAndOpenFileDescriptorTest, FuseCreateAndOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
 
 TEST_P(FuseCreateAndOpenFileDescriptorTest, TestReturnedFileDescriptor) {
-  ReturnDoesntExistOnLstat(FILENAME);
+  bool created = false;
+  ReturnIsFileOnLstatWithSizeIfFlagIsSet(FILENAME, fspp::num_bytes_t(100), &created);
   EXPECT_CALL(*fsimpl, createAndOpenFile(Eq(FILENAME), testing::_, testing::_, testing::_))
-    .Times(1).WillOnce(Return(GetParam()));
-  EXPECT_CALL(*fsimpl, read(GetParam(), testing::_, testing::_, testing::_)).Times(1).WillOnce(Return(fspp::num_bytes_t(1)));
-  //For the syscall to succeed, we also need to give an fstat implementation.
-  ReturnIsFileOnFstatWithSize(GetParam(), fspp::num_bytes_t(1));
+    .Times(1).WillOnce(Invoke([&] () {
+      ASSERT(!created, "called createAndOpenFile multiple times");
+      created = true;
+      return GetParam();
+    }));
+  EXPECT_CALL(*fsimpl, read(Eq(GetParam()), testing::_, testing::_, testing::_)).Times(1).WillOnce(Invoke([] () {
+    return fspp::num_bytes_t(1);
+  }));
 
   CreateAndOpenAndReadFile(FILENAME);
 }

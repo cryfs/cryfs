@@ -35,10 +35,14 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     DESTINATION "${CMAKE_INSTALL_BINDIR}"
   )
 
-else() # Linux and macOS
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") # macOS
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(Fuse REQUIRED IMPORTED_TARGET fuse)
   target_link_libraries(${PROJECT_NAME} PUBLIC PkgConfig::Fuse)
+else() # Linux
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(Fuse3 REQUIRED IMPORTED_TARGET fuse3)
+  target_link_libraries(${PROJECT_NAME} PUBLIC PkgConfig::Fuse3)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

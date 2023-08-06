@@ -31,21 +31,6 @@ void CryOpenFile::flush() {
   _parent->flush();
 }
 
-fspp::Node::stat_info CryOpenFile::stat() const {
-  _device->callFsActionCallbacks();
-  auto childOpt = _parent->GetChild(_fileBlob->blockId());
-  if (childOpt == boost::none) {
-    throw fspp::fuse::FuseErrnoException(ENOENT);
-  }
-  return dirEntryToStatInfo(*childOpt, _fileBlob->size());
-}
-
-void CryOpenFile::truncate(fspp::num_bytes_t size) const {
-  _device->callFsActionCallbacks();
-  _fileBlob->resize(size);
-  _parent->updateModificationTimestampForChild(_fileBlob->blockId());
-}
-
 fspp::num_bytes_t CryOpenFile::read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const {
   _device->callFsActionCallbacks();
   _parent->updateAccessTimestampForChild(_fileBlob->blockId(), timestampUpdateBehavior());

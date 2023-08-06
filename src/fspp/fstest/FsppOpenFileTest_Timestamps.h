@@ -14,7 +14,6 @@ public:
         auto file = this->CreateFile(path);
         file->truncate(size);
         auto openFile = file->open(fspp::openflags_t::RDWR());
-        ASSERT(this->stat(*openFile).size == size, "");
         ASSERT(this->stat(*this->Load(path)).size == size, "");
         return openFile;
     }
@@ -25,268 +24,165 @@ public:
     cpputils::unique_ref<fspp::OpenFile> OpenFile(const boost::filesystem::path &path, fspp::num_bytes_t size) {
         auto file = this->LoadFile(path);
         auto openFile = file->open(fspp::openflags_t::RDWR());
-        ASSERT(this->stat(*openFile).size == size, "");
         ASSERT(this->stat(*this->Load(path)).size == size, "");
         return openFile;
     }
 };
 TYPED_TEST_SUITE_P(FsppOpenFileTest_Timestamps);
 
-TYPED_TEST_P(FsppOpenFileTest_Timestamps, stat) {
-    auto operation = [] (fspp::OpenFile* openFile){
-        return [openFile] {
-            openFile->stat();
-        };
-    };
-    this->testBuilder().withAnyAtimeConfig([&] {
-        auto openFile = this->CreateAndOpenFile("/mynode");
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
-    });
-}
-
-TYPED_TEST_P(FsppOpenFileTest_Timestamps, truncate_empty_to_empty) {
-    auto operation = [] (fspp::OpenFile* openFile){
-        return [openFile] {
-            openFile->truncate(fspp::num_bytes_t(0));
-        };
-    };
-    this->testBuilder().withAnyAtimeConfig([&] {
-        auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(0));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    });
-}
-
-TYPED_TEST_P(FsppOpenFileTest_Timestamps, truncate_empty_to_nonempty) {
-    auto operation = [] (fspp::OpenFile* openFile){
-        return [openFile] {
-            openFile->truncate(fspp::num_bytes_t(10));
-        };
-    };
-    this->testBuilder().withAnyAtimeConfig([&] {
-        auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(0));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    });
-}
-
-TYPED_TEST_P(FsppOpenFileTest_Timestamps, truncate_nonempty_to_empty) {
-    auto operation = [] (fspp::OpenFile* openFile){
-        return [openFile] {
-            openFile->truncate(fspp::num_bytes_t(0));
-        };
-    };
-    this->testBuilder().withAnyAtimeConfig([&] {
-        auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    });
-}
-
-TYPED_TEST_P(FsppOpenFileTest_Timestamps, truncate_nonempty_to_nonempty_shrink) {
-    auto operation = [] (fspp::OpenFile* openFile){
-        return [openFile] {
-            openFile->truncate(fspp::num_bytes_t(5));
-        };
-    };
-    this->testBuilder().withAnyAtimeConfig([&] {
-        auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    });
-}
-
-TYPED_TEST_P(FsppOpenFileTest_Timestamps, truncate_nonempty_to_nonempty_grow) {
-    auto operation = [] (fspp::OpenFile* openFile){
-        return [openFile] {
-            openFile->truncate(fspp::num_bytes_t(20));
-        };
-    };
-    this->testBuilder().withAnyAtimeConfig([&] {
-        auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
-    });
-}
-
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, givenAtimeNewerThanMtimeButBeforeYesterday_read_inbounds) {
-    auto operation = [this] () {
-        this->CreateFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->setAtimeNewerThanMtimeButBeforeYesterday("/myfile");
-        auto openFile = this->OpenFile("/myfile", fspp::num_bytes_t(10));
-        auto* openFilePtr = openFile.get();
+    const boost::filesystem::path path = "/myfile";
+    auto operation = [this, path] () {
+        this->CreateFileWithSize(path, fspp::num_bytes_t(10));
+        this->setAtimeNewerThanMtimeButBeforeYesterday(path);
+        auto openFile = this->OpenFile(path, fspp::num_bytes_t(10));
 
-        return std::make_pair(openFilePtr, [openFile = std::move(openFile)] {
+        return [openFile = std::move(openFile)] {
             std::array<char, 5> buffer{};
             openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(0));
-        });
+        };
     };
     this->testBuilder()
       .withNoatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     });
 }
 
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, givenAtimeNewerThanMtime_read_inbounds) {
-    auto operation = [this] () {
-        this->CreateFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->setAtimeNewerThanMtime("/myfile");
-        auto openFile = this->OpenFile("/myfile", fspp::num_bytes_t(10));
-        auto* openFilePtr = openFile.get();
+    const boost::filesystem::path path = "/myfile";
+    auto operation = [this, path] () {
+        this->CreateFileWithSize(path, fspp::num_bytes_t(10));
+        this->setAtimeNewerThanMtime(path);
+        auto openFile = this->OpenFile(path, fspp::num_bytes_t(10));
 
-        return std::make_pair(openFilePtr, [openFile = std::move(openFile)] {
+        return [openFile = std::move(openFile)] {
             std::array<char, 5> buffer{};
             openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(0));
-        });
+        };
     };
     this->testBuilder()
       .withNoatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withNodiratimeRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withNodiratimeStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     });
 }
 
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, givenAtimeOlderThanMtime_read_inbounds) {
-    auto operation = [this] () {
-        this->CreateFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->setAtimeOlderThanMtime("/myfile");
-        auto openFile = this->OpenFile("/myfile", fspp::num_bytes_t(10));
-        auto* openFilePtr = openFile.get();
+    const boost::filesystem::path path = "/myfile";
+    auto operation = [this, path] () {
+        this->CreateFileWithSize(path, fspp::num_bytes_t(10));
+        this->setAtimeOlderThanMtime(path);
+        auto openFile = this->OpenFile(path, fspp::num_bytes_t(10));
 
-        return std::make_pair(openFilePtr, [openFile = std::move(openFile)] {
+        return [openFile = std::move(openFile)] {
             std::array<char, 5> buffer{};
             openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(0));
-        });
+        };
     };
     this->testBuilder()
       .withNoatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     });
 }
 
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, givenAtimeNewerThanMtimeButBeforeYesterday_read_outofbounds) {
-    auto operation = [this] () {
-        this->CreateFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->setAtimeNewerThanMtimeButBeforeYesterday("/myfile");
-        auto openFile = this->OpenFile("/myfile", fspp::num_bytes_t(10));
-        auto* openFilePtr = openFile.get();
+    const boost::filesystem::path path = "/myfile";
+    auto operation = [this, path] () {
+        this->CreateFileWithSize(path, fspp::num_bytes_t(10));
+        this->setAtimeNewerThanMtimeButBeforeYesterday(path);
+        auto openFile = this->OpenFile(path, fspp::num_bytes_t(10));
 
-        return std::make_pair(openFilePtr, [openFile = std::move(openFile)] {
+        return [openFile = std::move(openFile)] {
             std::array<char, 5> buffer{};
             openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(2));
-        });
+        };
     };
     this->testBuilder()
       .withNoatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     });
 }
 
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, givenAtimeNewerThanMtime_read_outofbounds) {
-    auto operation = [this] () {
-        this->CreateFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->setAtimeNewerThanMtime("/myfile");
-        auto openFile = this->OpenFile("/myfile", fspp::num_bytes_t(10));
-        auto* openFilePtr = openFile.get();
+    const boost::filesystem::path path = "/myfile";
+    auto operation = [this, path] () {
+        this->CreateFileWithSize(path, fspp::num_bytes_t(10));
+        this->setAtimeNewerThanMtime(path);
+        auto openFile = this->OpenFile(path, fspp::num_bytes_t(10));
 
-        return std::make_pair(openFilePtr, [openFile = std::move(openFile)] {
+        return [openFile = std::move(openFile)] {
             std::array<char, 5> buffer{};
             openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(2));
-        });
+        };
     };
     this->testBuilder()
       .withNoatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withNodiratimeRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withNodiratimeStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     });
 }
 
 TYPED_TEST_P(FsppOpenFileTest_Timestamps, givenAtimeOlderThanMtime_read_outofbounds) {
-    auto operation = [this] () {
-        this->CreateFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->setAtimeOlderThanMtime("/myfile");
-        auto openFile = this->OpenFile("/myfile", fspp::num_bytes_t(10));
-        auto* openFilePtr = openFile.get();
+    const boost::filesystem::path path = "/myfile";
+    auto operation = [this, path] () {
+        this->CreateFileWithSize(path, fspp::num_bytes_t(10));
+        this->setAtimeOlderThanMtime(path);
+        auto openFile = this->OpenFile(path, fspp::num_bytes_t(10));
 
-        return std::make_pair(openFilePtr, [openFile = std::move(openFile)] {
+        return [openFile = std::move(openFile)] {
             std::array<char, 5> buffer{};
             openFile->read(buffer.data(), fspp::num_bytes_t(5), fspp::num_bytes_t(2));
-        });
+        };
     };
     this->testBuilder()
       .withNoatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectDoesntUpdateAnyTimestamps});
     }).withStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeRelatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     }).withNodiratimeStrictatime([&] {
-        auto op = operation();
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*op.first, std::move(op.second), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(path, operation(), {this->ExpectUpdatesAccessTimestamp, this->ExpectDoesntUpdateModificationTimestamp, this->ExpectDoesntUpdateMetadataTimestamp});
     });
 }
 
@@ -298,7 +194,7 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, write_inbounds) {
     };
     this->testBuilder().withAnyAtimeConfig([&] {
         auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
     });
 }
 
@@ -310,7 +206,7 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, write_outofbounds) {
     };
     this->testBuilder().withAnyAtimeConfig([&] {
         auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(0));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation(openFile.get()), {this->ExpectDoesntUpdateAccessTimestamp, this->ExpectUpdatesModificationTimestamp, this->ExpectUpdatesMetadataTimestamp});
     });
 }
 
@@ -323,7 +219,7 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, flush) {
     };
     this->testBuilder().withAnyAtimeConfig([&] {
         auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
     });
 }
 
@@ -336,7 +232,7 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, fsync) {
     };
     this->testBuilder().withAnyAtimeConfig([&] {
         auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
     });
 }
 
@@ -349,17 +245,11 @@ TYPED_TEST_P(FsppOpenFileTest_Timestamps, fdatasync) {
     };
     this->testBuilder().withAnyAtimeConfig([&] {
         auto openFile = this->CreateAndOpenFileWithSize("/myfile", fspp::num_bytes_t(10));
-        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(*openFile, operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
+        this->EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS("/myfile", operation(openFile.get()), {this->ExpectDoesntUpdateAnyTimestamps});
     });
 }
 
 REGISTER_TYPED_TEST_SUITE_P(FsppOpenFileTest_Timestamps,
-   stat,
-   truncate_empty_to_empty,
-   truncate_empty_to_nonempty,
-   truncate_nonempty_to_empty,
-   truncate_nonempty_to_nonempty_shrink,
-   truncate_nonempty_to_nonempty_grow,
    givenAtimeNewerThanMtimeButBeforeYesterday_read_inbounds,
    givenAtimeNewerThanMtime_read_inbounds,
    givenAtimeOlderThanMtime_read_inbounds,

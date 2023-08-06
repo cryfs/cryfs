@@ -36,8 +36,8 @@ FilesystemImpl::FilesystemImpl(cpputils::unique_ref<Device> device)
   :
 #ifdef FSPP_PROFILE
    _loadFileNanosec(0), _loadDirNanosec(0), _loadSymlinkNanosec(0), _openFileNanosec(0), _flushNanosec(0),
-   _closeFileNanosec(0), _lstatNanosec(0), _fstatNanosec(0), _chmodNanosec(0), _chownNanosec(0), _truncateNanosec(0),
-   _ftruncateNanosec(0), _readNanosec(0), _writeNanosec(0), _fsyncNanosec(0), _fdatasyncNanosec(0), _accessNanosec(0),
+   _closeFileNanosec(0), _lstatNanosec(0), _chmodNanosec(0), _chownNanosec(0), _truncateNanosec(0),
+   _readNanosec(0), _writeNanosec(0), _fsyncNanosec(0), _fdatasyncNanosec(0), _accessNanosec(0),
    _createAndOpenFileNanosec(0), _createAndOpenFileNanosec_withoutLoading(0), _mkdirNanosec(0),
    _mkdirNanosec_withoutLoading(0), _rmdirNanosec(0), _rmdirNanosec_withoutLoading(0), _unlinkNanosec(0),
    _unlinkNanosec_withoutLoading(0), _renameNanosec(0), _readDirNanosec(0), _readDirNanosec_withoutLoading(0),
@@ -60,11 +60,9 @@ FilesystemImpl::~FilesystemImpl() {
     << std::setw(40) << "Flush: " << static_cast<double>(_flushNanosec)/1000000000 << "\n"
     << std::setw(40) << "CloseFile: " << static_cast<double>(_closeFileNanosec)/1000000000 << "\n"
     << std::setw(40) << "Lstat: " << static_cast<double>(_lstatNanosec)/1000000000 << "\n"
-    << std::setw(40) << "Fstat: " << static_cast<double>(_fstatNanosec)/1000000000 << "\n"
     << std::setw(40) << "Chmod: " << static_cast<double>(_chmodNanosec)/1000000000 << "\n"
     << std::setw(40) << "Chown: " << static_cast<double>(_chownNanosec)/1000000000 << "\n"
     << std::setw(40) << "Truncate: " << static_cast<double>(_truncateNanosec)/1000000000 << "\n"
-    << std::setw(40) << "Ftruncate: " << static_cast<double>(_ftruncateNanosec)/1000000000 << "\n"
     << std::setw(40) << "Read: " << static_cast<double>(_readNanosec)/1000000000 << "\n"
     << std::setw(40) << "Write: " << static_cast<double>(_writeNanosec)/1000000000 << "\n"
     << std::setw(40) << "Fsync: " << static_cast<double>(_fsyncNanosec)/1000000000 << "\n"
@@ -169,14 +167,6 @@ void FilesystemImpl::lstat(const bf::path &path, fspp::fuse::STAT *stbuf) {
   }
 }
 
-void FilesystemImpl::fstat(int descriptor, fspp::fuse::STAT *stbuf) {
-	PROFILE(_fstatNanosec);
-	auto stat_info = _open_files.load(descriptor, [] (OpenFile* openFile) {
-		return openFile->stat();
-	});
-	convert_stat_info_(stat_info, stbuf);
-}
-
 void FilesystemImpl::chmod(const boost::filesystem::path &path, ::mode_t mode) {
   PROFILE(_chmodNanosec);
   auto node = _device->Load(path);
@@ -200,13 +190,6 @@ void FilesystemImpl::chown(const boost::filesystem::path &path, ::uid_t uid, ::g
 void FilesystemImpl::truncate(const bf::path &path, fspp::num_bytes_t size) {
   PROFILE(_truncateNanosec);
   LoadFile(path)->truncate(size);
-}
-
-void FilesystemImpl::ftruncate(int descriptor, fspp::num_bytes_t size) {
-  PROFILE(_ftruncateNanosec);
-  _open_files.load(descriptor, [size] (OpenFile* openFile) {
-	  openFile->truncate(size);
-  });
 }
 
 fspp::num_bytes_t FilesystemImpl::read(int descriptor, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) {

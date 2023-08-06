@@ -24,9 +24,7 @@ public:
   MOCK_METHOD(int, openFile, (const boost::filesystem::path&, int), (override));
   MOCK_METHOD(void, closeFile, (int), (override));
   MOCK_METHOD(void, lstat, (const boost::filesystem::path&, fspp::fuse::STAT*), (override));
-  MOCK_METHOD(void, fstat, (int, fspp::fuse::STAT*), (override));
   MOCK_METHOD(void, truncate, (const boost::filesystem::path&, fspp::num_bytes_t), (override));
-  MOCK_METHOD(void, ftruncate, (int, fspp::num_bytes_t), (override));
   MOCK_METHOD(fspp::num_bytes_t, read, (int, void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
   MOCK_METHOD(void, write, (int, const void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
   MOCK_METHOD(void, flush, (int), (override));
@@ -81,18 +79,19 @@ public:
   //TODO Combine ReturnIsFile and ReturnIsFileFstat. This should be possible in gmock by either (a) using ::testing::Undefined as parameter type or (b) using action macros
   static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFile; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFileWithSize(fspp::num_bytes_t size); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+  static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsFileWithSizeIfFlagIsSet(fspp::num_bytes_t size, const bool* flag); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstat; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   static ::testing::Action<void(int, fspp::fuse::STAT*)> ReturnIsFileFstatWithSize(fspp::num_bytes_t size); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnIsDir; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   static ::testing::Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> ReturnDoesntExist; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
   void ReturnIsFileOnLstat(const boost::filesystem::path &path);
+  void ReturnIsFileOnLstatIfFlagIsSet(const boost::filesystem::path &path, const bool *created);
+  void ReturnIsFileOnLstatWithSizeIfFlagIsSet(const boost::filesystem::path &path, const fspp::num_bytes_t size, const bool* created);
   void ReturnIsFileOnLstatWithSize(const boost::filesystem::path &path, fspp::num_bytes_t size);
   void ReturnIsDirOnLstat(const boost::filesystem::path &path);
   void ReturnDoesntExistOnLstat(const boost::filesystem::path &path);
   void OnOpenReturnFileDescriptor(const char *filename, int descriptor);
-  void ReturnIsFileOnFstat(int descriptor);
-  void ReturnIsFileOnFstatWithSize(int descriptor, fspp::num_bytes_t size);
 };
 
 #endif

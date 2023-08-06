@@ -14,8 +14,6 @@ public:
 
   using stat_info = fspp::stat_info;
 
-  virtual stat_info stat() const = 0;
-  virtual void truncate(fspp::num_bytes_t size) const = 0;
   virtual fspp::num_bytes_t read(void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) const = 0;
   virtual void write(const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) = 0;
   virtual void flush() = 0;

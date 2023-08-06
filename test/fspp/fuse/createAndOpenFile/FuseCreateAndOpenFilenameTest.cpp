@@ -1,41 +1,50 @@
 #include "testutils/FuseCreateAndOpenTest.h"
 
 using ::testing::Eq;
-using ::testing::Return;
+using ::testing::Invoke;
 
 class FuseCreateAndOpenFilenameTest: public FuseCreateAndOpenTest {
 public:
 };
 
 TEST_F(FuseCreateAndOpenFilenameTest, CreateAndOpenFile) {
-  ReturnDoesntExistOnLstat("/myfile");
+  bool created = false;
+  ReturnIsFileOnLstatIfFlagIsSet("/myfile", &created);
   EXPECT_CALL(*fsimpl, createAndOpenFile(Eq("/myfile"), testing::_, testing::_, testing::_))
-    .Times(1).WillOnce(Return(0));
-  //For the syscall to succeed, we also need to give an fstat implementation.
-  ReturnIsFileOnFstat(0);
+    .Times(1).WillOnce(Invoke([&] () {
+      ASSERT(!created, "called createAndOpenFile multiple times");
+      created = true;
+      return 0;
+    }));
 
   CreateAndOpenFile("/myfile", O_RDONLY);
 }
 
 TEST_F(FuseCreateAndOpenFilenameTest, CreateAndOpenFileNested) {
+  bool created = false;
   ReturnIsDirOnLstat("/mydir");
-  ReturnDoesntExistOnLstat("/mydir/myfile");
+  ReturnIsFileOnLstatIfFlagIsSet("/mydir/myfile", &created);
   EXPECT_CALL(*fsimpl, createAndOpenFile(Eq("/mydir/myfile"), testing::_, testing::_, testing::_))
-    .Times(1).WillOnce(Return(0));
-  //For the syscall to succeed, we also need to give an fstat implementation.
-  ReturnIsFileOnFstat(0);
+    .Times(1).WillOnce(Invoke([&] () {
+      ASSERT(!created, "called createAndOpenFile multiple times");
+      created = true;
+      return 0;
+    }));
 
   CreateAndOpenFile("/mydir/myfile", O_RDONLY);
 }
 
 TEST_F(FuseCreateAndOpenFilenameTest, CreateAndOpenFileNested2) {
+  bool created = false;
   ReturnIsDirOnLstat("/mydir");
   ReturnIsDirOnLstat("/mydir/mydir2");
-  ReturnDoesntExistOnLstat("/mydir/mydir2/myfile");
+  ReturnIsFileOnLstatIfFlagIsSet("/mydir/mydir2/myfile", &created);
   EXPECT_CALL(*fsimpl, createAndOpenFile(Eq("/mydir/mydir2/myfile"), testing::_, testing::_, testing::_))
-    .Times(1).WillOnce(Return(0));
-  //For the syscall to succeed, we also need to give an fstat implementation.
-  ReturnIsFileOnFstat(0);
+    .Times(1).WillOnce(Invoke([&] () {
+      ASSERT(!created, "called createAndOpenFile multiple times");
+      created = true;
+      return 0;
+    }));
 
   CreateAndOpenFile("/mydir/mydir2/myfile", O_RDONLY);
 }

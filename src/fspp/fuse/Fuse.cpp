@@ -66,13 +66,9 @@ namespace {
 //#define FSPP_LOG 1
 
 namespace {
-  int fusepp_getattr(const char *path, fspp::fuse::STAT *stbuf) {
-    const int rs = FUSE_OBJ->getattr(bf::path(path), stbuf);
+  int fusepp_getattr(const char* path, fspp::fuse::STAT* stbuf, fuse_file_info* file_info) {
+    const int rs = FUSE_OBJ->getattr(bf::path(path), stbuf, file_info);
     return rs;
-  }
-
-  int fusepp_fgetattr(const char *path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo) {
-    return FUSE_OBJ->fgetattr(bf::path(path), stbuf, fileinfo);
   }
 
   int fusepp_readlink(const char *path, char *buf, size_t size) {
@@ -99,32 +95,29 @@ namespace {
     return FUSE_OBJ->symlink(bf::path(to), bf::path(from));
   }
 
-  int fusepp_rename(const char *from, const char *to) {
-    return FUSE_OBJ->rename(bf::path(from), bf::path(to));
+  int fusepp_rename(const char *from, const char *to, unsigned int flags) {
+    return FUSE_OBJ->rename(bf::path(from), bf::path(to), flags);
   }
 
   int fusepp_link(const char *from, const char *to) {
     return FUSE_OBJ->link(bf::path(from), bf::path(to));
   }
 
-  int fusepp_chmod(const char *path, ::mode_t mode) {
-    return FUSE_OBJ->chmod(bf::path(path), mode);
+  int fusepp_chmod(const char *path, ::mode_t mode, fuse_file_info* file_info) {
+    return FUSE_OBJ->chmod(bf::path(path), mode, file_info);
   }
 
-  int fusepp_chown(const char *path, ::uid_t uid, ::gid_t gid) {
-    return FUSE_OBJ->chown(bf::path(path), uid, gid);
+  int fusepp_chown(const char *path, ::uid_t uid, ::gid_t gid, fuse_file_info* file_info) {
+    return FUSE_OBJ->chown(bf::path(path), uid, gid, file_info);
   }
 
-  int fusepp_truncate(const char *path, int64_t size) {
-    return FUSE_OBJ->truncate(bf::path(path), size);
+  int fusepp_truncate(const char *path, int64_t size, fuse_file_info* file_info) {
+    return FUSE_OBJ->truncate(bf::path(path), size, file_info);
   }
 
-  int fusepp_ftruncate(const char *path, int64_t size, fuse_file_info *fileinfo) {
-    return FUSE_OBJ->ftruncate(bf::path(path), size, fileinfo);
-  }
-
-  int fusepp_utimens(const char *path, const timespec times[2]) {  // NOLINT(cppcoreguidelines-avoid-c-arrays)
-    return FUSE_OBJ->utimens(bf::path(path), {times[0], times[1]});
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
+  int fusepp_utimens(const char *path, const timespec times[2], fuse_file_info* file_info) {
+    return FUSE_OBJ->utimens(bf::path(path), {times[0], times[1]}, file_info);
   }
 
   int fusepp_open(const char *path, fuse_file_info *fileinfo) {
@@ -164,8 +157,8 @@ namespace {
     return FUSE_OBJ->opendir(bf::path(path), fileinfo);
   }
 
-  int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo) {
-    return FUSE_OBJ->readdir(bf::path(path), buf, filler, offset, fileinfo);
+  int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo, fuse_readdir_flags flags) {
+    return FUSE_OBJ->readdir(bf::path(path), buf, filler, offset, fileinfo, flags);
   }
 
   int fusepp_releasedir(const char *path, fuse_file_info *fileinfo) {
@@ -176,9 +169,9 @@ namespace {
     return FUSE_OBJ->fsyncdir(bf::path(path), datasync, fileinfo);
   }
 
-  void* fusepp_init(fuse_conn_info *conn) {
+  void* fusepp_init(fuse_conn_info *conn, fuse_config* config) {
     auto f = FUSE_OBJ;
-    f->init(conn);
+    f->init(conn, config);
     return f;
   }
 
@@ -212,7 +205,6 @@ namespace {
     if (!singleton) {
       singleton = std::make_unique<fuse_operations>();
       singleton->getattr = &fusepp_getattr;
-      singleton->fgetattr = &fusepp_fgetattr;
       singleton->readlink = &fusepp_readlink;
       singleton->mknod = &fusepp_mknod;
       singleton->mkdir = &fusepp_mkdir;
@@ -246,7 +238,6 @@ namespace {
       singleton->destroy = &fusepp_destroy;
       singleton->access = &fusepp_access;
       singleton->create = &fusepp_create;
-      singleton->ftruncate = &fusepp_ftruncate;
     }
 
     return singleton.get();
@@ -466,12 +457,6 @@ vector<char *> Fuse::_build_argv(const bf::path &mountdir, const vector<string> 
   // Make volume name default to mountdir on macOS
   _add_fuse_option_if_not_exists(&argv, "volname", mountdir.filename().string());
 #endif
-  // TODO Also set read/write size for macFUSE. The options there are called differently.
-  // large_read not necessary because reads are large anyhow. This option is only important for 2.4.
-  //argv.push_back(_create_c_string("-o"));
-  //argv.push_back(_create_c_string("large_read"));
-  argv.push_back(_create_c_string("-o"));
-  argv.push_back(_create_c_string("big_writes"));
   return argv;
 }
 
@@ -521,14 +506,15 @@ void Fuse::unmount(const bf::path& mountdir, bool force) {
   int returncode = success ? 0 : -1;
 #else
   const std::vector<std::string> args = force ? std::vector<std::string>({"-u", mountdir.string()}) : std::vector<std::string>({"-u", "-z", mountdir.string()});  // "-z" takes care that if the filesystem can't be unmounted right now because something is opened, it will be unmounted as soon as it can be.
-  const int returncode = cpputils::Subprocess::call("fusermount", args, "").exitcode;
+  const int returncode = cpputils::Subprocess::call("fusermount3", args, "").exitcode;
 #endif
   if (returncode != 0) {
     throw std::runtime_error("Could not unmount filesystem");
   }
 }
 
-int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
+int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info* file_info) {
+  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("getattr");
 #ifdef FSPP_LOG
   LOG(DEBUG, "getattr({}, _, _)", path);
@@ -546,49 +532,6 @@ int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf) {
   } catch(const fspp::fuse::FuseErrnoException &e) {
 #ifdef FSPP_LOG
     LOG(WARN, "getattr({}, _, _): failed with errno {}", path, e.getErrno());
-#endif
-    return -e.getErrno();
-  } catch(const std::exception &e) {
-    _logException(e);
-    return -EIO;
-  } catch(...) {
-    _logUnknownException();
-    return -EIO;
-  }
-}
-
-int Fuse::fgetattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo) {
-  const ThreadNameForDebugging _threadName("fgetattr");
-#ifdef FSPP_LOG
-  LOG(DEBUG, "fgetattr({}, _, _)", path);
-#endif
-
-  // On FreeBSD, trying to do anything with the mountpoint ends up
-  // opening it, and then using the FD for an fgetattr.  So in the
-  // special case of a path of "/", I need to do a getattr on the
-  // underlying base directory instead of doing the fgetattr().
-  // TODO Check if necessary
-  if (path.string() == "/") {
-    const int result = getattr(path, stbuf);
-#ifdef FSPP_LOG
-    LOG(DEBUG, "fgetattr({}, _, _): success", path);
-#endif
-    return result;
-  }
-
-  try {
-    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->fstat(fileinfo->fh, stbuf);
-#ifdef FSPP_LOG
-    LOG(DEBUG, "fgetattr({}, _, _): success", path);
-#endif
-    return 0;
-  } catch(const cpputils::AssertFailed &e) {
-    LOG(ERR, "AssertFailed in Fuse::fgetattr: {}", e.what());
-    return -EIO;
-  } catch(const fspp::fuse::FuseErrnoException &e) {
-#ifdef FSPP_LOG
-      LOG(ERR, "fgetattr({}, _, _): error", path);
 #endif
     return -e.getErrno();
   } catch(const std::exception &e) {
@@ -764,7 +707,9 @@ int Fuse::symlink(const bf::path &to, const bf::path &from) {
   }
 }
 
-int Fuse::rename(const bf::path &from, const bf::path &to) {
+int Fuse::rename(const bf::path &from, const bf::path &to, unsigned int flags) {
+  // TODO Handle flags correctly (see man renameat2)
+  UNUSED(flags);
   const ThreadNameForDebugging _threadName("rename");
 #ifdef FSPP_LOG
   LOG(DEBUG, "rename({}, {})", from, to);
@@ -805,7 +750,8 @@ int Fuse::link(const bf::path &from, const bf::path &to) {
   return ENOSYS;
 }
 
-int Fuse::chmod(const bf::path &path, ::mode_t mode) {
+int Fuse::chmod(const bf::path &path, ::mode_t mode, fuse_file_info* file_info) {
+  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("chmod");
 #ifdef FSPP_LOG
   LOG(DEBUG, "chmod({}, {})", path, mode);
@@ -834,7 +780,8 @@ int Fuse::chmod(const bf::path &path, ::mode_t mode) {
   }
 }
 
-int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
+int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid, fuse_file_info* file_info) {
+  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("chown");
 #ifdef FSPP_LOG
   LOG(DEBUG, "chown({}, {}, {})", path, uid, gid);
@@ -863,7 +810,8 @@ int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid) {
   }
 }
 
-int Fuse::truncate(const bf::path &path, int64_t size) {
+int Fuse::truncate(const bf::path &path, int64_t size, fuse_file_info* file_info) {
+  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("truncate");
 #ifdef FSPP_LOG
   LOG(DEBUG, "truncate({}, {})", path, size);
@@ -892,36 +840,8 @@ int Fuse::truncate(const bf::path &path, int64_t size) {
   }
 }
 
-int Fuse::ftruncate(const bf::path &path, int64_t size, fuse_file_info *fileinfo) {
-  const ThreadNameForDebugging _threadName("ftruncate");
-#ifdef FSPP_LOG
-  LOG(DEBUG, "ftruncate({}, {})", path, size);
-#endif
-  UNUSED(path);
-  try {
-    _fs->ftruncate(fileinfo->fh, fspp::num_bytes_t(size));
-#ifdef FSPP_LOG
-    LOG(DEBUG, "ftruncate({}, {}): success", path, size);
-#endif
-    return 0;
-  } catch(const cpputils::AssertFailed &e) {
-    LOG(ERR, "AssertFailed in Fuse::ftruncate: {}", e.what());
-    return -EIO;
-  } catch (FuseErrnoException &e) {
-#ifdef FSPP_LOG
-    LOG(WARN, "ftruncate({}, {}): failed with errno {}", path, size, e.getErrno());
-#endif
-    return -e.getErrno();
-  } catch(const std::exception &e) {
-    _logException(e);
-    return -EIO;
-  } catch(...) {
-    _logUnknownException();
-    return -EIO;
-  }
-}
-
-int Fuse::utimens(const bf::path &path, const std::array<timespec, 2> times) {
+int Fuse::utimens(const bf::path &path, const std::array<timespec, 2> times, fuse_file_info* file_info) {
+  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("utimens");
 #ifdef FSPP_LOG
   LOG(DEBUG, "utimens({}, _)", path);
@@ -1167,13 +1087,14 @@ int Fuse::opendir(const bf::path &path, fuse_file_info *fileinfo) {
   return 0;
 }
 
-int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo) {
+int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo, fuse_readdir_flags flags) {
   const ThreadNameForDebugging _threadName("readdir");
 #ifdef FSPP_LOG
   LOG(DEBUG, "readdir({}, _, _, {}, _)", path, offset);
 #endif
   UNUSED(fileinfo);
   UNUSED(offset);
+  UNUSED(flags);
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
     auto entries = _fs->readDir(path);
@@ -1183,6 +1104,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
       //but it doesn't help performance since fuse ignores everything in stbuf
       //except for file-type bits in st_mode and (if used) st_ino.
       //It does getattr() calls on all entries nevertheless.
+      // TODO With fuse3 and fuse_fill_dir_flags::FUSE_FILL_DIR_PLUS, it could make sense to pass more metadata.
       if (entry.type == Dir::EntryType::DIR) {
         stbuf.st_mode = S_IFDIR;
       } else if (entry.type == Dir::EntryType::FILE) {
@@ -1192,7 +1114,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
       } else {
         ASSERT(false, "Unknown entry type");
       }
-      if (filler(buf, entry.name.c_str(), &stbuf, 0) != 0) {
+      if (filler(buf, entry.name.c_str(), &stbuf, 0, static_cast<fuse_fill_dir_flags>(0)) != 0) {
 #ifdef FSPP_LOG
         LOG(DEBUG, "readdir({}, _, _, {}, _): failure with ENOMEM", path, offset);
 #endif
@@ -1239,9 +1161,14 @@ int Fuse::fsyncdir(const bf::path &path, int datasync, fuse_file_info *fileinfo)
   return 0;
 }
 
-void Fuse::init(fuse_conn_info *conn) {
-  UNUSED(conn);
+void Fuse::init(fuse_conn_info *conn, fuse_config *config) {
+  UNUSED(config);
+  
   const ThreadNameForDebugging _threadName("init");
+
+  // Disable capabilities that we don't support
+  conn->want &= ~(FUSE_CAP_POSIX_LOCKS | FUSE_CAP_ATOMIC_O_TRUNC | FUSE_CAP_EXPORT_SUPPORT);
+
   _fs = _init(this);
 
   ASSERT(_context != boost::none, "Context should have been initialized in Fuse::run() but somehow didn't");
