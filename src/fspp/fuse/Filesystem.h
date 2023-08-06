@@ -28,13 +28,11 @@ public:
   virtual void flush(int descriptor) = 0;
   virtual void closeFile(int descriptor) = 0;
   virtual void lstat(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf) = 0;
-  virtual void fstat(int descriptor, fspp::fuse::STAT *stbuf) = 0;
   //TODO Test chmod
   virtual void chmod(const boost::filesystem::path &path, ::mode_t mode) = 0;
   //TODO Test chown
   virtual void chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid) = 0;
   virtual void truncate(const boost::filesystem::path &path, fspp::num_bytes_t size) = 0;
-  virtual void ftruncate(int descriptor, fspp::num_bytes_t size) = 0;
   virtual fspp::num_bytes_t read(int descriptor, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) = 0;
   virtual void write(int descriptor, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) = 0;
   virtual void fsync(int descriptor) = 0;

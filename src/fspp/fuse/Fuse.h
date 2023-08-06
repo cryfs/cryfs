@@ -33,21 +33,19 @@ public:
 
   static void unmount(const boost::filesystem::path &mountdir, bool force = false);
 
-  int getattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf);
-  int fgetattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf, fuse_file_info *fileinfo);
+  int getattr(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf, fuse_file_info* file_info);
   int readlink(const boost::filesystem::path &path, char *buf, size_t size);
   int mknod(const boost::filesystem::path &path, ::mode_t mode, dev_t rdev);
   int mkdir(const boost::filesystem::path &path, ::mode_t mode);
   int unlink(const boost::filesystem::path &path);
   int rmdir(const boost::filesystem::path &path);
   int symlink(const boost::filesystem::path &from, const boost::filesystem::path &to);
-  int rename(const boost::filesystem::path &from, const boost::filesystem::path &to);
+  int rename(const boost::filesystem::path &from, const boost::filesystem::path &to, unsigned int flags);
   int link(const boost::filesystem::path &from, const boost::filesystem::path &to);
-  int chmod(const boost::filesystem::path &path, ::mode_t mode);
-  int chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid);
-  int truncate(const boost::filesystem::path &path, int64_t size);
-  int ftruncate(const boost::filesystem::path &path, int64_t size, fuse_file_info *fileinfo);
-  int utimens(const boost::filesystem::path &path, const std::array<timespec, 2> times);
+  int chmod(const boost::filesystem::path &path, ::mode_t mode, fuse_file_info* file_info);
+  int chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid, fuse_file_info* file_info);
+  int truncate(const boost::filesystem::path &path, int64_t size, fuse_file_info* file_info);
+  int utimens(const boost::filesystem::path &path, const std::array<timespec, 2> times, fuse_file_info* file_info);
   int open(const boost::filesystem::path &path, fuse_file_info *fileinfo);
   int release(const boost::filesystem::path &path, fuse_file_info *fileinfo);
   int read(const boost::filesystem::path &path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo);
@@ -56,10 +54,10 @@ public:
   int flush(const boost::filesystem::path &path, fuse_file_info *fileinfo);
   int fsync(const boost::filesystem::path &path, int flags, fuse_file_info *fileinfo);
   int opendir(const boost::filesystem::path &path, fuse_file_info *fileinfo);
-  int readdir(const boost::filesystem::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo);
+  int readdir(const boost::filesystem::path &path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo, fuse_readdir_flags flags);
   int releasedir(const boost::filesystem::path &path, fuse_file_info *fileinfo);
   int fsyncdir(const boost::filesystem::path &path, int datasync, fuse_file_info *fileinfo);
-  void init(fuse_conn_info *conn);
+  void init(fuse_conn_info *conn, fuse_config* config);
   void destroy();
   int access(const boost::filesystem::path &path, int mask);
   int create(const boost::filesystem::path &path, ::mode_t mode, fuse_file_info *fileinfo);

@@ -30,11 +30,9 @@ public:
 	void flush(int descriptor) override;
 	void closeFile(int descriptor) override;
 	void lstat(const boost::filesystem::path &path, fspp::fuse::STAT *stbuf) override;
-	void fstat(int descriptor, fspp::fuse::STAT *stbuf) override;
 	void chmod(const boost::filesystem::path &path, ::mode_t mode) override;
 	void chown(const boost::filesystem::path &path, ::uid_t uid, ::gid_t gid) override;
 	void truncate(const boost::filesystem::path &path, fspp::num_bytes_t size) override;
-	void ftruncate(int descriptor, fspp::num_bytes_t size) override;
 	fspp::num_bytes_t read(int descriptor, void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) override;
 	void write(int descriptor, const void *buf, fspp::num_bytes_t count, fspp::num_bytes_t offset) override;
 	void fsync(int descriptor) override;
@@ -66,11 +64,9 @@ private:
     std::atomic<uint64_t> _flushNanosec;
     std::atomic<uint64_t> _closeFileNanosec;
     std::atomic<uint64_t> _lstatNanosec;
-    std::atomic<uint64_t> _fstatNanosec;
     std::atomic<uint64_t> _chmodNanosec;
     std::atomic<uint64_t> _chownNanosec;
     std::atomic<uint64_t> _truncateNanosec;
-    std::atomic<uint64_t> _ftruncateNanosec;
     std::atomic<uint64_t> _readNanosec;
     std::atomic<uint64_t> _writeNanosec;
     std::atomic<uint64_t> _fsyncNanosec;

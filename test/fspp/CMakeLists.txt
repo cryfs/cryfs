@@ -35,13 +35,6 @@ set(SOURCES
     fuse/unlink/testutils/FuseUnlinkTest.cpp
     fuse/unlink/FuseUnlinkErrorTest.cpp
     fuse/unlink/FuseUnlinkFilenameTest.cpp
-    fuse/ftruncate/testutils/FuseFTruncateTest.cpp
-    fuse/ftruncate/FuseFTruncateFileDescriptorTest.cpp
-    fuse/ftruncate/FuseFTruncateSizeTest.cpp
-    fuse/ftruncate/FuseFTruncateErrorTest.cpp
-    fuse/fstat/testutils/FuseFstatTest.cpp
-    fuse/fstat/FuseFstatParameterTest.cpp
-    fuse/fstat/FuseFstatErrorTest.cpp
     fuse/truncate/FuseTruncateSizeTest.cpp
     fuse/truncate/testutils/FuseTruncateTest.cpp
     fuse/truncate/FuseTruncateErrorTest.cpp

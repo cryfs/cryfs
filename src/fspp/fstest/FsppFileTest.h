@@ -58,33 +58,33 @@ public:
     this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
   }
 
-  void Test_Chown_Uid(fspp::File *file, fspp::Node *node) {
+  void Test_Chown_Uid(fspp::Node *node) {
     node->chown(fspp::uid_t(100), fspp::gid_t(200));
-    this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
+    this->IN_STAT(node, [] (const fspp::Node::stat_info& st){
         EXPECT_EQ(fspp::uid_t(100u), st.uid);
     });
   }
 
-  void Test_Chown_Gid(fspp::File *file, fspp::Node *node) {
+  void Test_Chown_Gid(fspp::Node *node) {
     node->chown(fspp::uid_t(100), fspp::gid_t(200));
-    this->IN_STAT(file, node, [] (const fspp::Node::stat_info& st){
+    this->IN_STAT(node, [] (const fspp::Node::stat_info& st){
         EXPECT_EQ(fspp::gid_t(200u), st.gid);
     });
   }
 
-  void Test_Chmod(fspp::File *file, fspp::Node *node) {
+  void Test_Chmod(fspp::Node *node) {
     constexpr auto mode = fspp::mode_t().addFileFlag().addUserReadFlag().addOtherWriteFlag();
     node->chmod(mode);
-    this->IN_STAT(file, node, [mode] (const fspp::Node::stat_info& st){
+    this->IN_STAT(node, [mode] (const fspp::Node::stat_info& st){
         EXPECT_EQ(mode, st.mode);
     });
   }
 
-  void Test_Utimens(fspp::File *file, fspp::Node *node) {
+  void Test_Utimens(fspp::Node *node) {
     struct timespec ATIME{}; ATIME.tv_sec = 1458086400; ATIME.tv_nsec = 34525;
     struct timespec MTIME{}; MTIME.tv_sec = 1458086300; MTIME.tv_nsec = 48293;
     node->utimens(ATIME, MTIME);
-    this->IN_STAT(file, node, [this, ATIME, MTIME] (const fspp::Node::stat_info& st) {
+    this->IN_STAT(node, [this, ATIME, MTIME] (const fspp::Node::stat_info& st) {
         this->EXPECT_ATIME_EQ(ATIME, st);
         this->EXPECT_MTIME_EQ(MTIME, st);
     });
@@ -166,35 +166,35 @@ TYPED_TEST_P(FsppFileTest, Truncate_ShrinkTo0_Nested) {
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Uid) {
-  this->Test_Chown_Uid(this->file_root.get(), this->file_root_node.get());
+  this->Test_Chown_Uid(this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Uid_Nested) {
-  this->Test_Chown_Uid(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Chown_Uid(this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Gid) {
-  this->Test_Chown_Gid(this->file_root.get(), this->file_root_node.get());
+  this->Test_Chown_Gid(this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Gid_Nested) {
-  this->Test_Chown_Gid(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Chown_Gid(this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chmod) {
-  this->Test_Chmod(this->file_root.get(), this->file_root_node.get());
+  this->Test_Chmod(this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chmod_Nested) {
-  this->Test_Chmod(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Chmod(this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Utimens) {
-  this->Test_Utimens(this->file_root.get(), this->file_root_node.get());
+  this->Test_Utimens(this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Utimens_Nested) {
-  this->Test_Utimens(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Utimens(this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Remove) {

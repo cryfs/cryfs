@@ -38,16 +38,6 @@ public:
     }
 
     template<class Operation>
-    void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(const fspp::OpenFile &node, Operation&& operation, std::initializer_list<TimestampUpdateExpectation> behaviorChecks) {
-        EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(
-            [this, &node](){return this->stat(node);},
-            [this, &node](){return this->stat(node);},
-            std::forward<Operation>(operation),
-            behaviorChecks
-        );
-    }
-
-    template<class Operation>
     void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(const boost::filesystem::path &oldPath, const boost::filesystem::path &newPath, Operation&& operation, std::initializer_list<TimestampUpdateExpectation> behaviorChecks) {
         EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(
             [this, oldPath](){return this->stat(*this->Load(oldPath));},
@@ -79,10 +69,6 @@ public:
 
     static fspp::Node::stat_info stat(const fspp::Node &node) {
         return node.stat();
-    }
-
-    static fspp::Node::stat_info stat(const fspp::OpenFile &openFile) {
-        return openFile.stat();
     }
 
     timespec xSecondsAgo(int sec) {
