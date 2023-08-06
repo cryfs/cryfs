@@ -89,7 +89,7 @@ Requirements
   - CMake version >= 3.10
   - pkg-config (on Unix)
   - Conan package manager (version 1.x)
-  - libFUSE version >= 2.8.6 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
+  - libFUSE version >= 2.9 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
   - Python >= 3.5
   - OpenMP
 
