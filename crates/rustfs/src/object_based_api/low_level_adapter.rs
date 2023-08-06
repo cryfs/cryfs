@@ -8,8 +8,8 @@ use tokio::sync::RwLock;
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NodeKind,
-    NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+    AbsolutePath, DirEntry, FileHandle, FileHandleWithGeneration, FsError, FsResult, Gid,
+    HandleMap, Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{
     AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock,
@@ -85,6 +85,17 @@ where
             ))
         }
     }
+
+    async fn add_inode(
+        &self,
+        parent_ino: FileHandle,
+        node: AsyncDropGuard<Fs::Node>,
+        name: &PathComponent,
+    ) -> FileHandleWithGeneration {
+        let child_ino = self.inodes.write().await.add(AsyncDropArc::new(node));
+        log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
+        child_ino
+    }
 }
 
 #[async_trait]
@@ -127,8 +138,7 @@ where
 
         match child.getattr().await {
             Ok(attr) => {
-                let ino = self.inodes.write().await.add(AsyncDropArc::new(child));
-                log::info!("New inode {ino:?}: parent={parent:?}, name={name}");
+                let ino = self.add_inode(parent, child, name).await;
                 Ok(ReplyEntry {
                     ttl: TTL_LOOKUP,
                     attr,
@@ -237,8 +247,7 @@ where
                 .await?;
             Ok((attrs, child.as_node()))
         })?;
-        let ino = self.inodes.write().await.add(AsyncDropArc::new(child));
-        log::info!("New inode {ino:?}: parent={parent_ino:?}, name={name}");
+        let ino = self.add_inode(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
             attr,
@@ -419,11 +428,7 @@ where
 
                             // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
                             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
-                            let child_ino = inodes.write().await.add(AsyncDropArc::new(child));
-                            log::info!(
-                                "New inode {child_ino:?}: parent={ino:?}, name={name}",
-                                name = entry.name
-                            );
+                            let child_ino = self.add_inode(ino, child, &entry.name).await;
                             (offset, child_ino.handle, entry)
                         }
                     });
@@ -569,8 +574,7 @@ where
 
             // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode. If not, we probably don't need to return the child_node from create_and_open_file.
             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
-            let child_ino = self.inodes.write().await.add(AsyncDropArc::new(child_node));
-            log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
+            let child_ino = self.add_inode(parent_ino, child_node, name).await;
 
             let fh = self.open_files.write().await.add(open_file);
             Ok(ReplyCreate {
