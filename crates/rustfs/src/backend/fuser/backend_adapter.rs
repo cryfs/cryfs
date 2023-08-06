@@ -570,6 +570,7 @@ where
         umask: u32,
         reply: ReplyEntry,
     ) {
+        // TODO Assert that file/symlink flags aren't set
         let req = RequestInfo::from(req);
         let parent_ino = FileHandle::from(parent_ino);
         let name = name.to_owned();
@@ -1010,6 +1011,7 @@ where
         flags: i32,
         reply: ReplyCreate,
     ) {
+        // TODO Assert that dir/symlink flags aren't set
         let req = RequestInfo::from(req);
         let parent = FileHandle::from(parent);
         let name = name.to_owned();

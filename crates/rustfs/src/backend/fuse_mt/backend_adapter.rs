@@ -238,6 +238,7 @@ where
 
     fn mkdir(&self, req: RequestInfo, parent: &Path, name: &OsStr, mode: u32) -> ResultEntry {
         let mode = Mode::from(mode).add_dir_flag();
+        // TODO Assert that file/symlink flags aren't set
         self.run_async(
             &format!("mkdir({parent:?}, name={name:?}, mode={mode:?})"),
             move || async move {
@@ -674,6 +675,7 @@ where
     ) -> ResultCreate {
         let flags = flags as i32;
         let mode = Mode::from(mode).add_file_flag();
+        // TODO Assert that dir/symlink flags aren't set
         self.run_async(
             &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags})"),
             move || async move {

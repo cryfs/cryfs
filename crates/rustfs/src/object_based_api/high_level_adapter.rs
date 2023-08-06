@@ -241,7 +241,6 @@ where
         path: &AbsolutePath,
         mode: Mode,
     ) -> FsResult<AttrResponse> {
-        // TODO Assert mode doesn't have file or symlink flags set
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             // TODO Here and throughout, use a consistent logging and decide how to log (1) things that are wrong in the file system vs (2) operations that are successful if returning errors, e.g. getattr on a non-existing path
@@ -612,7 +611,6 @@ where
         mode: Mode,
         flags: i32,
     ) -> FsResult<CreateResponse> {
-        // TODO Assert that dir/symlink flags aren't set
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             // TODO Here and throughout, use a consistent logging and decide how to log (1) things that are wrong in the file system vs (2) operations that are successful if returning errors, e.g. getattr on a non-existing path
