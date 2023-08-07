@@ -338,12 +338,24 @@ void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, v
 vector<string> extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(vector<string>* fuseOptions) {
     vector<string> result;
     bool lastOptionWasDashO = false;
-    for (string& option : *fuseOptions) {
-        if (lastOptionWasDashO) {
-            extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&option, &result);
+    for (size_t i = 0; i < fuseOptions->size(); ++i)
+    {
+      string &option = (*fuseOptions)[i];
+      if (lastOptionWasDashO)
+      {
+        extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&option, &result);
+        if (option.empty()) {
+          // All options were removed, remove the empty argument
+          fuseOptions->erase(fuseOptions->begin() + i);
+          --i;
+          // And also remove the now value-less '-o' before it
+          fuseOptions->erase(fuseOptions->begin() + i);
+          --i;
         }
-        lastOptionWasDashO = (option == "-o");
+      }
+      lastOptionWasDashO = (option == "-o");
     }
+
     return result;
 }
 }
