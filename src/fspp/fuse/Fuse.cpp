@@ -311,24 +311,20 @@ void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, v
         constexpr std::array<const char*, 3> flags = {"strictatime", "relatime", "nodiratime"};
         return flags.end() != std::find(flags.begin(), flags.end(), flag);
     };
-    *csv_options = ranges::make_subrange(csv_options->begin(), csv_options->end())
-        | ranges::views::split(',')
-        | ranges::views::filter(
-            [&] (auto&& elem_) {
-                // TODO string_view would be better
-                const std::string elem(&*elem_.begin(), ranges::distance(elem_));
-                if (is_fuse_unsupported_atime_flag(elem)) {
-                    result->push_back(elem);
-                    return false;
-                }
-                if (is_fuse_supported_atime_flag(elem)) {
-                    result->push_back(elem);
-                }
-                return true;
-            })
-        | ranges::views::join(',')
-        | ranges::to<string>();
-}
+    *csv_options = ranges::make_subrange(csv_options->begin(), csv_options->end()) | ranges::views::split(',') | ranges::views::filter(
+      [&](auto &&elem_) {
+          // TODO string_view would be better
+          const std::string elem(&*elem_.begin(), ranges::distance(elem_));
+          if (is_fuse_unsupported_atime_flag(elem)) {
+              result->push_back(elem);
+              return false;
+          }
+          if (is_fuse_supported_atime_flag(elem)) {
+              result->push_back(elem);
+          }
+          return true;
+      }) | ranges::views::join(',') | ranges::to<string>();
+  }
 
 // Return a list of all atime options (e.g. atime, noatime, relatime, strictatime, nodiratime) that occur in the
 // fuseOptions input. They must be preceded by a '-o', i.e. {..., '-o', 'noatime', ...} and multiple ones can be
@@ -338,12 +334,24 @@ void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, v
 vector<string> extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(vector<string>* fuseOptions) {
     vector<string> result;
     bool lastOptionWasDashO = false;
-    for (string& option : *fuseOptions) {
-        if (lastOptionWasDashO) {
-            extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&option, &result);
+    for (size_t i = 0; i < fuseOptions->size(); ++i)
+    {
+      string &option = (*fuseOptions)[i];
+      if (lastOptionWasDashO)
+      {
+        extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&option, &result);
+        if (option.empty()) {
+          // All options were removed, remove the empty argument
+          fuseOptions->erase(fuseOptions->begin() + i);
+          --i;
+          // And also remove the now value-less '-o' before it
+          fuseOptions->erase(fuseOptions->begin() + i);
+          --i;
         }
-        lastOptionWasDashO = (option == "-o");
+      }
+      lastOptionWasDashO = (option == "-o");
     }
+
     return result;
 }
 }
