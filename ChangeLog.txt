@@ -4,6 +4,7 @@ Version 0.12.0 (unreleased)
 * Fixed small inaccuracy in calculation of free space in statvfs
 * Use libcurl dependency from conan instead of requiring it to be preinstalled
 * Updated dependencies to
+  * Fuse 2.9
   * DokanY 2.0.6.1000
   * range-v3/0.12.0
   * boost 1.79
