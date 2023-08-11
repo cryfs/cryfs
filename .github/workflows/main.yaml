@@ -127,7 +127,7 @@ jobs:
         run_tests: [true]
         run_clang_tidy: [false]
         exclude:
-          # MacOS CI doesn't have Clang 7, 8, 9, 10 or GCC 7, 8 anymore
+          # MacOS CI doesn't have Clang 7, 8, 9, 10, 11 or GCC 7, 8 anymore
           - os: macos-11
             compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
           - os: macos-11
@@ -136,6 +136,8 @@ jobs:
             compiler: {cxx: clang++-9, cc: clang-9, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, macos_cc: /usr/local/opt/llvm@9/bin/clang, apt_package: clang-9, homebrew_package: llvm@9}
           - os: macos-11
             compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
+          - os: macos-11
+            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: clang-11, homebrew_package: llvm@11}
           - os: macos-11
             compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: macos-11
@@ -146,14 +148,16 @@ jobs:
             compiler: {cxx: clang++-8, cc: clang-8, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, macos_cc: /usr/local/opt/llvm@8/bin/clang, apt_package: clang-8, homebrew_package: llvm@8}
           - os: macos-12
             compiler: {cxx: clang++-9, cc: clang-9, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, macos_cc: /usr/local/opt/llvm@9/bin/clang, apt_package: clang-9, homebrew_package: llvm@9}
+          - os: macos-12
+            compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
+          - os: macos-12
+            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: clang-11, homebrew_package: llvm@11}
           - os: macos-12
             compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: macos-12
             compiler: {cxx: g++-8, cc: gcc-8, macos_cxx: g++-8, macos_cc: gcc-8, homebrew_package: gcc@8, apt_package: g++-8}
           - os: macos-12
             compiler: {cxx: g++-9, cc: gcc-9, macos_cxx: g++-9, macos_cc: gcc-9, homebrew_package: gcc@9, apt_package: g++-9}
-          - os: macos-12
-            compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
           - os: macos-13
             compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
           - os: macos-13
@@ -161,7 +165,7 @@ jobs:
           - os: macos-13
             compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
           - os: macos-13
-            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: clang-11, homebrew_package: llvm@11}
+            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: clang-11, homebrew_package: llvm@11}
           # Ubuntu 20.04 doesn't have GCC 12, 13 yet
           - os: ubuntu-20.04
             compiler: {cxx: g++-12, cc: gcc-12, macos_cxx: g++-12, macos_cc: gcc-12, homebrew_package: gcc@12, apt_package: g++-12}
