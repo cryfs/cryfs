@@ -3,8 +3,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use cryfs_rustfs::{
-    object_based_api::Node,
-    AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    object_based_api::Node, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
@@ -65,7 +64,7 @@ impl PassthroughNode {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
-    }    
+    }
 
     async fn utimens(
         &self,

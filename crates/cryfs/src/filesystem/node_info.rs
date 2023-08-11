@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::sync::OnceCell;
 
-use super::fsblobstore::{DirBlob, FileBlob, DirEntry, EntryType, FsBlob, DIR_LSTAT_SIZE};
+use super::fsblobstore::{DirBlob, DirEntry, EntryType, FileBlob, FsBlob, DIR_LSTAT_SIZE};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
@@ -325,7 +325,8 @@ impl NodeInfo {
                 let gid = gid.map(|gid| fs_types::Gid::from(u32::from(gid)));
                 let lstat_size = self.load_lstat_size(blobstore).await?;
                 let result = parent_blob
-                    .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime).map(|result| dir_entry_to_node_attrs(result, lstat_size));
+                    .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime)
+                    .map(|result| dir_entry_to_node_attrs(result, lstat_size));
                 parent_blob.async_drop().await?;
                 result
             }

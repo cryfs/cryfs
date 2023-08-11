@@ -9,7 +9,9 @@ use super::CryDevice;
 use super::{dir::CryDir, file::CryFile, symlink::CrySymlink};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{NumBytes, object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
+use cryfs_rustfs::{
+    object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryNode<B>
