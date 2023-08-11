@@ -226,12 +226,33 @@ where
 
     async fn readlink<CallbackResult>(
         &self,
-        req: &RequestInfo,
+        _req: &RequestInfo,
         ino: InodeNumber,
         callback: impl Send + for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
     ) -> CallbackResult {
-        // TODO
-        callback(Err(FsError::NotImplemented))
+        let mut inode = match self.get_inode(ino).await {
+            Ok(inode) => inode,
+            Err(err) => return callback(Err(err)),
+        };
+        let target = match inode.as_symlink().await {
+            Ok(inode_symlink) => {
+                let target = inode_symlink.target();
+                match target.await {
+                    Ok(target) => Ok(target),
+                    Err(err) => Err(err),
+                }
+            }
+            Err(err) => Err(err),
+        };
+        let target = match target {
+            Ok(ref target) => Ok(target.as_str()),
+            Err(err) => Err(err),
+        };
+        let target = match inode.async_drop().await {
+            Ok(()) => target,
+            Err(err) => Err(err),
+        };
+        callback(target)
     }
 
     async fn mknod(

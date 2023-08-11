@@ -16,7 +16,7 @@ pub trait Device {
     type Dir<'a>: super::Dir<Device = Self> + Send + Sync
     where
         Self: 'a;
-    type Symlink<'a>: super::Symlink
+    type Symlink<'a>: super::Symlink + Send
     where
         Self: 'a;
     type File<'a>: super::File<Device = Self>
