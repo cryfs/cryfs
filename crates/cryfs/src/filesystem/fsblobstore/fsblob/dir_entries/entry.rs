@@ -114,6 +114,33 @@ impl DirEntry {
         self.inner.entry_type
     }
 
+    pub fn set_attr(
+        &mut self,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()> {
+        // TODO Direct implementation would be faster because it'd avoid _update_metadata_change_time calls. Maybe we could even remove the other setters and only have this one?
+        if let Some(mode) = mode {
+            self.set_mode(mode)?;
+        }
+        if let Some(uid) = uid {
+            self.set_uid(uid);
+        }
+        if let Some(gid) = gid {
+            self.set_gid(gid);
+        }
+        if let Some(atime) = atime {
+            self.set_last_access_time(atime);
+        }
+        if let Some(mtime) = mtime {
+            self.set_last_modification_time(mtime);
+        }
+        Ok(())
+    }
+
     pub fn set_mode(&mut self, mode: Mode) -> FsResult<()> {
         let old_mode = self.inner.mode;
         let old_last_metadata_change_time = self.inner.last_metadata_change_time;

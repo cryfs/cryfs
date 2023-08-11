@@ -20,14 +20,6 @@ impl PassthroughOpenFile {
     pub fn new(open_file: tokio::fs::File) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { open_file })
     }
-}
-
-#[async_trait]
-impl OpenFile for PassthroughOpenFile {
-    async fn getattr(&self) -> FsResult<NodeAttrs> {
-        let metadata = self.open_file.metadata().await.map_error()?;
-        convert_metadata(metadata)
-    }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
         let permissions = std::fs::Permissions::from_mode(mode.into());
@@ -104,6 +96,43 @@ impl OpenFile for PassthroughOpenFile {
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl OpenFile for PassthroughOpenFile {
+    async fn getattr(&self) -> FsResult<NodeAttrs> {
+        let metadata = self.open_file.metadata().await.map_error()?;
+        convert_metadata(metadata)
+    }
+
+    async fn setattr(
+        &self,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
+        // TODO Or is setting ctime allowed? What would it mean?
+        assert!(ctime.is_none(), "Can't directly set ctime");
+
+        if let Some(mode) = mode {
+            self.chmod(mode).await?;
+        }
+        if uid.is_some() || gid.is_some() {
+            self.chown(uid, gid).await?;
+        }
+        if let Some(size) = size {
+            self.truncate(size).await?;
+        }
+        if atime.is_some() || mtime.is_some() {
+            self.utimens(atime, mtime).await?;
+        }
+
+        self.getattr().await
     }
 
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {

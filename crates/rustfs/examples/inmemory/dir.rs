@@ -12,7 +12,7 @@ use std::time::SystemTime;
 use super::device::InMemoryDevice;
 use super::file::InMemoryFileRef;
 use super::file::InMemoryOpenFileRef;
-use super::inode_metadata::{chmod, chown, utimens};
+use super::inode_metadata::setattr;
 use super::node::InMemoryNodeRef;
 use super::symlink::InMemorySymlinkRef;
 
@@ -48,20 +48,16 @@ mod inode {
             &self.metadata
         }
 
-        pub fn chmod(&mut self, mode: Mode) {
-            chmod(&mut self.metadata, mode);
-        }
-
-        pub fn chown(&mut self, uid: Option<Uid>, gid: Option<Gid>) {
-            chown(&mut self.metadata, uid, gid);
-        }
-
-        pub fn utimens(
+        pub fn setattr(
             &mut self,
-            last_access: Option<SystemTime>,
-            last_modification: Option<SystemTime>,
-        ) {
-            utimens(&mut self.metadata, last_access, last_modification);
+            mode: Option<Mode>,
+            uid: Option<Uid>,
+            gid: Option<Gid>,
+            atime: Option<SystemTime>,
+            mtime: Option<SystemTime>,
+            ctime: Option<SystemTime>,
+        ) -> FsResult<NodeAttrs> {
+            setattr(&mut self.metadata, mode, uid, gid, atime, mtime, ctime)
         }
 
         pub fn entries(&self) -> &HashMap<PathComponentBuf, InMemoryNodeRef> {
@@ -131,19 +127,25 @@ impl InMemoryDirRef {
         }
     }
 
-    pub fn chmod(&self, mode: Mode) {
-        self.inode.lock().unwrap().chmod(mode);
-    }
-
-    pub fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) {
-        self.inode.lock().unwrap().chown(uid, gid);
-    }
-
-    pub fn utimens(&self, last_access: Option<SystemTime>, last_modification: Option<SystemTime>) {
+    pub fn setattr(
+        &self,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
+        // TODO Is setting size actually forbidden?
+        assert!(
+            size.is_none(),
+            "Can't set size using setattr on a directory"
+        );
         self.inode
             .lock()
             .unwrap()
-            .utimens(last_access, last_modification);
+            .setattr(mode, uid, gid, atime, mtime, ctime)
     }
 
     pub fn rename(&self, from: &PathComponent, to: &PathComponent) -> FsResult<()> {

@@ -123,11 +123,11 @@ where
                 log::error!("chmod: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
-            open_file.chmod(mode).await?
+            open_file.setattr(Some(mode), None, None, None, None, None, None).await?;
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, { node.chmod(mode).await })?;
+            with_async_drop_2!(node, { node.setattr(Some(mode), None, None, None, None, None, None).await })?;
         };
         Ok(())
     }
@@ -146,11 +146,11 @@ where
                 log::error!("chown: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
-            open_file.chown(uid, gid).await?
+            open_file.setattr(None, uid, gid, None, None, None, None).await?;
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, { node.chown(uid, gid).await })?
+            with_async_drop_2!(node, { node.setattr(None, uid, gid, None, None, None, None).await })?;
         }
 
         Ok(())
@@ -169,11 +169,11 @@ where
                 log::error!("truncate: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
-            open_file.truncate(size).await?;
+            open_file.setattr(None, None, None, Some(size), None, None, None).await?;
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, { node.as_file().await?.truncate(size).await })?;
+            with_async_drop_2!(node, { node.setattr(None, None, None, Some(size), None, None, None).await })?;
         };
         Ok(())
     }
@@ -192,11 +192,11 @@ where
                 log::error!("utimens: no open file with handle {}", u64::from(fh));
                 FsError::InvalidFileDescriptor { fh: u64::from(fh) }
             })?;
-            open_file.utimens(atime, mtime).await?
+            open_file.setattr(None, None, None, None, atime, mtime, None).await?;
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, { node.utimens(atime, mtime).await })?
+            with_async_drop_2!(node, { node.setattr(None, None, None, None, atime, mtime, None).await })?;
         };
         Ok(())
     }

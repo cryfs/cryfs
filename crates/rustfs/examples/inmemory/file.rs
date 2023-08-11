@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use super::device::InMemoryDevice;
-use super::inode_metadata::{chmod, chown, utimens};
+use super::inode_metadata::setattr;
 use super::node::InMemoryNodeRef;
 
 // Inode is in separate module so we can ensure class invariant through public/private boundaries
@@ -64,20 +64,16 @@ mod inode {
             &mut self.data
         }
 
-        pub fn chmod(&mut self, mode: Mode) {
-            chmod(&mut self.metadata, mode);
-        }
-
-        pub fn chown(&mut self, uid: Option<Uid>, gid: Option<Gid>) {
-            chown(&mut self.metadata, uid, gid);
-        }
-
-        pub fn utimens(
+        pub fn setattr(
             &mut self,
-            last_access: Option<SystemTime>,
-            last_modification: Option<SystemTime>,
-        ) {
-            utimens(&mut self.metadata, last_access, last_modification);
+            mode: Option<Mode>,
+            uid: Option<Uid>,
+            gid: Option<Gid>,
+            atime: Option<SystemTime>,
+            mtime: Option<SystemTime>,
+            ctime: Option<SystemTime>,
+        ) -> FsResult<NodeAttrs> {
+            setattr(&mut self.metadata, mode, uid, gid, atime, mtime, ctime)
         }
     }
 }
@@ -118,19 +114,21 @@ impl InMemoryFileRef {
         *inode.metadata()
     }
 
-    pub fn chmod(&self, mode: Mode) {
-        self.inode.lock().unwrap().chmod(mode);
-    }
-
-    pub fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) {
-        self.inode.lock().unwrap().chown(uid, gid);
-    }
-
-    pub fn utimens(&self, last_access: Option<SystemTime>, last_modification: Option<SystemTime>) {
-        self.inode
-            .lock()
-            .unwrap()
-            .utimens(last_access, last_modification);
+    pub fn setattr(
+        &self,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
+        let mut inode = self.inode.lock().unwrap();
+        if let Some(size) = size {
+            inode.resize(size);
+        }
+        inode.setattr(mode, uid, gid, atime, mtime, ctime)
     }
 }
 
@@ -140,11 +138,6 @@ impl File for InMemoryFileRef {
 
     async fn open(&self, openflags: OpenFlags) -> FsResult<AsyncDropGuard<InMemoryOpenFileRef>> {
         Ok(self.open_sync(openflags))
-    }
-
-    async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        self.inode.lock().unwrap().resize(new_size);
-        Ok(())
     }
 }
 
@@ -177,39 +170,27 @@ impl OpenFile for InMemoryOpenFileRef {
         Ok(*self.inode.lock().unwrap().metadata())
     }
 
-    async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        // TODO Is chmod allowed when openflags are readonly?
-        self.inode.lock().unwrap().chmod(mode);
-        Ok(())
-    }
-
-    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        // TODO Is chown allowed when openflags are readonly?
-        self.inode.lock().unwrap().chown(uid, gid);
-        Ok(())
-    }
-
-    async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        match self.openflags {
-            OpenFlags::Read => Err(FsError::WriteOnReadOnlyFileDescriptor),
-            OpenFlags::Write | OpenFlags::ReadWrite => {
-                self.inode.lock().unwrap().resize(new_size);
-                Ok(())
+    async fn setattr(
+        &self,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
+        // TODO Is setattr allowed when openflags are readonly?
+        let mut inode = self.inode.lock().unwrap();
+        if let Some(size) = size {
+            match self.openflags {
+                OpenFlags::Read => return Err(FsError::WriteOnReadOnlyFileDescriptor),
+                OpenFlags::Write | OpenFlags::ReadWrite => {
+                    inode.resize(size);
+                }
             }
         }
-    }
-
-    async fn utimens(
-        &self,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
-    ) -> FsResult<()> {
-        // TODO Is utimens allowed when openflags are readonly?
-        self.inode
-            .lock()
-            .unwrap()
-            .utimens(last_access, last_modification);
-        Ok(())
+        inode.setattr(mode, uid, gid, atime, mtime, ctime)
     }
 
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {

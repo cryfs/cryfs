@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::sync::OnceCell;
 
-use super::fsblobstore::{DirBlob, DirEntry, EntryType, FsBlob, DIR_LSTAT_SIZE};
+use super::fsblobstore::{DirBlob, FileBlob, DirEntry, EntryType, FsBlob, DIR_LSTAT_SIZE};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
@@ -205,6 +205,24 @@ impl NodeInfo {
             })
     }
 
+    pub async fn load_file_blob<'a, B>(
+        &self,
+        blobstore: &'a FsBlobStore<B>,
+    ) -> Result<FileBlob<'a, B>, FsError>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let blob = self.load_blob(blobstore).await?;
+        let blob_id = blob.blob_id();
+        FsBlob::into_file(blob).await.map_err(|err| {
+            FsError::CorruptedFilesystem {
+                // TODO Add to message what it actually is
+                message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", blob_id),
+            }
+        })
+    }
+
     async fn load_lstat_size<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NumBytes>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -269,42 +287,27 @@ impl NodeInfo {
         }
     }
 
-    pub async fn chmod<B>(&self, blobstore: &FsBlobStore<B>, mode: Mode) -> FsResult<()>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
-    {
-        match self.load_parent_blob(blobstore).await? {
-            LoadParentBlobResult::IsRootDir { .. } => {
-                // We're the root dir
-                // TODO What should we do here?
-                Err(FsError::InvalidOperation)
-            }
-            LoadParentBlobResult::IsNotRootDir {
-                name,
-                mut parent_blob,
-                ..
-            } => {
-                let result = parent_blob
-                    // TODO No Mode conversion
-                    .set_mode_of_entry_by_name(name, fs_types::Mode::from(u32::from(mode)));
-                parent_blob.async_drop().await?;
-                result?;
-                Ok(())
-            }
-        }
-    }
-
-    pub async fn chown<B>(
+    pub async fn setattr<B>(
         &self,
         blobstore: &FsBlobStore<B>,
+        mode: Option<Mode>,
         uid: Option<Uid>,
         gid: Option<Gid>,
-    ) -> FsResult<()>
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
+        // TODO Or is setting ctime allowed? What would it mean?
+        assert!(ctime.is_none(), "Cannot set ctime via setattr");
+        // TODO Improve concurrency
+        if let Some(size) = size {
+            self.truncate_file(blobstore, size).await?;
+        }
         match self.load_parent_blob(blobstore).await? {
             LoadParentBlobResult::IsRootDir { .. } => {
                 // We're the root dir
@@ -316,50 +319,33 @@ impl NodeInfo {
                 mut parent_blob,
                 ..
             } => {
-                let result = parent_blob.set_uid_gid_of_entry_by_name(
-                    name,
-                    // TODO Don't convert uid/gid
-                    uid.map(|uid| fs_types::Uid::from(u32::from(uid))),
-                    gid.map(|gid| fs_types::Gid::from(u32::from(gid))),
-                );
+                // TODO No Mode/Uid/Gid conversion
+                let mode = mode.map(|mode| fs_types::Mode::from(u32::from(mode)));
+                let uid = uid.map(|uid| fs_types::Uid::from(u32::from(uid)));
+                let gid = gid.map(|gid| fs_types::Gid::from(u32::from(gid)));
+                let lstat_size = self.load_lstat_size(blobstore).await?;
+                let result = parent_blob
+                    .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime).map(|result| dir_entry_to_node_attrs(result, lstat_size));
                 parent_blob.async_drop().await?;
-                result?;
-                Ok(())
+                result
             }
         }
     }
 
-    pub async fn utimens<B>(
+    pub async fn truncate_file<B>(
         &self,
         blobstore: &FsBlobStore<B>,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
+        new_size: NumBytes,
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
-        match self.load_parent_blob(blobstore).await? {
-            LoadParentBlobResult::IsRootDir { .. } => {
-                // We're the root dir
-                // TODO What should we do here?
-                Err(FsError::InvalidOperation)
-            }
-            LoadParentBlobResult::IsNotRootDir {
-                name,
-                mut parent_blob,
-                ..
-            } => {
-                let result = parent_blob.set_access_times_of_entry_by_name(
-                    name,
-                    last_access,
-                    last_modification,
-                );
-                parent_blob.async_drop().await?;
-                result?;
-                Ok(())
-            }
-        }
+        let mut blob = self.load_file_blob(blobstore).await?;
+        blob.resize(new_size.into()).await.map_err(|err| {
+            log::error!("Error resizing file blob: {err:?}");
+            FsError::UnknownError
+        })
     }
 }
 

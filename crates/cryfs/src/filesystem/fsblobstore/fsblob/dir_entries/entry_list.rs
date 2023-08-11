@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use std::fmt::Debug;
 use std::future::Future;
 use std::io::Cursor;
@@ -314,104 +314,20 @@ impl DirEntryList {
         .await
     }
 
-    pub fn set_mode(&mut self, blob_id: &BlobId, mode: Mode) -> FsResult<()> {
-        let Some(entry) = self.get_by_id_mut(blob_id) else {
-            // TODO Use FsError here and everywhere in `fsblobstore`
-            return Err(FsError::NodeDoesNotExist);
-        };
-        entry.set_mode(mode)?;
-        Ok(())
-    }
-
-    pub fn set_mode_by_name(&mut self, name: &PathComponent, mode: Mode) -> FsResult<()> {
+    pub fn set_attr_by_name<'s>(
+        &'s mut self,
+        name: &PathComponent,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<&'s DirEntry> {
         let Some(entry) = self.get_by_name_mut(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
         };
-        entry.set_mode(mode)?;
-        Ok(())
-    }
-
-    pub fn set_uid_gid(
-        &mut self,
-        blob_id: &BlobId,
-        uid: Option<Uid>,
-        gid: Option<Gid>,
-    ) -> FsResult<()> {
-        let Some(found) = self._get_index_by_id(blob_id) else {
-            return Err(FsError::NodeDoesNotExist);
-        };
-
-        if let Some(uid) = uid {
-            self.entries[found].set_uid(uid);
-            self.dirty = true;
-        }
-
-        if let Some(gid) = gid {
-            self.entries[found].set_gid(gid);
-            self.dirty = true;
-        }
-
-        Ok(())
-    }
-
-    pub fn set_uid_gid_by_name(
-        &mut self,
-        name: &PathComponent,
-        uid: Option<Uid>,
-        gid: Option<Gid>,
-    ) -> FsResult<()> {
-        let Some(found) = self._get_index_by_name(name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
-        };
-
-        if let Some(uid) = uid {
-            self.entries[found].set_uid(uid);
-            self.dirty = true;
-        }
-
-        if let Some(gid) = gid {
-            self.entries[found].set_gid(gid);
-            self.dirty = true;
-        }
-
-        Ok(())
-    }
-
-    pub fn set_access_times(
-        &mut self,
-        blob_id: &BlobId,
-        last_access_time: SystemTime,
-        last_modification_time: SystemTime,
-    ) -> FsResult<()> {
-        let Some(entry) = self.get_by_id_mut(blob_id) else {
-            return Err(FsError::NodeDoesNotExist);
-        };
-        entry.set_last_access_time(last_access_time);
-        entry.set_last_modification_time(last_modification_time);
-        Ok(())
-    }
-
-    pub fn set_access_times_by_name(
-        &mut self,
-        name: &PathComponent,
-        last_access_time: Option<SystemTime>,
-        last_modification_time: Option<SystemTime>,
-    ) -> FsResult<()> {
-        let Some(found) = self._get_index_by_name(name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
-        };
-
-        if let Some(last_access_time) = last_access_time {
-            self.entries[found].set_last_access_time(last_access_time);
-            self.dirty = true;
-        }
-
-        if let Some(last_modification_time) = last_modification_time {
-            self.entries[found].set_last_modification_time(last_modification_time);
-            self.dirty = true;
-        }
-
-        Ok(())
+        entry.set_attr(mode, uid, gid, atime, mtime)?;
+        Ok(entry)
     }
 
     pub fn maybe_update_access_timestamp(

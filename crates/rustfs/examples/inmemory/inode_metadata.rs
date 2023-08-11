@@ -1,28 +1,32 @@
-use cryfs_rustfs::{Gid, Mode, NodeAttrs, Uid};
+use cryfs_rustfs::{FsResult, Gid, Mode, NodeAttrs, Uid};
 use std::time::SystemTime;
 
-pub fn chmod(attrs: &mut NodeAttrs, mode: Mode) {
-    attrs.mode = mode;
-}
-
-pub fn chown(attrs: &mut NodeAttrs, uid: Option<Uid>, gid: Option<Gid>) {
+pub fn setattr(
+    attrs: &mut NodeAttrs,
+    mode: Option<Mode>,
+    uid: Option<Uid>,
+    gid: Option<Gid>,
+    atime: Option<SystemTime>,
+    mtime: Option<SystemTime>,
+    ctime: Option<SystemTime>,
+) -> FsResult<NodeAttrs> {
+    if let Some(mode) = mode {
+        attrs.mode = mode;
+    }
     if let Some(uid) = uid {
         attrs.uid = uid;
     }
     if let Some(gid) = gid {
         attrs.gid = gid;
     }
-}
-
-pub fn utimens(
-    attrs: &mut NodeAttrs,
-    last_access: Option<SystemTime>,
-    last_modification: Option<SystemTime>,
-) {
-    if let Some(last_access) = last_access {
-        attrs.atime = last_access;
+    if let Some(atime) = atime {
+        attrs.atime = atime;
     }
-    if let Some(last_modification) = last_modification {
-        attrs.mtime = last_modification;
+    if let Some(mtime) = mtime {
+        attrs.mtime = mtime;
     }
+    if let Some(ctime) = ctime {
+        attrs.ctime = ctime;
+    }
+    Ok(attrs.clone())
 }

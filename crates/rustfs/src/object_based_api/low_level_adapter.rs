@@ -194,7 +194,7 @@ where
 
     async fn setattr(
         &self,
-        req: &RequestInfo,
+        _req: &RequestInfo,
         ino: InodeNumber,
         mode: Option<Mode>,
         uid: Option<Uid>,
@@ -209,8 +209,19 @@ where
         bkuptime: Option<SystemTime>,
         flags: Option<u32>,
     ) -> FsResult<ReplyAttr> {
-        // TODO
-        Err(FsError::NotImplemented)
+        // TODO What to do with crtime, chgtime, bkuptime, flags?
+        // TODO setattr based on fh?
+        let mut node = self.get_inode(ino).await?;
+        let attr = node
+            .setattr(mode, uid, gid, size, atime, mtime, ctime)
+            .await;
+        node.async_drop().await?;
+        let attr = attr?;
+        Ok(ReplyAttr {
+            ttl: TTL_GETATTR,
+            attr,
+            ino,
+        })
     }
 
     async fn readlink<CallbackResult>(

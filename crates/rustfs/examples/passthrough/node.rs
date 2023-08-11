@@ -3,7 +3,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use cryfs_rustfs::{
-    object_based_api::Node, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, Uid,
+    object_based_api::Node,
+    AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
@@ -21,28 +22,6 @@ pub struct PassthroughNode {
 impl PassthroughNode {
     pub fn new(path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { path })
-    }
-}
-
-#[async_trait]
-impl Node for PassthroughNode {
-    type Device = PassthroughDevice;
-
-    async fn as_file(&self) -> FsResult<PassthroughFile> {
-        Ok(PassthroughFile::new(self.path.clone()))
-    }
-
-    async fn as_dir(&self) -> FsResult<PassthroughDir> {
-        Ok(PassthroughDir::new(self.path.clone()))
-    }
-
-    async fn as_symlink(&self) -> FsResult<PassthroughSymlink> {
-        Ok(PassthroughSymlink::new(self.path.clone()))
-    }
-
-    async fn getattr(&self) -> FsResult<NodeAttrs> {
-        let metadata = tokio::fs::symlink_metadata(&self.path).await.map_error()?;
-        convert_metadata(metadata)
     }
 
     async fn chmod(&self, mode: Mode) -> FsResult<()> {
@@ -75,6 +54,18 @@ impl Node for PassthroughNode {
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         Ok(())
     }
+
+    async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
+        let path = self.path.clone();
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || {
+                nix::unistd::truncate(path.as_str(), u64::from(new_size) as libc::off_t)
+                    .map_error()?;
+                Ok(())
+            })
+            .await
+            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
+    }    
 
     async fn utimens(
         &self,
@@ -117,6 +108,58 @@ impl Node for PassthroughNode {
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl Node for PassthroughNode {
+    type Device = PassthroughDevice;
+
+    async fn as_file(&self) -> FsResult<PassthroughFile> {
+        // TODO Should as_{file,dir,symlink} fail if it's the wrong type?
+        Ok(PassthroughFile::new(self.path.clone()))
+    }
+
+    async fn as_dir(&self) -> FsResult<PassthroughDir> {
+        Ok(PassthroughDir::new(self.path.clone()))
+    }
+
+    async fn as_symlink(&self) -> FsResult<PassthroughSymlink> {
+        Ok(PassthroughSymlink::new(self.path.clone()))
+    }
+
+    async fn getattr(&self) -> FsResult<NodeAttrs> {
+        let metadata = tokio::fs::symlink_metadata(&self.path).await.map_error()?;
+        convert_metadata(metadata)
+    }
+
+    async fn setattr(
+        &self,
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
+        // TODO Or is setting ctime allowed? What would it mean?
+        assert!(ctime.is_none(), "Can't directly set ctime");
+
+        if let Some(mode) = mode {
+            self.chmod(mode).await?;
+        }
+        if uid.is_some() || gid.is_some() {
+            self.chown(uid, gid).await?;
+        }
+        if let Some(size) = size {
+            self.truncate(size).await?;
+        }
+        if atime.is_some() || mtime.is_some() {
+            self.utimens(atime, mtime).await?;
+        }
+
+        self.getattr().await
     }
 }
 

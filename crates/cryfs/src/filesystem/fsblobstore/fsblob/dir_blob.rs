@@ -139,50 +139,17 @@ where
         self.entries.update_modification_timestamp(blob_id)
     }
 
-    pub fn set_mode_of_entry(&mut self, blob_id: &BlobId, mode: Mode) -> FsResult<()> {
-        self.entries.set_mode(blob_id, mode)
-    }
-
-    pub fn set_mode_of_entry_by_name(&mut self, name: &PathComponent, mode: Mode) -> FsResult<()> {
-        self.entries.set_mode_by_name(name, mode)
-    }
-
-    pub fn set_uid_gid_of_entry(
-        &mut self,
-        blob_id: &BlobId,
+    pub fn set_attr_of_entry_by_name<'s>(
+        &'s mut self,
+        name: &PathComponent,
+        mode: Option<Mode>,
         uid: Option<Uid>,
         gid: Option<Gid>,
-    ) -> FsResult<()> {
-        self.entries.set_uid_gid(blob_id, uid, gid)
-    }
-
-    pub fn set_uid_gid_of_entry_by_name(
-        &mut self,
-        name: &PathComponent,
-        uid: Option<Uid>,
-        gid: Option<Gid>,
-    ) -> FsResult<()> {
-        self.entries.set_uid_gid_by_name(name, uid, gid)
-    }
-
-    pub fn set_access_times_of_entry(
-        &mut self,
-        blob_id: &BlobId,
-        last_access_time: SystemTime,
-        last_modification_time: SystemTime,
-    ) -> FsResult<()> {
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<&'s DirEntry> {
         self.entries
-            .set_access_times(blob_id, last_access_time, last_modification_time)
-    }
-
-    pub fn set_access_times_of_entry_by_name(
-        &mut self,
-        name: &PathComponent,
-        last_access_time: Option<SystemTime>,
-        last_modification_time: Option<SystemTime>,
-    ) -> FsResult<()> {
-        self.entries
-            .set_access_times_by_name(name, last_access_time, last_modification_time)
+            .set_attr_by_name(name, mode, uid, gid, atime, mtime)
     }
 
     pub fn maybe_update_access_timestamp_of_entry(

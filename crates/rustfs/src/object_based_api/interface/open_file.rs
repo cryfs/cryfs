@@ -8,14 +8,17 @@ use cryfs_utils::data::Data;
 #[async_trait]
 pub trait OpenFile: Debug {
     async fn getattr(&self) -> FsResult<NodeAttrs>;
-    async fn chmod(&self, mode: Mode) -> FsResult<()>;
-    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()>;
-    async fn truncate(&self, new_size: NumBytes) -> FsResult<()>;
-    async fn utimens(
+    async fn setattr(
         &self,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
-    ) -> FsResult<()>;
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs>;
+
     // TODO Is it a better API to return a &[u8] from `read` by having the implementation pass &[u8] to a callback instead of returning a Data object? Might reduce copies. fuse-mt does this.
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data>;
     async fn write(&self, offset: NumBytes, data: Data) -> FsResult<()>;

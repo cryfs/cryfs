@@ -9,7 +9,7 @@ use super::CryDevice;
 use super::{dir::CryDir, file::CryFile, symlink::CrySymlink};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
+use cryfs_rustfs::{NumBytes, object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryNode<B>
@@ -114,21 +114,18 @@ where
         self.node_info.getattr(&self.blobstore).await
     }
 
-    async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        self.node_info.chmod(&self.blobstore, mode).await
-    }
-
-    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        self.node_info.chown(&self.blobstore, uid, gid).await
-    }
-
-    async fn utimens(
+    async fn setattr(
         &self,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
-    ) -> FsResult<()> {
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
         self.node_info
-            .utimens(&self.blobstore, last_access, last_modification)
+            .setattr(&self.blobstore, mode, uid, gid, size, atime, mtime, ctime)
             .await
     }
 }

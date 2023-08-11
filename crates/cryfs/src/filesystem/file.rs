@@ -50,10 +50,6 @@ where
             Arc::clone(&self.node_info),
         ))
     }
-
-    async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        super::open_file::truncate_file(&self.blobstore, &*self.node_info, new_size).await
-    }
 }
 
 impl<'a, B> Debug for CryFile<'a, B>

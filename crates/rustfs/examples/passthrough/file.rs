@@ -33,16 +33,4 @@ impl File for PassthroughFile {
         let open_file = options.open(&self.path).await.map_error()?;
         Ok(PassthroughOpenFile::new(open_file))
     }
-
-    async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        let path = self.path.clone();
-        tokio::runtime::Handle::current()
-            .spawn_blocking(move || {
-                nix::unistd::truncate(path.as_str(), u64::from(new_size) as libc::off_t)
-                    .map_error()?;
-                Ok(())
-            })
-            .await
-            .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
-    }
 }

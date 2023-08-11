@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use std::time::SystemTime;
 
-use super::Device;
-use crate::common::{FsResult, Gid, Mode, NodeAttrs, Uid};
-use cryfs_utils::async_drop::AsyncDropGuard;
+use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
 
 #[async_trait]
 pub trait Node {
@@ -14,11 +12,14 @@ pub trait Node {
     async fn as_symlink(&self) -> FsResult<<Self::Device as super::Device>::Symlink<'_>>;
 
     async fn getattr(&self) -> FsResult<NodeAttrs>;
-    async fn chmod(&self, mode: Mode) -> FsResult<()>;
-    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()>;
-    async fn utimens(
+    async fn setattr(
         &self,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
-    ) -> FsResult<()>;
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs>;
 }

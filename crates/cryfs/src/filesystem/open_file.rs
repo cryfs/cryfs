@@ -43,7 +43,7 @@ where
     }
 
     async fn load_blob<'a>(&self) -> FsResult<FileBlob<'_, B>> {
-        load_file_blob(&self.blobstore, &*self.node_info).await
+        self.node_info.load_file_blob(&self.blobstore).await
     }
 
     async fn flush_file_contents(&self) -> FsResult<()> {
@@ -99,25 +99,18 @@ where
         self.node_info.getattr(&self.blobstore).await
     }
 
-    async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        self.node_info.chmod(&self.blobstore, mode).await
-    }
-
-    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        self.node_info.chown(&self.blobstore, uid, gid).await
-    }
-
-    async fn truncate(&self, new_size: NumBytes) -> FsResult<()> {
-        truncate_file(&self.blobstore, &*self.node_info, new_size).await
-    }
-
-    async fn utimens(
+    async fn setattr(
         &self,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
-    ) -> FsResult<()> {
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
         self.node_info
-            .utimens(&self.blobstore, last_access, last_modification)
+            .setattr(&self.blobstore, mode, uid, gid, size, atime, mtime, ctime)
             .await
     }
 
@@ -177,36 +170,3 @@ where
     }
 }
 
-async fn load_file_blob<'a, B>(
-    blobstore: &'a FsBlobStore<B>,
-    node_info: &NodeInfo,
-) -> Result<FileBlob<'a, B>, FsError>
-where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
-{
-    let blob = node_info.load_blob(blobstore).await?;
-    let blob_id = blob.blob_id();
-    FsBlob::into_file(blob).await.map_err(|err| {
-        FsError::CorruptedFilesystem {
-            // TODO Add to message what it actually is
-            message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", blob_id),
-        }
-    })
-}
-
-pub async fn truncate_file<B>(
-    blobstore: &FsBlobStore<B>,
-    node_info: &NodeInfo,
-    new_size: NumBytes,
-) -> FsResult<()>
-where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
-{
-    let mut blob = load_file_blob(blobstore, node_info).await?;
-    blob.resize(new_size.into()).await.map_err(|err| {
-        log::error!("Error resizing file blob: {err:?}");
-        FsError::UnknownError
-    })
-}

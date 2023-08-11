@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use std::time::SystemTime;
 
-use cryfs_rustfs::{object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, Uid};
+use cryfs_rustfs::{
+    object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+};
 use cryfs_utils::async_drop::AsyncDrop;
 
 use super::dir::InMemoryDirRef;
@@ -66,35 +68,23 @@ impl Node for InMemoryNodeRef {
         }
     }
 
-    async fn chmod(&self, mode: Mode) -> FsResult<()> {
-        match self {
-            InMemoryNodeRef::File(file) => file.chmod(mode),
-            InMemoryNodeRef::Dir(dir) => dir.chmod(mode),
-            InMemoryNodeRef::Symlink(symlink) => symlink.chmod(mode),
-        }
-        Ok(())
-    }
-
-    async fn chown(&self, uid: Option<Uid>, gid: Option<Gid>) -> FsResult<()> {
-        match self {
-            InMemoryNodeRef::File(file) => file.chown(uid, gid),
-            InMemoryNodeRef::Dir(dir) => dir.chown(uid, gid),
-            InMemoryNodeRef::Symlink(symlink) => symlink.chown(uid, gid),
-        }
-        Ok(())
-    }
-
-    async fn utimens(
+    async fn setattr(
         &self,
-        last_access: Option<SystemTime>,
-        last_modification: Option<SystemTime>,
-    ) -> FsResult<()> {
+        mode: Option<Mode>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+        size: Option<NumBytes>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+        ctime: Option<SystemTime>,
+    ) -> FsResult<NodeAttrs> {
         match self {
-            InMemoryNodeRef::File(file) => file.utimens(last_access, last_modification),
-            InMemoryNodeRef::Dir(dir) => dir.utimens(last_access, last_modification),
-            InMemoryNodeRef::Symlink(symlink) => symlink.utimens(last_access, last_modification),
+            InMemoryNodeRef::File(file) => file.setattr(mode, uid, gid, size, atime, mtime, ctime),
+            InMemoryNodeRef::Dir(dir) => dir.setattr(mode, uid, gid, size, atime, mtime, ctime),
+            InMemoryNodeRef::Symlink(symlink) => {
+                symlink.setattr(mode, uid, gid, size, atime, mtime, ctime)
+            }
         }
-        Ok(())
     }
 }
 
