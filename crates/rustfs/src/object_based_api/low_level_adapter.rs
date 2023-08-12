@@ -560,17 +560,8 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn statfs(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<Statfs> {
-        // TODO
-        Ok(Statfs {
-            num_total_blocks: 0,
-            num_free_blocks: 0,
-            num_available_blocks: 0,
-            num_total_inodes: 0,
-            num_free_inodes: 0,
-            blocksize: 512,
-            max_filename_length: 255,
-        })
+    async fn statfs(&self, _req: &RequestInfo, _ino: InodeNumber) -> FsResult<Statfs> {
+        self.fs.read().await.get().statfs().await
     }
 
     async fn setxattr(
@@ -620,8 +611,8 @@ where
     }
 
     async fn access(&self, req: &RequestInfo, ino: InodeNumber, mask: i32) -> FsResult<()> {
-        // TODO
-        Err(FsError::NotImplemented)
+        // TODO Should we implement access?
+        Ok(())
     }
 
     async fn create(
