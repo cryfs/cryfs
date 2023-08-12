@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{object_based_api::Symlink, AbsolutePathBuf, FsError, FsResult};
+use cryfs_utils::async_drop::AsyncDropGuard;
 
+use super::device::PassthroughDevice;
 use super::errors::IoResultExt;
+use super::node::PassthroughNode;
 
 pub struct PassthroughSymlink {
     path: AbsolutePathBuf,
@@ -15,6 +18,12 @@ impl PassthroughSymlink {
 
 #[async_trait]
 impl Symlink for PassthroughSymlink {
+    type Device = PassthroughDevice;
+
+    fn as_node(&self) -> AsyncDropGuard<PassthroughNode> {
+        PassthroughNode::new(self.path.clone())
+    }
+
     async fn target(&self) -> FsResult<String> {
         let target = tokio::fs::read_link(&self.path).await.map_error()?;
         let target = target

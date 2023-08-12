@@ -27,6 +27,7 @@ const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
 const TTL_GETATTR: Duration = Duration::from_secs(1);
 const TTL_CREATE: Duration = Duration::from_secs(1);
+const TTL_SYMLINK: Duration = Duration::from_secs(1);
 
 // TODO Can we share more code with [super::high_level_adapter::ObjectBasedFsAdapter]?
 pub struct ObjectBasedFsAdapterLL<Fs: Device>
@@ -285,6 +286,7 @@ where
                 .await?;
             Ok((attrs, child.as_node()))
         })?;
+        // TODO Are we supposed to add the inode to our inode list here?
         let ino = self.add_inode(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
@@ -302,9 +304,7 @@ where
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            parent_dir
-                .remove_child_file_or_symlink(&name)
-                .await?;
+            parent_dir.remove_child_file_or_symlink(&name).await?;
             Ok(())
         })
     }
@@ -318,9 +318,7 @@ where
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            parent_dir
-                .remove_child_dir(&name)
-                .await?;
+            parent_dir.remove_child_dir(&name).await?;
             Ok(())
         })
     }
@@ -332,8 +330,21 @@ where
         name: &PathComponent,
         link: &str,
     ) -> FsResult<ReplyEntry> {
-        // TODO
-        Err(FsError::NotImplemented)
+        let parent = self.get_inode(parent_ino).await?;
+        let (attrs, child) = with_async_drop_2!(parent, {
+            let parent_dir = parent.as_dir().await?;
+            let (attrs, child) = parent_dir
+                .create_child_symlink(&name, link, req.uid, req.gid)
+                .await?;
+            Ok((attrs, child.as_node()))
+        })?;
+        // TODO Are we supposed to add the inode to our inode list here?
+        let ino = self.add_inode(parent_ino, child, name).await;
+        Ok(ReplyEntry {
+            ttl: TTL_SYMLINK,
+            attr: attrs,
+            ino,
+        })
     }
 
     async fn rename(

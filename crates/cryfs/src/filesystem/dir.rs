@@ -12,6 +12,7 @@ use super::{
     node::CryNode,
     node_info::{BlobDetails, NodeInfo},
     open_file::CryOpenFile,
+    symlink::CrySymlink,
 };
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
@@ -278,14 +279,16 @@ where
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs> {
+    ) -> FsResult<(NodeAttrs, CrySymlink<B>)> {
         // TODO What should NumBytes be? Also, no unwrap?
         let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
-        let blob_id = self.node_info.blob_id(&self.blobstore).await?;
+        let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
 
-        let (blob, new_symlink_blob_id) =
-            join!(self.load_blob(), self.create_symlink_blob(target, &blob_id),);
+        let (blob, new_symlink_blob_id) = join!(
+            self.load_blob(),
+            self.create_symlink_blob(target, &self_blob_id),
+        );
         let blob = blob?;
         // TODO Is this possible without to_owned()?
         let name = name.to_owned();
@@ -297,7 +300,7 @@ where
                 let mtime = atime;
 
                 let result = blob.add_entry_symlink(
-                    name,
+                    name.clone(),
                     new_symlink_blob_id,
                     // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
                     fs_types::Uid::from(u32::from(uid)),
@@ -311,8 +314,11 @@ where
                     FsError::UnknownError
                 })?;
 
+                let node =
+                    CrySymlink::new(&self.blobstore, Arc::new(NodeInfo::new(self_blob_id, name)));
+
                 // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-                Ok(NodeAttrs {
+                let attrs = NodeAttrs {
                     nlink: 1,
                     // TODO Don't convert mode but unify both classes
                     mode: cryfs_rustfs::Mode::from(u32::from(MODE_NEW_SYMLINK)),
@@ -323,7 +329,8 @@ where
                     atime,
                     mtime,
                     ctime: mtime,
-                })
+                };
+                Ok((attrs, node))
             })())
         })
         .await

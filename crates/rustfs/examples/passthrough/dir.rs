@@ -11,6 +11,7 @@ use super::device::PassthroughDevice;
 use super::errors::{IoResultExt, NixResultExt};
 use super::node::PassthroughNode;
 use super::openfile::PassthroughOpenFile;
+use super::symlink::PassthroughSymlink;
 use super::utils::convert_metadata;
 
 pub struct PassthroughDir {
@@ -116,7 +117,7 @@ impl Dir for PassthroughDir {
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs> {
+    ) -> FsResult<(NodeAttrs, PassthroughSymlink)> {
         let path = self.path.clone().push(name);
         let path_clone = path.clone();
         let target = target.to_owned();
@@ -137,7 +138,10 @@ impl Dir for PassthroughDir {
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         // TODO Return value directly without another call but make sure it returns the same value
-        PassthroughNode::new(path).getattr().await
+        let node = PassthroughNode::new(path);
+        let attrs = node.getattr().await?;
+        let symlink = node.as_symlink().await?;
+        Ok((attrs, symlink))
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {

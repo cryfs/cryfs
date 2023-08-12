@@ -326,7 +326,7 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let new_symlink_attrs = parent_dir
+            let (new_symlink_attrs, _symlink) = parent_dir
                 .create_child_symlink(&name, target, req.uid, req.gid)
                 .await?;
             Ok(AttrResponse {

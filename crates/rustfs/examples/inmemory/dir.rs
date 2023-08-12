@@ -234,7 +234,7 @@ impl Dir for InMemoryDirRef {
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs> {
+    ) -> FsResult<(NodeAttrs, InMemorySymlinkRef)> {
         let mut inode = self.inode.lock().unwrap();
         let symlink = InMemorySymlinkRef::new(target.to_owned(), uid, gid);
         let metadata = symlink.metadata();
@@ -244,10 +244,10 @@ impl Dir for InMemoryDirRef {
                 return Err(FsError::NodeAlreadyExists);
             }
             std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(InMemoryNodeRef::Symlink(symlink));
+                entry.insert(InMemoryNodeRef::Symlink(symlink.clone_ref()));
             }
         }
-        Ok(metadata)
+        Ok((metadata, symlink))
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {

@@ -36,7 +36,7 @@ pub trait Dir {
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<NodeAttrs>;
+    ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::Symlink<'_>)>;
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()>;
 

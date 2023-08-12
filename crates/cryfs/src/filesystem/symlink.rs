@@ -3,7 +3,9 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use super::{
+    device::CryDevice,
     fsblobstore::{FsBlob, FsBlobStore, SymlinkBlob},
+    node::CryNode,
     node_info::NodeInfo,
 };
 use cryfs_blobstore::BlobStore;
@@ -53,6 +55,15 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
 {
+    type Device = CryDevice<B>;
+
+    fn as_node(&self) -> AsyncDropGuard<CryNode<B>> {
+        CryNode::new_internal(
+            AsyncDropArc::clone(&self.blobstore),
+            Arc::clone(&self.node_info),
+        )
+    }
+
     async fn target(&self) -> FsResult<String> {
         let mut blob = self.load_blob().await?;
         blob.target().await.map_err(|err| {

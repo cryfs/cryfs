@@ -1,10 +1,12 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{object_based_api::Symlink, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
+use cryfs_utils::async_drop::AsyncDropGuard;
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use super::inode_metadata::setattr;
+use super::node::InMemoryNodeRef;
 
 mod inode {
     use super::*;
@@ -112,6 +114,12 @@ impl InMemorySymlinkRef {
 
 #[async_trait]
 impl Symlink for InMemorySymlinkRef {
+    type Device = super::InMemoryDevice;
+
+    fn as_node(&self) -> AsyncDropGuard<InMemoryNodeRef> {
+        AsyncDropGuard::new(InMemoryNodeRef::Symlink(self.clone_ref()))
+    }
+
     async fn target(&self) -> FsResult<String> {
         Ok(self.inode.lock().unwrap().target().to_owned())
     }
