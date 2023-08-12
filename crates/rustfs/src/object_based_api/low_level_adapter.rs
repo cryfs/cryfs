@@ -311,12 +311,18 @@ where
 
     async fn rmdir(
         &self,
-        req: &RequestInfo,
+        _req: &RequestInfo,
         parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
-        // TODO
-        Err(FsError::NotImplemented)
+        let parent = self.get_inode(parent_ino).await?;
+        with_async_drop_2!(parent, {
+            let parent_dir = parent.as_dir().await?;
+            parent_dir
+                .remove_child_dir(&name)
+                .await?;
+            Ok(())
+        })
     }
 
     async fn symlink(
