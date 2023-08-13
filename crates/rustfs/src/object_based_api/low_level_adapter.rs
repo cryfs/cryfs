@@ -448,13 +448,20 @@ where
 
     async fn flush(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
         fh: FileHandle,
-        lock_owner: u64,
+        _lock_owner: u64,
     ) -> FsResult<()> {
-        // TODO
-        Err(FsError::NotImplemented)
+        // TODO What to do about lock_owner?
+        let open_files = self.open_files.read().await;
+        let Some(open_file) = open_files.get(fh) else {
+            log::error!("write: no open file with handle {}", u64::from(fh));
+            // TODO Add a self.get_open_file() function that deduplicates this logic of throwing InvalidFileDescriptor between file system operations
+            return Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) });
+        };
+
+        open_file.flush().await
     }
 
     async fn release(
@@ -481,13 +488,20 @@ where
 
     async fn fsync(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
-        // TODO
-        Err(FsError::NotImplemented)
+        // TODO What to do about lock_owner?
+        let open_files = self.open_files.read().await;
+        let Some(open_file) = open_files.get(fh) else {
+            log::error!("write: no open file with handle {}", u64::from(fh));
+            // TODO Add a self.get_open_file() function that deduplicates this logic of throwing InvalidFileDescriptor between file system operations
+            return Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) });
+        };
+
+        open_file.fsync(datasync).await
     }
 
     async fn opendir(
