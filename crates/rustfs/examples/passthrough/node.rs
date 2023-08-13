@@ -115,15 +115,17 @@ impl Node for PassthroughNode {
     type Device = PassthroughDevice;
 
     async fn as_file(&self) -> FsResult<PassthroughFile> {
-        // TODO Should as_{file,dir,symlink} fail if it's the wrong type?
+        // TODO Fail if it's the wrong type
         Ok(PassthroughFile::new(self.path.clone()))
     }
 
     async fn as_dir(&self) -> FsResult<PassthroughDir> {
+        // TODO Fail if it's the wrong type
         Ok(PassthroughDir::new(self.path.clone()))
     }
 
     async fn as_symlink(&self) -> FsResult<PassthroughSymlink> {
+        // TODO Fail if it's the wrong type
         Ok(PassthroughSymlink::new(self.path.clone()))
     }
 

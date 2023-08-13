@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::common::{
     FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs, NumBytes,
-    PathComponent, RequestInfo, Statfs, Uid,
+    OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
 };
 
 // TODO Remove asterisk import
@@ -28,8 +28,7 @@ pub struct ReplyAttr {
 #[derive(Clone, Copy)]
 pub struct ReplyOpen {
     pub fh: FileHandle,
-    // TODO Which type for flags?
-    pub flags: u32,
+    pub flags: OpenFlags,
 }
 
 #[derive(Clone, Copy)]
@@ -227,8 +226,7 @@ pub trait AsyncFilesystemLL {
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        // TODO Which type for flags?
-        flags: i32,
+        flags: OpenFlags,
     ) -> FsResult<ReplyOpen>;
 
     /// Read data.

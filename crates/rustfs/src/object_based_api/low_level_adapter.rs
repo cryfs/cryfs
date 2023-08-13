@@ -33,6 +33,8 @@ const TTL_SYMLINK: Duration = Duration::from_secs(1);
 pub struct ObjectBasedFsAdapterLL<Fs: Device>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs: Device + Send + Sync + 'static,
+    for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
@@ -48,6 +50,8 @@ where
 impl<Fs: Device> ObjectBasedFsAdapterLL<Fs>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs: Device + Send + Sync + 'static,
+    for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
@@ -109,6 +113,7 @@ impl<Fs> AsyncFilesystemLL for ObjectBasedFsAdapterLL<Fs>
 where
     // TODO Do we need those Send + Sync + 'static bounds?
     Fs: Device + Send + Sync + 'static,
+    for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     async fn init(&self, req: &RequestInfo, _config: &mut KernelConfig) -> FsResult<()> {
@@ -371,11 +376,23 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn open(&self, req: &RequestInfo, ino: InodeNumber, flags: i32) -> FsResult<ReplyOpen> {
-        // TODO
-        Ok(ReplyOpen {
-            fh: FileHandle::from(0),
-            flags: 0,
+    async fn open(
+        &self,
+        _req: &RequestInfo,
+        ino: InodeNumber,
+        flags: OpenFlags,
+    ) -> FsResult<ReplyOpen> {
+        let inode = self.get_inode(ino).await?;
+        with_async_drop_2!(inode, {
+            let file = inode.as_file().await?;
+            let open_file = file.open(flags);
+            let open_file = open_file.await?;
+            let fh = self.open_files.write().await.add(open_file);
+            Ok(ReplyOpen {
+                fh: fh.handle,
+                // TODO What flags to return here? Just same as the argument?
+                flags,
+            })
         })
     }
 
@@ -422,15 +439,24 @@ where
 
     async fn release(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
         fh: FileHandle,
-        flags: i32,
-        lock_owner: Option<u64>,
+        _flags: i32,
+        _lock_owner: Option<u64>,
         flush: bool,
     ) -> FsResult<()> {
-        // TODO
-        Ok(())
+        // TODO Would it make sense to have `fh` always be equal to `ino`? Might simplify some things. Also, we could add an `assert_eq!(ino, fh)` here.
+
+        // TODO What to do with flags, lock_owner?
+        let open_file = self.open_files.write().await.remove(fh);
+        with_async_drop_2!(open_file, {
+            if flush {
+                // TODO Is this actually what the `flush` parameter should do?
+                open_file.flush().await?;
+            }
+            Ok(())
+        })
     }
 
     async fn fsync(
@@ -453,7 +479,7 @@ where
         // TODO
         Ok(ReplyOpen {
             fh: FileHandle::from(0),
-            flags: 0,
+            flags: OpenFlags::ReadWrite,
         })
     }
 
@@ -774,19 +800,22 @@ where
     }
 }
 
-impl<Fn, D> IntoFsLL<ObjectBasedFsAdapterLL<D>> for Fn
+impl<Fn, Fs> IntoFsLL<ObjectBasedFsAdapterLL<Fs>> for Fn
 where
-    Fn: FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
-    D: Device + Send + Sync + 'static,
-    D::OpenFile: Send + Sync,
+    Fn: FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
+    Fs: Device + Send + Sync + 'static,
+    for<'a> Fs::File<'a>: Send,
+    Fs::OpenFile: Send + Sync,
 {
-    fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapterLL<D>> {
+    fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapterLL<Fs>> {
         ObjectBasedFsAdapterLL::new(self)
     }
 }
 
 impl<Fs: Device> Debug for ObjectBasedFsAdapterLL<Fs>
 where
+    Fs: Device + Send + Sync + 'static,
+    for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -799,7 +828,8 @@ where
 #[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapterLL<Fs>
 where
-    Fs: Device + Send + Sync,
+    Fs: Device + Send + Sync + 'static,
+    for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     type Error = FsError;
