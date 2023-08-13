@@ -407,23 +407,43 @@ where
         lock_owner: Option<u64>,
         callback: impl Send + for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
     ) -> CallbackResult {
-        // TODO
-        callback(Err(FsError::NotImplemented))
+        let open_files = self.open_files.read().await;
+        let Some(open_file) = open_files.get(fh) else {
+            log::error!("read: no open file with handle {}", u64::from(fh));
+            return callback(Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) }));
+        };
+
+        let data = open_file.read(offset, size).await;
+        let data = match data {
+            Ok(ref data) => Ok(data.as_ref()),
+            Err(err) => Err(err),
+        };
+        callback(data)
     }
 
     async fn write(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         data: &[u8],
-        write_flags: u32,
-        flags: i32,
-        lock_owner: Option<u64>,
+        _write_flags: u32,
+        _flags: i32,
+        _lock_owner: Option<u64>,
     ) -> FsResult<ReplyWrite> {
-        // TODO
-        Err(FsError::NotImplemented)
+        // TODO What to do with WriteFlags, flags, lock_owner?
+        let open_files = self.open_files.read().await;
+        let Some(open_file) = open_files.get(fh) else {
+            log::error!("write: no open file with handle {}", u64::from(fh));
+            return Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) });
+        };
+
+        open_file.write(offset, data.to_vec().into()).await?;
+        Ok(ReplyWrite {
+            // TODO No unwrap
+            written: u32::try_from(data.len()).unwrap(),
+        })
     }
 
     async fn flush(
