@@ -406,7 +406,7 @@ where
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            func(fs, DataCallback { reply, log_msg });
+            func(fs, DataCallback { reply, log_msg }).await;
         });
     }
 }
@@ -1359,7 +1359,7 @@ impl DataCallback {
             }
             Err(err) => {
                 log::info!("{}...failed: {}", self.log_msg, err);
-                self.reply.error(err.system_error_code())
+                self.reply.error(err.system_error_code());
             }
         }
     }
