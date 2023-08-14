@@ -42,3 +42,6 @@ pub use inode_number::InodeNumber;
 
 mod request_info;
 pub use request_info::RequestInfo;
+
+mod callback;
+pub use callback::{Callback, CallbackImpl};

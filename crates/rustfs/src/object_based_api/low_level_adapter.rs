@@ -8,8 +8,9 @@ use tokio::sync::RwLock;
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration,
-    InodeNumber, Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap,
+    HandleWithGeneration, InodeNumber, Mode, NodeKind, NumBytes, OpenFlags, PathComponent,
+    RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{
     AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock,
@@ -230,15 +231,13 @@ where
         })
     }
 
-    async fn readlink<CallbackResult>(
-        &self,
-        _req: &RequestInfo,
-        ino: InodeNumber,
-        callback: impl Send + for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
-    ) -> CallbackResult {
+    async fn readlink<R, C>(&self, _req: &RequestInfo, ino: InodeNumber, callback: C) -> R
+    where
+        C: Send + for<'a> Callback<FsResult<&'a str>, R>,
+    {
         let mut inode = match self.get_inode(ino).await {
             Ok(inode) => inode,
-            Err(err) => return callback(Err(err)),
+            Err(err) => return callback.call(Err(err)),
         };
         let target = match inode.as_symlink().await {
             Ok(inode_symlink) => {
@@ -258,7 +257,7 @@ where
             Ok(()) => target,
             Err(err) => Err(err),
         };
-        callback(target)
+        callback.call(target)
     }
 
     async fn mknod(
@@ -396,7 +395,7 @@ where
         })
     }
 
-    async fn read<CallbackResult>(
+    async fn read<R, C>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -405,12 +404,15 @@ where
         size: NumBytes,
         flags: i32,
         lock_owner: Option<u64>,
-        callback: impl Send + for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
-    ) -> CallbackResult {
+        callback: C,
+    ) -> R
+    where
+        C: Send + for<'a> Callback<FsResult<&'a [u8]>, R>,
+    {
         let open_files = self.open_files.read().await;
         let Some(open_file) = open_files.get(fh) else {
             log::error!("read: no open file with handle {}", u64::from(fh));
-            return callback(Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) }));
+            return callback.call(Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) }));
         };
 
         let data = open_file.read(offset, size).await;
@@ -418,7 +420,7 @@ where
             Ok(ref data) => Ok(data.as_ref()),
             Err(err) => Err(err),
         };
-        callback(data)
+        callback.call(data)
     }
 
     async fn write(

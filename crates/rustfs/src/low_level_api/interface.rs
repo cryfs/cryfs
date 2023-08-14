@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs, NumBytes,
-    OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+    Callback, FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
+    NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
 };
 
 // TODO Remove asterisk import
@@ -136,12 +136,9 @@ pub trait AsyncFilesystemLL {
     ) -> FsResult<ReplyAttr>;
 
     /// Read symbolic link.
-    async fn readlink<CallbackResult>(
-        &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        callback: impl Send + for<'a> FnOnce(FsResult<&'a str>) -> CallbackResult,
-    ) -> CallbackResult;
+    async fn readlink<R, C>(&self, req: &RequestInfo, ino: InodeNumber, callback: C) -> R
+    where
+        C: Send + for<'a> Callback<FsResult<&'a str>, R>;
 
     /// Create file node.
     /// Create a regular file, character device, block device, fifo or socket node.
@@ -239,7 +236,7 @@ pub trait AsyncFilesystemLL {
     ///
     /// flags: these are the file flags, such as O_SYNC. Only supported with ABI >= 7.9
     /// lock_owner: only supported with ABI >= 7.9
-    async fn read<CallbackResult>(
+    async fn read<R, C>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -252,8 +249,10 @@ pub trait AsyncFilesystemLL {
         // TODO What is lock_owner?
         lock_owner: Option<u64>,
         // TODO Here and in other places, add documentation saying that `CallbackResult` is just a way to ensure that the implementation actually calls callback.
-        callback: impl Send + for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
-    ) -> CallbackResult;
+        callback: C,
+    ) -> R
+    where
+        C: Send + for<'a> Callback<FsResult<&'a [u8]>, R>;
 
     /// Write data.
     /// Write should return exactly the number of bytes requested except on error. An

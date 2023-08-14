@@ -15,7 +15,7 @@ use std::time::SystemTime;
 use tokio::sync::RwLock;
 
 use crate::common::{
-    FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
+    Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
     OpenFlags, PathComponentBuf, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{self, AsyncFilesystemLL};
@@ -522,12 +522,7 @@ where
         self.run_async_reply_data(
             format!("readlink(ino={ino:?})"),
             reply,
-            move |fs, callback| async move {
-                fs.read()
-                    .await
-                    .readlink(&req, ino, |result| callback.call(result.map(str::as_bytes)))
-                    .await
-            },
+            move |fs, callback| async move { fs.read().await.readlink(&req, ino, callback).await },
         );
     }
 
@@ -729,7 +724,7 @@ where
                     size,
                     flags,
                     lock_owner,
-                    |result| callback.call(result.map(|data| data.as_ref())),
+                    callback,
                 )
                 .await
             },
@@ -1350,8 +1345,8 @@ struct DataCallback {
     reply: fuser::ReplyData,
 }
 
-impl DataCallback {
-    pub fn call(self, data: FsResult<&[u8]>) {
+impl<'a> Callback<FsResult<&'a [u8]>, ()> for DataCallback {
+    fn call(self, data: FsResult<&'a [u8]>) {
         match data {
             Ok(data) => {
                 log::info!("{}...done", self.log_msg);
@@ -1362,5 +1357,11 @@ impl DataCallback {
                 self.reply.error(err.system_error_code());
             }
         }
+    }
+}
+
+impl<'a> Callback<FsResult<&'a str>, ()> for DataCallback {
+    fn call(self, data: FsResult<&'a str>) {
+        <Self as Callback<FsResult<&'a [u8]>, ()>>::call(self, data.map(|s| s.as_bytes()))
     }
 }

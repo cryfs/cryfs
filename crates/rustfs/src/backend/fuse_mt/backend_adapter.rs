@@ -10,8 +10,8 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, DirEntry, FileHandle, FsError, FsResult, Gid, Mode, NodeAttrs,
-    NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, Callback, CallbackImpl, DirEntry, FileHandle, FsError, FsResult,
+    Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
 };
 use crate::high_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -374,6 +374,7 @@ where
             match parse_absolute_path(path) {
                 Err(err) => callback(Err(err.system_error_code())),
                 Ok(path) => {
+                    let mut result = None;
                     self.fs
                         .read()
                         .await
@@ -383,20 +384,10 @@ where
                             FileHandle::from(fh),
                             NumBytes::from(offset),
                             NumBytes::from(u64::from(size)),
-                            move |slice| match slice {
-                                Ok(slice) => {
-                                    let result = callback(Ok(slice));
-                                    log::info!("{}...done", log_msg);
-                                    result
-                                }
-                                Err(err) => {
-                                    let result = callback(Err(err.system_error_code()));
-                                    log::info!("{}...failed: {err:?}", log_msg);
-                                    result
-                                }
-                            },
+                            DataCallback::new(log_msg, callback, &mut result),
                         )
-                        .await
+                        .await;
+                    result.expect("callback not called")
                 }
             }
         })
@@ -858,5 +849,45 @@ trait IntoOptionGid {
 impl IntoOptionGid for Option<u32> {
     fn into_gid(self) -> Option<Gid> {
         self.map(Gid::from)
+    }
+}
+
+struct DataCallback<'r, F>
+where
+    F: FnOnce(ResultSlice<'_>) -> CallbackResult,
+{
+    log_msg: String,
+    callback: F,
+    result: &'r mut Option<CallbackResult>,
+}
+
+impl<'r, F> DataCallback<'r, F>
+where
+    F: FnOnce(ResultSlice<'_>) -> CallbackResult,
+{
+    pub fn new(log_msg: String, callback: F, result: &'r mut Option<CallbackResult>) -> Self {
+        Self {
+            log_msg,
+            callback,
+            result,
+        }
+    }
+}
+
+impl<'a, 'r, F> Callback<FsResult<&'a [u8]>, ()> for DataCallback<'r, F>
+where
+    F: FnOnce(ResultSlice<'_>) -> CallbackResult,
+{
+    fn call(self, result: FsResult<&'a [u8]>) {
+        match result {
+            Ok(slice) => {
+                *self.result = Some((self.callback)(Ok(slice)));
+                log::info!("{}...done", self.log_msg);
+            }
+            Err(err) => {
+                *self.result = Some((self.callback)(Err(err.system_error_code())));
+                log::info!("{}...failed: {err:?}", self.log_msg);
+            }
+        }
     }
 }

@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode, NumBytes,
-    OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode,
+    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
@@ -391,15 +391,18 @@ where
         })
     }
 
-    async fn read<CallbackResult>(
+    async fn read<R, C>(
         &self,
         _req: RequestInfo,
         _path: &AbsolutePath,
         fh: FileHandle,
         offset: NumBytes,
         size: NumBytes,
-        callback: impl for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
-    ) -> CallbackResult {
+        callback: C,
+    ) -> R
+    where
+        C: for<'a> Callback<FsResult<&'a [u8]>, R>,
+    {
         let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("read: no open file with handle {}", u64::from(fh));
@@ -410,13 +413,13 @@ where
                 let data = open_file.read(offset, size).await;
                 match data {
                     Ok(data) => {
-                        let result = callback(Ok(data.as_ref()));
+                        let result = callback.call(Ok(data.as_ref()));
                         result
                     }
-                    Err(err) => callback(Err(err)),
+                    Err(err) => callback.call(Err(err)),
                 }
             }
-            Err(err) => callback(Err(err)),
+            Err(err) => callback.call(Err(err)),
         }
     }
 

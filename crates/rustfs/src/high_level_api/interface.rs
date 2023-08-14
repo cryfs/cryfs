@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    AbsolutePath, DirEntry, FileHandle, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags,
-    RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntry, FileHandle, FsResult, Gid, Mode, NodeAttrs, NumBytes,
+    OpenFlags, RequestInfo, Statfs, Uid,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -221,15 +221,17 @@ pub trait AsyncFilesystem {
     ///    the result data as a slice, or an error code.
     ///
     /// Return the return value from the `callback` function.
-    async fn read<CallbackResult>(
+    async fn read<R, C>(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
         offset: NumBytes,
         size: NumBytes,
-        callback: impl for<'a> FnOnce(FsResult<&'a [u8]>) -> CallbackResult,
-    ) -> CallbackResult;
+        callback: C,
+    ) -> R
+    where
+        C: for<'a> Callback<FsResult<&'a [u8]>, R>;
 
     /// Write to a file.
     ///
