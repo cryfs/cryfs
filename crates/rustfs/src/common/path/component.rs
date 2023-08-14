@@ -98,6 +98,13 @@ impl<'a> From<&'a PathComponent> for &'a std::ffi::OsStr {
     }
 }
 
+impl<'a> From<&'a PathComponent> for &'a str {
+    #[inline]
+    fn from(component: &'a PathComponent) -> Self {
+        component.as_ref()
+    }
+}
+
 impl Deref for PathComponent {
     type Target = str;
 

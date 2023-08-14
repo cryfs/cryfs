@@ -177,6 +177,13 @@ impl<'a> From<&'a AbsolutePath> for &'a std::path::Path {
     }
 }
 
+impl<'a> From<&'a AbsolutePath> for &'a str {
+    #[inline]
+    fn from(path: &'a AbsolutePath) -> Self {
+        path.as_ref()
+    }
+}
+
 impl Deref for AbsolutePath {
     type Target = str;
 
