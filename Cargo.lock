@@ -676,9 +676,11 @@ dependencies = [
  "futures",
  "libc",
  "log",
+ "mockall",
  "nix",
  "rstest",
  "rstest_reuse",
+ "tempdir",
  "thiserror",
  "tokio",
 ]

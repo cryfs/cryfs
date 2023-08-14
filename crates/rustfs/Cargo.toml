@@ -30,6 +30,8 @@ tokio = {workspace = true, features=["fs"]}
 # TODO env_logger and nix are only needed for the passthrough example
 env_logger.workspace = true
 nix.workspace = true
+mockall.workspace = true
+tempdir.workspace = true
 
 [features]
 default = ["fuser"]

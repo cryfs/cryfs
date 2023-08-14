@@ -233,7 +233,8 @@ where
 
     async fn readlink<R, C>(&self, _req: &RequestInfo, ino: InodeNumber, callback: C) -> R
     where
-        C: Send + for<'a> Callback<FsResult<&'a str>, R>,
+        R: 'static,
+        C: Send + 'static + for<'a> Callback<FsResult<&'a str>, R>,
     {
         let mut inode = match self.get_inode(ino).await {
             Ok(inode) => inode,
@@ -407,7 +408,8 @@ where
         callback: C,
     ) -> R
     where
-        C: Send + for<'a> Callback<FsResult<&'a [u8]>, R>,
+        R: 'static,
+        C: Send + 'static + for<'a> Callback<FsResult<&'a [u8]>, R>,
     {
         let open_files = self.open_files.read().await;
         let Some(open_file) = open_files.get(fh) else {

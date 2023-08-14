@@ -22,6 +22,9 @@ use rstest_reuse;
 // TODO Is there a better way?
 pub use common::{Callback, CallbackImpl};
 
+#[cfg(test)]
+mod tests;
+
 // TODO Test backends by running a mock filesystem, calling syscalls into it, and making sure the correct AsyncFilesystem functions get called
 // TODO Black-box test AsyncFilesystem instances (e.g. passthrough, inmemory) by mounting them and calling file system operations on them
 // TODO Test mount/spawn_mount correctly mount

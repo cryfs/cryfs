@@ -138,7 +138,8 @@ pub trait AsyncFilesystemLL {
     /// Read symbolic link.
     async fn readlink<R, C>(&self, req: &RequestInfo, ino: InodeNumber, callback: C) -> R
     where
-        C: Send + for<'a> Callback<FsResult<&'a str>, R>;
+        R: 'static,
+        C: Send + 'static + for<'a> Callback<FsResult<&'a str>, R>;
 
     /// Create file node.
     /// Create a regular file, character device, block device, fifo or socket node.
@@ -252,7 +253,8 @@ pub trait AsyncFilesystemLL {
         callback: C,
     ) -> R
     where
-        C: Send + for<'a> Callback<FsResult<&'a [u8]>, R>;
+        R: 'static,
+        C: Send + 'static + for<'a> Callback<FsResult<&'a [u8]>, R>;
 
     /// Write data.
     /// Write should return exactly the number of bytes requested except on error. An

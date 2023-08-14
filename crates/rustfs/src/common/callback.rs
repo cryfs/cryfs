@@ -31,7 +31,7 @@ pub trait Callback<T, R> {
 /// Example
 /// -------
 /// ```
-/// # use cryfs_rustfs::Callback;
+/// # use cryfs_rustfs::{Callback, CallbackImpl};
 ///
 /// trait MyTrait {
 ///   fn func<R, C: Callback<i32, R>>(&self, callback: C) -> R;
