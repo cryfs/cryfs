@@ -32,6 +32,7 @@ env_logger.workspace = true
 nix.workspace = true
 mockall.workspace = true
 tempdir.workspace = true
+cryfs-utils = {path = "../utils", features=["testutils"]}
 
 [features]
 default = ["fuser"]
