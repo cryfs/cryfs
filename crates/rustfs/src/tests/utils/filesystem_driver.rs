@@ -22,7 +22,8 @@ impl FilesystemDriver {
 
     pub async fn mkdir<'a>(&self, path: &str, mode: Mode) -> Result<()> {
         let path = self._path(path);
-        let mode = nix::sys::stat::Mode::from_bits(mode.into()).unwrap();
+        // TODO Why do we need unsafe from_bits_unchecked here? It seems to fail when the ISDIR bit is set otherwise.
+        let mode = unsafe { nix::sys::stat::Mode::from_bits_unchecked(mode.into()) };
         tokio::task::spawn_blocking(move || unistd::mkdir(&path, mode))
             .await
             .unwrap()
