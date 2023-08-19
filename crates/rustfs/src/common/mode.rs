@@ -55,6 +55,10 @@ const fn S_ISLNK(mode: Mode) -> bool {
 pub struct Mode(u32);
 
 impl Mode {
+    pub const fn default_const() -> Self {
+        Self(0)
+    }
+
     pub const fn add_file_flag(mut self) -> Self {
         self.0 |= S_IFREG.0;
         self

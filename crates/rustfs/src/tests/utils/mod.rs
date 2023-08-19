@@ -6,3 +6,6 @@ pub use mock_low_level_api::{make_mock_filesystem, MockAsyncFilesystemLL};
 
 mod fuser_runner;
 pub use fuser_runner::Runner;
+
+mod mock_helper;
+pub use mock_helper::MockHelper;
