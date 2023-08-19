@@ -1,5 +1,7 @@
-use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
+use std::sync::OnceLock;
 use tempdir::TempDir;
+
+use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use super::filesystem_driver::FilesystemDriver;
 use super::mock_low_level_api::MockAsyncFilesystemLL;
@@ -18,6 +20,14 @@ pub struct Runner {
 
 impl Runner {
     pub fn start(implementation: MockAsyncFilesystemLL) -> Self {
+        LOG_INIT.get_or_init(|| {
+            env_logger::builder()
+                .filter_level(log::LevelFilter::Debug)
+                .is_test(true)
+                .try_init()
+                .unwrap()
+        });
+
         let implementation = SyncDrop::new(AsyncDropArc::new(AsyncDropGuard::new(implementation)));
 
         let runtime = tokio::runtime::Handle::current();
@@ -36,9 +46,11 @@ impl Runner {
     }
 
     pub fn driver(&self) -> FilesystemDriver {
-        FilesystemDriver::new(self.mountpoint.path().to_owned())
+        FilesystemDriver::new(self.mountpoint.path().to_owned().try_into().unwrap())
     }
 }
+
+static LOG_INIT: OnceLock<()> = OnceLock::new();
 
 #[cfg(test)]
 mod tests {
