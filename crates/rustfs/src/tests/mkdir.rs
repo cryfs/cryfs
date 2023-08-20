@@ -2,6 +2,7 @@
 
 use mockall::predicate::{always, eq};
 use nix::errno::Errno;
+use rstest::rstest;
 use std::future::Future;
 use std::time::{Duration, SystemTime};
 
@@ -89,82 +90,52 @@ fn path(path: &str) -> &AbsolutePath {
 mod arguments {
     use super::*;
 
-    mod request_info {
-        use super::*;
-
-        async fn test_request_info(path: &'static AbsolutePath) {
-            test_mkdir(
-                &path,
-                |driver| async move { driver.mkdir(&path, Mode::default()).await },
-                move |_, req, _parent_ino, _name, mode, _umask| {
-                    assert_request_info_is_correct(req);
-                    mkdir_return_ok(mode)
-                },
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode() {
-            test_request_info(path("/some_component")).await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode() {
-            test_request_info(path("/some/nested/path")).await;
-        }
+    #[rstest]
+    #[tokio::test]
+    async fn test_request_info(
+        #[values(path("/some_component"), path("/some/nested/path"))] path: &AbsolutePath,
+    ) {
+        test_mkdir(
+            path,
+            |driver| async move { driver.mkdir(&path, Mode::default()).await },
+            move |_, req, _parent_ino, _name, mode, _umask| {
+                assert_request_info_is_correct(req);
+                mkdir_return_ok(mode)
+            },
+        )
+        .await;
     }
 
-    mod parent {
-        use super::*;
-
-        async fn test_parent_ino(path: &'static AbsolutePath) {
-            test_mkdir(
-                &path,
-                |driver| async move { driver.mkdir(&path, Mode::default()).await },
-                |fixture: &Fixture, _req, parent_ino, _name, mode, _umask| {
-                    assert_eq!(fixture.parent_ino, parent_ino);
-                    mkdir_return_ok(mode)
-                },
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode() {
-            test_parent_ino(path("/some_component")).await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode() {
-            test_parent_ino(path("/some/nested/path")).await;
-        }
+    #[rstest]
+    #[tokio::test]
+    async fn test_parent_ino(
+        #[values(path("/some_component"), path("/some/nested/path"))] path: &AbsolutePath,
+    ) {
+        test_mkdir(
+            path,
+            |driver| async move { driver.mkdir(&path, Mode::default()).await },
+            |fixture: &Fixture, _req, parent_ino, _name, mode, _umask| {
+                assert_eq!(fixture.parent_ino, parent_ino);
+                mkdir_return_ok(mode)
+            },
+        )
+        .await;
     }
 
-    mod name {
-        use super::*;
-
-        async fn test_name(path: &'static AbsolutePath) {
-            test_mkdir(
-                &path,
-                |driver| async move { driver.mkdir(&path, Mode::default()).await },
-                |_, _req, _parent_ino, name, mode, _umask| {
-                    assert_eq!(path.split_last().unwrap().1, name);
-                    mkdir_return_ok(mode)
-                },
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode() {
-            test_name(path("/some_component")).await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode() {
-            test_name(path("/some/nested/path")).await;
-        }
+    #[rstest]
+    #[tokio::test]
+    async fn test_name(
+        #[values(path("/some_component"), path("/some/nested/path"))] path: &'static AbsolutePath,
+    ) {
+        test_mkdir(
+            path,
+            |driver| async move { driver.mkdir(&path, Mode::default()).await },
+            |_, _req, _parent_ino, name, mode, _umask| {
+                assert_eq!(path.split_last().unwrap().1, name);
+                mkdir_return_ok(mode)
+            },
+        )
+        .await;
     }
 
     mod mode {
@@ -182,7 +153,18 @@ mod arguments {
         const MODE_MORE_COMPLEX_WITH_DIR_FLAG: Mode =
             MODE_MORE_COMPLEX_WITHOUT_DIR_FLAG.add_dir_flag();
 
-        async fn test_mode(path: &AbsolutePath, mode_arg: Mode, expected_mode_return: Mode) {
+        #[rstest]
+        #[case(MODE_DEFAULT_WITHOUT_DIR_FLAG, MODE_DEFAULT_WITH_DIR_FLAG)]
+        #[case(MODE_DEFAULT_WITH_DIR_FLAG, MODE_DEFAULT_WITH_DIR_FLAG)]
+        #[case(MODE_MORE_COMPLEX_WITHOUT_DIR_FLAG, MODE_MORE_COMPLEX_WITH_DIR_FLAG)]
+        #[case(MODE_MORE_COMPLEX_WITH_DIR_FLAG, MODE_MORE_COMPLEX_WITH_DIR_FLAG)]
+        #[tokio::test]
+        async fn test_mode(
+            #[values(path("/some_component"), path("/some/nested/path"))]
+            path: &'static AbsolutePath,
+            #[case] mode_arg: Mode,
+            #[case] expected_mode_return: Mode,
+        ) {
             test_mkdir(
                 &path,
                 |driver| async move { driver.mkdir(&path, mode_arg).await },
@@ -190,86 +172,6 @@ mod arguments {
                     assert_eq!(expected_mode_return, mode);
                     mkdir_return_ok(mode)
                 },
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode_whenMkdirWithDefaultMode_withoutDirFlag() {
-            test_mode(
-                path("/some_component"),
-                MODE_DEFAULT_WITHOUT_DIR_FLAG,
-                MODE_DEFAULT_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode_whenMkdirWithDefaultMode_withDirFlag() {
-            test_mode(
-                path("/some_component"),
-                MODE_DEFAULT_WITH_DIR_FLAG,
-                MODE_DEFAULT_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode_whenMkdirWithMoreComplexMode_withoutDirFlag() {
-            test_mode(
-                path("/some_component"),
-                MODE_MORE_COMPLEX_WITHOUT_DIR_FLAG,
-                MODE_MORE_COMPLEX_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode_whenMkdirWithMoreComplexMode_withDirFlag() {
-            test_mode(
-                path("/some_component"),
-                MODE_MORE_COMPLEX_WITH_DIR_FLAG,
-                MODE_MORE_COMPLEX_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode_whenMkdirWithDefaultMode_withoutDirFlag() {
-            test_mode(
-                path("/some/nested/path"),
-                MODE_DEFAULT_WITHOUT_DIR_FLAG,
-                MODE_DEFAULT_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode_whenMkdirWithDefaultMode_withDirFlag() {
-            test_mode(
-                path("/some/nested/path"),
-                MODE_DEFAULT_WITH_DIR_FLAG,
-                MODE_DEFAULT_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode_whenMkdirWithMoreComplexMode_withoutDirFlag() {
-            test_mode(
-                path("/some/nested/path"),
-                MODE_MORE_COMPLEX_WITHOUT_DIR_FLAG,
-                MODE_MORE_COMPLEX_WITH_DIR_FLAG,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode_whenMkdirWithMoreComplexMode_withDirFlag() {
-            test_mode(
-                path("/some/nested/path"),
-                MODE_MORE_COMPLEX_WITH_DIR_FLAG,
-                MODE_MORE_COMPLEX_WITH_DIR_FLAG,
             )
             .await;
         }
@@ -281,73 +183,41 @@ mod arguments {
 mod result {
     use super::*;
 
-    mod success {
-        use super::*;
-
-        async fn test_success(path: &'static AbsolutePath) {
-            test_mkdir(
-                &path,
-                |driver| async move {
-                    driver.mkdir(&path, Mode::default()).await.unwrap();
-                    Ok(())
-                },
-                |_, _req, _parent_ino, _name, mode, _umask| mkdir_return_ok(mode),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode() {
-            test_success(path("/some_component")).await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode() {
-            test_success(path("/some/nested/path")).await;
-        }
+    #[rstest]
+    #[tokio::test]
+    async fn test_success(
+        #[values(path("/some_component"), path("/some/nested/path"))] path: &AbsolutePath,
+    ) {
+        test_mkdir(
+            &path,
+            |driver| async move {
+                driver.mkdir(&path, Mode::default()).await.unwrap();
+                Ok(())
+            },
+            |_, _req, _parent_ino, _name, mode, _umask| mkdir_return_ok(mode),
+        )
+        .await;
     }
 
-    mod error_in_mkdir {
-        use super::*;
-
-        async fn test_error(
-            path: &'static AbsolutePath,
-            error: FsError,
-            expected_error_code: libc::c_int,
-        ) {
-            test_mkdir(
-                &path,
-                |driver| async move {
-                    let result = driver.mkdir(&path, Mode::default()).await.unwrap_err();
-                    assert_eq!(Errno::from_i32(expected_error_code), result);
-                    Ok(())
-                },
-                |_, _req, _parent_ino, _name, _mode, _umask| Err(error),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenRootLevelNode() {
-            test_error(
-                path("/some_component"),
-                FsError::NotImplemented,
-                libc::ENOSYS,
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn givenNestedNode() {
-            test_error(
-                path("/some/nested/path"),
-                FsError::NotImplemented,
-                libc::ENOSYS,
-            )
-            .await;
-        }
-
-        // TODO Test other error codes
+    #[rstest]
+    // TODO Test other error codes
+    #[case(FsError::NotImplemented, libc::ENOSYS)]
+    #[tokio::test]
+    async fn test_error_in_mkdir(
+        #[values(path("/some_component"), path("/some/nested/path"))] path: &'static AbsolutePath,
+        #[case] error: FsError,
+        #[case] expected_error_code: libc::c_int,
+    ) {
+        test_mkdir(
+            &path,
+            |driver| async move {
+                let result = driver.mkdir(&path, Mode::default()).await.unwrap_err();
+                assert_eq!(Errno::from_i32(expected_error_code), result);
+                Ok(())
+            },
+            |_, _req, _parent_ino, _name, _mode, _umask| Err(error),
+        )
+        .await;
     }
 
     mod error_before_mkdir {
