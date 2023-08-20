@@ -178,6 +178,8 @@ mod arguments {
     }
 
     // TODO What is umask and how to test it?
+    // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
+    // See https://github.com/cberner/fuser/issues/256
 }
 
 mod result {

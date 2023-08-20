@@ -280,9 +280,10 @@ where
         parent_ino: InodeNumber,
         name: &PathComponent,
         mode: Mode,
-        umask: u32,
+        _umask: u32,
     ) -> FsResult<ReplyEntry> {
-        // TODO What to do with umask?
+        // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
+        // TODO see https://github.com/cberner/fuser/issues/256
         let parent = self.get_inode(parent_ino).await?;
         let (attr, child) = with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
@@ -685,10 +686,11 @@ where
         parent_ino: InodeNumber,
         name: &PathComponent,
         mode: Mode,
-        umask: u32,
+        _umask: u32,
         flags: i32,
     ) -> FsResult<ReplyCreate> {
-        // TODO What should we do with umask?
+        // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
+        // TODO see https://github.com/cberner/fuser/issues/256
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
