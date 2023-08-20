@@ -33,6 +33,7 @@ nix.workspace = true
 mockall.workspace = true
 tempdir.workspace = true
 cryfs-utils = {path = "../utils", features=["testutils"]}
+users.workspace = true
 
 [features]
 default = ["fuser"]

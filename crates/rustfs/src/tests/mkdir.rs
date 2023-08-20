@@ -1,24 +1,36 @@
 #![allow(non_snake_case)]
 
 use mockall::predicate::{always, eq};
+use nix::errno::Errno;
 use std::future::Future;
 use std::time::{Duration, SystemTime};
 
 use super::utils::{
-    make_mock_filesystem, FilesystemDriver, MockAsyncFilesystemLL, MockHelper, Runner,
+    assert_request_info_is_correct, make_mock_filesystem, FilesystemDriver, MockHelper, Runner,
 };
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode,
-    NodeAttrs, NumBytes, PathComponent, RequestInfo, Uid,
+    AbsolutePath, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
+    NumBytes, PathComponent, RequestInfo, Uid,
 };
 use crate::low_level_api::ReplyEntry;
 
 const SOME_INO: InodeNumber = InodeNumber::from_const(20434);
 
+struct Fixture {
+    parent_ino: InodeNumber,
+}
+
 async fn test_mkdir<'a, F>(
     path: &AbsolutePath,
     call: impl FnOnce(FilesystemDriver) -> F,
-    expectation: impl FnOnce(&RequestInfo, InodeNumber, &PathComponent, Mode, u32) -> FsResult<ReplyEntry>
+    expectation: impl FnOnce(
+            &Fixture,
+            &RequestInfo,
+            InodeNumber,
+            &PathComponent,
+            Mode,
+            u32,
+        ) -> FsResult<ReplyEntry>
         + Send
         + 'static,
 ) where
@@ -40,7 +52,9 @@ async fn test_mkdir<'a, F>(
             always(),
             always(),
         )
-        .return_once(expectation);
+        .return_once(move |req, ino, name, mode, umask| {
+            expectation(&Fixture { parent_ino }, req, ino, name, mode, umask)
+        });
     let runner = Runner::start(mock_filesystem);
     let driver = runner.driver();
     call(driver).await.unwrap();
@@ -78,14 +92,53 @@ mod arguments {
     mod request_info {
         use super::*;
 
-        // TODO Tests
+        async fn test_request_info(path: &'static AbsolutePath) {
+            test_mkdir(
+                &path,
+                |driver| async move { driver.mkdir(&path, Mode::default()).await },
+                move |_, req, _parent_ino, _name, mode, _umask| {
+                    assert_request_info_is_correct(req);
+                    mkdir_return_ok(mode)
+                },
+            )
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenRootLevelNode() {
+            test_request_info(path("/some_component")).await;
+        }
+
+        #[tokio::test]
+        async fn givenNestedNode() {
+            test_request_info(path("/some/nested/path")).await;
+        }
     }
 
     mod parent {
         use super::*;
 
-        // TODO Test with root
-        // TODO Test with non-root ino
+        async fn test_parent_ino(path: &'static AbsolutePath) {
+            test_mkdir(
+                &path,
+                |driver| async move { driver.mkdir(&path, Mode::default()).await },
+                |fixture: &Fixture, _req, parent_ino, _name, mode, _umask| {
+                    assert_eq!(fixture.parent_ino, parent_ino);
+                    mkdir_return_ok(mode)
+                },
+            )
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenRootLevelNode() {
+            test_parent_ino(path("/some_component")).await;
+        }
+
+        #[tokio::test]
+        async fn givenNestedNode() {
+            test_parent_ino(path("/some/nested/path")).await;
+        }
     }
 
     mod name {
@@ -95,7 +148,7 @@ mod arguments {
             test_mkdir(
                 &path,
                 |driver| async move { driver.mkdir(&path, Mode::default()).await },
-                |_req, _ino, name, mode, _umask| {
+                |_, _req, _parent_ino, name, mode, _umask| {
                     assert_eq!(path.split_last().unwrap().1, name);
                     mkdir_return_ok(mode)
                 },
@@ -133,7 +186,7 @@ mod arguments {
             test_mkdir(
                 &path,
                 |driver| async move { driver.mkdir(&path, mode_arg).await },
-                move |_req, _ino, _name, mode, _umask| {
+                move |_, _req, _parent_ino, _name, mode, _umask| {
                     assert_eq!(expected_mode_return, mode);
                     mkdir_return_ok(mode)
                 },
@@ -225,4 +278,83 @@ mod arguments {
     // TODO What is umask and how to test it?
 }
 
-// TODO Test returns, including ok and error
+mod result {
+    use super::*;
+
+    mod success {
+        use super::*;
+
+        async fn test_success(path: &'static AbsolutePath) {
+            test_mkdir(
+                &path,
+                |driver| async move {
+                    driver.mkdir(&path, Mode::default()).await.unwrap();
+                    Ok(())
+                },
+                |_, _req, _parent_ino, _name, mode, _umask| mkdir_return_ok(mode),
+            )
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenRootLevelNode() {
+            test_success(path("/some_component")).await;
+        }
+
+        #[tokio::test]
+        async fn givenNestedNode() {
+            test_success(path("/some/nested/path")).await;
+        }
+    }
+
+    mod error_in_mkdir {
+        use super::*;
+
+        async fn test_error(
+            path: &'static AbsolutePath,
+            error: FsError,
+            expected_error_code: libc::c_int,
+        ) {
+            test_mkdir(
+                &path,
+                |driver| async move {
+                    let result = driver.mkdir(&path, Mode::default()).await.unwrap_err();
+                    assert_eq!(Errno::from_i32(expected_error_code), result);
+                    Ok(())
+                },
+                |_, _req, _parent_ino, _name, _mode, _umask| Err(error),
+            )
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenRootLevelNode() {
+            test_error(
+                path("/some_component"),
+                FsError::NotImplemented,
+                libc::ENOSYS,
+            )
+            .await;
+        }
+
+        #[tokio::test]
+        async fn givenNestedNode() {
+            test_error(
+                path("/some/nested/path"),
+                FsError::NotImplemented,
+                libc::ENOSYS,
+            )
+            .await;
+        }
+
+        // TODO Test other error codes
+    }
+
+    mod error_before_mkdir {
+        use super::*;
+
+        // TODO Test other error scenarios, e.g.
+        //  - error thrown not in mkdir but in lookup before (e.g. intermediate directory doesn't exist)
+        //  - path already exists as file/directory/symlink
+    }
+}

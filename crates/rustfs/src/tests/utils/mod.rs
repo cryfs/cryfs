@@ -9,3 +9,6 @@ pub use fuser_runner::Runner;
 
 mod mock_helper;
 pub use mock_helper::MockHelper;
+
+mod request_info;
+pub use request_info::assert_request_info_is_correct;

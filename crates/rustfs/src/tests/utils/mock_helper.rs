@@ -19,12 +19,6 @@ impl<'a> MockHelper<'a> {
         Self { mock_filesystem }
     }
 
-    pub fn allow_any_access_calls(&mut self) {
-        self.mock_filesystem
-            .expect_access()
-            .returning(|_, _, _| Ok(()));
-    }
-
     pub fn expect_lookup_doesnt_exist(&mut self, ino: InodeNumber, name: &PathComponent) {
         self.mock_filesystem
             .expect_lookup()
