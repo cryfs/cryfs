@@ -10,8 +10,8 @@ use super::utils::{
     assert_request_info_is_correct, make_mock_filesystem, FilesystemDriver, MockHelper, Runner,
 };
 use crate::common::{
-    AbsolutePath, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
-    NumBytes, PathComponent, RequestInfo, Uid,
+    AbsolutePath, FileHandle, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode,
+    NodeAttrs, NumBytes, PathComponent, RequestInfo, Uid,
 };
 use crate::low_level_api::ReplyEntry;
 
@@ -204,6 +204,8 @@ mod result {
     #[rstest]
     // TODO Test other error codes
     #[case(FsError::NotImplemented, libc::ENOSYS)]
+    #[case(FsError::NodeAlreadyExists, libc::EEXIST)]
+    #[case(FsError::InvalidPath, libc::EINVAL)]
     #[tokio::test]
     async fn test_error_in_mkdir(
         #[values(path("/some_component"), path("/some/nested/path"))] path: &'static AbsolutePath,
@@ -228,5 +230,6 @@ mod result {
         // TODO Test other error scenarios, e.g.
         //  - error thrown not in mkdir but in lookup before (e.g. intermediate directory doesn't exist)
         //  - path already exists as file/directory/symlink
+        //  - parent dir is not a dir
     }
 }
