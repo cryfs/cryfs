@@ -8,10 +8,11 @@ use std::time::{Duration, SystemTime};
 
 use super::utils::{
     assert_request_info_is_correct, make_mock_filesystem, FilesystemDriver, MockHelper, Runner,
+    ROOT_INO,
 };
 use crate::common::{
-    AbsolutePath, FileHandle, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode,
-    NodeAttrs, NumBytes, PathComponent, RequestInfo, Uid,
+    AbsolutePath, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
+    NodeKind, NumBytes, PathComponent, RequestInfo, Uid,
 };
 use crate::low_level_api::ReplyEntry;
 
@@ -41,7 +42,7 @@ async fn test_mkdir<'a, F>(
 
     let mut mock_filesystem = make_mock_filesystem();
     let mut mock_helper = MockHelper::new(&mut mock_filesystem);
-    let parent_ino = mock_helper.expect_lookup_dir_path_exists(parent);
+    let parent_ino = mock_helper.expect_lookup_path_is_dir(parent);
     mock_helper.expect_lookup_doesnt_exist(parent_ino, name);
     mock_filesystem
         .expect_mkdir()
@@ -85,6 +86,10 @@ fn mkdir_return_ok(mode: Mode) -> FsResult<ReplyEntry> {
 
 fn path(path: &str) -> &AbsolutePath {
     AbsolutePath::try_from_str(path).unwrap()
+}
+
+fn pathcomp(path_component: &str) -> &PathComponent {
+    PathComponent::try_from_str(path_component).unwrap()
 }
 
 mod arguments {
@@ -202,10 +207,11 @@ mod result {
     }
 
     #[rstest]
-    // TODO Test other error codes
+    // TODO Test other error codes (check mkdir man page)
     #[case(FsError::NotImplemented, libc::ENOSYS)]
     #[case(FsError::NodeAlreadyExists, libc::EEXIST)]
     #[case(FsError::InvalidPath, libc::EINVAL)]
+    #[case(FsError::NodeAlreadyExists, libc::EEXIST)]
     #[tokio::test]
     async fn test_error_in_mkdir(
         #[values(path("/some_component"), path("/some/nested/path"))] path: &'static AbsolutePath,
@@ -227,9 +233,77 @@ mod result {
     mod error_before_mkdir {
         use super::*;
 
-        // TODO Test other error scenarios, e.g.
-        //  - error thrown not in mkdir but in lookup before (e.g. intermediate directory doesn't exist)
-        //  - path already exists as file/directory/symlink
-        //  - parent dir is not a dir
+        #[rstest]
+        #[case(FsError::NodeDoesNotExist, libc::ENOENT)]
+        #[tokio::test]
+        async fn error_in_parent_lookup(
+            #[case] error: FsError,
+            #[case] expected_error_code: libc::c_int,
+        ) {
+            let mut mock_filesystem = make_mock_filesystem();
+            MockHelper::new(&mut mock_filesystem).expect_lookup_fail(
+                ROOT_INO,
+                pathcomp("some"),
+                error,
+            );
+            let runner = Runner::start(mock_filesystem);
+            let driver = runner.driver();
+            let result = driver
+                .mkdir(path("/some/nested/dir"), Mode::default())
+                .await
+                .unwrap_err();
+            assert_eq!(Errno::from_i32(expected_error_code), result);
+        }
+
+        #[rstest]
+        #[case(FsError::NotImplemented, libc::ENOSYS)]
+        #[case(FsError::InvalidOperation, libc::EINVAL)]
+        #[tokio::test]
+        async fn error_in_self_lookup(
+            #[case] error: FsError,
+            #[case] expected_error_code: libc::c_int,
+        ) {
+            let mut mock_filesystem = make_mock_filesystem();
+            let mut mock_helper = MockHelper::new(&mut mock_filesystem);
+            let parent_ino = mock_helper.expect_lookup_path_is_dir(path("/some/nested"));
+            mock_helper.expect_lookup_fail(parent_ino, pathcomp("dir"), error);
+            let runner = Runner::start(mock_filesystem);
+            let driver = runner.driver();
+            let result = driver
+                .mkdir(path("/some/nested/dir"), Mode::default())
+                .await
+                .unwrap_err();
+            assert_eq!(Errno::from_i32(expected_error_code), result);
+        }
+
+        #[rstest]
+        #[tokio::test]
+        async fn already_exists(
+            #[values(NodeKind::Dir, NodeKind::File, NodeKind::Symlink)] kind: NodeKind,
+        ) {
+            let mut mock_filesystem = make_mock_filesystem();
+            MockHelper::new(&mut mock_filesystem)
+                .expect_lookup_path_is_kind(path("/some/nested/dir"), kind);
+            let runner = Runner::start(mock_filesystem);
+            let driver = runner.driver();
+            let result = driver
+                .mkdir(path("/some/nested/dir"), Mode::default())
+                .await
+                .unwrap_err();
+            assert_eq!(Errno::from_i32(libc::EEXIST), result);
+        }
+
+        #[tokio::test]
+        async fn parent_is_a_file() {
+            let mut mock_filesystem = make_mock_filesystem();
+            MockHelper::new(&mut mock_filesystem).expect_lookup_path_is_file(path("/some/nested"));
+            let runner = Runner::start(mock_filesystem);
+            let driver = runner.driver();
+            let result = driver
+                .mkdir(path("/some/nested/dir"), Mode::default())
+                .await
+                .unwrap_err();
+            assert_eq!(Errno::from_i32(libc::ENOTDIR), result);
+        }
     }
 }
