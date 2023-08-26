@@ -7,6 +7,7 @@ pub mod binary;
 pub mod containers;
 pub mod crypto;
 pub mod data;
+pub mod mutex;
 mod panic;
 pub mod path;
 pub mod periodic_task;

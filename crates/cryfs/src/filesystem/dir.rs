@@ -21,7 +21,7 @@ use cryfs_rustfs::{
     PathComponent, Uid,
 };
 use cryfs_utils::{
-    async_drop::{with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{flatten_async_drop, with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
     with_async_drop_2,
 };
 
@@ -133,6 +133,31 @@ where
 
         Ok(blob_id)
     }
+
+    async fn on_rename_overwrites_destination(
+        &self,
+        old_destination_blob_id: BlobId,
+    ) -> FsResult<()> {
+        let result = self
+            .blobstore
+            .remove_by_id(&old_destination_blob_id)
+            .await
+            .map_err(|err| {
+                log::error!("Error removing blob: {:?}", err);
+                FsError::UnknownError
+            });
+        match result {
+            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                log::error!("During rename->overwrite, tried to remove blob that doesn't exist");
+                Err(FsError::UnknownError)
+            }
+            Err(err) => {
+                log::error!("Error removing blob: {:?}", err);
+                Err(FsError::UnknownError)
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -157,6 +182,145 @@ where
             AsyncDropArc::clone(&self.blobstore),
             node_info,
         ))
+    }
+
+    async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
+        let mut blob = self.load_blob().await?;
+        let result = blob
+            .rename_entry_by_name(oldname, newname.to_owned(), |blob_id| {
+                // TODO Is overwriting actually allowed here if the new entry already exists?
+                self.on_rename_overwrites_destination(*blob_id)
+            })
+            .await;
+        blob.async_drop().await?;
+        result
+    }
+
+    async fn move_child_to(
+        &self,
+        oldname: &PathComponent,
+        newparent: Self,
+        newname: &PathComponent,
+    ) -> FsResult<()> {
+        let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
+        // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
+        let (mut source_parent, mut dest_parent) =
+            flatten_async_drop(source_parent, dest_parent).await?;
+        let entry = match source_parent.entry_by_name(oldname) {
+            Some(entry) => entry,
+            None => {
+                // TODO Drop concurrently and drop latter even if first one fails
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                return Err(FsError::NodeDoesNotExist);
+            }
+        };
+        let self_blob_id = entry.blob_id();
+        // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
+        //      But it likely has some dependency with source_parent_blob.
+        let self_blob = self.blobstore.load(self_blob_id).await;
+        let mut self_blob = match self_blob {
+            Ok(Some(self_blob)) => self_blob,
+            Ok(None) => {
+                // TODO Drop concurrently and drop latter even if first one fails
+                // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                return Err(FsError::NodeDoesNotExist);
+            }
+            Err(err) => {
+                // TODO Drop concurrently and drop latter even if first one fails
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                log::error!("Error loading blob: {:?}", err);
+                return Err(FsError::UnknownError);
+            }
+        };
+
+        let mut existing_dir_check = || {
+            if let Some(existing_dest_entry) = dest_parent.entry_by_name_mut(newname) {
+                if existing_dest_entry.entry_type() == EntryType::Dir {
+                    let self_blob = self_blob.as_dir()
+                        .map_err(|_| FsError::CorruptedFilesystem { message: format!("Blob {self_blob_id:?} is not a directory but its entry in its parent directory says it is") })?;
+                    if self_blob.entries().len() > 0 {
+                        return Err(FsError::CannotOverwriteNonEmptyDirectory);
+                    }
+                }
+            }
+            Ok(())
+        };
+        match existing_dir_check() {
+            Ok(()) => (),
+            Err(err) => {
+                // TODO Drop concurrently and drop latter even if first one fails
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                self_blob.async_drop().await?;
+                return Err(err);
+            }
+        }
+
+        let res = source_parent.remove_entry_by_name(oldname);
+        let entry = match res {
+            Ok(entry) => entry,
+            Err(err) => {
+                // TODO Drop concurrently and drop latter even if first one fails
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                self_blob.async_drop().await?;
+                log::error!("Error in add_or_overwrite_entry: {err:?}");
+                return Err(FsError::UnknownError);
+            }
+        };
+        let res = dest_parent
+            .add_or_overwrite_entry(
+                newname.to_owned(),
+                *entry.blob_id(),
+                entry.entry_type(),
+                entry.mode(),
+                entry.uid(),
+                entry.gid(),
+                entry.last_access_time(),
+                entry.last_modification_time(),
+                |blob_id| {
+                    // TODO Is overwriting actually allowed here if the new entry already exists?
+                    self.on_rename_overwrites_destination(*blob_id)
+                },
+            )
+            .await;
+        match res {
+            Ok(()) => (),
+            Err(err) => {
+                // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
+                // TODO Drop concurrently and drop latter even if first one fails
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                self_blob.async_drop().await?;
+                log::error!("Error in add_or_overwrite_entry: {err:?}");
+                return Err(FsError::UnknownError);
+            }
+        }
+
+        let res = self_blob.set_parent(&dest_parent.blob_id()).await;
+        match res {
+            Ok(()) => (),
+            Err(err) => {
+                // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
+                // TODO Drop concurrently and drop latter even if first one fails
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                self_blob.async_drop().await?;
+                log::error!("Error setting parent: {err:?}");
+                return Err(FsError::UnknownError);
+            }
+        }
+        // TODO Drop concurrently and drop latter even if first one fails
+        self_blob.async_drop().await?;
+        source_parent.async_drop().await?;
+        dest_parent.async_drop().await?;
+        Ok(())
+
+        // TODO We need to update timestamps of the parent directories in the grandparent blobs.
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {

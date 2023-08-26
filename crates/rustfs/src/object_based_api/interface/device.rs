@@ -25,6 +25,8 @@ pub trait Device {
     type OpenFile: super::OpenFile + AsyncDrop<Error = FsError>;
 
     async fn rootdir(&self) -> FsResult<Self::Dir<'_>>;
+
+    // TODO We can probably remove `rename`. It's only called from the fuse-mt backend and fuser uses CryDir::{rename_child,move_child_to} instead. We can probably make fuse-mt use those too.
     async fn rename(&self, from: &AbsolutePath, to: &AbsolutePath) -> FsResult<()>;
     async fn statfs(&self) -> FsResult<Statfs>;
     async fn destroy(self);

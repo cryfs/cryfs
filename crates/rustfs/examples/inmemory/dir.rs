@@ -3,7 +3,7 @@ use cryfs_rustfs::{
     object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
     OpenFlags, PathComponent, PathComponentBuf, Uid,
 };
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::{async_drop::AsyncDropGuard, mutex::lock_in_ptr_order};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
@@ -171,6 +171,39 @@ impl Dir for InMemoryDirRef {
         name: &PathComponent,
     ) -> FsResult<AsyncDropGuard<InMemoryNodeRef>> {
         Ok(AsyncDropGuard::new(self.get_child(name)?))
+    }
+
+    async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
+        let mut inode = self.inode.lock().unwrap();
+        inode.rename(oldname, newname)
+    }
+
+    async fn move_child_to(
+        &self,
+        oldname: &PathComponent,
+        newparent: Self,
+        newname: &PathComponent,
+    ) -> FsResult<()> {
+        // We're moving it to another directory
+        let (mut source_inode, mut target_inode) =
+            lock_in_ptr_order(&self.inode(), &newparent.inode());
+        let source_entries = source_inode.entries_mut();
+        let target_entries = target_inode.entries_mut();
+        if target_entries.contains_key(newname) {
+            // TODO Some forms of overwriting are actually ok, we don't need to block them all
+            Err(FsError::NodeAlreadyExists)
+        } else {
+            let old_entry = match source_entries.remove(oldname) {
+                Some(node) => node,
+                None => {
+                    return Err(FsError::NodeDoesNotExist);
+                }
+            };
+            // TODO Use try_insert once stable
+            let insert_result = target_entries.insert(newname.to_owned(), old_entry);
+            assert!(insert_result.is_none(), "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail.");
+            Ok(())
+        }
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {

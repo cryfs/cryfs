@@ -19,6 +19,15 @@ pub trait Dir {
         name: &PathComponent,
     ) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Node>>;
 
+    async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()>;
+
+    async fn move_child_to(
+        &self,
+        oldname: &PathComponent,
+        newparent: Self,
+        newname: &PathComponent,
+    ) -> FsResult<()>;
+
     async fn create_child_dir(
         &self,
         name: &PathComponent,

@@ -344,12 +344,11 @@ where
                 });
                 // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
                 let (mut source_parent, mut dest_parent) =
-                    // TODO Use flatten_async_drop instead of flatten_async_drop_err_map
                     flatten_async_drop(source_parent, dest_parent).await?;
                 let entry = match source_parent.entry_by_name(source_name) {
                     Some(entry) => entry,
                     None => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
                         return Err(FsError::NodeDoesNotExist);
@@ -362,13 +361,13 @@ where
                 let mut self_blob = match self_blob {
                     Ok(Some(self_blob)) => self_blob,
                     Ok(None) => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
                         return Err(FsError::NodeDoesNotExist);
                     }
                     Err(err) => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
                         log::error!("Error loading blob: {:?}", err);
@@ -391,9 +390,10 @@ where
                 match existing_dir_check() {
                     Ok(()) => (),
                     Err(err) => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
+                        self_blob.async_drop().await?;
                         return Err(err);
                     }
                 }
@@ -402,7 +402,7 @@ where
                 let entry = match res {
                     Ok(entry) => entry,
                     Err(err) => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
                         log::error!("Error in add_or_overwrite_entry: {err:?}");
@@ -425,7 +425,7 @@ where
                 match res {
                     Ok(()) => (),
                     Err(err) => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
                         log::error!("Error in add_or_overwrite_entry: {err:?}");
@@ -437,14 +437,14 @@ where
                 match res {
                     Ok(()) => (),
                     Err(err) => {
-                        // TODO Drop concurrently
+                        // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
                         log::error!("Error setting parent: {err:?}");
                         return Err(FsError::UnknownError);
                     }
                 }
-                // TODO async_drop concurrently
+                // TODO Drop concurrently and drop latter even if first one fails
                 self_blob.async_drop().await?;
                 source_parent.async_drop().await?;
                 dest_parent.async_drop().await?;

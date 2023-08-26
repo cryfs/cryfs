@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use futures::stream::{FuturesOrdered, StreamExt};
+use futures::{
+    join,
+    stream::{FuturesOrdered, StreamExt},
+};
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
@@ -17,7 +20,7 @@ use crate::low_level_api::{
     ReplyLseek, ReplyOpen, ReplyWrite,
 };
 use cryfs_utils::{
-    async_drop::{with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{flatten_async_drop, with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
     with_async_drop_2,
 };
 use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
@@ -355,15 +358,39 @@ where
 
     async fn rename(
         &self,
-        req: &RequestInfo,
-        parent_ino: InodeNumber,
-        name: &PathComponent,
+        _req: &RequestInfo,
+        oldparent_ino: InodeNumber,
+        oldname: &PathComponent,
         newparent_ino: InodeNumber,
         newname: &PathComponent,
-        flags: u32,
+        _flags: u32,
     ) -> FsResult<()> {
-        // TODO
-        Err(FsError::NotImplemented)
+        // TODO Honor flags
+        // TODO Check that oldparent+oldname/newparent+newname aren't ancestors of each other, or at least write a test that fuse already blocks that
+        if oldparent_ino == newparent_ino {
+            let shared_parent = self.get_inode(oldparent_ino).await?;
+            with_async_drop_2!(shared_parent, {
+                let parent_dir = shared_parent.as_dir().await?;
+                parent_dir.rename_child(&oldname, &newname).await?;
+                Ok(())
+            })
+        } else {
+            let (oldparent, newparent) =
+                join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
+            let (mut oldparent, mut newparent) = flatten_async_drop(oldparent, newparent).await?;
+            let result = (|| async {
+                let oldparent_dir = oldparent.as_dir().await?;
+                let newparent_dir = newparent.as_dir().await?;
+                oldparent_dir
+                    .move_child_to(oldname, newparent_dir, newname)
+                    .await
+            })()
+            .await;
+            // TODO Drop concurrently and drop latter even if first one fails
+            oldparent.async_drop().await?;
+            newparent.async_drop().await?;
+            result
+        }
     }
 
     async fn link(

@@ -5,13 +5,12 @@ use cryfs_rustfs::{
     object_based_api::{Device, Node},
     AbsolutePath, FsError, FsResult, Gid, Mode, Statfs, Uid,
 };
-use cryfs_utils::{async_drop::AsyncDropGuard, with_async_drop_2};
+use cryfs_utils::{async_drop::AsyncDropGuard, mutex::lock_in_ptr_order, with_async_drop_2};
 
 use super::dir::{DirInode, InMemoryDirRef};
 use super::file::{InMemoryFileRef, InMemoryOpenFileRef};
 use super::node::InMemoryNodeRef;
 use super::symlink::InMemorySymlinkRef;
-use crate::utils::lock_in_ptr_order;
 
 pub struct RootDir {
     // We're pointing directly to the [DirInode] instead of using an [InMemoryDirRef] to avoid

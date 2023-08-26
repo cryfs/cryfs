@@ -42,6 +42,23 @@ impl Dir for PassthroughDir {
         Ok(PassthroughNode::new(path))
     }
 
+    async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
+        let old_path = self.path.clone().push(oldname);
+        let new_path = self.path.clone().push(newname);
+        tokio::fs::rename(old_path, new_path).await.map_error()
+    }
+
+    async fn move_child_to(
+        &self,
+        oldname: &PathComponent,
+        newparent: Self,
+        newname: &PathComponent,
+    ) -> FsResult<()> {
+        let old_path = self.path.clone().push(oldname);
+        let new_path = newparent.path.clone().push(newname);
+        tokio::fs::rename(old_path, new_path).await.map_error()
+    }
+
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         let mut entries = Vec::new();
         let mut dir = tokio::fs::read_dir(&self.path).await.map_error()?;
