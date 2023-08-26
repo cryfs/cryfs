@@ -96,9 +96,10 @@ impl BlockStoreWriter for BlockStoreAdapter {
         let Some(mut blob) = self
             .underlying_store
             .try_create(&BlobId { root: *id })
-            .await? else {
-                return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists)
-            };
+            .await?
+        else {
+            return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
+        };
         blob.resize(data.len() as u64).await?;
         blob.write(data, 0).await?;
         Ok(TryCreateResult::SuccessfullyCreated)

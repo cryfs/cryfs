@@ -359,7 +359,8 @@ mod tests {
                         .await
                         .unwrap()
                         .block_id();
-                    let DataNode::Leaf(node) = nodestore.load(block_id).await.unwrap().unwrap() else {
+                    let DataNode::Leaf(node) = nodestore.load(block_id).await.unwrap().unwrap()
+                    else {
                         panic!("Expected to load leaf node");
                     };
                     assert_eq!(data_fixture(100, 1).as_ref(), node.data());
@@ -378,10 +379,14 @@ mod tests {
                         .await
                         .unwrap()
                         .block_id();
-                    let DataNode::Inner(node) = nodestore.load(block_id).await.unwrap().unwrap() else {
+                    let DataNode::Inner(node) = nodestore.load(block_id).await.unwrap().unwrap()
+                    else {
                         panic!("Expected to load leaf node");
                     };
-                    assert_eq!(&vec![*child.block_id()], &node.children().collect::<Vec<_>>());
+                    assert_eq!(
+                        &vec![*child.block_id()],
+                        &node.children().collect::<Vec<_>>()
+                    );
                 })
             })
             .await
@@ -1395,7 +1400,8 @@ mod tests {
             // Reload node
             let inner_id = *inner.block_id();
             drop(inner);
-            let DataNode::Inner(mut inner) = nodestore.load(inner_id).await.unwrap().unwrap() else {
+            let DataNode::Inner(mut inner) = nodestore.load(inner_id).await.unwrap().unwrap()
+            else {
                 panic!("Expected leaf node");
             };
 

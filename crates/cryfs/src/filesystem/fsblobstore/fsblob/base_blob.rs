@@ -45,11 +45,9 @@ where
 
         // TODO Directly creating the blob with the data would probably be faster
         // than first creating it empty and then writing to it
-        let Some(mut blob) = blobstore
-            .try_create(blob_id)
-            .await? else {
-                return Ok(None);
-            };
+        let Some(mut blob) = blobstore.try_create(blob_id).await? else {
+            return Ok(None);
+        };
         blob.write(&blob_data, 0).await?;
         Ok(Some(blob))
     }

@@ -145,7 +145,8 @@ mod tests {
                     let node = new_full_inner_node(nodestore).await;
 
                     let block = node.into_block();
-                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    else {
                         panic!("Expected inner node");
                     };
 
@@ -170,7 +171,8 @@ mod tests {
                         .unwrap();
 
                     let block = node.into_block();
-                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    else {
                         panic!("Expected inner node");
                     };
 
@@ -188,7 +190,8 @@ mod tests {
                     let node = new_full_leaf_node(nodestore).await;
 
                     let block = node.into_block();
-                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    else {
                         panic!("Expected leaf node");
                     };
 
@@ -208,7 +211,8 @@ mod tests {
                     let node = new_empty_leaf_node(nodestore).await;
 
                     let block = node.into_block();
-                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    else {
                         panic!("Expected leaf node");
                     };
 
@@ -373,7 +377,8 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    else {
                         panic!("Expected an inner node");
                     };
                     assert_eq!(2, node.num_children().get());
@@ -391,7 +396,8 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap() else {
+                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    else {
                         panic!("Expected a leaf node");
                     };
                     assert_eq!(

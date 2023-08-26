@@ -254,7 +254,9 @@ mod tests {
                     assert_eq!(tree.num_bytes().await.unwrap(), 0);
                     tree.flush().await.unwrap();
 
-                    let DataNode::Leaf(node) = nodestore.load(*tree.root_node_id()).await.unwrap().unwrap() else {
+                    let DataNode::Leaf(node) =
+                        nodestore.load(*tree.root_node_id()).await.unwrap().unwrap()
+                    else {
                         panic!("Expected inner node");
                     };
                     assert_eq!(0, node.num_bytes());
@@ -298,7 +300,9 @@ mod tests {
                     assert_eq!(tree.num_bytes().await.unwrap(), 0);
                     tree.flush().await.unwrap();
 
-                    let DataNode::Leaf(node) = nodestore.load(*tree.root_node_id()).await.unwrap().unwrap() else {
+                    let DataNode::Leaf(node) =
+                        nodestore.load(*tree.root_node_id()).await.unwrap().unwrap()
+                    else {
                         panic!("Expected inner node");
                     };
                     assert_eq!(0, node.num_bytes());

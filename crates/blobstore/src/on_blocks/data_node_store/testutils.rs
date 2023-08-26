@@ -70,7 +70,7 @@ pub async fn load_inner_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
     block_id: BlockId,
 ) -> DataInnerNode<InMemoryBlockStore> {
-    let DataNode::Inner(inner) =  nodestore.load(block_id).await.unwrap().unwrap() else {
+    let DataNode::Inner(inner) = nodestore.load(block_id).await.unwrap().unwrap() else {
         panic!("Expected to load an inner node but got a leaf node instead");
     };
     inner
@@ -80,7 +80,7 @@ pub async fn load_leaf_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
     block_id: BlockId,
 ) -> DataLeafNode<InMemoryBlockStore> {
-    let DataNode::Leaf(leaf) =  nodestore.load(block_id).await.unwrap().unwrap() else {
+    let DataNode::Leaf(leaf) = nodestore.load(block_id).await.unwrap().unwrap() else {
         panic!("Expected to load a leaf node but got an inner node instead");
     };
     leaf

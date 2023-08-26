@@ -256,7 +256,7 @@ impl DirEntryList {
         F: Future<Output = FsResult<()>>,
     {
         let Some((mut source_index, source_entry)) = self._get_by_name_with_index(old_name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
         };
         let source_blob_id = *source_entry.blob_id();
 
@@ -324,7 +324,7 @@ impl DirEntryList {
         mtime: Option<SystemTime>,
     ) -> FsResult<&'s DirEntry> {
         let Some(entry) = self.get_by_name_mut(name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
         };
         entry.set_attr(mode, uid, gid, atime, mtime)?;
         Ok(entry)
@@ -374,7 +374,7 @@ impl DirEntryList {
 
     pub fn remove_by_name(&mut self, name: &PathComponent) -> FsResult<DirEntry> {
         let Some((index, _entry)) = self._get_by_name_with_index(name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist)
+            return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
         };
         self.dirty = true;
         let removed = self.entries.remove(index);
