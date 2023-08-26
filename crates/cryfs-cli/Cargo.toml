@@ -19,7 +19,7 @@ clap = {workspace = true, features = ["derive"]}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-cryfs = {path = "../cryfs"}
-cryfs-rustfs = {path = "../rustfs", features = ["fuse_mt"]}
+cryfs-rustfs = {path = "../rustfs", features = ["fuser"]}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 dialoguer.workspace = true

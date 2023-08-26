@@ -9,7 +9,7 @@ use cryfs_blockstore::{
 use cryfs_cryfs::config::{ciphers::AsyncCipherCallback, ConfigLoadResult};
 use cryfs_cryfs::filesystem::CryDevice;
 use cryfs_cryfs::localstate::LocalStateDir;
-use cryfs_rustfs::backend::fuse_mt;
+use cryfs_rustfs::backend::fuser;
 use cryfs_utils::crypto::symmetric::{CipherDef, EncryptionKey};
 
 pub struct FilesystemRunner<'m, 'c, 'l> {
@@ -67,7 +67,7 @@ impl<'m, 'c, 'l> AsyncCipherCallback for FilesystemRunner<'m, 'c, 'l> {
         };
 
         let fs = |_uid, _gid| device;
-        fuse_mt::mount(fs, self.mountdir, tokio::runtime::Handle::current())?;
+        fuser::mount(fs, self.mountdir, tokio::runtime::Handle::current())?;
 
         Ok(())
     }
