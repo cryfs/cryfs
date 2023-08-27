@@ -1,0 +1,5 @@
+{
+    // By default, VS Code calls "cargo check --all-features" when saving a file, but that is slow because of the
+    // slow-test-XXX features we use in the blobstore crate. Let's disable that and only check the default features on save.
+    "rust-analyzer.check.features": [],
+}
