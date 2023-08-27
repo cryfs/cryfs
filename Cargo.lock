@@ -662,6 +662,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryfs-recover"
+version = "2.0.0-alpha1"
+dependencies = [
+ "anyhow",
+ "cryfs-version",
+ "env_logger",
+ "tokio",
+]
+
+[[package]]
 name = "cryfs-rustfs"
 version = "2.0.0-alpha1"
 dependencies = [

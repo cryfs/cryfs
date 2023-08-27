@@ -1,0 +1,21 @@
+[package]
+name = "cryfs-recover"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "cryfs-recover"
+
+[dependencies]
+anyhow.workspace = true
+# async-trait.workspace = true
+# clap = {workspace = true, features = ["derive"]}
+cryfs-version = {path = "../cryfs-version"}
+env_logger.workspace = true
+tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
