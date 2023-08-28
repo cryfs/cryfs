@@ -1,24 +1,24 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use clap::Parser;
+use cryfs_cryfs::CRYFS_VERSION;
 use std::fmt::Display;
 use std::path::Path;
 
 use super::console::InteractiveConsole;
-use super::env;
 use super::password_provider::{InteractivePasswordProvider, NoninteractivePasswordProvider};
 use super::runner::FilesystemRunner;
 use crate::args::CryfsArgs;
 use cryfs_blockstore::{
     AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation,
 };
+use cryfs_cli_utils::{Application, Environment};
 use cryfs_cryfs::{
     config::ciphers::lookup_cipher_async,
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, PasswordProvider},
     localstate::LocalStateDir,
 };
 use cryfs_version::VersionInfo;
-
-const CRYFS_VERSION: VersionInfo = cryfs_cryfs::CRYFS_VERSION;
 
 // TODO Check (and add tests for) error messages make sense, e.g. when
 //   - wrong password
@@ -31,38 +31,34 @@ pub struct Cli {
     local_state_dir: LocalStateDir,
 }
 
-impl Cli {
+#[async_trait]
+impl Application for Cli {
+    type ConcreteArgs = CryfsArgs;
+    const NAME: &'static str = "cryfs";
+    const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
+
     // Returns None if the program should exit immediately with a success error code
-    pub fn new() -> Result<Option<Self>> {
-        let is_noninteractive = env::is_noninteractive();
-
-        _show_version();
-
-        let args = CryfsArgs::parse();
-
-        if args.version {
-            // No need to show version because we've already shown it, let's just exit
-            return Ok(None);
-        }
-
-        if args.show_ciphers {
-            for cipher in cryfs_cryfs::config::ALL_CIPHERS {
-                println!("{}", cipher);
-            }
-            return Ok(None);
-        }
+    fn new(args: CryfsArgs, env: Environment) -> Result<Self> {
+        let is_noninteractive = env.is_noninteractive();
 
         // TODO Make sure we have tests for the local_state_dir location
-        let local_state_dir = cryfs_cryfs::localstate::LocalStateDir::new(env::local_state_dir()?);
+        let local_state_dir = cryfs_cryfs::localstate::LocalStateDir::new(env.local_state_dir()?);
 
-        Ok(Some(Self {
+        Ok(Self {
             is_noninteractive,
             args,
             local_state_dir,
-        }))
+        })
     }
 
-    pub async fn main(&self) -> Result<()> {
+    async fn main(&self) -> Result<()> {
+        if self.args.show_ciphers {
+            for cipher in cryfs_cryfs::config::ALL_CIPHERS {
+                println!("{}", cipher);
+            }
+            return Ok(());
+        }
+
         self.run_filesystem().await?;
 
         println!(
@@ -72,7 +68,9 @@ impl Cli {
         );
         Ok(())
     }
+}
 
+impl Cli {
     async fn run_filesystem(&self) -> Result<()> {
         // TODO C++ code has lots more logic here, migrate that.
         let basedir = self.basedir().to_owned();
@@ -145,45 +143,6 @@ impl Cli {
     fn console(&self) -> &'static dyn Console {
         // TODO Implement NoninteractiveConsole
         &InteractiveConsole
-    }
-}
-
-// TODO (manually?) test this
-fn _show_version() {
-    eprintln!("CryFS Version {}", CRYFS_VERSION);
-    if let Some(gitinfo) = CRYFS_VERSION.gitinfo() {
-        if let Some(tag_info) = gitinfo.tag_info {
-            if tag_info.commits_since_tag > 0 {
-                eprintln!(
-                    "WARNING! This is a development version based on git commit {}. Please don't use in production.",
-                    gitinfo.commit_id,
-                );
-            }
-        }
-        if gitinfo.modified {
-            eprintln!("WARNING! There were uncommitted changes in the repository when building this version.");
-        }
-    }
-    if CRYFS_VERSION.version().prerelease.is_some() {
-        eprintln!("WARNING! This is a prerelease version. Please backup your data frequently!");
-    }
-
-    #[cfg(debug_assertions)]
-    eprintln!("WARNING! This is a debug build. Performance might be slow.");
-
-    #[cfg(feature = "check_for_updates")]
-    _check_for_updates();
-}
-
-#[cfg(feature = "check_for_updates")]
-fn _check_for_updates() {
-    if env::no_update_check() {
-        eprintln!("Automatic checking for security vulnerabilities and updates is disabled.");
-    } else if env::is_noninteractive() {
-        eprintln!("Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode.");
-    } else {
-        // TODO
-        // todo!()
     }
 }
 

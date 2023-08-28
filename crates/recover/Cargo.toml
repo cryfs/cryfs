@@ -14,8 +14,12 @@ name = "cryfs-recover"
 
 [dependencies]
 anyhow.workspace = true
-# async-trait.workspace = true
-# clap = {workspace = true, features = ["derive"]}
+async-trait.workspace = true
+clap = {workspace = true, features = ["derive"]}
+cryfs-cli-utils = {path = "../cli-utils"}
+cryfs-cryfs = {path = "../cryfs"}
 cryfs-version = {path = "../cryfs-version"}
-env_logger.workspace = true
-tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
+
+[features]
+default = ["check_for_updates"]
+check_for_updates = ["cryfs-cli-utils/check_for_updates"]

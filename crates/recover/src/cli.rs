@@ -1,15 +1,26 @@
 use anyhow::Result;
+use async_trait::async_trait;
+use cryfs_cli_utils::{Application, Environment};
+use cryfs_cryfs::CRYFS_VERSION;
+use cryfs_version::VersionInfo;
 
-pub struct Cli {}
+use crate::args::CryfsRecoverArgs;
 
-impl Cli {
-    pub fn new() -> Self {
-        Self {}
+pub struct RecoverCli {
+    args: CryfsRecoverArgs,
+}
+
+#[async_trait]
+impl Application for RecoverCli {
+    type ConcreteArgs = CryfsRecoverArgs;
+    const NAME: &'static str = "cryfs-recover";
+    const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
+
+    fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self> {
+        Ok(Self { args })
     }
 
-    pub async fn main(&self) -> Result<()> {
-        println!("Hello cryfs-recover");
-
+    async fn main(&self) -> Result<()> {
         Ok(())
     }
 }

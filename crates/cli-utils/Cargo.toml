@@ -1,5 +1,5 @@
 [package]
-name = "cryfs-cli"
+name = "cryfs-cli-utils"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,30 +9,26 @@ license.workspace = true
 readme.workspace = true
 version.workspace = true
 
-[[bin]]
-name = "cryfs"
-
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
 clap = {workspace = true, features = ["derive"]}
-cryfs-blobstore = {path = "../blobstore"}
-cryfs-blockstore = {path = "../blockstore"}
-cryfs-cli-utils = {path = "../cli-utils"}
 cryfs-cryfs = {path = "../cryfs"}
-cryfs-rustfs = {path = "../rustfs", features = ["fuser"]}
-cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
-dialoguer.workspace = true
-rpassword.workspace = true
-tokio.workspace = true
+dirs.workspace = true
+env_logger.workspace = true
+path-absolutize.workspace = true
+tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
 
 [dev-dependencies]
 assert_cmd.workspace = true
-escargot.workspace = true
+envtestkit.workspace = true
 lazy_static.workspace = true
+pathdiff.workspace = true
 predicates.workspace = true
+tempdir.workspace = true
+test-binary.workspace = true
 
 [features]
 default = ["check_for_updates"]
-check_for_updates = ["cryfs-cli-utils/check_for_updates"]
+check_for_updates = []

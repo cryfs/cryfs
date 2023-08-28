@@ -1,5 +1,5 @@
 use clap::{Args, Parser};
-use path_absolutize::*;
+use cryfs_cli_utils::parse_path;
 use std::path::{Path, PathBuf};
 
 // TODO Evaluate `clap_mangen` as a potential automatic manpage generator
@@ -9,9 +9,6 @@ use std::path::{Path, PathBuf};
 pub struct CryfsArgs {
     #[command(flatten)]
     pub mount: Option<MountArgs>,
-
-    #[arg(short = 'V', long, group = "immediate-exit", conflicts_with("mount"))]
-    pub version: bool,
 
     #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
     pub show_ciphers: bool,
@@ -40,13 +37,6 @@ pub struct MountArgs {
 
     #[arg(value_parser=parse_path)]
     pub mountdir: PathBuf,
-}
-
-fn parse_path(s: &str) -> Result<PathBuf, String> {
-    Path::new(s)
-        .absolutize()
-        .map(|a| a.into_owned())
-        .map_err(|e| e.to_string())
 }
 
 // TODO Tests

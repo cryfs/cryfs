@@ -85,8 +85,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"
-error: the argument '--version' cannot be used with:
+                r#"error: the argument '--version' cannot be used with:
   <BASEDIR>
   <MOUNTDIR>
 "#,
@@ -100,8 +99,7 @@ error: the argument '--version' cannot be used with:
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"
-error: the argument '--version' cannot be used with:
+                r#"error: the argument '--version' cannot be used with:
   <BASEDIR>
   <MOUNTDIR>
 "#,
@@ -150,8 +148,7 @@ mod show_ciphers {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"
-error: the argument '--show-ciphers' cannot be used with:
+                r#"error: the argument '--show-ciphers' cannot be used with:
   <BASEDIR>
   <MOUNTDIR>
 "#,
