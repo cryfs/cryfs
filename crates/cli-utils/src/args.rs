@@ -8,7 +8,7 @@ use cryfs_version::VersionInfo;
 
 #[derive(Parser, Debug)]
 pub struct ImmediateExitFlags {
-    #[arg(short = 'V', long, global = true, group = "immediate-exit")]
+    #[arg(short = 'V', long)]
     pub version: bool,
 }
 
@@ -30,33 +30,45 @@ pub fn parse_args<ConcreteArgs: Args>(
 
     // First try to parse ImmediateExitFlags by themselves. This is necessary because if we start by parsing `CombinedArgs`,
     // it would fail if `ConcreteArgs` aren't present.
-    match ImmediateExitFlags::try_parse() {
+    let args = match ImmediateExitFlags::try_parse() {
         Ok(immediate_exit_flags) => {
             if immediate_exit_flags.version {
                 // We've already printed the version number above, no need to print it again
                 return Ok(None);
+            } else {
+                CombinedArgs::<ConcreteArgs>::parse()
             }
         }
-        Err(e) => match e.kind() {
-            ErrorKind::DisplayHelp => {
-                // do nothing, clap will print the help when parsing `CombinedArgs` below.
+        Err(e) => {
+            match e.kind() {
+                ErrorKind::DisplayHelp => {
+                    // We need to display a help message. The easiest way to do that is to parse the arguments again,
+                    // but this time including `ConcreteArgs`. Clap will then exit and display the help message.
+                    CombinedArgs::<ConcreteArgs>::parse();
+                    panic!("We expected the previous line to exit with a help message. CLI Parsing error was: {e:#?}");
+                }
+                ErrorKind::UnknownArgument => {
+                    // Looks like some `ConcreteArgs` may have been present. In this case, we don't support the `--version` flag.
+                    // So let's parse our flags and make sure that `--version` isn't present.
+                    let args = CombinedArgs::<ConcreteArgs>::parse();
+                    if args.immediate_exit_flags.version {
+                        eprintln!("Calling with `--version` and additional other arguments is not supported");
+                        std::process::exit(1);
+                    }
+                    args
+                }
+                ErrorKind::DisplayVersion => {
+                    panic!("We have our own handling for `--version`, this shouldn't happen");
+                }
+                _ => {
+                    // Something went wrong parsing the arguments, e.g `--version=bad` or something like that was passed in.
+                    // Let's parse the arguments again, but this time so that clap exits with an error.
+                    CombinedArgs::<ConcreteArgs>::parse();
+                    panic!("We expected the previous line to exit with an error. CLI Parsing error was: {e:#?}");
+                }
             }
-            ErrorKind::UnknownArgument => {
-                // this is ok, it just means some arguments from `ConcreteArgs` may have been present.
-            }
-            ErrorKind::DisplayVersion => {
-                panic!("We have our own handling for `--version`, this shouldn't happen");
-            }
-            _ => {
-                // Something went wrong parsing the arguments, e.g `--version=bad` or something like that was passed in.
-                // Let's parse the arguments again, but this time so that clap exits with an error.
-                CombinedArgs::<ConcreteArgs>::parse();
-                panic!("We expected the previous line to exit with an error. CLI Parsing error was: {e:#?}");
-            }
-        },
-    }
-
-    let args = CombinedArgs::<ConcreteArgs>::parse();
+        }
+    };
 
     Ok(Some(args.concrete_args))
 }
