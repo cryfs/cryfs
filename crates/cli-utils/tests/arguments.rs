@@ -22,17 +22,6 @@ const CARGO_TOML: &str = concat!(
     r#""}"#,
 );
 
-// TODO Move the `EXPECTED_USAGE_XXX` consts into [TestConfig] and then parameterize the
-// test cases based on `TestConfig`, not on `TempProject`. But that requires `TestConfig`
-// to store the `TempProject` so we don't re-create it for every test case.
-const EXPECTED_USAGE_NOARGS_MAIN: &str = "Usage: my-testbin";
-const EXPECTED_USAGE_FLAG_MAIN: &str = "Usage: my-testbin [OPTIONS]";
-const EXPECTED_USAGE_FLAG: &str = "-f, --flag     Flag Documentation";
-const EXPECTED_USAGE_MANDATORY_POSITIONAL_MAIN: &str = "Usage: my-testbin <MANDATORY_POSITIONAL>";
-const EXPECTED_USAGE_MANDATORY_POSITIONAL: &str = "Arguments:\n  <MANDATORY_POSITIONAL>";
-const EXPECTED_USAGE_OPTIONAL_POSITIONAL_MAIN: &str = "Usage: my-testbin [OPTIONAL_POSITIONAL]";
-const EXPECTED_USAGE_OPTIONAL_POSITIONAL: &str = "Arguments:\n  [OPTIONAL_POSITIONAL]";
-
 /// [TestConfig] defines how to build a test binary with given arguments and main code.
 struct TestConfig {
     args: &'static str,
@@ -115,85 +104,106 @@ impl TestConfig {
     }
 }
 
-const TESTCONFIG_NOARGS: TestConfig = TestConfig {
-    args: stringify!(
-        #[derive(Args, Debug)]
-        struct MyArgs {}
-    ),
-    main: stringify!(
-        async fn main(&self) -> Result<()> {
-            println!("my-testbin:main");
-            Ok(())
-        }
-    ),
-};
-
-const TESTCONFIG_FLAGS: TestConfig = TestConfig {
-    args: stringify!(
-        #[derive(Args, Debug)]
-        struct MyArgs {
-            /// Flag Documentation
-            #[arg(short = 'f', long = "flag")]
-            flag: bool,
-        }
-    ),
-    main: stringify!(
-        async fn main(&self) -> Result<()> {
-            println!("my-testbin:main:{:?}", self.args.flag);
-            Ok(())
-        }
-    ),
-};
-
-const TESTCONFIG_MANDATORY_POSITIONAL: TestConfig = TestConfig {
-    args: stringify!(
-        #[derive(Args, Debug)]
-        struct MyArgs {
-            mandatory_positional: String,
-        }
-    ),
-    main: stringify!(
-        async fn main(&self) -> Result<()> {
-            println!("my-testbin:main:{}", self.args.mandatory_positional);
-            Ok(())
-        }
-    ),
-};
-
-const TESTCONFIG_OPTIONAL_POSITIONAL: TestConfig = TestConfig {
-    args: stringify!(
-        #[derive(Args, Debug)]
-        struct MyArgs {
-            optional_positional: Option<String>,
-        }
-    ),
-    main: stringify!(
-        async fn main(&self) -> Result<()> {
-            println!("my-testbin:main:{:?}", self.args.optional_positional);
-            Ok(())
-        }
-    ),
-};
+struct TestProject {
+    project: TempProject,
+    expected_usage_header: &'static str,
+    expected_usage_line: &'static str,
+}
 
 lazy_static! {
-    static ref PROJECT_NO_ARGS: TempProject = TESTCONFIG_NOARGS.project();
-    static ref PROJECT_FLAGS: TempProject = TESTCONFIG_FLAGS.project();
-    static ref PROJECT_MANDATORY_POSITIONAL: TempProject =
-        TESTCONFIG_MANDATORY_POSITIONAL.project();
-    static ref PROJECT_OPTIONAL_POSITIONAL: TempProject = TESTCONFIG_OPTIONAL_POSITIONAL.project();
+    static ref PROJECT_NOARGS: TestProject = TestProject {
+        project: TestConfig {
+            args: stringify!(
+                #[derive(Args, Debug)]
+                struct MyArgs {}
+            ),
+            main: stringify!(
+                async fn main(&self) -> Result<()> {
+                    println!("my-testbin:main");
+                    Ok(())
+                }
+            ),
+        }
+        .project(),
+        expected_usage_header: "Usage: my-testbin",
+        expected_usage_line: "",
+    };
+
+    static ref PROJECT_FLAGS: TestProject = TestProject {
+        project: TestConfig {
+            args: stringify!(
+                #[derive(Args, Debug)]
+                struct MyArgs {
+                    /// Flag Documentation
+                    #[arg(short = 'f', long = "flag")]
+                    flag: bool,
+                }
+            ),
+            main: stringify!(
+                async fn main(&self) -> Result<()> {
+                    println!("my-testbin:main:{:?}", self.args.flag);
+                    Ok(())
+                }
+            ),
+        }
+        .project(),
+        expected_usage_header: "Usage: my-testbin [OPTIONS]",
+        expected_usage_line: "-f, --flag     Flag Documentation",
+    };
+
+    static ref PROJECT_MANDATORY_POSITIONAL: TestProject = TestProject {
+        project: TestConfig {
+            args: stringify!(
+                #[derive(Args, Debug)]
+                struct MyArgs {
+                    mandatory_positional: String,
+                }
+            ),
+            main: stringify!(
+                async fn main(&self) -> Result<()> {
+                    println!("my-testbin:main:{}", self.args.mandatory_positional);
+                    Ok(())
+                }
+            ),
+        }
+        .project(),
+        expected_usage_header: "Usage: my-testbin <MANDATORY_POSITIONAL>",
+        expected_usage_line: "Arguments:\n  <MANDATORY_POSITIONAL>",
+    };
+
+    static ref PROJECT_OPTIONAL_POSITIONAL: TestProject = TestProject {
+        project: TestConfig {
+            args: stringify!(
+                #[derive(Args, Debug)]
+                struct MyArgs {
+                    optional_positional: Option<String>,
+                }
+            ),
+            main: stringify!(
+                async fn main(&self) -> Result<()> {
+                    println!("my-testbin:main:{:?}", self.args.optional_positional);
+                    Ok(())
+                }
+            ),
+        }
+        .project(),
+        expected_usage_header: "Usage: my-testbin [OPTIONAL_POSITIONAL]",
+        expected_usage_line: "Arguments:\n  [OPTIONAL_POSITIONAL]",
+    };
 }
 
 mod common {
-    //! Tests common to all `PROJECT_XXX`
+    //! Tests common to most `PROJECT_XXX`
 
     use super::*;
     #[rstest]
-    #[case(&PROJECT_NO_ARGS)]
+    #[case(&PROJECT_NOARGS)]
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn no_args(#[case] project: &TempProject) {
-        project
+    fn no_args(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .assert()
             .success()
@@ -202,13 +212,14 @@ mod common {
     }
 
     #[rstest]
-    #[case(&PROJECT_NO_ARGS)]
+    #[case(&PROJECT_NOARGS)]
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn version_flag_long(#[case] project: &TempProject) {
-        project
+    fn version_flag_long(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .arg("--version")
             .assert()
@@ -218,13 +229,14 @@ mod common {
     }
 
     #[rstest]
-    #[case(&PROJECT_NO_ARGS)]
+    #[case(&PROJECT_NOARGS)]
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn version_flag_short(#[case] project: &TempProject) {
-        project
+    fn version_flag_short(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .arg("-V")
             .assert()
@@ -234,13 +246,14 @@ mod common {
     }
 
     #[rstest]
-    #[case(&PROJECT_NO_ARGS)]
+    #[case(&PROJECT_NOARGS)]
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn version_flag_bad(#[case] project: &TempProject) {
-        project
+    fn version_flag_bad(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .arg("--version=bad")
             .assert()
@@ -252,61 +265,60 @@ mod common {
     }
 
     #[rstest]
-    #[case(&PROJECT_NO_ARGS, predicates::str::contains(EXPECTED_USAGE_NOARGS_MAIN), predicates::constant::always())]
-    #[case(&PROJECT_FLAGS, predicates::str::contains(EXPECTED_USAGE_FLAG_MAIN), predicates::str::contains(EXPECTED_USAGE_FLAG))]
-    #[case(&PROJECT_MANDATORY_POSITIONAL, predicates::str::contains(EXPECTED_USAGE_MANDATORY_POSITIONAL_MAIN), predicates::str::contains(EXPECTED_USAGE_MANDATORY_POSITIONAL))]
-    #[case(&PROJECT_OPTIONAL_POSITIONAL, predicates::str::contains(EXPECTED_USAGE_OPTIONAL_POSITIONAL_MAIN), predicates::str::contains(EXPECTED_USAGE_OPTIONAL_POSITIONAL))]
+    #[case(&PROJECT_NOARGS)]
+    #[case(&PROJECT_FLAGS)]
+    #[case(&PROJECT_MANDATORY_POSITIONAL)]
+    #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn help_flag_long(
-        #[case] project: &TempProject,
-        #[case] usage_stdout_predicate: impl predicates::Predicate<str>,
-        #[case] extra_stdout_predicate: impl predicates::Predicate<str>,
-    ) {
-        project
+    fn help_flag_long(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .arg("--help")
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(usage_stdout_predicate)
+            .stdout(predicates::str::contains(
+                test_project.expected_usage_header,
+            ))
             .stdout(predicates::str::contains("-V, --version"))
             .stdout(predicates::str::contains("-h, --help"))
-            .stdout(extra_stdout_predicate)
+            .stdout(predicates::str::contains(test_project.expected_usage_line))
             .stdout(predicates::str::contains(MAIN_MESSAGE).not());
     }
 
     #[rstest]
-    #[case(&PROJECT_NO_ARGS, predicates::str::contains(EXPECTED_USAGE_NOARGS_MAIN), predicates::constant::always())]
-    #[case(&PROJECT_FLAGS, predicates::str::contains(EXPECTED_USAGE_FLAG_MAIN), predicates::str::contains(EXPECTED_USAGE_FLAG))]
-    #[case(&PROJECT_MANDATORY_POSITIONAL, predicates::str::contains(EXPECTED_USAGE_MANDATORY_POSITIONAL_MAIN), predicates::str::contains(EXPECTED_USAGE_MANDATORY_POSITIONAL))]
-    #[case(&PROJECT_OPTIONAL_POSITIONAL, predicates::str::contains(EXPECTED_USAGE_OPTIONAL_POSITIONAL_MAIN), predicates::str::contains(EXPECTED_USAGE_OPTIONAL_POSITIONAL))]
+    #[case(&PROJECT_NOARGS)]
+    #[case(&PROJECT_FLAGS)]
+    #[case(&PROJECT_MANDATORY_POSITIONAL)]
+    #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn help_flag_short(
-        #[case] project: &TempProject,
-        #[case] usage_stdout_predicate: impl predicates::Predicate<str>,
-        #[case] extra_stdout_predicate: impl predicates::Predicate<str>,
-    ) {
-        project
+    fn help_flag_short(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .arg("-h")
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(usage_stdout_predicate)
+            .stdout(predicates::str::contains(
+                test_project.expected_usage_header,
+            ))
             .stdout(predicates::str::contains("-V, --version"))
             .stdout(predicates::str::contains("-h, --help"))
-            .stdout(extra_stdout_predicate)
+            .stdout(predicates::str::contains(test_project.expected_usage_line))
             .stdout(predicates::str::contains(MAIN_MESSAGE).not());
     }
 
     #[rstest]
-    #[case(&PROJECT_NO_ARGS)]
+    #[case(&PROJECT_NOARGS)]
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[test]
-    fn help_flag_bad(#[case] project: &TempProject) {
-        project
+    fn help_flag_bad(#[case] test_project: &TestProject) {
+        test_project
+            .project
             .run()
             .arg("--help=bad")
             .assert()
@@ -326,6 +338,7 @@ mod flag {
     #[test]
     fn without_flag() {
         PROJECT_FLAGS
+            .project
             .run()
             .assert()
             .success()
@@ -338,6 +351,7 @@ mod flag {
     #[test]
     fn with_flag_short() {
         PROJECT_FLAGS
+            .project
             .run()
             .arg("-f")
             .assert()
@@ -349,6 +363,7 @@ mod flag {
     #[test]
     fn with_flag_long() {
         PROJECT_FLAGS
+            .project
             .run()
             .arg("--flag")
             .assert()
@@ -360,6 +375,7 @@ mod flag {
     #[test]
     fn with_flag_bad() {
         PROJECT_FLAGS
+            .project
             .run()
             .arg("--flag=bad")
             .assert()
@@ -378,6 +394,7 @@ mod mandatory_positional {
     #[test]
     fn with_positional_arg() {
         PROJECT_MANDATORY_POSITIONAL
+            .project
             .run()
             .arg("some_value")
             .assert()
@@ -391,7 +408,9 @@ mod mandatory_positional {
 
     #[test]
     fn missing_positional_arg() {
-        PROJECT_MANDATORY_POSITIONAL.run()
+        PROJECT_MANDATORY_POSITIONAL
+        .project
+        .run()
         .assert()
         .failure()
         .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -408,6 +427,7 @@ mod optional_positional {
     #[test]
     fn with_positional_arg() {
         PROJECT_OPTIONAL_POSITIONAL
+            .project
             .run()
             .arg("some_value")
             .assert()
@@ -422,6 +442,7 @@ mod optional_positional {
     #[test]
     fn missing_positional_arg() {
         PROJECT_OPTIONAL_POSITIONAL
+            .project
             .run()
             .assert()
             .success()
