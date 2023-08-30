@@ -274,12 +274,14 @@ mod common {
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
     #[case(&PROJECT_MANDATORY_ARGUMENT)]
     #[case(&PROJECT_OPTIONAL_ARGUMENT)]
-    #[test]
-    fn version_flag_long(#[case] test_project: &TestProject) {
+    fn with_version_flag(
+        #[case] test_project: &TestProject,
+        #[values("--version", "-V")] version_flag: &str,
+    ) {
         test_project
             .project
             .run()
-            .arg("--version")
+            .arg(version_flag)
             .assert()
             .success()
             // TODO For `--version`, the VERSION_MESSAGE should be on stdout
@@ -295,27 +297,7 @@ mod common {
     #[case(&PROJECT_MANDATORY_ARGUMENT)]
     #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
-    fn version_flag_short(#[case] test_project: &TestProject) {
-        test_project
-            .project
-            .run()
-            .arg("-V")
-            .assert()
-            .success()
-            // TODO For `--version`, the VERSION_MESSAGE should be on stdout
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(MAIN_MESSAGE).not());
-    }
-
-    #[rstest]
-    #[case(&PROJECT_NOARGS)]
-    #[case(&PROJECT_FLAGS)]
-    #[case(&PROJECT_MANDATORY_POSITIONAL)]
-    #[case(&PROJECT_OPTIONAL_POSITIONAL)]
-    #[case(&PROJECT_MANDATORY_ARGUMENT)]
-    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
-    #[test]
-    fn version_flag_bad(#[case] test_project: &TestProject) {
+    fn with_version_flag_bad(#[case] test_project: &TestProject) {
         test_project
             .project
             .run()
@@ -336,21 +318,11 @@ mod common {
     #[case(&PROJECT_MANDATORY_ARGUMENT)]
     #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
-    fn help_flag_long(#[case] test_project: &TestProject) {
-        let run = test_project.project.run().arg("--help").assert().success();
-        test_project.expect_help_message(run);
-    }
-
-    #[rstest]
-    #[case(&PROJECT_NOARGS)]
-    #[case(&PROJECT_FLAGS)]
-    #[case(&PROJECT_MANDATORY_POSITIONAL)]
-    #[case(&PROJECT_OPTIONAL_POSITIONAL)]
-    #[case(&PROJECT_MANDATORY_ARGUMENT)]
-    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
-    #[test]
-    fn help_flag_short(#[case] test_project: &TestProject) {
-        let run = test_project.project.run().arg("-h").assert().success();
+    fn with_help_flag(
+        #[case] test_project: &TestProject,
+        #[values("--help", "-h")] help_flag: &str,
+    ) {
+        let run = test_project.project.run().arg(help_flag).assert().success();
         test_project.expect_help_message(run);
     }
 
@@ -383,12 +355,16 @@ mod common {
     #[case(&PROJECT_MANDATORY_ARGUMENT)]
     #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
-    fn help_and_version(#[case] test_project: &TestProject) {
+    fn help_and_version(
+        #[case] test_project: &TestProject,
+        #[values("--help", "-h")] help_flag: &str,
+        #[values("--version", "-V")] version_flag: &str,
+    ) {
         let run = test_project
             .project
             .run()
-            .arg("--help")
-            .arg("--version")
+            .arg(help_flag)
+            .arg(version_flag)
             .assert()
             .success();
         test_project.expect_help_message(run);
@@ -402,12 +378,16 @@ mod common {
     #[case(&PROJECT_MANDATORY_ARGUMENT)]
     #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
-    fn version_and_help(#[case] test_project: &TestProject) {
+    fn version_and_help(
+        #[case] test_project: &TestProject,
+        #[values("--help", "-h")] help_flag: &str,
+        #[values("--version", "-V")] version_flag: &str,
+    ) {
         let run = test_project
             .project
             .run()
-            .arg("--version")
-            .arg("--help")
+            .arg(version_flag)
+            .arg(help_flag)
             .assert()
             .success();
         test_project.expect_help_message(run);
@@ -432,24 +412,13 @@ mod flag {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_flag_short() {
+    fn with_flag(#[values("-f", "--flag")] flag: &str) {
         PROJECT_FLAGS
             .project
             .run()
-            .arg("-f")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(format!("{}:true", MAIN_MESSAGE,)));
-    }
-
-    #[test]
-    fn with_flag_long() {
-        PROJECT_FLAGS
-            .project
-            .run()
-            .arg("--flag")
+            .arg(flag)
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -470,37 +439,49 @@ mod flag {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_flag_and_help_flag() {
+    fn with_flag_and_help_flag(
+        #[values("-f", "--flag")] flag: &str,
+        #[values("-h", "--help")] help_flag: &str,
+    ) {
         let run = PROJECT_FLAGS
             .project
             .run()
-            .arg("--flag")
-            .arg("--help")
+            .arg(flag)
+            .arg(help_flag)
             .assert()
             .success();
         PROJECT_FLAGS.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_help_flag_and_flag() {
+    fn with_help_flag_and_flag(
+        #[values("-f", "--flag")] flag: &str,
+        #[values("-h", "--help")] help_flag: &str,
+    ) {
         let run = PROJECT_FLAGS
             .project
             .run()
-            .arg("--help")
-            .arg("--flag")
+            .arg(help_flag)
+            .arg(flag)
             .assert()
             .success();
         PROJECT_FLAGS.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_flag_and_version_flag() {
+    fn with_flag_and_version_flag(
+        #[values("-f", "--flag")] flag: &str,
+        #[values("-V", "--version")] version_flag: &str,
+    ) {
         PROJECT_FLAGS
             .project
             .run()
-            .arg("--flag")
-            .arg("--version")
+            .arg(flag)
+            .arg(version_flag)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -509,13 +490,17 @@ mod flag {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_version_flag_and_flag() {
+    fn with_version_flag_and_flag(
+        #[values("-f", "--flag")] flag: &str,
+        #[values("-V", "--version")] version_flag: &str,
+    ) {
         PROJECT_FLAGS
             .project
             .run()
-            .arg("--version")
-            .arg("--flag")
+            .arg(version_flag)
+            .arg(flag)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -557,37 +542,40 @@ mod mandatory_positional {
         ));
     }
 
+    #[rstest]
     #[test]
-    fn with_positional_and_help_flag() {
+    fn with_positional_and_help_flag(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_MANDATORY_POSITIONAL
             .project
             .run()
             .arg("some_value")
-            .arg("--help")
+            .arg(help_flag)
             .assert()
             .success();
         PROJECT_MANDATORY_POSITIONAL.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_help_flag_and_positional() {
+    fn with_help_flag_and_positional(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_MANDATORY_POSITIONAL
             .project
             .run()
-            .arg("--help")
+            .arg(help_flag)
             .arg("some_value")
             .assert()
             .success();
         PROJECT_MANDATORY_POSITIONAL.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_positional_and_version_flag() {
+    fn with_positional_and_version_flag(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_MANDATORY_POSITIONAL
             .project
             .run()
             .arg("positional")
-            .arg("--version")
+            .arg(version_flag)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -596,12 +584,13 @@ mod mandatory_positional {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_version_flag_and_positional() {
+    fn with_version_flag_and_positional(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_MANDATORY_POSITIONAL
             .project
             .run()
-            .arg("--version")
+            .arg(version_flag)
             .arg("positional")
             .assert()
             .failure()
@@ -642,37 +631,40 @@ mod optional_positional {
             .stdout(predicates::str::contains(format!("{}:None", MAIN_MESSAGE,)));
     }
 
+    #[rstest]
     #[test]
-    fn with_positional_and_help_flag() {
+    fn with_positional_and_help_flag(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_OPTIONAL_POSITIONAL
             .project
             .run()
             .arg("some_value")
-            .arg("--help")
+            .arg(help_flag)
             .assert()
             .success();
         PROJECT_OPTIONAL_POSITIONAL.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_help_flag_and_positional() {
+    fn with_help_flag_and_positional(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_OPTIONAL_POSITIONAL
             .project
             .run()
-            .arg("--help")
+            .arg(help_flag)
             .arg("some_value")
             .assert()
             .success();
         PROJECT_OPTIONAL_POSITIONAL.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_positional_and_version_flag() {
+    fn with_positional_and_version_flag(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_OPTIONAL_POSITIONAL
             .project
             .run()
             .arg("positional")
-            .arg("--version")
+            .arg(version_flag)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -681,12 +673,13 @@ mod optional_positional {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_version_flag_and_positional() {
+    fn with_version_flag_and_positional(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_OPTIONAL_POSITIONAL
             .project
             .run()
-            .arg("--version")
+            .arg(version_flag)
             .arg("positional")
             .assert()
             .failure()
@@ -715,13 +708,16 @@ mod mandatory_argument {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_short_split() {
+    fn with_argument(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--mandatory-argument", "12345"], &["--mandatory-argument=12345"])]
+        argument: &[&str],
+    ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
             .run()
-            .arg("-a")
-            .arg("12345")
+            .args(argument)
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -730,27 +726,16 @@ mod mandatory_argument {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_short_unsplit() {
+    fn with_argument_bad(
+        #[values(&["-a", "bad"], &["-a=bad"], &["--mandatory-argument", "bad"], &["--mandatory-argument=bad"])]
+        argument: &[&str],
+    ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
             .run()
-            .arg("-a=12345")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(
-                format!("{}:12345", MAIN_MESSAGE,),
-            ));
-    }
-
-    #[test]
-    fn with_argument_short_split_bad() {
-        PROJECT_MANDATORY_ARGUMENT
-            .project
-            .run()
-            .arg("-a")
-            .arg("bad")
+            .args(argument)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -759,110 +744,52 @@ mod mandatory_argument {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_short_unsplit_bad() {
-        PROJECT_MANDATORY_ARGUMENT
-            .project
-            .run()
-            .arg("-a=bad")
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stderr(predicates::str::contains(
-                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
-            ));
-    }
-
-    #[test]
-    fn with_argument_long_split() {
-        PROJECT_MANDATORY_ARGUMENT
-            .project
-            .run()
-            .arg("--mandatory-argument")
-            .arg("12345")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(
-                format!("{}:12345", MAIN_MESSAGE,),
-            ));
-    }
-
-    #[test]
-    fn with_argument_long_unsplit() {
-        PROJECT_MANDATORY_ARGUMENT
-            .project
-            .run()
-            .arg("--mandatory-argument=12345")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(
-                format!("{}:12345", MAIN_MESSAGE,),
-            ));
-    }
-
-    #[test]
-    fn with_argument_long_split_bad() {
-        PROJECT_MANDATORY_ARGUMENT
-            .project
-            .run()
-            .arg("-a")
-            .arg("bad")
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stderr(predicates::str::contains(
-                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
-            ));
-    }
-
-    #[test]
-    fn with_argument_long_unsplit_bad() {
-        PROJECT_MANDATORY_ARGUMENT
-            .project
-            .run()
-            .arg("-a=bad")
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stderr(predicates::str::contains(
-                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
-            ));
-    }
-
-    // TODO For the below, add split/unsplit and long/short cases. Maybe use rstest for this and also use rstest above. Also below for optional argument test cases.
-    #[test]
-    fn with_argument_split_and_help_flag() {
+    fn with_argument_and_help_flag(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--mandatory-argument", "12345"], &["--mandatory-argument=12345"])]
+        argument: &[&str],
+        #[values("-h", "--help")] help_flag: &str,
+    ) {
         let run = PROJECT_MANDATORY_ARGUMENT
             .project
             .run()
-            .arg("-a=12345")
-            .arg("--help")
+            .args(argument)
+            .arg(help_flag)
             .assert()
             .success();
         PROJECT_MANDATORY_ARGUMENT.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_help_flag_and_argument_split() {
+    fn with_help_flag_and_argument(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--mandatory-argument", "12345"], &["--mandatory-argument=12345"])]
+        argument: &[&str],
+        #[values("-h", "--help")] help_flag: &str,
+    ) {
         let run = PROJECT_MANDATORY_ARGUMENT
             .project
             .run()
-            .arg("--help")
-            .arg("-a=12345")
+            .arg(help_flag)
+            .args(argument)
             .assert()
             .success();
         PROJECT_MANDATORY_ARGUMENT.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_and_version_flag() {
+    fn with_argument_and_version_flag(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--mandatory-argument", "12345"], &["--mandatory-argument=12345"])]
+        argument: &[&str],
+        #[values("-V", "--version")] version_flag: &str,
+    ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
             .run()
-            .arg("-a=12345")
-            .arg("--version")
+            .args(argument)
+            .arg(version_flag)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -871,13 +798,18 @@ mod mandatory_argument {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_version_flag_and_argument() {
+    fn with_version_flag_and_argument(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--mandatory-argument", "12345"], &["--mandatory-argument=12345"])]
+        argument: &[&str],
+        #[values("-V", "--version")] version_flag: &str,
+    ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
             .run()
-            .arg("--version")
-            .arg("-a=12345")
+            .arg(version_flag)
+            .args(argument)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -903,13 +835,16 @@ mod optional_argument {
             .stdout(predicates::str::contains(format!("{}:None", MAIN_MESSAGE,)));
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_short_split() {
+    fn with_argument(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--optional-argument", "12345"], &["--optional-argument=12345"])]
+        argument: &[&str],
+    ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
             .run()
-            .arg("-a")
-            .arg("12345")
+            .args(argument)
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -919,28 +854,16 @@ mod optional_argument {
             )));
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_short_unsplit() {
+    fn with_argument_bad(
+        #[values(&["-a", "bad"], &["-a=bad"], &["--optional-argument", "bad"], &["--optional-argument=bad"])]
+        argument: &[&str],
+    ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
             .run()
-            .arg("-a=12345")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(format!(
-                "{}:Some(12345)",
-                MAIN_MESSAGE,
-            )));
-    }
-
-    #[test]
-    fn with_argument_short_split_bad() {
-        PROJECT_OPTIONAL_ARGUMENT
-            .project
-            .run()
-            .arg("-a")
-            .arg("bad")
+            .args(argument)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -949,111 +872,52 @@ mod optional_argument {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_short_unsplit_bad() {
-        PROJECT_OPTIONAL_ARGUMENT
-            .project
-            .run()
-            .arg("-a=bad")
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stderr(predicates::str::contains(
-                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
-            ));
-    }
-
-    #[test]
-    fn with_argument_long_split() {
-        PROJECT_OPTIONAL_ARGUMENT
-            .project
-            .run()
-            .arg("--optional-argument")
-            .arg("12345")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(format!(
-                "{}:Some(12345)",
-                MAIN_MESSAGE,
-            )));
-    }
-
-    #[test]
-    fn with_argument_long_unsplit() {
-        PROJECT_OPTIONAL_ARGUMENT
-            .project
-            .run()
-            .arg("--optional-argument=12345")
-            .assert()
-            .success()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stdout(predicates::str::contains(format!(
-                "{}:Some(12345)",
-                MAIN_MESSAGE,
-            )));
-    }
-
-    #[test]
-    fn with_argument_long_split_bad() {
-        PROJECT_OPTIONAL_ARGUMENT
-            .project
-            .run()
-            .arg("-a")
-            .arg("bad")
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stderr(predicates::str::contains(
-                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
-            ));
-    }
-
-    #[test]
-    fn with_argument_long_unsplit_bad() {
-        PROJECT_OPTIONAL_ARGUMENT
-            .project
-            .run()
-            .arg("-a=bad")
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(VERSION_MESSAGE))
-            .stderr(predicates::str::contains(
-                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
-            ));
-    }
-
-    #[test]
-    fn with_argument_split_and_help_flag() {
+    fn with_argument_and_help_flag(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--optional-argument", "12345"], &["--optional-argument=12345"])]
+        argument: &[&str],
+        #[values("-h", "--help")] help_flag: &str,
+    ) {
         let run = PROJECT_OPTIONAL_ARGUMENT
             .project
             .run()
-            .arg("-a=12345")
-            .arg("--help")
+            .args(argument)
+            .arg(help_flag)
             .assert()
             .success();
         PROJECT_OPTIONAL_ARGUMENT.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_help_flag_and_argument_split() {
+    fn with_help_flag_and_argument(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--optional-argument", "12345"], &["--optional-argument=12345"])]
+        argument: &[&str],
+        #[values("-h", "--help")] help_flag: &str,
+    ) {
         let run = PROJECT_OPTIONAL_ARGUMENT
             .project
             .run()
-            .arg("--help")
-            .arg("-a=12345")
+            .arg(help_flag)
+            .args(argument)
             .assert()
             .success();
         PROJECT_OPTIONAL_ARGUMENT.expect_help_message(run);
     }
 
+    #[rstest]
     #[test]
-    fn with_argument_and_version_flag() {
+    fn with_argument_and_version_flag(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--optional-argument", "12345"], &["--optional-argument=12345"])]
+        argument: &[&str],
+        #[values("-V", "--version")] version_flag: &str,
+    ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
             .run()
-            .arg("-a=12345")
-            .arg("--version")
+            .args(argument)
+            .arg(version_flag)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -1062,13 +926,18 @@ mod optional_argument {
             ));
     }
 
+    #[rstest]
     #[test]
-    fn with_version_flag_and_argument() {
+    fn with_version_flag_and_argument(
+        #[values(&["-a", "12345"], &["-a=12345"], &["--optional-argument", "12345"], &["--optional-argument=12345"])]
+        argument: &[&str],
+        #[values("-V", "--version")] version_flag: &str,
+    ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
             .run()
-            .arg("--version")
-            .arg("-a=12345")
+            .arg(version_flag)
+            .args(argument)
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
