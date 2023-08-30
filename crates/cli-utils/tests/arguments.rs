@@ -486,7 +486,7 @@ mod flag {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -505,7 +505,7 @@ mod flag {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -580,7 +580,7 @@ mod mandatory_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -596,7 +596,7 @@ mod mandatory_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -669,7 +669,7 @@ mod optional_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -685,7 +685,7 @@ mod optional_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -794,7 +794,7 @@ mod mandatory_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -814,7 +814,7 @@ mod mandatory_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -922,7 +922,7 @@ mod optional_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -942,7 +942,7 @@ mod optional_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "Calling with `--version` and additional other arguments is not supported",
+                "error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }

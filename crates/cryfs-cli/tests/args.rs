@@ -61,7 +61,7 @@ mod version {
             .assert()
             .success()
             .stderr(predicates::str::contains(format!(
-                "CryFS Version {}",
+                "cryfs {}",
                 cryfs_cryfs::CRYFS_VERSION,
             )));
     }
@@ -73,7 +73,7 @@ mod version {
             .assert()
             .success()
             .stderr(predicates::str::contains(format!(
-                "CryFS Version {}",
+                "cryfs {}",
                 cryfs_cryfs::CRYFS_VERSION,
             )));
     }
@@ -85,10 +85,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with:
-  <BASEDIR>
-  <MOUNTDIR>
-"#,
+                r#"error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -99,10 +96,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with:
-  <BASEDIR>
-  <MOUNTDIR>
-"#,
+                r#"error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -113,7 +107,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with '--show-ciphers'"#,
+                r#"error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -124,7 +118,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with '--show-ciphers'"#,
+                r#"error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 }
@@ -162,7 +156,7 @@ mod show_ciphers {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--show-ciphers' cannot be used with '--version'"#,
+                r#"error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -173,7 +167,7 @@ mod show_ciphers {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--show-ciphers' cannot be used with '--version'"#,
+                r#"error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 }

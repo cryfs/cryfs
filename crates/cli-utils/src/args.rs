@@ -52,7 +52,9 @@ pub fn parse_args<ConcreteArgs: Args>(
                     // So let's parse our flags and make sure that `--version` isn't present.
                     let args = CombinedArgs::<ConcreteArgs>::parse();
                     if args.immediate_exit_flags.version {
-                        eprintln!("Calling with `--version` and additional other arguments is not supported");
+                        eprintln!(
+                            "error: the argument '--version' cannot be used with other arguments"
+                        );
                         std::process::exit(1);
                     }
                     args
