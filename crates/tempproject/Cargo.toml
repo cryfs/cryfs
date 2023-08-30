@@ -13,3 +13,7 @@ version.workspace = true
 anyhow.workspace = true
 assert_cmd.workspace = true
 tempdir.workspace = true
+
+[dev-dependencies]
+indoc.workspace = true
+predicates.workspace = true
