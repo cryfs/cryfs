@@ -22,6 +22,9 @@ const CARGO_TOML: &str = concat!(
     r#""}"#,
 );
 
+// TODO Move the `EXPECTED_USAGE_XXX` consts into [TestConfig] and then parameterize the
+// test cases based on `TestConfig`, not on `TempProject`. But that requires `TestConfig`
+// to store the `TempProject` so we don't re-create it for every test case.
 const EXPECTED_USAGE_NOARGS_MAIN: &str = "Usage: my-testbin";
 const EXPECTED_USAGE_FLAG_MAIN: &str = "Usage: my-testbin [OPTIONS]";
 const EXPECTED_USAGE_FLAG: &str = "-f, --flag     Flag Documentation";
@@ -30,220 +33,154 @@ const EXPECTED_USAGE_MANDATORY_POSITIONAL: &str = "Arguments:\n  <MANDATORY_POSI
 const EXPECTED_USAGE_OPTIONAL_POSITIONAL_MAIN: &str = "Usage: my-testbin [OPTIONAL_POSITIONAL]";
 const EXPECTED_USAGE_OPTIONAL_POSITIONAL: &str = "Arguments:\n  [OPTIONAL_POSITIONAL]";
 
+/// [TestConfig] defines how to build a test binary with given arguments and main code.
+struct TestConfig {
+    args: &'static str,
+    main: &'static str,
+}
+
+impl TestConfig {
+    /// Create a cargo project with a binary following our specification
+    pub fn project(&self) -> TempProject {
+        let main_use = stringify!(
+            use cryfs_cli_utils::{
+                reexports_for_tests::{
+                    anyhow::Result,
+                    async_trait::async_trait,
+                    clap::{self, Args},
+                    cryfs_version::{Version, VersionInfo},
+                },
+                run, Application, Environment,
+            };
+        );
+        let main_cli = stringify!(
+            struct Cli {
+                args: MyArgs,
+            }
+        );
+        let main_app = stringify!(
+            type ConcreteArgs = MyArgs;
+            const NAME: &'static str = "my-cli-name";
+            const VERSION: VersionInfo<'static, 'static, 'static> = VersionInfo::new(
+                Version {
+                    major: 1,
+                    minor: 2,
+                    patch: 3,
+                    prerelease: None,
+                },
+                None,
+            );
+
+            fn new(args: MyArgs, env: Environment) -> Result<Self> {
+                Ok(Self { args })
+            }
+        );
+        let main_main = stringify!(
+            fn main() -> Result<()> {
+                run::<Cli>()
+            }
+        );
+
+        TempProjectBuilder::new()
+            .unwrap()
+            .cargo(CARGO_TOML)
+            .main(format!(
+                indoc!(
+                    r#"
+                {main_use}
+
+                {self_args}
+
+                {main_cli}
+
+                #[async_trait]
+                impl Application for Cli {{
+                    {main_app}
+
+                    {self_main}
+                }}
+
+                {main_main}
+                "#
+                ),
+                main_use = main_use,
+                main_cli = main_cli,
+                main_app = main_app,
+                main_main = main_main,
+                self_args = self.args,
+                self_main = self.main,
+            ))
+            .build()
+            .unwrap()
+    }
+}
+
+const TESTCONFIG_NOARGS: TestConfig = TestConfig {
+    args: stringify!(
+        #[derive(Args, Debug)]
+        struct MyArgs {}
+    ),
+    main: stringify!(
+        async fn main(&self) -> Result<()> {
+            println!("my-testbin:main");
+            Ok(())
+        }
+    ),
+};
+
+const TESTCONFIG_FLAGS: TestConfig = TestConfig {
+    args: stringify!(
+        #[derive(Args, Debug)]
+        struct MyArgs {
+            /// Flag Documentation
+            #[arg(short = 'f', long = "flag")]
+            flag: bool,
+        }
+    ),
+    main: stringify!(
+        async fn main(&self) -> Result<()> {
+            println!("my-testbin:main:{:?}", self.args.flag);
+            Ok(())
+        }
+    ),
+};
+
+const TESTCONFIG_MANDATORY_POSITIONAL: TestConfig = TestConfig {
+    args: stringify!(
+        #[derive(Args, Debug)]
+        struct MyArgs {
+            mandatory_positional: String,
+        }
+    ),
+    main: stringify!(
+        async fn main(&self) -> Result<()> {
+            println!("my-testbin:main:{}", self.args.mandatory_positional);
+            Ok(())
+        }
+    ),
+};
+
+const TESTCONFIG_OPTIONAL_POSITIONAL: TestConfig = TestConfig {
+    args: stringify!(
+        #[derive(Args, Debug)]
+        struct MyArgs {
+            optional_positional: Option<String>,
+        }
+    ),
+    main: stringify!(
+        async fn main(&self) -> Result<()> {
+            println!("my-testbin:main:{:?}", self.args.optional_positional);
+            Ok(())
+        }
+    ),
+};
+
 lazy_static! {
-    // TODO Deduplicate code between different PROJECT_XXX.
-    //      Probably by introducing a TestConfig struct that holds fields like the code to set up args, code from main, expected usage lines, etc.
-
-    static ref PROJECT_NO_ARGS: TempProject = TempProjectBuilder::new()
-        .unwrap()
-        .cargo(CARGO_TOML)
-        .main(stringify!(
-            use cryfs_cli_utils::{
-                reexports_for_tests::{
-                    anyhow::Result,
-                    async_trait::async_trait,
-                    clap::{self, Args},
-                    cryfs_version::{Version, VersionInfo},
-                },
-                run, Application, Environment,
-            };
-
-            #[derive(Args, Debug)]
-            struct MyArgs {}
-
-            struct Cli {}
-
-            #[async_trait]
-            impl Application for Cli {
-                type ConcreteArgs = MyArgs;
-                const NAME: &'static str = "my-cli-name";
-                const VERSION: VersionInfo<'static, 'static, 'static> = VersionInfo::new(
-                    Version {
-                        major: 1,
-                        minor: 2,
-                        patch: 3,
-                        prerelease: None,
-                    },
-                    None,
-                );
-
-                fn new(args: MyArgs, env: Environment) -> Result<Self> {
-                    Ok(Self {})
-                }
-
-                async fn main(&self) -> Result<()> {
-                    println!("my-testbin:main");
-                    Ok(())
-                }
-            }
-
-            fn main() -> Result<()> {
-                run::<Cli>()
-            }
-        ))
-        .build()
-        .unwrap();
-
-    static ref PROJECT_FLAGS: TempProject = TempProjectBuilder::new().unwrap()
-        .cargo(CARGO_TOML)
-        .main(stringify!(
-            use cryfs_cli_utils::{
-                reexports_for_tests::{
-                    anyhow::Result,
-                    async_trait::async_trait,
-                    clap::{self, Args},
-                    cryfs_version::{Version, VersionInfo},
-                },
-                run, Application, Environment,
-            };
-
-            #[derive(Args, Debug)]
-            struct MyArgs {
-                /// Flag Documentation
-                #[arg(short = 'f', long = "flag")]
-                flag: bool,
-            }
-
-            struct Cli {
-                args: MyArgs,
-            }
-
-            #[async_trait]
-            impl Application for Cli {
-                type ConcreteArgs = MyArgs;
-                const NAME: &'static str = "my-cli-name";
-                const VERSION: VersionInfo<'static, 'static, 'static> = VersionInfo::new(
-                    Version {
-                        major: 1,
-                        minor: 2,
-                        patch: 3,
-                        prerelease: None,
-                    },
-                    None,
-                );
-
-                fn new(args: MyArgs, env: Environment) -> Result<Self> {
-                    Ok(Self { args })
-                }
-
-                async fn main(&self) -> Result<()> {
-                    println!("my-testbin:main:{:?}", self.args.flag,);
-                    Ok(())
-                }
-            }
-
-            fn main() -> Result<()> {
-                run::<Cli>()
-            }
-        )).build().unwrap();
-
-    static ref PROJECT_MANDATORY_POSITIONAL: TempProject = TempProjectBuilder::new().unwrap()
-        .cargo(CARGO_TOML)
-        .main(stringify!(
-            use cryfs_cli_utils::{
-                reexports_for_tests::{
-                    anyhow::Result,
-                    async_trait::async_trait,
-                    clap::{self, Args},
-                    cryfs_version::{Version, VersionInfo},
-                },
-                run, Application, Environment,
-            };
-
-            #[derive(Args, Debug)]
-            struct MyArgs {
-                mandatory_positional: String,
-            }
-
-            struct Cli {
-                args: MyArgs,
-            }
-
-            #[async_trait]
-            impl Application for Cli {
-                type ConcreteArgs = MyArgs;
-                const NAME: &'static str = "my-cli-name";
-                const VERSION: VersionInfo<'static, 'static, 'static> = VersionInfo::new(
-                    Version {
-                        major: 1,
-                        minor: 2,
-                        patch: 3,
-                        prerelease: None,
-                    },
-                    None,
-                );
-
-                fn new(args: MyArgs, env: Environment) -> Result<Self> {
-                    Ok(Self { args })
-                }
-
-                async fn main(&self) -> Result<()> {
-                    println!(
-                        "my-testbin:main:{}",
-                        self.args.mandatory_positional,
-                    );
-                    Ok(())
-                }
-            }
-
-            fn main() -> Result<()> {
-                run::<Cli>()
-            }
-        )).build().unwrap();
-
-        static ref PROJECT_OPTIONAL_POSITIONAL: TempProject = TempProjectBuilder::new().unwrap()
-        .cargo(CARGO_TOML)
-        .main(stringify!(
-            use cryfs_cli_utils::{
-                reexports_for_tests::{
-                    anyhow::Result,
-                    async_trait::async_trait,
-                    clap::{self, Args},
-                    cryfs_version::{Version, VersionInfo},
-                },
-                run, Application, Environment,
-            };
-
-            #[derive(Args, Debug)]
-            struct MyArgs {
-                optional_positional: Option<String>,
-            }
-
-            struct Cli {
-                args: MyArgs,
-            }
-
-            #[async_trait]
-            impl Application for Cli {
-                type ConcreteArgs = MyArgs;
-                const NAME: &'static str = "my-cli-name";
-                const VERSION: VersionInfo<'static, 'static, 'static> = VersionInfo::new(
-                    Version {
-                        major: 1,
-                        minor: 2,
-                        patch: 3,
-                        prerelease: None,
-                    },
-                    None,
-                );
-
-                fn new(args: MyArgs, env: Environment) -> Result<Self> {
-                    Ok(Self { args })
-                }
-
-                async fn main(&self) -> Result<()> {
-                    println!(
-                        "my-testbin:main:{:?}",
-                        self.args.optional_positional,
-                    );
-                    Ok(())
-                }
-            }
-
-            fn main() -> Result<()> {
-                run::<Cli>()
-            }
-        )).build().unwrap();
+    static ref PROJECT_NO_ARGS: TempProject = TESTCONFIG_NOARGS.project();
+    static ref PROJECT_FLAGS: TempProject = TESTCONFIG_FLAGS.project();
+    static ref PROJECT_MANDATORY_POSITIONAL: TempProject =
+        TESTCONFIG_MANDATORY_POSITIONAL.project();
+    static ref PROJECT_OPTIONAL_POSITIONAL: TempProject = TESTCONFIG_OPTIONAL_POSITIONAL.project();
 }
 
 mod common {

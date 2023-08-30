@@ -635,7 +635,6 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "clap",
- "cryfs-cryfs",
  "cryfs-version",
  "dirs",
  "env_logger",

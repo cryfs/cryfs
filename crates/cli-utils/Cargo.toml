@@ -13,7 +13,6 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 clap = {workspace = true, features = ["derive"]}
-cryfs-cryfs = {path = "../cryfs"}
 cryfs-version = {path = "../cryfs-version"}
 dirs.workspace = true
 env_logger.workspace = true
