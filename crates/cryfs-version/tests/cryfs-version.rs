@@ -1,6 +1,7 @@
 use cryfs_version::Version;
 use tempproject::{TempProject, TempProjectBuilder};
 
+const OUR_CRATE_PATH: &str = env!("CARGO_MANIFEST_DIR");
 const OUR_GITVERSION: Option<Version> = match cryfs_version::GITINFO {
     None => None,
     Some(gitinfo) => match gitinfo.tag_info {
@@ -44,8 +45,6 @@ mod test_macro_package_version {
     }
 
     fn make_version_test_project(version: &str) -> TempProject {
-        let path_to_cryfs_version_crate = env!("CARGO_MANIFEST_DIR");
-
         let project = TempProjectBuilder::new().unwrap();
         let project = project.cargo(format!(
             r#"
@@ -58,7 +57,7 @@ version = "{version}"
 [workspace]
 
 [dependencies]
-cryfs-version = {{path = "{path_to_cryfs_version_crate}"}}
+cryfs-version = {{path = "{OUR_CRATE_PATH}"}}
 serde_json = "^1.0.96"
             "#
         ));
@@ -123,8 +122,6 @@ mod test_macro_cargo_version {
     }
 
     fn make_version_test_project(version: &str) -> TempProject {
-        let path_to_cryfs_version_crate = env!("CARGO_MANIFEST_DIR");
-
         let project = TempProjectBuilder::new().unwrap();
         let project = project.cargo(format!(
             r#"
@@ -137,7 +134,7 @@ version = "{version}"
 [workspace]
 
 [dependencies]
-cryfs-version = {{path = "{path_to_cryfs_version_crate}"}}
+cryfs-version = {{path = "{OUR_CRATE_PATH}"}}
 serde_json = "^1.0.96"
             "#
         ));
@@ -182,7 +179,6 @@ mod test_macro_assert_cargo_version_equals_git_version {
     }
 
     fn make_version_test_project(version: &str) -> TempProject {
-        let path_to_cryfs_version_crate = env!("CARGO_MANIFEST_DIR");
         let project = TempProjectBuilder::new().unwrap();
         let project = project.cargo(format!(
             r#"
@@ -195,7 +191,7 @@ version = "{version}"
 [workspace]
 
 [dependencies]
-cryfs-version = {{path = "{path_to_cryfs_version_crate}"}}
+cryfs-version = {{path = "{OUR_CRATE_PATH}"}}
 serde_json = "^1.0.96"
             "#
         ));

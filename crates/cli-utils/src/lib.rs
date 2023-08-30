@@ -24,9 +24,3 @@ pub mod reexports_for_tests {
     pub use clap;
     pub use cryfs_version;
 }
-
-// TODO Add integration tests for:
-//  - optional argument
-//  - mandatory argument
-//  - subcommand
-// TODO Can we reduce duplication between the tests?
