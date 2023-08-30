@@ -60,7 +60,7 @@ impl TestConfig {
                 None,
             );
 
-            fn new(args: MyArgs, env: Environment) -> Result<Self> {
+            fn new(args: MyArgs, _env: Environment) -> Result<Self> {
                 Ok(Self { args })
             }
         );
@@ -190,6 +190,50 @@ lazy_static! {
         expected_usage_header: "Usage: my-testbin [OPTIONAL_POSITIONAL]",
         expected_usage_line: "Arguments:\n  [OPTIONAL_POSITIONAL]",
     };
+
+    static ref PROJECT_MANDATORY_ARGUMENT: TestProject = TestProject {
+        project: TestConfig {
+            args: stringify!(
+                #[derive(Args, Debug)]
+                struct MyArgs {
+                    /// Mandatory Arg Documentation
+                    #[arg(short='a', long)]
+                    mandatory_argument: i32,
+                }
+            ),
+            main: stringify!(
+                async fn main(&self) -> Result<()> {
+                    println!("my-testbin:main:{}", self.args.mandatory_argument);
+                    Ok(())
+                }
+            ),
+        }
+        .project(),
+        expected_usage_header: "Usage: my-testbin --mandatory-argument <MANDATORY_ARGUMENT>",
+        expected_usage_line: "-a, --mandatory-argument <MANDATORY_ARGUMENT>  Mandatory Arg Documentation",
+    };
+
+    static ref PROJECT_OPTIONAL_ARGUMENT: TestProject = TestProject {
+        project: TestConfig {
+            args: stringify!(
+                #[derive(Args, Debug)]
+                struct MyArgs {
+                    /// Optional Arg Documentation
+                    #[arg(short='a', long)]
+                    optional_argument: Option<i32>,
+                }
+            ),
+            main: stringify!(
+                async fn main(&self) -> Result<()> {
+                    println!("my-testbin:main:{:?}", self.args.optional_argument);
+                    Ok(())
+                }
+            ),
+        }
+        .project(),
+        expected_usage_header: "Usage: my-testbin [OPTIONS]",
+        expected_usage_line: "-a, --optional-argument <OPTIONAL_ARGUMENT>  Optional Arg Documentation",
+    };
 }
 
 mod common {
@@ -200,6 +244,7 @@ mod common {
     #[case(&PROJECT_NOARGS)]
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn no_args(#[case] test_project: &TestProject) {
         test_project
@@ -216,6 +261,8 @@ mod common {
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_MANDATORY_ARGUMENT)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn version_flag_long(#[case] test_project: &TestProject) {
         test_project
@@ -233,6 +280,8 @@ mod common {
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_MANDATORY_ARGUMENT)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn version_flag_short(#[case] test_project: &TestProject) {
         test_project
@@ -250,6 +299,8 @@ mod common {
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_MANDATORY_ARGUMENT)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn version_flag_bad(#[case] test_project: &TestProject) {
         test_project
@@ -269,6 +320,8 @@ mod common {
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_MANDATORY_ARGUMENT)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn help_flag_long(#[case] test_project: &TestProject) {
         test_project
@@ -292,6 +345,8 @@ mod common {
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_MANDATORY_ARGUMENT)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn help_flag_short(#[case] test_project: &TestProject) {
         test_project
@@ -315,6 +370,8 @@ mod common {
     #[case(&PROJECT_FLAGS)]
     #[case(&PROJECT_MANDATORY_POSITIONAL)]
     #[case(&PROJECT_OPTIONAL_POSITIONAL)]
+    #[case(&PROJECT_MANDATORY_ARGUMENT)]
+    #[case(&PROJECT_OPTIONAL_ARGUMENT)]
     #[test]
     fn help_flag_bad(#[case] test_project: &TestProject) {
         test_project
@@ -451,9 +508,279 @@ mod optional_positional {
     }
 }
 
+mod mandatory_argument {
+    //! Tests specific to [PROJECT_MANDATORY_ARGUMENT]
+
+    use super::*;
+
+    #[test]
+    fn without_argument() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: the following required arguments were not provided:\n  --mandatory-argument <MANDATORY_ARGUMENT>",
+            ));
+    }
+
+    #[test]
+    fn with_argument_short_split() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("-a")
+            .arg("12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(
+                format!("{}:12345", MAIN_MESSAGE,),
+            ));
+    }
+
+    #[test]
+    fn with_argument_short_unsplit() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("-a=12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(
+                format!("{}:12345", MAIN_MESSAGE,),
+            ));
+    }
+
+    #[test]
+    fn with_argument_short_split_bad() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("-a")
+            .arg("bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+
+    #[test]
+    fn with_argument_short_unsplit_bad() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("-a=bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+
+    #[test]
+    fn with_argument_long_split() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("--mandatory-argument")
+            .arg("12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(
+                format!("{}:12345", MAIN_MESSAGE,),
+            ));
+    }
+
+    #[test]
+    fn with_argument_long_unsplit() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("--mandatory-argument=12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(
+                format!("{}:12345", MAIN_MESSAGE,),
+            ));
+    }
+
+    #[test]
+    fn with_argument_long_split_bad() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("-a")
+            .arg("bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+
+    #[test]
+    fn with_argument_long_unsplit_bad() {
+        PROJECT_MANDATORY_ARGUMENT
+            .project
+            .run()
+            .arg("-a=bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--mandatory-argument <MANDATORY_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+}
+
+mod optional_argument {
+    //! Tests specific to [PROJECT_OPTIONAL_ARGUMENT]
+
+    use super::*;
+
+    #[test]
+    fn without_argument() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(format!("{}:None", MAIN_MESSAGE,)));
+    }
+
+    #[test]
+    fn with_argument_short_split() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("-a")
+            .arg("12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(format!(
+                "{}:Some(12345)",
+                MAIN_MESSAGE,
+            )));
+    }
+
+    #[test]
+    fn with_argument_short_unsplit() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("-a=12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(format!(
+                "{}:Some(12345)",
+                MAIN_MESSAGE,
+            )));
+    }
+
+    #[test]
+    fn with_argument_short_split_bad() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("-a")
+            .arg("bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+
+    #[test]
+    fn with_argument_short_unsplit_bad() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("-a=bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+
+    #[test]
+    fn with_argument_long_split() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("--optional-argument")
+            .arg("12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(format!(
+                "{}:Some(12345)",
+                MAIN_MESSAGE,
+            )));
+    }
+
+    #[test]
+    fn with_argument_long_unsplit() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("--optional-argument=12345")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stdout(predicates::str::contains(format!(
+                "{}:Some(12345)",
+                MAIN_MESSAGE,
+            )));
+    }
+
+    #[test]
+    fn with_argument_long_split_bad() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("-a")
+            .arg("bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+
+    #[test]
+    fn with_argument_long_unsplit_bad() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run()
+            .arg("-a=bad")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(VERSION_MESSAGE))
+            .stderr(predicates::str::contains(
+                "error: invalid value 'bad' for '--optional-argument <OPTIONAL_ARGUMENT>': invalid digit found in string",
+            ));
+    }
+}
+
 // TODO Test `--version` and `--help` combination
-// TODO Test combination of the flag/positional argument and `--version` or `--help
+// TODO Test combination of the flag/positional argument/argument and `--version` or `--help
 // TODO Add integration tests for:
-//  - optional argument
-//  - mandatory argument
 //  - subcommand
