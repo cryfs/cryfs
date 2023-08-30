@@ -788,9 +788,11 @@ version = "2.0.0-alpha1"
 dependencies = [
  "git2version",
  "konst",
+ "predicates 3.0.3",
  "serde",
  "serde_json",
  "tempdir",
+ "tempproject",
 ]
 
 [[package]]
@@ -2527,6 +2529,15 @@ dependencies = [
  "redox_syscall 0.3.5",
  "rustix",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "tempproject"
+version = "2.0.0-alpha1"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "tempdir",
 ]
 
 [[package]]

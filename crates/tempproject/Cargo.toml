@@ -1,0 +1,15 @@
+[package]
+name = "tempproject"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+assert_cmd.workspace = true
+tempdir.workspace = true
