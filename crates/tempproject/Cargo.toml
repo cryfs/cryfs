@@ -12,6 +12,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 assert_cmd.workspace = true
+is_executable.workspace = true
 tempdir.workspace = true
 
 [dev-dependencies]
