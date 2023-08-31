@@ -37,7 +37,7 @@ mod test_macro_package_version {
     fn doesnt_match_git_version() {
         if let Some(_our_gitversion) = OUR_GITVERSION {
             let project = make_version_test_project("1.2.3");
-            run_version_test_project_expect_error(
+            run_version_test_project_expect_build_error(
                 &project,
                 "Version mismatch: The version in the git tag does not match the version in Cargo.toml",
             );
@@ -74,19 +74,16 @@ serde_json = "^1.0.96"
     }
 
     fn run_version_test_project_expect_success(project: &TempProject, expected_version: &Version) {
-        let run = project.run().assert().success();
+        let run = project.run_debug().unwrap().assert().success();
         let output = run.get_output();
 
         let actual_version: Version = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(expected_version, &actual_version);
     }
 
-    fn run_version_test_project_expect_error(project: &TempProject, expected_error: &str) {
-        project
-            .run()
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(expected_error));
+    fn run_version_test_project_expect_build_error(project: &TempProject, expected_error: &str) {
+        let error = project.run_debug().unwrap_err();
+        assert!(error.stderr.unwrap().contains(expected_error));
     }
 }
 
@@ -151,7 +148,7 @@ serde_json = "^1.0.96"
     }
 
     fn run_version_test_project(project: &TempProject, expected_version: &Version) {
-        let run = project.run().assert().success();
+        let run = project.run_debug().unwrap().assert().success();
         let output = run.get_output();
 
         let actual_version: Version = serde_json::from_slice(&output.stdout).unwrap();
@@ -174,7 +171,7 @@ mod test_macro_assert_cargo_version_equals_git_version {
     fn doesnt_match_git_version() {
         if let Some(_our_gitversion) = OUR_GITVERSION {
             let project = make_version_test_project("0.1.0");
-            run_version_test_project_expect_error(&project, "Version mismatch: The version in the git tag does not match the version in Cargo.toml");
+            run_version_test_project_expect_build_error(&project, "Version mismatch: The version in the git tag does not match the version in Cargo.toml");
         }
     }
 
@@ -205,14 +202,11 @@ serde_json = "^1.0.96"
     }
 
     fn run_version_test_project_expect_success(project: &TempProject) {
-        project.run().assert().success();
+        project.run_debug().unwrap().assert().success();
     }
 
-    fn run_version_test_project_expect_error(project: &TempProject, expected_error: &str) {
-        project
-            .run()
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(expected_error));
+    fn run_version_test_project_expect_build_error(project: &TempProject, expected_error: &str) {
+        let error = project.run_debug().unwrap_err();
+        assert!(error.stderr.unwrap().contains(expected_error));
     }
 }

@@ -1,13 +1,23 @@
 use assert_cmd::Command;
 use is_executable::IsExecutable;
 use std::path::{Path, PathBuf};
+use std::string::FromUtf8Error;
 use std::sync::OnceLock;
 use tempdir::TempDir;
+use thiserror::Error;
+
+#[derive(Error, Debug, Clone)]
+#[error("Process exited with code {exit_code:?}\n\nstdout:\n{stdout:?}\n\nstderr:\n{stderr:?}")]
+pub struct ProcessError {
+    pub exit_code: Option<i32>,
+    pub stdout: Result<String, FromUtf8Error>,
+    pub stderr: Result<String, FromUtf8Error>,
+}
 
 #[derive(Debug)]
 pub struct TempProject {
     folder: TempDir,
-    executable: OnceLock<PathBuf>,
+    executable: OnceLock<Result<PathBuf, ProcessError>>,
 }
 
 impl TempProject {
@@ -22,22 +32,35 @@ impl TempProject {
         self.folder.path().join("target")
     }
 
-    pub fn build(&self) -> PathBuf {
+    pub fn build_debug(&self) -> Result<PathBuf, ProcessError> {
         let mut command = Command::new(env!("CARGO"));
-        command
+        let command = command
             .current_dir(self.folder.path())
             .arg("build")
             .arg("--target-dir")
-            .arg(self.target_dir());
-        command.assert().success();
-        find_single_binary_in(&self.target_dir().join("debug"))
+            .arg(self.target_dir())
+            .assert();
+        let output = command.get_output();
+        if output.status.success() {
+            Ok(find_single_binary_in(&self.target_dir().join("debug")))
+        } else {
+            Err(ProcessError {
+                exit_code: output.status.code(),
+                stdout: String::from_utf8(output.stdout.clone()),
+                stderr: String::from_utf8(output.stderr.clone()),
+            })
+        }
     }
 
-    pub fn run(&self) -> Command {
-        let executable = self.executable.get_or_init(|| self.build());
+    pub fn run_debug(&self) -> Result<Command, ProcessError> {
+        let executable = match self.executable.get_or_init(|| self.build_debug()) {
+            Ok(executable) => executable,
+            Err(err) => return Err(err.clone()),
+        };
+
         let mut command = Command::new(executable);
         command.current_dir(self.folder.path());
-        command
+        Ok(command)
     }
 }
 

@@ -260,7 +260,8 @@ mod common {
     fn no_args(#[case] test_project: &TestProject) {
         test_project
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -280,7 +281,8 @@ mod common {
     ) {
         test_project
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .assert()
             .success()
@@ -300,7 +302,8 @@ mod common {
     fn with_version_flag_bad(#[case] test_project: &TestProject) {
         test_project
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("--version=bad")
             .assert()
             .failure()
@@ -322,7 +325,13 @@ mod common {
         #[case] test_project: &TestProject,
         #[values("--help", "-h")] help_flag: &str,
     ) {
-        let run = test_project.project.run().arg(help_flag).assert().success();
+        let run = test_project
+            .project
+            .run_debug()
+            .unwrap()
+            .arg(help_flag)
+            .assert()
+            .success();
         test_project.expect_help_message(run);
     }
 
@@ -337,7 +346,8 @@ mod common {
     fn help_flag_bad(#[case] test_project: &TestProject) {
         test_project
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("--help=bad")
             .assert()
             .failure()
@@ -362,7 +372,8 @@ mod common {
     ) {
         let run = test_project
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(help_flag)
             .arg(version_flag)
             .assert()
@@ -385,7 +396,8 @@ mod common {
     ) {
         let run = test_project
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .arg(help_flag)
             .assert()
@@ -403,7 +415,8 @@ mod flag {
     fn without_flag() {
         PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -417,7 +430,8 @@ mod flag {
     fn with_flag(#[values("-f", "--flag")] flag: &str) {
         PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(flag)
             .assert()
             .success()
@@ -429,7 +443,8 @@ mod flag {
     fn with_flag_bad() {
         PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("--flag=bad")
             .assert()
             .failure()
@@ -447,7 +462,8 @@ mod flag {
     ) {
         let run = PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(flag)
             .arg(help_flag)
             .assert()
@@ -463,7 +479,8 @@ mod flag {
     ) {
         let run = PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(help_flag)
             .arg(flag)
             .assert()
@@ -479,7 +496,8 @@ mod flag {
     ) {
         PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(flag)
             .arg(version_flag)
             .assert()
@@ -498,7 +516,8 @@ mod flag {
     ) {
         PROJECT_FLAGS
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .arg(flag)
             .assert()
@@ -518,7 +537,8 @@ mod mandatory_positional {
     fn with_positional_arg() {
         PROJECT_MANDATORY_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("some_value")
             .assert()
             .success()
@@ -533,7 +553,8 @@ mod mandatory_positional {
     fn missing_positional_arg() {
         PROJECT_MANDATORY_POSITIONAL
         .project
-        .run()
+        .run_debug()
+        .unwrap()
         .assert()
         .failure()
         .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -547,7 +568,8 @@ mod mandatory_positional {
     fn with_positional_and_help_flag(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_MANDATORY_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("some_value")
             .arg(help_flag)
             .assert()
@@ -560,7 +582,8 @@ mod mandatory_positional {
     fn with_help_flag_and_positional(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_MANDATORY_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(help_flag)
             .arg("some_value")
             .assert()
@@ -573,7 +596,8 @@ mod mandatory_positional {
     fn with_positional_and_version_flag(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_MANDATORY_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("positional")
             .arg(version_flag)
             .assert()
@@ -589,7 +613,8 @@ mod mandatory_positional {
     fn with_version_flag_and_positional(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_MANDATORY_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .arg("positional")
             .assert()
@@ -609,7 +634,8 @@ mod optional_positional {
     fn with_positional_arg() {
         PROJECT_OPTIONAL_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("some_value")
             .assert()
             .success()
@@ -624,7 +650,8 @@ mod optional_positional {
     fn missing_positional_arg() {
         PROJECT_OPTIONAL_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -636,7 +663,8 @@ mod optional_positional {
     fn with_positional_and_help_flag(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_OPTIONAL_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("some_value")
             .arg(help_flag)
             .assert()
@@ -649,7 +677,8 @@ mod optional_positional {
     fn with_help_flag_and_positional(#[values("-h", "--help")] help_flag: &str) {
         let run = PROJECT_OPTIONAL_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(help_flag)
             .arg("some_value")
             .assert()
@@ -662,7 +691,8 @@ mod optional_positional {
     fn with_positional_and_version_flag(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_OPTIONAL_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg("positional")
             .arg(version_flag)
             .assert()
@@ -678,7 +708,8 @@ mod optional_positional {
     fn with_version_flag_and_positional(#[values("-V", "--version")] version_flag: &str) {
         PROJECT_OPTIONAL_POSITIONAL
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .arg("positional")
             .assert()
@@ -699,7 +730,8 @@ mod mandatory_argument {
     fn without_argument() {
         PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .assert()
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -716,7 +748,8 @@ mod mandatory_argument {
     ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .assert()
             .success()
@@ -734,7 +767,8 @@ mod mandatory_argument {
     ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .assert()
             .failure()
@@ -753,7 +787,8 @@ mod mandatory_argument {
     ) {
         let run = PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .arg(help_flag)
             .assert()
@@ -770,7 +805,8 @@ mod mandatory_argument {
     ) {
         let run = PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(help_flag)
             .args(argument)
             .assert()
@@ -787,7 +823,8 @@ mod mandatory_argument {
     ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .arg(version_flag)
             .assert()
@@ -807,7 +844,8 @@ mod mandatory_argument {
     ) {
         PROJECT_MANDATORY_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .args(argument)
             .assert()
@@ -828,7 +866,8 @@ mod optional_argument {
     fn without_argument() {
         PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .assert()
             .success()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
@@ -843,7 +882,8 @@ mod optional_argument {
     ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .assert()
             .success()
@@ -862,7 +902,8 @@ mod optional_argument {
     ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .assert()
             .failure()
@@ -881,7 +922,8 @@ mod optional_argument {
     ) {
         let run = PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .arg(help_flag)
             .assert()
@@ -898,7 +940,8 @@ mod optional_argument {
     ) {
         let run = PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(help_flag)
             .args(argument)
             .assert()
@@ -915,7 +958,8 @@ mod optional_argument {
     ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .args(argument)
             .arg(version_flag)
             .assert()
@@ -935,7 +979,8 @@ mod optional_argument {
     ) {
         PROJECT_OPTIONAL_ARGUMENT
             .project
-            .run()
+            .run_debug()
+            .unwrap()
             .arg(version_flag)
             .args(argument)
             .assert()
