@@ -17,14 +17,16 @@ pub struct ProcessError {
 #[derive(Debug)]
 pub struct TempProject {
     folder: TempDir,
-    executable: OnceLock<Result<PathBuf, ProcessError>>,
+    executable_debug: OnceLock<Result<PathBuf, ProcessError>>,
+    executable_release: OnceLock<Result<PathBuf, ProcessError>>,
 }
 
 impl TempProject {
     pub(crate) fn new(folder: TempDir) -> Self {
         Self {
             folder,
-            executable: OnceLock::new(),
+            executable_debug: OnceLock::new(),
+            executable_release: OnceLock::new(),
         }
     }
 
@@ -33,6 +35,12 @@ impl TempProject {
     }
 
     pub fn build_debug(&self) -> Result<PathBuf, ProcessError> {
+        let result = self._build_debug();
+        let _ignore_error = self.executable_debug.set(result.clone());
+        result
+    }
+
+    fn _build_debug(&self) -> Result<PathBuf, ProcessError> {
         let mut command = Command::new(env!("CARGO"));
         let command = command
             .current_dir(self.folder.path())
@@ -52,8 +60,49 @@ impl TempProject {
         }
     }
 
+    pub fn build_release(&self) -> Result<PathBuf, ProcessError> {
+        let result = self._build_release();
+        let _ignore_error = self.executable_release.set(result.clone());
+        result
+    }
+
+    fn _build_release(&self) -> Result<PathBuf, ProcessError> {
+        let mut command = Command::new(env!("CARGO"));
+        let command = command
+            .current_dir(self.folder.path())
+            .arg("build")
+            .arg("--release")
+            .arg("--target-dir")
+            .arg(self.target_dir())
+            .assert();
+        let output = command.get_output();
+        if output.status.success() {
+            Ok(find_single_binary_in(&self.target_dir().join("release")))
+        } else {
+            Err(ProcessError {
+                exit_code: output.status.code(),
+                stdout: String::from_utf8(output.stdout.clone()),
+                stderr: String::from_utf8(output.stderr.clone()),
+            })
+        }
+    }
+
     pub fn run_debug(&self) -> Result<Command, ProcessError> {
-        let executable = match self.executable.get_or_init(|| self.build_debug()) {
+        let executable = match self.executable_debug.get_or_init(|| self._build_debug()) {
+            Ok(executable) => executable,
+            Err(err) => return Err(err.clone()),
+        };
+
+        let mut command = Command::new(executable);
+        command.current_dir(self.folder.path());
+        Ok(command)
+    }
+
+    pub fn run_release(&self) -> Result<Command, ProcessError> {
+        let executable = match self
+            .executable_release
+            .get_or_init(|| self._build_release())
+        {
             Ok(executable) => executable,
             Err(err) => return Err(err.clone()),
         };
