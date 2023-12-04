@@ -2,7 +2,7 @@ use anyhow::{ensure, Result};
 use async_trait::async_trait;
 use std::path::{Path, PathBuf};
 
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{
     EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig, LockingBlockStore, OnDiskBlockStore,
 };

@@ -11,16 +11,15 @@ use tokio::sync::RwLock;
 use super::utils::MaybeInitializedFs;
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap,
-    HandleWithGeneration, InodeNumber, Mode, NodeKind, NumBytes, OpenFlags, PathComponent,
-    RequestInfo, Statfs, Uid,
+    Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
+    Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{
     AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock,
     ReplyLseek, ReplyOpen, ReplyWrite,
 };
 use cryfs_utils::{
-    async_drop::{flatten_async_drop, with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{flatten_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
     with_async_drop_2,
 };
 use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};

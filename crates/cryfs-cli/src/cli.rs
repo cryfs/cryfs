@@ -1,6 +1,5 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use clap::Parser;
 use cryfs_cryfs::CRYFS_VERSION;
 use std::fmt::Display;
 use std::path::Path;

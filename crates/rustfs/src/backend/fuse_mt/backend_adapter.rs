@@ -10,8 +10,8 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, Callback, CallbackImpl, DirEntry, FileHandle, FsError, FsResult,
-    Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, Mode,
+    NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
 };
 use crate::high_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -704,9 +704,9 @@ fn convert_node_attrs(attrs: NodeAttrs) -> FileAttr {
         nlink: attrs.nlink,
         uid: attrs.uid.into(),
         gid: attrs.gid.into(),
-        /// Device ID (if special file)
+        // Device ID (if special file)
         rdev: 0, // TODO What to do about this?
-        /// Flags (macOS only; see chflags(2))
+        // Flags (macOS only; see chflags(2))
         flags: 0, // TODO What to do about this?
     }
 }

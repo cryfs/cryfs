@@ -1,12 +1,10 @@
 use async_trait::async_trait;
 
-use cryfs_rustfs::{
-    object_based_api::File, AbsolutePathBuf, FsError, FsResult, NumBytes, OpenFlags,
-};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_rustfs::{object_based_api::File, AbsolutePathBuf, FsResult, OpenFlags};
+use cryfs_utils::async_drop::AsyncDropGuard;
 
 use super::device::PassthroughDevice;
-use super::errors::{IoResultExt, NixResultExt};
+use super::errors::IoResultExt;
 use super::openfile::PassthroughOpenFile;
 
 pub struct PassthroughFile {

@@ -1,6 +1,6 @@
 use clap::{Args, Parser};
 use cryfs_cli_utils::parse_path;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 // TODO Evaluate `clap_mangen` as a potential automatic manpage generator
 // TODO Evaluate `clap_complete` as a potenail shell completion generator

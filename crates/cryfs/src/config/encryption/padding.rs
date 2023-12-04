@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use binary_layout::Field;
 use rand::{thread_rng, RngCore};
 use thiserror::Error;

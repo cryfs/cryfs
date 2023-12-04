@@ -399,6 +399,7 @@ mod tests {
     #![allow(non_snake_case)]
     use super::*;
     use crate::tests::blockid;
+    use base64::engine::{general_purpose::STANDARD as base64_STANDARD, Engine as _};
     use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
     use common_macros::hash_map;
@@ -1696,7 +1697,7 @@ mod tests {
         async fn test_backwards_compatibility_empty_file() {
             let tempdir = TempDir::new("test").unwrap();
             let path = tempdir.path().join("file");
-            write_file(&path, &base64::decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
+            write_file(&path, &base64_STANDARD.decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
             let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
             assert!(!obj.integrity_violation_in_previous_run());
             assert_eq!(Vec::<BlockId>::new(), obj.existing_blocks());
@@ -1706,7 +1707,7 @@ mod tests {
         async fn test_backwards_compatibility_empty_file_with_previous_violation() {
             let tempdir = TempDir::new("test").unwrap();
             let path = tempdir.path().join("file");
-            write_file(&path, &base64::decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQABAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
+            write_file(&path, &base64_STANDARD.decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQABAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
             let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
             assert!(obj.integrity_violation_in_previous_run());
             assert_eq!(Vec::<BlockId>::new(), obj.existing_blocks());
@@ -1716,7 +1717,7 @@ mod tests {
         async fn test_backwards_compatibility_nonempty_file() {
             let tempdir = TempDir::new("test").unwrap();
             let path = tempdir.path().join("file");
-            write_file(&path, &base64::decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAwAAAAAAAACJZ0Ujkyo4nuFLxwkKx3KXIUkbtAIAAAAAAAAAeFY0EhSRu0kyo4nuFLxwkKx3KXIFAAAAAAAAAIlnRSMUkbtJMqOJ7hS8cJCsdylyCgAAAAAAAAACAAAAAAAAAJMqOJ7hS8cJCsdylyFJG7QAAAAAFJG7STKjie4UvHCQrHcpcnhWNBI=").unwrap());
+            write_file(&path, &base64_STANDARD.decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAwAAAAAAAACJZ0Ujkyo4nuFLxwkKx3KXIUkbtAIAAAAAAAAAeFY0EhSRu0kyo4nuFLxwkKx3KXIFAAAAAAAAAIlnRSMUkbtJMqOJ7hS8cJCsdylyCgAAAAAAAAACAAAAAAAAAJMqOJ7hS8cJCsdylyFJG7QAAAAAFJG7STKjie4UvHCQrHcpcnhWNBI=").unwrap());
             let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
             assert!(!obj.integrity_violation_in_previous_run());
 

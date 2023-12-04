@@ -1,10 +1,10 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_blockstore::RemoveResult;
 use futures::join;
 use maybe_owned::MaybeOwned;
+use std::fmt::Debug;
 use std::sync::Arc;
-use std::{convert::Infallible, fmt::Debug};
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
@@ -12,14 +12,14 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::{
     async_drop::{flatten_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    safe_panic, with_async_drop_2,
+    safe_panic,
 };
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
     symlink::CrySymlink,
 };
-use crate::filesystem::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, FsBlobStore};
+use crate::filesystem::fsblobstore::{BlobType, EntryType, FsBlob, FsBlobStore};
 
 pub struct CryDevice<B>
 where

@@ -14,7 +14,7 @@ use cryfs_utils::{
 };
 
 use super::node_info::{LoadParentBlobResult, NodeInfo};
-use crate::filesystem::fsblobstore::{FileBlob, FsBlob, FsBlobStore};
+use crate::filesystem::fsblobstore::{FileBlob, FsBlobStore};
 
 // TODO Make sure we don't keep a lock on the file blob, or keep the lock in an Arc that is shared between all File, Node and OpenFile instances of the same file
 

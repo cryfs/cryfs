@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
+use base64::engine::{general_purpose::STANDARD as base64_STANDARD, Engine as _};
 use futures::stream::{BoxStream, Stream, StreamExt, TryStreamExt};
 use std::fmt::{self, Debug};
 use std::io::ErrorKind;
@@ -290,9 +291,12 @@ fn _blockid_from_filepath(path: &Path) -> BlockId {
 fn _check_and_remove_header(mut data: Data) -> Result<Data> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
         if data.starts_with(FORMAT_VERSION_HEADER_PREFIX) {
-            bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS? Block: {}", base64::encode(data));
+            bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS? Block: {}", base64_STANDARD.encode(data));
         } else {
-            bail!("This is not a valid block: {}", base64::encode(data));
+            bail!(
+                "This is not a valid block: {}",
+                base64_STANDARD.encode(data)
+            );
         }
     }
     data.shrink_to_subregion(FORMAT_VERSION_HEADER.len()..);

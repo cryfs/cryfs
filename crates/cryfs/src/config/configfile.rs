@@ -1,19 +1,14 @@
 use anyhow::{bail, Context, Result};
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::Seek;
-use std::io::{BufReader, BufWriter, ErrorKind, SeekFrom, Write};
-use std::path::{Path, PathBuf};
+use std::io::{BufReader, BufWriter, ErrorKind};
+use std::path::PathBuf;
 use thiserror::Error;
 
-use cryfs_utils::crypto::{
-    kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings},
-    symmetric::EncryptionKey,
-};
+use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
 
-use super::cryconfig::{CryConfig, FILESYSTEM_FORMAT_VERSION};
+use super::cryconfig::CryConfig;
 use super::encryption::ConfigEncryptionKey;
-use super::password_provider::PasswordProvider;
 
 #[derive(Error, Debug)]
 pub enum CreateConfigFileError {

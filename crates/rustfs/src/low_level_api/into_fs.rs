@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use super::AsyncFilesystemLL;
 use crate::common::FsError;
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 pub trait IntoFsLL<Fs>
 where

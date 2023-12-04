@@ -1319,10 +1319,10 @@ fn convert_node_attrs(attrs: NodeAttrs, ino: InodeNumber) -> fuser::FileAttr {
         nlink: attrs.nlink,
         uid: attrs.uid.into(),
         gid: attrs.gid.into(),
-        /// Device ID (if special file)
+        // Device ID (if special file)
         rdev: 0, // TODO What to do about this?
-        /// Flags (macOS only; see chflags(2))
-        flags: 0, // TODO What to do about this?
+        // Flags (macOS only; see chflags(2))
+        flags: 0,      // TODO What to do about this?
         blksize: 4096, // TODO What to do about this?
     }
 }
