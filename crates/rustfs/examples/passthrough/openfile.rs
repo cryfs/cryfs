@@ -4,7 +4,7 @@ use cryfs_rustfs::{
     object_based_api::OpenFile, Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsFd, AsRawFd};
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
@@ -38,7 +38,7 @@ impl PassthroughOpenFile {
 
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
-                nix::unistd::fchown(open_file.as_raw_fd(), uid, gid).map_error()?;
+                nix::unistd::fchown(open_file.as_fd().as_raw_fd(), uid, gid).map_error()?;
                 Ok(())
             })
             .await
@@ -145,7 +145,7 @@ impl OpenFile for PassthroughOpenFile {
                 // and there could be a race condition if multiple tasks read from the same file
                 // and overwrite each other's seek position.
                 let res = nix::sys::uio::pread(
-                    open_file.as_raw_fd(),
+                    open_file.as_fd(),
                     &mut buffer,
                     i64::try_from(u64::from(offset)).unwrap(),
                 )
@@ -171,7 +171,7 @@ impl OpenFile for PassthroughOpenFile {
                 // and there could be a race condition if multiple tasks write to the same file
                 // and overwrite each other's seek position.
                 let num_written = nix::sys::uio::pwrite(
-                    open_file.as_raw_fd(),
+                    open_file.as_fd(),
                     data.as_ref(),
                     i64::try_from(u64::from(offset)).unwrap(),
                 )

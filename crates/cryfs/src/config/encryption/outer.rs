@@ -1,5 +1,5 @@
 use anyhow::{ensure, Context, Result};
-use binrw::{binrw, until_eof, BinRead, BinWrite, NullString};
+use binrw::{binrw, helpers::until_eof, BinRead, BinWrite, NullString};
 use std::io::{Cursor, Read, Seek, Write};
 
 use cryfs_utils::{

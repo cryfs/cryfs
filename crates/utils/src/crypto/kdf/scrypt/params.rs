@@ -1,5 +1,5 @@
 use anyhow::{ensure, Result};
-use binrw::{binrw, until_eof, BinRead, BinWrite};
+use binrw::{binrw, helpers::until_eof, BinRead, BinWrite};
 use rand::{thread_rng, RngCore};
 use std::fmt::Debug;
 use std::io::Cursor;

@@ -29,7 +29,7 @@ rstest_reuse.workspace = true
 tokio = {workspace = true, features=["fs"]}
 # TODO env_logger and nix are only needed for the passthrough example
 env_logger.workspace = true
-nix.workspace = true
+nix = {workspace = true, features=["fs", "user", "uio"]}
 mockall.workspace = true
 tempdir.workspace = true
 cryfs-utils = {path = "../utils", features=["testutils"]}

@@ -13,15 +13,15 @@ use crate::data::Data;
 #[allow(non_camel_case_types)]
 pub trait CipherType {
     const KEY_SIZE: usize;
-    type NONCE_SIZE: ArrayLength<u8>;
-    type AUTH_TAG_SIZE: ArrayLength<u8>;
+    type NONCE_SIZE: ArrayLength;
+    type AUTH_TAG_SIZE: ArrayLength;
 
     fn instantiate() -> OpenSSLCipher;
 }
-pub struct Aes256Gcm<NonceSize: ArrayLength<u8>> {
+pub struct Aes256Gcm<NonceSize: ArrayLength> {
     _n: PhantomData<NonceSize>,
 }
-impl<NonceSize: ArrayLength<u8>> CipherType for Aes256Gcm<NonceSize> {
+impl<NonceSize: ArrayLength> CipherType for Aes256Gcm<NonceSize> {
     const KEY_SIZE: usize = 32;
     type NONCE_SIZE = NonceSize;
     type AUTH_TAG_SIZE = U16;
@@ -30,10 +30,10 @@ impl<NonceSize: ArrayLength<u8>> CipherType for Aes256Gcm<NonceSize> {
         OpenSSLCipher::aes_256_gcm()
     }
 }
-pub struct Aes128Gcm<NonceSize: ArrayLength<u8>> {
+pub struct Aes128Gcm<NonceSize: ArrayLength> {
     _n: PhantomData<NonceSize>,
 }
-impl<NonceSize: ArrayLength<u8>> CipherType for Aes128Gcm<NonceSize> {
+impl<NonceSize: ArrayLength> CipherType for Aes128Gcm<NonceSize> {
     const KEY_SIZE: usize = 16;
     type NONCE_SIZE = NonceSize;
     type AUTH_TAG_SIZE = U16;
