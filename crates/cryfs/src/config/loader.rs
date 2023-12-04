@@ -113,7 +113,7 @@ pub fn load_or_create(
         let password = password
             .password_for_existing_filesystem()
             .map_err(ConfigLoadError::InteractionError)?;
-        load(
+        _load(
             filename,
             &password,
             console,
@@ -134,6 +134,26 @@ pub fn load_or_create(
             local_state_dir,
         )
     }
+}
+
+pub fn load_readonly(
+    filename: PathBuf,
+    password: &(impl PasswordProvider + ?Sized),
+    console: &(impl Console + ?Sized),
+    command_line_flags: &CommandLineFlags,
+    local_state_dir: &LocalStateDir,
+) -> Result<ConfigLoadResult, ConfigLoadError> {
+    let password = password
+        .password_for_existing_filesystem()
+        .map_err(ConfigLoadError::InteractionError)?;
+    _load(
+        filename,
+        &password,
+        console,
+        command_line_flags,
+        local_state_dir,
+        Access::ReadOnly,
+    )
 }
 
 fn _create(
@@ -160,7 +180,7 @@ fn _create(
     })
 }
 
-pub fn load(
+fn _load(
     filename: PathBuf,
     password: &str,
     console: &(impl Console + ?Sized),

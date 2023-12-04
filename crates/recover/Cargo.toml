@@ -18,6 +18,7 @@ async-trait.workspace = true
 clap = {workspace = true, features = ["derive"]}
 cryfs-cli-utils = {path = "../cli-utils"}
 cryfs-cryfs = {path = "../cryfs"}
+cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 
 [features]

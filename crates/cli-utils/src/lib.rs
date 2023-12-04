@@ -8,6 +8,7 @@ mod path;
 pub use path::parse_path;
 
 mod args;
+pub mod password_provider;
 mod version;
 
 mod env;
@@ -15,6 +16,9 @@ pub use env::Environment;
 
 mod application;
 pub use application::{run, Application};
+
+mod config;
+pub use config::print_config;
 
 cryfs_version::assert_cargo_version_equals_git_version!();
 

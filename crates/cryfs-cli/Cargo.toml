@@ -24,7 +24,6 @@ cryfs-rustfs = {path = "../rustfs", features = ["fuser"]}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 dialoguer.workspace = true
-rpassword.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]

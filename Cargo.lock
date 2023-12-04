@@ -646,7 +646,6 @@ dependencies = [
  "escargot",
  "lazy_static",
  "predicates 3.0.4",
- "rpassword",
  "tokio",
 ]
 
@@ -658,6 +657,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "clap",
+ "cryfs-cryfs",
  "cryfs-version",
  "dirs",
  "env_logger",
@@ -667,6 +667,7 @@ dependencies = [
  "path-absolutize",
  "pathdiff",
  "predicates 3.0.4",
+ "rpassword",
  "rstest",
  "tempdir",
  "tempproject",
@@ -711,6 +712,7 @@ dependencies = [
  "clap",
  "cryfs-cli-utils",
  "cryfs-cryfs",
+ "cryfs-utils",
  "cryfs-version",
 ]
 

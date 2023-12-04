@@ -7,7 +7,6 @@ mod cli;
 pub use cli::Cli;
 
 mod console;
-mod password_provider;
 
 mod runner;
 
