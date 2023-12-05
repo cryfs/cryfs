@@ -21,7 +21,7 @@ mod config;
 pub use config::print_config;
 
 mod blockstore_setup;
-pub use blockstore_setup::{setup_blockstore, BlockstoreCallback};
+pub use blockstore_setup::{setup_blockstore_stack, BlockstoreCallback};
 
 cryfs_version::assert_cargo_version_equals_git_version!();
 

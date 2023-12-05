@@ -1,10 +1,9 @@
 use anyhow::{ensure, Result};
 use async_trait::async_trait;
-use std::path::PathBuf;
 
 use cryfs_blockstore::{
     BlockStore, EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig, LockingBlockStore,
-    OnDiskBlockStore,
+    OptimizedBlockStoreWriter,
 };
 use cryfs_cryfs::config::{
     ciphers::{lookup_cipher_async, AsyncCipherCallback},
@@ -26,9 +25,10 @@ pub trait BlockstoreCallback {
     ) -> Self::Result;
 }
 
-/// Set up a blockstore stack (i.e. OnDiskBlockStore, EncryptedBlockStore, IntegrityBlockStore) using the cipher specified in the config file.
-pub async fn setup_blockstore<CB: BlockstoreCallback + Send + Sync>(
-    basedir: PathBuf,
+/// Set up a blockstore stack (i.e. EncryptedBlockStore, IntegrityBlockStore) using the cipher specified in the config file.
+/// Give it the base blockstore (i.e. OnDiskBlockStore) and it will set up the blockstore stack as needed for a cryfs device.
+pub async fn setup_blockstore_stack<CB: BlockstoreCallback + Send + Sync>(
+    base_blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync>,
     config: &ConfigLoadResult,
     local_state_dir: &LocalStateDir,
     integrity_config: IntegrityConfig,
@@ -37,7 +37,7 @@ pub async fn setup_blockstore<CB: BlockstoreCallback + Send + Sync>(
     lookup_cipher_async(
         &config.config.config().cipher,
         CipherCallbackForBlockstoreSetup {
-            basedir,
+            base_blockstore,
             config,
             local_state_dir,
             integrity_config,
@@ -47,8 +47,13 @@ pub async fn setup_blockstore<CB: BlockstoreCallback + Send + Sync>(
     .await?
 }
 
-struct CipherCallbackForBlockstoreSetup<'c, 'l, CB: BlockstoreCallback> {
-    basedir: PathBuf,
+struct CipherCallbackForBlockstoreSetup<
+    'c,
+    'l,
+    B: BlockStore + OptimizedBlockStoreWriter + Send + Sync,
+    CB: BlockstoreCallback,
+> {
+    base_blockstore: AsyncDropGuard<B>,
     config: &'c ConfigLoadResult,
     local_state_dir: &'l LocalStateDir,
     integrity_config: IntegrityConfig,
@@ -56,16 +61,13 @@ struct CipherCallbackForBlockstoreSetup<'c, 'l, CB: BlockstoreCallback> {
 }
 
 #[async_trait]
-impl<CB: BlockstoreCallback + Send> AsyncCipherCallback
-    for CipherCallbackForBlockstoreSetup<'_, '_, CB>
+impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCallback + Send>
+    AsyncCipherCallback for CipherCallbackForBlockstoreSetup<'_, '_, B, CB>
 {
     type Result = Result<CB::Result>;
 
     async fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
         // TODO Drop safety, make sure we correctly drop intermediate objects when errors happen
-
-        let ondisk_blockstore = OnDiskBlockStore::new(self.basedir);
-        // TODO Either don't use lookup_cipher_dyn or there is no need for the non-dyn lookup_cipher methods.
 
         let key = EncryptionKey::from_hex(&self.config.config.config().enc_key)?;
         ensure!(
@@ -75,7 +77,7 @@ impl<CB: BlockstoreCallback + Send> AsyncCipherCallback
             key.num_bytes(),
         );
         let cipher = C::new(key)?;
-        let encrypted_blockstore = EncryptedBlockStore::new(ondisk_blockstore, cipher);
+        let encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);
         let integrity_file_path = self
             .local_state_dir
             .for_filesystem_id(&self.config.config.config().filesystem_id)?

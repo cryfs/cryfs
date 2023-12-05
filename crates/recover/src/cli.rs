@@ -1,11 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_blockstore::{
-    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation,
+    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
+    ReadOnlyBlockStore,
 };
 use cryfs_cli_utils::{
-    password_provider::InteractivePasswordProvider, print_config, setup_blockstore, Application,
-    Environment,
+    password_provider::InteractivePasswordProvider, print_config, setup_blockstore_stack,
+    Application, Environment,
 };
 use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult},
@@ -48,8 +49,10 @@ impl Application for RecoverCli {
                 .to_str()
                 .expect("Invalid utf-8 in filesystem path")
         );
-        setup_blockstore(
-            self.args.basedir,
+        let blockstore = OnDiskBlockStore::new(self.args.basedir);
+        let blockstore = ReadOnlyBlockStore::new(blockstore);
+        setup_blockstore_stack(
+            blockstore,
             &config,
             &self.local_state_dir,
             // TODO Setup IntegrityConfig correctly

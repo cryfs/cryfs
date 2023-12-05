@@ -6,12 +6,12 @@ use super::console::InteractiveConsole;
 use super::runner::FilesystemRunner;
 use crate::args::CryfsArgs;
 use cryfs_blockstore::{
-    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation,
+    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
 };
 use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
 };
-use cryfs_cli_utils::{print_config, setup_blockstore, Application, Environment};
+use cryfs_cli_utils::{print_config, setup_blockstore_stack, Application, Environment};
 use cryfs_cryfs::CRYFS_VERSION;
 use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, PasswordProvider},
@@ -84,8 +84,8 @@ impl Cli {
         let config = self.load_or_create_config()?;
         print_config(&config);
 
-        setup_blockstore(
-            basedir,
+        setup_blockstore_stack(
+            OnDiskBlockStore::new(basedir),
             &config,
             &self.local_state_dir,
             // TODO Setup IntegrityConfig correctly
