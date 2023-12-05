@@ -15,7 +15,7 @@ pub trait Application: Sized {
     const VERSION: VersionInfo<'static, 'static, 'static>;
 
     fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self>;
-    async fn main(&self) -> Result<()>;
+    async fn main(self) -> Result<()>;
 }
 
 pub fn run<App: Application>() -> Result<()> {

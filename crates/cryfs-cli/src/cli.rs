@@ -11,10 +11,9 @@ use cryfs_blockstore::{
 use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
 };
-use cryfs_cli_utils::{print_config, Application, Environment};
+use cryfs_cli_utils::{print_config, setup_blockstore, Application, Environment};
 use cryfs_cryfs::CRYFS_VERSION;
 use cryfs_cryfs::{
-    config::ciphers::lookup_cipher_async,
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, PasswordProvider},
     localstate::LocalStateDir,
 };
@@ -51,7 +50,7 @@ impl Application for Cli {
         })
     }
 
-    async fn main(&self) -> Result<()> {
+    async fn main(self) -> Result<()> {
         if self.args.show_ciphers {
             for cipher in cryfs_cryfs::config::ALL_CIPHERS {
                 println!("{}", cipher);
@@ -85,20 +84,22 @@ impl Cli {
         let config = self.load_or_create_config()?;
         print_config(&config);
 
-        lookup_cipher_async(
-            &config.config.config().cipher,
+        setup_blockstore(
+            basedir,
+            &config,
+            &self.local_state_dir,
+            // TODO Setup IntegrityConfig correctly
+            IntegrityConfig {
+                allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                missing_block_is_integrity_violation:
+                    MissingBlockIsIntegrityViolation::IsNotAViolation,
+                on_integrity_violation: Box::new(|err| {
+                    // TODO
+                }),
+            },
             FilesystemRunner {
-                basedir,
                 mountdir,
                 config: &config,
-                local_state_dir: &self.local_state_dir,
-                // TODO Setup IntegrityConfig correctly
-                integrity_config: IntegrityConfig {
-                    allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
-                    missing_block_is_integrity_violation:
-                        MissingBlockIsIntegrityViolation::IsNotAViolation,
-                    on_integrity_violation: Box::new(|err| {}),
-                },
             },
         )
         .await??;

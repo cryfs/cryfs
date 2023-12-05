@@ -16,6 +16,8 @@ name = "cryfs-recover"
 anyhow.workspace = true
 async-trait.workspace = true
 clap = {workspace = true, features = ["derive"]}
+cryfs-blockstore = {path = "../blockstore"}
+cryfs-blobstore = {path = "../blobstore"}
 cryfs-cli-utils = {path = "../cli-utils"}
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-utils = {path = "../utils"}

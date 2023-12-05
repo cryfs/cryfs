@@ -14,7 +14,10 @@ anyhow.workspace = true
 async-trait.workspace = true
 clap = {workspace = true, features = ["derive"]}
 cryfs-cryfs = {path = "../cryfs"}
+cryfs-blobstore = {path = "../blobstore"}
+cryfs-blockstore = {path = "../blockstore"}
 cryfs-version = {path = "../cryfs-version"}
+cryfs-utils = {path = "../utils"}
 dirs.workspace = true
 env_logger.workspace = true
 path-absolutize.workspace = true

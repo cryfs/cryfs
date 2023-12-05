@@ -1,7 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use cryfs_cli_utils::password_provider::InteractivePasswordProvider;
-use cryfs_cli_utils::{print_config, Application, Environment};
+use cryfs_blockstore::{
+    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation,
+};
+use cryfs_cli_utils::{
+    password_provider::InteractivePasswordProvider, print_config, setup_blockstore, Application,
+    Environment,
+};
 use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult},
     localstate::LocalStateDir,
@@ -9,7 +14,7 @@ use cryfs_cryfs::{
 };
 use cryfs_version::VersionInfo;
 
-use super::console::RecoverConsole;
+use super::{console::RecoverConsole, runner::RecoverRunner};
 use crate::args::CryfsRecoverArgs;
 
 pub struct RecoverCli {
@@ -32,9 +37,27 @@ impl Application for RecoverCli {
         })
     }
 
-    async fn main(&self) -> Result<()> {
+    async fn main(self) -> Result<()> {
         let config = self.load_config()?;
         print_config(&config);
+
+        setup_blockstore(
+            self.args.basedir,
+            &config,
+            &self.local_state_dir,
+            // TODO Setup IntegrityConfig correctly
+            IntegrityConfig {
+                allow_integrity_violations: AllowIntegrityViolations::AllowViolations,
+                missing_block_is_integrity_violation:
+                    // TODO Since we say AllowViolations above, should this be IsAViolation so we log it?
+                    MissingBlockIsIntegrityViolation::IsNotAViolation,
+                on_integrity_violation: Box::new(|err| {
+                    // TODO What to do here? Maybe we should at least log it
+                }),
+            },
+            RecoverRunner { config: &config },
+        )
+        .await??;
 
         Ok(())
     }
