@@ -719,6 +719,7 @@ dependencies = [
  "cryfs-cryfs",
  "cryfs-utils",
  "cryfs-version",
+ "log",
 ]
 
 [[package]]

@@ -41,6 +41,13 @@ impl Application for RecoverCli {
         let config = self.load_config()?;
         print_config(&config);
 
+        log::info!(
+            "Calculating stats for filesystem at {}",
+            self.args
+                .basedir
+                .to_str()
+                .expect("Invalid utf-8 in filesystem path")
+        );
         setup_blockstore(
             self.args.basedir,
             &config,

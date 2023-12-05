@@ -22,6 +22,7 @@ cryfs-cli-utils = {path = "../cli-utils"}
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
+log.workspace = true
 
 [features]
 default = ["check_for_updates"]
