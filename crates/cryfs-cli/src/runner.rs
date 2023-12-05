@@ -16,23 +16,27 @@ pub struct FilesystemRunner<'m, 'c> {
 
 #[async_trait]
 impl<'m, 'c> BlockstoreCallback for FilesystemRunner<'m, 'c> {
-    // TODO Any way to do this without dyn?
     type Result = Result<()>;
 
     async fn callback<B: BlockStore + Send + Sync + AsyncDrop + 'static>(
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
-        // TODO Drop safety, make sure we correctly drop intermediate objects when errors happen
-
         // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
-        let blobstore = BlobStoreOnBlocks::new(
+        let mut blobstore = BlobStoreOnBlocks::new(
             blockstore,
             u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
         )
         .await?;
 
-        let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob)?;
+        let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
+        let root_blob_id = match root_blob_id {
+            Ok(root_blob_id) => root_blob_id,
+            Err(e) => {
+                blobstore.async_drop().await?;
+                return Err(e);
+            }
+        };
 
         let device = if self.config.first_time_access {
             CryDevice::create_new_filesystem(blobstore, root_blob_id).await?

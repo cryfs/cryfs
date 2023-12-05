@@ -75,8 +75,15 @@ impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockSt
         my_client_id: ClientId,
         config: IntegrityConfig,
     ) -> Result<AsyncDropGuard<Self>> {
-        let mut integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
-            .context("Tried to create IntegrityData")?;
+        let integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
+            .context("Tried to create IntegrityData");
+        let mut integrity_data = match integrity_data {
+            Ok(integrity_data) => integrity_data,
+            Err(err) => {
+                underlying_block_store.async_drop().await?;
+                return Err(err);
+            }
+        };
         if integrity_data.integrity_violation_in_previous_run() {
             match config.allow_integrity_violations {
                 AllowIntegrityViolations::AllowViolations => {

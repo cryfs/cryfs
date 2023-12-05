@@ -1,4 +1,4 @@
-use anyhow::{ensure, Result};
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 use cryfs_blockstore::{
@@ -66,22 +66,43 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
 {
     type Result = Result<CB::Result>;
 
-    async fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
-        // TODO Drop safety, make sure we correctly drop intermediate objects when errors happen
+    async fn callback<C: CipherDef + Send + Sync + 'static>(mut self) -> Self::Result {
+        let key = match EncryptionKey::from_hex(&self.config.config.config().enc_key) {
+            Ok(key) => key,
+            Err(err) => {
+                self.base_blockstore.async_drop().await?;
+                return Err(err);
+            }
+        };
 
-        let key = EncryptionKey::from_hex(&self.config.config.config().enc_key)?;
-        ensure!(
-            key.num_bytes() == C::KEY_SIZE,
-            "Invalid key length in config file. Expected {} bytes, got {} bytes.",
-            C::KEY_SIZE,
-            key.num_bytes(),
-        );
-        let cipher = C::new(key)?;
-        let encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);
+        if key.num_bytes() != C::KEY_SIZE {
+            self.base_blockstore.async_drop().await?;
+            bail!(
+                "Invalid key length in config file. Expected {} bytes, got {} bytes.",
+                C::KEY_SIZE,
+                key.num_bytes(),
+            );
+        }
+
+        let cipher = match C::new(key) {
+            Ok(cipher) => cipher,
+            Err(err) => {
+                self.base_blockstore.async_drop().await?;
+                return Err(err);
+            }
+        };
+        let mut encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);
+
         let integrity_file_path = self
             .local_state_dir
-            .for_filesystem_id(&self.config.config.config().filesystem_id)?
-            .join("integritydata");
+            .for_filesystem_id(&self.config.config.config().filesystem_id);
+        let integrity_file_path = match integrity_file_path {
+            Ok(integrity_file_path) => integrity_file_path.join("integritydata"),
+            Err(err) => {
+                encrypted_blockstore.async_drop().await?;
+                return Err(err);
+            }
+        };
         let integrity_blockstore = IntegrityBlockStore::new(
             encrypted_blockstore,
             integrity_file_path,
