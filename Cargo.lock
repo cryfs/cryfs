@@ -711,6 +711,7 @@ name = "cryfs-recover"
 version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
+ "async-recursion",
  "async-trait",
  "clap",
  "cryfs-blobstore",
