@@ -1,7 +1,6 @@
 use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
-#[cfg(test)]
 use futures::stream::BoxStream;
 
 pub use crate::RemoveResult;
@@ -203,7 +202,6 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         node.flush(&self.block_store).await
     }
 
-    #[cfg(test)]
     pub async fn all_nodes(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         self.block_store.all_blocks().await
     }

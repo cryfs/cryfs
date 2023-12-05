@@ -5,6 +5,7 @@ use cryfs_blockstore::{BlockId, BLOCKID_LEN};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, BinRead, BinWrite)]
 pub struct BlobId {
+    // TODO Remove `pub(super)` and use `Self::to_root_block_id()` instead.
     pub(super) root: BlockId,
 }
 
@@ -13,6 +14,11 @@ impl BlobId {
         Self {
             root: BlockId::new_random(),
         }
+    }
+
+    #[inline]
+    pub fn to_root_block_id(&self) -> &BlockId {
+        &self.root
     }
 
     #[inline]

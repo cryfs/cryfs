@@ -6,6 +6,8 @@ mod blobstore_on_blocks;
 
 pub use blob_on_blocks::BlobOnBlocks;
 pub use blobstore_on_blocks::BlobStoreOnBlocks;
+pub use data_node_store::DataNodeStore;
+pub use data_tree_store::DataTreeStore;
 
 #[cfg(test)]
 mod test_as_blockstore;
