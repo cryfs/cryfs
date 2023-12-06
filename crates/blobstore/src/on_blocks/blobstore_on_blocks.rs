@@ -5,7 +5,7 @@ use std::fmt;
 use super::blob_on_blocks::BlobOnBlocks;
 use super::data_tree_store::DataTreeStore;
 use crate::{BlobId, BlobStore, RemoveResult};
-use cryfs_blockstore::{BlockStore, LockingBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 pub struct BlobStoreOnBlocks<B: BlockStore + Send + Sync> {
@@ -20,6 +20,10 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
         Ok(AsyncDropGuard::new(Self {
             tree_store: DataTreeStore::new(blockstore, block_size_bytes).await?,
         }))
+    }
+
+    pub async fn load_block_depth(&self, id: &BlockId) -> Result<Option<u8>> {
+        self.tree_store.load_block_depth(id).await
     }
 
     #[cfg(test)]

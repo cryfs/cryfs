@@ -43,7 +43,7 @@ impl Application for RecoverCli {
         print_config(&config);
 
         log::info!(
-            "Calculating stats for filesystem at {}",
+            "Checking filesystem at {}",
             self.args
                 .basedir
                 .to_str()
