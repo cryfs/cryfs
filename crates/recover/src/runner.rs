@@ -78,6 +78,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         errors.extend(checks.finalize());
 
+        // TODO Some errors may be found by multiple checks, let's deduplicate those.
+
         // TODO println not info log for regular outputs
         log::info!("Found {} errors", errors.len());
         for error in errors {
