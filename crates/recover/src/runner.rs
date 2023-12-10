@@ -1,12 +1,16 @@
 use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
+use futures::future;
 use futures::stream::{FuturesUnordered, StreamExt, TryStreamExt};
 use indicatif::ProgressBar;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::sync::Arc;
 
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
+use super::checks::{AllChecks, FilesystemCheck};
+use super::error::CorruptedError;
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
 use cryfs_cryfs::{
@@ -27,26 +31,40 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
-        // TODO We should be able to list all blocks in parallel with listing all known blocks
+        // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
+        let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
+
+        let mut nodestore = DataNodeStore::new(blockstore, blocksize_bytes).await?;
+
+        let checks = AllChecks::new();
+        let mut errors = vec![];
 
         log::info!("Listing all nodes...");
-        let all_nodes = match get_all_node_ids(&blockstore).await {
+        let all_nodes = match get_all_node_ids(&nodestore).await {
             Ok(all_nodes) => all_nodes,
             Err(e) => {
-                blockstore.async_drop().await?;
+                nodestore.async_drop().await?;
                 return Err(e);
             }
         };
-        log::info!("Listing all nodes...done. Found {} nodes", all_nodes.len(),);
+        log::info!("Listing all nodes...done. Found {} nodes", all_nodes.len());
 
-        // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
+        // TODO Read all blobs before we're reading all nodes since it's a faster pass
+
+        log::info!("Checking all nodes...");
+        errors.extend(check_all_nodes(&nodestore, &all_nodes, &checks).await);
+        log::info!("Checking all nodes...done");
+
+        // TODO Reading blobs loads those blobs again even though we already read them above. Can we prevent the double-load? e.g. using Blob::all_blocks()? but need to make sure we also load blocks that aren't referenced.
+
         let blobstore = BlobStoreOnBlocks::new(
-            blockstore,
-            u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
+            DataNodeStore::into_inner_blockstore(nodestore),
+            blocksize_bytes,
         )
         .await?;
         let mut blobstore = FsBlobStore::new(blobstore);
 
+        log::info!("Checking directory structure...");
         let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
         let root_blob_id = match root_blob_id {
             Ok(root_blob_id) => root_blob_id,
@@ -55,141 +73,165 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
                 return Err(e);
             }
         };
+        errors.extend(check_all_blobs(&blobstore, root_blob_id, &checks).await?);
+        log::info!("Checking directory structure...done");
 
-        log::info!("Listing referenced nodes...");
-        let pb = ProgressBar::new(u64::try_from(all_nodes.len()).unwrap());
-        let referenced_nodes =
-            get_referenced_node_ids(&blobstore, root_blob_id, Some(all_nodes.len()), &pb).await;
-        let referenced_nodes: Vec<BlockId> = match referenced_nodes {
-            Ok(referenced_nodes) => referenced_nodes,
-            Err(e) => {
-                blobstore.async_drop().await?;
-                return Err(e);
-            }
-        };
-        pb.finish_and_clear();
-        log::info!(
-            "Listing referenced nodes...done. Found {} nodes",
-            referenced_nodes.len()
-        );
+        errors.extend(checks.finalize());
 
-        let mut unreferenced_nodes = all_nodes;
-        for referenced_node in referenced_nodes {
-            let found = unreferenced_nodes.remove(&referenced_node);
-            if !found {
-                blobstore.async_drop().await?;
-                bail!("Node {:?} is referenced but not in the set of all nodes. This can happen if the file system changed while we're checking it.", referenced_node);
-            }
+        // TODO println not info log for regular outputs
+        log::info!("Found {} errors", errors.len());
+        for error in errors {
+            log::info!("- {error}");
         }
 
-        log::info!("Found {} unreferenced nodes", unreferenced_nodes.len());
-
-        log::info!("Checking node depths...");
-        let mut num_unreferenced_nodes_per_depth = HashMap::new();
-        // TODO Remember node depth when we iterate through them the first time instead of requiring another pass through the nodes
-        for unreferenced_node in unreferenced_nodes {
-            let depth = blobstore.load_block_depth(&unreferenced_node).await;
-            let depth = match depth {
-                Ok(Some(depth)) => depth,
-                Ok(None) => {
-                    blobstore.async_drop().await?;
-                    bail!("Node {:?} found earlier but now it is gone. This can happen if the file system changed while we're checking it.", unreferenced_node);
-                }
-                Err(e) => {
-                    blobstore.async_drop().await?;
-                    return Err(e);
-                }
-            };
-            let num_unreferenced_nodes_at_depth =
-                num_unreferenced_nodes_per_depth.entry(depth).or_insert(0);
-            *num_unreferenced_nodes_at_depth += 1;
-        }
-        let mut num_unreferenced_nodes_per_depth: Vec<(u8, u64)> =
-            num_unreferenced_nodes_per_depth.into_iter().collect();
-        num_unreferenced_nodes_per_depth.sort_by_key(|(depth, _)| *depth);
-        log::info!("Checking node depths...done");
-        for (depth, num_unreferenced_nodes_at_depth) in num_unreferenced_nodes_per_depth {
-            log::info!(
-                "Found {} unreferenced nodes at depth {}",
-                num_unreferenced_nodes_at_depth,
-                depth
-            );
-        }
+        // log::info!("Checking node depths...");
+        // let mut num_unreferenced_nodes_per_depth = HashMap::new();
+        // // TODO Remember node depth when we iterate through them the first time instead of requiring another pass through the nodes
+        // for unreferenced_node in unreferenced_nodes {
+        //     let depth = blobstore.load_block_depth(&unreferenced_node).await;
+        //     let depth = match depth {
+        //         Ok(Some(depth)) => depth,
+        //         Ok(None) => {
+        //             blobstore.async_drop().await?;
+        //             bail!("Node {:?} found earlier but now it is gone. This can happen if the file system changed while we're checking it.", unreferenced_node);
+        //         }
+        //         Err(e) => {
+        //             blobstore.async_drop().await?;
+        //             return Err(e);
+        //         }
+        //     };
+        //     let num_unreferenced_nodes_at_depth =
+        //         num_unreferenced_nodes_per_depth.entry(depth).or_insert(0);
+        //     *num_unreferenced_nodes_at_depth += 1;
+        // }
+        // let mut num_unreferenced_nodes_per_depth: Vec<(u8, u64)> =
+        //     num_unreferenced_nodes_per_depth.into_iter().collect();
+        // num_unreferenced_nodes_per_depth.sort_by_key(|(depth, _)| *depth);
+        // log::info!("Checking node depths...done");
+        // for (depth, num_unreferenced_nodes_at_depth) in num_unreferenced_nodes_per_depth {
+        //     log::info!(
+        //         "Found {} unreferenced nodes at depth {}",
+        //         num_unreferenced_nodes_at_depth,
+        //         depth
+        //     );
+        // }
 
         blobstore.async_drop().await?;
         Ok(())
     }
 }
 
-async fn get_all_node_ids(
-    blockstore: &AsyncDropGuard<LockingBlockStore<impl BlockStore + Send + Sync>>,
-) -> Result<HashSet<BlockId>> {
-    blockstore.all_blocks().await?.try_collect().await
+async fn get_all_node_ids<B>(
+    nodestore: &AsyncDropGuard<DataNodeStore<B>>,
+) -> Result<HashSet<BlockId>>
+where
+    B: BlockStore + Send + Sync + 'static,
+{
+    nodestore.all_nodes().await?.try_collect().await
+}
+
+#[must_use]
+async fn check_all_nodes<B>(
+    nodestore: &AsyncDropGuard<DataNodeStore<B>>,
+    all_nodes: &HashSet<BlockId>,
+    checks: &AllChecks,
+) -> Vec<CorruptedError>
+where
+    B: BlockStore + Send + Sync + 'static,
+{
+    let pb = Arc::new(ProgressBar::new(u64::try_from(all_nodes.len()).unwrap()));
+    let pb_clone = Arc::clone(&pb);
+    // TODO Should we rate-limit this instead of trying to load all at once?
+    let errors: FuturesUnordered<_> = all_nodes.iter().map(|&node_id| {
+        let pb_clone = Arc::clone(&pb_clone);
+        async move {
+            let loaded = nodestore.load(node_id).await;
+            pb_clone.inc(1);
+            match loaded {
+                Ok(Some(node)) => {
+                    checks.process_existing_node(&node);
+                    None // no error
+                }
+                Ok(None) => {
+                    // TODO don't panic but return an error (i.e. change result from Vec<CorruptedError> to Result<Vec<CorruptedError>>) and exit gracefully
+                    panic!("Node {node_id:?} previously present but then vanished during our checks. Please don't modify the file system while checks are running.");
+                }
+                Err(error) => {
+                    // return the error
+                    Some(CorruptedError::NodeUnreadable {
+                        node_id,
+                        error,
+                    })
+                }
+            }
+        }
+    }).collect();
+    let result = errors.filter_map(future::ready).collect().await;
+    pb.finish_and_clear();
+    result
 }
 
 #[async_recursion]
-async fn get_referenced_node_ids(
-    blobstore: &AsyncDropGuard<
-        FsBlobStore<
-            impl BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        >,
-    >,
+async fn check_all_blobs<B>(
+    blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     root_blob_id: BlobId,
-    capacity_hint: Option<usize>,
-    progress_bar: &ProgressBar,
-) -> Result<Vec<BlockId>> {
+    checks: &AllChecks,
+) -> Result<Vec<CorruptedError>>
+where
+    B: BlockStore + Send + Sync + 'static,
+{
     log::debug!("Entering blob {:?}", &root_blob_id);
+    let loaded = blobstore.load(&root_blob_id).await;
+    let errors = match loaded {
+        Ok(Some(mut blob)) => {
+            checks.process_reachable_blob(&blob);
+            match blob.blob_type() {
+                BlobType::File | BlobType::Symlink => {
+                    // file and symlink blobs don't have child blobs. Nothing to do.
+                    blob.async_drop().await?;
+                    vec![]
+                }
+                BlobType::Dir => {
+                    // Get all directory entry and recurse into their blobs, concurrently.
+                    let blob = FsBlob::into_dir(blob).await;
+                    let mut blob = match blob {
+                        Ok(blob) => blob,
+                        Err(_) => {
+                            bail!("Blob {root_blob_id:?} previously was a directory blob but now isn't. Please don't modify the file system while checks are running.");
+                        }
+                    };
 
-    let mut referenced_nodes = match capacity_hint {
-        Some(capacity_hint) => Vec::with_capacity(capacity_hint),
-        None => Vec::new(),
-    };
-
-    let mut blob = blobstore
-        .load(&root_blob_id)
-        .await?
-        .ok_or_else(|| anyhow!("Blob root {:?} referenced but not found", root_blob_id))?;
-    progress_bar.inc(1);
-
-    // TODO Parallelize: If it's a directory, we can get blocks of the blob while we're reading the directory entries since that has to load all blocks anyways.
-    let blocks_of_blob: Result<Vec<BlockId>> = blob.all_blocks()?.try_collect().await;
-    let blocks_of_blob = match blocks_of_blob {
-        Ok(blocks_of_blob) => blocks_of_blob,
-        Err(e) => {
-            blob.async_drop().await?;
-            return Err(e);
-        }
-    };
-    referenced_nodes.extend(blocks_of_blob);
-
-    match blob.blob_type() {
-        BlobType::File | BlobType::Symlink => {
-            // file and symlink blobs don't have child blobs. Nothing to do.
-            blob.async_drop().await?;
-        }
-        BlobType::Dir => {
-            // Get all directory entry and recurse into their blobs, concurrently.
-            let mut blob = FsBlob::into_dir(blob)
-                .await
-                .context("We just checked that the blob is a directory but now it isn't. The filesystem changed while we're checking it.")?;
-
-            // TODO Would FuturesOrdered be faster than FuturesUnordered here? Or look at stream processing as in [DataTree::_all_blocks_descendants_of]
-            let mut child_subtrees: FuturesUnordered<_> = blob
-                .entries()
-                .map(|entry| *entry.blob_id())
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|blob_id| async move {
-                    get_referenced_node_ids(blobstore, blob_id, None, progress_bar).await
-                })
-                .collect();
-            // TODO Concurrently async drop blob
-            blob.async_drop().await?;
-            while let Some(blocks_in_child_subtree) = child_subtrees.next().await {
-                referenced_nodes.extend(blocks_in_child_subtree?);
+                    // TODO Would FuturesOrdered be faster than FuturesUnordered here? Or look at stream processing as in [DataTree::_all_blocks_descendants_of]
+                    let mut child_subtrees: FuturesUnordered<_> =
+                        blob.entries()
+                            .map(|entry| *entry.blob_id())
+                            .collect::<Vec<_>>()
+                            .into_iter()
+                            .map(|blob_id| async move {
+                                check_all_blobs(blobstore, blob_id, checks).await
+                            })
+                            .collect();
+                    blob.async_drop().await?;
+                    let mut errors = vec![];
+                    while let Some(child_subtree_errors) = child_subtrees.next().await {
+                        errors.extend(child_subtree_errors?);
+                    }
+                    errors
+                }
             }
         }
-    }
-
-    Ok(referenced_nodes)
+        Ok(None) => {
+            vec![CorruptedError::BlobMissing {
+                blob_id: root_blob_id,
+            }]
+        }
+        Err(error) => {
+            vec![CorruptedError::BlobUnreadable {
+                blob_id: root_blob_id,
+                error,
+            }]
+        }
+    };
+    log::debug!("Exiting blob {:?}", &root_blob_id);
+    Ok(errors)
 }

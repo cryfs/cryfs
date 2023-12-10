@@ -206,6 +206,12 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         self.block_store.all_blocks().await
     }
 
+    pub fn into_inner_blockstore(
+        this: AsyncDropGuard<Self>,
+    ) -> AsyncDropGuard<LockingBlockStore<B>> {
+        this.unsafe_into_inner_dont_drop().block_store
+    }
+
     #[cfg(test)]
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.block_store.clear_cache_slow().await

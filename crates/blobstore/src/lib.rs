@@ -10,7 +10,7 @@ mod interface;
 pub use interface::{Blob, BlobStore, BLOBID_LEN};
 
 mod on_blocks;
-pub use on_blocks::{BlobOnBlocks, BlobStoreOnBlocks};
+pub use on_blocks::{BlobOnBlocks, BlobStoreOnBlocks, DataNode, DataNodeStore};
 
 pub use cryfs_blockstore::RemoveResult;
 

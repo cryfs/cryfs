@@ -26,6 +26,7 @@ cryfs-version = {path = "../cryfs-version"}
 log.workspace = true
 futures.workspace = true
 indicatif.workspace = true
+thiserror.workspace = true
 console.workspace = true
 
 [features]

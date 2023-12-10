@@ -6,7 +6,9 @@ mod args;
 mod cli;
 pub use cli::RecoverCli;
 
+mod checks;
 mod console;
+mod error;
 mod runner;
 
 cryfs_version::assert_cargo_version_equals_git_version!();
