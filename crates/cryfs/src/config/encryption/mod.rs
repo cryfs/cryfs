@@ -2,9 +2,12 @@ use anyhow::{Context, Result};
 use std::io::{Read, Seek, Write};
 
 use crate::config::CryConfig;
-use cryfs_utils::crypto::{
-    kdf::{KDFParameters, PasswordBasedKDF},
-    symmetric::{CipherDef, EncryptionKey},
+use cryfs_utils::{
+    crypto::{
+        kdf::{KDFParameters, PasswordBasedKDF},
+        symmetric::{CipherDef, EncryptionKey},
+    },
+    progress::Spinner,
 };
 use inner::InnerConfig;
 use outer::{OuterCipher, OuterConfig};
@@ -51,15 +54,16 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
     let outer_config =
         OuterConfig::deserialize(source).context("Trying to deserialize outer config")?;
 
-    log::info!("Deriving key from password...");
+    let pb = Spinner::new_autotick("Deriving key from password");
 
     let kdf_parameters = KDF::Parameters::deserialize(outer_config.kdf_parameters())
         .context("Trying to deserialize KDF parameters")?;
 
     let config_encryption_key = ConfigEncryptionKey::derive::<KDF>(&kdf_parameters, password);
 
-    log::info!("Deriving key from password...done");
-    log::info!("Decrypting config file...");
+    pb.finish();
+
+    let pb = Spinner::new_autotick("Decrypting config file");
 
     let inner_config = outer_config
         .decrypt(config_encryption_key.outer_key())
@@ -68,7 +72,7 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
         .decrypt(config_encryption_key.inner_key())
         .context("Trying to decrypt inner config")?;
 
-    log::info!("Decrypting config file...done");
+    pb.finish();
 
     Ok((config_encryption_key, kdf_parameters, config))
 }

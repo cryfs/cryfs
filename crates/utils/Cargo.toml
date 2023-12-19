@@ -22,6 +22,7 @@ futures.workspace = true
 generic-array.workspace = true
 hex.workspace = true
 itertools.workspace = true
+indicatif.workspace = true
 lockable.workspace = true
 log.workspace = true
 openssl = {workspace = true, features = ["vendored"]}

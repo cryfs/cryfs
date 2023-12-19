@@ -22,6 +22,7 @@ cryfs-version = {path = "../cryfs-version"}
 derive_more.workspace = true
 futures.workspace = true
 hex.workspace = true
+indicatif.workspace = true
 konst.workspace = true
 libc.workspace = true
 lockable.workspace = true

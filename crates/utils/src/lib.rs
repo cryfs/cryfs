@@ -11,6 +11,7 @@ pub mod mutex;
 mod panic;
 pub mod path;
 pub mod periodic_task;
+pub mod progress;
 pub mod stream;
 
 #[cfg(any(test, feature = "testutils"))]
