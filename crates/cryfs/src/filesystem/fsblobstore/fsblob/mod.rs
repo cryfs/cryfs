@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
-use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_blockstore::BlockId;
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNode};
+use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
@@ -39,6 +39,23 @@ where
     File(FileBlob<'a, B>),
     Directory(AsyncDropGuard<DirBlob<'a, B>>),
     Symlink(SymlinkBlob<'a, B>),
+}
+
+impl<'a, B> FsBlob<'a, BlobStoreOnBlocks<B>>
+where
+    B: BlockStore + Send + Sync,
+{
+    pub async fn load_all_nodes(
+        this: AsyncDropGuard<Self>,
+    ) -> Result<BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>>> {
+        // unsafe_into_inner_dont_drop is ok here because we only have to call async_drop for Self::Directory
+        // and [DirBlob::load_all_nodes] takes care of that.
+        match this.unsafe_into_inner_dont_drop() {
+            Self::File(blob) => Ok(blob.load_all_nodes()),
+            Self::Directory(blob) => DirBlob::load_all_nodes(blob).await,
+            Self::Symlink(blob) => Ok(blob.load_all_nodes()),
+        }
+    }
 }
 
 impl<'a, B> FsBlob<'a, B>

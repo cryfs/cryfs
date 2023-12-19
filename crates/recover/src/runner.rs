@@ -2,8 +2,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use futures::future;
-use futures::stream::{FuturesUnordered, StreamExt, TryStreamExt};
-use indicatif::ProgressBar;
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -17,13 +16,15 @@ use cryfs_cryfs::{
     config::ConfigLoadResult,
     filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    progress::{Progress, Spinner},
+};
 
 pub struct RecoverRunner<'c> {
     pub config: &'c ConfigLoadResult,
 }
 
-#[async_trait]
 impl<'l> BlockstoreCallback for RecoverRunner<'l> {
     type Result = Result<()>;
 
@@ -36,10 +37,12 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         let mut nodestore = DataNodeStore::new(blockstore, blocksize_bytes).await?;
 
+        // TODO --------------- From here on, it's the old algorithm
         let checks = AllChecks::new();
-        let mut errors = vec![];
 
-        log::info!("Listing all nodes...");
+        // TODO Instead of autotick, we could manually tick it while listing nodes. That would mean users see it if it gets stuck.
+        //      Or we could even show a Progress bar since we know we're going from AAA to ZZZ in the folder structure.
+        let pb = Spinner::new_autotick("Listing all nodes");
         let all_nodes = match get_all_node_ids(&nodestore).await {
             Ok(all_nodes) => all_nodes,
             Err(e) => {
@@ -47,13 +50,22 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
                 return Err(e);
             }
         };
-        log::info!("Listing all nodes...done. Found {} nodes", all_nodes.len());
+        pb.finish();
+        println!("Found {} nodes", all_nodes.len());
 
         // TODO Read all blobs before we're reading all nodes since it's a faster pass
 
-        log::info!("Checking all nodes...");
-        errors.extend(check_all_nodes(&nodestore, &all_nodes, &checks).await);
-        log::info!("Checking all nodes...done");
+        // TODO since `check_all_blobs` now also checks the nodes of the blobs, we can remove this
+        //      and should replace it with code that checks which nodes haven't been processed by blobs and only go over those.
+        let pb = Progress::new(
+            "Checking all nodes",
+            u64::try_from(all_nodes.len()).unwrap(),
+        );
+        check_all_nodes(&nodestore, &all_nodes, &checks, pb.clone()).await;
+        pb.finish();
+
+        // TODO --------------- From here on, it's the new algorithm
+        let checks = AllChecks::new();
 
         // TODO Reading blobs loads those blobs again even though we already read them above. Can we prevent the double-load? e.g. using Blob::all_blocks()? but need to make sure we also load blocks that aren't referenced.
 
@@ -64,7 +76,6 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         .await?;
         let mut blobstore = FsBlobStore::new(blobstore);
 
-        log::info!("Checking directory structure...");
         let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
         let root_blob_id = match root_blob_id {
             Ok(root_blob_id) => root_blob_id,
@@ -73,18 +84,32 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
                 return Err(e);
             }
         };
-        errors.extend(check_all_blobs(&blobstore, root_blob_id, &checks).await?);
-        log::info!("Checking directory structure...done");
+        let pb = Progress::new(
+            "Checking all blobs",
+            u64::try_from(all_nodes.len()).unwrap(),
+        );
+        // Check all reachable nodes
+        let check_all_blobs_result =
+            check_all_blobs(&blobstore, root_blob_id, &checks, pb.clone()).await?;
 
-        errors.extend(checks.finalize());
+        // Check any leftover unreferenced nodes
+        let mut unreferenced_nodes = all_nodes;
+        for visited_node in check_all_blobs_result.visited_nodes {
+            unreferenced_nodes.remove(&visited_node);
+        }
+        let mut nodestore =
+            BlobStoreOnBlocks::into_inner_node_store(FsBlobStore::into_inner_blobstore(blobstore));
+        check_all_nodes(&nodestore, &unreferenced_nodes, &checks, pb.clone()).await;
+        pb.finish();
+
+        let errors = checks.finalize();
 
         // TODO Some errors may be found by multiple checks, let's deduplicate those.
 
-        // TODO println not info log for regular outputs
-        log::info!("Found {} errors", errors.len());
-        for error in errors {
-            log::info!("- {error}");
+        for error in &errors {
+            println!("- {error}");
         }
+        println!("Found {} errors", errors.len());
 
         // log::info!("Checking node depths...");
         // let mut num_unreferenced_nodes_per_depth = HashMap::new();
@@ -118,7 +143,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         //     );
         // }
 
-        blobstore.async_drop().await?;
+        nodestore.async_drop().await?;
         Ok(())
     }
 }
@@ -132,24 +157,22 @@ where
     nodestore.all_nodes().await?.try_collect().await
 }
 
-#[must_use]
 async fn check_all_nodes<B>(
     nodestore: &AsyncDropGuard<DataNodeStore<B>>,
     all_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
-) -> Vec<CorruptedError>
-where
+    pb: Progress,
+) where
     B: BlockStore + Send + Sync + 'static,
 {
-    let pb = Arc::new(ProgressBar::new(u64::try_from(all_nodes.len()).unwrap()));
-    let pb_clone = Arc::clone(&pb);
-    // TODO Should we rate-limit this instead of trying to load all at once?
-    let errors: FuturesUnordered<_> = all_nodes.iter().map(|&node_id| {
-        let pb_clone = Arc::clone(&pb_clone);
+    // TODO What's a good concurrency value here?
+    const MAX_CONCURRENCY: usize = 100;
+    let all_nodes = stream::iter(all_nodes.iter());
+    let mut maybe_errors = all_nodes.map(move |&node_id| {
+        let pb = pb.clone();
         async move {
             let loaded = nodestore.load(node_id).await;
-            pb_clone.inc(1);
-            match loaded {
+            let result = match loaded {
                 Ok(Some(node)) => {
                     checks.process_existing_node(&node);
                     None // no error
@@ -165,12 +188,22 @@ where
                         error,
                     })
                 }
-            }
+            };
+            pb.inc(1);
+            result
         }
-    }).collect();
-    let result = errors.filter_map(future::ready).collect().await;
-    pb.finish_and_clear();
-    result
+    })
+    .buffer_unordered(MAX_CONCURRENCY);
+    while let Some(maybe_error) = maybe_errors.next().await {
+        if let Some(error) = maybe_error {
+            checks.add_error(error);
+        }
+    }
+}
+
+#[must_use]
+struct CheckAllBlobsResult {
+    visited_nodes: Vec<BlockId>,
 }
 
 #[async_recursion]
@@ -178,62 +211,134 @@ async fn check_all_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     root_blob_id: BlobId,
     checks: &AllChecks,
-) -> Result<Vec<CorruptedError>>
+    pb: Progress,
+) -> Result<CheckAllBlobsResult>
 where
     B: BlockStore + Send + Sync + 'static,
 {
     log::debug!("Entering blob {:?}", &root_blob_id);
     let loaded = blobstore.load(&root_blob_id).await;
-    let errors = match loaded {
+    let mut result = CheckAllBlobsResult {
+        visited_nodes: vec![*root_blob_id.to_root_block_id()],
+    };
+    match loaded {
         Ok(Some(mut blob)) => {
             checks.process_reachable_blob(&blob);
-            match blob.blob_type() {
-                BlobType::File | BlobType::Symlink => {
-                    // file and symlink blobs don't have child blobs. Nothing to do.
-                    blob.async_drop().await?;
-                    vec![]
-                }
-                BlobType::Dir => {
-                    // Get all directory entry and recurse into their blobs, concurrently.
-                    let blob = FsBlob::into_dir(blob).await;
-                    let mut blob = match blob {
-                        Ok(blob) => blob,
-                        Err(_) => {
-                            bail!("Blob {root_blob_id:?} previously was a directory blob but now isn't. Please don't modify the file system while checks are running.");
-                        }
-                    };
 
-                    // TODO Would FuturesOrdered be faster than FuturesUnordered here? Or look at stream processing as in [DataTree::_all_blocks_descendants_of]
-                    let mut child_subtrees: FuturesUnordered<_> =
-                        blob.entries()
-                            .map(|entry| *entry.blob_id())
-                            .collect::<Vec<_>>()
-                            .into_iter()
-                            .map(|blob_id| async move {
-                                check_all_blobs(blobstore, blob_id, checks).await
-                            })
-                            .collect();
+            // TODO Can we check nodes of this blob and children blobs concurrently?
+            // TODO Checking children blobs for directory blobs loads the nodes of this blob.
+            //      Then we load it again when we check the nodes of this blob. Can we only load it once?
+
+            let subresult = check_all_children_blobs(blobstore, &blob, checks, pb.clone()).await;
+            let subresult = match subresult {
+                Ok(subresult) => subresult,
+                Err(err) => {
                     blob.async_drop().await?;
-                    let mut errors = vec![];
-                    while let Some(child_subtree_errors) = child_subtrees.next().await {
-                        errors.extend(child_subtree_errors?);
-                    }
-                    errors
+                    return Err(err);
                 }
-            }
+            };
+            result.visited_nodes.extend(subresult.visited_nodes);
+
+            let subresult = check_all_nodes_of_blob(blob, checks, pb).await?;
+            result.visited_nodes.extend(subresult.visited_nodes);
         }
         Ok(None) => {
-            vec![CorruptedError::BlobMissing {
+            checks.add_error(CorruptedError::BlobMissing {
                 blob_id: root_blob_id,
-            }]
+            });
         }
         Err(error) => {
-            vec![CorruptedError::BlobUnreadable {
+            checks.add_error(CorruptedError::BlobUnreadable {
                 blob_id: root_blob_id,
                 error,
-            }]
+            });
         }
     };
     log::debug!("Exiting blob {:?}", &root_blob_id);
-    Ok(errors)
+    Ok(result)
+}
+
+async fn check_all_children_blobs<'a, B>(
+    blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
+    blob: &FsBlob<'a, BlobStoreOnBlocks<B>>,
+    checks: &AllChecks,
+    pb: Progress,
+) -> Result<CheckAllBlobsResult>
+where
+    B: BlockStore + Send + Sync + 'static,
+{
+    // TODO What's a good concurrency value here?
+    // TODO This doesn't correctly limit concurrency because it's not a global limit but just for this node
+    const MAX_CONCURRENCY: usize = 2;
+
+    let mut result = CheckAllBlobsResult {
+        visited_nodes: vec![],
+    };
+    match blob.blob_type() {
+        BlobType::File | BlobType::Symlink => {
+            // file and symlink blobs don't have child blobs. Nothing to do.
+        }
+        BlobType::Dir => {
+            // Get all directory entry and recurse into their blobs, concurrently.
+            let blob = match blob.as_dir() {
+                Ok(blob) => blob,
+                Err(_) => {
+                    bail!("Blob {blob_id:?} previously was a directory blob but now isn't. Please don't modify the file system while checks are running.", blob_id=blob.blob_id());
+                }
+            };
+
+            let mut subtree_results = stream::iter(
+                blob.entries()
+                    .map(|entry| *entry.blob_id())
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .map(|blob_id| check_all_blobs(blobstore, blob_id, checks, pb.clone())),
+            )
+            .buffer_unordered(MAX_CONCURRENCY);
+            while let Some(subtree_result) = subtree_results.next().await {
+                let subtree_result = subtree_result?;
+                result.visited_nodes.extend(subtree_result.visited_nodes);
+            }
+        }
+    };
+    Ok(result)
+}
+
+async fn check_all_nodes_of_blob<'a, B>(
+    blob: AsyncDropGuard<FsBlob<'a, BlobStoreOnBlocks<B>>>,
+    checks: &AllChecks,
+    pb: Progress,
+) -> Result<CheckAllBlobsResult>
+where
+    B: BlockStore + Send + Sync + 'static,
+{
+    let all_nodes = FsBlob::load_all_nodes(blob).await?;
+    // TODO Should we rate-limit this instead of trying to load all at once?
+    // TODO Does this actually have good concurrency? Stream handling at least ought to be ordered, which might reduce concurrency
+    let mut results = all_nodes.map(|node| {
+        pb.inc(1);
+        match node {
+            Ok(node) => {
+                checks.process_existing_node(&node);
+                (*node.block_id(), None) // no error
+            }
+            Err((node_id, error)) => {
+                // return the error
+                (
+                    node_id,
+                    Some(CorruptedError::NodeUnreadable { node_id, error }),
+                )
+            }
+        }
+    });
+    let mut combined_result = CheckAllBlobsResult {
+        visited_nodes: vec![],
+    };
+    while let Some((node_id, error)) = results.next().await {
+        combined_result.visited_nodes.push(node_id);
+        if let Some(error) = error {
+            checks.add_error(error);
+        }
+    }
+    Ok(combined_result)
 }

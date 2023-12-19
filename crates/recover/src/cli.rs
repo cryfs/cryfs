@@ -23,7 +23,6 @@ pub struct RecoverCli {
     local_state_dir: LocalStateDir,
 }
 
-#[async_trait]
 impl Application for RecoverCli {
     type ConcreteArgs = CryfsRecoverArgs;
     const NAME: &'static str = "cryfs-recover";
@@ -42,7 +41,7 @@ impl Application for RecoverCli {
         let config = self.load_config()?;
         print_config(&config);
 
-        log::info!(
+        println!(
             "Checking filesystem at {}",
             self.args
                 .basedir

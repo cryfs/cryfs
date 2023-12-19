@@ -7,7 +7,6 @@ use cryfs_version::VersionInfo;
 use crate::args::parse_args;
 use crate::env::Environment;
 
-#[async_trait]
 pub trait Application: Sized {
     type ConcreteArgs: Args;
 

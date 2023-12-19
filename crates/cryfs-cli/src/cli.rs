@@ -30,7 +30,6 @@ pub struct Cli {
     local_state_dir: LocalStateDir,
 }
 
-#[async_trait]
 impl Application for Cli {
     type ConcreteArgs = CryfsArgs;
     const NAME: &'static str = "cryfs";

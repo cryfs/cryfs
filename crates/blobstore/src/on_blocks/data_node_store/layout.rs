@@ -15,7 +15,7 @@ define_layout!(node, LittleEndian, {
     // Leaf nodes have a depth of 0. Each layer above has a depth of one higher than the level directly below.
     depth: u8,
 
-    // Leaf nodes store number of data byes here. Inner nodes store number of children.
+    // Leaf nodes store number of data bytes here. Inner nodes store number of children.
     size: u32,
 
     // Data. Leaf nodes just store bytes here. Inner nodes store a list of child block ids.

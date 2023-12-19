@@ -4,8 +4,8 @@ use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use super::layout::{self, FORMAT_VERSION_HEADER};
-use cryfs_blobstore::{Blob, BlobId, BlobStore};
-use cryfs_blockstore::BlockId;
+use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNode};
+use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::data::Data;
 
 pub struct BaseBlob<'a, B>
@@ -14,6 +14,15 @@ where
 {
     blob: B::ConcreteBlob<'a>,
     header_cache: layout::fsblob_header::View<Data>,
+}
+
+impl<'a, B> BaseBlob<'a, BlobStoreOnBlocks<B>>
+where
+    B: BlockStore + Send + Sync,
+{
+    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        self.blob.load_all_nodes()
+    }
 }
 
 impl<'a, B> BaseBlob<'a, B>

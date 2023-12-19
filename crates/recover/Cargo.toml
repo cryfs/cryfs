@@ -28,6 +28,7 @@ futures.workspace = true
 indicatif.workspace = true
 thiserror.workspace = true
 console.workspace = true
+tokio.workspace = true
 
 [features]
 default = ["check_for_updates"]

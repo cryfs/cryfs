@@ -3,14 +3,24 @@ use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use super::{base_blob::BaseBlob, layout::BlobType};
-use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_blockstore::BlockId;
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNode};
+use cryfs_blockstore::{BlockId, BlockStore};
 
 pub struct FileBlob<'a, B>
 where
     B: BlobStore + Debug + 'a,
 {
     blob: BaseBlob<'a, B>,
+}
+
+impl<'a, B> FileBlob<'a, BlobStoreOnBlocks<B>>
+where
+    B: BlockStore + Send + Sync,
+{
+    // TODO We're duplicating a lot of the `BaseBlob` methods here and just passing them through. Might be better to offer a `.base_blob()` method and then the blob store can call those methods directly on the base blob.
+    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        self.blob.load_all_nodes()
+    }
 }
 
 impl<'a, B> FileBlob<'a, B>

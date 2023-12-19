@@ -198,6 +198,7 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                 for existing_block in &all_underlying_blocks {
                     expected_blocks.remove(existing_block);
                 }
+                // TODO Is stream::iter().buffer_unordered() here faster than FuturesUnordered? It was in some other places.
                 let missing_blocks: FuturesUnordered<_> = expected_blocks
                     .into_iter()
                     .map(|expected_block_id| async move {

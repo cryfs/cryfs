@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use std::fmt;
 
 use super::blob_on_blocks::BlobOnBlocks;
+use super::data_node_store::DataNodeStore;
 use super::data_tree_store::DataTreeStore;
 use crate::{BlobId, BlobStore, RemoveResult};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
@@ -40,6 +41,11 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
     #[cfg(test)]
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.tree_store.clear_cache_slow().await
+    }
+
+    pub fn into_inner_node_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataNodeStore<B>> {
+        let tree_store = this.unsafe_into_inner_dont_drop().tree_store;
+        DataTreeStore::into_inner_node_store(tree_store)
     }
 }
 

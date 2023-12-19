@@ -95,6 +95,10 @@ where
     pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult> {
         self.blobstore.remove_by_id(id).await
     }
+
+    pub fn into_inner_blobstore(this: AsyncDropGuard<Self>) -> AsyncDropGuard<B> {
+        this.unsafe_into_inner_dont_drop().blobstore
+    }
 }
 
 #[async_trait]

@@ -15,7 +15,6 @@ use cryfs_utils::{
     crypto::symmetric::{CipherDef, EncryptionKey},
 };
 
-#[async_trait]
 pub trait BlockstoreCallback {
     type Result;
 
@@ -60,7 +59,6 @@ struct CipherCallbackForBlockstoreSetup<
     callback: CB,
 }
 
-#[async_trait]
 impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCallback + Send>
     AsyncCipherCallback for CipherCallbackForBlockstoreSetup<'_, '_, B, CB>
 {

@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 
+use super::data_node_store::DataNode;
 use super::data_tree_store::DataTree;
 use crate::{Blob, BlobId};
 use cryfs_blockstore::{BlockId, BlockStore};
@@ -24,6 +25,12 @@ impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
 
     fn _tree_mut(&mut self) -> &mut DataTree<'a, B> {
         self.tree.as_mut().expect("BlobOnBlocks.tree is None")
+    }
+
+    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        self.tree
+            .expect("BlobOnBlocks.tree is None")
+            .load_all_nodes()
     }
 }
 

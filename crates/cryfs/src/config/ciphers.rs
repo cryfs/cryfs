@@ -15,7 +15,6 @@ use cryfs_utils::crypto::symmetric::{
 pub const ALL_CIPHERS: &[&str] = &["xchacha20-poly1305", "aes-256-gcm", "aes-128-gcm"];
 
 // offer a way to lookup ciphers at runtime while statically binding its type
-#[async_trait]
 pub trait AsyncCipherCallback {
     type Result;
 
@@ -110,7 +109,6 @@ mod tests {
     // TODO Test lookup_cipher_dyn
 
     struct DummyCallback;
-    #[async_trait]
     impl AsyncCipherCallback for DummyCallback {
         type Result = ();
         async fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
@@ -135,7 +133,6 @@ mod tests {
             Self { _p: PhantomData }
         }
     }
-    #[async_trait]
     impl<ExpectedCipher: CipherDef + Send> AsyncCipherCallback
         for CipherEqualityAssertion<ExpectedCipher>
     {

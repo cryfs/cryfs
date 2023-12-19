@@ -84,6 +84,10 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
         Ok(self.node_store.load(*id).await?.map(|node| node.depth()))
     }
 
+    pub fn into_inner_node_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataNodeStore<B>> {
+        this.unsafe_into_inner_dont_drop().node_store
+    }
+
     #[cfg(test)]
     // This needs to load all blocks, so it's not very efficient. Only use it for tests.
     pub async fn all_tree_roots(&self) -> Result<Vec<BlockId>> {

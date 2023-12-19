@@ -668,6 +668,58 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             .ok_or_else(|| anyhow!("Didn't find block {:?}", subtree_root_id))?;
         self._all_blocks_in_subtree(&child)
     }
+
+    // TODO Deduplicate logic between `all_blocks` and `load_all_nodes`
+
+    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        let root_node = self.root_node.expect("root_node is None");
+        Self::_load_all_nodes_in_subtree(self.node_store, root_node)
+    }
+
+    fn _load_all_nodes_in_subtree(
+        node_store: &'a DataNodeStore<B>,
+        subtree_root: DataNode<B>,
+    ) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        match subtree_root {
+            DataNode::Leaf(leaf) => stream::once(future::ready(Ok(DataNode::Leaf(leaf)))).boxed(),
+            DataNode::Inner(inner) => {
+                let block_ids_in_descendants =
+                    Self::_load_all_nodes_descendants_of(node_store, &inner);
+                stream::once(future::ready(Ok(DataNode::Inner(inner))))
+                    .chain(block_ids_in_descendants)
+                    .boxed()
+            }
+        }
+    }
+
+    fn _load_all_nodes_descendants_of(
+        node_store: &'a DataNodeStore<B>,
+        subtree_root: &DataInnerNode<B>,
+    ) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        // iter<stream<result<block_id>>>
+        let subtree_stream = subtree_root.children().map(|child_id| {
+            let child_stream = Self::_load_all_nodes_in_subtree_of_id(node_store, child_id);
+            // Transform Future<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
+            child_stream.flatten_stream().boxed()
+        });
+        let subtree_stream = stream::select_all(subtree_stream).boxed();
+        subtree_stream
+    }
+
+    async fn _load_all_nodes_in_subtree_of_id(
+        node_store: &'a DataNodeStore<B>,
+        subtree_root_id: BlockId,
+    ) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+        let child = node_store.load(subtree_root_id).await;
+        match child {
+            Ok(Some(child)) => Self::_load_all_nodes_in_subtree(node_store, child),
+            Ok(None) => Box::pin(stream::once(future::ready(Err((
+                subtree_root_id,
+                anyhow!("Didn't find block {:?}", subtree_root_id),
+            ))))),
+            Err(err) => Box::pin(stream::once(future::ready(Err((subtree_root_id, err))))),
+        }
+    }
 }
 
 #[async_trait]

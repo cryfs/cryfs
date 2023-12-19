@@ -46,6 +46,7 @@ where
     F: Future<Output = Result<(), E>>,
     E: Debug,
 {
+    // TODO Is stream::iter().buffer_unordered() here faster than FuturesUnordered? It was in other places.
     let tasks: FuturesUnordered<_> = items.map(func).collect();
     run_to_completion(tasks).await
 }
