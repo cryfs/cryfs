@@ -29,6 +29,7 @@ indicatif.workspace = true
 thiserror.workspace = true
 console.workspace = true
 tokio.workspace = true
+tokio-stream.workspace = true
 
 [features]
 default = ["check_for_updates"]

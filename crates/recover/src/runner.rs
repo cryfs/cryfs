@@ -1,11 +1,13 @@
 use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
-use futures::future;
+use futures::future::{self, BoxFuture};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::sync::Arc;
+use tokio::sync::mpsc::{UnboundedSender, WeakUnboundedSender};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use super::checks::{AllChecks, FilesystemCheck};
 use super::error::CorruptedError;
@@ -32,6 +34,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
+        // TODO It currently seems to spend some seconds here before displaying "Listing all nodes". Why? What is it doing? Show another progress bar?
+
         // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
         let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
 
@@ -206,7 +210,6 @@ struct CheckAllBlobsResult {
     visited_nodes: Vec<BlockId>,
 }
 
-#[async_recursion]
 async fn check_all_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     root_blob_id: BlobId,
@@ -215,6 +218,49 @@ async fn check_all_blobs<B>(
 ) -> Result<CheckAllBlobsResult>
 where
     B: BlockStore + Send + Sync + 'static,
+{
+    // TODO What's a good concurrency value here?
+    const MAX_CONCURRENCY: usize = 100;
+
+    let (task_queue_sender, mut task_queue_receiver) = tokio::sync::mpsc::unbounded_channel();
+
+    task_queue_sender
+        .send(Box::pin(_check_all_blobs(
+            blobstore,
+            root_blob_id,
+            checks,
+            task_queue_sender.clone(),
+            pb,
+        )))
+        .expect("Failed to send task to task queue");
+    // Drop our instance of the sender so that `blob_queue_stream` below finishes when the last task holding a sender instance is gone
+    std::mem::drop(task_queue_sender);
+
+    let mut result = CheckAllBlobsResult {
+        visited_nodes: vec![],
+    };
+    let mut blob_queue_stream =
+        UnboundedReceiverStream::new(task_queue_receiver).buffer_unordered(MAX_CONCURRENCY);
+    while let Some(subresult) = blob_queue_stream.next().await {
+        result.visited_nodes.extend(subresult?.visited_nodes);
+    }
+    Ok(result)
+}
+
+#[async_recursion]
+async fn _check_all_blobs<'a, 'b, 'f, B>(
+    blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
+    root_blob_id: BlobId,
+    checks: &'b AllChecks,
+    // TODO Is this possible without BoxFuture?
+    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<CheckAllBlobsResult>>>,
+    pb: Progress,
+) -> Result<CheckAllBlobsResult>
+where
+    B: BlockStore + Send + Sync + 'static,
+    'a: 'f,
+    'b: 'f,
+    'f: 'async_recursion,
 {
     log::debug!("Entering blob {:?}", &root_blob_id);
     let loaded = blobstore.load(&root_blob_id).await;
@@ -225,19 +271,21 @@ where
         Ok(Some(mut blob)) => {
             checks.process_reachable_blob(&blob);
 
-            // TODO Can we check nodes of this blob and children blobs concurrently?
             // TODO Checking children blobs for directory blobs loads the nodes of this blob.
             //      Then we load it again when we check the nodes of this blob. Can we only load it once?
 
-            let subresult = check_all_children_blobs(blobstore, &blob, checks, pb.clone()).await;
-            let subresult = match subresult {
-                Ok(subresult) => subresult,
+            let subresult =
+                check_all_children_blobs(blobstore, &blob, checks, task_queue_sender, pb.clone())
+                    .await;
+            match subresult {
+                Ok(()) => (),
                 Err(err) => {
                     blob.async_drop().await?;
                     return Err(err);
                 }
             };
-            result.visited_nodes.extend(subresult.visited_nodes);
+
+            // TODO Can we check nodes of this blob and children blobs concurrently?
 
             let subresult = check_all_nodes_of_blob(blob, checks, pb).await?;
             result.visited_nodes.extend(subresult.visited_nodes);
@@ -258,22 +306,18 @@ where
     Ok(result)
 }
 
-async fn check_all_children_blobs<'a, B>(
-    blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
-    blob: &FsBlob<'a, BlobStoreOnBlocks<B>>,
-    checks: &AllChecks,
+async fn check_all_children_blobs<'a, 'b, 'c, 'f, B>(
+    blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
+    blob: &FsBlob<'b, BlobStoreOnBlocks<B>>,
+    checks: &'c AllChecks,
+    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<CheckAllBlobsResult>>>,
     pb: Progress,
-) -> Result<CheckAllBlobsResult>
+) -> Result<()>
 where
     B: BlockStore + Send + Sync + 'static,
+    'a: 'f,
+    'c: 'f,
 {
-    // TODO What's a good concurrency value here?
-    // TODO This doesn't correctly limit concurrency because it's not a global limit but just for this node
-    const MAX_CONCURRENCY: usize = 2;
-
-    let mut result = CheckAllBlobsResult {
-        visited_nodes: vec![],
-    };
     match blob.blob_type() {
         BlobType::File | BlobType::Symlink => {
             // file and symlink blobs don't have child blobs. Nothing to do.
@@ -287,21 +331,20 @@ where
                 }
             };
 
-            let mut subtree_results = stream::iter(
-                blob.entries()
-                    .map(|entry| *entry.blob_id())
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .map(|blob_id| check_all_blobs(blobstore, blob_id, checks, pb.clone())),
-            )
-            .buffer_unordered(MAX_CONCURRENCY);
-            while let Some(subtree_result) = subtree_results.next().await {
-                let subtree_result = subtree_result?;
-                result.visited_nodes.extend(subtree_result.visited_nodes);
+            for entry in blob.entries() {
+                task_queue_sender
+                    .send(Box::pin(_check_all_blobs(
+                        blobstore,
+                        *entry.blob_id(),
+                        checks,
+                        task_queue_sender.clone(),
+                        pb.clone(),
+                    )))
+                    .expect("Failed to send task to task queue");
             }
         }
     };
-    Ok(result)
+    Ok(())
 }
 
 async fn check_all_nodes_of_blob<'a, B>(
