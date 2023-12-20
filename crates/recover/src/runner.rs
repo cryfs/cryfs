@@ -274,6 +274,7 @@ where
             // TODO Checking children blobs for directory blobs loads the nodes of this blob.
             //      Then we load it again when we check the nodes of this blob. Can we only load it once?
 
+            // First, add tasks for all children blobs (if we're a directory blob).
             let subresult =
                 check_all_children_blobs(blobstore, &blob, checks, task_queue_sender, pb.clone())
                     .await;
@@ -285,8 +286,8 @@ where
                 }
             };
 
-            // TODO Can we check nodes of this blob and children blobs concurrently?
-
+            // Then, check all nodes of the current blob. This will be processed concurrently to the
+            // children blobs added to the task queue above.
             let subresult = check_all_nodes_of_blob(blob, checks, pb).await?;
             result.visited_nodes.extend(subresult.visited_nodes);
         }
