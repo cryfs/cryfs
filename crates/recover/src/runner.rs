@@ -34,8 +34,6 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
-        // TODO It currently seems to spend some seconds here before displaying "Listing all nodes". Why? What is it doing? Show another progress bar?
-
         // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
         let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
 
@@ -358,7 +356,6 @@ where
 {
     let all_nodes = FsBlob::load_all_nodes(blob).await?;
     // TODO Should we rate-limit this instead of trying to load all at once?
-    // TODO Does this actually have good concurrency? Stream handling at least ought to be ordered, which might reduce concurrency
     let mut results = all_nodes.map(|node| {
         pb.inc(1);
         match node {
