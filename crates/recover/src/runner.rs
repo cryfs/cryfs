@@ -29,7 +29,7 @@ pub struct RecoverRunner<'c> {
 }
 
 impl<'l> BlockstoreCallback for RecoverRunner<'l> {
-    type Result = Result<()>;
+    type Result = Result<Vec<CorruptedError>>;
 
     async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
@@ -82,13 +82,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         // TODO Some errors may be found by multiple checks, let's deduplicate those.
 
-        for error in &errors {
-            println!("- {error}");
-        }
-        println!("Found {} errors", errors.len());
-
         nodestore.async_drop().await?;
-        Ok(())
+        Ok(errors)
     }
 }
 
