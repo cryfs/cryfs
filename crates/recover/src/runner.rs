@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use futures::future::{self, BoxFuture};
@@ -68,7 +68,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
             u64::try_from(all_nodes.len()).unwrap(),
         );
         let check_all_blobs_result =
-            check_all_reachable_blobs(&blobstore, root_blob_id, &checks, pb.clone()).await?;
+            check_all_reachable_blobs(&blobstore, &all_nodes, root_blob_id, &checks, pb.clone())
+                .await?;
 
         let mut unreachable_nodes = set_remove_all(all_nodes, check_all_blobs_result.visited_nodes);
 
@@ -153,6 +154,7 @@ struct CheckAllBlobsResult {
 
 async fn check_all_reachable_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
+    all_nodes: &HashSet<BlockId>,
     root_blob_id: BlobId,
     checks: &AllChecks,
     pb: Progress,
@@ -168,6 +170,7 @@ where
     task_queue_sender
         .send(Box::pin(_check_all_reachable_blobs(
             blobstore,
+            all_nodes,
             root_blob_id,
             checks,
             task_queue_sender.clone(),
@@ -189,10 +192,11 @@ where
 }
 
 #[async_recursion]
-async fn _check_all_reachable_blobs<'a, 'b, 'f, B>(
+async fn _check_all_reachable_blobs<'a, 'b, 'c, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
+    all_nodes: &'b HashSet<BlockId>,
     root_blob_id: BlobId,
-    checks: &'b AllChecks,
+    checks: &'c AllChecks,
     // TODO Is this possible without BoxFuture?
     task_queue_sender: UnboundedSender<BoxFuture<'f, Result<CheckAllBlobsResult>>>,
     pb: Progress,
@@ -201,9 +205,12 @@ where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
+    'c: 'f,
     'f: 'async_recursion,
 {
     log::debug!("Entering blob {:?}", &root_blob_id);
+    ensure!(all_nodes.contains(root_blob_id.to_root_block_id()), "Blob {root_blob_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
+
     let loaded = blobstore.load(&root_blob_id).await;
     let mut result = CheckAllBlobsResult {
         visited_nodes: vec![*root_blob_id.to_root_block_id()],
@@ -218,6 +225,7 @@ where
             // First, add tasks for all children blobs (if we're a directory blob).
             let subresult = check_all_reachable_children_blobs(
                 blobstore,
+                all_nodes,
                 &blob,
                 checks,
                 task_queue_sender,
@@ -234,7 +242,7 @@ where
 
             // Then, check all nodes of the current blob. This will be processed concurrently to the
             // children blobs added to the task queue above.
-            let subresult = check_all_nodes_of_reachable_blob(blob, checks, pb).await?;
+            let subresult = check_all_nodes_of_reachable_blob(blob, all_nodes, checks, pb).await?;
             result.visited_nodes.extend(subresult.visited_nodes);
         }
         Ok(None) => {
@@ -253,17 +261,19 @@ where
     Ok(result)
 }
 
-async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'f, B>(
+async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
-    blob: &FsBlob<'b, BlobStoreOnBlocks<B>>,
-    checks: &'c AllChecks,
+    all_nodes: &'b HashSet<BlockId>,
+    blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
+    checks: &'d AllChecks,
     task_queue_sender: UnboundedSender<BoxFuture<'f, Result<CheckAllBlobsResult>>>,
     pb: Progress,
 ) -> Result<()>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
-    'c: 'f,
+    'b: 'f,
+    'd: 'f,
 {
     match blob.blob_type() {
         BlobType::File | BlobType::Symlink => {
@@ -282,6 +292,7 @@ where
                 task_queue_sender
                     .send(Box::pin(_check_all_reachable_blobs(
                         blobstore,
+                        all_nodes,
                         *entry.blob_id(),
                         checks,
                         task_queue_sender.clone(),
@@ -296,35 +307,39 @@ where
 
 async fn check_all_nodes_of_reachable_blob<'a, B>(
     blob: AsyncDropGuard<FsBlob<'a, BlobStoreOnBlocks<B>>>,
+    all_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
 ) -> Result<CheckAllBlobsResult>
 where
     B: BlockStore + Send + Sync + 'static,
 {
-    let all_nodes = FsBlob::load_all_nodes(blob).await?;
+    let all_nodes_of_blob = FsBlob::load_all_nodes(blob).await?;
     // TODO Should we rate-limit this instead of trying to load all at once?
-    let mut results = all_nodes.map(|node| {
-        let result = match node {
+    let mut results = all_nodes_of_blob.map(|node| {
+        let (node_id, error) = match node {
             Ok(node) => {
                 checks.process_reachable_node(&node);
-                (*node.block_id(), None) // no error
+                // no error
+                (*node.block_id(), None)
             }
-            Err((node_id, error)) => {
-                // return the error
+            Err((node_id, load_error)) => {
+                // return the CorruptedError we found
                 (
                     node_id,
-                    Some(CorruptedError::NodeUnreadable { node_id, error }),
+                    Some(CorruptedError::NodeUnreadable { node_id, error: load_error }),
                 )
             }
         };
+        ensure!(all_nodes.contains(&node_id), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
         pb.inc(1);
-        result
+        Ok((node_id, error))
     });
     let mut combined_result = CheckAllBlobsResult {
         visited_nodes: vec![],
     };
-    while let Some((node_id, error)) = results.next().await {
+    while let Some(result) = results.next().await {
+        let (node_id, error) = result?;
         combined_result.visited_nodes.push(node_id);
         if let Some(error) = error {
             checks.add_error(error);
