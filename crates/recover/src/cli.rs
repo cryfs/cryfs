@@ -51,6 +51,7 @@ impl Application for RecoverCli {
         let blockstore = OnDiskBlockStore::new(self.args.basedir);
         let blockstore = ReadOnlyBlockStore::new(blockstore);
         // TODO It currently seems to spend some seconds before getting from here in to `RecoveryRunner`. Probably to load local state or something like that. Let's add a spinner.
+        //      Or parallelize that with scrypt.
 
         setup_blockstore_stack(
             blockstore,

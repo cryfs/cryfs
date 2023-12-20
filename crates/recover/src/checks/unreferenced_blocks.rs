@@ -37,7 +37,7 @@ impl CheckUnreferencedNodes {
 }
 
 impl FilesystemCheck for CheckUnreferencedNodes {
-    fn process_existing_node(
+    fn process_reachable_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) {
@@ -54,6 +54,15 @@ impl FilesystemCheck for CheckUnreferencedNodes {
                 // A leaf node doesn't reference other nodes
             }
         }
+    }
+
+    fn process_unreachable_node(
+        &mut self,
+        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+    ) {
+        // TODO Now, since we have `process_unreachable_node` separate from `process_reachable_node`, we can significantly simplify this whole check.
+        //      Probably don't need to keep the two sets anymore.
+        self.process_reachable_node(node);
     }
 
     fn process_reachable_blob(

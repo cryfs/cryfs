@@ -30,21 +30,29 @@ use super::error::CorruptedError;
 //    Do we then also need to check for any other integrity violations?
 
 /// The trait that all filesystem checks must implement.
-/// The cryfs-recover program will call the methods of this trait
-/// - `process_existing_node` for each existing block in the file system, whether referenced or not.
-/// - `process_reachable_tree` for each blob that is (transitively) referenced from the root blob, i.e. a reachable entity in the file system.
-/// The order of these calls is not guaranteed.
-///
+/// The cryfs-recover program will call the methods of this trait for blobs/nodes it encounters.
+/// The order of these calls is not specified.
 /// At the end, it will call `finalize` to get a list of all the errors found.
 pub trait FilesystemCheck {
-    fn process_existing_node(
-        &mut self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-    );
+    /// Called for each blob that is reachable from the root of the file system via its directory structure
     fn process_reachable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     );
+
+    /// Called for each node that is part of a reachable blob
+    fn process_reachable_node(
+        &mut self,
+        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+    );
+
+    /// Called for each node that is not part of a reachable blob
+    fn process_unreachable_node(
+        &mut self,
+        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+    );
+
+    /// Called to get the results and all accumulated errors
     fn finalize(self) -> Vec<CorruptedError>;
 }
 
@@ -64,16 +72,6 @@ impl AllChecks {
         }
     }
 
-    pub fn process_existing_node(
-        &self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-    ) {
-        self.check_unreferenced_nodes
-            .lock()
-            .unwrap()
-            .process_existing_node(node);
-    }
-
     pub fn process_reachable_blob(
         &self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
@@ -82,6 +80,26 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_reachable_blob(blob);
+    }
+
+    pub fn process_reachable_node(
+        &self,
+        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+    ) {
+        self.check_unreferenced_nodes
+            .lock()
+            .unwrap()
+            .process_reachable_node(node);
+    }
+
+    pub fn process_unreachable_node(
+        &self,
+        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+    ) {
+        self.check_unreferenced_nodes
+            .lock()
+            .unwrap()
+            .process_unreachable_node(node);
     }
 
     pub fn finalize(mut self) -> Vec<CorruptedError> {

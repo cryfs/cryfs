@@ -39,9 +39,6 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         let mut nodestore = DataNodeStore::new(blockstore, blocksize_bytes).await?;
 
-        // TODO --------------- From here on, it's the old algorithm
-        let checks = AllChecks::new();
-
         // TODO Instead of autotick, we could manually tick it while listing nodes. That would mean users see it if it gets stuck.
         //      Or we could even show a Progress bar since we know we're going from AAA to ZZZ in the folder structure.
         let pb = Spinner::new_autotick("Listing all nodes");
@@ -55,21 +52,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         pb.finish();
         println!("Found {} nodes", all_nodes.len());
 
-        // TODO Read all blobs before we're reading all nodes since it's a faster pass
-
-        // TODO since `check_all_blobs` now also checks the nodes of the blobs, we can remove this
-        //      and should replace it with code that checks which nodes haven't been processed by blobs and only go over those.
-        let pb = Progress::new(
-            "Checking all nodes",
-            u64::try_from(all_nodes.len()).unwrap(),
-        );
-        check_all_nodes(&nodestore, &all_nodes, &checks, pb.clone()).await;
-        pb.finish();
-
-        // TODO --------------- From here on, it's the new algorithm
         let checks = AllChecks::new();
-
-        // TODO Reading blobs loads those blobs again even though we already read them above. Can we prevent the double-load? e.g. using Blob::all_blocks()? but need to make sure we also load blocks that aren't referenced.
 
         let blobstore = BlobStoreOnBlocks::new(
             DataNodeStore::into_inner_blockstore(nodestore),
@@ -90,18 +73,16 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
             "Checking all blobs",
             u64::try_from(all_nodes.len()).unwrap(),
         );
-        // Check all reachable nodes
         let check_all_blobs_result =
-            check_all_blobs(&blobstore, root_blob_id, &checks, pb.clone()).await?;
+            check_all_reachable_blobs(&blobstore, root_blob_id, &checks, pb.clone()).await?;
 
-        // Check any leftover unreferenced nodes
-        let mut unreferenced_nodes = all_nodes;
+        let mut unreachable_nodes = all_nodes;
         for visited_node in check_all_blobs_result.visited_nodes {
-            unreferenced_nodes.remove(&visited_node);
+            unreachable_nodes.remove(&visited_node);
         }
         let mut nodestore =
             BlobStoreOnBlocks::into_inner_node_store(FsBlobStore::into_inner_blobstore(blobstore));
-        check_all_nodes(&nodestore, &unreferenced_nodes, &checks, pb.clone()).await;
+        check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await;
         pb.finish();
 
         let errors = checks.finalize();
@@ -112,38 +93,6 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
             println!("- {error}");
         }
         println!("Found {} errors", errors.len());
-
-        // log::info!("Checking node depths...");
-        // let mut num_unreferenced_nodes_per_depth = HashMap::new();
-        // // TODO Remember node depth when we iterate through them the first time instead of requiring another pass through the nodes
-        // for unreferenced_node in unreferenced_nodes {
-        //     let depth = blobstore.load_block_depth(&unreferenced_node).await;
-        //     let depth = match depth {
-        //         Ok(Some(depth)) => depth,
-        //         Ok(None) => {
-        //             blobstore.async_drop().await?;
-        //             bail!("Node {:?} found earlier but now it is gone. This can happen if the file system changed while we're checking it.", unreferenced_node);
-        //         }
-        //         Err(e) => {
-        //             blobstore.async_drop().await?;
-        //             return Err(e);
-        //         }
-        //     };
-        //     let num_unreferenced_nodes_at_depth =
-        //         num_unreferenced_nodes_per_depth.entry(depth).or_insert(0);
-        //     *num_unreferenced_nodes_at_depth += 1;
-        // }
-        // let mut num_unreferenced_nodes_per_depth: Vec<(u8, u64)> =
-        //     num_unreferenced_nodes_per_depth.into_iter().collect();
-        // num_unreferenced_nodes_per_depth.sort_by_key(|(depth, _)| *depth);
-        // log::info!("Checking node depths...done");
-        // for (depth, num_unreferenced_nodes_at_depth) in num_unreferenced_nodes_per_depth {
-        //     log::info!(
-        //         "Found {} unreferenced nodes at depth {}",
-        //         num_unreferenced_nodes_at_depth,
-        //         depth
-        //     );
-        // }
 
         nodestore.async_drop().await?;
         Ok(())
@@ -159,9 +108,9 @@ where
     nodestore.all_nodes().await?.try_collect().await
 }
 
-async fn check_all_nodes<B>(
+async fn check_all_unreachable_nodes<B>(
     nodestore: &AsyncDropGuard<DataNodeStore<B>>,
-    all_nodes: &HashSet<BlockId>,
+    unreachable_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
 ) where
@@ -169,14 +118,14 @@ async fn check_all_nodes<B>(
 {
     // TODO What's a good concurrency value here?
     const MAX_CONCURRENCY: usize = 100;
-    let all_nodes = stream::iter(all_nodes.iter());
-    let mut maybe_errors = all_nodes.map(move |&node_id| {
+    let unreachable_nodes = stream::iter(unreachable_nodes.iter());
+    let mut maybe_errors = unreachable_nodes.map(move |&node_id| {
         let pb = pb.clone();
         async move {
             let loaded = nodestore.load(node_id).await;
             let result = match loaded {
                 Ok(Some(node)) => {
-                    checks.process_existing_node(&node);
+                    checks.process_unreachable_node(&node);
                     None // no error
                 }
                 Ok(None) => {
@@ -208,7 +157,7 @@ struct CheckAllBlobsResult {
     visited_nodes: Vec<BlockId>,
 }
 
-async fn check_all_blobs<B>(
+async fn check_all_reachable_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     root_blob_id: BlobId,
     checks: &AllChecks,
@@ -223,7 +172,7 @@ where
     let (task_queue_sender, mut task_queue_receiver) = tokio::sync::mpsc::unbounded_channel();
 
     task_queue_sender
-        .send(Box::pin(_check_all_blobs(
+        .send(Box::pin(_check_all_reachable_blobs(
             blobstore,
             root_blob_id,
             checks,
@@ -246,7 +195,7 @@ where
 }
 
 #[async_recursion]
-async fn _check_all_blobs<'a, 'b, 'f, B>(
+async fn _check_all_reachable_blobs<'a, 'b, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     root_blob_id: BlobId,
     checks: &'b AllChecks,
@@ -273,9 +222,14 @@ where
             //      Then we load it again when we check the nodes of this blob. Can we only load it once?
 
             // First, add tasks for all children blobs (if we're a directory blob).
-            let subresult =
-                check_all_children_blobs(blobstore, &blob, checks, task_queue_sender, pb.clone())
-                    .await;
+            let subresult = check_all_reachable_children_blobs(
+                blobstore,
+                &blob,
+                checks,
+                task_queue_sender,
+                pb.clone(),
+            )
+            .await;
             match subresult {
                 Ok(()) => (),
                 Err(err) => {
@@ -286,7 +240,7 @@ where
 
             // Then, check all nodes of the current blob. This will be processed concurrently to the
             // children blobs added to the task queue above.
-            let subresult = check_all_nodes_of_blob(blob, checks, pb).await?;
+            let subresult = check_all_nodes_of_reachable_blob(blob, checks, pb).await?;
             result.visited_nodes.extend(subresult.visited_nodes);
         }
         Ok(None) => {
@@ -305,7 +259,7 @@ where
     Ok(result)
 }
 
-async fn check_all_children_blobs<'a, 'b, 'c, 'f, B>(
+async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     blob: &FsBlob<'b, BlobStoreOnBlocks<B>>,
     checks: &'c AllChecks,
@@ -332,7 +286,7 @@ where
 
             for entry in blob.entries() {
                 task_queue_sender
-                    .send(Box::pin(_check_all_blobs(
+                    .send(Box::pin(_check_all_reachable_blobs(
                         blobstore,
                         *entry.blob_id(),
                         checks,
@@ -346,7 +300,7 @@ where
     Ok(())
 }
 
-async fn check_all_nodes_of_blob<'a, B>(
+async fn check_all_nodes_of_reachable_blob<'a, B>(
     blob: AsyncDropGuard<FsBlob<'a, BlobStoreOnBlocks<B>>>,
     checks: &AllChecks,
     pb: Progress,
@@ -360,7 +314,7 @@ where
         pb.inc(1);
         match node {
             Ok(node) => {
-                checks.process_existing_node(&node);
+                checks.process_reachable_node(&node);
                 (*node.block_id(), None) // no error
             }
             Err((node_id, error)) => {
