@@ -5,6 +5,7 @@ use futures::future::{self, BoxFuture};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::sync::Arc;
 use tokio::sync::mpsc::{UnboundedSender, WeakUnboundedSender};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -34,18 +35,13 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
-        // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
-        let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
-
-        let mut nodestore = DataNodeStore::new(blockstore, blocksize_bytes).await?;
-
         // TODO Instead of autotick, we could manually tick it while listing nodes. That would mean users see it if it gets stuck.
         //      Or we could even show a Progress bar since we know we're going from AAA to ZZZ in the folder structure.
         let pb = Spinner::new_autotick("Listing all nodes");
-        let all_nodes = match get_all_node_ids(&nodestore).await {
+        let all_nodes = match get_all_node_ids(&blockstore).await {
             Ok(all_nodes) => all_nodes,
             Err(e) => {
-                nodestore.async_drop().await?;
+                blockstore.async_drop().await?;
                 return Err(e);
             }
         };
@@ -54,12 +50,10 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         let checks = AllChecks::new();
 
-        let blobstore = BlobStoreOnBlocks::new(
-            DataNodeStore::into_inner_blockstore(nodestore),
-            blocksize_bytes,
-        )
-        .await?;
-        let mut blobstore = FsBlobStore::new(blobstore);
+        // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
+        let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
+        let mut blobstore =
+            FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize_bytes).await?);
 
         let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
         let root_blob_id = match root_blob_id {
@@ -76,10 +70,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         let check_all_blobs_result =
             check_all_reachable_blobs(&blobstore, root_blob_id, &checks, pb.clone()).await?;
 
-        let mut unreachable_nodes = all_nodes;
-        for visited_node in check_all_blobs_result.visited_nodes {
-            unreachable_nodes.remove(&visited_node);
-        }
+        let mut unreachable_nodes = set_remove_all(all_nodes, check_all_blobs_result.visited_nodes);
+
         let mut nodestore =
             BlobStoreOnBlocks::into_inner_node_store(FsBlobStore::into_inner_blobstore(blobstore));
         check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await?;
@@ -100,12 +92,12 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 }
 
 async fn get_all_node_ids<B>(
-    nodestore: &AsyncDropGuard<DataNodeStore<B>>,
+    blockstore: &AsyncDropGuard<LockingBlockStore<B>>,
 ) -> Result<HashSet<BlockId>>
 where
     B: BlockStore + Send + Sync + 'static,
 {
-    nodestore.all_nodes().await?.try_collect().await
+    blockstore.all_blocks().await?.try_collect().await
 }
 
 async fn check_all_unreachable_nodes<B>(
@@ -313,8 +305,7 @@ where
     let all_nodes = FsBlob::load_all_nodes(blob).await?;
     // TODO Should we rate-limit this instead of trying to load all at once?
     let mut results = all_nodes.map(|node| {
-        pb.inc(1);
-        match node {
+        let result = match node {
             Ok(node) => {
                 checks.process_reachable_node(&node);
                 (*node.block_id(), None) // no error
@@ -326,7 +317,9 @@ where
                     Some(CorruptedError::NodeUnreadable { node_id, error }),
                 )
             }
-        }
+        };
+        pb.inc(1);
+        result
     });
     let mut combined_result = CheckAllBlobsResult {
         visited_nodes: vec![],
@@ -338,4 +331,11 @@ where
         }
     }
     Ok(combined_result)
+}
+
+fn set_remove_all<T: Hash + Eq>(mut set: HashSet<T>, to_remove: Vec<T>) -> HashSet<T> {
+    for item in to_remove {
+        set.remove(&item);
+    }
+    set
 }
