@@ -82,7 +82,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         }
         let mut nodestore =
             BlobStoreOnBlocks::into_inner_node_store(FsBlobStore::into_inner_blobstore(blobstore));
-        check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await;
+        check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await?;
         pb.finish();
 
         let errors = checks.finalize();
@@ -113,11 +113,13 @@ async fn check_all_unreachable_nodes<B>(
     unreachable_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
-) where
+) -> Result<()>
+where
     B: BlockStore + Send + Sync + 'static,
 {
     // TODO What's a good concurrency value here?
     const MAX_CONCURRENCY: usize = 100;
+
     let unreachable_nodes = stream::iter(unreachable_nodes.iter());
     let mut maybe_errors = unreachable_nodes.map(move |&node_id| {
         let pb = pb.clone();
@@ -129,8 +131,7 @@ async fn check_all_unreachable_nodes<B>(
                     None // no error
                 }
                 Ok(None) => {
-                    // TODO don't panic but return an error (i.e. change result from Vec<CorruptedError> to Result<Vec<CorruptedError>>) and exit gracefully
-                    panic!("Node {node_id:?} previously present but then vanished during our checks. Please don't modify the file system while checks are running.");
+                    bail!("Node {node_id:?} previously present but then vanished during our checks. Please don't modify the file system while checks are running.");
                 }
                 Err(error) => {
                     // return the error
@@ -141,15 +142,16 @@ async fn check_all_unreachable_nodes<B>(
                 }
             };
             pb.inc(1);
-            result
+            Ok(result)
         }
     })
     .buffer_unordered(MAX_CONCURRENCY);
     while let Some(maybe_error) = maybe_errors.next().await {
-        if let Some(error) = maybe_error {
+        if let Some(error) = maybe_error? {
             checks.add_error(error);
         }
     }
+    Ok(())
 }
 
 #[must_use]
