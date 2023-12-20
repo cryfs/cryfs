@@ -14,7 +14,6 @@ pub struct FilesystemRunner<'m, 'c> {
     pub config: &'c ConfigLoadResult,
 }
 
-#[async_trait]
 impl<'m, 'c> BlockstoreCallback for FilesystemRunner<'m, 'c> {
     type Result = Result<()>;
 

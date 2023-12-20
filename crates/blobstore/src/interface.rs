@@ -11,7 +11,7 @@ use crate::{BlobId, RemoveResult};
 pub const BLOBID_LEN: usize = BLOCKID_LEN;
 
 #[async_trait]
-pub trait Blob<'a>: Sized + Debug {
+pub trait Blob: Sized + Debug {
     fn id(&self) -> BlobId;
     // TODO Can we make size take &self instead of &mut self? Same for other read-only functions?
     async fn num_bytes(&mut self) -> Result<u64>;
@@ -33,7 +33,7 @@ pub trait Blob<'a>: Sized + Debug {
 #[async_trait]
 pub trait BlobStore {
     // TODO Remove Send+Sync bound
-    type ConcreteBlob<'a>: Blob<'a> + Debug + Send + Sync
+    type ConcreteBlob<'a>: Blob + Debug + Send + Sync
     where
         Self: 'a;
 

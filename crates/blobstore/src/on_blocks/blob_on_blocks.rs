@@ -35,7 +35,7 @@ impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
 }
 
 #[async_trait]
-impl<'a, B: BlockStore + Send + Sync> Blob<'a> for BlobOnBlocks<'a, B> {
+impl<'a, B: BlockStore + Send + Sync> Blob for BlobOnBlocks<'a, B> {
     fn id(&self) -> BlobId {
         BlobId {
             root: *self._tree().root_node_id(),
