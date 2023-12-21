@@ -49,9 +49,7 @@ impl FilesystemFixture {
                     panic!("integrity violation");
                 }),
             },
-            CreateFilesystemRunner {
-                config: &config,
-            },
+            CreateFilesystemRunner { config: &config },
         )
         .await
         .expect("Failed to setup blockstore stack");
