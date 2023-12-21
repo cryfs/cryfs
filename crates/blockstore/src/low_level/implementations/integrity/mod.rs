@@ -167,9 +167,12 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     }
 
     // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store.
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        self.underlying_block_store.block_size_from_physical_block_size(block_size)?.checked_sub(HEADER_SIZE as u64)
-            .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, HEADER_SIZE))
+    fn block_size_from_physical_block_size(&self, physical_block_size: u64) -> Result<u64> {
+        let block_size = self
+            .underlying_block_store
+            .block_size_from_physical_block_size(physical_block_size)?;
+        block_size.checked_sub(HEADER_SIZE as u64)
+            .with_context(|| anyhow!("Block size of {} (physical: {}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, physical_block_size, HEADER_SIZE))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

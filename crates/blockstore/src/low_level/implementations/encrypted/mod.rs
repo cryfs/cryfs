@@ -96,9 +96,14 @@ impl<
             .estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
-        let ciphertext_size = self.underlying_block_store.deref().borrow().block_size_from_physical_block_size(block_size)?.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
-            .with_context(|| anyhow!("Physical block size of {} is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))?;
+    fn block_size_from_physical_block_size(&self, physical_block_size: u64) -> Result<u64> {
+        let block_size = self
+            .underlying_block_store
+            .deref()
+            .borrow()
+            .block_size_from_physical_block_size(physical_block_size)?;
+        let ciphertext_size = block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
+            .with_context(|| anyhow!("Block size of {} (physical: {}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, physical_block_size, FORMAT_VERSION_HEADER.len()))?;
         ciphertext_size
             .checked_sub((C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64)
             .with_context(|| anyhow!("Physical block size of {} is too small.", block_size))
