@@ -732,6 +732,7 @@ dependencies = [
  "futures",
  "indicatif",
  "log",
+ "tempdir",
  "thiserror",
  "tokio",
  "tokio-stream",

@@ -101,6 +101,25 @@ pub struct CommandLineFlags<'a> {
     pub expected_cipher: Option<&'a str>,
 }
 
+pub fn create(
+    filename: PathBuf,
+    password: &(impl PasswordProvider + ?Sized),
+    console: &(impl Console + ?Sized),
+    command_line_flags: &CommandLineFlags,
+    local_state_dir: &LocalStateDir,
+) -> Result<ConfigLoadResult, ConfigLoadError> {
+    let password = password
+        .password_for_new_filesystem()
+        .map_err(ConfigLoadError::InteractionError)?;
+    _create(
+        filename,
+        &password,
+        console,
+        command_line_flags,
+        local_state_dir,
+    )
+}
+
 pub fn load_or_create(
     filename: PathBuf,
     password: &(impl PasswordProvider + ?Sized),

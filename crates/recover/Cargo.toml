@@ -31,6 +31,11 @@ console.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
 
+[dev-dependencies]
+tempdir.workspace = true
+cryfs-cryfs = {path = "../cryfs", features=["testutils"]}
+cryfs-blockstore = {path = "../blockstore", features=["testutils"]}
+
 [features]
 default = ["check_for_updates"]
 check_for_updates = ["cryfs-cli-utils/check_for_updates"]
