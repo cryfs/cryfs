@@ -125,7 +125,7 @@ where
                     // return the error
                     Some(CorruptedError::NodeUnreadable {
                         node_id,
-                        error,
+                        // error,
                     })
                 }
             };
@@ -248,7 +248,7 @@ where
         Err(error) => {
             checks.add_error(CorruptedError::BlobUnreadable {
                 blob_id: root_blob_id,
-                error,
+                // error,
             });
         }
     };
@@ -322,7 +322,7 @@ where
                 // return the CorruptedError we found
                 (
                     node_id,
-                    Some(CorruptedError::NodeUnreadable { node_id, error: load_error }),
+                    Some(CorruptedError::NodeUnreadable { node_id/* , error: load_error*/ }),
                 )
             }
         };

@@ -3,12 +3,12 @@ use thiserror::Error;
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockId;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
-        error: anyhow::Error,
+        // TODO error: anyhow::Error,
     },
 
     #[error("Node {node_id:?} is referenced but does not exist")]
@@ -29,7 +29,7 @@ pub enum CorruptedError {
     #[error("Blob {blob_id:?} is unreadable and likely corrupted")]
     BlobUnreadable {
         blob_id: BlobId,
-        error: anyhow::Error,
+        // TODO error: aerror: anyhow::Error,
     },
 
     #[error("Blob {blob_id:?} is referenced but does not exist")]

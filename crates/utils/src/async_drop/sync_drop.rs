@@ -34,14 +34,14 @@ impl<T: Debug + AsyncDrop> Drop for SyncDrop<T> {
 }
 
 impl<T: Debug + AsyncDrop> Deref for SyncDrop<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
+    type Target = AsyncDropGuard<T>;
+    fn deref(&self) -> &AsyncDropGuard<T> {
         self.0.as_ref().expect("Already dropped")
     }
 }
 
 impl<T: Debug + AsyncDrop> DerefMut for SyncDrop<T> {
-    fn deref_mut(&mut self) -> &mut T {
+    fn deref_mut(&mut self) -> &mut AsyncDropGuard<T> {
         self.0.as_mut().expect("Already dropped")
     }
 }

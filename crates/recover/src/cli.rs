@@ -9,7 +9,7 @@ use cryfs_cli_utils::{
     Application, Environment,
 };
 use cryfs_cryfs::{
-    config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult},
+    config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, PasswordProvider},
     localstate::LocalStateDir,
     CRYFS_VERSION,
 };
@@ -51,7 +51,16 @@ impl Application for RecoverCli {
         let config_file_path = self.args.basedir.join("cryfs.config");
         let blockstore = OnDiskBlockStore::new(self.args.basedir);
 
-        let errors = check_filesystem(blockstore, &config_file_path, &self.local_state_dir).await?;
+        // TODO Allow NonInteractivePasswordProvider like cryfs-cli does?
+        let password_provider = InteractivePasswordProvider;
+
+        let errors = check_filesystem(
+            blockstore,
+            &config_file_path,
+            &self.local_state_dir,
+            &password_provider,
+        )
+        .await?;
 
         for error in &errors {
             println!("- {error}");
@@ -66,10 +75,11 @@ pub async fn check_filesystem(
     blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Sync + Send>,
     config_file_path: &Path,
     local_state_dir: &LocalStateDir,
+    password_provider: &impl PasswordProvider,
 ) -> Result<Vec<CorruptedError>> {
     let blockstore = ReadOnlyBlockStore::new(blockstore);
 
-    let config = load_config(config_file_path, local_state_dir)?;
+    let config = load_config(config_file_path, local_state_dir, password_provider)?;
     print_config(&config);
 
     // TODO It currently seems to spend some seconds before getting from here in to `RecoveryRunner`. Probably to load local state or something like that. Let's add a spinner.
@@ -97,12 +107,12 @@ pub async fn check_filesystem(
 fn load_config(
     config_file_path: &Path,
     local_state_dir: &LocalStateDir,
+    password_provider: &impl PasswordProvider,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     // TODO Allow changing config file using args as C++ did
     cryfs_cryfs::config::load_readonly(
         config_file_path.to_owned(),
-        // TODO Allow NonInteractivePasswordProvider like cryfs-cli does?
-        &InteractivePasswordProvider,
+        password_provider,
         &RecoverConsole,
         &CommandLineFlags {
             missing_block_is_integrity_violation: Some(false),

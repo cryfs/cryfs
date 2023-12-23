@@ -7,10 +7,14 @@ use cryfs_blockstore::{
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
-    config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, FixedPasswordProvider},
+    config::{
+        CommandLineFlags, ConfigLoadError, ConfigLoadResult, FixedPasswordProvider,
+        PasswordProvider,
+    },
     filesystem::fsblobstore::FsBlobStore,
     localstate::LocalStateDir,
 };
+use cryfs_recover::CorruptedError;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
 use futures::Future;
 use std::fmt::{Debug, Formatter};
@@ -92,10 +96,7 @@ impl FilesystemFixture {
     ) where
         F: Future<Output = ()>,
     {
-        self.fsblobstore
-            .clear_cache_slow()
-            .await
-            .expect("Failed to clear cache");
+        self._clear_fsblobstore_cache().await;
         update_fn(&self.blockstore);
     }
 
@@ -106,6 +107,27 @@ impl FilesystemFixture {
         F: Future<Output = ()>,
     {
         update_fn(&self.fsblobstore);
+    }
+
+    pub async fn run_cryfs_recover(self) -> Vec<CorruptedError> {
+        // First drop fsblobstore so that its cache is cleared
+        std::mem::drop(self.fsblobstore);
+
+        cryfs_recover::check_filesystem(
+            self.blockstore.into_inner_dont_drop(),
+            &self.tempdir.config_file_path(),
+            &self.tempdir.local_state_dir(),
+            &FixedPasswordProvider::new(PASSWORD.to_owned()),
+        )
+        .await
+        .expect("Failed to run cryfs-recover")
+    }
+
+    async fn _clear_fsblobstore_cache(&self) {
+        self.fsblobstore
+            .clear_cache_slow()
+            .await
+            .expect("Failed to clear cache");
     }
 }
 
