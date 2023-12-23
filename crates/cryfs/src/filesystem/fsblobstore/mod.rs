@@ -99,6 +99,11 @@ where
     pub fn into_inner_blobstore(this: AsyncDropGuard<Self>) -> AsyncDropGuard<B> {
         this.unsafe_into_inner_dont_drop().blobstore
     }
+
+    #[cfg(any(test, feature="testutils"))]
+    pub async fn clear_cache_slow(&self) -> Result<()> {
+        self.blobstore.clear_cache_slow().await
+    }
 }
 
 #[async_trait]

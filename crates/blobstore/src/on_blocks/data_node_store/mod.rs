@@ -202,7 +202,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         node.flush(&self.block_store).await
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.block_store.clear_cache_slow().await
     }

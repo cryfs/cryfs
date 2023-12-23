@@ -39,4 +39,4 @@ tokio = {workspace = true, features = ["sync"]}
 tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
 
 [features]
-testutils = []
+testutils = ["cryfs-blobstore/testutils"]

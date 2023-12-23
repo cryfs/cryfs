@@ -1,4 +1,4 @@
-use anyhow::{ensure, Context, Error, Result};
+use anyhow::{anyhow, ensure, Context, Error, Result};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use itertools::Itertools;
 use std::collections::hash_map::HashMap;
@@ -100,7 +100,8 @@ where
     }
 
     fn serialize_to_file(&self, file_path: &Path) -> Result<()> {
-        let file = File::create(file_path).context("Tried to create file to serialize to")?;
+        let file = File::create(file_path)
+            .with_context(|| anyhow!("Tried to create file to serialize to at {file_path:?}"))?;
         self.serialize_to_stream(&mut BufWriter::new(file))?;
         Ok(())
     }

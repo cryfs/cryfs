@@ -268,6 +268,16 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         self.cache.flush_block(entry, &block_id).await
     }
 
+    pub async fn into_inner_block_store(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B>> {
+        let mut this = this.unsafe_into_inner_dont_drop();
+        // TODO Exception safety. Drop base_store if dropping the cache fails.
+        this.cache.async_drop().await?;
+
+        let base_store = this.base_store.take().expect("Already destructed");
+        let base_store = Arc::try_unwrap(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
+        Ok(base_store)
+    }
+
     /// clear_cache_slow is only used in test cases. Without test cases calling it, they would only
     /// ever test cached blocks and never have to store/reload them to the base store.
     /// This is implemented in a very slow way and shouldn't be used in non-test code.
@@ -289,6 +299,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<()> {
+        // TODO Exception safety. Should we drop base_store even if dropping the cache fails?
         self.cache.async_drop().await?;
 
         // Since we just dropped the cache, we know there are no cache entries left with access to the self.base_store Arc.

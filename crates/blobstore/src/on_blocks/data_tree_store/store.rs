@@ -108,7 +108,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
         Ok(potential_roots.into_iter().collect())
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.node_store.clear_cache_slow().await
     }

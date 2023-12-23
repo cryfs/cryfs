@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, Context, Result};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
 use rand::{thread_rng, Rng};
@@ -366,6 +366,7 @@ impl KnownBlockVersions {
         KnownBlockVersionsSerialized::async_from(self)
             .await
             .serialize_to_file(file_path)
+            .context("Error saving KnownBlockVersions")
     }
 
     pub async fn lock_block_info(

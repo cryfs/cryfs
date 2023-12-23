@@ -38,11 +38,6 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
             .collect())
     }
 
-    #[cfg(test)]
-    pub async fn clear_cache_slow(&self) -> Result<()> {
-        self.tree_store.clear_cache_slow().await
-    }
-
     pub fn into_inner_node_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataNodeStore<B>> {
         let tree_store = this.unsafe_into_inner_dont_drop().tree_store;
         DataTreeStore::into_inner_node_store(tree_store)
@@ -91,6 +86,11 @@ impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
 
     async fn load_block_depth(&self, id: &cryfs_blockstore::BlockId) -> Result<Option<u8>> {
         self.tree_store.load_block_depth(id).await
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    async fn clear_cache_slow(&self) -> Result<()> {
+        self.tree_store.clear_cache_slow().await
     }
 }
 

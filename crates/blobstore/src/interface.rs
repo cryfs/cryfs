@@ -48,4 +48,7 @@ pub trait BlobStore {
 
     // TODO load_block_depth is only needed for our c++ bindings of the stats tool. Remove them.
     async fn load_block_depth(&self, _id: &cryfs_blockstore::BlockId) -> Result<Option<u8>>;
+
+    #[cfg(any(test, feature = "testutils"))]
+    async fn clear_cache_slow(&self) -> Result<()>;
 }

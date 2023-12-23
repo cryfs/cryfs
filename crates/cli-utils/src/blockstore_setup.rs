@@ -113,3 +113,35 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
         Ok(self.callback.callback(blockstore).await)
     }
 }
+
+pub async fn setup_blockstore_stack_dyn(
+    base_blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync>,
+    config: &ConfigLoadResult,
+    local_state_dir: &LocalStateDir,
+    integrity_config: IntegrityConfig,
+) -> Result<AsyncDropGuard<LockingBlockStore<Box<dyn BlockStore + Send + Sync>>>> {
+    setup_blockstore_stack(
+        base_blockstore,
+        config,
+        local_state_dir,
+        integrity_config,
+        DynCallback,
+    )
+    .await?
+}
+
+struct DynCallback;
+impl BlockstoreCallback for DynCallback {
+    type Result = Result<AsyncDropGuard<LockingBlockStore<Box<dyn BlockStore + Send + Sync>>>>;
+
+    async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
+        self,
+        blockstore: AsyncDropGuard<LockingBlockStore<B>>,
+    ) -> Self::Result {
+        let inner = LockingBlockStore::into_inner_block_store(blockstore).await?;
+        let inner: Box<dyn BlockStore + Send + Sync> =
+            Box::new(inner.unsafe_into_inner_dont_drop());
+        let inner = AsyncDropGuard::new(inner);
+        Ok(LockingBlockStore::new(inner))
+    }
+}
