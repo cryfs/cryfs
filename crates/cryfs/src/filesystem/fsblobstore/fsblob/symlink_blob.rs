@@ -77,6 +77,11 @@ where
     pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         self.blob.all_blocks()
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn num_nodes(&mut self) -> Result<u64> {
+        self.blob.num_nodes().await
+    }
 }
 
 impl<'a, B> Debug for SymlinkBlob<'a, B>

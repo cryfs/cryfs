@@ -90,23 +90,29 @@ impl FilesystemFixture {
         blobstore
     }
 
-    pub async fn update_blockstore<F>(
-        &self,
-        update_fn: impl FnOnce(&SharedBlockStore<InMemoryBlockStore>) -> F,
+    pub async fn update_blockstore<'s, 'b, 'f, F>(
+        &'s self,
+        update_fn: impl FnOnce(&'b SharedBlockStore<InMemoryBlockStore>) -> F,
     ) where
-        F: Future<Output = ()>,
+        F: 'f + Future<Output = ()>,
+        's: 'f + 'b,
+        'b: 'f,
     {
         self._clear_fsblobstore_cache().await;
         update_fn(&self.blockstore);
     }
 
-    pub fn update_fsblobstore<F>(
-        &self,
-        update_fn: impl FnOnce(&FsBlobStore<BlobStoreOnBlocks<Box<dyn BlockStore + Send + Sync>>>) -> F,
+    pub async fn update_fsblobstore<'s, 'b, 'f, F>(
+        &'s self,
+        update_fn: impl FnOnce(
+            &'b FsBlobStore<BlobStoreOnBlocks<Box<dyn BlockStore + Send + Sync>>>,
+        ) -> F,
     ) where
-        F: Future<Output = ()>,
+        F: 'f + Future<Output = ()>,
+        's: 'f + 'b,
+        'b: 'f,
     {
-        update_fn(&self.fsblobstore);
+        update_fn(&self.fsblobstore).await;
     }
 
     pub async fn run_cryfs_recover(self) -> Vec<CorruptedError> {
@@ -128,6 +134,10 @@ impl FilesystemFixture {
             .clear_cache_slow()
             .await
             .expect("Failed to clear cache");
+    }
+
+    pub fn root_blob_id(&self) -> BlobId {
+        self.root_blob_id
     }
 }
 

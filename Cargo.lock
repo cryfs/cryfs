@@ -731,6 +731,7 @@ dependencies = [
  "cryfs-version",
  "futures",
  "indicatif",
+ "itertools 0.12.0",
  "log",
  "tempdir",
  "thiserror",

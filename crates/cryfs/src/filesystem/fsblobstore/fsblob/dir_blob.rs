@@ -296,7 +296,14 @@ where
     }
 
     pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
+        // TODO We may want to flush here since otherwise any change aren't written yet
         self.blob.all_blocks()
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn num_nodes(&mut self) -> Result<u64> {
+        self.flush().await?;
+        self.blob.num_nodes().await
     }
 }
 
