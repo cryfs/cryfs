@@ -56,18 +56,18 @@ pub trait FilesystemCheck {
     fn finalize(self) -> Vec<CorruptedError>;
 }
 
-mod unreferenced_blocks;
-use unreferenced_blocks::CheckUnreferencedNodes;
+mod unreachable_nodes;
+use unreachable_nodes::CheckUnreachableNodes;
 
 pub struct AllChecks {
-    check_unreferenced_nodes: Mutex<CheckUnreferencedNodes>,
+    check_unreachable_nodes: Mutex<CheckUnreachableNodes>,
     additional_errors: Mutex<Vec<CorruptedError>>,
 }
 
 impl AllChecks {
     pub fn new() -> Self {
         Self {
-            check_unreferenced_nodes: Mutex::new(CheckUnreferencedNodes::new()),
+            check_unreachable_nodes: Mutex::new(CheckUnreachableNodes::new()),
             additional_errors: Mutex::new(Vec::new()),
         }
     }
@@ -76,7 +76,7 @@ impl AllChecks {
         &self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) {
-        self.check_unreferenced_nodes
+        self.check_unreachable_nodes
             .lock()
             .unwrap()
             .process_reachable_blob(blob);
@@ -86,7 +86,7 @@ impl AllChecks {
         &self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) {
-        self.check_unreferenced_nodes
+        self.check_unreachable_nodes
             .lock()
             .unwrap()
             .process_reachable_node(node);
@@ -96,7 +96,7 @@ impl AllChecks {
         &self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) {
-        self.check_unreferenced_nodes
+        self.check_unreachable_nodes
             .lock()
             .unwrap()
             .process_unreachable_node(node);
@@ -105,7 +105,7 @@ impl AllChecks {
     pub fn finalize(mut self) -> Vec<CorruptedError> {
         let mut errors = self.additional_errors.into_inner().unwrap();
         errors.extend(
-            self.check_unreferenced_nodes
+            self.check_unreachable_nodes
                 .into_inner()
                 .unwrap()
                 .finalize(),
