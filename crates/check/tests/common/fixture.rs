@@ -90,29 +90,31 @@ impl FilesystemFixture {
         blobstore
     }
 
-    pub async fn update_blockstore<'s, 'b, 'f, F>(
+    pub async fn update_blockstore<'s, 'b, 'f, F, R>(
         &'s self,
         update_fn: impl FnOnce(&'b SharedBlockStore<InMemoryBlockStore>) -> F,
-    ) where
-        F: 'f + Future<Output = ()>,
+    ) -> R
+    where
+        F: 'f + Future<Output = R>,
         's: 'f + 'b,
         'b: 'f,
     {
         self._clear_fsblobstore_cache().await;
-        update_fn(&self.blockstore);
+        update_fn(&self.blockstore).await
     }
 
-    pub async fn update_fsblobstore<'s, 'b, 'f, F>(
+    pub async fn update_fsblobstore<'s, 'b, 'f, F, R>(
         &'s self,
         update_fn: impl FnOnce(
             &'b FsBlobStore<BlobStoreOnBlocks<Box<dyn BlockStore + Send + Sync>>>,
         ) -> F,
-    ) where
-        F: 'f + Future<Output = ()>,
+    ) -> R
+    where
+        F: 'f + Future<Output = R>,
         's: 'f + 'b,
         'b: 'f,
     {
-        update_fn(&self.fsblobstore).await;
+        update_fn(&self.fsblobstore).await
     }
 
     pub async fn run_cryfs_check(self) -> Vec<CorruptedError> {
