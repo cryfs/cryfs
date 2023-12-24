@@ -3,7 +3,7 @@ use itertools::Itertools;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use cryfs_blobstore::BlobStore;
+use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
@@ -88,10 +88,22 @@ where
     new_entry
 }
 
-pub async fn create_some_files_directories_and_symlinks<'a, 'b, 'c, B>(
+pub struct SomeBlobs {
+    root: BlobId,
+    dir1: BlobId,
+    dir2: BlobId,
+    dir1_dir3: BlobId,
+    dir1_dir4: BlobId,
+    dir1_dir3_dir5: BlobId,
+    dir2_dir6: BlobId,
+    dir2_dir7: BlobId,
+}
+
+pub async fn create_some_blobs<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
     root: &'a mut DirBlob<'c, B>,
-) where
+) -> SomeBlobs
+where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let mut dir1 = create_dir(fsblobstore, root, "dir1").await;
@@ -145,6 +157,17 @@ pub async fn create_some_files_directories_and_symlinks<'a, 'b, 'c, B>(
         "If this fails, we need to make the data larger so it uses enough nodes."
     );
 
+    let result = SomeBlobs {
+        root: root.blob_id(),
+        dir1: dir1.blob_id(),
+        dir2: dir2.blob_id(),
+        dir1_dir3: dir1_dir3.blob_id(),
+        dir1_dir4: dir1_dir4.blob_id(),
+        dir1_dir3_dir5: dir1_dir3_dir5.blob_id(),
+        dir2_dir6: dir2_dir6.blob_id(),
+        dir2_dir7: dir2_dir7.blob_id(),
+    };
+
     dir2_dir7.async_drop().await.unwrap();
     dir2_dir6.async_drop().await.unwrap();
     dir1_dir3_dir5.async_drop().await.unwrap();
@@ -152,6 +175,8 @@ pub async fn create_some_files_directories_and_symlinks<'a, 'b, 'c, B>(
     dir1_dir3.async_drop().await.unwrap();
     dir2.async_drop().await.unwrap();
     dir1.async_drop().await.unwrap();
+
+    result
 }
 
 fn data(size: usize, seed: u64) -> Data {

@@ -12,7 +12,7 @@ use cryfs_cryfs::{
         CommandLineFlags, ConfigLoadError, ConfigLoadResult, FixedPasswordProvider,
         PasswordProvider,
     },
-    filesystem::fsblobstore::FsBlobStore,
+    filesystem::fsblobstore::{FsBlob, FsBlobStore},
     localstate::LocalStateDir,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
@@ -22,6 +22,7 @@ use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
+use super::entry_helpers::SomeBlobs;
 
 const PASSWORD: &str = "mypassword";
 
@@ -140,6 +141,19 @@ impl FilesystemFixture {
 
     pub fn root_blob_id(&self) -> BlobId {
         self.root_blob_id
+    }
+
+    pub async fn create_some_blobs(&self) -> SomeBlobs {
+        let root_id = self.root_blob_id;
+        self.update_fsblobstore(move |blobstore| async move {
+            let mut root = FsBlob::into_dir(blobstore.load(&root_id).await.unwrap().unwrap())
+                .await
+                .unwrap();
+            let result = super::entry_helpers::create_some_blobs(blobstore, &mut root).await;
+            root.async_drop().await.unwrap();
+            result
+        })
+        .await
     }
 }
 
