@@ -81,7 +81,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         let errors = checks.finalize();
 
-        // TODO Some errors may be found by multiple checks, let's deduplicate those.
+        // Some errors may be found by multiple checks, let's deduplicate those.
+        let errors = deduplicate(errors);
 
         nodestore.async_drop().await?;
         Ok(errors)
@@ -349,4 +350,14 @@ fn set_remove_all<T: Hash + Eq>(mut set: HashSet<T>, to_remove: Vec<T>) -> HashS
         set.remove(&item);
     }
     set
+}
+
+fn deduplicate<T>(mut items: Vec<T>) -> Vec<T>
+where
+    T: Eq + Hash + Clone,
+{
+    // TODO Without clone?
+    let mut seen: HashSet<T> = HashSet::new();
+    items.retain(|item| seen.insert(item.clone()));
+    items
 }
