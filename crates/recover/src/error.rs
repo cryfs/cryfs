@@ -17,6 +17,9 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is not referenced but exists")]
     NodeUnreferenced { node_id: BlockId },
 
+    #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]
+    UnreachableSubtreeWithCycle { node_id: BlockId },
+
     #[error("Node {node_id:?} is referenced multiple times")]
     NodeReferencedMultipleTimes { node_id: BlockId },
 
