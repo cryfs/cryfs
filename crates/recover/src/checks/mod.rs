@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::sync::Mutex;
 
-use cryfs_blobstore::{BlobStoreOnBlocks, DataNode};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::BlockStore;
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
 
@@ -56,18 +56,18 @@ pub trait FilesystemCheck {
     fn finalize(self) -> Vec<CorruptedError>;
 }
 
-mod unreachable_nodes;
-use unreachable_nodes::CheckUnreachableNodes;
+mod unreferenced_nodes;
+use unreferenced_nodes::CheckUnreferencedNodes;
 
 pub struct AllChecks {
-    check_unreachable_nodes: Mutex<CheckUnreachableNodes>,
+    check_unreachable_nodes: Mutex<CheckUnreferencedNodes>,
     additional_errors: Mutex<Vec<CorruptedError>>,
 }
 
 impl AllChecks {
-    pub fn new() -> Self {
+    pub fn new(root_blob_id: BlobId) -> Self {
         Self {
-            check_unreachable_nodes: Mutex::new(CheckUnreachableNodes::new()),
+            check_unreachable_nodes: Mutex::new(CheckUnreferencedNodes::new(root_blob_id)),
             additional_errors: Mutex::new(Vec::new()),
         }
     }

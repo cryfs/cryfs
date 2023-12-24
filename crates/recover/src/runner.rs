@@ -35,6 +35,15 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
+        let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
+        let root_blob_id = match root_blob_id {
+            Ok(root_blob_id) => root_blob_id,
+            Err(e) => {
+                blockstore.async_drop().await?;
+                return Err(e);
+            }
+        };
+
         // TODO Instead of autotick, we could manually tick it while listing nodes. That would mean users see it if it gets stuck.
         //      Or we could even show a Progress bar since we know we're going from AAA to ZZZ in the folder structure.
         let pb = Spinner::new_autotick("Listing all nodes");
@@ -48,21 +57,13 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         pb.finish();
         println!("Found {} nodes", all_nodes.len());
 
-        let checks = AllChecks::new();
+        let checks = AllChecks::new(root_blob_id);
 
         // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
         let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
         let mut blobstore =
             FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize_bytes).await?);
 
-        let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
-        let root_blob_id = match root_blob_id {
-            Ok(root_blob_id) => root_blob_id,
-            Err(e) => {
-                blobstore.async_drop().await?;
-                return Err(e);
-            }
-        };
         let pb = Progress::new(
             "Checking all blobs",
             u64::try_from(all_nodes.len()).unwrap(),
