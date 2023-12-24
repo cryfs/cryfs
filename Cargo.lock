@@ -635,6 +635,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryfs-check"
+version = "2.0.0-alpha1"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "clap",
+ "console",
+ "cryfs-blobstore",
+ "cryfs-blockstore",
+ "cryfs-cli-utils",
+ "cryfs-cryfs",
+ "cryfs-utils",
+ "cryfs-version",
+ "futures",
+ "indicatif",
+ "itertools 0.12.0",
+ "log",
+ "tempdir",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+]
+
+[[package]]
 name = "cryfs-cli"
 version = "2.0.0-alpha1"
 dependencies = [
@@ -712,31 +737,6 @@ dependencies = [
  "serde_with",
  "thiserror",
  "tokio",
-]
-
-[[package]]
-name = "cryfs-recover"
-version = "2.0.0-alpha1"
-dependencies = [
- "anyhow",
- "async-recursion",
- "async-trait",
- "clap",
- "console",
- "cryfs-blobstore",
- "cryfs-blockstore",
- "cryfs-cli-utils",
- "cryfs-cryfs",
- "cryfs-utils",
- "cryfs-version",
- "futures",
- "indicatif",
- "itertools 0.12.0",
- "log",
- "tempdir",
- "thiserror",
- "tokio",
- "tokio-stream",
 ]
 
 [[package]]

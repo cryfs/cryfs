@@ -129,7 +129,7 @@ impl ReferenceChecker {
 /// For unreachable nodes, this can find filesystem errors. We still run the algorithm of reference checks so that only the root of any
 /// dangling tree is reported and not all the nodes below it.
 ///
-/// For reachable nodes, this is used to assert that cryfs-recover works correctly and doesn't miss any nodes.
+/// For reachable nodes, this is used to assert that cryfs-check works correctly and doesn't miss any nodes.
 pub struct CheckUnreferencedNodes {
     reachable_nodes_checker: ReferenceChecker,
     unreachable_nodes_checker: ReferenceChecker,
@@ -174,7 +174,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
         if !reachable_nodes_errors.is_empty() {
             // If reachable nodes don't pass the check, we have a bug in the check tool.
             // Possible errors:
-            // - missing block: This is a bug in the checlk tool because if it's actually missing, then cryfs-recover should still try to load it and fail before we get here.
+            // - missing block: This is a bug in the checlk tool because if it's actually missing, then cryfs-check should still try to load it and fail before we get here.
             // - node referenced multiple times: This is a bug in the check tool.
             // - node unreferenced: This is a bug in the check tool because it somehow sent us nodes further down the tree without sending us the parent node.
             panic!("Algorithm invariant violated: {reachable_nodes_errors:?}");

@@ -1,5 +1,5 @@
 //! This crate contains some utilities for handling the command line interface.
-//! This is shared between the different cryfs executables, e.g. `cryfs` and `cryfs-recover`.
+//! This is shared between the different cryfs executables, e.g. `cryfs` and `cryfs-check`.
 
 #![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]

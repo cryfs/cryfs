@@ -1,6 +1,6 @@
+use cryfs_check::CorruptedError;
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
 use cryfs_cryfs::utils::fs_types::{Gid, Mode, Uid};
-use cryfs_recover::CorruptedError;
 use std::time::SystemTime;
 
 mod common;
@@ -11,7 +11,7 @@ use common::fixture::FilesystemFixture;
 async fn fs_with_only_root_dir() {
     let fs_fixture = FilesystemFixture::new().await;
 
-    let errors = fs_fixture.run_cryfs_recover().await;
+    let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(Vec::<CorruptedError>::new(), errors);
 }
 
@@ -29,6 +29,6 @@ async fn fs_with_some_files_and_directories_and_symlinks() {
         })
         .await;
 
-    let errors = fs_fixture.run_cryfs_recover().await;
+    let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(Vec::<CorruptedError>::new(), errors);
 }

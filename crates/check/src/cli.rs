@@ -27,7 +27,7 @@ pub struct RecoverCli {
 
 impl Application for RecoverCli {
     type ConcreteArgs = CryfsRecoverArgs;
-    const NAME: &'static str = "cryfs-recover";
+    const NAME: &'static str = "cryfs-check";
     const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
 
     fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self> {

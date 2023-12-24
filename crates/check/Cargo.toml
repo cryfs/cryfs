@@ -1,5 +1,5 @@
 [package]
-name = "cryfs-recover"
+name = "cryfs-check"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,7 +10,7 @@ readme.workspace = true
 version.workspace = true
 
 [[bin]]
-name = "cryfs-recover"
+name = "cryfs-check"
 
 [dependencies]
 anyhow.workspace = true

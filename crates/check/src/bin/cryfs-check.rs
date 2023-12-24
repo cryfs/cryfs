@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cryfs_recover::RecoverCli;
+use cryfs_check::RecoverCli;
 
 fn main() -> Result<()> {
     cryfs_cli_utils::run::<RecoverCli>()

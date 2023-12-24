@@ -5,6 +5,7 @@ use cryfs_blockstore::{
     tests::Fixture, AllowIntegrityViolations, BlockStore, InMemoryBlockStore, IntegrityConfig,
     LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
 };
+use cryfs_check::CorruptedError;
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
     config::{
@@ -14,7 +15,6 @@ use cryfs_cryfs::{
     filesystem::fsblobstore::FsBlobStore,
     localstate::LocalStateDir,
 };
-use cryfs_recover::CorruptedError;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
 use futures::Future;
 use std::fmt::{Debug, Formatter};
@@ -115,18 +115,18 @@ impl FilesystemFixture {
         update_fn(&self.fsblobstore).await;
     }
 
-    pub async fn run_cryfs_recover(self) -> Vec<CorruptedError> {
+    pub async fn run_cryfs_check(self) -> Vec<CorruptedError> {
         // First drop fsblobstore so that its cache is cleared
         std::mem::drop(self.fsblobstore);
 
-        cryfs_recover::check_filesystem(
+        cryfs_check::check_filesystem(
             self.blockstore.into_inner_dont_drop(),
             &self.tempdir.config_file_path(),
             &self.tempdir.local_state_dir(),
             &FixedPasswordProvider::new(PASSWORD.to_owned()),
         )
         .await
-        .expect("Failed to run cryfs-recover")
+        .expect("Failed to run cryfs-check")
     }
 
     async fn _clear_fsblobstore_cache(&self) {
@@ -156,7 +156,7 @@ struct FixtureTempDir {
 
 impl FixtureTempDir {
     pub fn new() -> Self {
-        let tempdir = TempDir::new("cryfs-recover-fixture").expect("Couldn't create tempdir");
+        let tempdir = TempDir::new("cryfs-check-fixture").expect("Couldn't create tempdir");
         let result = Self { tempdir };
         std::fs::create_dir(result.local_state_dir_path())
             .expect("Failed to create local state dir");

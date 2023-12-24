@@ -8,7 +8,7 @@ use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
 use super::error::CorruptedError;
 
 // TODO Check
-//  ( some of these should probably be added as checks into general loading code so they run in regular cryfs as well and then cryfs-recover just catches the loading error )
+//  ( some of these should probably be added as checks into general loading code so they run in regular cryfs as well and then cryfs-check just catches the loading error )
 //  - root is a directory
 //  - all referenced blocks are present
 //  - all present blocks are referenced
@@ -30,7 +30,7 @@ use super::error::CorruptedError;
 //    Do we then also need to check for any other integrity violations?
 
 /// The trait that all filesystem checks must implement.
-/// The cryfs-recover program will call the methods of this trait for blobs/nodes it encounters.
+/// The cryfs-check program will call the methods of this trait for blobs/nodes it encounters.
 /// The order of these calls is not specified.
 /// At the end, it will call `finalize` to get a list of all the errors found.
 pub trait FilesystemCheck {
