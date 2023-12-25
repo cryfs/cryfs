@@ -1,12 +1,14 @@
 use std::fmt::Debug;
 use std::ops::{Bound, RangeBounds};
 
+#[track_caller]
 pub fn assert_unordered_vec_eq<T: Eq + Ord + Debug>(mut lhs: Vec<T>, mut rhs: Vec<T>) {
     lhs.sort();
     rhs.sort();
     assert_eq!(lhs, rhs);
 }
 
+#[track_caller]
 pub fn assert_data_range_eq(lhs: &[u8], rhs: &[u8], range: impl RangeBounds<usize>) {
     assert_eq!(_apply_bound(lhs, &range), _apply_bound(rhs, &range));
 }
