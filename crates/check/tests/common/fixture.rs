@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
-use super::entry_helpers::SomeBlobs;
+use super::entry_helpers::{load_dir_blob, SomeBlobs};
 
 const PASSWORD: &str = "mypassword";
 

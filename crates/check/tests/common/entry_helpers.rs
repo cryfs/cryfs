@@ -10,6 +10,18 @@ use cryfs_cryfs::{
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
+pub async fn load_dir_blob<'b, B>(
+    fsblobstore: &'b FsBlobStore<B>,
+    blob_id: &BlobId,
+) -> AsyncDropGuard<DirBlob<'b, B>>
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+{
+    FsBlob::into_dir(fsblobstore.load(blob_id).await.unwrap().unwrap())
+        .await
+        .unwrap()
+}
+
 pub async fn create_dir<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
     parent: &'a mut DirBlob<'c, B>,
@@ -22,10 +34,18 @@ where
         .create_dir_blob(&parent.blob_id())
         .await
         .unwrap();
+    add_dir_entry(parent, name, new_entry.blob_id());
+    new_entry
+}
+
+pub fn add_dir_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + 'static,
+{
     parent
         .add_entry_dir(
             name.to_string().try_into().unwrap(),
-            new_entry.blob_id(),
+            blob_id,
             Mode::zero().add_dir_flag(),
             Uid::from(1000),
             Gid::from(1000),
@@ -33,7 +53,6 @@ where
             SystemTime::now(),
         )
         .unwrap();
-    new_entry
 }
 
 pub async fn create_file<'a, 'b, 'c, B>(
@@ -48,10 +67,18 @@ where
         .create_file_blob(&parent.blob_id())
         .await
         .unwrap();
+    add_file_entry(parent, name, new_entry.blob_id());
+    new_entry
+}
+
+pub fn add_file_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + 'static,
+{
     parent
         .add_entry_file(
             name.to_string().try_into().unwrap(),
-            new_entry.blob_id(),
+            blob_id,
             Mode::zero().add_file_flag(),
             Uid::from(1000),
             Gid::from(1000),
@@ -59,7 +86,6 @@ where
             SystemTime::now(),
         )
         .unwrap();
-    new_entry
 }
 
 pub async fn create_symlink<'a, 'b, 'c, B>(
@@ -75,17 +101,24 @@ where
         .create_symlink_blob(&parent.blob_id(), target)
         .await
         .unwrap();
+    add_symlink_entry(parent, name, new_entry.blob_id());
+    new_entry
+}
+
+pub fn add_symlink_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + 'static,
+{
     parent
         .add_entry_symlink(
             name.to_string().try_into().unwrap(),
-            new_entry.blob_id(),
+            blob_id,
             Uid::from(1000),
             Gid::from(1000),
             SystemTime::now(),
             SystemTime::now(),
         )
         .unwrap();
-    new_entry
 }
 
 pub struct SomeBlobs {
