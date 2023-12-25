@@ -221,7 +221,6 @@ where
     'f: 'async_recursion,
 {
     log::debug!("Entering blob {:?}", &root_blob_id);
-    ensure!(all_nodes.contains(root_blob_id.to_root_block_id()), "Blob {root_blob_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
 
     let loaded = blobstore.load(&root_blob_id).await;
     let mut result = CheckAllBlobsResult {
@@ -229,6 +228,8 @@ where
     };
     match loaded {
         Ok(Some(mut blob)) => {
+            ensure!(all_nodes.contains(root_blob_id.to_root_block_id()), "Blob {root_blob_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
+
             checks.process_reachable_blob(&blob);
 
             // TODO Checking children blobs for directory blobs loads the nodes of this blob.
