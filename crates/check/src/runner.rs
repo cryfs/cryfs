@@ -70,14 +70,29 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         );
         let check_all_blobs_result =
             check_all_reachable_blobs(&blobstore, &all_nodes, root_blob_id, &checks, pb.clone())
-                .await?;
+                .await;
+        let check_all_blobs_result = match check_all_blobs_result {
+            Ok(check_all_blobs_result) => check_all_blobs_result,
+            Err(e) => {
+                blobstore.async_drop().await?;
+                return Err(e);
+            }
+        };
 
         let mut unreachable_nodes = set_remove_all(all_nodes, check_all_blobs_result.visited_nodes);
 
         let mut nodestore =
             BlobStoreOnBlocks::into_inner_node_store(FsBlobStore::into_inner_blobstore(blobstore));
-        check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await?;
+        let check_unreachable_nodes_result =
+            check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await;
         pb.finish();
+        match check_unreachable_nodes_result {
+            Ok(()) => (),
+            Err(e) => {
+                nodestore.async_drop().await?;
+                return Err(e);
+            }
+        };
 
         let errors = checks.finalize();
 
