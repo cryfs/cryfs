@@ -89,14 +89,14 @@ where
 }
 
 pub struct SomeBlobs {
-    root: BlobId,
-    dir1: BlobId,
-    dir2: BlobId,
-    dir1_dir3: BlobId,
-    dir1_dir4: BlobId,
-    dir1_dir3_dir5: BlobId,
-    dir2_dir6: BlobId,
-    dir2_dir7: BlobId,
+    pub root: BlobId,
+    pub dir1: BlobId,
+    pub dir2: BlobId,
+    pub dir1_dir3: BlobId,
+    pub dir1_dir4: BlobId,
+    pub dir1_dir3_dir5: BlobId,
+    pub dir2_dir6: BlobId,
+    pub dir2_dir7: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
