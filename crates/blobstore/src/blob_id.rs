@@ -22,6 +22,11 @@ impl BlobId {
     }
 
     #[inline]
+    pub fn from_root_block_id(root: BlockId) -> Self {
+        Self { root }
+    }
+
+    #[inline]
     pub fn from_slice(id_data: &[u8]) -> Result<Self> {
         Ok(Self {
             root: BlockId::from_slice(id_data)?,

@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
 use super::FilesystemCheck;
@@ -7,6 +7,11 @@ use crate::error::CorruptedError;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
+
+enum NodeType {
+    RootNode,
+    NonrootNode,
+}
 
 /// Check that each existing node is referenced and each referenced node exists (i.e. no dangling node exists and no node is missing)
 ///
@@ -17,7 +22,7 @@ struct ReferenceChecker {
     seen_and_unreferenced: HashSet<BlockId>,
 
     // Remember all nodes we've seen a reference to but we haven't seen the node itself yet
-    unseen_and_referenced: HashSet<BlockId>,
+    unseen_and_referenced: HashMap<BlockId, NodeType>,
 
     // Remember all nodes we've seen and have seen the reference to.
     // Invariant: Nodes in `seen_and_referenced` don't get added to `seen_and_unreferenced` or `unseen_and_referenced` anymore.
@@ -30,7 +35,7 @@ impl ReferenceChecker {
     pub fn new() -> Self {
         Self {
             seen_and_unreferenced: HashSet::new(),
-            unseen_and_referenced: HashSet::new(),
+            unseen_and_referenced: HashMap::new(),
             seen_and_referenced: HashSet::new(),
             errors: Vec::new(),
         }
@@ -46,7 +51,7 @@ impl ReferenceChecker {
         match node {
             DataNode::Inner(node) => {
                 for child in node.children() {
-                    self.mark_as_referenced(child);
+                    self.mark_as_referenced(child, NodeType::NonrootNode);
                 }
             }
             DataNode::Leaf(_) => {
@@ -67,14 +72,17 @@ impl ReferenceChecker {
             }
             FsBlob::Directory(blob) => {
                 for child in blob.entries() {
-                    self.mark_as_referenced(*child.blob_id().to_root_block_id());
+                    self.mark_as_referenced(
+                        *child.blob_id().to_root_block_id(),
+                        NodeType::RootNode,
+                    );
                 }
             }
         }
     }
 
     fn mark_as_seen(&mut self, node_id: BlockId) {
-        if self.unseen_and_referenced.remove(&node_id) {
+        if self.unseen_and_referenced.remove(&node_id).is_some() {
             // We already saw a reference to this node previously and now we saw the node itself. Everything is fine.
             if !self.seen_and_referenced.insert(node_id) {
                 panic!("Algorithm invariant violated: A node was in both `unseen_and_referenced` and in `seen_and_referenced`.");
@@ -91,7 +99,7 @@ impl ReferenceChecker {
         }
     }
 
-    fn mark_as_referenced(&mut self, node_id: BlockId) {
+    fn mark_as_referenced(&mut self, node_id: BlockId, node_type: NodeType) {
         if self.seen_and_unreferenced.remove(&node_id) {
             // We already saw this node previously and now we saw the reference to it. Everything is fine.
             if !self.seen_and_referenced.insert(node_id) {
@@ -103,7 +111,7 @@ impl ReferenceChecker {
                 .push(CorruptedError::NodeReferencedMultipleTimes { node_id });
         } else {
             // We haven't seen this node yet. Remember it.
-            self.unseen_and_referenced.insert(node_id);
+            self.unseen_and_referenced.insert(node_id, node_type);
         }
     }
 
@@ -118,7 +126,12 @@ impl ReferenceChecker {
         errors.extend(
             self.unseen_and_referenced
                 .into_iter()
-                .map(|node_id| CorruptedError::NodeMissing { node_id }),
+                .map(|(node_id, node_type)| match node_type {
+                    NodeType::RootNode => CorruptedError::BlobMissing {
+                        blob_id: BlobId::from_root_block_id(node_id.into()),
+                    },
+                    NodeType::NonrootNode => CorruptedError::NodeMissing { node_id },
+                }),
         );
         (errors, self.seen_and_referenced)
     }
@@ -138,7 +151,8 @@ pub struct CheckUnreferencedNodes {
 impl CheckUnreferencedNodes {
     pub fn new(root_blob_id: BlobId) -> Self {
         let mut reachable_nodes_checker = ReferenceChecker::new();
-        reachable_nodes_checker.mark_as_referenced(*root_blob_id.to_root_block_id());
+        reachable_nodes_checker
+            .mark_as_referenced(*root_blob_id.to_root_block_id(), NodeType::RootNode);
         Self {
             reachable_nodes_checker,
             unreachable_nodes_checker: ReferenceChecker::new(),
@@ -186,7 +200,8 @@ impl FilesystemCheck for CheckUnreferencedNodes {
                     panic!("Algorithm invariant violated (NodeUnreferenced): {error:?}");
                 }
                 CorruptedError::NodeReferencedMultipleTimes { .. }
-                | CorruptedError::NodeMissing { .. } => {
+                | CorruptedError::NodeMissing { .. }
+                | CorruptedError::BlobMissing { .. } => {
                     errors.push(error);
                 }
                 _ => {

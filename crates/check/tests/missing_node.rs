@@ -31,13 +31,7 @@ async fn file_with_missing_root_node() {
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(
-        vec![
-            // TODO Why is this reported both as a missing blob **and** as a missing node? Can we only report it as a blob? Maybe during the error deduplication step.
-            CorruptedError::BlobMissing { blob_id: blobid1() },
-            CorruptedError::NodeMissing {
-                node_id: *blobid1().to_root_block_id(),
-            },
-        ],
+        vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
 }
@@ -78,13 +72,7 @@ async fn dir_with_missing_root_node() {
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(
-        vec![
-            // TODO Why is this reported both as a missing blob **and** as a missing node? Can we only report it as a blob? Maybe during the error deduplication step.
-            CorruptedError::BlobMissing { blob_id: blobid1() },
-            CorruptedError::NodeMissing {
-                node_id: *blobid1().to_root_block_id(),
-            },
-        ],
+        vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
 }
@@ -125,13 +113,7 @@ async fn symlink_with_missing_root_node() {
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(
-        vec![
-            // TODO Why is this reported both as a missing blob **and** as a missing node? Can we only report it as a blob? Maybe during the error deduplication step.
-            CorruptedError::BlobMissing { blob_id: blobid1() },
-            CorruptedError::NodeMissing {
-                node_id: *blobid1().to_root_block_id(),
-            },
-        ],
+        vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
 }
