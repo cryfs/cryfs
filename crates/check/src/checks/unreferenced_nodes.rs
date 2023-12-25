@@ -169,22 +169,32 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     }
 
     fn finalize(self) -> Vec<CorruptedError> {
-        let (reachable_nodes_errors, _reachable_nodes_processed) =
-            self.reachable_nodes_checker.finalize();
-        if !reachable_nodes_errors.is_empty() {
-            // If reachable nodes don't pass the check, we have a bug in the check tool.
-            // Possible errors:
-            // - missing block: This is a bug in the checlk tool because if it's actually missing, then cryfs-check should still try to load it and fail before we get here.
-            // - node referenced multiple times: This is a bug in the check tool.
-            // - node unreferenced: This is a bug in the check tool because it somehow sent us nodes further down the tree without sending us the parent node.
-            panic!("Algorithm invariant violated: {reachable_nodes_errors:?}");
-        }
-
         let (mut errors, unreachable_nodes_without_errors) =
             self.unreachable_nodes_checker.finalize();
         for node_id in unreachable_nodes_without_errors {
             // Nodes that were seen and referenced but unreachable mean there is a cycle in this unreachable subtree.
             errors.push(CorruptedError::UnreachableSubtreeWithCycle { node_id });
+        }
+
+        let (reachable_nodes_errors, _reachable_nodes_processed) =
+            self.reachable_nodes_checker.finalize();
+        for error in reachable_nodes_errors {
+            match error {
+                CorruptedError::NodeUnreferenced { .. } => {
+                    // The check tool somehow sent us nodes further down the tree without sending us the parent node.
+                    // TODO bail instead of panic
+                    panic!("Algorithm invariant violated (NodeUnreferenced): {error:?}");
+                }
+                CorruptedError::NodeReferencedMultipleTimes { .. }
+                | CorruptedError::NodeMissing { .. } => {
+                    errors.push(error);
+                }
+                _ => {
+                    // These errors are not expected for reachable nodes
+                    // TODO bail instead of panic
+                    panic!("Algorithm invariant violated (unexpected error): {error:?}");
+                }
+            }
         }
 
         errors
