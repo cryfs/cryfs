@@ -1,6 +1,7 @@
-use cryfs_blobstore::BlobId;
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
+use cryfs_blockstore::{BlockStore, DynBlockStore};
 use cryfs_check::CorruptedError;
-use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
+use cryfs_cryfs::filesystem::fsblobstore::{FsBlob, FsBlobStore};
 use cryfs_cryfs::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 use std::time::SystemTime;
@@ -21,12 +22,16 @@ async fn file_with_missing_root_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     fs_fixture
-        .update_fsblobstore(|blobstore| async move {
-            let mut parent = load_dir_blob(blobstore, &some_blobs.dir1_dir3_dir5).await;
-            // Add a file entry but don't add the corresponding blob
-            add_file_entry(&mut parent, "filename", blobid1());
-            parent.async_drop().await.unwrap();
-        })
+        .update_fsblobstore(
+            |blobstore: &FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>| {
+                Box::pin(async move {
+                    let mut parent = load_dir_blob(blobstore, &some_blobs.dir1_dir3_dir5).await;
+                    // Add a file entry but don't add the corresponding blob
+                    add_file_entry(&mut parent, "filename", blobid1());
+                    parent.async_drop().await.unwrap();
+                })
+            },
+        )
         .await;
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -62,12 +67,16 @@ async fn dir_with_missing_root_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     fs_fixture
-        .update_fsblobstore(|blobstore| async move {
-            let mut parent = load_dir_blob(blobstore, &some_blobs.dir2_dir6).await;
-            // Add a dir entry but don't add the corresponding blob
-            add_dir_entry(&mut parent, "dirname", blobid1());
-            parent.async_drop().await.unwrap();
-        })
+        .update_fsblobstore(
+            |blobstore: &FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>| {
+                Box::pin(async move {
+                    let mut parent = load_dir_blob(blobstore, &some_blobs.dir2_dir6).await;
+                    // Add a dir entry but don't add the corresponding blob
+                    add_dir_entry(&mut parent, "dirname", blobid1());
+                    parent.async_drop().await.unwrap();
+                })
+            },
+        )
         .await;
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -103,12 +112,16 @@ async fn symlink_with_missing_root_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     fs_fixture
-        .update_fsblobstore(|blobstore| async move {
-            let mut parent = load_dir_blob(blobstore, &some_blobs.root).await;
-            // Add a symlink entry but don't add the corresponding blob
-            add_symlink_entry(&mut parent, "symlinkname", blobid1());
-            parent.async_drop().await.unwrap();
-        })
+        .update_fsblobstore(
+            |blobstore: &FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>| {
+                Box::pin(async move {
+                    let mut parent = load_dir_blob(blobstore, &some_blobs.root).await;
+                    // Add a symlink entry but don't add the corresponding blob
+                    add_symlink_entry(&mut parent, "symlinkname", blobid1());
+                    parent.async_drop().await.unwrap();
+                })
+            },
+        )
         .await;
 
     let errors = fs_fixture.run_cryfs_check().await;
