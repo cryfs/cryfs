@@ -8,7 +8,7 @@ mod implementations;
 #[cfg(any(test, feature = "testutils"))]
 pub use implementations::{ActionCounts, MockBlockStore, SharedBlockStore, TrackingBlockStore};
 pub use implementations::{
-    AllowIntegrityViolations, ClientId, CompressingBlockStore, EncryptedBlockStore,
+    AllowIntegrityViolations, ClientId, CompressingBlockStore, DynBlockStore, EncryptedBlockStore,
     InMemoryBlockStore, IntegrityBlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
     OnDiskBlockStore, ReadOnlyBlockStore,
 };

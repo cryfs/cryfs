@@ -2,8 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    tests::Fixture, AllowIntegrityViolations, BlockStore, InMemoryBlockStore, IntegrityConfig,
-    LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
+    tests::Fixture, AllowIntegrityViolations, BlockStore, DynBlockStore, InMemoryBlockStore,
+    IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
 };
 use cryfs_check::CorruptedError;
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
@@ -29,7 +29,7 @@ const PASSWORD: &str = "mypassword";
 pub struct FilesystemFixture {
     root_blob_id: BlobId,
     blockstore: SyncDrop<SharedBlockStore<InMemoryBlockStore>>,
-    fsblobstore: SyncDrop<FsBlobStore<BlobStoreOnBlocks<Box<dyn BlockStore + Send + Sync>>>>,
+    fsblobstore: SyncDrop<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>>,
 
     // tempdir should be in last position so it gets dropped last
     tempdir: FixtureTempDir,
@@ -56,7 +56,7 @@ impl FilesystemFixture {
         config: &ConfigLoadResult,
         blockstore: AsyncDropGuard<SharedBlockStore<InMemoryBlockStore>>,
         tempdir: &FixtureTempDir,
-    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<Box<dyn BlockStore + Send + Sync>>>> {
+    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>> {
         let blockstore = setup_blockstore_stack_dyn(
             blockstore,
             &config,
@@ -106,9 +106,7 @@ impl FilesystemFixture {
 
     pub async fn update_fsblobstore<'s, 'b, 'f, F, R>(
         &'s self,
-        update_fn: impl FnOnce(
-            &'b FsBlobStore<BlobStoreOnBlocks<Box<dyn BlockStore + Send + Sync>>>,
-        ) -> F,
+        update_fn: impl FnOnce(&'b FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>) -> F,
     ) -> R
     where
         F: 'f + Future<Output = R>,

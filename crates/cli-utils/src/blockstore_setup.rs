@@ -2,8 +2,8 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 
 use cryfs_blockstore::{
-    BlockStore, EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig, LockingBlockStore,
-    OptimizedBlockStoreWriter,
+    BlockStore, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig,
+    LockingBlockStore, OptimizedBlockStoreWriter,
 };
 use cryfs_cryfs::config::{
     ciphers::{lookup_cipher_async, AsyncCipherCallback},
@@ -119,7 +119,7 @@ pub async fn setup_blockstore_stack_dyn(
     config: &ConfigLoadResult,
     local_state_dir: &LocalStateDir,
     integrity_config: IntegrityConfig,
-) -> Result<AsyncDropGuard<LockingBlockStore<Box<dyn BlockStore + Send + Sync>>>> {
+) -> Result<AsyncDropGuard<LockingBlockStore<DynBlockStore>>> {
     setup_blockstore_stack(
         base_blockstore,
         config,
@@ -132,7 +132,7 @@ pub async fn setup_blockstore_stack_dyn(
 
 struct DynCallback;
 impl BlockstoreCallback for DynCallback {
-    type Result = Result<AsyncDropGuard<LockingBlockStore<Box<dyn BlockStore + Send + Sync>>>>;
+    type Result = Result<AsyncDropGuard<LockingBlockStore<DynBlockStore>>>;
 
     async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
@@ -141,7 +141,7 @@ impl BlockstoreCallback for DynCallback {
         let inner = LockingBlockStore::into_inner_block_store(blockstore).await?;
         let inner: Box<dyn BlockStore + Send + Sync> =
             Box::new(inner.unsafe_into_inner_dont_drop());
-        let inner = AsyncDropGuard::new(inner);
+        let inner = AsyncDropGuard::new(DynBlockStore(inner));
         Ok(LockingBlockStore::new(inner))
     }
 }
