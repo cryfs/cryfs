@@ -23,7 +23,7 @@ jobs:
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         features: ["", "--no-default-features"]
-        toolchain: ["stable", "nightly", "1.67"]
+        toolchain: ["stable", "nightly", "1.75"]
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v3
