@@ -187,7 +187,8 @@ impl FilesystemCheck for CheckUnreferencedNodes {
             self.unreachable_nodes_checker.finalize();
         for node_id in unreachable_nodes_without_errors {
             // Nodes that were seen and referenced but unreachable mean there is a cycle in this unreachable subtree.
-            errors.push(CorruptedError::UnreachableSubtreeWithCycle { node_id });
+            // TODO This is not true since these can also just be inner nodes that are referenced by other unreachable nodes. What should we do here then?
+            // errors.push(CorruptedError::UnreachableSubtreeWithCycle { node_id });
         }
 
         let (reachable_nodes_errors, _reachable_nodes_processed) =
