@@ -332,6 +332,7 @@ where
     let mut results = all_nodes_of_blob.map(|node| {
         let (node_id, error) = match node {
             Ok(node) => {
+                ensure!(all_nodes.contains(node.block_id()), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.", node_id=node.block_id());
                 checks.process_reachable_node(&node);
                 // no error
                 (*node.block_id(), None)
@@ -344,7 +345,6 @@ where
                 )
             }
         };
-        ensure!(all_nodes.contains(&node_id), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
         pb.inc(1);
         Ok((node_id, error))
     });
