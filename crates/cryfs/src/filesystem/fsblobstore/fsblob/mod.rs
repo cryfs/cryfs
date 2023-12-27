@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNode};
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNode, LoadNodeError};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -47,7 +47,7 @@ where
 {
     pub async fn load_all_nodes(
         this: AsyncDropGuard<Self>,
-    ) -> Result<BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>>> {
+    ) -> Result<BoxStream<'a, Result<DataNode<B>, LoadNodeError>>> {
         // unsafe_into_inner_dont_drop is ok here because we only have to call async_drop for Self::Directory
         // and [DirBlob::load_all_nodes] takes care of that.
         match this.unsafe_into_inner_dont_drop() {

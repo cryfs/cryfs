@@ -12,7 +12,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use super::checks::{AllChecks, FilesystemCheck};
 use super::error::CorruptedError;
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore};
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore, LoadNodeError};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
 use cryfs_cryfs::{
@@ -337,13 +337,19 @@ where
                 // no error
                 (*node.block_id(), None)
             }
-            Err((node_id, load_error)) => {
+            Err(LoadNodeError::NodeNotFound{node_id, }) => {
+                (
+                    node_id,
+                    Some(CorruptedError::NodeMissing { node_id }),
+                )
+            },
+            Err(LoadNodeError::NodeLoadError { node_id, error }) => {
                 // return the CorruptedError we found
                 (
                     node_id,
                     Some(CorruptedError::NodeUnreadable { node_id/* , error: load_error*/ }),
                 )
-            }
+            },
         };
         pb.inc(1);
         Ok((node_id, error))

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 
 use super::data_node_store::DataNode;
-use super::data_tree_store::DataTree;
+use super::data_tree_store::{DataTree, LoadNodeError};
 use crate::{Blob, BlobId};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::data::Data;
@@ -27,7 +27,7 @@ impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
         self.tree.as_mut().expect("BlobOnBlocks.tree is None")
     }
 
-    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
         self.tree
             .expect("BlobOnBlocks.tree is None")
             .load_all_nodes()

@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 use std::num::{NonZeroU32, NonZeroU64};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use thiserror::Error;
 
 use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
@@ -20,6 +21,18 @@ use crate::{
 };
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::{data::Data, stream::for_each_unordered};
+
+#[derive(Error, Debug)]
+pub enum LoadNodeError {
+    #[error("Node with id {node_id:?} not found")]
+    NodeNotFound { node_id: BlockId },
+
+    #[error("Error loading node {node_id:?}: {error:?}")]
+    NodeLoadError {
+        node_id: BlockId,
+        error: anyhow::Error,
+    },
+}
 
 pub struct DataTree<'a, B: BlockStore + Send + Sync> {
     // The lock on the root node also ensures that there never are two [DataTree] instances for the same tree
@@ -671,7 +684,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
 
     // TODO Deduplicate logic between `all_blocks` and `load_all_nodes`
 
-    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
         let root_node = self.root_node.expect("root_node is None");
         Self::_load_all_nodes_in_subtree(self.node_store, root_node)
     }
@@ -679,7 +692,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     fn _load_all_nodes_in_subtree(
         node_store: &'a DataNodeStore<B>,
         subtree_root: DataNode<B>,
-    ) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+    ) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
         match subtree_root {
             DataNode::Leaf(leaf) => stream::once(future::ready(Ok(DataNode::Leaf(leaf)))).boxed(),
             DataNode::Inner(inner) => {
@@ -695,7 +708,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     fn _load_all_nodes_descendants_of(
         node_store: &'a DataNodeStore<B>,
         subtree_root: &DataInnerNode<B>,
-    ) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+    ) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
         // iter<stream<result<block_id>>>
         let subtree_stream = subtree_root.children().map(|child_id| {
             let child_stream = Self::_load_all_nodes_in_subtree_of_id(node_store, child_id);
@@ -709,15 +722,21 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     async fn _load_all_nodes_in_subtree_of_id(
         node_store: &'a DataNodeStore<B>,
         subtree_root_id: BlockId,
-    ) -> BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>> {
+    ) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
         let child = node_store.load(subtree_root_id).await;
         match child {
             Ok(Some(child)) => Self::_load_all_nodes_in_subtree(node_store, child),
-            Ok(None) => Box::pin(stream::once(future::ready(Err((
-                subtree_root_id,
-                anyhow!("Didn't find block {:?}", subtree_root_id),
-            ))))),
-            Err(err) => Box::pin(stream::once(future::ready(Err((subtree_root_id, err))))),
+            Ok(None) => Box::pin(stream::once(future::ready(Err(
+                LoadNodeError::NodeNotFound {
+                    node_id: subtree_root_id,
+                },
+            )))),
+            Err(error) => Box::pin(stream::once(future::ready(Err(
+                LoadNodeError::NodeLoadError {
+                    node_id: subtree_root_id,
+                    error,
+                },
+            )))),
         }
     }
 }

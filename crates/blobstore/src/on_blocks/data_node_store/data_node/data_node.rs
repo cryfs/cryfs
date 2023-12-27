@@ -125,6 +125,20 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         // TODO DataNode::parse() is checking invariants again but we don't need to do that - violating invariants wouldn't have been able to create the source object.
         DataNode::parse(block, layout)
     }
+
+    pub fn into_inner_node(self) -> Option<DataInnerNode<B>> {
+        match self {
+            Self::Inner(inner) => Some(inner),
+            Self::Leaf(_) => None,
+        }
+    }
+
+    pub fn into_leaf_node(self) -> Option<DataLeafNode<B>> {
+        match self {
+            Self::Inner(_) => None,
+            Self::Leaf(leaf) => Some(leaf),
+        }
+    }
 }
 
 #[cfg(test)]

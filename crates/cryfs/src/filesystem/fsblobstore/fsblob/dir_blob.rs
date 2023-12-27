@@ -9,7 +9,9 @@ use super::atime_update_behavior::AtimeUpdateBehavior;
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
-use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNode, BLOBID_LEN};
+use cryfs_blobstore::{
+    Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNode, LoadNodeError, BLOBID_LEN,
+};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_rustfs::{FsError, FsResult, PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -45,7 +47,7 @@ where
     // TODO We're duplicating a lot of the `BaseBlob` methods here and just passing them through. Might be better to offer a `.base_blob()` method and then the blob store can call those methods directly on the base blob.
     pub async fn load_all_nodes(
         this: AsyncDropGuard<Self>,
-    ) -> Result<BoxStream<'a, Result<DataNode<B>, (BlockId, anyhow::Error)>>> {
+    ) -> Result<BoxStream<'a, Result<DataNode<B>, LoadNodeError>>> {
         // async_drop just calls `this.flush()`. So let's call that manually and then we don't have to worry about it.
         // It's ok to do this and then still do operations on the object afterwards, because the operations we do afterwards
         // don't write anything.

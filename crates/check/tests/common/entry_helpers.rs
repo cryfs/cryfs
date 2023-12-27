@@ -3,12 +3,21 @@ use itertools::Itertools;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataNode, DataNodeStore};
+use cryfs_blockstore::BlockStore;
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+
+pub const LARGE_FILE_SIZE: usize = 24 * 1024;
+
+fn large_symlink_target() -> String {
+    (0..1_000)
+        .map(|i| format!("pathcomponentforsymlink_{i}"))
+        .join("/")
+}
 
 pub async fn load_dir_blob<'b, B>(
     fsblobstore: &'b FsBlobStore<B>,
@@ -130,6 +139,7 @@ pub struct SomeBlobs {
     pub dir1_dir3_dir5: BlobId,
     pub dir2_dir6: BlobId,
     pub dir2_dir7: BlobId,
+    pub large_file: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -172,9 +182,7 @@ where
     );
 
     // Let's create a symlink with a very long path (so it'll use multiple nodes)
-    let target = (0..1_000)
-        .map(|i| format!("pathcomponentforsymlink_{i}"))
-        .join("/");
+    let target = large_symlink_target();
     let mut symlink =
         create_symlink(fsblobstore, &mut dir2_dir7, &format!("symlink"), &target).await;
     assert!(
@@ -184,7 +192,7 @@ where
 
     // Let's create a file with lots of data (so it'll use multiple nodes)
     let mut file = create_file(fsblobstore, &mut dir2_dir7, "file").await;
-    file.write(&data(16 * 1024, 0), 0).await.unwrap();
+    file.write(&data(LARGE_FILE_SIZE, 0), 0).await.unwrap();
     assert!(
         file.num_nodes().await.unwrap() > 1_000,
         "If this fails, we need to make the data larger so it uses enough nodes."
@@ -199,6 +207,7 @@ where
         dir1_dir3_dir5: dir1_dir3_dir5.blob_id(),
         dir2_dir6: dir2_dir6.blob_id(),
         dir2_dir7: dir2_dir7.blob_id(),
+        large_file: file.blob_id(),
     };
 
     dir2_dir7.async_drop().await.unwrap();
@@ -212,6 +221,36 @@ where
     result
 }
 
-fn data(size: usize, seed: u64) -> Data {
+pub fn data(size: usize, seed: u64) -> Data {
     DataFixture::new(seed).get(size).into()
+}
+
+pub async fn find_an_inner_node_of_a_large_blob<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    let blob_root_node = nodestore
+        .load(*blob_id.to_root_block_id())
+        .await
+        .unwrap()
+        .unwrap()
+        .into_inner_node()
+        .expect("test blob too small to have more than one node. We need to change the test and increase its size");
+
+    let child_of_root_id = blob_root_node.children().skip(1).next().expect("test blob too small to have more than one child of root. We need to change the test and increase its size");
+    let child_of_root = nodestore.load(child_of_root_id).await.unwrap().unwrap().into_inner_node().expect(
+        "test blob too small to have more than two levels. We need to change the test and increase its size"
+    );
+    let child_of_child_of_root_id = child_of_root.children().next().expect("test blob too small to have more than one child of child of root. We need to change the test and increase its size");
+    let child_of_child_of_root = nodestore
+        .load(child_of_child_of_root_id)
+        .await
+        .unwrap()
+        .unwrap()
+        .into_inner_node()
+        .expect("test blob too small to have more than three levels. We need to change the test and increase its size");
+    child_of_child_of_root
 }

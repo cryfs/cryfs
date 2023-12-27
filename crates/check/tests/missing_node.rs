@@ -1,14 +1,18 @@
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
-use cryfs_blockstore::{BlockStore, DynBlockStore};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
+use cryfs_blockstore::{BlockStore, BlockStoreDeleter, DynBlockStore, RemoveResult};
 use cryfs_check::CorruptedError;
-use cryfs_cryfs::filesystem::fsblobstore::{FsBlob, FsBlobStore};
-use cryfs_cryfs::utils::fs_types::{Gid, Mode, Uid};
+use cryfs_cryfs::{
+    filesystem::fsblobstore::{FsBlob, FsBlobStore},
+    utils::fs_types::{Gid, Mode, Uid},
+};
+
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 use std::time::SystemTime;
 
 mod common;
 use common::entry_helpers::{
-    add_dir_entry, add_file_entry, add_symlink_entry, create_dir, create_some_blobs, load_dir_blob,
+    add_dir_entry, add_file_entry, add_symlink_entry, create_dir, create_file, create_some_blobs,
+    create_symlink, data, find_an_inner_node_of_a_large_blob, load_dir_blob, LARGE_FILE_SIZE,
 };
 use common::fixture::FilesystemFixture;
 
@@ -43,7 +47,35 @@ async fn file_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_missing_inner_node() {
-    // TODO
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let (removed_node, orphaned_children) = fs_fixture
+        .update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let inner_node =
+                    find_an_inner_node_of_a_large_blob(nodestore, &some_blobs.large_file).await;
+                let orphaned_children = inner_node.children().collect::<Vec<_>>();
+                let inner_node_id = *inner_node.block_id();
+                inner_node.upcast().remove(nodestore).await.unwrap();
+                (inner_node_id, orphaned_children)
+            })
+        })
+        .await;
+
+    let expected_errors = [CorruptedError::NodeMissing {
+        node_id: removed_node,
+    }]
+    .into_iter()
+    .chain(
+        orphaned_children
+            .into_iter()
+            .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+    )
+    .collect::<Vec<_>>();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]

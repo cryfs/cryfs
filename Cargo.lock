@@ -600,6 +600,7 @@ dependencies = [
  "rand 0.8.5",
  "rstest",
  "rstest_reuse",
+ "thiserror",
  "tokio",
 ]
 

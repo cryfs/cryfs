@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore};
 use cryfs_blockstore::{
     tests::Fixture, AllowIntegrityViolations, BlockStore, DynBlockStore, InMemoryBlockStore,
     IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
@@ -60,10 +60,8 @@ impl FilesystemFixture {
         fsblobstore.async_drop().await.unwrap();
     }
 
-    async fn make_blobstore(
-        &self,
-    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>> {
-        let blockstore = setup_blockstore_stack_dyn(
+    async fn make_locking_blockstore(&self) -> AsyncDropGuard<LockingBlockStore<DynBlockStore>> {
+        setup_blockstore_stack_dyn(
             SharedBlockStore::clone(&self.blockstore),
             &self.config,
             &self.tempdir.local_state_dir(),
@@ -77,9 +75,15 @@ impl FilesystemFixture {
             },
         )
         .await
-        .expect("Failed to setup blockstore stack");
+        .expect("Failed to setup blockstore stack")
+    }
 
-        let blobstore = FsBlobStore::new(
+    async fn make_blobstore(
+        &self,
+    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>> {
+        let blockstore = self.make_locking_blockstore().await;
+
+        FsBlobStore::new(
             BlobStoreOnBlocks::new(
                 blockstore,
                 // TODO Change type in config instead of doing u32::try_from
@@ -87,9 +91,19 @@ impl FilesystemFixture {
             )
             .await
             .expect("Failed to create BlobStoreOnBlocks"),
-        );
+        )
+    }
 
-        blobstore
+    async fn make_nodestore(&self) -> AsyncDropGuard<DataNodeStore<DynBlockStore>> {
+        let blockstore = self.make_locking_blockstore().await;
+
+        DataNodeStore::new(
+            blockstore,
+            // TODO Change type in config instead of doing u32::try_from
+            u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
+        )
+        .await
+        .expect("Failed to create DataNodeStore")
     }
 
     pub async fn update_blockstore<'s, 'b, 'f, F, R>(
@@ -104,8 +118,18 @@ impl FilesystemFixture {
         update_fn(&self.blockstore).await
     }
 
-    pub async fn update_fsblobstore<'s, 'f, R>(
-        &'s self,
+    pub async fn update_nodestore<R>(
+        &self,
+        update_fn: impl for<'b> FnOnce(&'b DataNodeStore<DynBlockStore>) -> BoxFuture<'b, R>,
+    ) -> R {
+        let mut nodestore = self.make_nodestore().await;
+        let result = update_fn(&nodestore).await;
+        nodestore.async_drop().await.unwrap();
+        result
+    }
+
+    pub async fn update_fsblobstore<R>(
+        &self,
         update_fn: impl for<'b> FnOnce(
             &'b FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>,
         ) -> BoxFuture<'b, R>,
