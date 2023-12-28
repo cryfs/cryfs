@@ -165,9 +165,6 @@ where
             .await
             .unwrap();
         create_file(fsblobstore, &mut dir2_dir6, &format!("file{i}")).await;
-        let target = (0..i)
-            .map(|i| format!("pathcomponentforsymlink_{i}"))
-            .join("/");
         create_symlink(
             fsblobstore,
             &mut dir2_dir6,
