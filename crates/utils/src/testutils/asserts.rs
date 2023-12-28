@@ -5,7 +5,29 @@ use std::ops::{Bound, RangeBounds};
 pub fn assert_unordered_vec_eq<T: Eq + Ord + Debug>(mut lhs: Vec<T>, mut rhs: Vec<T>) {
     lhs.sort();
     rhs.sort();
-    assert_eq!(lhs, rhs);
+    if lhs != rhs {
+        let left_only = lhs
+            .iter()
+            .filter(|x| !rhs.contains(x))
+            // .map(|x| format!("{:?}", x))
+            .collect::<Vec<_>>();
+        let right_only = rhs
+            .iter()
+            .filter(|x| !lhs.contains(x))
+            // .map(|x| format!("{:?}", x))
+            .collect::<Vec<_>>();
+        let both = lhs
+            .iter()
+            .filter(|x| rhs.contains(x))
+            // .map(|x| format!("{:?}", x))
+            .collect::<Vec<_>>();
+        panic!(
+            "Assertion failed: Vec's are different.\n- both ({both_len}): {both:?}\n- left only ({left_only_len}): {left_only:?}\n- right only ({right_only_len}): {right_only:?}",
+            both_len = both.len(),
+            left_only_len = left_only.len(),
+            right_only_len = right_only.len(),
+        );
+    }
 }
 
 #[track_caller]
