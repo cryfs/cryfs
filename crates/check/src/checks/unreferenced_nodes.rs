@@ -200,9 +200,12 @@ impl FilesystemCheck for CheckUnreferencedNodes {
                     // TODO bail instead of panic
                     panic!("Algorithm invariant violated (NodeUnreferenced): {error:?}");
                 }
-                CorruptedError::NodeReferencedMultipleTimes { .. }
-                | CorruptedError::NodeMissing { .. }
-                | CorruptedError::BlobMissing { .. } => {
+                CorruptedError::NodeMissing { .. } | CorruptedError::BlobMissing { .. } => {
+                    // Our check wasn't called for a node or blob that should have been reachable. This means the cryfs-check runner failed
+                    // to load the node or it doesn't exist. In both cases, the runner will already report the error, we don't need to report it from here.
+                    // Also, we don't actually know here whether the node didn't exist or wasn't readable so we wouldn't know which error to report.
+                }
+                CorruptedError::NodeReferencedMultipleTimes { .. } => {
                     errors.push(error);
                 }
                 _ => {
