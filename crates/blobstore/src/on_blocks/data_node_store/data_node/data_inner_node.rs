@@ -1,5 +1,6 @@
 use anyhow::{anyhow, ensure, Result};
 use binary_layout::Field;
+use std::fmt::Debug;
 use std::num::{NonZeroU32, NonZeroU8};
 
 use super::super::layout::{node, NodeLayout, FORMAT_VERSION_HEADER};
@@ -9,7 +10,6 @@ use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;
 
-#[derive(Debug)]
 pub struct DataInnerNode<B: BlockStore + Send + Sync> {
     block: Block<B>,
 }
@@ -202,6 +202,16 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
     for (index, child) in children.iter().enumerate() {
         // TODO Some way to avoid this copy by not using &[BlockId] or Vec<BlockId> but our own collection type that already has it aligned correctly?
         dest[(BLOCKID_LEN * index)..(BLOCKID_LEN * (index + 1))].copy_from_slice(child.data());
+    }
+}
+
+impl<B: BlockStore + Send + Sync> Debug for DataInnerNode<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DataInnerNode")
+            .field("block_id", &self.block_id())
+            .field("depth", &self.depth())
+            .field("children", &self.children().collect::<Vec<_>>())
+            .finish()
     }
 }
 

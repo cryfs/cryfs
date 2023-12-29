@@ -1,5 +1,6 @@
 use anyhow::{ensure, Result};
 use binary_layout::Field;
+use std::fmt::Debug;
 
 use super::super::{
     layout::{node, NodeLayout, FORMAT_VERSION_HEADER},
@@ -8,7 +9,6 @@ use super::super::{
 use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::Data;
 
-#[derive(Debug)]
 pub struct DataLeafNode<B: BlockStore + Send + Sync> {
     block: Block<B>,
 }
@@ -134,6 +134,15 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
     view.size_mut().write(num_bytes);
     // view.data is already set correctly because we grew this view from the data input
     data
+}
+
+impl<B: BlockStore + Send + Sync> Debug for DataLeafNode<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DataLeafNode")
+            .field("block_id", &self.block_id())
+            .field("num_bytes", &self.num_bytes())
+            .finish()
+    }
 }
 
 #[cfg(test)]
