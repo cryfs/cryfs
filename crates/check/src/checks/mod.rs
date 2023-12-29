@@ -14,6 +14,7 @@ use super::error::CorruptedError;
 //  - all present blocks are referenced
 //  - all blocks are readable
 //  - trees are balanced left-max-data trees
+//  - depth of nodes is correct
 //  - leaves not empty
 //  - there are no cycles or self-references within a tree
 //  - there are no cycles or self-references between trees (i.e. in the directory structure)
