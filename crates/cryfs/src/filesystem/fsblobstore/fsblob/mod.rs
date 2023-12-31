@@ -41,23 +41,6 @@ where
     Symlink(SymlinkBlob<'a, B>),
 }
 
-impl<'a, B> FsBlob<'a, BlobStoreOnBlocks<B>>
-where
-    B: BlockStore + Send + Sync,
-{
-    pub async fn load_all_nodes(
-        this: AsyncDropGuard<Self>,
-    ) -> Result<BoxStream<'a, Result<DataNode<B>, LoadNodeError>>> {
-        // unsafe_into_inner_dont_drop is ok here because we only have to call async_drop for Self::Directory
-        // and [DirBlob::load_all_nodes] takes care of that.
-        match this.unsafe_into_inner_dont_drop() {
-            Self::File(blob) => Ok(blob.load_all_nodes()),
-            Self::Directory(blob) => DirBlob::load_all_nodes(blob).await,
-            Self::Symlink(blob) => Ok(blob.load_all_nodes()),
-        }
-    }
-}
-
 impl<'a, B> FsBlob<'a, B>
 where
     B: BlobStore + Debug + 'static,

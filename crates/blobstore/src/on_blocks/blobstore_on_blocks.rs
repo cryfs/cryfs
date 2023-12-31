@@ -38,9 +38,8 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
             .collect())
     }
 
-    pub fn into_inner_node_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataNodeStore<B>> {
-        let tree_store = this.unsafe_into_inner_dont_drop().tree_store;
-        DataTreeStore::into_inner_node_store(tree_store)
+    pub fn into_inner_tree_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataTreeStore<B>> {
+        this.unsafe_into_inner_dont_drop().tree_store
     }
 }
 

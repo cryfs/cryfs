@@ -40,24 +40,6 @@ where
     entries: DirEntryList,
 }
 
-impl<'a, B> DirBlob<'a, BlobStoreOnBlocks<B>>
-where
-    B: BlockStore + Send + Sync,
-{
-    // TODO We're duplicating a lot of the `BaseBlob` methods here and just passing them through. Might be better to offer a `.base_blob()` method and then the blob store can call those methods directly on the base blob.
-    pub async fn load_all_nodes(
-        this: AsyncDropGuard<Self>,
-    ) -> Result<BoxStream<'a, Result<DataNode<B>, LoadNodeError>>> {
-        // async_drop just calls `this.flush()`. So let's call that manually and then we don't have to worry about it.
-        // It's ok to do this and then still do operations on the object afterwards, because the operations we do afterwards
-        // don't write anything.
-        let mut this = this.unsafe_into_inner_dont_drop();
-        this.flush().await?;
-
-        Ok(this.blob.load_all_nodes())
-    }
-}
-
 impl<'a, B> DirBlob<'a, B>
 where
     B: BlobStore + Debug + 'a,

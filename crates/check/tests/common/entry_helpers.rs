@@ -130,6 +130,7 @@ where
         .unwrap();
 }
 
+#[derive(Debug)]
 pub struct SomeBlobs {
     pub root: BlobId,
     pub dir1: BlobId,
@@ -140,6 +141,7 @@ pub struct SomeBlobs {
     pub dir2_dir6: BlobId,
     pub dir2_dir7: BlobId,
     pub large_file: BlobId,
+    pub large_dir: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -205,6 +207,7 @@ where
         dir2_dir6: dir2_dir6.blob_id(),
         dir2_dir7: dir2_dir7.blob_id(),
         large_file: file.blob_id(),
+        large_dir: dir2_dir6.blob_id(),
     };
 
     dir2_dir7.async_drop().await.unwrap();

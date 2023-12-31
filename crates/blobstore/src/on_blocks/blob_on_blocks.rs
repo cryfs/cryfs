@@ -26,12 +26,6 @@ impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
     fn _tree_mut(&mut self) -> &mut DataTree<'a, B> {
         self.tree.as_mut().expect("BlobOnBlocks.tree is None")
     }
-
-    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
-        self.tree
-            .expect("BlobOnBlocks.tree is None")
-            .load_all_nodes()
-    }
 }
 
 #[async_trait]

@@ -1,18 +1,15 @@
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{bail, ensure, Result};
 use async_recursion::async_recursion;
-use async_trait::async_trait;
-use futures::future::{self, BoxFuture};
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
+use futures::future::BoxFuture;
+use futures::stream::{self, StreamExt, TryStreamExt};
+use std::collections::HashSet;
 use std::hash::Hash;
-use std::sync::Arc;
-use tokio::sync::mpsc::{UnboundedSender, WeakUnboundedSender};
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use super::checks::{AllChecks, FilesystemCheck};
+use super::checks::AllChecks;
 use super::error::CorruptedError;
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore, LoadNodeError};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore, DataTreeStore, LoadNodeError};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
 use cryfs_cryfs::{
@@ -64,25 +61,43 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         let mut blobstore =
             FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize_bytes).await?);
 
-        let pb = Progress::new(
-            "Checking all blobs",
-            u64::try_from(all_nodes.len()).unwrap(),
-        );
-        let check_all_blobs_result =
+        let pb = Progress::new("Checking all reachable blobs", 1);
+        let reachable_blobs =
             check_all_reachable_blobs(&blobstore, &all_nodes, root_blob_id, &checks, pb.clone())
                 .await;
-        let check_all_blobs_result = match check_all_blobs_result {
-            Ok(check_all_blobs_result) => check_all_blobs_result,
+        let reachable_blobs = match reachable_blobs {
+            Ok(reachable_blobs) => reachable_blobs,
             Err(e) => {
                 blobstore.async_drop().await?;
                 return Err(e);
             }
         };
+        pb.finish();
 
-        let mut unreachable_nodes = set_remove_all(all_nodes, check_all_blobs_result.visited_nodes);
+        let pb = Progress::new(
+            "Checking all nodes",
+            u64::try_from(all_nodes.len()).unwrap(),
+        );
+        let mut treestore =
+            BlobStoreOnBlocks::into_inner_tree_store(FsBlobStore::into_inner_blobstore(blobstore));
+        let reachable_nodes = check_all_nodes_of_reachable_blobs(
+            &treestore,
+            reachable_blobs,
+            &all_nodes,
+            &checks,
+            pb.clone(),
+        )
+        .await;
+        let reachable_nodes = match reachable_nodes {
+            Ok(reachable_nodes) => reachable_nodes,
+            Err(e) => {
+                treestore.async_drop().await?;
+                return Err(e);
+            }
+        };
 
-        let mut nodestore =
-            BlobStoreOnBlocks::into_inner_node_store(FsBlobStore::into_inner_blobstore(blobstore));
+        let unreachable_nodes = set_remove_all(all_nodes, reachable_nodes);
+        let mut nodestore = DataTreeStore::into_inner_node_store(treestore);
         let check_unreachable_nodes_result =
             check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await;
         pb.finish();
@@ -159,25 +174,20 @@ where
     Ok(())
 }
 
-#[must_use]
-struct CheckAllBlobsResult {
-    visited_nodes: Vec<BlockId>,
-}
-
 async fn check_all_reachable_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &HashSet<BlockId>,
     root_blob_id: BlobId,
     checks: &AllChecks,
     pb: Progress,
-) -> Result<CheckAllBlobsResult>
+) -> Result<Vec<BlobId>>
 where
     B: BlockStore + Send + Sync + 'static,
 {
     // TODO What's a good concurrency value here?
     const MAX_CONCURRENCY: usize = 100;
 
-    let (task_queue_sender, mut task_queue_receiver) = tokio::sync::mpsc::unbounded_channel();
+    let (task_queue_sender, task_queue_receiver) = tokio::sync::mpsc::unbounded_channel();
 
     task_queue_sender
         .send(Box::pin(_check_all_reachable_blobs(
@@ -192,15 +202,10 @@ where
     // Drop our instance of the sender so that `blob_queue_stream` below finishes when the last task holding a sender instance is gone
     std::mem::drop(task_queue_sender);
 
-    let mut result = CheckAllBlobsResult {
-        visited_nodes: vec![],
-    };
-    let mut blob_queue_stream =
-        UnboundedReceiverStream::new(task_queue_receiver).buffer_unordered(MAX_CONCURRENCY);
-    while let Some(subresult) = blob_queue_stream.next().await {
-        result.visited_nodes.extend(subresult?.visited_nodes);
-    }
-    Ok(result)
+    UnboundedReceiverStream::new(task_queue_receiver)
+        .buffer_unordered(MAX_CONCURRENCY)
+        .try_collect()
+        .await
 }
 
 #[async_recursion]
@@ -210,9 +215,9 @@ async fn _check_all_reachable_blobs<'a, 'b, 'c, 'f, B>(
     root_blob_id: BlobId,
     checks: &'c AllChecks,
     // TODO Is this possible without BoxFuture?
-    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<CheckAllBlobsResult>>>,
+    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<BlobId>>>,
     pb: Progress,
-) -> Result<CheckAllBlobsResult>
+) -> Result<BlobId>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
@@ -223,9 +228,7 @@ where
     log::debug!("Entering blob {:?}", &root_blob_id);
 
     let loaded = blobstore.load(&root_blob_id).await;
-    let mut result = CheckAllBlobsResult {
-        visited_nodes: vec![*root_blob_id.to_root_block_id()],
-    };
+
     match loaded {
         Ok(Some(mut blob)) => {
             ensure!(all_nodes.contains(root_blob_id.to_root_block_id()), "Blob {root_blob_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
@@ -235,7 +238,6 @@ where
             // TODO Checking children blobs for directory blobs loads the nodes of this blob.
             //      Then we load it again when we check the nodes of this blob. Can we only load it once?
 
-            // First, add tasks for all children blobs (if we're a directory blob).
             let subresult = check_all_reachable_children_blobs(
                 blobstore,
                 all_nodes,
@@ -245,18 +247,8 @@ where
                 pb.clone(),
             )
             .await;
-            match subresult {
-                Ok(()) => (),
-                Err(err) => {
-                    blob.async_drop().await?;
-                    return Err(err);
-                }
-            };
-
-            // Then, check all nodes of the current blob. This will be processed concurrently to the
-            // children blobs added to the task queue above.
-            let subresult = check_all_nodes_of_reachable_blob(blob, all_nodes, checks, pb).await?;
-            result.visited_nodes.extend(subresult.visited_nodes);
+            blob.async_drop().await?;
+            subresult?;
         }
         Ok(None) => {
             checks.add_error(CorruptedError::BlobMissing {
@@ -270,8 +262,9 @@ where
             });
         }
     };
+    pb.inc(1);
     log::debug!("Exiting blob {:?}", &root_blob_id);
-    Ok(result)
+    Ok(root_blob_id)
 }
 
 async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
@@ -279,7 +272,7 @@ async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
     all_nodes: &'b HashSet<BlockId>,
     blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
     checks: &'d AllChecks,
-    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<CheckAllBlobsResult>>>,
+    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<BlobId>>>,
     pb: Progress,
 ) -> Result<()>
 where
@@ -301,6 +294,10 @@ where
                 }
             };
 
+            // TODO If we manage to prioritize directory blobs over file blobs in the processing, then the progress bar max would be correct much more quickly.
+            //      We could for example do it with two task queues, one for directory blobs and one for file/symlink blobs, and then chain them together.
+            pb.inc_length(blob.entries().len() as u64);
+
             for entry in blob.entries() {
                 task_queue_sender
                     .send(Box::pin(_check_all_reachable_blobs(
@@ -318,53 +315,81 @@ where
     Ok(())
 }
 
-async fn check_all_nodes_of_reachable_blob<'a, B>(
-    blob: AsyncDropGuard<FsBlob<'a, BlobStoreOnBlocks<B>>>,
-    all_nodes: &HashSet<BlockId>,
+async fn check_all_nodes_of_reachable_blobs<B>(
+    treestore: &DataTreeStore<B>,
+    all_blobs: Vec<BlobId>,
+    allowed_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
-) -> Result<CheckAllBlobsResult>
+) -> Result<Vec<BlockId>>
 where
     B: BlockStore + Send + Sync + 'static,
 {
-    let all_nodes_of_blob = FsBlob::load_all_nodes(blob).await?;
-    // TODO Should we rate-limit this instead of trying to load all at once?
-    let mut results = all_nodes_of_blob.map(|node| {
-        let (node_id, error) = match node {
-            Ok(node) => {
-                ensure!(all_nodes.contains(node.block_id()), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.", node_id=node.block_id());
-                checks.process_reachable_node(&node);
-                // no error
-                (*node.block_id(), None)
-            }
-            Err(LoadNodeError::NodeNotFound{node_id, }) => {
-                (
-                    node_id,
-                    Some(CorruptedError::NodeMissing { node_id }),
-                )
-            },
-            Err(LoadNodeError::NodeLoadError { node_id, error }) => {
-                // return the CorruptedError we found
-                (
-                    node_id,
-                    Some(CorruptedError::NodeUnreadable { node_id/* , error: load_error*/ }),
-                )
-            },
-        };
-        pb.inc(1);
-        Ok((node_id, error))
-    });
-    let mut combined_result = CheckAllBlobsResult {
-        visited_nodes: vec![],
-    };
-    while let Some(result) = results.next().await {
-        let (node_id, error) = result?;
-        combined_result.visited_nodes.push(node_id);
-        if let Some(error) = error {
-            checks.add_error(error);
-        }
+    // TODO What's a good concurrency value here?
+    const MAX_CONCURRENCY: usize = 100;
+
+    let mut tasks = stream::iter(all_blobs.into_iter().map(|blob_root| {
+        check_all_nodes_of_reachable_blob(
+            treestore,
+            *blob_root.to_root_block_id(),
+            allowed_nodes,
+            checks,
+            pb.clone(),
+        )
+    }))
+    .buffer_unordered(MAX_CONCURRENCY);
+
+    let mut result = vec![];
+    while let Some(task) = tasks.next().await {
+        result.extend(task?);
     }
-    Ok(combined_result)
+    Ok(result)
+}
+
+async fn check_all_nodes_of_reachable_blob<B>(
+    treestore: &DataTreeStore<B>,
+    root_node_id: BlockId,
+    allowed_nodes: &HashSet<BlockId>,
+    checks: &AllChecks,
+    pb: Progress,
+    // TODO Return stream? But measure that it's not slower
+) -> Result<Vec<BlockId>>
+where
+    B: BlockStore + Send + Sync + 'static,
+{
+    let mut all_nodes_of_blob = treestore
+        .load_all_nodes_in_subtree_of_id(root_node_id)
+        .await;
+    let mut visited_nodes = vec![];
+    while let Some(node) = all_nodes_of_blob.next().await {
+        let node_id = match node {
+            Ok(node) => {
+                ensure!(allowed_nodes.contains(node.block_id()), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.", node_id=node.block_id());
+                checks.process_reachable_node(&node);
+                *node.block_id()
+            }
+            Err(LoadNodeError::NodeNotFound { node_id }) => {
+                if node_id == root_node_id {
+                    checks.add_error(CorruptedError::BlobMissing {
+                        blob_id: BlobId::from_root_block_id(node_id),
+                    });
+                } else {
+                    checks.add_error(CorruptedError::NodeMissing { node_id });
+                }
+                node_id
+            }
+            Err(LoadNodeError::NodeLoadError { node_id, error }) => {
+                checks.add_error(CorruptedError::NodeUnreadable {
+                    node_id,
+                    // error,
+                });
+                node_id
+            }
+        };
+        visited_nodes.push(node_id);
+        pb.inc(1);
+    }
+    Ok(visited_nodes)
 }
 
 fn set_remove_all<T: Hash + Eq>(mut set: HashSet<T>, to_remove: Vec<T>) -> HashSet<T> {

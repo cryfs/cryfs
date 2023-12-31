@@ -16,7 +16,7 @@ use cryfs_cryfs::{
     localstate::LocalStateDir,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
-use futures::{future::BoxFuture, Future, FutureExt};
+use futures::{future::BoxFuture, stream::StreamExt, Future, FutureExt};
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use tempdir::TempDir;
@@ -165,6 +165,22 @@ impl FilesystemFixture {
                 let result = super::entry_helpers::create_some_blobs(blobstore, &mut root).await;
                 root.async_drop().await.unwrap();
                 result
+            })
+        })
+        .await
+    }
+
+    pub async fn get_children_of_dir_blob(&self, dir_blob: BlobId) -> Vec<BlobId> {
+        self.update_fsblobstore(|fsblobstore| {
+            Box::pin(async move {
+                let blob = fsblobstore.load(&dir_blob).await.unwrap().unwrap();
+                let mut blob = FsBlob::into_dir(blob).await.unwrap();
+                let children = blob
+                    .entries()
+                    .map(|entry| *entry.blob_id())
+                    .collect::<Vec<_>>();
+                blob.async_drop().await.unwrap();
+                children
             })
         })
         .await

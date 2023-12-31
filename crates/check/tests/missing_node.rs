@@ -120,7 +120,53 @@ async fn dir_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_inner_node() {
-    // TODO
+    // TODO In this test, make sure that some dir entries have more than just one node
+    // TODO In this test, make sure that a dir entry has its own entries, i.e. 2 dir levels removed from the missing node
+
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_children_blobs = fs_fixture
+        .get_children_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let (removed_node, orphaned_children_nodes) = fs_fixture
+        .update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let inner_node =
+                    find_an_inner_node_of_a_large_blob(nodestore, &some_blobs.large_dir).await;
+                let orphaned_children_nodes = inner_node.children().collect::<Vec<_>>();
+                let inner_node_id = *inner_node.block_id();
+                inner_node.upcast().remove(nodestore).await.unwrap();
+                (inner_node_id, orphaned_children_nodes)
+            })
+        })
+        .await;
+
+    let expected_errors = [
+        CorruptedError::NodeMissing {
+            node_id: removed_node,
+        },
+        CorruptedError::BlobUnreadable {
+            blob_id: some_blobs.large_dir,
+        },
+    ]
+    .into_iter()
+    .chain(
+        orphaned_children_nodes
+            .into_iter()
+            .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+    )
+    .chain(
+        orphaned_children_blobs
+            .into_iter()
+            .map(|child| CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }),
+    )
+    .collect::<Vec<_>>();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]

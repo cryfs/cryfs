@@ -1,20 +1,25 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use futures::stream::BoxStream;
 #[cfg(test)]
 use futures::stream::TryStreamExt;
 #[cfg(test)]
 use std::collections::HashSet;
 
-#[cfg(test)]
-use crate::on_blocks::data_node_store::DataNode;
-use crate::{on_blocks::data_node_store::DataNodeStore, RemoveResult};
+use crate::{
+    on_blocks::data_node_store::{DataNode, DataNodeStore},
+    RemoveResult,
+};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
 };
 
-use super::tree::DataTree;
+use super::{
+    traversal::{self, LoadNodeError},
+    tree::DataTree,
+};
 
 #[derive(Debug)]
 pub struct DataTreeStore<B: BlockStore + Send + Sync> {
@@ -86,6 +91,13 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
 
     pub fn into_inner_node_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataNodeStore<B>> {
         this.unsafe_into_inner_dont_drop().node_store
+    }
+
+    pub async fn load_all_nodes_in_subtree_of_id(
+        &self,
+        subtree_root_id: BlockId,
+    ) -> BoxStream<'_, Result<DataNode<B>, LoadNodeError>> {
+        traversal::load_all_nodes_in_subtree_of_id(&self.node_store, subtree_root_id).await
     }
 
     #[cfg(test)]

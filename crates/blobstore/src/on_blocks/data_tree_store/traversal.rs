@@ -3,6 +3,11 @@ use async_recursion::async_recursion;
 use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
+use futures::{
+    future::{self, FutureExt},
+    stream::{self, BoxStream, StreamExt},
+};
+use thiserror::Error;
 
 use crate::on_blocks::data_node_store::{
     DataInnerNode, DataLeafNode, DataNode, DataNodeStore, NodeLayout,
@@ -701,6 +706,80 @@ async fn _while_root_has_only_one_child_remove_root_return_child<B: BlockStore +
             }
         }
     }
+}
+
+#[derive(Error, Debug)]
+pub enum LoadNodeError {
+    #[error("Node with id {node_id:?} not found")]
+    NodeNotFound { node_id: BlockId },
+
+    #[error("Error loading node {node_id:?}: {error:?}")]
+    NodeLoadError {
+        node_id: BlockId,
+        error: anyhow::Error,
+    },
+}
+
+// TODO Can we deduplicate `load_all_nodes_in_subtree{,_of_id}` with the functions above?  But make sure it doesn't get slower!
+//      Otherwise, move them into a separate module.
+
+pub async fn load_all_nodes_in_subtree_of_id<'a, B>(
+    node_store: &'a DataNodeStore<B>,
+    subtree_root_id: BlockId,
+) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>>
+where
+    B: BlockStore + Send + Sync,
+{
+    let child = node_store.load(subtree_root_id).await;
+    match child {
+        Ok(Some(child)) => load_all_nodes_in_subtree(node_store, child),
+        Ok(None) => Box::pin(stream::once(future::ready(Err(
+            LoadNodeError::NodeNotFound {
+                node_id: subtree_root_id,
+            },
+        )))),
+        Err(error) => Box::pin(stream::once(future::ready(Err(
+            LoadNodeError::NodeLoadError {
+                node_id: subtree_root_id,
+                error,
+            },
+        )))),
+    }
+}
+
+pub fn load_all_nodes_in_subtree<'a, B>(
+    node_store: &'a DataNodeStore<B>,
+    subtree_root: DataNode<B>,
+) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>>
+where
+    B: BlockStore + Send + Sync,
+{
+    match subtree_root {
+        DataNode::Leaf(leaf) => stream::once(future::ready(Ok(DataNode::Leaf(leaf)))).boxed(),
+        DataNode::Inner(inner) => {
+            let block_ids_in_descendants = _load_all_nodes_descendants_of(node_store, &inner);
+            stream::once(future::ready(Ok(DataNode::Inner(inner))))
+                .chain(block_ids_in_descendants)
+                .boxed()
+        }
+    }
+}
+
+fn _load_all_nodes_descendants_of<'a, B>(
+    node_store: &'a DataNodeStore<B>,
+    subtree_root: &DataInnerNode<B>,
+) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>>
+where
+    B: BlockStore + Send + Sync,
+{
+    // iter<stream<result<block_id>>>
+    let subtree_stream = subtree_root.children().map(|child_id| {
+        let child_stream = load_all_nodes_in_subtree_of_id(node_store, child_id);
+        // Transform Future<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
+        child_stream.flatten_stream().boxed()
+    });
+    let subtree_stream = stream::select_all(subtree_stream).boxed();
+    subtree_stream
 }
 
 // TODO Tests

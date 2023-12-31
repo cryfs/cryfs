@@ -7,4 +7,5 @@ mod tree;
 mod testutils;
 
 pub use store::DataTreeStore;
-pub use tree::{DataTree, LoadNodeError};
+pub use traversal::LoadNodeError;
+pub use tree::DataTree;

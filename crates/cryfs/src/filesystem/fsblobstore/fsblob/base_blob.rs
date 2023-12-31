@@ -16,15 +16,6 @@ where
     header_cache: layout::fsblob_header::View<Data>,
 }
 
-impl<'a, B> BaseBlob<'a, BlobStoreOnBlocks<B>>
-where
-    B: BlockStore + Send + Sync,
-{
-    pub fn load_all_nodes(self) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>> {
-        self.blob.load_all_nodes()
-    }
-}
-
 impl<'a, B> BaseBlob<'a, B>
 where
     B: BlobStore + Debug + 'a,
