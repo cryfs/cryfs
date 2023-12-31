@@ -142,6 +142,7 @@ pub struct SomeBlobs {
     pub dir2_dir7: BlobId,
     pub large_file: BlobId,
     pub large_dir: BlobId,
+    pub large_symlink: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -208,6 +209,7 @@ where
         dir2_dir7: dir2_dir7.blob_id(),
         large_file: file.blob_id(),
         large_dir: dir2_dir6.blob_id(),
+        large_symlink: symlink.blob_id(),
     };
 
     dir2_dir7.async_drop().await.unwrap();

@@ -207,7 +207,35 @@ async fn symlink_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_inner_node() {
-    // TODO
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let (removed_node, orphaned_children) = fs_fixture
+        .update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let inner_node =
+                    find_an_inner_node_of_a_large_blob(nodestore, &some_blobs.large_symlink).await;
+                let orphaned_children = inner_node.children().collect::<Vec<_>>();
+                let inner_node_id = *inner_node.block_id();
+                inner_node.upcast().remove(nodestore).await.unwrap();
+                (inner_node_id, orphaned_children)
+            })
+        })
+        .await;
+
+    let expected_errors = [CorruptedError::NodeMissing {
+        node_id: removed_node,
+    }]
+    .into_iter()
+    .chain(
+        orphaned_children
+            .into_iter()
+            .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+    )
+    .collect::<Vec<_>>();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
