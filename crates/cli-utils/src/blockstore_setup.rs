@@ -1,5 +1,4 @@
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 
 use cryfs_blockstore::{
     BlockStore, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig,
@@ -18,6 +17,7 @@ use cryfs_utils::{
 pub trait BlockstoreCallback {
     type Result;
 
+    #[allow(async_fn_in_trait)]
     async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,

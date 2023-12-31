@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use std::path::Path;
 
 use super::console::InteractiveConsole;

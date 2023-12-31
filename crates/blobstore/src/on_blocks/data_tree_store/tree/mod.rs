@@ -11,10 +11,9 @@ use std::marker::PhantomData;
 use std::num::{NonZeroU32, NonZeroU64};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
-use thiserror::Error;
 
 use super::size_cache::SizeCache;
-use super::traversal::{self, LeafHandle, LoadNodeError};
+use super::traversal::{self, LeafHandle};
 use crate::{
     on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout},
     RemoveResult,

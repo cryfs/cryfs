@@ -4,8 +4,8 @@ use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use super::layout::{self, FORMAT_VERSION_HEADER};
-use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNode, LoadNodeError};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blobstore::{Blob, BlobId, BlobStore};
+use cryfs_blockstore::BlockId;
 use cryfs_utils::data::Data;
 
 pub struct BaseBlob<'a, B>

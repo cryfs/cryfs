@@ -1,5 +1,4 @@
 use anyhow::{bail, Result};
-use async_trait::async_trait;
 
 use cryfs_utils::crypto::symmetric::{
     Aes128Gcm, Aes256Gcm, Cipher, CipherDef, EncryptionKey, XChaCha20Poly1305,
@@ -18,6 +17,7 @@ pub const ALL_CIPHERS: &[&str] = &["xchacha20-poly1305", "aes-256-gcm", "aes-128
 pub trait AsyncCipherCallback {
     type Result;
 
+    #[allow(async_fn_in_trait)]
     async fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result;
 }
 pub trait SyncCipherCallback {
@@ -78,7 +78,6 @@ pub fn cipher_is_supported(cipher_name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use cryfs_utils::data::Data;
     // TODO Separate InfallibleUnwrap from lockable crate and remove lockable crate from our dependencies
     use lockable::InfallibleUnwrap;

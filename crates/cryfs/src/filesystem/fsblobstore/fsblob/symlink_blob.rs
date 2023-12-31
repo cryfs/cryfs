@@ -4,8 +4,8 @@ use std::fmt::Debug;
 
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNode, LoadNodeError};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blockstore::BlockId;
 
 pub struct SymlinkBlob<'a, B>
 where

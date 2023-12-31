@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, ensure, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
+#[cfg(test)]
 use futures::stream::BoxStream;
 
 pub use crate::RemoveResult;

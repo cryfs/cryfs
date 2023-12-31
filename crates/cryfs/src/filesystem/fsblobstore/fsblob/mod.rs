@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, DataNode, LoadNodeError};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blockstore::BlockId;
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 

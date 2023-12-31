@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use clap::Args;
 
 use cryfs_version::VersionInfo;
@@ -14,6 +13,8 @@ pub trait Application: Sized {
     const VERSION: VersionInfo<'static, 'static, 'static>;
 
     fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self>;
+
+    #[allow(async_fn_in_trait)]
     async fn main(self) -> Result<()>;
 }
 

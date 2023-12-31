@@ -2,8 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 
-use super::data_node_store::DataNode;
-use super::data_tree_store::{DataTree, LoadNodeError};
+use super::data_tree_store::DataTree;
 use crate::{Blob, BlobId};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::data::Data;

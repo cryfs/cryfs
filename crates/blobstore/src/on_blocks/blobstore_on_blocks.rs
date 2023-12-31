@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use std::fmt;
 
 use super::blob_on_blocks::BlobOnBlocks;
-use super::data_node_store::DataNodeStore;
 use super::data_tree_store::DataTreeStore;
 use crate::{BlobId, BlobStore, RemoveResult};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
