@@ -186,6 +186,11 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         self.block_store.remove(block_id).await
     }
 
+    #[cfg(test)]
+    pub async fn all_nodes(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
+        self.block_store.all_blocks().await
+    }
+
     pub async fn num_nodes(&self) -> Result<u64> {
         self.block_store.num_blocks().await
     }
