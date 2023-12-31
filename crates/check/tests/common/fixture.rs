@@ -1,6 +1,6 @@
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore};
 use cryfs_blockstore::{
-    AllowIntegrityViolations, DynBlockStore, InMemoryBlockStore, IntegrityConfig,
+    AllowIntegrityViolations, BlockId, DynBlockStore, InMemoryBlockStore, IntegrityConfig,
     LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
 };
 use cryfs_check::CorruptedError;
@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
-use super::entry_helpers::SomeBlobs;
+use super::entry_helpers::{find_an_inner_node_of_a_large_blob, SomeBlobs};
 
 const PASSWORD: &str = "mypassword";
 
@@ -180,6 +180,30 @@ impl FilesystemFixture {
         })
         .await
     }
+
+    pub async fn remove_an_inner_node_of_a_large_blob(
+        &self,
+        blob_id: BlobId,
+    ) -> RemoveInnerNodeResult {
+        self.update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let inner_node = find_an_inner_node_of_a_large_blob(nodestore, &blob_id).await;
+                let orphaned_children_nodes = inner_node.children().collect::<Vec<_>>();
+                let inner_node_id = *inner_node.block_id();
+                inner_node.upcast().remove(nodestore).await.unwrap();
+                RemoveInnerNodeResult {
+                    removed_node: inner_node_id,
+                    orphaned_children_nodes,
+                }
+            })
+        })
+        .await
+    }
+}
+
+pub struct RemoveInnerNodeResult {
+    pub removed_node: BlockId,
+    pub orphaned_children_nodes: Vec<BlockId>,
 }
 
 impl Debug for FilesystemFixture {
