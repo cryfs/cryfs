@@ -1,10 +1,6 @@
 use cryfs_check::CorruptedError;
-use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
-use cryfs_cryfs::utils::fs_types::{Gid, Mode, Uid};
-use std::time::SystemTime;
 
 mod common;
-use common::entry_helpers::{create_dir, create_some_blobs};
 use common::fixture::FilesystemFixture;
 
 #[tokio::test(flavor = "multi_thread")]

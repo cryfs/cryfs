@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,

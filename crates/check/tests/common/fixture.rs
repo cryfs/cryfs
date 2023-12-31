@@ -1,28 +1,23 @@
-use anyhow::Result;
-use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore};
 use cryfs_blockstore::{
-    tests::Fixture, AllowIntegrityViolations, BlockStore, DynBlockStore, InMemoryBlockStore,
-    IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
+    AllowIntegrityViolations, DynBlockStore, InMemoryBlockStore, IntegrityConfig,
+    LockingBlockStore, MissingBlockIsIntegrityViolation, SharedBlockStore,
 };
 use cryfs_check::CorruptedError;
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
-    config::{
-        CommandLineFlags, ConfigLoadError, ConfigLoadResult, FixedPasswordProvider,
-        PasswordProvider,
-    },
+    config::{CommandLineFlags, ConfigLoadResult, FixedPasswordProvider},
     filesystem::fsblobstore::{FsBlob, FsBlobStore},
     localstate::LocalStateDir,
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
-use futures::{future::BoxFuture, stream::StreamExt, Future, FutureExt};
+use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
+use futures::{future::BoxFuture, Future};
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
-use super::entry_helpers::{load_dir_blob, SomeBlobs};
+use super::entry_helpers::SomeBlobs;
 
 const PASSWORD: &str = "mypassword";
 

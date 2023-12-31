@@ -1,18 +1,14 @@
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
-use cryfs_blockstore::{BlockStore, BlockStoreDeleter, DynBlockStore, RemoveResult};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
+use cryfs_blockstore::DynBlockStore;
 use cryfs_check::CorruptedError;
-use cryfs_cryfs::{
-    filesystem::fsblobstore::{FsBlob, FsBlobStore},
-    utils::fs_types::{Gid, Mode, Uid},
-};
+use cryfs_cryfs::filesystem::fsblobstore::FsBlobStore;
 
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
-use std::time::SystemTime;
 
 mod common;
 use common::entry_helpers::{
-    add_dir_entry, add_file_entry, add_symlink_entry, create_dir, create_file, create_some_blobs,
-    create_symlink, data, find_an_inner_node_of_a_large_blob, load_dir_blob, LARGE_FILE_SIZE,
+    add_dir_entry, add_file_entry, add_symlink_entry, find_an_inner_node_of_a_large_blob,
+    load_dir_blob,
 };
 use common::fixture::FilesystemFixture;
 

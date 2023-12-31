@@ -103,7 +103,7 @@ impl AllChecks {
             .process_unreachable_node(node);
     }
 
-    pub fn finalize(mut self) -> Vec<CorruptedError> {
+    pub fn finalize(self) -> Vec<CorruptedError> {
         let mut errors = self.additional_errors.into_inner().unwrap();
         errors.extend(
             self.check_unreachable_nodes

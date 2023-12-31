@@ -3,7 +3,7 @@ use itertools::Itertools;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataNode, DataNodeStore};
+use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataNodeStore};
 use cryfs_blockstore::BlockStore;
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
@@ -39,7 +39,7 @@ pub async fn create_dir<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
-    let mut new_entry = fsblobstore
+    let new_entry = fsblobstore
         .create_dir_blob(&parent.blob_id())
         .await
         .unwrap();
@@ -72,7 +72,7 @@ pub async fn create_file<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
-    let mut new_entry = fsblobstore
+    let new_entry = fsblobstore
         .create_file_blob(&parent.blob_id())
         .await
         .unwrap();
@@ -106,7 +106,7 @@ pub async fn create_symlink<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
-    let mut new_entry = fsblobstore
+    let new_entry = fsblobstore
         .create_symlink_blob(&parent.blob_id(), target)
         .await
         .unwrap();
