@@ -69,6 +69,10 @@ impl Progress {
         self.pb.inc(delta);
     }
 
+    pub fn inc_length(&self, delta: u64) {
+        self.pb.inc_length(delta);
+    }
+
     /// Will panic if there are still other clones referencing the same progress bar.
     pub fn finish(self) {
         let pb = Arc::into_inner(self.pb).expect(
@@ -90,6 +94,10 @@ impl ProgressImpl {
 
     pub fn inc(&self, delta: u64) {
         self.pb.inc(delta);
+    }
+
+    pub fn inc_length(&self, delta: u64) {
+        self.pb.inc_length(delta);
     }
 }
 
