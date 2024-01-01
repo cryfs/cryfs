@@ -42,7 +42,28 @@ async fn file_entirely_missing() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_missing_root_node() {
-    // TODO
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let RemoveInnerNodeResult {
+        removed_node,
+        orphaned_children_nodes,
+    } = fs_fixture
+        .remove_root_node_of_a_large_blob(some_blobs.large_file)
+        .await;
+
+    let expected_errors = iter::once(CorruptedError::BlobMissing {
+        blob_id: BlobId::from_root_block_id(removed_node),
+    })
+    .chain(
+        orphaned_children_nodes
+            .into_iter()
+            .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+    )
+    .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -113,7 +134,38 @@ async fn dir_entirely_missing() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_root_node() {
-    // TODO
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let RemoveInnerNodeResult {
+        removed_node,
+        orphaned_children_nodes,
+    } = fs_fixture
+        .remove_root_node_of_a_large_blob(some_blobs.large_dir)
+        .await;
+
+    let expected_errors =
+        [CorruptedError::BlobMissing {
+            blob_id: BlobId::from_root_block_id(removed_node),
+        }]
+        .into_iter()
+        .chain(
+            orphaned_children_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -199,7 +251,28 @@ async fn symlink_entirely_missing() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_root_node() {
-    // TODO
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let RemoveInnerNodeResult {
+        removed_node,
+        orphaned_children_nodes,
+    } = fs_fixture
+        .remove_root_node_of_a_large_blob(some_blobs.large_symlink)
+        .await;
+
+    let expected_errors = iter::once(CorruptedError::BlobMissing {
+        blob_id: BlobId::from_root_block_id(removed_node),
+    })
+    .chain(
+        orphaned_children_nodes
+            .into_iter()
+            .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+    )
+    .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]

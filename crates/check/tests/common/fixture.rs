@@ -213,6 +213,29 @@ impl FilesystemFixture {
         })
         .await
     }
+
+    pub async fn remove_root_node_of_a_large_blob(&self, blob_id: BlobId) -> RemoveInnerNodeResult {
+        self.update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let blob_root_node = nodestore
+                    .load(*blob_id.to_root_block_id())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .into_inner_node()
+                    .expect("test blob too small to have more than one node. We need to change the test and increase its size");
+                let orphaned_children_nodes = blob_root_node.children().collect::<Vec<_>>();
+                let inner_node_id = *blob_root_node.block_id();
+                assert_eq!(blob_id.to_root_block_id(), blob_root_node.block_id());
+                blob_root_node.upcast().remove(nodestore).await.unwrap();
+                RemoveInnerNodeResult {
+                    removed_node: inner_node_id,
+                    orphaned_children_nodes,
+                }
+            })
+        })
+        .await
+    }
 }
 
 pub struct RemoveInnerNodeResult {
