@@ -16,7 +16,7 @@ fn blobid1() -> BlobId {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn file_with_missing_root_node() {
+async fn file_entirely_missing() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
@@ -38,6 +38,11 @@ async fn file_with_missing_root_node() {
         vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_missing_root_node() {
+    // TODO
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -82,7 +87,7 @@ async fn file_with_missing_inner_node_and_foreign_leaf_node() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn dir_with_missing_root_node() {
+async fn dir_entirely_missing() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
@@ -104,6 +109,11 @@ async fn dir_with_missing_root_node() {
         vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_with_missing_root_node() {
+    // TODO
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -162,11 +172,8 @@ async fn dir_with_missing_inner_node_and_foreign_leaf_node() {
     // TODO
 }
 
-// TODO For all the missing_root_node tests, it's better to remove the root node of a larger blob similar to missing_inner_node.
-//      and add a separate test for "whole blob is missing"
-
 #[tokio::test(flavor = "multi_thread")]
-async fn symlink_with_missing_root_node() {
+async fn symlink_entirely_missing() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
@@ -188,6 +195,11 @@ async fn symlink_with_missing_root_node() {
         vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn symlink_with_missing_root_node() {
+    // TODO
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -228,6 +240,11 @@ async fn symlink_with_missing_inner_node_and_own_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_inner_node_and_foreign_leaf_node() {
+    // TODO
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn root_dir_entirely_missing() {
     // TODO
 }
 
