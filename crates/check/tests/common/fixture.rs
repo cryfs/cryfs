@@ -11,13 +11,17 @@ use cryfs_cryfs::{
     localstate::LocalStateDir,
 };
 use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
-use futures::{future::BoxFuture, Future};
+use futures::{
+    future::{self, BoxFuture},
+    stream::{self, BoxStream, StreamExt},
+    Future, FutureExt,
+};
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
-use super::entry_helpers::{find_an_inner_node_of_a_large_blob, SomeBlobs};
+use super::entry_helpers::{self, find_an_inner_node_of_a_large_blob, SomeBlobs};
 
 const PASSWORD: &str = "mypassword";
 
@@ -177,6 +181,16 @@ impl FilesystemFixture {
                 blob.async_drop().await.unwrap();
                 children
             })
+        })
+        .await
+    }
+
+    pub async fn get_descendants_of_dir_blob<'a>(&'a self, dir_blob: BlobId) -> Vec<BlobId> {
+        self.update_fsblobstore(move |fsblobstore| {
+            Box::pin(
+                entry_helpers::get_descendants_of_dir_blob(fsblobstore, dir_blob)
+                    .collect::<Vec<BlobId>>(),
+            )
         })
         .await
     }

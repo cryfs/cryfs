@@ -1,4 +1,8 @@
-use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
+use async_recursion::async_recursion;
+use futures::{
+    future::FutureExt,
+    stream::{self, BoxStream, StreamExt},
+};
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::time::SystemTime;
@@ -10,6 +14,7 @@ use cryfs_cryfs::{
     utils::fs_types::{Gid, Mode, Uid},
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
 
@@ -130,6 +135,105 @@ where
         .unwrap();
 }
 
+pub async fn create_large_file<'a, 'b, 'c, B>(
+    fsblobstore: &'b FsBlobStore<B>,
+    parent: &'a mut DirBlob<'c, B>,
+    name: &str,
+) -> FileBlob<'b, B>
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+{
+    let mut file = create_file(fsblobstore, parent, name).await;
+    file.write(&data(LARGE_FILE_SIZE, 0), 0).await.unwrap();
+    assert!(
+        file.num_nodes().await.unwrap() > 1_000,
+        "If this fails, we need to make the data larger so it uses enough nodes."
+    );
+
+    file
+}
+
+pub async fn create_large_symlink<'a, 'b, 'c, B>(
+    fsblobstore: &'b FsBlobStore<B>,
+    parent: &'a mut DirBlob<'c, B>,
+    name: &str,
+) -> SymlinkBlob<'b, B>
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+{
+    let target = large_symlink_target();
+    let mut symlink = create_symlink(fsblobstore, parent, name, &target).await;
+    assert!(
+        symlink.num_nodes().await.unwrap() > 1_000,
+        "If this fails, we need to make the target longer so it uses enough nodes."
+    );
+    symlink
+}
+
+pub async fn create_large_dir<'a, 'b, 'c, B>(
+    fsblobstore: &'b FsBlobStore<B>,
+    parent: &'a mut DirBlob<'c, B>,
+    name: &str,
+) -> AsyncDropGuard<DirBlob<'b, B>>
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+{
+    let mut dir = create_dir(fsblobstore, parent, name).await;
+
+    for i in 0..100 {
+        create_dir(fsblobstore, &mut dir, &format!("dir{i}"))
+            .await
+            .async_drop()
+            .await
+            .unwrap();
+        create_file(fsblobstore, &mut dir, &format!("file{i}")).await;
+        create_symlink(
+            fsblobstore,
+            &mut dir,
+            &format!("symlink{i}"),
+            &format!("symlink_target_{i}"),
+        )
+        .await;
+    }
+    assert!(
+        dir.num_nodes().await.unwrap() > 1_000,
+        "If this fails, we need to create even more entries to make the directory large enough."
+    );
+
+    dir
+}
+
+#[async_recursion]
+pub async fn create_large_dir_with_large_entries<'a, 'b, 'c, B>(
+    fsblobstore: &'b FsBlobStore<B>,
+    parent: &'a mut DirBlob<'c, B>,
+    name: &str,
+    levels: usize,
+) -> AsyncDropGuard<DirBlob<'b, B>>
+where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+{
+    let mut dir = create_large_dir(fsblobstore, parent, name).await;
+
+    create_large_file(fsblobstore, &mut dir, "large_file").await;
+    create_large_symlink(fsblobstore, &mut dir, "large_symlink").await;
+    if levels == 0 {
+        create_large_dir(fsblobstore, &mut dir, "large_dir")
+            .await
+            .async_drop()
+            .await
+            .unwrap();
+    } else {
+        create_large_dir_with_large_entries(fsblobstore, &mut dir, "large_dir", levels - 1)
+            .await
+            .async_drop()
+            .await
+            .unwrap();
+    }
+
+    dir
+}
+
 #[derive(Debug)]
 pub struct SomeBlobs {
     pub root: BlobId,
@@ -150,7 +254,7 @@ pub async fn create_some_blobs<'a, 'b, 'c, B>(
     root: &'a mut DirBlob<'c, B>,
 ) -> SomeBlobs
 where
-    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
 {
     let mut dir1 = create_dir(fsblobstore, root, "dir1").await;
     let mut dir2 = create_dir(fsblobstore, &mut dir1, "dir2").await;
@@ -160,43 +264,11 @@ where
     let mut dir2_dir6 = create_dir(fsblobstore, &mut dir2, "dir6").await;
     let mut dir2_dir7 = create_dir(fsblobstore, &mut dir2, "dir7").await;
 
-    // Let's create a directory with lots of entries (so it'll use multiple nodes)
-    for i in 0..100 {
-        create_dir(fsblobstore, &mut dir2_dir6, &format!("dir{i}"))
-            .await
-            .async_drop()
-            .await
-            .unwrap();
-        create_file(fsblobstore, &mut dir2_dir6, &format!("file{i}")).await;
-        create_symlink(
-            fsblobstore,
-            &mut dir2_dir6,
-            &format!("symlink{i}"),
-            &format!("symlink_target_{i}"),
-        )
-        .await;
-    }
-    assert!(
-        dir2_dir6.num_nodes().await.unwrap() > 1_000,
-        "If this fails, we need to create even more entries to make the directory large enough."
-    );
-
-    // Let's create a symlink with a very long path (so it'll use multiple nodes)
-    let target = large_symlink_target();
-    let mut symlink =
-        create_symlink(fsblobstore, &mut dir2_dir7, &format!("symlink"), &target).await;
-    assert!(
-        symlink.num_nodes().await.unwrap() > 1_000,
-        "If this fails, we need to make the target longer so it uses enough nodes."
-    );
-
-    // Let's create a file with lots of data (so it'll use multiple nodes)
-    let mut file = create_file(fsblobstore, &mut dir2_dir7, "file").await;
-    file.write(&data(LARGE_FILE_SIZE, 0), 0).await.unwrap();
-    assert!(
-        file.num_nodes().await.unwrap() > 1_000,
-        "If this fails, we need to make the data larger so it uses enough nodes."
-    );
+    // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
+    let mut large_dir =
+        create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "large_dir", 2).await;
+    let large_symlink = create_large_symlink(fsblobstore, &mut dir2_dir7, "large_symlink").await;
+    let large_file = create_large_file(fsblobstore, &mut dir2_dir7, "large_file").await;
 
     let result = SomeBlobs {
         root: root.blob_id(),
@@ -207,11 +279,12 @@ where
         dir1_dir3_dir5: dir1_dir3_dir5.blob_id(),
         dir2_dir6: dir2_dir6.blob_id(),
         dir2_dir7: dir2_dir7.blob_id(),
-        large_file: file.blob_id(),
-        large_dir: dir2_dir6.blob_id(),
-        large_symlink: symlink.blob_id(),
+        large_file: large_file.blob_id(),
+        large_dir: large_dir.blob_id(),
+        large_symlink: large_symlink.blob_id(),
     };
 
+    large_dir.async_drop().await.unwrap();
     dir2_dir7.async_drop().await.unwrap();
     dir2_dir6.async_drop().await.unwrap();
     dir1_dir3_dir5.async_drop().await.unwrap();
@@ -255,4 +328,37 @@ where
         .into_inner_node()
         .expect("test blob too small to have more than three levels. We need to change the test and increase its size");
     child_of_child_of_root
+}
+
+pub fn get_descendants_of_dir_blob<'a, 'r, B>(
+    fsblobstore: &'a FsBlobStore<B>,
+    dir_blob_id: BlobId,
+) -> BoxStream<'r, BlobId>
+where
+    'a: 'r,
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+{
+    Box::pin(
+        async move {
+            let blob = fsblobstore.load(&dir_blob_id).await.unwrap().unwrap();
+            let mut blob = FsBlob::into_dir(blob).await.unwrap();
+            let children = blob
+                .entries()
+                .map(|entry| *entry.blob_id())
+                .collect::<Vec<_>>();
+            let dir_children = blob
+                .entries()
+                .filter(|entry| entry.mode().has_dir_flag())
+                .map(|entry| *entry.blob_id())
+                .collect::<Vec<_>>();
+            blob.async_drop().await.unwrap();
+            let recursive_streams = dir_children
+                .into_iter()
+                .map(|child_id| get_descendants_of_dir_blob(fsblobstore, child_id))
+                .collect::<Vec<_>>();
+            let recursive_children = stream::select_all(recursive_streams);
+            stream::iter(children.into_iter()).chain(recursive_children)
+        }
+        .flatten_stream(),
+    )
 }

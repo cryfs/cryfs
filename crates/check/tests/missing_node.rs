@@ -108,14 +108,11 @@ async fn dir_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_inner_node() {
-    // TODO In this test, make sure that some dir entries have more than just one node
-    // TODO In this test, make sure that a dir entry has its own entries, i.e. 2 dir levels removed from the missing node
-
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
-    let orphaned_children_blobs = fs_fixture
-        .get_children_of_dir_blob(some_blobs.large_dir)
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
         .await;
     let RemoveInnerNodeResult {
         removed_node,
@@ -124,28 +121,27 @@ async fn dir_with_missing_inner_node() {
         .remove_an_inner_node_of_a_large_blob(some_blobs.large_dir)
         .await;
 
-    let expected_errors = [
-        CorruptedError::NodeMissing {
-            node_id: removed_node,
-        },
-        CorruptedError::BlobUnreadable {
-            blob_id: some_blobs.large_dir,
-        },
-    ]
-    .into_iter()
-    .chain(
-        orphaned_children_nodes
-            .into_iter()
-            .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
-    )
-    .chain(
-        orphaned_children_blobs
-            .into_iter()
-            .map(|child| CorruptedError::NodeUnreferenced {
+    let expected_errors =
+        [
+            CorruptedError::NodeMissing {
+                node_id: removed_node,
+            },
+            CorruptedError::BlobUnreadable {
+                blob_id: some_blobs.large_dir,
+            },
+        ]
+        .into_iter()
+        .chain(
+            orphaned_children_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
                 node_id: *child.to_root_block_id(),
-            }),
-    )
-    .collect();
+            }
+        }))
+        .collect();
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
@@ -165,6 +161,9 @@ async fn dir_with_missing_inner_node_and_own_leaf_node() {
 async fn dir_with_missing_inner_node_and_foreign_leaf_node() {
     // TODO
 }
+
+// TODO For all the missing_root_node tests, it's better to remove the root node of a larger blob similar to missing_inner_node.
+//      and add a separate test for "whole blob is missing"
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_root_node() {
