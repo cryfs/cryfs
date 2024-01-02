@@ -420,7 +420,7 @@ pub async fn _find_leaf_node<B>(
 where
     B: BlockStore + Send + Sync,
 {
-    let mut children = root.children();
+    let children = root.children();
     let child = children.choose(rng).expect("Inner node has no children");
     let child = nodestore.load(child).await.unwrap().unwrap();
     match child {

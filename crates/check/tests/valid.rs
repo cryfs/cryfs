@@ -1,3 +1,5 @@
+//! Tests where the filesystem doesn't have errors
+
 use cryfs_check::CorruptedError;
 
 mod common;

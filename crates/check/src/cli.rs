@@ -19,6 +19,8 @@ use std::path::Path;
 use super::{console::RecoverConsole, error::CorruptedError, runner::RecoverRunner};
 use crate::args::CryfsRecoverArgs;
 
+// TODO Make sure we don't write to local state or integrity data either. Read-only blockstore isn't enough.
+
 pub struct RecoverCli {
     args: CryfsRecoverArgs,
     local_state_dir: LocalStateDir,

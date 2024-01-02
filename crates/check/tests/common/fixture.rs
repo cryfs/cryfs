@@ -1,4 +1,4 @@
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore};
+use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockId, BlockStoreReader, BlockStoreWriter, DynBlockStore,
     InMemoryBlockStore, IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation,
@@ -12,12 +12,8 @@ use cryfs_cryfs::{
     localstate::LocalStateDir,
 };
 use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
-use futures::{
-    future::{self, BoxFuture},
-    stream::{self, BoxStream, StreamExt},
-    Future, FutureExt,
-};
-use rand::{rngs::SmallRng, seq::SliceRandom, SeedableRng};
+use futures::{future::BoxFuture, stream::StreamExt, Future};
+use rand::{rngs::SmallRng, SeedableRng};
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use tempdir::TempDir;
@@ -56,7 +52,7 @@ impl FilesystemFixture {
     }
 
     async fn create_root_dir_blob(&self) {
-        let mut fsblobstore = self.make_blobstore().await;
+        let mut fsblobstore = self.make_fsblobstore().await;
         fsblobstore
             .create_root_dir_blob(&self.root_blob_id)
             .await
@@ -82,22 +78,6 @@ impl FilesystemFixture {
         .expect("Failed to setup blockstore stack")
     }
 
-    async fn make_blobstore(
-        &self,
-    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>> {
-        let blockstore = self.make_locking_blockstore().await;
-
-        FsBlobStore::new(
-            BlobStoreOnBlocks::new(
-                blockstore,
-                // TODO Change type in config instead of doing u32::try_from
-                u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
-            )
-            .await
-            .expect("Failed to create BlobStoreOnBlocks"),
-        )
-    }
-
     async fn make_nodestore(&self) -> AsyncDropGuard<DataNodeStore<DynBlockStore>> {
         let blockstore = self.make_locking_blockstore().await;
 
@@ -108,6 +88,26 @@ impl FilesystemFixture {
         )
         .await
         .expect("Failed to create DataNodeStore")
+    }
+
+    async fn make_blobstore(&self) -> AsyncDropGuard<BlobStoreOnBlocks<DynBlockStore>> {
+        let blockstore = self.make_locking_blockstore().await;
+
+        BlobStoreOnBlocks::new(
+            blockstore,
+            // TODO Change type in config instead of doing u32::try_from
+            u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
+        )
+        .await
+        .expect("Failed to create blobstore")
+    }
+
+    async fn make_fsblobstore(
+        &self,
+    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>> {
+        let blobstore = self.make_blobstore().await;
+
+        FsBlobStore::new(blobstore)
     }
 
     pub async fn update_blockstore<'s, 'b, 'f, F, R>(
@@ -132,13 +132,23 @@ impl FilesystemFixture {
         result
     }
 
+    pub async fn update_blobstore<R>(
+        &self,
+        update_fn: impl for<'b> FnOnce(&'b BlobStoreOnBlocks<DynBlockStore>) -> BoxFuture<'b, R>,
+    ) -> R {
+        let mut blobstore = self.make_blobstore().await;
+        let result = update_fn(&blobstore).await;
+        blobstore.async_drop().await.unwrap();
+        result
+    }
+
     pub async fn update_fsblobstore<R>(
         &self,
         update_fn: impl for<'b> FnOnce(
             &'b FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>,
         ) -> BoxFuture<'b, R>,
     ) -> R {
-        let mut fsblobstore = self.make_blobstore().await;
+        let mut fsblobstore = self.make_fsblobstore().await;
         let result = update_fn(&fsblobstore).await;
         fsblobstore.async_drop().await.unwrap();
         result
@@ -266,6 +276,31 @@ impl FilesystemFixture {
                 let byte_index = 100 % block.len();
                 block[byte_index] = block[byte_index].overflowing_add(1).0;
                 blockstore.store(&block_id, &block).await.unwrap();
+            })
+        })
+        .await;
+    }
+
+    pub async fn increment_format_version_of_blob(&self, blob_id: BlobId) {
+        self.update_blobstore(|blobstore| {
+            Box::pin(async move {
+                let mut blob = blobstore.load(&blob_id).await.unwrap().unwrap();
+                // The first u16 is the format version. Increase it by 1 to make the blob invalid
+                let mut format_version = [0u8; 2];
+                blob.read(&mut format_version, 0).await.unwrap();
+                format_version[1] += 1;
+                blob.write(&format_version, 0).await.unwrap();
+            })
+        })
+        .await;
+    }
+
+    pub async fn corrupt_blob_type(&self, blob_id: BlobId) {
+        self.update_blobstore(|blobstore| {
+            Box::pin(async move {
+                let mut blob = blobstore.load(&blob_id).await.unwrap().unwrap();
+                // The third byte is for the blob type (dir/file/symlink). Set it to an invalid value.
+                blob.write(&[10u8], 2).await.unwrap();
             })
         })
         .await;

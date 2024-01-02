@@ -1,3 +1,5 @@
+//! Tests where individual nodes are unreadable
+
 use std::iter;
 
 use cryfs_blobstore::BlobId;
