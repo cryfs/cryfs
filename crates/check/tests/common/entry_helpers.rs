@@ -180,17 +180,26 @@ where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let mut dir = create_dir(fsblobstore, parent, name).await;
+    add_entries_to_make_dir_large(fsblobstore, &mut dir).await;
+    dir
+}
 
+pub async fn add_entries_to_make_dir_large<B>(
+    fsblobstore: &FsBlobStore<B>,
+    dir: &mut DirBlob<'_, B>,
+) where
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+{
     for i in 0..125 {
-        create_dir(fsblobstore, &mut dir, &format!("dir{i}"))
+        create_dir(fsblobstore, dir, &format!("dir{i}"))
             .await
             .async_drop()
             .await
             .unwrap();
-        create_file(fsblobstore, &mut dir, &format!("file{i}")).await;
+        create_file(fsblobstore, dir, &format!("file{i}")).await;
         create_symlink(
             fsblobstore,
-            &mut dir,
+            dir,
             &format!("symlink{i}"),
             &format!("symlink_target_{i}"),
         )
@@ -200,8 +209,6 @@ where
         dir.num_nodes().await.unwrap() > 1_000,
         "If this fails, we need to create even more entries to make the directory large enough."
     );
-
-    dir
 }
 
 #[async_recursion]
@@ -257,19 +264,20 @@ pub async fn create_some_blobs<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
 {
-    let mut dir1 = create_dir(fsblobstore, root, "dir1").await;
-    let mut dir2 = create_dir(fsblobstore, &mut dir1, "dir2").await;
-    let mut dir1_dir3 = create_dir(fsblobstore, &mut dir1, "dir3").await;
-    let mut dir1_dir4 = create_dir(fsblobstore, &mut dir1, "dir4").await;
-    let mut dir1_dir3_dir5 = create_dir(fsblobstore, &mut dir1_dir3, "dir5").await;
-    let mut dir2_dir6 = create_dir(fsblobstore, &mut dir2, "dir6").await;
-    let mut dir2_dir7 = create_dir(fsblobstore, &mut dir2, "dir7").await;
+    let mut dir1 = create_dir(fsblobstore, root, "somedir1").await;
+    let mut dir2 = create_dir(fsblobstore, &mut dir1, "somedir2").await;
+    let mut dir1_dir3 = create_dir(fsblobstore, &mut dir1, "somedir3").await;
+    let mut dir1_dir4 = create_dir(fsblobstore, &mut dir1, "somedir4").await;
+    let mut dir1_dir3_dir5 = create_dir(fsblobstore, &mut dir1_dir3, "somedir5").await;
+    let mut dir2_dir6 = create_dir(fsblobstore, &mut dir2, "somedir6").await;
+    let mut dir2_dir7 = create_dir(fsblobstore, &mut dir2, "somedir7").await;
 
     // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
     let mut large_dir =
-        create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "large_dir", 2).await;
-    let large_symlink = create_large_symlink(fsblobstore, &mut dir2_dir7, "large_symlink").await;
-    let large_file = create_large_file(fsblobstore, &mut dir2_dir7, "large_file").await;
+        create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "some_large_dir", 2).await;
+    let large_symlink =
+        create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink").await;
+    let large_file = create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file").await;
 
     let result = SomeBlobs {
         root: root.blob_id(),
@@ -308,10 +316,13 @@ pub async fn find_an_inner_node_of_a_large_blob<B>(
 where
     B: BlockStore + Send + Sync,
 {
-    find_inner_node(nodestore, *blob_id.to_root_block_id()).await
+    find_inner_node_with_distance_from_root(nodestore, *blob_id.to_root_block_id()).await
 }
 
-pub async fn find_inner_node<B>(nodestore: &DataNodeStore<B>, root: BlockId) -> DataInnerNode<B>
+pub async fn find_inner_node_with_distance_from_root<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+) -> DataInnerNode<B>
 where
     B: BlockStore + Send + Sync,
 {
@@ -338,10 +349,39 @@ where
     child_of_child_of_root
 }
 
-pub async fn find_a_leaf_node_of_a_large_blob<B>(
+pub async fn find_an_inner_node_of_a_small_blob<B>(
     nodestore: &DataNodeStore<B>,
     blob_id: &BlobId,
-) -> DataLeafNode<B>
+) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    find_inner_node_without_distance_from_root(nodestore, *blob_id.to_root_block_id()).await
+}
+
+pub async fn find_inner_node_without_distance_from_root<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    let root_node = nodestore
+        .load(root)
+        .await
+        .unwrap()
+        .unwrap()
+        .into_inner_node()
+        .expect("test blob too small to have more than one node. We need to change the test and increase its size");
+
+    let child_of_root_id = root_node.children().skip(1).next().expect("test blob too small to have more than one child of root. We need to change the test and increase its size");
+    let child_of_root = nodestore.load(child_of_root_id).await.unwrap().unwrap().into_inner_node().expect(
+        "test blob too small to have more than two levels. We need to change the test and increase its size"
+    );
+    child_of_root
+}
+
+pub async fn find_a_leaf_node<B>(nodestore: &DataNodeStore<B>, blob_id: &BlobId) -> DataLeafNode<B>
 where
     B: BlockStore + Send + Sync,
 {

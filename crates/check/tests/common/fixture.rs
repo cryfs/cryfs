@@ -23,8 +23,8 @@ use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
 use super::entry_helpers::{
-    self, find_a_leaf_node_of_a_large_blob, find_an_inner_node_of_a_large_blob, find_inner_node,
-    find_leaf_node, SomeBlobs,
+    self, find_a_leaf_node, find_an_inner_node_of_a_large_blob, find_an_inner_node_of_a_small_blob,
+    find_inner_node_with_distance_from_root, find_leaf_node, SomeBlobs,
 };
 
 const PASSWORD: &str = "mypassword";
@@ -144,6 +144,7 @@ impl FilesystemFixture {
     }
 
     pub async fn run_cryfs_check(self) -> Vec<CorruptedError> {
+        // TODO Console output is very chaotic here because the progress bars are all displayed. Let's suppress them.
         cryfs_check::check_filesystem(
             self.blockstore.into_inner_dont_drop(),
             &self.tempdir.config_file_path(),
@@ -241,6 +242,25 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn remove_an_inner_node_of_a_small_blob(
+        &self,
+        blob_id: BlobId,
+    ) -> RemoveInnerNodeResult {
+        self.update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let inner_node = find_an_inner_node_of_a_small_blob(nodestore, &blob_id).await;
+                let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
+                let inner_node_id = *inner_node.block_id();
+                inner_node.upcast().remove(nodestore).await.unwrap();
+                RemoveInnerNodeResult {
+                    removed_node: inner_node_id,
+                    orphaned_nodes,
+                }
+            })
+        })
+        .await
+    }
+
     pub async fn remove_some_nodes_of_a_large_blob(
         &self,
         blob_id: BlobId,
@@ -258,13 +278,15 @@ impl FilesystemFixture {
 
                 // for child1, find an inner node A. Remove an inner node below A, a leaf below A, and A itself.
                 {
-                    let inner_node_a = find_inner_node(nodestore, child1).await;
+                    let inner_node_a =
+                        find_inner_node_with_distance_from_root(nodestore, child1).await;
                     let mut children = inner_node_a.children();
                     let subchild1 = children.next().unwrap();
                     let subchild2 = children.next().unwrap();
                     std::mem::drop(children);
 
-                    let inner_below_a = find_inner_node(nodestore, subchild1).await;
+                    let inner_below_a =
+                        find_inner_node_with_distance_from_root(nodestore, subchild1).await;
                     orphaned_nodes.extend(inner_below_a.children());
                     removed_nodes.push(*inner_below_a.block_id());
                     inner_below_a.upcast().remove(nodestore).await.unwrap();
@@ -280,18 +302,21 @@ impl FilesystemFixture {
 
                 // for child2, find an inner node A. Remove an inner node B below A. Also remove an inner node C below A and its direct child. Don't remove A.
                 {
-                    let inner_node_a = find_inner_node(nodestore, child2).await;
+                    let inner_node_a =
+                        find_inner_node_with_distance_from_root(nodestore, child2).await;
                     let mut children = inner_node_a.children();
                     let subchild1 = children.next().unwrap();
                     let subchild2 = children.next().unwrap();
                     std::mem::drop(children);
 
-                    let inner_node_b = find_inner_node(nodestore, subchild1).await;
+                    let inner_node_b =
+                        find_inner_node_with_distance_from_root(nodestore, subchild1).await;
                     orphaned_nodes.extend(inner_node_b.children());
                     removed_nodes.push(*inner_node_b.block_id());
                     inner_node_b.upcast().remove(nodestore).await.unwrap();
 
-                    let inner_node_c = find_inner_node(nodestore, subchild2).await;
+                    let inner_node_c =
+                        find_inner_node_with_distance_from_root(nodestore, subchild2).await;
                     let mut children_of_c = inner_node_c.children();
                     let child_of_c_id = children_of_c.next().unwrap();
                     std::mem::drop(children_of_c);
@@ -325,16 +350,29 @@ impl FilesystemFixture {
         .await
     }
 
-    pub async fn remove_a_leaf_node_of_a_large_blob(&self, blob_id: BlobId) -> BlockId {
+    pub async fn remove_a_leaf_node(&self, blob_id: BlobId) -> BlockId {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
-                let leaf_node = find_a_leaf_node_of_a_large_blob(nodestore, &blob_id).await;
+                let leaf_node = find_a_leaf_node(nodestore, &blob_id).await;
                 let leaf_node_id = *leaf_node.block_id();
                 leaf_node.upcast().remove(nodestore).await.unwrap();
                 leaf_node_id
             })
         })
         .await
+    }
+
+    pub async fn add_entries_to_make_dir_large(&self, blob_id: BlobId) {
+        self.update_fsblobstore(|fsblobstore| {
+            Box::pin(async move {
+                let mut dir = FsBlob::into_dir(fsblobstore.load(&blob_id).await.unwrap().unwrap())
+                    .await
+                    .unwrap();
+                entry_helpers::add_entries_to_make_dir_large(fsblobstore, &mut dir).await;
+                dir.async_drop().await.unwrap();
+            })
+        })
+        .await;
     }
 }
 
