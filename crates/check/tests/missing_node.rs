@@ -49,7 +49,7 @@ async fn file_with_missing_root_node() {
         removed_node,
         orphaned_nodes,
     } = fs_fixture
-        .remove_root_node_of_a_large_blob(some_blobs.large_file)
+        .remove_root_node_of_blob(some_blobs.large_file)
         .await;
 
     let expected_errors = iter::once(CorruptedError::BlobMissing {
@@ -206,7 +206,7 @@ async fn dir_with_missing_root_node() {
         removed_node,
         orphaned_nodes,
     } = fs_fixture
-        .remove_root_node_of_a_large_blob(some_blobs.large_dir)
+        .remove_root_node_of_blob(some_blobs.large_dir)
         .await;
 
     let expected_errors =
@@ -376,7 +376,7 @@ async fn symlink_with_missing_root_node() {
         removed_node,
         orphaned_nodes,
     } = fs_fixture
-        .remove_root_node_of_a_large_blob(some_blobs.large_symlink)
+        .remove_root_node_of_blob(some_blobs.large_symlink)
         .await;
 
     let expected_errors = iter::once(CorruptedError::BlobMissing {
@@ -535,9 +535,7 @@ async fn root_dir_with_missing_root_node() {
     let RemoveInnerNodeResult {
         removed_node,
         orphaned_nodes,
-    } = fs_fixture
-        .remove_root_node_of_a_large_blob(some_blobs.root)
-        .await;
+    } = fs_fixture.remove_root_node_of_blob(some_blobs.root).await;
 
     let expected_errors =
         [CorruptedError::BlobMissing {

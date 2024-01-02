@@ -70,7 +70,7 @@ where
         .unwrap();
 }
 
-pub async fn create_file<'a, 'b, 'c, B>(
+pub async fn create_empty_file<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
     parent: &'a mut DirBlob<'c, B>,
     name: &str,
@@ -144,7 +144,7 @@ pub async fn create_large_file<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
-    let mut file = create_file(fsblobstore, parent, name).await;
+    let mut file = create_empty_file(fsblobstore, parent, name).await;
     file.write(&data(LARGE_FILE_SIZE, 0), 0).await.unwrap();
     assert!(
         file.num_nodes().await.unwrap() > 1_000,
@@ -196,7 +196,7 @@ pub async fn add_entries_to_make_dir_large<B>(
             .async_drop()
             .await
             .unwrap();
-        create_file(fsblobstore, dir, &format!("file{i}")).await;
+        create_empty_file(fsblobstore, dir, &format!("file{i}")).await;
         create_symlink(
             fsblobstore,
             dir,
@@ -381,7 +381,10 @@ where
     child_of_root
 }
 
-pub async fn find_a_leaf_node<B>(nodestore: &DataNodeStore<B>, blob_id: &BlobId) -> DataLeafNode<B>
+pub async fn find_leaf_node_of_blob<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+) -> DataLeafNode<B>
 where
     B: BlockStore + Send + Sync,
 {
