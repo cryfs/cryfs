@@ -258,32 +258,62 @@ impl FilesystemFixture {
 
                 // for child1, find an inner node A. Remove an inner node below A, a leaf below A, and A itself.
                 {
-                    let inner_node = find_inner_node(nodestore, child1).await;
-                    let mut children = inner_node.children();
+                    let inner_node_a = find_inner_node(nodestore, child1).await;
+                    let mut children = inner_node_a.children();
                     let subchild1 = children.next().unwrap();
                     let subchild2 = children.next().unwrap();
                     std::mem::drop(children);
 
-                    let leaf = find_leaf_node(nodestore, subchild1, &mut rng).await;
-                    removed_nodes.push(*leaf.block_id());
-                    leaf.upcast().remove(nodestore).await.unwrap();
+                    let inner_below_a = find_inner_node(nodestore, subchild1).await;
+                    orphaned_nodes.extend(inner_below_a.children());
+                    removed_nodes.push(*inner_below_a.block_id());
+                    inner_below_a.upcast().remove(nodestore).await.unwrap();
 
-                    let inner = find_inner_node(nodestore, subchild2).await;
-                    orphaned_nodes.extend(inner.children());
-                    removed_nodes.push(*inner.block_id());
-                    inner.upcast().remove(nodestore).await.unwrap();
+                    let leaf_below_a = find_leaf_node(nodestore, subchild2, &mut rng).await;
+                    removed_nodes.push(*leaf_below_a.block_id());
+                    leaf_below_a.upcast().remove(nodestore).await.unwrap();
 
-                    orphaned_nodes.extend(inner_node.children());
-                    removed_nodes.push(*inner_node.block_id());
-                    inner_node.upcast().remove(nodestore).await.unwrap();
+                    orphaned_nodes.extend(inner_node_a.children());
+                    removed_nodes.push(*inner_node_a.block_id());
+                    inner_node_a.upcast().remove(nodestore).await.unwrap();
                 }
 
-                // for child2, find an inner node A and remove it.
+                // for child2, find an inner node A. Remove an inner node B below A. Also remove an inner node C below A and its direct child. Don't remove A.
                 {
-                    let inner_node = find_inner_node(nodestore, child2).await;
-                    orphaned_nodes.extend(inner_node.children());
-                    removed_nodes.push(*inner_node.block_id());
-                    inner_node.upcast().remove(nodestore).await.unwrap();
+                    let inner_node_a = find_inner_node(nodestore, child2).await;
+                    let mut children = inner_node_a.children();
+                    let subchild1 = children.next().unwrap();
+                    let subchild2 = children.next().unwrap();
+                    std::mem::drop(children);
+
+                    let inner_node_b = find_inner_node(nodestore, subchild1).await;
+                    orphaned_nodes.extend(inner_node_b.children());
+                    removed_nodes.push(*inner_node_b.block_id());
+                    inner_node_b.upcast().remove(nodestore).await.unwrap();
+
+                    let inner_node_c = find_inner_node(nodestore, subchild2).await;
+                    let mut children_of_c = inner_node_c.children();
+                    let child_of_c_id = children_of_c.next().unwrap();
+                    std::mem::drop(children_of_c);
+
+                    let child_of_c = nodestore
+                        .load(child_of_c_id)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .into_inner_node()
+                        .unwrap();
+                    orphaned_nodes.extend(child_of_c.children());
+                    // Don't add child_of_c to removed_nodes because its parent is removed too so it's not referenced&&missing
+                    child_of_c.upcast().remove(nodestore).await.unwrap();
+
+                    orphaned_nodes.extend(
+                        inner_node_c
+                            .children()
+                            .filter(|node_id| *node_id != child_of_c_id),
+                    );
+                    removed_nodes.push(*inner_node_c.block_id());
+                    inner_node_c.upcast().remove(nodestore).await.unwrap();
                 }
 
                 RemoveSomeNodesResult {
