@@ -89,24 +89,25 @@ impl ReferenceChecker {
     fn mark_as_seen(&mut self, node_id: BlockId) {
         if self.unseen_and_referenced.remove(&node_id).is_some() {
             // We already saw a reference to this node previously and now we saw the node itself. Everything is fine.
+            assert!(!self.seen_and_unreferenced.contains(&node_id), "Algorithm invariant violated: A node was in both `seen_and_unreferenced` and in `unseen_and_referenced`.");
             if !self.seen_and_referenced.insert(node_id) {
                 panic!("Algorithm invariant violated: A node was in both `unseen_and_referenced` and in `seen_and_referenced`.");
             }
         } else if self.seen_and_referenced.contains(&node_id) {
             // We've already seen the node before. We shouldn't see it again. This is a bug in the check tool.
-            panic!(
-                "Algorithm invariant violated: Node {:?} was seen twice",
-                node_id
-            );
+            panic!("Algorithm invariant violated: Node {node_id:?} was seen twice",);
         } else {
             // We haven't seen a reference to this node yet. Remember it.
-            self.seen_and_unreferenced.insert(node_id);
+            if !self.seen_and_unreferenced.insert(node_id) {
+                panic!("Algorithm invariant violated: node {node_id:?} was seen twice");
+            }
         }
     }
 
     fn mark_as_referenced(&mut self, node_id: BlockId, node_type: NodeType) {
         if self.seen_and_unreferenced.remove(&node_id) {
             // We already saw this node previously and now we saw the reference to it. Everything is fine.
+            assert!(!self.unseen_and_referenced.contains_key(&node_id), "Algorithm invariant violated: A node was in both `unseen_and_referenced` and in `seen_and_unreferenced`.");
             if !self.seen_and_referenced.insert(node_id) {
                 panic!("Algorithm invariant violated: A node was in both `seen_and_unreferenced` and in `seen_and_referenced`.");
             }
@@ -116,7 +117,15 @@ impl ReferenceChecker {
                 .push(CorruptedError::NodeReferencedMultipleTimes { node_id });
         } else {
             // We haven't seen this node yet. Remember it.
-            self.unseen_and_referenced.insert(node_id, node_type);
+            if self
+                .unseen_and_referenced
+                .insert(node_id, node_type)
+                .is_some()
+            {
+                // TODO Specifically test scenarios for NodeReferencedMultipleTimes, both this and the case above
+                self.errors
+                    .push(CorruptedError::NodeReferencedMultipleTimes { node_id });
+            }
         }
     }
 
