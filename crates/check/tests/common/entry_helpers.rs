@@ -37,7 +37,7 @@ where
         .unwrap()
 }
 
-pub async fn create_dir<'a, 'b, 'c, B>(
+pub async fn create_empty_dir<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
     parent: &'a mut DirBlob<'c, B>,
     name: &str,
@@ -179,7 +179,7 @@ pub async fn create_large_dir<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
-    let mut dir = create_dir(fsblobstore, parent, name).await;
+    let mut dir = create_empty_dir(fsblobstore, parent, name).await;
     add_entries_to_make_dir_large(fsblobstore, &mut dir).await;
     dir
 }
@@ -191,7 +191,7 @@ pub async fn add_entries_to_make_dir_large<B>(
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     for i in 0..125 {
-        create_dir(fsblobstore, dir, &format!("dir{i}"))
+        create_empty_dir(fsblobstore, dir, &format!("dir{i}"))
             .await
             .async_drop()
             .await
@@ -264,13 +264,13 @@ pub async fn create_some_blobs<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
 {
-    let mut dir1 = create_dir(fsblobstore, root, "somedir1").await;
-    let mut dir2 = create_dir(fsblobstore, &mut dir1, "somedir2").await;
-    let mut dir1_dir3 = create_dir(fsblobstore, &mut dir1, "somedir3").await;
-    let mut dir1_dir4 = create_dir(fsblobstore, &mut dir1, "somedir4").await;
-    let mut dir1_dir3_dir5 = create_dir(fsblobstore, &mut dir1_dir3, "somedir5").await;
-    let mut dir2_dir6 = create_dir(fsblobstore, &mut dir2, "somedir6").await;
-    let mut dir2_dir7 = create_dir(fsblobstore, &mut dir2, "somedir7").await;
+    let mut dir1 = create_empty_dir(fsblobstore, root, "somedir1").await;
+    let mut dir2 = create_empty_dir(fsblobstore, &mut dir1, "somedir2").await;
+    let mut dir1_dir3 = create_empty_dir(fsblobstore, &mut dir1, "somedir3").await;
+    let mut dir1_dir4 = create_empty_dir(fsblobstore, &mut dir1, "somedir4").await;
+    let mut dir1_dir3_dir5 = create_empty_dir(fsblobstore, &mut dir1_dir3, "somedir5").await;
+    let mut dir2_dir6 = create_empty_dir(fsblobstore, &mut dir2, "somedir6").await;
+    let mut dir2_dir7 = create_empty_dir(fsblobstore, &mut dir2, "somedir7").await;
 
     // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
     let mut large_dir =

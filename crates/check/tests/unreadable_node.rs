@@ -139,4 +139,188 @@ async fn file_with_corrupted_some_nodes() {
     assert_unordered_vec_eq(expected_errors, errors);
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_with_unreadable_single_node_without_children() {
+    let fs_fixture = FilesystemFixture::new().await;
+    fs_fixture.create_some_blobs().await;
+    let dir = fs_fixture.create_empty_dir().await;
+
+    let orphaned_descendant_blobs = fs_fixture.get_descendants_of_dir_blob(dir).await;
+    assert_eq!(
+        0,
+        orphaned_descendant_blobs.len(),
+        "test precondition violated"
+    );
+    let CorruptInnerNodeResult {
+        corrupted_node,
+        orphaned_nodes,
+    } = fs_fixture.corrupt_root_node_of_blob(dir).await;
+    assert_eq!(0, orphaned_nodes.len(), "test precondition violated");
+
+    let expected_errors = vec![
+        CorruptedError::BlobUnreadable {
+            blob_id: BlobId::from_root_block_id(corrupted_node),
+        },
+        CorruptedError::NodeUnreadable {
+            node_id: corrupted_node,
+        },
+    ];
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_with_unreadable_root_node() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let CorruptInnerNodeResult {
+        corrupted_node,
+        orphaned_nodes,
+    } = fs_fixture
+        .corrupt_root_node_of_blob(some_blobs.large_dir)
+        .await;
+
+    let expected_errors =
+        [
+            CorruptedError::BlobUnreadable {
+                blob_id: BlobId::from_root_block_id(corrupted_node),
+            },
+            CorruptedError::NodeUnreadable {
+                node_id: corrupted_node,
+            },
+        ]
+        .into_iter()
+        .chain(
+            orphaned_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_with_unreadable_inner_node() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let CorruptInnerNodeResult {
+        corrupted_node,
+        orphaned_nodes,
+    } = fs_fixture
+        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_dir)
+        .await;
+
+    let expected_errors =
+        [
+            CorruptedError::NodeUnreadable {
+                node_id: corrupted_node,
+            },
+            CorruptedError::BlobUnreadable {
+                blob_id: some_blobs.large_dir,
+            },
+        ]
+        .into_iter()
+        .chain(
+            orphaned_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_with_unreadable_leaf_node() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let removed_node = fs_fixture.corrupt_a_leaf_node(some_blobs.large_dir).await;
+
+    let expected_errors =
+        [
+            CorruptedError::NodeUnreadable {
+                node_id: removed_node,
+            },
+            CorruptedError::BlobUnreadable {
+                blob_id: some_blobs.large_dir,
+            },
+        ]
+        .into_iter()
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_with_unreadable_some_nodes() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let CorruptSomeNodesResult {
+        corrupted_nodes,
+        orphaned_nodes,
+    } = fs_fixture
+        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_dir)
+        .await;
+
+    let expected_errors =
+        iter::once(CorruptedError::BlobUnreadable {
+            blob_id: some_blobs.large_dir,
+        })
+        .chain(
+            corrupted_nodes
+                .into_iter()
+                .map(|node_id| CorruptedError::NodeUnreadable { node_id }),
+        )
+        .chain(
+            orphaned_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
+}
+
 // TODO Copy over (and adapt) other test from `missing_node`

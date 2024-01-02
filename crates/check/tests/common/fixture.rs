@@ -192,6 +192,24 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn create_empty_dir(&self) -> BlobId {
+        let root_id = self.root_blob_id;
+        self.update_fsblobstore(move |blobstore| {
+            Box::pin(async move {
+                let mut root = FsBlob::into_dir(blobstore.load(&root_id).await.unwrap().unwrap())
+                    .await
+                    .unwrap();
+                let mut created_dir =
+                    super::entry_helpers::create_empty_dir(blobstore, &mut root, "dir_name").await;
+                let result = created_dir.blob_id();
+                created_dir.async_drop().await.unwrap();
+                root.async_drop().await.unwrap();
+                result
+            })
+        })
+        .await
+    }
+
     pub async fn get_children_of_dir_blob(&self, dir_blob: BlobId) -> Vec<BlobId> {
         self.update_fsblobstore(|fsblobstore| {
             Box::pin(async move {
