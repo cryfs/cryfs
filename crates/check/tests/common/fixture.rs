@@ -381,6 +381,27 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn corrupt_an_inner_node_of_a_small_blob(
+        &self,
+        blob_id: BlobId,
+    ) -> CorruptInnerNodeResult {
+        let result = self
+            .update_nodestore(|nodestore| {
+                Box::pin(async move {
+                    let inner_node = find_an_inner_node_of_a_small_blob(nodestore, &blob_id).await;
+                    let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
+                    let inner_node_id = *inner_node.block_id();
+                    CorruptInnerNodeResult {
+                        corrupted_node: inner_node_id,
+                        orphaned_nodes,
+                    }
+                })
+            })
+            .await;
+        self.corrupt_block(result.corrupted_node).await;
+        result
+    }
+
     pub async fn remove_some_nodes_of_a_large_blob(
         &self,
         blob_id: BlobId,
