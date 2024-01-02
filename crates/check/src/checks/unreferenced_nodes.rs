@@ -121,7 +121,7 @@ impl ReferenceChecker {
     }
 
     // Returns a list of errors and a list of nodes that were processed without errors
-    pub fn finalize(self) -> (Vec<CorruptedError>, HashSet<BlockId>) {
+    pub fn finalize(self) -> Vec<CorruptedError> {
         let mut errors = self.errors;
         errors.extend(
             self.seen_and_unreferenced
@@ -138,7 +138,7 @@ impl ReferenceChecker {
                     NodeType::NonrootNode => CorruptedError::NodeMissing { node_id },
                 }),
         );
-        (errors, self.seen_and_referenced)
+        errors
     }
 }
 
@@ -198,16 +198,8 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     }
 
     fn finalize(self) -> Vec<CorruptedError> {
-        let (mut errors, unreachable_nodes_without_errors) =
-            self.unreachable_nodes_checker.finalize();
-        for node_id in unreachable_nodes_without_errors {
-            // Nodes that were seen and referenced but unreachable mean there is a cycle in this unreachable subtree.
-            // TODO This is not true since these can also just be inner nodes that are referenced by other unreachable nodes. What should we do here then?
-            // errors.push(CorruptedError::UnreachableSubtreeWithCycle { node_id });
-        }
-
-        let (reachable_nodes_errors, _reachable_nodes_processed) =
-            self.reachable_nodes_checker.finalize();
+        let mut errors = self.unreachable_nodes_checker.finalize();
+        let reachable_nodes_errors = self.reachable_nodes_checker.finalize();
         for error in reachable_nodes_errors {
             match error {
                 CorruptedError::NodeUnreferenced { .. } => {
