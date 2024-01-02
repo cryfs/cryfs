@@ -1,7 +1,7 @@
 use std::iter;
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
-use cryfs_blockstore::DynBlockStore;
+use cryfs_blockstore::{DynBlockStore, RemoveResult};
 use cryfs_check::CorruptedError;
 use cryfs_cryfs::filesystem::fsblobstore::FsBlobStore;
 
@@ -136,7 +136,7 @@ async fn file_with_missing_some_nodes() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn dir_entirely_missing() {
+async fn dir_entirely_missing_without_children() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
@@ -158,6 +158,42 @@ async fn dir_entirely_missing() {
         vec![CorruptedError::BlobMissing { blob_id: blobid1() }],
         errors,
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dir_entirely_missing_with_children() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    fs_fixture
+        .update_fsblobstore(|fsblobstore| {
+            Box::pin(async move {
+                let remove_result = fsblobstore
+                    .remove_by_id(&some_blobs.large_dir)
+                    .await
+                    .unwrap();
+                assert_eq!(RemoveResult::SuccessfullyRemoved, remove_result);
+            })
+        })
+        .await;
+
+    let expected_errors =
+        [CorruptedError::BlobMissing {
+            blob_id: some_blobs.large_dir,
+        }]
+        .into_iter()
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -431,7 +467,12 @@ async fn symlink_with_missing_some_nodes() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn root_dir_entirely_missing() {
+async fn root_dir_entirely_missing_without_children() {
+    // TODO
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn root_dir_entirely_missing_with_children() {
     // TODO
 }
 
