@@ -9,7 +9,7 @@ use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
 use common::entry_helpers::{add_dir_entry, add_file_entry, add_symlink_entry, load_dir_blob};
-use common::fixture::{FilesystemFixture, RemoveInnerNodeResult};
+use common::fixture::{FilesystemFixture, RemoveInnerNodeResult, RemoveSomeNodesResult};
 
 fn blobid1() -> BlobId {
     BlobId::from_hex("ad977bad7882ede765bc3ef88f95c040").unwrap()
@@ -47,7 +47,7 @@ async fn file_with_missing_root_node() {
 
     let RemoveInnerNodeResult {
         removed_node,
-        orphaned_children_nodes,
+        orphaned_nodes,
     } = fs_fixture
         .remove_root_node_of_a_large_blob(some_blobs.large_file)
         .await;
@@ -56,7 +56,7 @@ async fn file_with_missing_root_node() {
         blob_id: BlobId::from_root_block_id(removed_node),
     })
     .chain(
-        orphaned_children_nodes
+        orphaned_nodes
             .into_iter()
             .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
     )
@@ -73,7 +73,7 @@ async fn file_with_missing_inner_node() {
 
     let RemoveInnerNodeResult {
         removed_node,
-        orphaned_children_nodes,
+        orphaned_nodes,
     } = fs_fixture
         .remove_an_inner_node_of_a_large_blob(some_blobs.large_file)
         .await;
@@ -82,7 +82,7 @@ async fn file_with_missing_inner_node() {
         node_id: removed_node,
     })
     .chain(
-        orphaned_children_nodes
+        orphaned_nodes
             .into_iter()
             .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
     )
@@ -110,13 +110,29 @@ async fn file_with_missing_leaf_node() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn file_with_missing_inner_node_and_own_leaf_node() {
-    // TODO
-}
+async fn file_with_missing_some_nodes() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
 
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_missing_inner_node_and_foreign_leaf_node() {
-    // TODO
+    let RemoveSomeNodesResult {
+        removed_nodes,
+        orphaned_nodes,
+    } = fs_fixture
+        .remove_some_nodes_of_a_large_blob(some_blobs.large_file)
+        .await;
+
+    let expected_errors = removed_nodes
+        .into_iter()
+        .map(|node_id| CorruptedError::NodeMissing { node_id })
+        .chain(
+            orphaned_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -154,7 +170,7 @@ async fn dir_with_missing_root_node() {
         .await;
     let RemoveInnerNodeResult {
         removed_node,
-        orphaned_children_nodes,
+        orphaned_nodes,
     } = fs_fixture
         .remove_root_node_of_a_large_blob(some_blobs.large_dir)
         .await;
@@ -165,7 +181,7 @@ async fn dir_with_missing_root_node() {
         }]
         .into_iter()
         .chain(
-            orphaned_children_nodes
+            orphaned_nodes
                 .into_iter()
                 .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
         )
@@ -190,7 +206,7 @@ async fn dir_with_missing_inner_node() {
         .await;
     let RemoveInnerNodeResult {
         removed_node,
-        orphaned_children_nodes,
+        orphaned_nodes,
     } = fs_fixture
         .remove_an_inner_node_of_a_large_blob(some_blobs.large_dir)
         .await;
@@ -206,7 +222,7 @@ async fn dir_with_missing_inner_node() {
         ]
         .into_iter()
         .chain(
-            orphaned_children_nodes
+            orphaned_nodes
                 .into_iter()
                 .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
         )
@@ -255,13 +271,43 @@ async fn dir_with_missing_leaf_node() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn dir_with_missing_inner_node_and_own_leaf_node() {
-    // TODO
-}
+async fn dir_with_missing_some_nodes() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
 
-#[tokio::test(flavor = "multi_thread")]
-async fn dir_with_missing_inner_node_and_foreign_leaf_node() {
-    // TODO
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .await;
+    let RemoveSomeNodesResult {
+        removed_nodes,
+        orphaned_nodes,
+    } = fs_fixture
+        .remove_some_nodes_of_a_large_blob(some_blobs.large_dir)
+        .await;
+
+    let expected_errors =
+        iter::once(CorruptedError::BlobUnreadable {
+            blob_id: some_blobs.large_dir,
+        })
+        .chain(
+            removed_nodes
+                .into_iter()
+                .map(|node_id| CorruptedError::NodeMissing { node_id }),
+        )
+        .chain(
+            orphaned_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
+            CorruptedError::NodeUnreferenced {
+                node_id: *child.to_root_block_id(),
+            }
+        }))
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -296,7 +342,7 @@ async fn symlink_with_missing_root_node() {
 
     let RemoveInnerNodeResult {
         removed_node,
-        orphaned_children_nodes,
+        orphaned_nodes,
     } = fs_fixture
         .remove_root_node_of_a_large_blob(some_blobs.large_symlink)
         .await;
@@ -305,7 +351,7 @@ async fn symlink_with_missing_root_node() {
         blob_id: BlobId::from_root_block_id(removed_node),
     })
     .chain(
-        orphaned_children_nodes
+        orphaned_nodes
             .into_iter()
             .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
     )
@@ -322,7 +368,7 @@ async fn symlink_with_missing_inner_node() {
 
     let RemoveInnerNodeResult {
         removed_node,
-        orphaned_children_nodes,
+        orphaned_nodes,
     } = fs_fixture
         .remove_an_inner_node_of_a_large_blob(some_blobs.large_symlink)
         .await;
@@ -331,7 +377,7 @@ async fn symlink_with_missing_inner_node() {
         node_id: removed_node,
     })
     .chain(
-        orphaned_children_nodes
+        orphaned_nodes
             .into_iter()
             .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
     )
@@ -359,13 +405,29 @@ async fn symlink_with_missing_leaf_node() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn symlink_with_missing_inner_node_and_own_leaf_node() {
-    // TODO
-}
+async fn symlink_with_missing_some_nodes() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
 
-#[tokio::test(flavor = "multi_thread")]
-async fn symlink_with_missing_inner_node_and_foreign_leaf_node() {
-    // TODO
+    let RemoveSomeNodesResult {
+        removed_nodes,
+        orphaned_nodes,
+    } = fs_fixture
+        .remove_some_nodes_of_a_large_blob(some_blobs.large_symlink)
+        .await;
+
+    let expected_errors = removed_nodes
+        .into_iter()
+        .map(|node_id| CorruptedError::NodeMissing { node_id })
+        .chain(
+            orphaned_nodes
+                .into_iter()
+                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
+        )
+        .collect();
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -389,11 +451,6 @@ async fn root_dir_with_missing_leaf_node() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn root_dir_with_missing_inner_node_and_own_leaf_node() {
-    // TODO
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn root_dir_with_missing_inner_node_and_foreign_leaf_node() {
+async fn root_dir_with_missing_some_nodes() {
     // TODO
 }

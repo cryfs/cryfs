@@ -4,12 +4,12 @@ use futures::{
     stream::{self, BoxStream, StreamExt},
 };
 use itertools::Itertools;
-use rand::{rngs::SmallRng, seq::SliceRandom, SeedableRng};
+use rand::{rngs::SmallRng, seq::IteratorRandom, SeedableRng};
 use std::fmt::Debug;
 use std::time::SystemTime;
 
 use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore};
-use cryfs_blockstore::BlockStore;
+use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
@@ -181,7 +181,7 @@ where
 {
     let mut dir = create_dir(fsblobstore, parent, name).await;
 
-    for i in 0..100 {
+    for i in 0..125 {
         create_dir(fsblobstore, &mut dir, &format!("dir{i}"))
             .await
             .async_drop()
@@ -308,15 +308,22 @@ pub async fn find_an_inner_node_of_a_large_blob<B>(
 where
     B: BlockStore + Send + Sync,
 {
-    let blob_root_node = nodestore
-        .load(*blob_id.to_root_block_id())
+    find_inner_node(nodestore, *blob_id.to_root_block_id()).await
+}
+
+pub async fn find_inner_node<B>(nodestore: &DataNodeStore<B>, root: BlockId) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    let root_node = nodestore
+        .load(root)
         .await
         .unwrap()
         .unwrap()
         .into_inner_node()
         .expect("test blob too small to have more than one node. We need to change the test and increase its size");
 
-    let child_of_root_id = blob_root_node.children().skip(1).next().expect("test blob too small to have more than one child of root. We need to change the test and increase its size");
+    let child_of_root_id = root_node.children().skip(1).next().expect("test blob too small to have more than one child of root. We need to change the test and increase its size");
     let child_of_root = nodestore.load(child_of_root_id).await.unwrap().unwrap().into_inner_node().expect(
         "test blob too small to have more than two levels. We need to change the test and increase its size"
     );
@@ -338,46 +345,41 @@ pub async fn find_a_leaf_node_of_a_large_blob<B>(
 where
     B: BlockStore + Send + Sync,
 {
+    let mut rng = SmallRng::seed_from_u64(0);
+    find_leaf_node(nodestore, *blob_id.to_root_block_id(), &mut rng).await
+}
+
+pub async fn find_leaf_node<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    rng: &mut SmallRng,
+) -> DataLeafNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
     let blob_root_node = nodestore
-        .load(*blob_id.to_root_block_id())
+        .load(root)
         .await
         .unwrap()
         .unwrap()
         .into_inner_node()
         .expect("test blob too small to have more than one node. We need to change the test and increase its size");
 
-    let rng = SmallRng::seed_from_u64(0);
     _find_leaf_node(nodestore, blob_root_node, rng).await
-
-    // let child_of_root_id = blob_root_node.children().skip(1).next().expect("test blob too small to have more than one child of root. We need to change the test and increase its size");
-    // let child_of_root = nodestore.load(child_of_root_id).await.unwrap().unwrap().into_inner_node().expect(
-    //     "test blob too small to have more than two levels. We need to change the test and increase its size"
-    // );
-    // let child_of_child_of_root_id = child_of_root.children().next().expect("test blob too small to have more than one child of child of root. We need to change the test and increase its size");
-    // let child_of_child_of_root = nodestore
-    //     .load(child_of_child_of_root_id)
-    //     .await
-    //     .unwrap()
-    //     .unwrap()
-    //     .into_inner_node()
-    //     .expect("test blob too small to have more than three levels. We need to change the test and increase its size");
-    // child_of_child_of_root
 }
 
 #[async_recursion]
-async fn _find_leaf_node<B>(
+pub async fn _find_leaf_node<B>(
     nodestore: &DataNodeStore<B>,
     root: DataInnerNode<B>,
-    mut rng: SmallRng,
+    rng: &mut SmallRng,
 ) -> DataLeafNode<B>
 where
     B: BlockStore + Send + Sync,
 {
-    let mut children = root.children().collect::<Vec<_>>();
-    let child = children
-        .choose(&mut rng)
-        .expect("Inner node has no children");
-    let child = nodestore.load(*child).await.unwrap().unwrap();
+    let mut children = root.children();
+    let child = children.choose(rng).expect("Inner node has no children");
+    let child = nodestore.load(child).await.unwrap().unwrap();
     match child {
         DataNode::Inner(inner) => _find_leaf_node(nodestore, inner, rng).await,
         DataNode::Leaf(leaf) => leaf,
