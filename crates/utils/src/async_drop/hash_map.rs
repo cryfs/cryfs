@@ -33,7 +33,7 @@ where
     }
 
     pub fn try_insert(&mut self, key: K, value: AsyncDropGuard<V>) -> Result<()> {
-        self.map.try_insert(key, value)
+        HashMapExt::try_insert(&mut self.map, key, value)
     }
 
     pub fn remove(&mut self, key: &K) -> Option<AsyncDropGuard<V>> {
