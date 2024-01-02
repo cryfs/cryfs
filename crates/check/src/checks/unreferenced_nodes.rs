@@ -59,6 +59,12 @@ impl ReferenceChecker {
         }
     }
 
+    pub fn process_unreadable_node(&mut self, node_id: BlockId) {
+        self.mark_as_seen(node_id);
+
+        self.errors.push(CorruptedError::NodeUnreadable { node_id });
+    }
+
     // TODO `process_blob` is only called correctly when the blob is reachable. For unreachable blob, it isn't.
     //      This means we do report each unreachable blob in the tree as an error, not just the root.
     pub fn process_blob(
@@ -167,11 +173,21 @@ impl FilesystemCheck for CheckUnreferencedNodes {
         self.reachable_nodes_checker.process_node(node);
     }
 
+    fn process_reachable_unreadable_node(&mut self, node_id: BlockId) {
+        self.reachable_nodes_checker
+            .process_unreadable_node(node_id);
+    }
+
     fn process_unreachable_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) {
         self.unreachable_nodes_checker.process_node(node);
+    }
+
+    fn process_unreachable_unreadable_node(&mut self, node_id: BlockId) {
+        self.unreachable_nodes_checker
+            .process_unreadable_node(node_id);
     }
 
     fn process_reachable_blob(
@@ -199,12 +215,10 @@ impl FilesystemCheck for CheckUnreferencedNodes {
                     // TODO bail instead of panic
                     panic!("Algorithm invariant violated (NodeUnreferenced): {error:?}");
                 }
-                CorruptedError::NodeMissing { .. } | CorruptedError::BlobMissing { .. } => {
-                    // Our check wasn't called for a node or blob that should have been reachable. This means the cryfs-check runner failed
-                    // to load the node or it doesn't exist. In both cases, the runner will already report the error, we don't need to report it from here.
-                    // Also, we don't actually know here whether the node didn't exist or wasn't readable so we wouldn't know which error to report.
-                }
-                CorruptedError::NodeReferencedMultipleTimes { .. } => {
+                CorruptedError::NodeReferencedMultipleTimes { .. }
+                | CorruptedError::NodeUnreadable { .. }
+                | CorruptedError::NodeMissing { .. }
+                | CorruptedError::BlobMissing { .. } => {
                     errors.push(error);
                 }
                 _ => {

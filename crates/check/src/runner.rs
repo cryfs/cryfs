@@ -140,37 +140,29 @@ where
     // TODO What's a good concurrency value here?
     const MAX_CONCURRENCY: usize = 100;
 
-    let unreachable_nodes = stream::iter(unreachable_nodes.iter());
-    let mut maybe_errors = unreachable_nodes.map(move |&node_id| {
-        let pb = pb.clone();
-        async move {
-            let loaded = nodestore.load(node_id).await;
-            let result = match loaded {
-                Ok(Some(node)) => {
-                    checks.process_unreachable_node(&node);
-                    None // no error
-                }
-                Ok(None) => {
-                    bail!("Node {node_id:?} previously present but then vanished during our checks. Please don't modify the file system while checks are running.");
-                }
-                Err(error) => {
-                    // return the error
-                    Some(CorruptedError::NodeUnreadable {
-                        node_id,
-                        // error,
-                    })
-                }
-            };
-            pb.inc(1);
-            Ok(result)
-        }
-    })
-    .buffer_unordered(MAX_CONCURRENCY);
-    while let Some(maybe_error) = maybe_errors.next().await {
-        if let Some(error) = maybe_error? {
-            checks.add_error(error);
-        }
-    }
+    stream::iter(unreachable_nodes.iter())
+        .map(move |&node_id| {
+            let pb = pb.clone();
+            async move {
+                let loaded = nodestore.load(node_id).await;
+                match loaded {
+                    Ok(Some(node)) => {
+                        checks.process_unreachable_node(&node);
+                    }
+                    Ok(None) => {
+                        bail!("Node {node_id:?} previously present but then vanished during our checks. Please don't modify the file system while checks are running.");
+                    }
+                    Err(error) => {
+                        checks.process_unreachable_unreadable_node(node_id);
+                    }
+                };
+                pb.inc(1);
+                Ok(())
+            }
+        })
+        .buffer_unordered(MAX_CONCURRENCY)
+        .try_collect::<Vec<()>>()
+        .await?;
     Ok(())
 }
 
@@ -349,7 +341,7 @@ where
 async fn check_all_nodes_of_reachable_blob<B>(
     treestore: &DataTreeStore<B>,
     root_node_id: BlockId,
-    allowed_nodes: &HashSet<BlockId>,
+    expected_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
     // TODO Return stream? But measure that it's not slower
@@ -364,11 +356,12 @@ where
     while let Some(node) = all_nodes_of_blob.next().await {
         let node_id = match node {
             Ok(node) => {
-                ensure!(allowed_nodes.contains(node.block_id()), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.", node_id=node.block_id());
+                ensure!(expected_nodes.contains(node.block_id()), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.", node_id=node.block_id());
                 checks.process_reachable_node(&node);
                 *node.block_id()
             }
             Err(LoadNodeError::NodeNotFound { node_id }) => {
+                ensure!(!expected_nodes.contains(&node_id), "Node {node_id:?} was present before but is now missing. Please don't modify the file system while checks are running.");
                 if node_id == root_node_id {
                     checks.add_error(CorruptedError::BlobMissing {
                         blob_id: BlobId::from_root_block_id(node_id),
@@ -379,10 +372,8 @@ where
                 node_id
             }
             Err(LoadNodeError::NodeLoadError { node_id, error }) => {
-                checks.add_error(CorruptedError::NodeUnreadable {
-                    node_id,
-                    // error,
-                });
+                ensure!(expected_nodes.contains(&node_id), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
+                checks.process_reachable_unreadable_node(node_id);
                 node_id
             }
         };
