@@ -20,7 +20,16 @@ pub enum CorruptedError {
     // #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]
     // UnreachableSubtreeWithCycle { node_id: BlockId },
     #[error("Node {node_id:?} is referenced multiple times")]
-    NodeReferencedMultipleTimes { node_id: BlockId },
+    NodeReferencedMultipleTimes {
+        node_id: BlockId,
+        // TODO parents: HashSet<BlockId>,
+    },
+
+    #[error("Blob {blob_id:?} is referenced multiple times")]
+    BlobReferencedMultipleTimes {
+        blob_id: BlobId,
+        // TODO parents: HashSet<BlobId>,
+    },
 
     // #[error("Cyclic self-reference: Node {node_id:?} references itself")]
     // NodeHasCyclicSelfReference { node_id: BlockId },
@@ -35,4 +44,11 @@ pub enum CorruptedError {
 
     #[error("Blob {blob_id:?} is referenced but does not exist")]
     BlobMissing { blob_id: BlobId },
+
+    #[error("Blob {blob_id:?} is referenced by parent {referenced_by_parent:?} but has parent pointer {parent_pointer:?}")]
+    WrongParentPointer {
+        blob_id: BlobId,
+        referenced_by_parent: BlobId,
+        parent_pointer: BlobId,
+    },
 }

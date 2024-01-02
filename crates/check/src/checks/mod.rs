@@ -66,9 +66,13 @@ use unreferenced_nodes::CheckUnreferencedNodes;
 mod nodes_readable;
 use nodes_readable::CheckNodesReadable;
 
+mod parent_pointers;
+use parent_pointers::CheckParentPointers;
+
 pub struct AllChecks {
     check_unreachable_nodes: Mutex<CheckUnreferencedNodes>,
     check_nodes_readable: Mutex<CheckNodesReadable>,
+    check_parent_pointers: Mutex<CheckParentPointers>,
     additional_errors: Mutex<Vec<CorruptedError>>,
 }
 
@@ -77,6 +81,7 @@ impl AllChecks {
         Self {
             check_unreachable_nodes: Mutex::new(CheckUnreferencedNodes::new(root_blob_id)),
             check_nodes_readable: Mutex::new(CheckNodesReadable::new()),
+            check_parent_pointers: Mutex::new(CheckParentPointers::new()),
             additional_errors: Mutex::new(Vec::new()),
         }
     }
@@ -85,11 +90,16 @@ impl AllChecks {
         &self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) {
+        // TODO Here and in other methods, avoid having to list all the members and risking to forget one. Maybe a macro?
         self.check_unreachable_nodes
             .lock()
             .unwrap()
             .process_reachable_blob(blob);
         self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_reachable_blob(blob);
+        self.check_parent_pointers
             .lock()
             .unwrap()
             .process_reachable_blob(blob);
@@ -107,6 +117,10 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_reachable_node(node);
+        self.check_parent_pointers
+            .lock()
+            .unwrap()
+            .process_reachable_node(node);
     }
 
     pub fn process_reachable_unreadable_node(&self, node_id: BlockId) {
@@ -115,6 +129,10 @@ impl AllChecks {
             .unwrap()
             .process_reachable_unreadable_node(node_id);
         self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_reachable_unreadable_node(node_id);
+        self.check_parent_pointers
             .lock()
             .unwrap()
             .process_reachable_unreadable_node(node_id);
@@ -132,6 +150,10 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_unreachable_node(node);
+        self.check_parent_pointers
+            .lock()
+            .unwrap()
+            .process_unreachable_node(node);
     }
 
     pub fn process_unreachable_unreadable_node(&self, node_id: BlockId) {
@@ -140,6 +162,10 @@ impl AllChecks {
             .unwrap()
             .process_unreachable_unreadable_node(node_id);
         self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_unreachable_unreadable_node(node_id);
+        self.check_parent_pointers
             .lock()
             .unwrap()
             .process_unreachable_unreadable_node(node_id);
@@ -159,6 +185,13 @@ impl AllChecks {
             )
             .chain(
                 self.check_nodes_readable
+                    .into_inner()
+                    .unwrap()
+                    .finalize()
+                    .into_iter(),
+            )
+            .chain(
+                self.check_parent_pointers
                     .into_inner()
                     .unwrap()
                     .finalize()

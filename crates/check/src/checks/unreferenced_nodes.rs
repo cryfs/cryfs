@@ -15,6 +15,7 @@ enum NodeType {
 /// Check that
 /// - each existing node is referenced
 /// - each referenced node exists (i.e. no dangling node exists and no node is missing)
+/// - no node is referenced multiple times
 ///
 /// Algorithm: While passing through each node, we mark the current node as **seen** and all referenced nodes as **referenced**.
 /// We make sure that each node id is both **seen** and **referenced** and that there are no nodes that are only one of the two.
