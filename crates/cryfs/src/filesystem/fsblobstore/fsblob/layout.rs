@@ -21,6 +21,7 @@ impl LayoutAs<u8> for BlobType {
             MAGIC_NUMBER_DIR => BlobType::Dir,
             MAGIC_NUMBER_FILE => BlobType::File,
             MAGIC_NUMBER_SYMLINK => BlobType::Symlink,
+            // TODO bail! instead of panic!
             magic_number => panic!("Invalid FsBlob magic number {magic_number}"),
         }
     }
