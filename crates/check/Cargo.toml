@@ -36,6 +36,7 @@ tempdir.workspace = true
 cryfs-cryfs = {path = "../cryfs", features=["testutils"]}
 cryfs-blockstore = {path = "../blockstore", features=["testutils"]}
 itertools.workspace = true
+rand.workspace = true
 
 [features]
 default = ["check_for_updates"]

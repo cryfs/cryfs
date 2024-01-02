@@ -4,10 +4,11 @@ use futures::{
     stream::{self, BoxStream, StreamExt},
 };
 use itertools::Itertools;
+use rand::{rngs::SmallRng, seq::SliceRandom, SeedableRng};
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataNodeStore};
+use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore};
 use cryfs_blockstore::BlockStore;
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
@@ -328,6 +329,59 @@ where
         .into_inner_node()
         .expect("test blob too small to have more than three levels. We need to change the test and increase its size");
     child_of_child_of_root
+}
+
+pub async fn find_a_leaf_node_of_a_large_blob<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+) -> DataLeafNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    let blob_root_node = nodestore
+        .load(*blob_id.to_root_block_id())
+        .await
+        .unwrap()
+        .unwrap()
+        .into_inner_node()
+        .expect("test blob too small to have more than one node. We need to change the test and increase its size");
+
+    let rng = SmallRng::seed_from_u64(0);
+    _find_leaf_node(nodestore, blob_root_node, rng).await
+
+    // let child_of_root_id = blob_root_node.children().skip(1).next().expect("test blob too small to have more than one child of root. We need to change the test and increase its size");
+    // let child_of_root = nodestore.load(child_of_root_id).await.unwrap().unwrap().into_inner_node().expect(
+    //     "test blob too small to have more than two levels. We need to change the test and increase its size"
+    // );
+    // let child_of_child_of_root_id = child_of_root.children().next().expect("test blob too small to have more than one child of child of root. We need to change the test and increase its size");
+    // let child_of_child_of_root = nodestore
+    //     .load(child_of_child_of_root_id)
+    //     .await
+    //     .unwrap()
+    //     .unwrap()
+    //     .into_inner_node()
+    //     .expect("test blob too small to have more than three levels. We need to change the test and increase its size");
+    // child_of_child_of_root
+}
+
+#[async_recursion]
+async fn _find_leaf_node<B>(
+    nodestore: &DataNodeStore<B>,
+    root: DataInnerNode<B>,
+    mut rng: SmallRng,
+) -> DataLeafNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    let mut children = root.children().collect::<Vec<_>>();
+    let child = children
+        .choose(&mut rng)
+        .expect("Inner node has no children");
+    let child = nodestore.load(*child).await.unwrap().unwrap();
+    match child {
+        DataNode::Inner(inner) => _find_leaf_node(nodestore, inner, rng).await,
+        DataNode::Leaf(leaf) => leaf,
+    }
 }
 
 pub fn get_descendants_of_dir_blob<'a, 'r, B>(

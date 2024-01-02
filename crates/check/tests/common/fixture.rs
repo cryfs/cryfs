@@ -21,7 +21,9 @@ use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
-use super::entry_helpers::{self, find_an_inner_node_of_a_large_blob, SomeBlobs};
+use super::entry_helpers::{
+    self, find_a_leaf_node_of_a_large_blob, find_an_inner_node_of_a_large_blob, SomeBlobs,
+};
 
 const PASSWORD: &str = "mypassword";
 
@@ -195,6 +197,29 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn remove_root_node_of_a_large_blob(&self, blob_id: BlobId) -> RemoveInnerNodeResult {
+        self.update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let blob_root_node = nodestore
+                    .load(*blob_id.to_root_block_id())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .into_inner_node()
+                    .expect("test blob too small to have more than one node. We need to change the test and increase its size");
+                let orphaned_children_nodes = blob_root_node.children().collect::<Vec<_>>();
+                let inner_node_id = *blob_root_node.block_id();
+                assert_eq!(blob_id.to_root_block_id(), blob_root_node.block_id());
+                blob_root_node.upcast().remove(nodestore).await.unwrap();
+                RemoveInnerNodeResult {
+                    removed_node: inner_node_id,
+                    orphaned_children_nodes,
+                }
+            })
+        })
+        .await
+    }
+
     pub async fn remove_an_inner_node_of_a_large_blob(
         &self,
         blob_id: BlobId,
@@ -214,24 +239,13 @@ impl FilesystemFixture {
         .await
     }
 
-    pub async fn remove_root_node_of_a_large_blob(&self, blob_id: BlobId) -> RemoveInnerNodeResult {
+    pub async fn remove_a_leaf_node_of_a_large_blob(&self, blob_id: BlobId) -> BlockId {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
-                let blob_root_node = nodestore
-                    .load(*blob_id.to_root_block_id())
-                    .await
-                    .unwrap()
-                    .unwrap()
-                    .into_inner_node()
-                    .expect("test blob too small to have more than one node. We need to change the test and increase its size");
-                let orphaned_children_nodes = blob_root_node.children().collect::<Vec<_>>();
-                let inner_node_id = *blob_root_node.block_id();
-                assert_eq!(blob_id.to_root_block_id(), blob_root_node.block_id());
-                blob_root_node.upcast().remove(nodestore).await.unwrap();
-                RemoveInnerNodeResult {
-                    removed_node: inner_node_id,
-                    orphaned_children_nodes,
-                }
+                let leaf_node = find_a_leaf_node_of_a_large_blob(nodestore, &blob_id).await;
+                let leaf_node_id = *leaf_node.block_id();
+                leaf_node.upcast().remove(nodestore).await.unwrap();
+                leaf_node_id
             })
         })
         .await
