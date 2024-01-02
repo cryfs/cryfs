@@ -12,7 +12,9 @@ enum NodeType {
     NonrootNode,
 }
 
-/// Check that each existing node is referenced and each referenced node exists (i.e. no dangling node exists and no node is missing)
+/// Check that
+/// - each existing node is referenced
+/// - each referenced node exists (i.e. no dangling node exists and no node is missing)
 ///
 /// Algorithm: While passing through each node, we mark the current node as **seen** and all referenced nodes as **referenced**.
 /// We make sure that each node id is both **seen** and **referenced** and that there are no nodes that are only one of the two.
@@ -61,8 +63,6 @@ impl ReferenceChecker {
 
     pub fn process_unreadable_node(&mut self, node_id: BlockId) {
         self.mark_as_seen(node_id);
-
-        self.errors.push(CorruptedError::NodeUnreadable { node_id });
     }
 
     // TODO `process_blob` is only called correctly when the blob is reachable. For unreachable blob, it isn't.
@@ -142,10 +142,12 @@ impl ReferenceChecker {
     }
 }
 
-/// Check that each existing node is referenced and each referenced node exists (i.e. no dangling node exists and no node is missing)
+/// Check that
+/// - each existing node is referenced
+/// - each referenced node exists (i.e. no dangling node exists and no node is missing)
 ///
-/// For unreachable nodes, this can find filesystem errors. We still run the algorithm of reference checks so that only the root of any
-/// dangling tree is reported and not all the nodes below it.
+/// For unreachable nodes, this can find filesystem errors. We run [ReferenceChecker] on these nodes so that only the root of any
+/// dangling blob is reported and not all the nodes below it.
 ///
 /// For reachable nodes, this is used to assert that cryfs-check works correctly and doesn't miss any nodes.
 pub struct CheckUnreferencedNodes {

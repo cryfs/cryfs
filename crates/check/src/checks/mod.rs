@@ -10,9 +10,6 @@ use super::error::CorruptedError;
 // TODO Check
 //  ( some of these should probably be added as checks into general loading code so they run in regular cryfs as well and then cryfs-check just catches the loading error )
 //  - root is a directory
-//  - all referenced blocks are present
-//  - all present blocks are referenced
-//  - all blocks are readable
 //  - trees are balanced left-max-data trees
 //  - depth of nodes is correct
 //  - leaves not empty
@@ -66,8 +63,12 @@ pub trait FilesystemCheck {
 mod unreferenced_nodes;
 use unreferenced_nodes::CheckUnreferencedNodes;
 
+mod nodes_readable;
+use nodes_readable::CheckNodesReadable;
+
 pub struct AllChecks {
     check_unreachable_nodes: Mutex<CheckUnreferencedNodes>,
+    check_nodes_readable: Mutex<CheckNodesReadable>,
     additional_errors: Mutex<Vec<CorruptedError>>,
 }
 
@@ -75,6 +76,7 @@ impl AllChecks {
     pub fn new(root_blob_id: BlobId) -> Self {
         Self {
             check_unreachable_nodes: Mutex::new(CheckUnreferencedNodes::new(root_blob_id)),
+            check_nodes_readable: Mutex::new(CheckNodesReadable::new()),
             additional_errors: Mutex::new(Vec::new()),
         }
     }
@@ -84,6 +86,10 @@ impl AllChecks {
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) {
         self.check_unreachable_nodes
+            .lock()
+            .unwrap()
+            .process_reachable_blob(blob);
+        self.check_nodes_readable
             .lock()
             .unwrap()
             .process_reachable_blob(blob);
@@ -97,10 +103,18 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_reachable_node(node);
+        self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_reachable_node(node);
     }
 
     pub fn process_reachable_unreadable_node(&self, node_id: BlockId) {
         self.check_unreachable_nodes
+            .lock()
+            .unwrap()
+            .process_reachable_unreadable_node(node_id);
+        self.check_nodes_readable
             .lock()
             .unwrap()
             .process_reachable_unreadable_node(node_id);
@@ -114,6 +128,10 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_unreachable_node(node);
+        self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_unreachable_node(node);
     }
 
     pub fn process_unreachable_unreadable_node(&self, node_id: BlockId) {
@@ -121,17 +139,32 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_unreachable_unreadable_node(node_id);
+        self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_unreachable_unreadable_node(node_id);
     }
 
     pub fn finalize(self) -> Vec<CorruptedError> {
-        let mut errors = self.additional_errors.into_inner().unwrap();
-        errors.extend(
-            self.check_unreachable_nodes
-                .into_inner()
-                .unwrap()
-                .finalize(),
-        );
-        errors
+        self.additional_errors
+            .into_inner()
+            .unwrap()
+            .into_iter()
+            .chain(
+                self.check_unreachable_nodes
+                    .into_inner()
+                    .unwrap()
+                    .finalize()
+                    .into_iter(),
+            )
+            .chain(
+                self.check_nodes_readable
+                    .into_inner()
+                    .unwrap()
+                    .finalize()
+                    .into_iter(),
+            )
+            .collect()
     }
 
     pub fn add_error(&self, error: CorruptedError) {
