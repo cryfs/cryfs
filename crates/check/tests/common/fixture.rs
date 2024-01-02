@@ -210,6 +210,29 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn create_symlink(&self, target: &str) -> BlobId {
+        let root_id = self.root_blob_id;
+        let target = target.to_owned();
+        self.update_fsblobstore(move |blobstore| {
+            Box::pin(async move {
+                let mut root = FsBlob::into_dir(blobstore.load(&root_id).await.unwrap().unwrap())
+                    .await
+                    .unwrap();
+                let result = super::entry_helpers::create_symlink(
+                    blobstore,
+                    &mut root,
+                    "symlink_name",
+                    &target,
+                )
+                .await
+                .blob_id();
+                root.async_drop().await.unwrap();
+                result
+            })
+        })
+        .await
+    }
+
     pub async fn get_children_of_dir_blob(&self, dir_blob: BlobId) -> Vec<BlobId> {
         self.update_fsblobstore(|fsblobstore| {
             Box::pin(async move {
