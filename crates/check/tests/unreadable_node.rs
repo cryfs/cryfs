@@ -1,19 +1,12 @@
-use std::{fs, iter};
+use std::iter;
 
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
-use cryfs_blockstore::{DynBlockStore, RemoveResult};
+use cryfs_blobstore::BlobId;
 use cryfs_check::CorruptedError;
-use cryfs_cryfs::filesystem::fsblobstore::FsBlobStore;
 
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{add_dir_entry, add_file_entry, add_symlink_entry, load_dir_blob};
 use common::fixture::{CorruptInnerNodeResult, CorruptSomeNodesResult, FilesystemFixture};
-
-fn blobid1() -> BlobId {
-    BlobId::from_hex("2ede765bc3ef88f95c040ad977bad788").unwrap()
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_unreadable_single_node() {
