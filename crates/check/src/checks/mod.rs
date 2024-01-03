@@ -60,6 +60,8 @@ pub trait FilesystemCheck {
     fn finalize(self) -> Vec<CorruptedError>;
 }
 
+mod utils;
+
 mod unreferenced_nodes;
 use unreferenced_nodes::CheckUnreferencedNodes;
 

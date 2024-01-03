@@ -12,7 +12,7 @@ use super::{CorruptedError, FilesystemCheck};
 
 /// Check that blob parent pointers go back to the parent that referenced the blob
 pub struct CheckParentPointers {
-    // TODO There's lots of duplication in the algorithm with [super::unreferenced_nodes::ReferenceChecker]. Can we deduplicate that?
+    // TODO Use [super:utils::reference_checker]
 
     // Stores parents for blobs we've seen but haven't seen their parents yet.
     // This is the parent pointer of the blob itself.

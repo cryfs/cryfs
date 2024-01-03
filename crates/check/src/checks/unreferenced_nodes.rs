@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
+use super::utils::reference_checker::ReferenceChecker;
 use super::FilesystemCheck;
 use crate::error::CorruptedError;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
@@ -19,26 +19,15 @@ enum NodeType {
 ///
 /// Algorithm: While passing through each node, we mark the current node as **seen** and all referenced nodes as **referenced**.
 /// We make sure that each node id is both **seen** and **referenced** and that there are no nodes that are only one of the two.
-struct ReferenceChecker {
-    // Remember all nodes we've seen but we haven't seen a reference to yet
-    seen_and_unreferenced: HashSet<BlockId>,
-
-    // Remember all nodes we've seen a reference to but we haven't seen the node itself yet
-    unseen_and_referenced: HashMap<BlockId, NodeType>,
-
-    // Remember all nodes we've seen and have seen the reference to.
-    // Invariant: Nodes in `seen_and_referenced` don't get added to `seen_and_unreferenced` or `unseen_and_referenced` anymore.
-    seen_and_referenced: HashSet<BlockId>,
-
+struct UnreferencedNodesReferenceChecker {
+    reference_checker: ReferenceChecker<BlockId, (), NodeType>,
     errors: Vec<CorruptedError>,
 }
 
-impl ReferenceChecker {
+impl UnreferencedNodesReferenceChecker {
     pub fn new() -> Self {
         Self {
-            seen_and_unreferenced: HashSet::new(),
-            unseen_and_referenced: HashMap::new(),
-            seen_and_referenced: HashSet::new(),
+            reference_checker: ReferenceChecker::new(),
             errors: Vec::new(),
         }
     }
@@ -47,13 +36,14 @@ impl ReferenceChecker {
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) {
-        self.mark_as_seen(*node.block_id());
+        self.reference_checker.mark_as_seen(*node.block_id(), ());
 
         // Mark all referenced nodes within the same blob as referenced
         match node {
             DataNode::Inner(node) => {
                 for child in node.children() {
-                    self.mark_as_referenced(child, NodeType::NonrootNode);
+                    self.reference_checker
+                        .mark_as_referenced(child, NodeType::NonrootNode);
                 }
             }
             DataNode::Leaf(_) => {
@@ -63,7 +53,7 @@ impl ReferenceChecker {
     }
 
     pub fn process_unreadable_node(&mut self, node_id: BlockId) {
-        self.mark_as_seen(node_id);
+        self.reference_checker.mark_as_seen(node_id, ());
         self.errors.push(CorruptedError::Assert(Box::new(
             CorruptedError::NodeUnreadable { node_id },
         )));
@@ -81,7 +71,7 @@ impl ReferenceChecker {
             }
             FsBlob::Directory(blob) => {
                 for child in blob.entries() {
-                    self.mark_as_referenced(
+                    self.reference_checker.mark_as_referenced(
                         *child.blob_id().to_root_block_id(),
                         NodeType::RootNode,
                     );
@@ -90,67 +80,42 @@ impl ReferenceChecker {
         }
     }
 
-    fn mark_as_seen(&mut self, node_id: BlockId) {
-        if self.unseen_and_referenced.remove(&node_id).is_some() {
-            // We already saw a reference to this node previously and now we saw the node itself. Everything is fine.
-            assert!(!self.seen_and_unreferenced.contains(&node_id), "Algorithm invariant violated: A node was in both `seen_and_unreferenced` and in `unseen_and_referenced`.");
-            if !self.seen_and_referenced.insert(node_id) {
-                panic!("Algorithm invariant violated: A node was in both `unseen_and_referenced` and in `seen_and_referenced`.");
-            }
-        } else if self.seen_and_referenced.contains(&node_id) {
-            // We've already seen the node before. We shouldn't see it again. This is a bug in the check tool.
-            panic!("Algorithm invariant violated: Node {node_id:?} was seen twice",);
-        } else {
-            // We haven't seen a reference to this node yet. Remember it.
-            if !self.seen_and_unreferenced.insert(node_id) {
-                panic!("Algorithm invariant violated: node {node_id:?} was seen twice");
-            }
-        }
-    }
-
-    fn mark_as_referenced(&mut self, node_id: BlockId, node_type: NodeType) {
-        if self.seen_and_unreferenced.remove(&node_id) {
-            // We already saw this node previously and now we saw the reference to it. Everything is fine.
-            assert!(!self.unseen_and_referenced.contains_key(&node_id), "Algorithm invariant violated: A node was in both `unseen_and_referenced` and in `seen_and_unreferenced`.");
-            if !self.seen_and_referenced.insert(node_id) {
-                panic!("Algorithm invariant violated: A node was in both `seen_and_unreferenced` and in `seen_and_referenced`.");
-            }
-        } else if self.seen_and_referenced.contains(&node_id) {
-            // We've already seen this node and the reference to it. This is now the second reference to it.
-            self.errors
-                .push(CorruptedError::NodeReferencedMultipleTimes { node_id });
-        } else {
-            // We haven't seen this node yet. Remember it.
-            if self
-                .unseen_and_referenced
-                .insert(node_id, node_type)
-                .is_some()
-            {
-                // TODO Specifically test scenarios for NodeReferencedMultipleTimes, both this and the case above
-                self.errors
-                    .push(CorruptedError::NodeReferencedMultipleTimes { node_id });
-            }
-        }
-    }
-
     // Returns a list of errors and a list of nodes that were processed without errors
     pub fn finalize(self) -> Vec<CorruptedError> {
         let mut errors = self.errors;
-        errors.extend(
-            self.seen_and_unreferenced
-                .into_iter()
-                .map(|node_id| CorruptedError::NodeUnreferenced { node_id }),
-        );
-        errors.extend(
-            self.unseen_and_referenced
-                .into_iter()
-                .map(|(node_id, node_type)| match node_type {
-                    NodeType::RootNode => CorruptedError::BlobMissing {
-                        blob_id: BlobId::from_root_block_id(node_id.into()),
-                    },
-                    NodeType::NonrootNode => CorruptedError::NodeMissing { node_id },
-                }),
-        );
+        errors.extend(self.reference_checker.finalize().flat_map(
+            |(node_id, seen, referenced_as)| {
+                let mut errors = vec![];
+                match referenced_as.first() {
+                    Some(node_type) => {
+                        if seen.is_none() {
+                            match node_type {
+                                NodeType::RootNode => {
+                                    errors.push(CorruptedError::BlobMissing {
+                                        blob_id: BlobId::from_root_block_id(node_id.into()),
+                                    });
+                                }
+                                NodeType::NonrootNode => {
+                                    errors.push(CorruptedError::NodeMissing { node_id });
+                                }
+                            }
+                        }
+                        if referenced_as.len() > 1 {
+                            errors.push(CorruptedError::NodeReferencedMultipleTimes { node_id });
+                        }
+                    }
+                    None => {
+                        // This node is not referenced by any other node. This is an error.
+                        assert!(
+                            seen.is_some(),
+                            "Algorithm invariant violated: Node was neither seen nor referenced."
+                        );
+                        errors.push(CorruptedError::NodeUnreferenced { node_id });
+                    }
+                }
+                errors.into_iter()
+            },
+        ));
         errors
     }
 }
@@ -158,24 +123,26 @@ impl ReferenceChecker {
 /// Check that
 /// - each existing node is referenced
 /// - each referenced node exists (i.e. no dangling node exists and no node is missing)
+/// - no node is referenced multiple times
 ///
 /// For unreachable nodes, this can find filesystem errors. We run [ReferenceChecker] on these nodes so that only the root of any
 /// dangling blob is reported and not all the nodes below it.
 ///
 /// For reachable nodes, this is used to assert that cryfs-check works correctly and doesn't miss any nodes.
 pub struct CheckUnreferencedNodes {
-    reachable_nodes_checker: ReferenceChecker,
-    unreachable_nodes_checker: ReferenceChecker,
+    reachable_nodes_checker: UnreferencedNodesReferenceChecker,
+    unreachable_nodes_checker: UnreferencedNodesReferenceChecker,
 }
 
 impl CheckUnreferencedNodes {
     pub fn new(root_blob_id: BlobId) -> Self {
-        let mut reachable_nodes_checker = ReferenceChecker::new();
+        let mut reachable_nodes_checker = UnreferencedNodesReferenceChecker::new();
         reachable_nodes_checker
+            .reference_checker
             .mark_as_referenced(*root_blob_id.to_root_block_id(), NodeType::RootNode);
         Self {
             reachable_nodes_checker,
-            unreachable_nodes_checker: ReferenceChecker::new(),
+            unreachable_nodes_checker: UnreferencedNodesReferenceChecker::new(),
         }
     }
 }
