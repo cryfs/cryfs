@@ -64,6 +64,9 @@ impl ReferenceChecker {
 
     pub fn process_unreadable_node(&mut self, node_id: BlockId) {
         self.mark_as_seen(node_id);
+        self.errors.push(CorruptedError::Assert(Box::new(
+            CorruptedError::NodeUnreadable { node_id },
+        )));
     }
 
     // TODO `process_blob` is only called correctly when the blob is reachable. For unreachable blob, it isn't.
@@ -222,7 +225,8 @@ impl FilesystemCheck for CheckUnreferencedNodes {
                 CorruptedError::NodeReferencedMultipleTimes { .. }
                 | CorruptedError::NodeUnreadable { .. }
                 | CorruptedError::NodeMissing { .. }
-                | CorruptedError::BlobMissing { .. } => {
+                | CorruptedError::BlobMissing { .. }
+                | CorruptedError::Assert(_) => {
                     errors.push(error);
                 }
                 _ => {

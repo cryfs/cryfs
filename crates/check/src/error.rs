@@ -3,7 +3,7 @@ use thiserror::Error;
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockId;
 
-#[derive(Debug, Error, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
+#[derive(Debug, Error, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
@@ -51,4 +51,10 @@ pub enum CorruptedError {
         referenced_by_parent: BlobId,
         parent_pointer: BlobId,
     },
+
+    /// Not an actual error but reported by a check to indicate that we need to assert that another check reported this error.
+    /// This is reported by checks who aren't the main responsible check for a condition but discovered something on the side
+    /// that another check should have reported.
+    #[error("We need to assert that {0} was reported")]
+    Assert(Box<CorruptedError>),
 }

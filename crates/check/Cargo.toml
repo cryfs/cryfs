@@ -30,6 +30,7 @@ thiserror.workspace = true
 console.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
+itertools.workspace = true
 
 [dev-dependencies]
 tempdir.workspace = true

@@ -2,6 +2,7 @@ use anyhow::{bail, ensure, Result};
 use async_recursion::async_recursion;
 use futures::future::BoxFuture;
 use futures::stream::{self, StreamExt, TryStreamExt};
+use itertools::{Either, Itertools};
 use std::collections::HashSet;
 use std::hash::Hash;
 use tokio::sync::mpsc::UnboundedSender;
@@ -111,8 +112,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         let errors = checks.finalize();
 
-        // Some errors may be found by multiple checks, let's deduplicate those.
-        let errors = deduplicate(errors);
+        let errors = run_assertions(errors);
 
         nodestore.async_drop().await?;
         Ok(errors)
@@ -243,9 +243,12 @@ where
             subresult?;
         }
         Ok(None) => {
-            checks.add_error(CorruptedError::BlobMissing {
-                blob_id: root_blob_id,
-            });
+            // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
+            checks.add_error(CorruptedError::Assert(Box::new(
+                CorruptedError::BlobMissing {
+                    blob_id: root_blob_id,
+                },
+            )));
         }
         Err(error) => {
             checks.add_error(CorruptedError::BlobUnreadable {
@@ -363,17 +366,24 @@ where
             Err(LoadNodeError::NodeNotFound { node_id }) => {
                 ensure!(!expected_nodes.contains(&node_id), "Node {node_id:?} was present before but is now missing. Please don't modify the file system while checks are running.");
                 if node_id == root_node_id {
-                    checks.add_error(CorruptedError::BlobMissing {
-                        blob_id: BlobId::from_root_block_id(node_id),
-                    });
+                    checks.add_error(CorruptedError::Assert(Box::new(
+                        CorruptedError::BlobMissing {
+                            blob_id: BlobId::from_root_block_id(node_id),
+                        },
+                    )));
                 } else {
-                    checks.add_error(CorruptedError::NodeMissing { node_id });
+                    checks.add_error(CorruptedError::Assert(Box::new(
+                        CorruptedError::NodeMissing { node_id },
+                    )));
                 }
                 node_id
             }
             Err(LoadNodeError::NodeLoadError { node_id, error }) => {
                 ensure!(expected_nodes.contains(&node_id), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
                 checks.process_reachable_unreadable_node(node_id);
+                checks.add_error(CorruptedError::Assert(Box::new(
+                    CorruptedError::NodeUnreadable { node_id },
+                )));
                 node_id
             }
         };
@@ -390,12 +400,18 @@ fn set_remove_all<T: Hash + Eq>(mut set: HashSet<T>, to_remove: Vec<T>) -> HashS
     set
 }
 
-fn deduplicate<T>(mut items: Vec<T>) -> Vec<T>
-where
-    T: Eq + Hash + Clone,
-{
-    // TODO Without clone?
-    let mut seen: HashSet<T> = HashSet::new();
-    items.retain(|item| seen.insert(item.clone()));
-    items
+fn run_assertions(errors: Vec<CorruptedError>) -> Vec<CorruptedError> {
+    // Run assertions to make sure all errors that some checks found on the side were reported by the check responsible for them
+    let (errors, assertions): (Vec<CorruptedError>, Vec<CorruptedError>) =
+        errors.into_iter().partition_map(|error| match error {
+            CorruptedError::Assert(err) => Either::Right(*err),
+            err => Either::Left(err),
+        });
+    for assertion in assertions {
+        assert!(
+            errors.contains(&assertion),
+            "CorruptedError::Assert failed: {assertion:?}"
+        );
+    }
+    errors
 }
