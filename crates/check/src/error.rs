@@ -3,6 +3,8 @@ use thiserror::Error;
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockId;
 
+// TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
+
 #[derive(Debug, Error, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
