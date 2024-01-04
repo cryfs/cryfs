@@ -65,7 +65,7 @@ where
             root_blob_id,
             blobstore,
             BlobType::Dir,
-            &BlobId::from_slice(&[0; BLOBID_LEN]).unwrap(),
+            &BlobId::zero(),
             &[],
         )
         .await?

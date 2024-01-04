@@ -83,7 +83,7 @@ impl AllChecks {
         Self {
             check_unreachable_nodes: Mutex::new(CheckUnreferencedNodes::new(root_blob_id)),
             check_nodes_readable: Mutex::new(CheckNodesReadable::new()),
-            check_parent_pointers: Mutex::new(CheckParentPointers::new()),
+            check_parent_pointers: Mutex::new(CheckParentPointers::new(root_blob_id)),
             additional_errors: Mutex::new(Vec::new()),
         }
     }

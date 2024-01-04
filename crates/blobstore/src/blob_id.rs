@@ -16,6 +16,12 @@ impl BlobId {
         }
     }
 
+    pub const fn zero() -> Self {
+        Self {
+            root: BlockId::zero(),
+        }
+    }
+
     #[inline]
     pub fn to_root_block_id(&self) -> &BlockId {
         &self.root

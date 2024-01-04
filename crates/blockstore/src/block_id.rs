@@ -20,6 +20,12 @@ impl BlockId {
         result
     }
 
+    pub const fn zero() -> Self {
+        Self {
+            id: [0; BLOCKID_LEN],
+        }
+    }
+
     #[inline]
     pub fn from_slice(id_data: &[u8]) -> Result<Self> {
         Ok(Self::from_array(id_data.try_into()?))

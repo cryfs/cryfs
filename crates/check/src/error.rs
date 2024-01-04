@@ -45,10 +45,10 @@ pub enum CorruptedError {
     #[error("Blob {blob_id:?} is referenced but does not exist")]
     BlobMissing { blob_id: BlobId },
 
-    #[error("Blob {blob_id:?} is referenced by parent {referenced_by_parent:?} but has parent pointer {parent_pointer:?}")]
+    #[error("Blob {blob_id:?} is referenced by parent {referenced_by:?} but has parent pointer {parent_pointer:?}")]
     WrongParentPointer {
         blob_id: BlobId,
-        referenced_by_parent: BlobId,
+        referenced_by: Vec<BlobId>,
         parent_pointer: BlobId,
     },
 
