@@ -3,14 +3,18 @@ use async_recursion::async_recursion;
 use futures::future::BoxFuture;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::{Either, Itertools};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use std::hash::Hash;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use super::checks::AllChecks;
 use super::error::{CheckError, CorruptedError};
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore, DataTreeStore, LoadNodeError};
+use cryfs_blobstore::{
+    BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore, LoadNodeError,
+};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
 use cryfs_cryfs::{
@@ -19,6 +23,7 @@ use cryfs_cryfs::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    containers::{HashMapExt, OccupiedError},
     progress::{Progress, Spinner},
 };
 
@@ -33,6 +38,8 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
+        // TODO Function too large. Split into subfunctions
+
         let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
         let root_blob_id = match root_blob_id {
             Ok(root_blob_id) => root_blob_id,
@@ -63,16 +70,26 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
             FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize_bytes).await?);
 
         let pb = Progress::new("Checking all reachable blobs", 1);
-        let reachable_blobs =
-            check_all_reachable_blobs(&blobstore, &all_nodes, root_blob_id, &checks, pb.clone())
-                .await;
-        let reachable_blobs = match reachable_blobs {
-            Ok(reachable_blobs) => reachable_blobs,
+        let processed_blobs = Arc::new(ProcessedItems::new());
+        let check_all_reachable_blobs_result = check_all_reachable_blobs(
+            &blobstore,
+            &all_nodes,
+            Arc::clone(&processed_blobs),
+            root_blob_id,
+            &checks,
+            pb.clone(),
+        )
+        .await;
+        match check_all_reachable_blobs_result {
+            Ok(()) => (),
             Err(e) => {
                 blobstore.async_drop().await?;
                 return Err(e);
             }
         };
+        let processed_blobs = Arc::try_unwrap(processed_blobs)
+            .expect("All tasks are finished here and we should be able to unwrap the Arc");
+        let reachable_blobs: Vec<BlobId> = processed_blobs.into_keys().collect();
         pb.finish();
 
         let pb = Progress::new(
@@ -81,23 +98,27 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         );
         let mut treestore =
             BlobStoreOnBlocks::into_inner_tree_store(FsBlobStore::into_inner_blobstore(blobstore));
-        let reachable_nodes = check_all_nodes_of_reachable_blobs(
+        let processed_nodes = Arc::new(ProcessedItems::new());
+        let check_all_nodes_of_reachable_blobs_result = check_all_nodes_of_reachable_blobs(
             &treestore,
             reachable_blobs,
             &all_nodes,
+            Arc::clone(&processed_nodes),
             &checks,
             pb.clone(),
         )
         .await;
-        let reachable_nodes = match reachable_nodes {
-            Ok(reachable_nodes) => reachable_nodes,
+        match check_all_nodes_of_reachable_blobs_result {
+            Ok(()) => (),
             Err(e) => {
                 treestore.async_drop().await?;
                 return Err(e.into());
             }
         };
 
-        let unreachable_nodes = set_remove_all(all_nodes, reachable_nodes);
+        let processed_nodes = Arc::try_unwrap(processed_nodes)
+            .expect("All tasks are finished here and we should be able to unwrap the Arc");
+        let unreachable_nodes = set_remove_all(all_nodes, processed_nodes.into_keys());
         let mut nodestore = DataTreeStore::into_inner_node_store(treestore);
         let check_unreachable_nodes_result =
             check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await;
@@ -171,10 +192,11 @@ where
 async fn check_all_reachable_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &HashSet<BlockId>,
+    already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     root_blob_id: BlobId,
     checks: &AllChecks,
     pb: Progress,
-) -> Result<Vec<BlobId>>
+) -> Result<()>
 where
     B: BlockStore + Send + Sync + 'static,
 {
@@ -187,6 +209,7 @@ where
         .send(Box::pin(_check_all_reachable_blobs(
             blobstore,
             all_nodes,
+            Arc::clone(&already_processed_blobs),
             root_blob_id,
             checks,
             task_queue_sender.clone(),
@@ -199,19 +222,21 @@ where
     UnboundedReceiverStream::new(task_queue_receiver)
         .buffer_unordered(MAX_CONCURRENCY)
         .try_collect()
-        .await
+        .await?;
+    Ok(())
 }
 
 #[async_recursion]
 async fn _check_all_reachable_blobs<'a, 'b, 'c, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
+    already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     root_blob_id: BlobId,
     checks: &'c AllChecks,
     // TODO Is this possible without BoxFuture?
-    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<BlobId>>>,
+    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<()>>>,
     pb: Progress,
-) -> Result<BlobId>
+) -> Result<()>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
@@ -219,61 +244,98 @@ where
     'c: 'f,
     'f: 'async_recursion,
 {
+    // TODO Function too large, split into subfunctions
+
     log::debug!("Entering blob {:?}", &root_blob_id);
 
     let loaded = blobstore.load(&root_blob_id).await;
 
-    match loaded {
-        Ok(Some(mut blob)) => {
-            if !all_nodes.contains(root_blob_id.to_root_block_id()) {
-                Err(CheckError::FilesystemModified {
-                    msg: format!("Blob {root_blob_id:?} wasn't present before but is now."),
-                })?;
-            }
-
-            checks.process_reachable_blob(&blob)?;
-
-            // TODO Checking children blobs for directory blobs loads the nodes of this blob.
-            //      Then we load it again when we check the nodes of this blob. Can we only load it once?
-
-            let subresult = check_all_reachable_children_blobs(
-                blobstore,
-                all_nodes,
-                &blob,
-                checks,
-                task_queue_sender,
-                pb.clone(),
-            )
-            .await;
-            blob.async_drop().await?;
-            subresult?;
-        }
-        Ok(None) => {
-            // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
+    let blob_info = match &loaded {
+        Ok(Some(blob)) => processed_blob_info(blob),
+        Ok(None) => BlobInfo::Missing,
+        Err(_) => BlobInfo::Unreadable,
+    };
+    match already_processed_blobs.add(root_blob_id, blob_info) {
+        AlreadySeen::AlreadySeen {
+            prev_seen,
+            now_seen,
+        } => {
+            // The blob was already seen before. This can only happen if the blob is referenced multiple times.
             checks.add_error(CorruptedError::Assert(Box::new(
-                CorruptedError::BlobMissing {
+                CorruptedError::BlobReferencedMultipleTimes {
                     blob_id: root_blob_id,
                 },
             )));
+
+            // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip processing it.
+            if prev_seen != now_seen {
+                Err(CheckError::FilesystemModified {
+                    msg: format!(
+                        "Blob {blob_id:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
+                        blob_id = root_blob_id,
+                        prev_seen = prev_seen,
+                        now_seen = now_seen,
+                    ),
+                })?;
+            }
         }
-        Err(error) => {
-            checks.add_error(CorruptedError::BlobUnreadable {
-                blob_id: root_blob_id,
-                // error,
-            });
+        AlreadySeen::NotSeenYet => {
+            match loaded {
+                Ok(Some(mut blob)) => {
+                    if !all_nodes.contains(root_blob_id.to_root_block_id()) {
+                        Err(CheckError::FilesystemModified {
+                            msg: format!("Blob {root_blob_id:?} wasn't present before but is now."),
+                        })?;
+                    }
+
+                    checks.process_reachable_blob(&blob)?;
+
+                    // TODO Checking children blobs for directory blobs loads the nodes of this blob.
+                    //      Then we load it again when we check the nodes of this blob. Can we only load it once?
+
+                    let subresult = check_all_reachable_children_blobs(
+                        blobstore,
+                        all_nodes,
+                        already_processed_blobs,
+                        &blob,
+                        checks,
+                        task_queue_sender,
+                        pb.clone(),
+                    )
+                    .await;
+                    blob.async_drop().await?;
+                    subresult?;
+                }
+                Ok(None) => {
+                    // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
+                    checks.add_error(CorruptedError::Assert(Box::new(
+                        CorruptedError::BlobMissing {
+                            blob_id: root_blob_id,
+                        },
+                    )));
+                }
+                Err(error) => {
+                    checks.add_error(CorruptedError::BlobUnreadable {
+                        blob_id: root_blob_id,
+                        // error,
+                    });
+                }
+            };
+            pb.inc(1);
         }
-    };
-    pb.inc(1);
+    }
+
     log::debug!("Exiting blob {:?}", &root_blob_id);
-    Ok(root_blob_id)
+    Ok(())
 }
 
 async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
+    already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
     checks: &'d AllChecks,
-    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<BlobId>>>,
+    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<()>>>,
     pb: Progress,
 ) -> Result<(), CheckError>
 where
@@ -309,6 +371,7 @@ where
                     .send(Box::pin(_check_all_reachable_blobs(
                         blobstore,
                         all_nodes,
+                        Arc::clone(&already_processed_blobs),
                         *entry.blob_id(),
                         checks,
                         task_queue_sender.clone(),
@@ -325,101 +388,136 @@ async fn check_all_nodes_of_reachable_blobs<B>(
     treestore: &DataTreeStore<B>,
     all_blobs: Vec<BlobId>,
     allowed_nodes: &HashSet<BlockId>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
     checks: &AllChecks,
     pb: Progress,
-) -> Result<Vec<BlockId>, CheckError>
+) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
 {
     // TODO What's a good concurrency value here?
     const MAX_CONCURRENCY: usize = 100;
 
-    let mut tasks = stream::iter(all_blobs.into_iter().map(|blob_root| {
+    stream::iter(all_blobs.into_iter().map(|blob_root| {
         check_all_nodes_of_reachable_blob(
             treestore,
             *blob_root.to_root_block_id(),
             allowed_nodes,
+            Arc::clone(&already_processed_nodes),
             checks,
             pb.clone(),
         )
     }))
-    .buffer_unordered(MAX_CONCURRENCY);
+    .buffer_unordered(MAX_CONCURRENCY)
+    .try_collect()
+    .await?;
 
-    let mut result = vec![];
-    while let Some(task) = tasks.next().await {
-        result.extend(task?);
-    }
-    Ok(result)
+    Ok(())
 }
 
 async fn check_all_nodes_of_reachable_blob<B>(
     treestore: &DataTreeStore<B>,
     root_node_id: BlockId,
     expected_nodes: &HashSet<BlockId>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
     checks: &AllChecks,
     pb: Progress,
-    // TODO Return stream? But measure that it's not slower
-) -> Result<Vec<BlockId>, CheckError>
+) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
 {
+    // TODO Function too long, split into subfunctions
+
     let mut all_nodes_of_blob = treestore
         .load_all_nodes_in_subtree_of_id(root_node_id)
         .await;
-    let mut visited_nodes = vec![];
     while let Some(node) = all_nodes_of_blob.next().await {
-        let node_id = match node {
-            Ok(node) => {
-                if !expected_nodes.contains(node.block_id()) {
+        let (node_id, node_info) = match &node {
+            Ok(node) => (*node.block_id(), processed_node_info(node)),
+            Err(LoadNodeError::NodeNotFound { node_id }) => (*node_id, NodeInfo::Missing),
+            Err(LoadNodeError::NodeLoadError { node_id, .. }) => (*node_id, NodeInfo::Unreadable),
+        };
+        match already_processed_nodes.add(node_id, node_info) {
+            AlreadySeen::AlreadySeen {
+                prev_seen,
+                now_seen,
+            } => {
+                // The node was already seen before. This can only happen if the node is referenced multiple times.
+                checks.add_error(CorruptedError::Assert(Box::new(
+                    CorruptedError::NodeReferencedMultipleTimes { node_id },
+                )));
+
+                // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip processing it.
+
+                // TODO Due to how [DataTreeStore::load_all_nodes_in_subtree_of_id] works, we're still loading all of the children.
+                //      We could make this faster by doing our own tree traversal and stopping traversal if a node was already seen.
+                if prev_seen != now_seen {
                     return Err(CheckError::FilesystemModified {
                         msg: format!(
-                            "Node {node_id:?} wasn't present before but is now.",
-                            node_id = node.block_id()
+                            "Node {node_id:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
+                            node_id = node_id,
+                            prev_seen = prev_seen,
+                            now_seen = now_seen,
                         ),
                     });
                 }
-                checks.process_reachable_node(&node)?;
-                *node.block_id()
             }
-            Err(LoadNodeError::NodeNotFound { node_id }) => {
-                if expected_nodes.contains(&node_id) {
-                    return Err(CheckError::FilesystemModified {
-                        msg: format!("Node {node_id:?} was present before but is now missing.",),
-                    });
-                }
-                if node_id == root_node_id {
-                    checks.add_error(CorruptedError::Assert(Box::new(
-                        CorruptedError::BlobMissing {
-                            blob_id: BlobId::from_root_block_id(node_id),
-                        },
-                    )));
-                } else {
-                    checks.add_error(CorruptedError::Assert(Box::new(
-                        CorruptedError::NodeMissing { node_id },
-                    )));
-                }
-                node_id
+            AlreadySeen::NotSeenYet => {
+                match node {
+                    Ok(node) => {
+                        if !expected_nodes.contains(node.block_id()) {
+                            return Err(CheckError::FilesystemModified {
+                                msg: format!(
+                                    "Node {node_id:?} wasn't present before but is now.",
+                                    node_id = node.block_id()
+                                ),
+                            });
+                        }
+                        checks.process_reachable_node(&node)?;
+                    }
+                    Err(LoadNodeError::NodeNotFound { node_id }) => {
+                        if expected_nodes.contains(&node_id) {
+                            return Err(CheckError::FilesystemModified {
+                                msg: format!(
+                                    "Node {node_id:?} was present before but is now missing.",
+                                ),
+                            });
+                        }
+                        if node_id == root_node_id {
+                            checks.add_error(CorruptedError::Assert(Box::new(
+                                CorruptedError::BlobMissing {
+                                    blob_id: BlobId::from_root_block_id(node_id),
+                                },
+                            )));
+                        } else {
+                            checks.add_error(CorruptedError::Assert(Box::new(
+                                CorruptedError::NodeMissing { node_id },
+                            )));
+                        }
+                    }
+                    Err(LoadNodeError::NodeLoadError { node_id, error }) => {
+                        if !expected_nodes.contains(&node_id) {
+                            return Err(CheckError::FilesystemModified {
+                                msg: format!("Node {node_id:?} wasn't present before but is now.",),
+                            });
+                        }
+                        checks.process_reachable_unreadable_node(node_id)?;
+                        checks.add_error(CorruptedError::Assert(Box::new(
+                            CorruptedError::NodeUnreadable { node_id },
+                        )));
+                    }
+                };
+                pb.inc(1);
             }
-            Err(LoadNodeError::NodeLoadError { node_id, error }) => {
-                if !expected_nodes.contains(&node_id) {
-                    return Err(CheckError::FilesystemModified {
-                        msg: format!("Node {node_id:?} wasn't present before but is now.",),
-                    });
-                }
-                checks.process_reachable_unreadable_node(node_id)?;
-                checks.add_error(CorruptedError::Assert(Box::new(
-                    CorruptedError::NodeUnreadable { node_id },
-                )));
-                node_id
-            }
-        };
-        visited_nodes.push(node_id);
-        pb.inc(1);
+        }
     }
-    Ok(visited_nodes)
+    Ok(())
 }
 
-fn set_remove_all<T: Hash + Eq>(mut set: HashSet<T>, to_remove: Vec<T>) -> HashSet<T> {
+fn set_remove_all<T: Hash + Eq>(
+    mut set: HashSet<T>,
+    to_remove: impl Iterator<Item = T>,
+) -> HashSet<T> {
     for item in to_remove {
         set.remove(&item);
     }
@@ -440,4 +538,105 @@ fn run_assertions(errors: Vec<CorruptedError>) -> Vec<CorruptedError> {
         );
     }
     errors
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+enum NodeInfo {
+    Unreadable,
+    Missing,
+    Leaf,
+    Inner {
+        // We're storing children into the [NodeInfo] so that if the node comes up again,
+        // we can check that it still has the same children. This allows us to know that
+        // we already processed those children when we saw the blob for the first time.
+        // TODO Vec instead of HashSet should be enough
+        children: HashSet<BlockId>,
+    },
+}
+
+fn processed_node_info<B>(node: &DataNode<B>) -> NodeInfo
+where
+    B: BlockStore + Send + Sync + 'static,
+{
+    match node {
+        DataNode::Leaf(_) => NodeInfo::Leaf,
+        DataNode::Inner(node) => NodeInfo::Inner {
+            children: node.children().collect(),
+        },
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+enum BlobInfo {
+    Unreadable,
+    Missing,
+    File,
+    Symlink,
+    Dir {
+        // We're storing children into the [NodeInfo] so that if the node comes up again,
+        // we can check that it still has the same children. This allows us to know that
+        // we already processed those children when we saw the blob for the first time.
+        children: Vec<BlobId>,
+    },
+}
+
+fn processed_blob_info<'a, B>(blob: &FsBlob<'a, B>) -> BlobInfo
+where
+    // TODO Do we really need B: 'static ?
+    B: BlobStore + Debug + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    match blob {
+        FsBlob::File(_) => BlobInfo::File,
+        FsBlob::Symlink(_) => BlobInfo::Symlink,
+        FsBlob::Directory(blob) => BlobInfo::Dir {
+            children: blob.entries().map(|entry| *entry.blob_id()).collect(),
+        },
+    }
+}
+
+#[derive(Debug)]
+struct ProcessedItems<ItemId, ItemInfo>
+where
+    ItemId: Debug + PartialEq + Eq + Hash,
+    ItemInfo: Clone,
+{
+    nodes: Mutex<HashMap<ItemId, ItemInfo>>,
+}
+
+impl<ItemId, ItemInfo> ProcessedItems<ItemId, ItemInfo>
+where
+    ItemId: Debug + PartialEq + Eq + Hash,
+    ItemInfo: Clone,
+{
+    pub fn new() -> Self {
+        Self {
+            nodes: Mutex::new(HashMap::new()),
+        }
+    }
+
+    #[must_use]
+    pub fn add(&self, id: ItemId, node: ItemInfo) -> AlreadySeen<ItemInfo> {
+        match HashMapExt::try_insert(&mut *self.nodes.lock().unwrap(), id, node) {
+            Ok(_) => AlreadySeen::NotSeenYet,
+            Err(OccupiedError { entry, value, .. }) => AlreadySeen::AlreadySeen {
+                prev_seen: entry.get().clone(),
+                now_seen: value,
+            },
+        }
+    }
+
+    pub fn into_keys(self) -> impl Iterator<Item = ItemId> {
+        self.nodes.into_inner().unwrap().into_keys()
+    }
+}
+
+#[must_use]
+enum AlreadySeen<ItemInfo> {
+    NotSeenYet,
+    AlreadySeen {
+        // TODO Return `prev_seen` by reference, not clone
+        prev_seen: ItemInfo,
+        now_seen: ItemInfo,
+    },
 }

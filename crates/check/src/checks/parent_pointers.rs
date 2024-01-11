@@ -77,20 +77,7 @@ impl FilesystemCheck for CheckParentPointers {
             .mark_as_seen(blob.blob_id(), blob_info.clone());
         match mark_as_seen_result {
             MarkAsSeenResult::AlreadySeenBefore { prev_seen_info } => {
-                // This should only happen if a node is referenced multiple times.
-                // So let's make sure that error was caught and reported.
-                self.errors.push(CorruptedError::Assert(Box::new(
-                    CorruptedError::BlobReferencedMultipleTimes {
-                        blob_id: blob.blob_id(),
-                    },
-                )));
-
-                if blob_info != prev_seen_info {
-                    // If the children changed, then the file system must have changed during the analysis. This isn't supported.
-                    return Err(CheckError::FilesystemModified {
-                        msg: format!("Blob {blob_id:?} was seen multiple times and in a different state ({prev_seen_info:?} vs {blob_info:?}).", blob_id=blob.blob_id()),
-                    });
-                }
+                panic!("This shouldn't happen because the runner guarantees that it doesn't process the same node multiple times");
             }
             MarkAsSeenResult::NotSeenBeforeYet => {
                 for child_id in blob_info.children.into_iter() {

@@ -29,10 +29,11 @@ use super::error::{CheckError, CorruptedError};
 
 /// The trait that all filesystem checks must implement.
 /// The cryfs-check program will call the methods of this trait for blobs/nodes it encounters.
-/// The order of these calls is not specified.
+/// The order of these calls is not specified but it guarantees that it calls [Self::process_reachable_blob]
+/// only once per blob, and exactly one of the `_node` functions exactly once for each node.
 /// At the end, it will call `finalize` to get a list of all the errors found.
 pub trait FilesystemCheck {
-    /// Called for each blob that is reachable from the root of the file system via its directory structure
+    /// Called for each blob that is reachable from the root of the file system via its directory structure.
     fn process_reachable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,

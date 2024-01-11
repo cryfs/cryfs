@@ -83,16 +83,7 @@ impl UnreferencedNodesReferenceChecker {
             MarkAsSeenResult::AlreadySeenBefore {
                 prev_seen_info: prev_seen_children,
             } => {
-                // This should only happen if a node is referenced multiple times.
-                // So let's make sure that error was caught and reported.
-                self.errors.push(CorruptedError::Assert(Box::new(
-                    CorruptedError::NodeReferencedMultipleTimes { node_id },
-                )));
-
-                if children != prev_seen_children {
-                    // If the children changed, then the file system must have changed during the analysis. This isn't supported.
-                    return Err(CheckError::FilesystemModified{msg: format!("Node {node_id:?} was seen multiple times and with a different list of children ({prev_seen_children:?} vs {children:?}).")});
-                }
+                panic!("This shouldn't happen because the runner guarantees that it doesn't process the same node multiple times");
             }
             MarkAsSeenResult::NotSeenBeforeYet => {
                 // Mark all referenced nodes within the same blob as referenced
