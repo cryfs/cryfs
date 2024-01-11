@@ -1,7 +1,6 @@
-use std::collections::HashSet;
 use std::fmt::Debug;
 
-use super::utils::reference_checker::{MarkAsSeenResult, ReferenceChecker};
+use super::utils::reference_checker::ReferenceChecker;
 use super::FilesystemCheck;
 use crate::error::{CheckError, CorruptedError};
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
@@ -13,22 +12,6 @@ enum NodeType {
     NonrootNode,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-enum ChildrenOfNode {
-    Unreadable,
-    Leaf,
-    Inner(HashSet<BlockId>),
-}
-
-impl ChildrenOfNode {
-    pub fn into_iter(self) -> impl Iterator<Item = BlockId> {
-        match self {
-            Self::Unreadable | Self::Leaf => HashSet::new().into_iter(),
-            Self::Inner(children) => children.into_iter(),
-        }
-    }
-}
-
 /// Check that
 /// - each existing node is referenced
 /// - each referenced node exists (i.e. no dangling node exists and no node is missing)
@@ -37,7 +20,7 @@ impl ChildrenOfNode {
 /// Algorithm: While passing through each node, we mark the current node as **seen** and all referenced nodes as **referenced**.
 /// We make sure that each node id is both **seen** and **referenced** and that there are no nodes that are only one of the two.
 struct UnreferencedNodesReferenceChecker {
-    reference_checker: ReferenceChecker<BlockId, ChildrenOfNode, NodeType>,
+    reference_checker: ReferenceChecker<BlockId, (), NodeType>,
     errors: Vec<CorruptedError>,
 }
 
@@ -53,15 +36,26 @@ impl UnreferencedNodesReferenceChecker {
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
-        let children = match node {
-            DataNode::Inner(node) => ChildrenOfNode::Inner(node.children().collect()),
-            DataNode::Leaf(_) => ChildrenOfNode::Leaf,
-        };
-        self._mark_as_seen_and_children_as_referenced(*node.block_id(), children)
+        self.reference_checker.mark_as_seen(*node.block_id(), ());
+
+        // Mark all referenced nodes within the same blob as referenced
+        match node {
+            DataNode::Leaf(_) => {
+                // Leaf nodes don't have children
+            }
+            DataNode::Inner(node) => {
+                for child in node.children() {
+                    self.reference_checker
+                        .mark_as_referenced(child, NodeType::NonrootNode);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn process_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
-        self._mark_as_seen_and_children_as_referenced(node_id, ChildrenOfNode::Unreadable)?;
+        self.reference_checker.mark_as_seen(node_id, ());
 
         // Also make sure that the unreadable node was reported by a different check
         self.errors.push(CorruptedError::Assert(Box::new(
@@ -71,32 +65,7 @@ impl UnreferencedNodesReferenceChecker {
         Ok(())
     }
 
-    fn _mark_as_seen_and_children_as_referenced(
-        &mut self,
-        node_id: BlockId,
-        children: ChildrenOfNode,
-    ) -> Result<(), CheckError> {
-        let mark_as_seen_result = self
-            .reference_checker
-            .mark_as_seen(node_id, children.clone());
-        match mark_as_seen_result {
-            MarkAsSeenResult::AlreadySeenBefore {
-                prev_seen_info: prev_seen_children,
-            } => {
-                panic!("This shouldn't happen because the runner guarantees that it doesn't process the same node multiple times");
-            }
-            MarkAsSeenResult::NotSeenBeforeYet => {
-                // Mark all referenced nodes within the same blob as referenced
-                for child in children.into_iter() {
-                    self.reference_checker
-                        .mark_as_referenced(child, NodeType::NonrootNode);
-                }
-            }
-        }
-        Ok(())
-    }
-
-    // TODO `process_blob` is only called correctly when the blob is reachable. For unreachable blob, it isn't.
+    // TODO `process_blob` is only called correctly when the blob is reachable. For unreachable blob, it isn't called.
     //      This means we do report each unreachable blob in the tree as an error, not just the root.
     pub fn process_blob(
         &mut self,
