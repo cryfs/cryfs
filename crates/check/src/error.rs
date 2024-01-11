@@ -5,6 +5,7 @@ use cryfs_blockstore::BlockId;
 
 // TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
 
+/// A [CorruptedError] is an error we found in the file system when analyzing it
 #[derive(Debug, Error, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
@@ -59,4 +60,11 @@ pub enum CorruptedError {
     /// that another check should have reported.
     #[error("We need to assert that {0} was reported")]
     Assert(Box<CorruptedError>),
+}
+
+/// A CheckError is an error found in the analysis itself. This doesn't necessarily mean that the file system is corrupted
+#[derive(Error, Debug)]
+pub enum CheckError {
+    #[error("The filesystem was modified while the check was running. Please make sure the file system is not mounted or modified for the duration of the check.\n Details: {msg}")]
+    FilesystemModified { msg: String },
 }

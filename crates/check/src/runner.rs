@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::Result;
 use async_recursion::async_recursion;
 use futures::future::BoxFuture;
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use super::checks::AllChecks;
-use super::error::CorruptedError;
+use super::error::{CheckError, CorruptedError};
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNodeStore, DataTreeStore, LoadNodeError};
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
@@ -93,7 +93,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
             Ok(reachable_nodes) => reachable_nodes,
             Err(e) => {
                 treestore.async_drop().await?;
-                return Err(e);
+                return Err(e.into());
             }
         };
 
@@ -106,7 +106,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
             Ok(()) => (),
             Err(e) => {
                 nodestore.async_drop().await?;
-                return Err(e);
+                return Err(e.into());
             }
         };
 
@@ -133,7 +133,7 @@ async fn check_all_unreachable_nodes<B>(
     unreachable_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
-) -> Result<()>
+) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
 {
@@ -147,13 +147,15 @@ where
                 let loaded = nodestore.load(node_id).await;
                 match loaded {
                     Ok(Some(node)) => {
-                        checks.process_unreachable_node(&node);
+                        checks.process_unreachable_node(&node)?;
                     }
                     Ok(None) => {
-                        bail!("Node {node_id:?} previously present but then vanished during our checks. Please don't modify the file system while checks are running.");
+                        return Err(CheckError::FilesystemModified { msg: format!(
+                            "Node {node_id:?} previously present but then vanished during our checks."
+                        )});
                     }
                     Err(error) => {
-                        checks.process_unreachable_unreadable_node(node_id);
+                        checks.process_unreachable_unreadable_node(node_id)?;
                     }
                 };
                 pb.inc(1);
@@ -223,9 +225,13 @@ where
 
     match loaded {
         Ok(Some(mut blob)) => {
-            ensure!(all_nodes.contains(root_blob_id.to_root_block_id()), "Blob {root_blob_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
+            if !all_nodes.contains(root_blob_id.to_root_block_id()) {
+                Err(CheckError::FilesystemModified {
+                    msg: format!("Blob {root_blob_id:?} wasn't present before but is now."),
+                })?;
+            }
 
-            checks.process_reachable_blob(&blob);
+            checks.process_reachable_blob(&blob)?;
 
             // TODO Checking children blobs for directory blobs loads the nodes of this blob.
             //      Then we load it again when we check the nodes of this blob. Can we only load it once?
@@ -269,7 +275,7 @@ async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
     checks: &'d AllChecks,
     task_queue_sender: UnboundedSender<BoxFuture<'f, Result<BlobId>>>,
     pb: Progress,
-) -> Result<()>
+) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
@@ -285,7 +291,12 @@ where
             let blob = match blob.as_dir() {
                 Ok(blob) => blob,
                 Err(_) => {
-                    bail!("Blob {blob_id:?} previously was a directory blob but now isn't. Please don't modify the file system while checks are running.", blob_id=blob.blob_id());
+                    return Err(CheckError::FilesystemModified {
+                        msg: format!(
+                            "Blob {blob_id:?} previously was a directory blob but now isn't",
+                            blob_id = blob.blob_id(),
+                        ),
+                    });
                 }
             };
 
@@ -316,7 +327,7 @@ async fn check_all_nodes_of_reachable_blobs<B>(
     allowed_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: Progress,
-) -> Result<Vec<BlockId>>
+) -> Result<Vec<BlockId>, CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
 {
@@ -348,7 +359,7 @@ async fn check_all_nodes_of_reachable_blob<B>(
     checks: &AllChecks,
     pb: Progress,
     // TODO Return stream? But measure that it's not slower
-) -> Result<Vec<BlockId>>
+) -> Result<Vec<BlockId>, CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
 {
@@ -359,12 +370,23 @@ where
     while let Some(node) = all_nodes_of_blob.next().await {
         let node_id = match node {
             Ok(node) => {
-                ensure!(expected_nodes.contains(node.block_id()), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.", node_id=node.block_id());
-                checks.process_reachable_node(&node);
+                if !expected_nodes.contains(node.block_id()) {
+                    return Err(CheckError::FilesystemModified {
+                        msg: format!(
+                            "Node {node_id:?} wasn't present before but is now.",
+                            node_id = node.block_id()
+                        ),
+                    });
+                }
+                checks.process_reachable_node(&node)?;
                 *node.block_id()
             }
             Err(LoadNodeError::NodeNotFound { node_id }) => {
-                ensure!(!expected_nodes.contains(&node_id), "Node {node_id:?} was present before but is now missing. Please don't modify the file system while checks are running.");
+                if expected_nodes.contains(&node_id) {
+                    return Err(CheckError::FilesystemModified {
+                        msg: format!("Node {node_id:?} was present before but is now missing.",),
+                    });
+                }
                 if node_id == root_node_id {
                     checks.add_error(CorruptedError::Assert(Box::new(
                         CorruptedError::BlobMissing {
@@ -379,8 +401,12 @@ where
                 node_id
             }
             Err(LoadNodeError::NodeLoadError { node_id, error }) => {
-                ensure!(expected_nodes.contains(&node_id), "Node {node_id:?} wasn't present before but is now. Please don't modify the file system while checks are running.");
-                checks.process_reachable_unreadable_node(node_id);
+                if !expected_nodes.contains(&node_id) {
+                    return Err(CheckError::FilesystemModified {
+                        msg: format!("Node {node_id:?} wasn't present before but is now.",),
+                    });
+                }
+                checks.process_reachable_unreadable_node(node_id)?;
                 checks.add_error(CorruptedError::Assert(Box::new(
                     CorruptedError::NodeUnreadable { node_id },
                 )));

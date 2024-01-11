@@ -104,6 +104,15 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             .map(|id_bytes| BlockId::from_slice(id_bytes).unwrap())
     }
 
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn update_child(&mut self, index: usize, new_child: &BlockId) {
+        assert!(index < usize::try_from(self.num_children().get()).unwrap());
+        self._children_mut_raw()
+            .nth(index)
+            .unwrap()
+            .copy_from_slice(new_child.data());
+    }
+
     fn _children_mut_raw(&mut self) -> impl Iterator<Item = &mut [u8]> + ExactSizeIterator {
         let view = node::View::new(self.block.data_mut().as_mut());
         let children_data: &mut [u8] = view.into_data().into_slice();

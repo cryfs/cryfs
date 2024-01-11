@@ -400,6 +400,17 @@ pub async fn find_leaf_node<B>(
 where
     B: BlockStore + Send + Sync,
 {
+    find_leaf_node_and_parent(nodestore, root, rng).await.0
+}
+
+pub async fn find_leaf_node_and_parent<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    rng: &mut SmallRng,
+) -> (DataLeafNode<B>, DataInnerNode<B>, usize)
+where
+    B: BlockStore + Send + Sync,
+{
     let blob_root_node = nodestore
         .load(root)
         .await
@@ -408,24 +419,27 @@ where
         .into_inner_node()
         .expect("test blob too small to have more than one node. We need to change the test and increase its size");
 
-    _find_leaf_node(nodestore, blob_root_node, rng).await
+    _find_leaf_node_and_parent(nodestore, blob_root_node, rng).await
 }
 
 #[async_recursion]
-pub async fn _find_leaf_node<B>(
+pub async fn _find_leaf_node_and_parent<B>(
     nodestore: &DataNodeStore<B>,
     root: DataInnerNode<B>,
     rng: &mut SmallRng,
-) -> DataLeafNode<B>
+) -> (DataLeafNode<B>, DataInnerNode<B>, usize)
 where
     B: BlockStore + Send + Sync,
 {
     let children = root.children();
-    let child = children.choose(rng).expect("Inner node has no children");
+    let (index, child) = children
+        .enumerate()
+        .choose(rng)
+        .expect("Inner node has no children");
     let child = nodestore.load(child).await.unwrap().unwrap();
     match child {
-        DataNode::Inner(inner) => _find_leaf_node(nodestore, inner, rng).await,
-        DataNode::Leaf(leaf) => leaf,
+        DataNode::Inner(inner) => _find_leaf_node_and_parent(nodestore, inner, rng).await,
+        DataNode::Leaf(leaf) => (leaf, root, index),
     }
 }
 
