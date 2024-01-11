@@ -1,12 +1,12 @@
 [package]
-name = "cryfs-utils"
 authors.workspace = true
 edition.workspace = true
-rust-version.workspace = true
 homepage.workspace = true
-repository.workspace = true
 license.workspace = true
+name = "cryfs-utils"
 readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
@@ -21,8 +21,8 @@ divrem = {workspace = true, optional = true}
 futures.workspace = true
 generic-array.workspace = true
 hex.workspace = true
-itertools.workspace = true
 indicatif.workspace = true
+itertools.workspace = true
 lockable.workspace = true
 log.workspace = true
 openssl = {workspace = true, features = ["vendored"]}

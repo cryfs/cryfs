@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 use super::{AsyncDrop, AsyncDropGuard};
-use crate::containers::HashMapExt;
+use crate::containers::{HashMapExt, OccupiedError};
 use crate::stream::for_each_unordered;
 
 /// A HashMap that can hold values with [AsyncDrop] semantics.
@@ -32,7 +32,11 @@ where
         })
     }
 
-    pub fn try_insert(&mut self, key: K, value: AsyncDropGuard<V>) -> Result<()> {
+    pub fn try_insert(
+        &mut self,
+        key: K,
+        value: AsyncDropGuard<V>,
+    ) -> Result<&mut AsyncDropGuard<V>, OccupiedError<'_, K, AsyncDropGuard<V>>> {
         HashMapExt::try_insert(&mut self.map, key, value)
     }
 
