@@ -36,6 +36,7 @@ pub struct FilesystemFixture {
 }
 
 impl FilesystemFixture {
+    // TODO add a new_with_some_blobs function so we can save that line in tests
     pub async fn new() -> Self {
         let tempdir = FixtureTempDir::new();
         let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
