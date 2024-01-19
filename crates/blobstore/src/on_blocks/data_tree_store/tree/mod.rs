@@ -550,6 +550,12 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         Ok(())
     }
 
+    // TODO We should probably put the traversal methods somewhere outside of [DataTree] so they can be better shared with test cases
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn remove_subtree(node_store: &DataNodeStore<B>, root: DataNode<B>) -> Result<()> {
+        Self::_remove_subtree(node_store, root).await
+    }
+
     async fn _remove_subtree(node_store: &DataNodeStore<B>, root: DataNode<B>) -> Result<()> {
         match root {
             DataNode::Leaf(_) => {

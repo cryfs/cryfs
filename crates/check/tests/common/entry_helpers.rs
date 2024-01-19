@@ -8,7 +8,9 @@ use rand::{rngs::SmallRng, seq::IteratorRandom, SeedableRng};
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use cryfs_blobstore::{BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore};
+use cryfs_blobstore::{
+    BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore, DataTree,
+};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
@@ -469,6 +471,108 @@ where
     }
 }
 
+pub async fn find_inner_node_of_blob<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+    depth: u8,
+) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    let mut rng = SmallRng::seed_from_u64(0);
+    find_inner_node(nodestore, *blob_id.to_root_block_id(), depth, &mut rng).await
+}
+
+pub async fn find_inner_node_id<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    depth: u8,
+    rng: &mut SmallRng,
+) -> BlockId
+where
+    B: BlockStore + Send + Sync,
+{
+    *find_inner_node_and_parent(nodestore, root, depth, rng)
+        .await
+        .0
+        .block_id()
+}
+
+pub async fn find_inner_node<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    depth: u8,
+    rng: &mut SmallRng,
+) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    find_inner_node_and_parent(nodestore, root, depth, rng)
+        .await
+        .0
+}
+
+pub async fn find_inner_node_id_and_parent<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    depth: u8,
+    rng: &mut SmallRng,
+) -> (BlockId, DataInnerNode<B>, usize)
+where
+    B: BlockStore + Send + Sync,
+{
+    let (node, parent, index) = find_inner_node_and_parent(nodestore, root, depth, rng).await;
+    (*node.block_id(), parent, index)
+}
+
+pub async fn find_inner_node_and_parent<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    depth: u8,
+    rng: &mut SmallRng,
+) -> (DataInnerNode<B>, DataInnerNode<B>, usize)
+where
+    B: BlockStore + Send + Sync,
+{
+    let blob_root_node = nodestore
+        .load(root)
+        .await
+        .unwrap()
+        .unwrap()
+        .into_inner_node()
+        .expect("test blob too small to have more than one node. We need to change the test and increase its size");
+
+    _find_inner_node_and_parent(nodestore, blob_root_node, depth, rng).await
+}
+
+#[async_recursion]
+pub async fn _find_inner_node_and_parent<B>(
+    nodestore: &DataNodeStore<B>,
+    root: DataInnerNode<B>,
+    depth: u8,
+    rng: &mut SmallRng,
+) -> (DataInnerNode<B>, DataInnerNode<B>, usize)
+where
+    B: BlockStore + Send + Sync,
+{
+    assert!(depth >= 1);
+
+    let children = root.children();
+    let (index, child) = children
+        .enumerate()
+        .choose(rng)
+        .expect("Inner node has no children");
+    let child = nodestore.load(child).await.unwrap().unwrap();
+    let child = child
+        .into_inner_node()
+        .expect("Tried to find an inner node but found a leaf node");
+    if depth == 1 {
+        (child, root, index)
+    } else {
+        _find_inner_node_and_parent(nodestore, child, depth - 1, rng).await
+    }
+}
+
 pub fn get_descendants_of_dir_blob<'a, 'r, B>(
     fsblobstore: &'a FsBlobStore<B>,
     dir_blob_id: BlobId,
@@ -500,4 +604,12 @@ where
         }
         .flatten_stream(),
     )
+}
+
+pub async fn remove_subtree<B>(nodestore: &DataNodeStore<B>, root: BlockId)
+where
+    B: BlockStore + Send + Sync,
+{
+    let node = nodestore.load(root).await.unwrap().unwrap();
+    DataTree::remove_subtree(nodestore, node).await.unwrap();
 }

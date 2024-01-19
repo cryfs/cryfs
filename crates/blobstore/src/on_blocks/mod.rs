@@ -7,7 +7,7 @@ mod blobstore_on_blocks;
 pub use blob_on_blocks::BlobOnBlocks;
 pub use blobstore_on_blocks::BlobStoreOnBlocks;
 pub use data_node_store::{DataInnerNode, DataLeafNode, DataNode, DataNodeStore};
-pub use data_tree_store::{DataTreeStore, LoadNodeError};
+pub use data_tree_store::{DataTree, DataTreeStore, LoadNodeError};
 
 #[cfg(test)]
 mod test_as_blockstore;

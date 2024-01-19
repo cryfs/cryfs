@@ -12,7 +12,7 @@ pub use interface::{Blob, BlobStore, BLOBID_LEN};
 mod on_blocks;
 pub use on_blocks::{
     BlobOnBlocks, BlobStoreOnBlocks, DataInnerNode, DataLeafNode, DataNode, DataNodeStore,
-    DataTreeStore, LoadNodeError,
+    DataTree, DataTreeStore, LoadNodeError,
 };
 
 pub use cryfs_blockstore::RemoveResult;
