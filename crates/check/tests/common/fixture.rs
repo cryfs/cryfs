@@ -14,8 +14,11 @@ use cryfs_cryfs::{
 use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
 use futures::{future::BoxFuture, stream::StreamExt, Future};
 use rand::{rngs::SmallRng, SeedableRng};
-use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
+use std::{
+    fmt::{Debug, Formatter},
+    fs,
+};
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
@@ -36,7 +39,12 @@ pub struct FilesystemFixture {
 }
 
 impl FilesystemFixture {
-    // TODO add a new_with_some_blobs function so we can save that line in tests
+    pub async fn new_with_some_blobs() -> (Self, SomeBlobs) {
+        let fs_fixture = Self::new().await;
+        let some_blobs = fs_fixture.create_some_blobs().await;
+        (fs_fixture, some_blobs)
+    }
+
     pub async fn new() -> Self {
         let tempdir = FixtureTempDir::new();
         let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());

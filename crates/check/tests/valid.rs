@@ -15,8 +15,7 @@ async fn fs_with_only_root_dir() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn fs_with_some_files_and_directories_and_symlinks() {
-    let fs_fixture = FilesystemFixture::new().await;
-    fs_fixture.create_some_blobs().await;
+    let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(Vec::<CorruptedError>::new(), errors);

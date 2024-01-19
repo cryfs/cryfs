@@ -12,8 +12,7 @@ use common::fixture::{CorruptInnerNodeResult, CorruptSomeNodesResult, Filesystem
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_unreadable_single_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    fs_fixture.create_some_blobs().await;
+    let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let file = fs_fixture.create_empty_file().await;
 
     let CorruptInnerNodeResult {
@@ -37,8 +36,7 @@ async fn file_with_unreadable_single_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_unreadable_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let CorruptInnerNodeResult {
         corrupted_node,
@@ -69,8 +67,7 @@ async fn file_with_unreadable_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_corrupted_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let CorruptInnerNodeResult {
         corrupted_node,
@@ -95,8 +92,7 @@ async fn file_with_corrupted_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_corrupted_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let removed_node = fs_fixture
         .corrupt_a_leaf_node(some_blobs.large_file_1)
@@ -112,8 +108,7 @@ async fn file_with_corrupted_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_corrupted_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let CorruptSomeNodesResult {
         corrupted_nodes,
@@ -138,8 +133,7 @@ async fn file_with_corrupted_some_nodes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_unreadable_single_node_without_children() {
-    let fs_fixture = FilesystemFixture::new().await;
-    fs_fixture.create_some_blobs().await;
+    let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let dir = fs_fixture.create_empty_dir().await;
 
     let orphaned_descendant_blobs = fs_fixture.get_descendants_of_dir_blob(dir).await;
@@ -169,8 +163,7 @@ async fn dir_with_unreadable_single_node_without_children() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_unreadable_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -210,8 +203,7 @@ async fn dir_with_unreadable_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_unreadable_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -251,8 +243,7 @@ async fn dir_with_unreadable_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_unreadable_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -282,8 +273,7 @@ async fn dir_with_unreadable_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_unreadable_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -322,8 +312,7 @@ async fn dir_with_unreadable_some_nodes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_unreadable_single_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    fs_fixture.create_some_blobs().await;
+    let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let symlink = fs_fixture.create_symlink("/t").await;
 
     let CorruptInnerNodeResult {
@@ -347,8 +336,7 @@ async fn symlink_with_unreadable_single_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_unreadable_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let CorruptInnerNodeResult {
         corrupted_node,
@@ -379,8 +367,7 @@ async fn symlink_with_unreadable_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_unreadable_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let CorruptInnerNodeResult {
         corrupted_node,
@@ -405,8 +392,7 @@ async fn symlink_with_unreadable_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_unreadable_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let corrupted_node = fs_fixture
         .corrupt_a_leaf_node(some_blobs.large_symlink_1)
@@ -422,8 +408,7 @@ async fn symlink_with_unreadable_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_unreadable_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let CorruptSomeNodesResult {
         corrupted_nodes,
@@ -491,8 +476,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_unreadable_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -530,8 +514,7 @@ async fn root_dir_with_unreadable_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_unreadable_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -571,8 +554,7 @@ async fn root_dir_with_unreadable_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_unreadable_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -602,8 +584,7 @@ async fn root_dir_with_unreadable_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_unreadable_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     // Make the root dir large enough that we can remove some nodes
     fs_fixture
         .add_entries_to_make_dir_large(some_blobs.root)

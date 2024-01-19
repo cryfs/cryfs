@@ -8,8 +8,7 @@ use common::fixture::FilesystemFixture;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn unreadable_file_blob_bad_format_version() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     fs_fixture
         .increment_format_version_of_blob(some_blobs.large_file_1)
@@ -26,8 +25,7 @@ async fn unreadable_file_blob_bad_format_version() {
 // TODO
 // #[tokio::test(flavor = "multi_thread")]
 // async fn unreadable_file_blob_bad_blob_type() {
-//     let fs_fixture = FilesystemFixture::new().await;
-//     let some_blobs = fs_fixture.create_some_blobs().await;
+//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
 //     fs_fixture.corrupt_blob_type(some_blobs.large_file_1).await;
 
@@ -41,8 +39,7 @@ async fn unreadable_file_blob_bad_format_version() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn unreadable_dir_blob_bad_format_version() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -70,8 +67,7 @@ async fn unreadable_dir_blob_bad_format_version() {
 // TODO
 // #[tokio::test(flavor = "multi_thread")]
 // async fn unreadable_dir_blob_bad_blob_type() {
-//     let fs_fixture = FilesystemFixture::new().await;
-//     let some_blobs = fs_fixture.create_some_blobs().await;
+//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
 //     let orphaned_descendant_blobs = fs_fixture
 //         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -96,8 +92,7 @@ async fn unreadable_dir_blob_bad_format_version() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn unreadable_symlink_blob_bad_format_version() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     fs_fixture
         .increment_format_version_of_blob(some_blobs.large_symlink_1)
@@ -114,8 +109,7 @@ async fn unreadable_symlink_blob_bad_format_version() {
 // TODO
 // #[tokio::test(flavor = "multi_thread")]
 // async fn unreadable_symlink_blob_bad_blob_type() {
-//     let fs_fixture = FilesystemFixture::new().await;
-//     let some_blobs = fs_fixture.create_some_blobs().await;
+//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
 //     fs_fixture.corrupt_blob_type(some_blobs.large_symlink_1).await;
 

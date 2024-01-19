@@ -19,8 +19,7 @@ fn blobid1() -> BlobId {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_entirely_missing() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     fs_fixture
         .update_fsblobstore(
@@ -44,8 +43,7 @@ async fn file_entirely_missing() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_missing_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let RemoveInnerNodeResult {
         removed_node,
@@ -70,8 +68,7 @@ async fn file_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_missing_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let RemoveInnerNodeResult {
         removed_node,
@@ -96,8 +93,7 @@ async fn file_with_missing_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_missing_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let removed_node = fs_fixture.remove_a_leaf_node(some_blobs.large_file_1).await;
 
@@ -111,8 +107,7 @@ async fn file_with_missing_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_missing_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let RemoveSomeNodesResult {
         removed_nodes,
@@ -137,8 +132,7 @@ async fn file_with_missing_some_nodes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_entirely_missing_without_children() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     fs_fixture
         .update_fsblobstore(
@@ -162,8 +156,7 @@ async fn dir_entirely_missing_without_children() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_entirely_missing_with_children() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -198,8 +191,7 @@ async fn dir_entirely_missing_with_children() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -234,8 +226,7 @@ async fn dir_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -275,8 +266,7 @@ async fn dir_with_missing_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -306,8 +296,7 @@ async fn dir_with_missing_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn dir_with_missing_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
@@ -346,8 +335,7 @@ async fn dir_with_missing_some_nodes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_entirely_missing() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     fs_fixture
         .update_fsblobstore(
@@ -371,8 +359,7 @@ async fn symlink_entirely_missing() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let RemoveInnerNodeResult {
         removed_node,
@@ -397,8 +384,7 @@ async fn symlink_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let RemoveInnerNodeResult {
         removed_node,
@@ -423,8 +409,7 @@ async fn symlink_with_missing_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let removed_node = fs_fixture
         .remove_a_leaf_node(some_blobs.large_symlink_1)
@@ -440,8 +425,7 @@ async fn symlink_with_missing_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn symlink_with_missing_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let RemoveSomeNodesResult {
         removed_nodes,
@@ -495,8 +479,7 @@ async fn root_dir_entirely_missing_without_children() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_entirely_missing_with_children() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -528,8 +511,7 @@ async fn root_dir_entirely_missing_with_children() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_missing_root_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -562,8 +544,7 @@ async fn root_dir_with_missing_root_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_missing_inner_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -603,8 +584,7 @@ async fn root_dir_with_missing_inner_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_missing_leaf_node() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_of_dir_blob(some_blobs.root)
@@ -634,8 +614,7 @@ async fn root_dir_with_missing_leaf_node() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn root_dir_with_missing_some_nodes() {
-    let fs_fixture = FilesystemFixture::new().await;
-    let some_blobs = fs_fixture.create_some_blobs().await;
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     // Make the root dir large enough that we can remove some nodes
     fs_fixture
         .add_entries_to_make_dir_large(some_blobs.root)
