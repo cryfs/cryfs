@@ -7,7 +7,7 @@ use std::hash::Hash;
 use std::io::{BufReader, BufWriter, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::num::{NonZeroU32, NonZeroU8};
 use std::path::Path;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, SystemTime, SystemTimeError};
 
 // TODO Re-enable doc tests. They're likely broken.
 
@@ -329,20 +329,24 @@ struct TimeSpec {
     tv_sec: u64,
     tv_nsec: u32,
 }
-impl From<SystemTime> for TimeSpec {
-    fn from(time: SystemTime) -> Self {
-        let duration = time.duration_since(SystemTime::UNIX_EPOCH).unwrap();
-        Self {
+impl TryFrom<SystemTime> for TimeSpec {
+    type Error = SystemTimeError;
+
+    fn try_from(time: SystemTime) -> Result<Self, SystemTimeError> {
+        let duration = time.duration_since(SystemTime::UNIX_EPOCH)?;
+        Ok(Self {
             tv_sec: duration.as_secs(),
             tv_nsec: duration.subsec_nanos(),
-        }
+        })
     }
 }
-impl From<TimeSpec> for SystemTime {
-    fn from(timespec: TimeSpec) -> Self {
+impl TryFrom<TimeSpec> for SystemTime {
+    type Error = anyhow::Error;
+
+    fn try_from(timespec: TimeSpec) -> Result<Self> {
         SystemTime::UNIX_EPOCH
             .checked_add(Duration::new(timespec.tv_sec, timespec.tv_nsec))
-            .unwrap()
+            .ok_or_else(|| anyhow!("Overflow trying to convert TimeSpec to SystemTime"))
     }
 }
 
@@ -353,7 +357,12 @@ pub fn read_timespec<R: Read + Seek>(
     endian: Endian,
     _: (),
 ) -> BinResult<SystemTime> {
-    TimeSpec::read_options(reader, endian, ()).map(Into::into)
+    TimeSpec::read_options(reader, endian, ()).and_then(|time| {
+        SystemTime::try_from(time).map_err(|err| binrw::Error::Custom {
+            pos: reader.seek(SeekFrom::Current(0)).unwrap(),
+            err: Box::new(err),
+        })
+    })
 }
 
 /// TODO Docs
@@ -364,7 +373,12 @@ pub fn write_timespec(
     endian: Endian,
     args: (),
 ) -> Result<(), binrw::Error> {
-    TimeSpec::from(*v).write_options(writer, endian, args)
+    TimeSpec::try_from(*v)
+        .map_err(|err| binrw::Error::Custom {
+            pos: writer.seek(SeekFrom::Current(0)).unwrap(),
+            err: Box::new(err),
+        })?
+        .write_options(writer, endian, args)
 }
 
 #[cfg(any(test, feature = "testutils"))]
