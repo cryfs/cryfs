@@ -1,4 +1,5 @@
 use rand::{rngs::SmallRng, SeedableRng};
+use rstest::rstest;
 
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::{BlockId, RemoveResult};
@@ -6,7 +7,7 @@ use cryfs_check::CorruptedError;
 
 mod common;
 use common::entry_helpers::{
-    find_inner_node_id_and_parent, find_leaf_id_and_parent, remove_subtree,
+    find_inner_node_id_and_parent, find_leaf_id_and_parent, remove_subtree, SomeBlobs,
 };
 use common::fixture::FilesystemFixture;
 
@@ -101,11 +102,19 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
         .await
 }
 
-async fn test_blob_with_leaf_node_referenced_multiple_times(
-    fs_fixture: FilesystemFixture,
-    blob1: BlobId,
-    blob2: BlobId,
+#[rstest]
+#[case::from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
+#[case::from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
+// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
+//#[case::from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
+#[case::from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_leaf_node_referenced_multiple_times(
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
 ) {
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
+    let (blob1, blob2) = blobs(&some_blobs);
+
     let node_id = remove_leaf_and_replace_in_parent_with_another_existing_leaf(
         &fs_fixture,
         *blob1.to_root_block_id(),
@@ -120,19 +129,27 @@ async fn test_blob_with_leaf_node_referenced_multiple_times(
     );
 }
 
-async fn test_blob_with_inner_node_referenced_multiple_times(
-    fs_fixture: FilesystemFixture,
-    blob1: BlobId,
-    depth1: u8,
-    blob2: BlobId,
-    depth2: u8,
+#[rstest]
+#[case::from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
+#[case::from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
+// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
+//#[case::from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
+#[case::from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_inner_node_referenced_multiple_times(
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
+    // with_same_depth and with_different_depth
+    #[values((5, 5), (5, 7))] depths: (u8, u8),
 ) {
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
+    let (blob1, blob2) = blobs(&some_blobs);
+
     let node_id = remove_inner_node_and_replace_in_parent_with_another_existing_inner_node(
         &fs_fixture,
         *blob1.to_root_block_id(),
-        depth1,
+        depths.0,
         *blob2.to_root_block_id(),
-        depth2,
+        depths.1,
     )
     .await;
 
@@ -143,11 +160,19 @@ async fn test_blob_with_inner_node_referenced_multiple_times(
     );
 }
 
-async fn test_blob_with_root_node_referenced_multiple_times(
-    fs_fixture: FilesystemFixture,
-    blob1: BlobId,
-    blob2: BlobId,
+#[rstest]
+#[case::from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
+#[case::from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
+// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
+//#[case::from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
+#[case::from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_root_node_referenced_from_same_file(
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
 ) {
+    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
+    let (blob1, blob2) = blobs(&some_blobs);
+
     let node_id = remove_inner_node_and_replace_in_parent_with_root_node(
         &fs_fixture,
         *blob1.to_root_block_id(),
@@ -161,198 +186,6 @@ async fn test_blob_with_root_node_referenced_multiple_times(
         vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
         errors
     );
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_leaf_node_referenced_multiple_times_from_same_file() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_leaf_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        some_blobs.large_file_1,
-    )
-    .await;
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times_from_same_file_with_same_depth() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_inner_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        5,
-        some_blobs.large_file_1,
-        5,
-    )
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times_from_same_file_with_different_depth() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_inner_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        5,
-        some_blobs.large_file_1,
-        7,
-    )
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_root_node_referenced_from_same_file() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_root_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        some_blobs.large_file_1,
-    )
-    .await;
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_leaf_node_referenced_multiple_times_from_different_file() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-
-    test_blob_with_leaf_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        some_blobs.large_file_2,
-    )
-    .await;
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times_from_different_file_with_same_depth() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_inner_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        5,
-        some_blobs.large_file_2,
-        5,
-    )
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times_from_different_file_with_different_depth() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_inner_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        5,
-        some_blobs.large_file_2,
-        7,
-    )
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_root_node_referenced_from_different_file() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_root_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_file_1,
-        some_blobs.large_file_2,
-    )
-    .await;
-}
-
-// TODO These currently don't work because the dir gets corrupted and it's children become unreferenced.
-// #[tokio::test(flavor = "multi_thread")]
-// async fn file_with_leaf_node_referenced_multiple_times_from_different_dir() {
-//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-//     test_blob_with_leaf_node_referenced_multiple_times(
-//         fs_fixture,
-//         some_blobs.large_dir_1,
-//         some_blobs.large_file_1,
-//     )
-//     .await;
-// }
-// #[tokio::test(flavor = "multi_thread")]
-// async fn file_with_inner_node_referenced_multiple_times_from_different_dir_with_same_depth() {
-//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-//     test_blob_with_inner_node_referenced_multiple_times(
-//         fs_fixture,
-//         some_blobs.large_dir_1,
-//         5,
-//         some_blobs.large_file_1,
-//         5,
-//     )
-//     .await
-// }
-// #[tokio::test(flavor = "multi_thread")]
-// async fn file_with_inner_node_referenced_multiple_times_from_different_dir_with_different_depth() {
-//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-//     test_blob_with_inner_node_referenced_multiple_times(
-//         fs_fixture,
-//         some_blobs.large_dir_1,
-//         5,
-//         some_blobs.large_file_1,
-//         7,
-//     )
-//     .await
-// }
-// #[tokio::test(flavor = "multi_thread")]
-// async fn file_with_root_node_referenced_from_different_dir() {
-//     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-//     test_blob_with_root_node_referenced_multiple_times(
-//         fs_fixture,
-//         some_blobs.large_dir_1,
-//         some_blobs.large_file_1,
-//     )
-//     .await;
-// }
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_leaf_node_referenced_multiple_times_from_different_symlink() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_leaf_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_symlink_1,
-        some_blobs.large_file_1,
-    )
-    .await;
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times_from_different_symlink_with_same_depth() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_inner_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_symlink_1,
-        5,
-        some_blobs.large_file_1,
-        5,
-    )
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times_from_different_symlink_with_different_depth(
-) {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_inner_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_symlink_1,
-        5,
-        some_blobs.large_file_1,
-        7,
-    )
-    .await
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_root_node_referenced_from_different_symlink() {
-    let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    test_blob_with_root_node_referenced_multiple_times(
-        fs_fixture,
-        some_blobs.large_symlink_1,
-        some_blobs.large_file_1,
-    )
-    .await;
 }
 
 // TODO test same things for dirs and symlinks
