@@ -1,17 +1,15 @@
 use anyhow::Result;
 use async_recursion::async_recursion;
-use futures::future::BoxFuture;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::{Either, Itertools};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::UnboundedSender;
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use super::checks::AllChecks;
 use super::error::{CheckError, CorruptedError};
+use super::task_queue::{self, TaskSpawner};
 use cryfs_blobstore::{
     BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore, LoadNodeError,
 };
@@ -203,26 +201,19 @@ where
     // TODO What's a good concurrency value here?
     const MAX_CONCURRENCY: usize = 100;
 
-    let (task_queue_sender, task_queue_receiver) = tokio::sync::mpsc::unbounded_channel();
-
-    task_queue_sender
-        .send(Box::pin(_check_all_reachable_blobs(
+    task_queue::run_to_completion(MAX_CONCURRENCY, |task_spawner| {
+        _check_all_reachable_blobs(
             blobstore,
             all_nodes,
             Arc::clone(&already_processed_blobs),
             root_blob_id,
             checks,
-            task_queue_sender.clone(),
+            task_spawner,
             pb,
-        )))
-        .expect("Failed to send task to task queue");
-    // Drop our instance of the sender so that `blob_queue_stream` below finishes when the last task holding a sender instance is gone
-    std::mem::drop(task_queue_sender);
+        )
+    })
+    .await?;
 
-    UnboundedReceiverStream::new(task_queue_receiver)
-        .buffer_unordered(MAX_CONCURRENCY)
-        .try_collect()
-        .await?;
     Ok(())
 }
 
@@ -233,8 +224,7 @@ async fn _check_all_reachable_blobs<'a, 'b, 'c, 'f, B>(
     already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     root_blob_id: BlobId,
     checks: &'c AllChecks,
-    // TODO Is this possible without BoxFuture?
-    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<()>>>,
+    task_spawner: TaskSpawner<'f>,
     pb: Progress,
 ) -> Result<()>
 where
@@ -299,7 +289,7 @@ where
                         already_processed_blobs,
                         &blob,
                         checks,
-                        task_queue_sender,
+                        task_spawner,
                         pb.clone(),
                     )
                     .await;
@@ -335,7 +325,7 @@ async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
     already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
     checks: &'d AllChecks,
-    task_queue_sender: UnboundedSender<BoxFuture<'f, Result<()>>>,
+    task_spawner: TaskSpawner<'f>,
     pb: Progress,
 ) -> Result<(), CheckError>
 where
@@ -367,17 +357,17 @@ where
             pb.inc_length(blob.entries().len() as u64);
 
             for entry in blob.entries() {
-                task_queue_sender
-                    .send(Box::pin(_check_all_reachable_blobs(
+                task_spawner.spawn(|task_spawner| {
+                    _check_all_reachable_blobs(
                         blobstore,
                         all_nodes,
                         Arc::clone(&already_processed_blobs),
                         *entry.blob_id(),
                         checks,
-                        task_queue_sender.clone(),
+                        task_spawner,
                         pb.clone(),
-                    )))
-                    .expect("Failed to send task to task queue");
+                    )
+                });
             }
         }
     };

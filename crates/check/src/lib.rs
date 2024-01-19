@@ -11,5 +11,6 @@ mod console;
 mod error;
 pub use error::CorruptedError;
 mod runner;
+mod task_queue;
 
 cryfs_version::assert_cargo_version_equals_git_version!();
