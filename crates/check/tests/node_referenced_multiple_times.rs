@@ -38,20 +38,20 @@ mod helpers {
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
                     let mut rng = SmallRng::seed_from_u64(0);
-                    let (leaf1_id, parent1, _leaf1_index) =
+                    let (leaf1_id, mut parent1, leaf1_index) =
                         find_leaf_id_and_parent(nodestore, root1, &mut rng).await;
-                    let (leaf2_id, mut parent2, leaf2_index) =
+                    let (leaf2_id, parent2, _leaf2_index) =
                         find_leaf_id_and_parent(nodestore, root2, &mut rng).await;
-                    assert_ne!(leaf2_id, leaf1_id);
+                    assert_ne!(leaf1_id, leaf2_id);
                     assert_ne!(*parent1.block_id(), *parent2.block_id());
-                    std::mem::drop(parent1);
-
-                    parent2.update_child(leaf2_index, &leaf1_id);
                     std::mem::drop(parent2);
-                    let remove_result = nodestore.remove_by_id(&leaf2_id).await.unwrap();
+
+                    parent1.update_child(leaf1_index, &leaf2_id);
+                    std::mem::drop(parent1);
+                    let remove_result = nodestore.remove_by_id(&leaf1_id).await.unwrap();
                     assert_eq!(RemoveResult::SuccessfullyRemoved, remove_result);
 
-                    leaf1_id
+                    leaf2_id
                 })
             })
             .await
@@ -69,9 +69,9 @@ mod helpers {
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
                     let mut rng = SmallRng::seed_from_u64(0);
-                    let (node1_id, parent1, _node1_index) =
+                    let (node1_id, mut parent1, node1_index) =
                         find_inner_node_id_and_parent(nodestore, root1, depth1, &mut rng).await;
-                    let (node2_id, mut parent2, node2_index) =
+                    let (node2_id, parent2, _node2_index) =
                         find_inner_node_id_and_parent(nodestore, root2, depth2, &mut rng).await;
                     assert_ne!(node2_id, node1_id);
                     assert_ne!(node1_id, *parent2.block_id());
@@ -79,13 +79,13 @@ mod helpers {
                     assert_ne!(node1_id, *parent1.block_id());
                     assert_ne!(node2_id, *parent1.block_id());
                     assert_ne!(*parent1.block_id(), *parent2.block_id());
-                    std::mem::drop(parent1);
-
-                    parent2.update_child(node2_index, &node1_id);
                     std::mem::drop(parent2);
-                    remove_subtree(nodestore, node2_id).await;
 
-                    node1_id
+                    parent1.update_child(node1_index, &node2_id);
+                    std::mem::drop(parent1);
+                    remove_subtree(nodestore, node1_id).await;
+
+                    node2_id
                 })
             })
             .await
@@ -191,10 +191,9 @@ async fn file_with_leaf_node_referenced_multiple_times_from_same_file() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
-    let blob_id = some_blobs.large_file_1;
     let node_id = remove_leaf_and_replace_in_parent_with_another_existing_leaf_from_same_blob(
         &fs_fixture,
-        *blob_id.to_root_block_id(),
+        *some_blobs.large_file_1.to_root_block_id(),
     )
     .await;
 
@@ -210,11 +209,10 @@ async fn file_with_inner_node_referenced_multiple_times_from_same_file_with_same
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
-    let blob_id = some_blobs.large_file_1;
     let node_id =
         remove_inner_node_and_replace_in_parent_with_another_existing_inner_node_from_same_blob_of_same_depth(
             &fs_fixture,
-            *blob_id.to_root_block_id(),
+            *some_blobs.large_file_1.to_root_block_id(),
         )
         .await;
 
@@ -230,11 +228,10 @@ async fn file_with_inner_node_referenced_multiple_times_from_same_file_with_diff
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
-    let blob_id = some_blobs.large_file_1;
     let node_id =
         remove_inner_node_and_replace_in_parent_with_another_existing_inner_node_from_same_blob_of_different_depth(
             &fs_fixture,
-            *blob_id.to_root_block_id(),
+            *some_blobs.large_file_1.to_root_block_id(),
         )
         .await;
 
@@ -250,10 +247,9 @@ async fn file_with_root_node_referenced_from_same_file() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
-    let blob_id = some_blobs.large_file_1;
     let node_id = remove_inner_node_and_replace_in_parent_with_root_node_from_same_blob(
         &fs_fixture,
-        *blob_id.to_root_block_id(),
+        *some_blobs.large_file_1.to_root_block_id(),
     )
     .await;
 
@@ -342,5 +338,161 @@ async fn file_with_root_node_referenced_from_different_file() {
     );
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_leaf_node_referenced_multiple_times_from_different_dir() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id = remove_leaf_and_replace_in_parent_with_another_existing_leaf_from_different_blob(
+        &fs_fixture,
+        *some_blobs.large_file_1.to_root_block_id(),
+        *some_blobs.large_dir_2.to_root_block_id(),
+    )
+    .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_inner_node_referenced_multiple_times_from_different_dir_with_same_depth() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id =
+        remove_inner_node_and_replace_in_parent_with_another_existing_inner_node_from_different_blob_of_same_depth(
+            &fs_fixture,
+            *some_blobs.large_file_1.to_root_block_id(),
+            *some_blobs.large_dir_2.to_root_block_id(),
+        )
+        .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_inner_node_referenced_multiple_times_from_different_dir_with_different_depth() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id =
+        remove_inner_node_and_replace_in_parent_with_another_existing_inner_node_from_different_blob_of_different_depth(
+            &fs_fixture,
+            *some_blobs.large_file_1.to_root_block_id(),
+            *some_blobs.large_dir_2.to_root_block_id(),
+        )
+        .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_root_node_referenced_from_different_dir() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id = remove_inner_node_and_replace_in_parent_with_root_node_from_different_blob(
+        &fs_fixture,
+        *some_blobs.large_file_1.to_root_block_id(),
+        *some_blobs.large_dir_2.to_root_block_id(),
+    )
+    .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_leaf_node_referenced_multiple_times_from_different_symlink() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id = remove_leaf_and_replace_in_parent_with_another_existing_leaf_from_different_blob(
+        &fs_fixture,
+        *some_blobs.large_file_1.to_root_block_id(),
+        *some_blobs.large_symlink_2.to_root_block_id(),
+    )
+    .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_inner_node_referenced_multiple_times_from_different_symlink_with_same_depth() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id =
+        remove_inner_node_and_replace_in_parent_with_another_existing_inner_node_from_different_blob_of_same_depth(
+            &fs_fixture,
+            *some_blobs.large_file_1.to_root_block_id(),
+            *some_blobs.large_symlink_2.to_root_block_id(),
+        )
+        .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_inner_node_referenced_multiple_times_from_different_symlink_with_different_depth(
+) {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id =
+        remove_inner_node_and_replace_in_parent_with_another_existing_inner_node_from_different_blob_of_different_depth(
+            &fs_fixture,
+            *some_blobs.large_file_1.to_root_block_id(),
+            *some_blobs.large_symlink_2.to_root_block_id(),
+        )
+        .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_root_node_referenced_from_different_symlink() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let node_id = remove_inner_node_and_replace_in_parent_with_root_node_from_different_blob(
+        &fs_fixture,
+        *some_blobs.large_file_1.to_root_block_id(),
+        *some_blobs.large_symlink_2.to_root_block_id(),
+    )
+    .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
 // TODO test same things for dirs and symlinks
-// TODO For the `_from_different_` tests, we can also cross-test where a file blob points to a dir and so on
