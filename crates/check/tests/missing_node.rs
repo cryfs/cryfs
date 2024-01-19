@@ -17,6 +17,8 @@ fn blobid1() -> BlobId {
     BlobId::from_hex("ad977bad7882ede765bc3ef88f95c040").unwrap()
 }
 
+// TODO Use rstest to combine test cases into fewer test templates
+
 #[tokio::test(flavor = "multi_thread")]
 async fn file_entirely_missing() {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;

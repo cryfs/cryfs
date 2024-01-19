@@ -10,6 +10,8 @@ use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 mod common;
 use common::fixture::{CorruptInnerNodeResult, CorruptSomeNodesResult, FilesystemFixture};
 
+// TODO Use rstest to combine test cases into fewer test templates
+
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_unreadable_single_node() {
     let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;

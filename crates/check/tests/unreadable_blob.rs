@@ -6,6 +6,8 @@ use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 mod common;
 use common::fixture::FilesystemFixture;
 
+// TODO Use rstest to combine test cases into fewer test templates
+
 #[tokio::test(flavor = "multi_thread")]
 async fn unreadable_file_blob_bad_format_version() {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
