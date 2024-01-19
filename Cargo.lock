@@ -656,6 +656,7 @@ dependencies = [
  "log",
  "rand 0.8.5",
  "rstest",
+ "rstest_reuse",
  "tempdir",
  "thiserror",
  "tokio",

@@ -1,5 +1,6 @@
 use rand::{rngs::SmallRng, SeedableRng};
 use rstest::rstest;
+use rstest_reuse::{self, *};
 
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::{BlockId, RemoveResult};
@@ -102,14 +103,31 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
         .await
 }
 
+#[template]
 #[rstest]
-#[case::from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
-#[case::from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
+#[case::file_referenced_from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
+#[case::file_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
 // TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
-//#[case::from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
-#[case::from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
+//#[case::file_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
+#[case::file_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
+// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
+//#[case::dir_referenced_from_same_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_dir_1))]
+//#[case::dir_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_2, some_blobs.large_dir_1))]
+#[case::dir_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_dir_1))]
+#[case::dir_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_dir_1))]
+#[case::symlink_referenced_from_same_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_symlink_1))]
+#[case::symlink_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_2, some_blobs.large_symlink_1))]
+#[case::symlink_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_symlink_1))]
+// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
+//#[case::symlink_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_symlink_1))]
 #[tokio::test(flavor = "multi_thread")]
-async fn file_with_leaf_node_referenced_multiple_times(
+fn test_case_with_multiple_reference_scenarios(
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
+) {
+}
+
+#[apply(test_case_with_multiple_reference_scenarios)]
+async fn leaf_node_referenced_multiple_times(
     #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
@@ -129,14 +147,8 @@ async fn file_with_leaf_node_referenced_multiple_times(
     );
 }
 
-#[rstest]
-#[case::from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
-#[case::from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
-// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
-//#[case::from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
-#[case::from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_inner_node_referenced_multiple_times(
+#[apply(test_case_with_multiple_reference_scenarios)]
+async fn inner_node_referenced_multiple_times(
     #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
     // with_same_depth and with_different_depth
     #[values((5, 5), (5, 7))] depths: (u8, u8),
@@ -160,14 +172,8 @@ async fn file_with_inner_node_referenced_multiple_times(
     );
 }
 
-#[rstest]
-#[case::from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
-#[case::from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
-// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
-//#[case::from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
-#[case::from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
-#[tokio::test(flavor = "multi_thread")]
-async fn file_with_root_node_referenced_from_same_file(
+#[apply(test_case_with_multiple_reference_scenarios)]
+async fn root_node_referenced_from_same_file(
     #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
@@ -187,5 +193,3 @@ async fn file_with_root_node_referenced_from_same_file(
         errors
     );
 }
-
-// TODO test same things for dirs and symlinks

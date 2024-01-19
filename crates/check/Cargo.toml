@@ -39,6 +39,7 @@ cryfs-blockstore = {path = "../blockstore", features=["testutils"]}
 itertools.workspace = true
 rand.workspace = true
 rstest.workspace = true
+rstest_reuse.workspace = true
 
 [features]
 default = ["check_for_updates"]
