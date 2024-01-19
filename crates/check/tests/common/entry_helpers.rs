@@ -392,6 +392,20 @@ where
     find_leaf_node(nodestore, *blob_id.to_root_block_id(), &mut rng).await
 }
 
+pub async fn find_leaf_id<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    rng: &mut SmallRng,
+) -> BlockId
+where
+    B: BlockStore + Send + Sync,
+{
+    *find_leaf_node_and_parent(nodestore, root, rng)
+        .await
+        .0
+        .block_id()
+}
+
 pub async fn find_leaf_node<B>(
     nodestore: &DataNodeStore<B>,
     root: BlockId,
@@ -401,6 +415,18 @@ where
     B: BlockStore + Send + Sync,
 {
     find_leaf_node_and_parent(nodestore, root, rng).await.0
+}
+
+pub async fn find_leaf_id_and_parent<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    rng: &mut SmallRng,
+) -> (BlockId, DataInnerNode<B>, usize)
+where
+    B: BlockStore + Send + Sync,
+{
+    let (leaf, parent, index) = find_leaf_node_and_parent(nodestore, root, rng).await;
+    (*leaf.block_id(), parent, index)
 }
 
 pub async fn find_leaf_node_and_parent<B>(
