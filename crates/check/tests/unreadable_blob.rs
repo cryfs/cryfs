@@ -12,11 +12,11 @@ async fn unreadable_file_blob_bad_format_version() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     fs_fixture
-        .increment_format_version_of_blob(some_blobs.large_file)
+        .increment_format_version_of_blob(some_blobs.large_file_1)
         .await;
 
     let expected_errors = vec![CorruptedError::BlobUnreadable {
-        blob_id: some_blobs.large_file,
+        blob_id: some_blobs.large_file_1,
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -29,10 +29,10 @@ async fn unreadable_file_blob_bad_format_version() {
 //     let fs_fixture = FilesystemFixture::new().await;
 //     let some_blobs = fs_fixture.create_some_blobs().await;
 
-//     fs_fixture.corrupt_blob_type(some_blobs.large_file).await;
+//     fs_fixture.corrupt_blob_type(some_blobs.large_file_1).await;
 
 //     let expected_errors = vec![CorruptedError::BlobUnreadable {
-//         blob_id: some_blobs.large_file,
+//         blob_id: some_blobs.large_file_1,
 //     }];
 
 //     let errors = fs_fixture.run_cryfs_check().await;
@@ -45,15 +45,15 @@ async fn unreadable_dir_blob_bad_format_version() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
-        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .get_descendants_of_dir_blob(some_blobs.large_dir_1)
         .await;
     fs_fixture
-        .increment_format_version_of_blob(some_blobs.large_dir)
+        .increment_format_version_of_blob(some_blobs.large_dir_1)
         .await;
 
     let expected_errors =
         [CorruptedError::BlobUnreadable {
-            blob_id: some_blobs.large_dir,
+            blob_id: some_blobs.large_dir_1,
         }]
         .into_iter()
         .chain(orphaned_descendant_blobs.into_iter().map(|child| {
@@ -74,13 +74,13 @@ async fn unreadable_dir_blob_bad_format_version() {
 //     let some_blobs = fs_fixture.create_some_blobs().await;
 
 //     let orphaned_descendant_blobs = fs_fixture
-//         .get_descendants_of_dir_blob(some_blobs.large_dir)
+//         .get_descendants_of_dir_blob(some_blobs.large_dir_1)
 //         .await;
-//     fs_fixture.corrupt_blob_type(some_blobs.large_dir).await;
+//     fs_fixture.corrupt_blob_type(some_blobs.large_dir_1).await;
 
 //     let expected_errors =
 //         [CorruptedError::BlobUnreadable {
-//             blob_id: some_blobs.large_dir,
+//             blob_id: some_blobs.large_dir_1,
 //         }]
 //         .into_iter()
 //         .chain(orphaned_descendant_blobs.into_iter().map(|child| {
@@ -100,11 +100,11 @@ async fn unreadable_symlink_blob_bad_format_version() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     fs_fixture
-        .increment_format_version_of_blob(some_blobs.large_symlink)
+        .increment_format_version_of_blob(some_blobs.large_symlink_1)
         .await;
 
     let expected_errors = vec![CorruptedError::BlobUnreadable {
-        blob_id: some_blobs.large_symlink,
+        blob_id: some_blobs.large_symlink_1,
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -117,10 +117,10 @@ async fn unreadable_symlink_blob_bad_format_version() {
 //     let fs_fixture = FilesystemFixture::new().await;
 //     let some_blobs = fs_fixture.create_some_blobs().await;
 
-//     fs_fixture.corrupt_blob_type(some_blobs.large_symlink).await;
+//     fs_fixture.corrupt_blob_type(some_blobs.large_symlink_1).await;
 
 //     let expected_errors = vec![CorruptedError::BlobUnreadable {
-//         blob_id: some_blobs.large_symlink,
+//         blob_id: some_blobs.large_symlink_1,
 //     }];
 
 //     let errors = fs_fixture.run_cryfs_check().await;

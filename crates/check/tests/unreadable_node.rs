@@ -44,7 +44,7 @@ async fn file_with_unreadable_root_node() {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_root_node_of_blob(some_blobs.large_file)
+        .corrupt_root_node_of_blob(some_blobs.large_file_1)
         .await;
 
     let expected_errors = [
@@ -76,7 +76,7 @@ async fn file_with_corrupted_inner_node() {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_file)
+        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_file_1)
         .await;
 
     let expected_errors = iter::once(CorruptedError::NodeUnreadable {
@@ -98,7 +98,9 @@ async fn file_with_corrupted_leaf_node() {
     let fs_fixture = FilesystemFixture::new().await;
     let some_blobs = fs_fixture.create_some_blobs().await;
 
-    let removed_node = fs_fixture.corrupt_a_leaf_node(some_blobs.large_file).await;
+    let removed_node = fs_fixture
+        .corrupt_a_leaf_node(some_blobs.large_file_1)
+        .await;
 
     let expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: removed_node,
@@ -117,7 +119,7 @@ async fn file_with_corrupted_some_nodes() {
         corrupted_nodes,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_file)
+        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_file_1)
         .await;
 
     let expected_errors = corrupted_nodes
@@ -171,13 +173,13 @@ async fn dir_with_unreadable_root_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
-        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .get_descendants_of_dir_blob(some_blobs.large_dir_1)
         .await;
     let CorruptInnerNodeResult {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_root_node_of_blob(some_blobs.large_dir)
+        .corrupt_root_node_of_blob(some_blobs.large_dir_1)
         .await;
 
     let expected_errors =
@@ -212,13 +214,13 @@ async fn dir_with_unreadable_inner_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
-        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .get_descendants_of_dir_blob(some_blobs.large_dir_1)
         .await;
     let CorruptInnerNodeResult {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_dir)
+        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_dir_1)
         .await;
 
     let expected_errors =
@@ -227,7 +229,7 @@ async fn dir_with_unreadable_inner_node() {
                 node_id: corrupted_node,
             },
             CorruptedError::BlobUnreadable {
-                blob_id: some_blobs.large_dir,
+                blob_id: some_blobs.large_dir_1,
             },
         ]
         .into_iter()
@@ -253,9 +255,9 @@ async fn dir_with_unreadable_leaf_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
-        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .get_descendants_of_dir_blob(some_blobs.large_dir_1)
         .await;
-    let removed_node = fs_fixture.corrupt_a_leaf_node(some_blobs.large_dir).await;
+    let removed_node = fs_fixture.corrupt_a_leaf_node(some_blobs.large_dir_1).await;
 
     let expected_errors =
         [
@@ -263,7 +265,7 @@ async fn dir_with_unreadable_leaf_node() {
                 node_id: removed_node,
             },
             CorruptedError::BlobUnreadable {
-                blob_id: some_blobs.large_dir,
+                blob_id: some_blobs.large_dir_1,
             },
         ]
         .into_iter()
@@ -284,18 +286,18 @@ async fn dir_with_unreadable_some_nodes() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     let orphaned_descendant_blobs = fs_fixture
-        .get_descendants_of_dir_blob(some_blobs.large_dir)
+        .get_descendants_of_dir_blob(some_blobs.large_dir_1)
         .await;
     let CorruptSomeNodesResult {
         corrupted_nodes,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_dir)
+        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_dir_1)
         .await;
 
     let expected_errors =
         iter::once(CorruptedError::BlobUnreadable {
-            blob_id: some_blobs.large_dir,
+            blob_id: some_blobs.large_dir_1,
         })
         .chain(
             corrupted_nodes
@@ -352,7 +354,7 @@ async fn symlink_with_unreadable_root_node() {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_root_node_of_blob(some_blobs.large_symlink)
+        .corrupt_root_node_of_blob(some_blobs.large_symlink_1)
         .await;
 
     let expected_errors = [
@@ -384,7 +386,7 @@ async fn symlink_with_unreadable_inner_node() {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_symlink)
+        .corrupt_an_inner_node_of_a_large_blob(some_blobs.large_symlink_1)
         .await;
 
     let expected_errors = iter::once(CorruptedError::NodeUnreadable {
@@ -407,7 +409,7 @@ async fn symlink_with_unreadable_leaf_node() {
     let some_blobs = fs_fixture.create_some_blobs().await;
 
     let corrupted_node = fs_fixture
-        .corrupt_a_leaf_node(some_blobs.large_symlink)
+        .corrupt_a_leaf_node(some_blobs.large_symlink_1)
         .await;
 
     let expected_errors = vec![CorruptedError::NodeUnreadable {
@@ -427,7 +429,7 @@ async fn symlink_with_unreadable_some_nodes() {
         corrupted_nodes,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_symlink)
+        .corrupt_some_nodes_of_a_large_blob(some_blobs.large_symlink_1)
         .await;
 
     let expected_errors = corrupted_nodes

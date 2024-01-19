@@ -254,9 +254,12 @@ pub struct SomeBlobs {
     pub dir1_dir3_dir5: BlobId,
     pub dir2_dir6: BlobId,
     pub dir2_dir7: BlobId,
-    pub large_file: BlobId,
-    pub large_dir: BlobId,
-    pub large_symlink: BlobId,
+    pub large_file_1: BlobId,
+    pub large_file_2: BlobId,
+    pub large_dir_1: BlobId,
+    pub large_dir_2: BlobId,
+    pub large_symlink_1: BlobId,
+    pub large_symlink_2: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -275,11 +278,18 @@ where
     let mut dir2_dir7 = create_empty_dir(fsblobstore, &mut dir2, "somedir7").await;
 
     // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
-    let mut large_dir =
-        create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "some_large_dir", 2).await;
-    let large_symlink =
-        create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink").await;
-    let large_file = create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file").await;
+    let mut large_dir_1 =
+        create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "some_large_dir_1", 2)
+            .await;
+    let mut large_dir_2 =
+        create_large_dir_with_large_entries(fsblobstore, &mut dir1_dir4, "some_large_dir_2", 2)
+            .await;
+    let large_symlink_1 =
+        create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink_1").await;
+    let large_symlink_2 =
+        create_large_symlink(fsblobstore, &mut dir2, "some_large_symlink_2").await;
+    let large_file_1 = create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
+    let large_file_2 = create_large_file(fsblobstore, &mut dir2_dir6, "some_large_file_2").await;
 
     let result = SomeBlobs {
         root: root.blob_id(),
@@ -290,12 +300,16 @@ where
         dir1_dir3_dir5: dir1_dir3_dir5.blob_id(),
         dir2_dir6: dir2_dir6.blob_id(),
         dir2_dir7: dir2_dir7.blob_id(),
-        large_file: large_file.blob_id(),
-        large_dir: large_dir.blob_id(),
-        large_symlink: large_symlink.blob_id(),
+        large_file_1: large_file_1.blob_id(),
+        large_file_2: large_file_2.blob_id(),
+        large_dir_1: large_dir_1.blob_id(),
+        large_dir_2: large_dir_2.blob_id(),
+        large_symlink_1: large_symlink_1.blob_id(),
+        large_symlink_2: large_symlink_2.blob_id(),
     };
 
-    large_dir.async_drop().await.unwrap();
+    large_dir_1.async_drop().await.unwrap();
+    large_dir_2.async_drop().await.unwrap();
     dir2_dir7.async_drop().await.unwrap();
     dir2_dir6.async_drop().await.unwrap();
     dir1_dir3_dir5.async_drop().await.unwrap();
