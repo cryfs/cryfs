@@ -93,6 +93,30 @@ async fn remove_inner_node_and_replace_in_parent_with_another_existing_inner_nod
     .await
 }
 
+async fn remove_inner_node_and_replace_in_parent_with_root_node(
+    fs_fixture: &FilesystemFixture,
+    root: BlockId,
+) -> BlockId {
+    const DEPTH: u8 = 6;
+    fs_fixture
+        .update_nodestore(|nodestore| {
+            Box::pin(async move {
+                let mut rng = SmallRng::seed_from_u64(0);
+                let (node1_id, mut parent1, node1_index) =
+                    find_inner_node_id_and_parent(nodestore, root, DEPTH, &mut rng).await;
+                assert_ne!(root, node1_id);
+                assert_ne!(root, *parent1.block_id());
+
+                parent1.update_child(node1_index, &root);
+                std::mem::drop(parent1);
+                remove_subtree(nodestore, node1_id).await;
+
+                root
+            })
+        })
+        .await
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn file_with_leaf_node_referenced_multiple_times_from_same_file() {
     let fs_fixture = FilesystemFixture::new().await;
@@ -152,7 +176,25 @@ async fn file_with_inner_node_referenced_multiple_times_from_same_file_with_diff
     );
 }
 
-// TODO test root node referenced from within the file
+#[tokio::test(flavor = "multi_thread")]
+async fn file_with_root_node_referenced_from_same_file() {
+    let fs_fixture = FilesystemFixture::new().await;
+    let some_blobs = fs_fixture.create_some_blobs().await;
+
+    let blob_id = some_blobs.large_file;
+    let node_id = remove_inner_node_and_replace_in_parent_with_root_node(
+        &fs_fixture,
+        *blob_id.to_root_block_id(),
+    )
+    .await;
+
+    let errors = fs_fixture.run_cryfs_check().await;
+    assert_eq!(
+        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        errors
+    );
+}
+
 // TODO test referenced from different file
 
 // TODO test same things for dirs and symlinks
