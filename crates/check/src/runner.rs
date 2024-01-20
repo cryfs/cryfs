@@ -247,6 +247,10 @@ where
             prev_seen,
             now_seen,
         } => {
+            if let Ok(Some(mut blob)) = loaded {
+                blob.async_drop().await?;
+            }
+
             // The blob was already seen before. This can only happen if the blob is referenced multiple times.
             checks.add_error(CorruptedError::Assert(Box::new(
                 CorruptedError::BlobReferencedMultipleTimes {
@@ -275,7 +279,7 @@ where
                         })?;
                     }
 
-                    checks.process_reachable_blob(&blob)?;
+                    let process_result = checks.process_reachable_blob(&blob);
 
                     // TODO Checking children blobs for directory blobs loads the nodes of this blob.
                     //      Then we load it again when we check the nodes of this blob. Can we only load it once?
@@ -290,7 +294,9 @@ where
                         pb.clone(),
                     )
                     .await;
+
                     blob.async_drop().await?;
+                    process_result?;
                     subresult?;
                 }
                 Ok(None) => {
