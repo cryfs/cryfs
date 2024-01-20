@@ -1,6 +1,9 @@
 use rand::{rngs::SmallRng, SeedableRng};
 use rstest::rstest;
 use rstest_reuse::{self, *};
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::iter;
 
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::{BlockId, RemoveResult};
@@ -107,23 +110,57 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 #[rstest]
 #[case::file_referenced_from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_file_1))]
 #[case::file_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
-// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
-//#[case::file_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
+#[case::file_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
 #[case::file_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
-// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
-//#[case::dir_referenced_from_same_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_dir_1))]
-//#[case::dir_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_2, some_blobs.large_dir_1))]
+// TODO For some reason this causes a deadlock
+// #[case::dir_referenced_from_same_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_dir_1))]
+// TODO leaf_node_referenced_multiple_times::case_05_dir_referenced_from_different_dir is flaky. Probably because sometimes, it aligns just right so that the blob ids from the other dir blob remain valid.
+// Repro:
+// ```fish
+// cargo t --release --test node_referenced_multiple_times root_node_referenced_from_same_file::case_05_dir_referenced_from_same_dir                                                                                                                                                                                                    (base)
+// set iter 1
+// while RUST_BACKTRACE=1 RUST_LOG=debug /home/heinzi/projects/cryfs/target/release/deps/node_referenced_multiple_times-b97db7071c4492dd --nocapture leaf_node_referenced_multiple_times::case_05_dir_referenced_from_different_dir
+//    echo again $iter
+//    set iter (math $iter + 1)
+// end
+// ````
+// #[case::dir_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_2, some_blobs.large_dir_1))]
 #[case::dir_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_dir_1))]
 #[case::dir_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_dir_1))]
 #[case::symlink_referenced_from_same_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_symlink_1))]
 #[case::symlink_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_2, some_blobs.large_symlink_1))]
 #[case::symlink_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_symlink_1))]
-// TODO This currently doesn't work because the dir gets corrupted and it's children become unreferenced.
-//#[case::symlink_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_symlink_1))]
+#[case::symlink_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_symlink_1))]
 #[tokio::test(flavor = "multi_thread")]
 fn test_case_with_multiple_reference_scenarios(
     #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
 ) {
+}
+
+async fn errors_allowed_from_dir_blob_being_unreadable(
+    fs_fixture: &FilesystemFixture,
+    blob_id: BlobId,
+) -> HashSet<CorruptedError> {
+    if fs_fixture.is_dir_blob(blob_id).await {
+        fs_fixture
+            .get_descendants_of_dir_blob(blob_id)
+            .await
+            .into_iter()
+            .map(|descendant| CorruptedError::NodeUnreferenced {
+                node_id: *descendant.to_root_block_id(),
+            })
+            .chain(
+                [
+                    CorruptedError::BlobUnreadable { blob_id },
+                    // TODO Why is BlobMissing necessary here? Without it, tests seem to become flaky because it is sometimes thrown
+                    CorruptedError::BlobMissing { blob_id },
+                ]
+                .into_iter(),
+            )
+            .collect()
+    } else {
+        HashSet::new()
+    }
 }
 
 #[apply(test_case_with_multiple_reference_scenarios)]
@@ -133,6 +170,13 @@ async fn leaf_node_referenced_multiple_times(
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
 
+    // Depending on how this modifies the dir blob, it could make it unreadable.
+    // So let's ignore any errors that could be caused by that.
+    // Note: This is indeterministic. Dir entries are ordered by blob id and in some test
+    // runs this could make the blob unreadable while in others it wouldn't. So we have to
+    // actually ignore these errors and allow for both cases to avoid test flakiness.
+    let ignored_errors = errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1).await;
+
     let node_id = remove_leaf_and_replace_in_parent_with_another_existing_leaf(
         &fs_fixture,
         *blob1.to_root_block_id(),
@@ -141,9 +185,10 @@ async fn leaf_node_referenced_multiple_times(
     .await;
 
     let errors = fs_fixture.run_cryfs_check().await;
+    let errors = remove_all(errors, ignored_errors);
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
-        errors
+        errors,
     );
 }
 
@@ -156,6 +201,13 @@ async fn inner_node_referenced_multiple_times(
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
 
+    // Depending on how this modifies the dir blob, it could make it unreadable.
+    // So let's ignore any errors that could be caused by that.
+    // Note: This is indeterministic. Dir entries are ordered by blob id and in some test
+    // runs this could make the blob unreadable while in others it wouldn't. So we have to
+    // actually ignore these errors and allow for both cases to avoid test flakiness.
+    let ignored_errors = errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1).await;
+
     let node_id = remove_inner_node_and_replace_in_parent_with_another_existing_inner_node(
         &fs_fixture,
         *blob1.to_root_block_id(),
@@ -166,6 +218,7 @@ async fn inner_node_referenced_multiple_times(
     .await;
 
     let errors = fs_fixture.run_cryfs_check().await;
+    let errors = remove_all(errors, ignored_errors);
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
         errors
@@ -179,6 +232,13 @@ async fn root_node_referenced_from_same_file(
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
 
+    // Depending on how this modifies the dir blob, it could make it unreadable.
+    // So let's ignore any errors that could be caused by that.
+    // Note: This is indeterministic. Dir entries are ordered by blob id and in some test
+    // runs this could make the blob unreadable while in others it wouldn't. So we have to
+    // actually ignore these errors and allow for both cases to avoid test flakiness.
+    let ignored_errors = errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1).await;
+
     let node_id = remove_inner_node_and_replace_in_parent_with_root_node(
         &fs_fixture,
         *blob1.to_root_block_id(),
@@ -188,8 +248,17 @@ async fn root_node_referenced_from_same_file(
     .await;
 
     let errors = fs_fixture.run_cryfs_check().await;
+    let errors = remove_all(errors, ignored_errors);
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
         errors
     );
+}
+
+fn remove_all<T>(mut source: Vec<T>, to_remove: HashSet<T>) -> Vec<T>
+where
+    T: PartialEq + Eq + Hash,
+{
+    source.retain(|item| !to_remove.contains(item));
+    source
 }

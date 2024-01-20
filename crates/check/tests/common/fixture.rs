@@ -278,6 +278,18 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn is_dir_blob(&self, blob_id: BlobId) -> bool {
+        self.update_fsblobstore(move |fsblobstore| {
+            Box::pin(async move {
+                let mut blob = fsblobstore.load(&blob_id).await.unwrap().unwrap();
+                let result = matches!(&*blob, FsBlob::Directory(_));
+                blob.async_drop().await.unwrap();
+                result
+            })
+        })
+        .await
+    }
+
     pub async fn corrupt_block(&self, block_id: BlockId) {
         self.update_blockstore(|blockstore| {
             Box::pin(async move {
