@@ -14,11 +14,8 @@ use cryfs_cryfs::{
 use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
 use futures::{future::BoxFuture, stream::StreamExt, Future};
 use rand::{rngs::SmallRng, SeedableRng};
+use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
-use std::{
-    fmt::{Debug, Formatter},
-    fs,
-};
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
@@ -78,7 +75,7 @@ impl FilesystemFixture {
                 allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
                 missing_block_is_integrity_violation:
                     MissingBlockIsIntegrityViolation::IsAViolation,
-                on_integrity_violation: Box::new(|err| {
+                on_integrity_violation: Box::new(|_err| {
                     panic!("integrity violation");
                 }),
             },

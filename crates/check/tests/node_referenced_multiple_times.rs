@@ -3,7 +3,6 @@ use rstest::rstest;
 use rstest_reuse::{self, *};
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::iter;
 
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::{BlockId, RemoveResult};
