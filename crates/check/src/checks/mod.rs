@@ -34,10 +34,13 @@ use super::error::{CheckError, CorruptedError};
 /// At the end, it will call `finalize` to get a list of all the errors found.
 pub trait FilesystemCheck {
     /// Called for each blob that is reachable from the root of the file system via its directory structure.
-    fn process_reachable_blob(
+    fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) -> Result<(), CheckError>;
+
+    /// Called for each blob that is reachable from the root of the file system via its directory structure that was found but is not readable.
+    fn process_reachable_unreadable_blob(&mut self, blob_id: BlobId) -> Result<(), CheckError>;
 
     /// Called for each node that is part of a reachable blob
     fn process_reachable_node(
@@ -89,7 +92,7 @@ impl AllChecks {
         }
     }
 
-    pub fn process_reachable_blob(
+    pub fn process_reachable_readable_blob(
         &self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) -> Result<(), CheckError> {
@@ -97,15 +100,31 @@ impl AllChecks {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_blob(blob)?;
+            .process_reachable_readable_blob(blob)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_blob(blob)?;
+            .process_reachable_readable_blob(blob)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_blob(blob)?;
+            .process_reachable_readable_blob(blob)?;
+        Ok(())
+    }
+
+    pub fn process_reachable_unreadable_blob(&self, blob_id: BlobId) -> Result<(), CheckError> {
+        self.check_unreachable_nodes
+            .lock()
+            .unwrap()
+            .process_reachable_unreadable_blob(blob_id)?;
+        self.check_nodes_readable
+            .lock()
+            .unwrap()
+            .process_reachable_unreadable_blob(blob_id)?;
+        self.check_parent_pointers
+            .lock()
+            .unwrap()
+            .process_reachable_unreadable_blob(blob_id)?;
         Ok(())
     }
 

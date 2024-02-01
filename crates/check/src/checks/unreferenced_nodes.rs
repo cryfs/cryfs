@@ -179,11 +179,16 @@ impl FilesystemCheck for CheckUnreferencedNodes {
             .process_unreadable_node(node_id)
     }
 
-    fn process_reachable_blob(
+    fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) -> Result<(), CheckError> {
         self.reachable_nodes_checker.process_blob(blob)
+    }
+
+    fn process_reachable_unreadable_blob(&mut self, _blob_id: BlobId) -> Result<(), CheckError> {
+        // do nothing
+        Ok(())
     }
 
     fn finalize(self) -> Vec<CorruptedError> {

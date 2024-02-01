@@ -279,7 +279,7 @@ where
                         })?;
                     }
 
-                    let process_result = checks.process_reachable_blob(&blob);
+                    let process_result = checks.process_reachable_readable_blob(&blob);
 
                     // TODO Checking children blobs for directory blobs loads the nodes of this blob.
                     //      Then we load it again when we check the nodes of this blob. Can we only load it once?
@@ -308,6 +308,7 @@ where
                     )));
                 }
                 Err(error) => {
+                    checks.process_reachable_unreadable_blob(root_blob_id)?;
                     checks.add_error(CorruptedError::BlobUnreadable {
                         blob_id: root_blob_id,
                         // error,

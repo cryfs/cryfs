@@ -12,8 +12,9 @@ use super::{
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
 
 #[derive(Eq, PartialEq)]
-struct BlobInfo {
-    parent_pointer: BlobId,
+enum BlobInfo {
+    Readable { parent_pointer: BlobId },
+    Unreadable,
 }
 
 #[derive(Eq, PartialEq)]
@@ -34,11 +35,11 @@ impl CheckParentPointers {
 }
 
 impl FilesystemCheck for CheckParentPointers {
-    fn process_reachable_blob(
+    fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) -> Result<(), CheckError> {
-        let blob_info = BlobInfo {
+        let blob_info = BlobInfo::Readable {
             parent_pointer: blob.parent(),
         };
         self.reference_checker
@@ -59,8 +60,11 @@ impl FilesystemCheck for CheckParentPointers {
         Ok(())
     }
 
-    // TODO fn process_reachable_blob_again() for when a blob is referenced multiple times, because one of those should report a ParentPointer error
-    //      also make sure that the blob_referenced_multiple_times tests correctly report these.
+    fn process_reachable_unreadable_blob(&mut self, blob_id: BlobId) -> Result<(), CheckError> {
+        self.reference_checker
+            .mark_as_seen(blob_id, BlobInfo::Unreadable);
+        Ok(())
+    }
 
     fn process_reachable_node(
         &mut self,
@@ -99,20 +103,25 @@ impl FilesystemCheck for CheckParentPointers {
                     panic!("Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs.");
                 }
 
-                if let Some(BlobInfo{parent_pointer, ..}) = blob_info {
-                    if !referenced_by.contains(&ReferencedByParent(parent_pointer)) {
-                        errors.push(CorruptedError::WrongParentPointer {
-                            blob_id,
-                            parent_pointer,
-                            referenced_by: referenced_by
-                                .iter()
-                                .map(|ReferencedByParent(blob_id)| *blob_id)
-                                .collect(),
-                        });
+                match blob_info {
+                    Some(BlobInfo::Readable{parent_pointer}) => {
+                        if !referenced_by.contains(&ReferencedByParent(parent_pointer)) {
+                            errors.push(CorruptedError::WrongParentPointer {
+                                blob_id,
+                                parent_pointer,
+                                referenced_by: referenced_by
+                                    .iter()
+                                    .map(|ReferencedByParent(blob_id)| *blob_id)
+                                    .collect(),
+                            });
+                        }
                     }
-                } else {
-                    // TODO Should we be responsible for reporting BlobMissing and `unreferenced_nodes` instead throw an Assert?
-                    // errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobMissing { blob_id })));
+                    Some(BlobInfo::Unreadable) => {
+                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { blob_id })));
+                    }
+                    None => {
+                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobMissing { blob_id })));
+                    }
                 }
                 errors.into_iter()
             }).collect()
