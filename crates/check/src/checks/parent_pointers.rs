@@ -59,6 +59,9 @@ impl FilesystemCheck for CheckParentPointers {
         Ok(())
     }
 
+    // TODO fn process_reachable_blob_again() for when a blob is referenced multiple times, because one of those should report a ParentPointer error
+    //      also make sure that the blob_referenced_multiple_times tests correctly report these.
+
     fn process_reachable_node(
         &mut self,
         _node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
