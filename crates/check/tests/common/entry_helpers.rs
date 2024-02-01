@@ -260,7 +260,9 @@ pub struct SomeBlobs {
     pub large_dir_2: BlobId,
     pub large_symlink_1: BlobId,
     pub large_symlink_2: BlobId,
+    pub empty_file: BlobId,
     pub empty_dir: BlobId,
+    pub empty_symlink: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -292,7 +294,9 @@ where
     let large_file_1 = create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
     let large_file_2 = create_large_file(fsblobstore, &mut dir2_dir6, "some_large_file_2").await;
 
+    let empty_file = create_empty_file(fsblobstore, &mut dir1_dir3_dir5, "some_empty_file").await;
     let mut empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
+    let empty_symlink = create_symlink(fsblobstore, &mut dir1_dir3, "some_empty_symlink", "").await;
 
     let result = SomeBlobs {
         root: root.blob_id(),
@@ -309,7 +313,9 @@ where
         large_dir_2: large_dir_2.blob_id(),
         large_symlink_1: large_symlink_1.blob_id(),
         large_symlink_2: large_symlink_2.blob_id(),
+        empty_file: empty_file.blob_id(),
         empty_dir: empty_dir.blob_id(),
+        empty_symlink: empty_symlink.blob_id(),
     };
 
     large_dir_1.async_drop().await.unwrap();
