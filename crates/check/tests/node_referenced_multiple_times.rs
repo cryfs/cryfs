@@ -226,9 +226,7 @@ async fn inner_node_referenced_multiple_times(
 }
 
 #[apply(test_case_with_multiple_reference_scenarios)]
-async fn root_node_referenced_from_same_file(
-    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
-) {
+async fn root_node_referenced(#[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId)) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
 

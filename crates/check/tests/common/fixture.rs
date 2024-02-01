@@ -195,16 +195,21 @@ impl FilesystemFixture {
     }
 
     pub async fn create_empty_file(&self) -> BlobId {
-        let root_id = self.root_blob_id;
+        self.create_empty_file_in_parent(self.root_blob_id, "file_name")
+            .await
+    }
+
+    pub async fn create_empty_file_in_parent(&self, parent_id: BlobId, name: &str) -> BlobId {
+        let name = name.to_owned();
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
-                let mut root = FsBlob::into_dir(blobstore.load(&root_id).await.unwrap().unwrap())
-                    .await
-                    .unwrap();
+                let mut parent =
+                    FsBlob::into_dir(blobstore.load(&parent_id).await.unwrap().unwrap())
+                        .await
+                        .unwrap();
                 let result =
-                    super::entry_helpers::create_empty_file(blobstore, &mut root, "file_name")
-                        .await;
-                root.async_drop().await.unwrap();
+                    super::entry_helpers::create_empty_file(blobstore, &mut parent, &name).await;
+                parent.async_drop().await.unwrap();
                 result.blob_id()
             })
         })
@@ -212,17 +217,23 @@ impl FilesystemFixture {
     }
 
     pub async fn create_empty_dir(&self) -> BlobId {
-        let root_id = self.root_blob_id;
+        self.create_empty_dir_in_parent(self.root_blob_id, "dir_name")
+            .await
+    }
+
+    pub async fn create_empty_dir_in_parent(&self, parent_id: BlobId, name: &str) -> BlobId {
+        let name = name.to_owned();
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
-                let mut root = FsBlob::into_dir(blobstore.load(&root_id).await.unwrap().unwrap())
-                    .await
-                    .unwrap();
+                let mut parent =
+                    FsBlob::into_dir(blobstore.load(&parent_id).await.unwrap().unwrap())
+                        .await
+                        .unwrap();
                 let mut created_dir =
-                    super::entry_helpers::create_empty_dir(blobstore, &mut root, "dir_name").await;
+                    super::entry_helpers::create_empty_dir(blobstore, &mut parent, &name).await;
                 let result = created_dir.blob_id();
                 created_dir.async_drop().await.unwrap();
-                root.async_drop().await.unwrap();
+                parent.async_drop().await.unwrap();
                 result
             })
         })
@@ -230,26 +241,75 @@ impl FilesystemFixture {
     }
 
     pub async fn create_symlink(&self, target: &str) -> BlobId {
-        let root_id = self.root_blob_id;
+        self.create_symlink_in_parent(self.root_blob_id, "symlink_name", target)
+            .await
+    }
+
+    pub async fn create_symlink_in_parent(
+        &self,
+        parent_id: BlobId,
+        name: &str,
+        target: &str,
+    ) -> BlobId {
+        let name = name.to_owned();
         let target = target.to_owned();
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
-                let mut root = FsBlob::into_dir(blobstore.load(&root_id).await.unwrap().unwrap())
-                    .await
-                    .unwrap();
-                let result = super::entry_helpers::create_symlink(
-                    blobstore,
-                    &mut root,
-                    "symlink_name",
-                    &target,
-                )
-                .await
-                .blob_id();
-                root.async_drop().await.unwrap();
+                let mut parent =
+                    FsBlob::into_dir(blobstore.load(&parent_id).await.unwrap().unwrap())
+                        .await
+                        .unwrap();
+                let result =
+                    super::entry_helpers::create_symlink(blobstore, &mut parent, &name, &target)
+                        .await
+                        .blob_id();
+                parent.async_drop().await.unwrap();
                 result
             })
         })
         .await
+    }
+
+    pub async fn add_file_entry_to_dir(&self, parent: BlobId, name: &str, blob_id: BlobId) {
+        let name = name.to_owned();
+        self.update_fsblobstore(move |blobstore| {
+            Box::pin(async move {
+                let mut parent = FsBlob::into_dir(blobstore.load(&parent).await.unwrap().unwrap())
+                    .await
+                    .unwrap();
+                super::entry_helpers::add_file_entry(&mut parent, &name, blob_id);
+                parent.async_drop().await.unwrap();
+            })
+        })
+        .await;
+    }
+
+    pub async fn add_dir_entry_to_dir(&self, parent: BlobId, name: &str, blob_id: BlobId) {
+        let name = name.to_owned();
+        self.update_fsblobstore(move |blobstore| {
+            Box::pin(async move {
+                let mut parent = FsBlob::into_dir(blobstore.load(&parent).await.unwrap().unwrap())
+                    .await
+                    .unwrap();
+                super::entry_helpers::add_dir_entry(&mut parent, &name, blob_id);
+                parent.async_drop().await.unwrap();
+            })
+        })
+        .await;
+    }
+
+    pub async fn add_symlink_entry_to_dir(&self, parent: BlobId, name: &str, blob_id: BlobId) {
+        let name = name.to_owned();
+        self.update_fsblobstore(move |blobstore| {
+            Box::pin(async move {
+                let mut parent = FsBlob::into_dir(blobstore.load(&parent).await.unwrap().unwrap())
+                    .await
+                    .unwrap();
+                super::entry_helpers::add_symlink_entry(&mut parent, &name, blob_id);
+                parent.async_drop().await.unwrap();
+            })
+        })
+        .await;
     }
 
     pub async fn get_children_of_dir_blob(&self, dir_blob: BlobId) -> Vec<BlobId> {
