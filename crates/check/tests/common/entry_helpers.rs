@@ -260,6 +260,7 @@ pub struct SomeBlobs {
     pub large_dir_2: BlobId,
     pub large_symlink_1: BlobId,
     pub large_symlink_2: BlobId,
+    pub empty_dir: BlobId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -291,6 +292,8 @@ where
     let large_file_1 = create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
     let large_file_2 = create_large_file(fsblobstore, &mut dir2_dir6, "some_large_file_2").await;
 
+    let mut empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
+
     let result = SomeBlobs {
         root: root.blob_id(),
         dir1: dir1.blob_id(),
@@ -306,6 +309,7 @@ where
         large_dir_2: large_dir_2.blob_id(),
         large_symlink_1: large_symlink_1.blob_id(),
         large_symlink_2: large_symlink_2.blob_id(),
+        empty_dir: empty_dir.blob_id(),
     };
 
     large_dir_1.async_drop().await.unwrap();
@@ -317,6 +321,7 @@ where
     dir1_dir3.async_drop().await.unwrap();
     dir2.async_drop().await.unwrap();
     dir1.async_drop().await.unwrap();
+    empty_dir.async_drop().await.unwrap();
 
     result
 }
@@ -611,10 +616,50 @@ where
             blob.async_drop().await.unwrap();
             let recursive_streams = dir_children
                 .into_iter()
-                .map(|child_id| get_descendants_of_dir_blob(fsblobstore, child_id))
+                .map(|child_id| get_descendants_if_dir_blob(fsblobstore, child_id))
                 .collect::<Vec<_>>();
             let recursive_children = stream::select_all(recursive_streams);
-            stream::iter(children.into_iter()).chain(recursive_children)
+            stream::iter(children.into_iter())
+                .chain(recursive_children)
+                .boxed()
+        }
+        .flatten_stream(),
+    )
+}
+
+pub fn get_descendants_if_dir_blob<'a, 'r, B>(
+    fsblobstore: &'a FsBlobStore<B>,
+    maybe_dir_blob_id: BlobId,
+) -> BoxStream<'r, BlobId>
+where
+    'a: 'r,
+    B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+{
+    Box::pin(
+        async move {
+            let blob = fsblobstore.load(&maybe_dir_blob_id).await.unwrap().unwrap();
+            if let Ok(mut blob) = FsBlob::into_dir(blob).await {
+                let children = blob
+                    .entries()
+                    .map(|entry| *entry.blob_id())
+                    .collect::<Vec<_>>();
+                let dir_children = blob
+                    .entries()
+                    .filter(|entry| entry.mode().has_dir_flag())
+                    .map(|entry| *entry.blob_id())
+                    .collect::<Vec<_>>();
+                blob.async_drop().await.unwrap();
+                let recursive_streams = dir_children
+                    .into_iter()
+                    .map(|child_id| get_descendants_if_dir_blob(fsblobstore, child_id))
+                    .collect::<Vec<_>>();
+                let recursive_children = stream::select_all(recursive_streams);
+                stream::iter(children.into_iter())
+                    .chain(recursive_children)
+                    .boxed()
+            } else {
+                stream::empty().boxed()
+            }
         }
         .flatten_stream(),
     )

@@ -106,7 +106,7 @@ async fn blob_referenced_multiple_times(
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(
         vec![
-            // TODO Can we avoid reporting `NodeReferencedMultipleTimes` and only report `BlobReferencedMultipleTimes`?
+            // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
             CorruptedError::NodeReferencedMultipleTimes {
                 node_id: *blob_id.to_root_block_id()
             },

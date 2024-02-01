@@ -325,6 +325,16 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn get_descendants_if_dir_blob<'a>(&'a self, maybe_dir_blob: BlobId) -> Vec<BlobId> {
+        self.update_fsblobstore(move |fsblobstore| {
+            Box::pin(
+                entry_helpers::get_descendants_if_dir_blob(fsblobstore, maybe_dir_blob)
+                    .collect::<Vec<BlobId>>(),
+            )
+        })
+        .await
+    }
+
     pub async fn get_descendants_of_dir_blob<'a>(&'a self, dir_blob: BlobId) -> Vec<BlobId> {
         self.update_fsblobstore(move |fsblobstore| {
             Box::pin(
