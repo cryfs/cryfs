@@ -4,7 +4,7 @@ use futures::stream::{BoxStream, StreamExt};
 use std::collections::hash_map::HashMap;
 use std::fmt::{self, Debug};
 use std::sync::RwLock;
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 
 use crate::{
     low_level::{
