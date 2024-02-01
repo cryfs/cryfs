@@ -1,3 +1,5 @@
+//! Tests where a node is referenced multiple times, either from the same or from a different blob
+
 use rand::{rngs::SmallRng, SeedableRng};
 use rstest::rstest;
 use rstest_reuse::{self, *};
