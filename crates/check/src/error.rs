@@ -12,46 +12,59 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
+        // TODO referenced_by: BlockId,
         // TODO error: anyhow::Error,
+        // TODO expected_depth: u8,
     },
 
     #[error("Node {node_id:?} is referenced but does not exist")]
-    NodeMissing { node_id: BlockId },
+    NodeMissing {
+        node_id: BlockId,
+        // TODO referenced_by: BlockId,
+        // TODO expected_depth: u8,
+    },
 
     #[error("Node {node_id:?} is not referenced but exists")]
-    NodeUnreferenced { node_id: BlockId },
+    NodeUnreferenced {
+        node_id: BlockId,
+        // TODO depth: u8,
+    },
 
     // #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]
     // UnreachableSubtreeWithCycle { node_id: BlockId },
     #[error("Node {node_id:?} is referenced multiple times")]
     NodeReferencedMultipleTimes {
         node_id: BlockId,
-        // TODO parents: HashSet<BlockId>,
+        // TODO referenced_by: BTreeSet<BlockId>,
+        // TODO expected_depths: u8,
     },
 
     #[error("Blob {blob_id:?} is referenced multiple times")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
-        // TODO parents: HashSet<BlobId>,
+        // TODO blob_type: ,
+        // TODO referenced_by: BTreeSet<BlobId>,
     },
 
-    // #[error("Cyclic self-reference: Node {node_id:?} references itself")]
-    // NodeHasCyclicSelfReference { node_id: BlockId },
-
-    // #[error("Cyclic self-reference: Dir Blob {blob_id:?} references itself")]
-    // DirBlobHasCyclicSelfReference { blob_id: BlobId },
     #[error("Blob {blob_id:?} is unreadable and likely corrupted")]
     BlobUnreadable {
         blob_id: BlobId,
+        // TODO expected_blob_type: ,
+        // TODO referenced_by: BlobId,
         // TODO error:  anyhow::Error,
     },
 
     #[error("Blob {blob_id:?} is referenced but does not exist")]
-    BlobMissing { blob_id: BlobId },
+    BlobMissing {
+        blob_id: BlobId,
+        // TODO expected_blob_type: ,
+        // TODO referenced_by: BlobId,
+    },
 
     #[error("Blob {blob_id:?} is referenced by parent {referenced_by:?} but has parent pointer {parent_pointer:?}")]
     WrongParentPointer {
         blob_id: BlobId,
+        // TODO blob_type: ,
         referenced_by: BTreeSet<BlobId>,
         parent_pointer: BlobId,
     },
