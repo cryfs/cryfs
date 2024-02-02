@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use thiserror::Error;
 
 use cryfs_blobstore::BlobId;
@@ -6,7 +7,7 @@ use cryfs_blockstore::BlockId;
 // TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
 
 /// A [CorruptedError] is an error we found in the file system when analyzing it
-#[derive(Debug, Error, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
+#[derive(Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
@@ -51,7 +52,7 @@ pub enum CorruptedError {
     #[error("Blob {blob_id:?} is referenced by parent {referenced_by:?} but has parent pointer {parent_pointer:?}")]
     WrongParentPointer {
         blob_id: BlobId,
-        referenced_by: Vec<BlobId>,
+        referenced_by: BTreeSet<BlobId>,
         parent_pointer: BlobId,
     },
 
