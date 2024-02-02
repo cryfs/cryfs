@@ -21,7 +21,7 @@ use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
 
-fn large_symlink_target() -> String {
+pub fn large_symlink_target() -> String {
     (0..1_000)
         .map(|i| format!("pathcomponentforsymlink_{i}"))
         .join("/")
