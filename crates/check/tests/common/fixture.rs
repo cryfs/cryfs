@@ -11,7 +11,10 @@ use cryfs_cryfs::{
     filesystem::fsblobstore::{FsBlob, FsBlobStore},
     localstate::LocalStateDir,
 };
-use cryfs_utils::async_drop::{AsyncDropGuard, SyncDrop};
+use cryfs_utils::{
+    async_drop::{AsyncDropGuard, SyncDrop},
+    progress::SilentProgressBarManager,
+};
 use futures::{future::BoxFuture, stream::StreamExt, Future};
 use rand::{rngs::SmallRng, SeedableRng};
 use std::fmt::{Debug, Formatter};
@@ -167,6 +170,7 @@ impl FilesystemFixture {
             &self.tempdir.config_file_path(),
             &self.tempdir.local_state_dir(),
             &FixedPasswordProvider::new(PASSWORD.to_owned()),
+            SilentProgressBarManager,
         )
         .await
         .expect("Failed to run cryfs-check")

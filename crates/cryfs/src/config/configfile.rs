@@ -5,7 +5,10 @@ use std::io::{BufReader, BufWriter, ErrorKind};
 use std::path::PathBuf;
 use thiserror::Error;
 
-use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
+use cryfs_utils::{
+    crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings},
+    progress::ProgressBarManager,
+};
 
 use super::cryconfig::CryConfig;
 use super::encryption::ConfigEncryptionKey;
@@ -150,6 +153,7 @@ impl CryConfigFile {
         path: PathBuf,
         password: &str,
         access: Access,
+        progress_bars: impl ProgressBarManager,
     ) -> Result<CryConfigFile, LoadConfigFileError> {
         let file =
             OpenOptions::new()
@@ -165,9 +169,12 @@ impl CryConfigFile {
                     // TODO Other possible errors?
                     _ => LoadConfigFileError::IoError(error),
                 })?;
-        let (config_encryption_key, kdf_parameters, config) =
-            super::encryption::decrypt::<Scrypt>(&mut BufReader::new(file), password)
-                .map_err(LoadConfigFileError::DeserializationError)?;
+        let (config_encryption_key, kdf_parameters, config) = super::encryption::decrypt::<Scrypt>(
+            &mut BufReader::new(file),
+            password,
+            progress_bars,
+        )
+        .map_err(LoadConfigFileError::DeserializationError)?;
         Ok(Self {
             path,
             config,

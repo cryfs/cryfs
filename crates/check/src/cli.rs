@@ -1,4 +1,6 @@
 use anyhow::Result;
+use std::path::Path;
+
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,
@@ -12,9 +14,11 @@ use cryfs_cryfs::{
     localstate::LocalStateDir,
     CRYFS_VERSION,
 };
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::{
+    async_drop::AsyncDropGuard,
+    progress::{ConsoleProgressBarManager, ProgressBarManager},
+};
 use cryfs_version::VersionInfo;
-use std::path::Path;
 
 use super::{console::RecoverConsole, error::CorruptedError, runner::RecoverRunner};
 use crate::args::CryfsRecoverArgs;
@@ -60,6 +64,7 @@ impl Application for RecoverCli {
             &config_file_path,
             &self.local_state_dir,
             &password_provider,
+            ConsoleProgressBarManager,
         )
         .await?;
 
@@ -77,10 +82,16 @@ pub async fn check_filesystem(
     config_file_path: &Path,
     local_state_dir: &LocalStateDir,
     password_provider: &impl PasswordProvider,
+    progress_bar_manager: impl ProgressBarManager,
 ) -> Result<Vec<CorruptedError>> {
     let blockstore = ReadOnlyBlockStore::new(blockstore);
 
-    let config = load_config(config_file_path, local_state_dir, password_provider)?;
+    let config = load_config(
+        config_file_path,
+        local_state_dir,
+        password_provider,
+        progress_bar_manager,
+    )?;
     print_config(&config);
 
     // TODO It currently seems to spend some seconds before getting from here in to `RecoveryRunner`. Probably to load local state or something like that. Let's add a spinner.
@@ -100,7 +111,10 @@ pub async fn check_filesystem(
                     // TODO What to do here? Maybe we should at least log it
                 }),
             },
-        RecoverRunner { config: &config },
+        RecoverRunner {
+            config: &config,
+            progress_bar_manager,
+        },
     )
     .await?
 }
@@ -109,6 +123,7 @@ fn load_config(
     config_file_path: &Path,
     local_state_dir: &LocalStateDir,
     password_provider: &impl PasswordProvider,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     // TODO Allow changing config file using args as C++ did
     cryfs_cryfs::config::load_readonly(
@@ -120,5 +135,6 @@ fn load_config(
             expected_cipher: None,
         },
         local_state_dir,
+        progress_bars,
     )
 }

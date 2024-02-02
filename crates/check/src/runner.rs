@@ -22,17 +22,18 @@ use cryfs_cryfs::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     containers::{HashMapExt, OccupiedError},
-    progress::{Progress, Spinner},
+    progress::{Progress, ProgressBarManager, Spinner},
 };
 
 // TODO What's a good concurrency value here?
 const MAX_CONCURRENCY: usize = 100;
 
-pub struct RecoverRunner<'c> {
+pub struct RecoverRunner<'c, PBM: ProgressBarManager> {
+    pub progress_bar_manager: PBM,
     pub config: &'c ConfigLoadResult,
 }
 
-impl<'l> BlockstoreCallback for RecoverRunner<'l> {
+impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> {
     type Result = Result<Vec<CorruptedError>>;
 
     async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
@@ -52,7 +53,9 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
 
         // TODO Instead of autotick, we could manually tick it while listing nodes. That would mean users see it if it gets stuck.
         //      Or we could even show a Progress bar since we know we're going from AAA to ZZZ in the folder structure.
-        let pb = Spinner::new_autotick("Listing all nodes");
+        let pb = self
+            .progress_bar_manager
+            .new_spinner_autotick("Listing all nodes");
         let all_nodes = match get_all_node_ids(&blockstore).await {
             Ok(all_nodes) => all_nodes,
             Err(e) => {
@@ -70,7 +73,9 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         let mut blobstore =
             FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize_bytes).await?);
 
-        let pb = Progress::new("Checking all reachable blobs", 1);
+        let pb = self
+            .progress_bar_manager
+            .new_progress_bar("Checking all reachable blobs", 1);
         let processed_blobs = Arc::new(ProcessedItems::new());
         let check_all_reachable_blobs_result = check_all_reachable_blobs(
             &blobstore,
@@ -93,7 +98,7 @@ impl<'l> BlockstoreCallback for RecoverRunner<'l> {
         let reachable_blobs: Vec<BlobId> = processed_blobs.into_keys().collect();
         pb.finish();
 
-        let pb = Progress::new(
+        let pb = self.progress_bar_manager.new_progress_bar(
             "Checking all nodes",
             u64::try_from(all_nodes.len()).unwrap(),
         );
@@ -154,7 +159,7 @@ async fn check_all_unreachable_nodes<B>(
     nodestore: &AsyncDropGuard<DataNodeStore<B>>,
     unreachable_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
-    pb: Progress,
+    pb: impl Progress,
 ) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
@@ -193,7 +198,7 @@ async fn check_all_reachable_blobs<B>(
     already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     root_blob_id: BlobId,
     checks: &AllChecks,
-    pb: Progress,
+    pb: impl Progress,
 ) -> Result<()>
 where
     B: BlockStore + Send + Sync + 'static,
@@ -215,20 +220,21 @@ where
 }
 
 #[async_recursion]
-async fn _check_all_reachable_blobs<'a, 'b, 'c, 'f, B>(
+async fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
     already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     root_blob_id: BlobId,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f>,
-    pb: Progress,
+    pb: impl Progress + 'd,
 ) -> Result<()>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
+    'd: 'f,
     'f: 'async_recursion,
 {
     // TODO Function too large, split into subfunctions
@@ -323,20 +329,21 @@ where
     Ok(())
 }
 
-async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'f, B>(
+async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
     already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
     blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
     checks: &'d AllChecks,
     task_spawner: TaskSpawner<'f>,
-    pb: Progress,
+    pb: impl Progress + 'e,
 ) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'd: 'f,
+    'e: 'f,
 {
     match blob.blob_type() {
         BlobType::File | BlobType::Symlink => {
@@ -384,7 +391,7 @@ async fn check_all_nodes_of_reachable_blobs<B>(
     allowed_nodes: &HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
     checks: &AllChecks,
-    pb: Progress,
+    pb: impl Progress,
 ) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
@@ -413,7 +420,7 @@ where
     Ok(())
 }
 
-async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'f, B>(
+async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     nodestore: &'a DataNodeStore<B>,
     blob_id: BlobId,
     current_node_id: BlockId,
@@ -421,13 +428,14 @@ async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'f, B>(
     already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f, CheckError>,
-    pb: Progress,
+    pb: impl Progress + 'd,
 ) -> Result<(), CheckError>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
+    'd: 'f,
 {
     // TODO Function too long, split into subfunctions
 
@@ -525,7 +533,7 @@ where
     Ok(())
 }
 
-fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'f, B>(
+fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
     nodestore: &'a DataNodeStore<B>,
     blob_id: BlobId,
     current_node: &DataNode<B>,
@@ -533,12 +541,13 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'f, B>(
     already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f, CheckError>,
-    pb: Progress,
+    pb: impl Progress + 'd,
 ) where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
+    'd: 'f,
 {
     match current_node {
         DataNode::Leaf(_) => {

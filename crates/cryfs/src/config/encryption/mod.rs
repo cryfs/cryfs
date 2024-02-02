@@ -7,7 +7,7 @@ use cryfs_utils::{
         kdf::{KDFParameters, PasswordBasedKDF},
         symmetric::{CipherDef, EncryptionKey},
     },
-    progress::Spinner,
+    progress::{ProgressBarManager, Spinner},
 };
 use inner::InnerConfig;
 use outer::{OuterCipher, OuterConfig};
@@ -50,11 +50,12 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
     // TODO Here and throughout the whole function stack, protect password similar to how we protect `EncryptionKey` (mprotect, etc.)
     //      Maybe we also have to protect CryConfig or at least make sure that the key is never unprotected on its way from/to the file into/from the key member of the CryConfig instance
     password: &str,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<(ConfigEncryptionKey, KDF::Parameters, CryConfig)> {
     let outer_config =
         OuterConfig::deserialize(source).context("Trying to deserialize outer config")?;
 
-    let pb = Spinner::new_autotick("Deriving key from password");
+    let pb = progress_bars.new_spinner_autotick("Deriving key from password");
 
     let kdf_parameters = KDF::Parameters::deserialize(outer_config.kdf_parameters())
         .context("Trying to deserialize KDF parameters")?;
@@ -63,7 +64,7 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
 
     pb.finish();
 
-    let pb = Spinner::new_autotick("Decrypting config file");
+    let pb = progress_bars.new_spinner_autotick("Decrypting config file");
 
     let inner_config = outer_config
         .decrypt(config_encryption_key.outer_key())
@@ -122,6 +123,7 @@ mod tests {
     use crate::config::CryConfig;
     use crate::config::FilesystemId;
     use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
+    use cryfs_utils::progress::SilentProgressBarManager;
     use std::io::Cursor;
 
     #[test]
@@ -131,6 +133,7 @@ mod tests {
         let config = super::decrypt::<Scrypt>(
             &mut Cursor::new(&hex::decode(CONFIG).unwrap()),
             "mypassword",
+            SilentProgressBarManager,
         )
         .unwrap();
         assert_eq!(
@@ -175,8 +178,12 @@ mod tests {
             &mut Cursor::new(&mut encrypted),
         )
         .unwrap();
-        let decrypted_config =
-            super::decrypt::<Scrypt>(&mut Cursor::new(&encrypted), "some_password").unwrap();
+        let decrypted_config = super::decrypt::<Scrypt>(
+            &mut Cursor::new(&encrypted),
+            "some_password",
+            SilentProgressBarManager,
+        )
+        .unwrap();
         assert_eq!(config_encryption_key, &decrypted_config.0);
         assert_eq!(kdf_parameters, decrypted_config.1);
         assert_eq!(config, decrypted_config.2);

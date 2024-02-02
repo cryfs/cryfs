@@ -12,7 +12,7 @@ use super::password_provider::PasswordProvider;
 use super::CryConfig;
 use crate::localstate::{FilesystemMetadata, LocalStateDir};
 use cryfs_blockstore::ClientId;
-use cryfs_utils::crypto::symmetric::EncryptionKey;
+use cryfs_utils::{crypto::symmetric::EncryptionKey, progress::ProgressBarManager};
 use cryfs_version::{Version, VersionInfo};
 
 use crate::config::FILESYSTEM_FORMAT_VERSION;
@@ -126,6 +126,7 @@ pub fn load_or_create(
     console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     if filename.exists() {
         // TODO Protect password similar to how we protect EncryptionKey
@@ -139,6 +140,7 @@ pub fn load_or_create(
             command_line_flags,
             local_state_dir,
             Access::ReadWrite,
+            progress_bars,
         )
     } else {
         // TODO Protect password similar to how we protect EncryptionKey
@@ -161,6 +163,7 @@ pub fn load_readonly(
     console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     let password = password
         .password_for_existing_filesystem()
@@ -172,6 +175,7 @@ pub fn load_readonly(
         command_line_flags,
         local_state_dir,
         Access::ReadOnly,
+        progress_bars,
     )
 }
 
@@ -206,8 +210,10 @@ fn _load(
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
     access: Access,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
-    let mut configfile: CryConfigFile = CryConfigFile::load(filename, password, access)?;
+    let mut configfile: CryConfigFile =
+        CryConfigFile::load(filename, password, access, progress_bars)?;
     let old_config = configfile.config().clone();
     _check_version(configfile.config(), console)?;
     _update_version_in_config(&mut configfile);

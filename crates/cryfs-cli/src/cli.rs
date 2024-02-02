@@ -16,6 +16,7 @@ use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, PasswordProvider},
     localstate::LocalStateDir,
 };
+use cryfs_utils::progress::{ConsoleProgressBarManager, ProgressBarManager};
 use cryfs_version::VersionInfo;
 
 // TODO Check (and add tests for) error messages make sense, e.g. when
@@ -56,7 +57,7 @@ impl Application for Cli {
             return Ok(());
         }
 
-        self.run_filesystem().await?;
+        self.run_filesystem(ConsoleProgressBarManager).await?;
 
         println!(
             "Basedir: {:?}\nMountdir: {:?}",
@@ -68,7 +69,7 @@ impl Application for Cli {
 }
 
 impl Cli {
-    async fn run_filesystem(&self) -> Result<()> {
+    async fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<()> {
         // TODO C++ code has lots more logic here, migrate that.
         let basedir = self.basedir().to_owned();
         if !basedir.exists() {
@@ -79,7 +80,7 @@ impl Cli {
             std::fs::create_dir(mountdir)?;
         }
 
-        let config = self.load_or_create_config()?;
+        let config = self.load_or_create_config(progress_bars)?;
         print_config(&config);
 
         setup_blockstore_stack(
@@ -106,7 +107,10 @@ impl Cli {
     }
 
     // TODO Test the console flows for opening an existing/creating a new file system
-    fn load_or_create_config(&self) -> Result<ConfigLoadResult, ConfigLoadError> {
+    fn load_or_create_config(
+        &self,
+        progress_bars: impl ProgressBarManager,
+    ) -> Result<ConfigLoadResult, ConfigLoadError> {
         // TODO Allow changing config file using args as C++ did
         let config_file_location = self.basedir().join("cryfs.config");
         cryfs_cryfs::config::load_or_create(
@@ -119,6 +123,7 @@ impl Cli {
                 expected_cipher: None,
             },
             &self.local_state_dir,
+            progress_bars,
         )
     }
 
