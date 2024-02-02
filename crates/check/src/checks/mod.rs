@@ -12,7 +12,7 @@ use super::error::{CheckError, CorruptedError};
 //  - root is a directory
 //  - trees are balanced left-max-data trees
 //  - depth of nodes is correct
-//  - leaves not empty
+//  - leaves not empty, all leaves but rightmost one must be full, rightmost one non-empty
 //  - there are no cycles or self-references within a tree
 //  - there are no cycles or self-references between trees (i.e. in the directory structure)
 //  - all parent pointers are correct
