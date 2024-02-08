@@ -1,4 +1,6 @@
-use binary_layout::{define_layout, LayoutAs};
+use anyhow::bail;
+use binary_layout::{binary_layout, LayoutAs};
+use std::convert::Infallible;
 
 use cryfs_blobstore::BLOBID_LEN;
 
@@ -16,32 +18,34 @@ pub enum BlobType {
 }
 
 impl LayoutAs<u8> for BlobType {
-    fn read(v: u8) -> Self {
+    type ReadError = anyhow::Error;
+    type WriteError = Infallible;
+
+    fn try_read(v: u8) -> Result<Self, anyhow::Error> {
         match v {
-            MAGIC_NUMBER_DIR => BlobType::Dir,
-            MAGIC_NUMBER_FILE => BlobType::File,
-            MAGIC_NUMBER_SYMLINK => BlobType::Symlink,
-            // TODO bail! instead of panic!
-            magic_number => panic!("Invalid FsBlob magic number {magic_number}"),
+            MAGIC_NUMBER_DIR => Ok(BlobType::Dir),
+            MAGIC_NUMBER_FILE => Ok(BlobType::File),
+            MAGIC_NUMBER_SYMLINK => Ok(BlobType::Symlink),
+            magic_number => bail!("Invalid FsBlob magic number {magic_number}"),
         }
     }
 
-    fn write(v: Self) -> u8 {
+    fn try_write(v: Self) -> Result<u8, Infallible> {
         match v {
-            BlobType::Dir => MAGIC_NUMBER_DIR,
-            BlobType::File => MAGIC_NUMBER_FILE,
-            BlobType::Symlink => MAGIC_NUMBER_SYMLINK,
+            BlobType::Dir => Ok(MAGIC_NUMBER_DIR),
+            BlobType::File => Ok(MAGIC_NUMBER_FILE),
+            BlobType::Symlink => Ok(MAGIC_NUMBER_SYMLINK),
         }
     }
 }
 
-define_layout!(fsblob_header, LittleEndian, {
+binary_layout!(fsblob_header, LittleEndian, {
     format_version_header: u16,
     blob_type: BlobType as u8,
     parent: [u8; BLOBID_LEN], // TODO `BlobId as [u8; BLOBID_LEN]` with binary_layout::LayoutAs
 });
 
-define_layout!(fsblob, LittleEndian, {
+binary_layout!(fsblob, LittleEndian, {
         header: fsblob_header::NestedView,
         data: [u8],
     }

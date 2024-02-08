@@ -8,6 +8,7 @@ use futures::{
 use log::warn;
 use std::collections::hash_set::HashSet;
 use std::fmt::{self, Debug};
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 use crate::{
@@ -33,11 +34,11 @@ use integrity_data::{
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
-binary_layout::define_layout!(block_layout, LittleEndian, {
+binary_layout::binary_layout!(block_layout, LittleEndian, {
     // TODO Use types BlockId, FormatVersionHeader as types instead of slices
     format_version_header: u16,
     block_id: [u8; BLOCKID_LEN],
-    last_update_client_id: ClientId as u32,
+    last_update_client_id: ClientId as NonZeroU32,
     block_version: BlockVersion as u64,
     data: [u8],
 });
@@ -394,7 +395,10 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
         Self::_check_format_version_header(&view)?;
         self._check_id_header(&view, &expected_block_id)?;
 
-        let last_update_client_id = view.last_update_client_id().read();
+        let last_update_client_id = view
+            .last_update_client_id()
+            .try_read()
+            .context("Read invalid client id")?;
         let block_version = view.block_version().read();
 
         // TODO Use view.into_data().extract(), but that requires adding an IntoSubregion trait to binary-layout that we can implement for our Data class.
@@ -594,7 +598,6 @@ mod specialized_tests {
     use common_macros::hash_set;
     use cryfs_utils::async_drop::SyncDrop;
     use futures::future::BoxFuture;
-    use std::num::NonZeroU32;
     use std::sync::{Arc, Mutex};
     use tempdir::TempDir;
 
@@ -690,14 +693,20 @@ mod specialized_tests {
             self.underlying.store(id, &data).await.unwrap();
         }
 
-        async fn change_client_id(&self, id: &BlockId) {
+        #[cfg(test)]
+        async fn change_client_id(&self, id: &BlockId) -> Result<()> {
             let mut data = self.underlying.load(id).await.unwrap().unwrap();
             let mut view = block_layout::View::new(&mut data);
-            let old_client_id = view.last_update_client_id().read().id.get();
-            view.last_update_client_id_mut().write(ClientId {
-                id: NonZeroU32::new(old_client_id + 1).unwrap(),
-            });
+            let old_client_id = view
+                .last_update_client_id()
+                .try_read()
+                .context("Read invalid client id")?
+                .id;
+            let new_client_id = old_client_id.checked_add(1).unwrap();
+            view.last_update_client_id_mut()
+                .write(ClientId { id: new_client_id });
             self.underlying.store(id, &data).await.unwrap();
+            Ok(())
         }
 
         async fn delete_base_block(&self, id: &BlockId) {
@@ -949,7 +958,7 @@ mod specialized_tests {
                     fixture.modify_block(&store, &blockid).await;
                     let old_block_our_client = fixture.load_base_block(&blockid).await;
                     // Simulate a valid change by a different client by changing the client id
-                    fixture.change_client_id(&blockid).await;
+                    fixture.change_client_id(&blockid).await.unwrap();
                     fixture.decrease_version_number(&blockid).await;
                     store.load(&blockid).await.unwrap().unwrap();
                     let old_block_other_client = fixture.load_base_block(&blockid).await;
@@ -990,7 +999,7 @@ mod specialized_tests {
                     let blockid = create_block_return_key(&store, &data(1024, 1)).await;
                     fixture.modify_block(&store, &blockid).await;
                     // Simulate a valid change by a different client by changing the client id
-                    fixture.change_client_id(&blockid).await;
+                    fixture.change_client_id(&blockid).await.unwrap();
                     fixture.decrease_version_number(&blockid).await;
                     blockid
                 })
@@ -1024,7 +1033,7 @@ mod specialized_tests {
                     // Fake a modification by a different client with lower version numbers
                     fixture.decrease_version_number(&blockid).await;
                     fixture.decrease_version_number(&blockid).await;
-                    fixture.change_client_id(&blockid).await;
+                    fixture.change_client_id(&blockid).await.unwrap();
                     store.load(&blockid).await.unwrap().unwrap();
 
                     // Rollback to old client without increasing its version number

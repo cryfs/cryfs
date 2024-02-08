@@ -3,6 +3,7 @@ use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
 use rand::{thread_rng, Rng};
 use std::collections::hash_map::{Entry, HashMap};
+use std::convert::Infallible;
 use std::hash::Hash;
 use std::io::{Read, Seek, Write};
 use std::num::NonZeroU32;
@@ -50,16 +51,16 @@ pub enum MaybeClientId {
     BlockWasDeleted,
 }
 
-impl binary_layout::LayoutAs<u32> for ClientId {
-    fn read(id: u32) -> ClientId {
-        // TODO We shouldn't panic but just return an error
-        NonZeroU32::new(id)
-            .map(|id| ClientId { id })
-            .expect("Loaded block with client_id=0 which shouldn't be possible")
+impl binary_layout::LayoutAs<NonZeroU32> for ClientId {
+    type ReadError = Infallible;
+    type WriteError = Infallible;
+
+    fn try_read(id: NonZeroU32) -> Result<ClientId, Infallible> {
+        Ok(ClientId { id })
     }
 
-    fn write(id: ClientId) -> u32 {
-        id.id.get()
+    fn try_write(id: ClientId) -> Result<NonZeroU32, Infallible> {
+        Ok(id.id)
     }
 }
 
@@ -119,12 +120,15 @@ impl BlockVersion {
 }
 
 impl binary_layout::LayoutAs<u64> for BlockVersion {
-    fn read(version: u64) -> BlockVersion {
-        BlockVersion { version }
+    type ReadError = Infallible;
+    type WriteError = Infallible;
+
+    fn try_read(version: u64) -> Result<BlockVersion, Infallible> {
+        Ok(BlockVersion { version })
     }
 
-    fn write(version: BlockVersion) -> u64 {
-        version.version
+    fn try_write(version: BlockVersion) -> Result<u64, Infallible> {
+        Ok(version.version)
     }
 }
 

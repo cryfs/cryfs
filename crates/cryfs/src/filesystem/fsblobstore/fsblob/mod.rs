@@ -48,7 +48,7 @@ where
 {
     pub async fn parse(blob: B::ConcreteBlob<'a>) -> Result<AsyncDropGuard<FsBlob<'a, B>>> {
         let blob = BaseBlob::parse(blob).await?;
-        match blob.blob_type() {
+        match blob.blob_type()? {
             BlobType::Dir => Ok(AsyncDropGuard::new(Self::Directory(
                 DirBlob::new(blob).await?,
             ))),

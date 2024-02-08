@@ -226,12 +226,13 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "binary-layout"
-version = "3.3.0"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5845e3504cf59b9588fff324710f27ee519515b8a8a9f1207042da9a9e64f819"
+checksum = "274471eb13f5f8a2053fda0541c5d4bf8575fb6c05d80635f50600286e754a09"
 dependencies = [
  "doc-comment",
  "paste",
+ "thiserror",
 ]
 
 [[package]]

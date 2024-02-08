@@ -78,8 +78,8 @@ where
         self.blob.id()
     }
 
-    pub fn blob_type(&self) -> layout::BlobType {
-        self.header_cache.blob_type().read()
+    pub fn blob_type(&self) -> Result<layout::BlobType> {
+        Ok(self.header_cache.blob_type().try_read()?)
     }
 
     pub fn parent(&self) -> BlobId {

@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Result};
-use binary_layout::{define_layout, Field};
+use binary_layout::{binary_layout, Field};
 use std::num::NonZeroU64;
 
 use cryfs_blockstore::BLOCKID_LEN;
 
 pub const FORMAT_VERSION_HEADER: u16 = 0;
 
-define_layout!(node, LittleEndian, {
+binary_layout!(node, LittleEndian, {
     format_version_header: u16,
 
     // Not currently used, only used for alignment.

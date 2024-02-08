@@ -7,7 +7,7 @@ use cryfs_utils::data::Data;
 
 // TODO Make padding deterministic and check it when it's removed
 
-binary_layout::define_layout!(padded_data, LittleEndian, {
+binary_layout::binary_layout!(padded_data, LittleEndian, {
     num_bytes: u32,
     data_and_padding: [u8],
 });
