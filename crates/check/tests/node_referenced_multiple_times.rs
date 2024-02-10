@@ -113,8 +113,18 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 #[case::file_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2, some_blobs.large_file_1))]
 #[case::file_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_file_1))]
 #[case::file_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1, some_blobs.large_file_1))]
-// TODO For some reason this causes a deadlock
+// TODO #[case::file_referenced_from_parent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir2, some_blobs.dir2_large_file_1))]
+// TODO #[case::file_referenced_from_grandparent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir2, some_blobs.dir2_dir7_large_file_1))]
+// TODO For some reason this causes a deadlock. Maybe because it runs into an infinite loop loading that dir again and again?
 // #[case::dir_referenced_from_same_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_dir_1))]
+// TODO #[case::dir_referenced_from_child_dir(|some_blobs: &SomeBlobs| (some_blobs.dir1_dir3, some_blobs.dir1))]
+// TODO #[case::dir_referenced_from_child_file(|some_blobs: &SomeBlobs| (some_blobs.dir2_large_file_1, some_blobs.dir2))]
+// TODO #[case::dir_referenced_from_child_symlink(|some_blobs: &SomeBlobs| (some_blobs.dir2_large_symlink_1, some_blobs.dir2))]
+// TODO #[case::dir_referenced_from_grandchild_dir(|some_blobs: &SomeBlobs| (some_blobs.dir1_dir3_dir5, some_blobs.dir1))]
+// TODO #[case::dir_referenced_from_grandchild_file(|some_blobs: &SomeBlobs| (some_blobs.dir2_dir7_large_file_1, some_blobs.dir2))]
+// TODO #[case::dir_referenced_from_grandchild_symlink(|some_blobs: &SomeBlobs| (some_blobs.dir2_dir7_large_symlink_1, some_blobs.dir2))]
+// TODO #[case::dir_referenced_from_parent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir1, some_blobs.dir1_dir3))]
+// TODO #[case::dir_referenced_from_grandparent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir1, some_blobs.dir1_dir3_dir5))]
 // TODO leaf_node_referenced_multiple_times::case_05_dir_referenced_from_different_dir is flaky. Probably because sometimes, it aligns just right so that the blob ids from the other dir blob remain valid.
 // Repro:
 // ```fish
@@ -132,6 +142,8 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 #[case::symlink_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_2, some_blobs.large_symlink_1))]
 #[case::symlink_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1, some_blobs.large_symlink_1))]
 #[case::symlink_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1, some_blobs.large_symlink_1))]
+// TODO #[case::symlink_referenced_from_parent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir2, some_blobs.dir2_large_symlink_1))]
+// TODO #[case::symlink_referenced_from_grandparent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir2, some_blobs.dir2_dir7_large_symlink_1))]
 #[tokio::test(flavor = "multi_thread")]
 fn test_case_with_multiple_reference_scenarios(
     #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),

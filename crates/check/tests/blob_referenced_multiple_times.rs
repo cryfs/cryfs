@@ -115,3 +115,13 @@ async fn blob_referenced_multiple_times(
         errors,
     );
 }
+
+// TODO Test
+//  - dir blob referenced from child dir
+//  - dir blob referenced from grandchild dir
+//  - dir blob referenced from parent dir (i.e. 2x from the same dir)
+//  - dir blob referenced from grandparent dir
+//  - file blob referenced from parent dir (i.e. 2x from the same dir)
+//  - file blob referenced from grandparent dir
+//  - symlink blob referenced from parent dir (i.e. 2x from the same dir)
+//  - symlink blob referenced from grandparent dir

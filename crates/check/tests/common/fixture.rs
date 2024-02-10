@@ -164,7 +164,6 @@ impl FilesystemFixture {
     }
 
     pub async fn run_cryfs_check(self) -> Vec<CorruptedError> {
-        // TODO Console output is very chaotic here because the progress bars are all displayed. Let's suppress them.
         cryfs_check::check_filesystem(
             self.blockstore.into_inner_dont_drop(),
             &self.tempdir.config_file_path(),

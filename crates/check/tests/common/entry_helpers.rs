@@ -254,10 +254,14 @@ pub struct SomeBlobs {
     pub dir1_dir3_dir5: BlobId,
     pub dir2_dir6: BlobId,
     pub dir2_dir7: BlobId,
+    pub dir2_large_file_1: BlobId,
+    pub dir2_dir7_large_file_1: BlobId,
     pub large_file_1: BlobId,
     pub large_file_2: BlobId,
     pub large_dir_1: BlobId,
     pub large_dir_2: BlobId,
+    pub dir2_large_symlink_1: BlobId,
+    pub dir2_dir7_large_symlink_1: BlobId,
     pub large_symlink_1: BlobId,
     pub large_symlink_2: BlobId,
     pub empty_file: BlobId,
@@ -287,12 +291,13 @@ where
     let mut large_dir_2 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir1_dir4, "some_large_dir_2", 2)
             .await;
-    let large_symlink_1 =
+    let dir2_dir7_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink_1").await;
-    let large_symlink_2 =
+    let dir2_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2, "some_large_symlink_2").await;
-    let large_file_1 = create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
-    let large_file_2 = create_large_file(fsblobstore, &mut dir2_dir6, "some_large_file_2").await;
+    let dir2_dir7_large_file_1 =
+        create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
+    let dir2_large_file_1 = create_large_file(fsblobstore, &mut dir2, "some_large_file_2").await;
 
     let empty_file = create_empty_file(fsblobstore, &mut dir1_dir3_dir5, "some_empty_file").await;
     let mut empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
@@ -307,12 +312,16 @@ where
         dir1_dir3_dir5: dir1_dir3_dir5.blob_id(),
         dir2_dir6: dir2_dir6.blob_id(),
         dir2_dir7: dir2_dir7.blob_id(),
-        large_file_1: large_file_1.blob_id(),
-        large_file_2: large_file_2.blob_id(),
+        dir2_dir7_large_file_1: dir2_dir7_large_file_1.blob_id(),
+        dir2_large_file_1: dir2_large_file_1.blob_id(),
+        large_file_1: dir2_dir7_large_file_1.blob_id(),
+        large_file_2: dir2_large_file_1.blob_id(),
         large_dir_1: large_dir_1.blob_id(),
         large_dir_2: large_dir_2.blob_id(),
-        large_symlink_1: large_symlink_1.blob_id(),
-        large_symlink_2: large_symlink_2.blob_id(),
+        dir2_dir7_large_symlink_1: dir2_dir7_large_symlink_1.blob_id(),
+        large_symlink_1: dir2_dir7_large_symlink_1.blob_id(),
+        dir2_large_symlink_1: dir2_large_symlink_1.blob_id(),
+        large_symlink_2: dir2_large_symlink_1.blob_id(),
         empty_file: empty_file.blob_id(),
         empty_dir: empty_dir.blob_id(),
         empty_symlink: empty_symlink.blob_id(),
