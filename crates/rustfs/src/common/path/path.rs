@@ -53,6 +53,22 @@ impl AbsolutePath {
         &self.path == "/"
     }
 
+    // TODO Test
+    #[inline]
+    pub fn join(&self, component: &PathComponent) -> AbsolutePathBuf {
+        let capacity = if &self.path != "/" {
+            self.path.len() + 1 + component.len()
+        } else {
+            1 + component.len()
+        };
+
+        let new_path = AbsolutePathBuf::root_with_capacity(capacity);
+        let new_path = new_path.push_all(&self);
+        let new_path = new_path.push(component);
+        assert_eq!(capacity, new_path.len());
+        new_path
+    }
+
     #[inline]
     pub fn as_str(&self) -> &str {
         &self.path
@@ -245,6 +261,14 @@ impl AbsolutePathBuf {
         AbsolutePath::root().to_owned()
     }
 
+    // TODO Test
+    #[inline]
+    pub fn root_with_capacity(capacity_num_bytes: usize) -> Self {
+        let mut path = String::with_capacity(capacity_num_bytes);
+        path.push('/');
+        AbsolutePathBuf::new_without_invariant_check(path)
+    }
+
     #[inline]
     pub fn try_from_string(path: String) -> Result<Self, ParsePathError> {
         AbsolutePath::check_invariants(&path)?;
@@ -254,6 +278,7 @@ impl AbsolutePathBuf {
     #[inline]
     pub fn push(mut self, component: &PathComponent) -> Self {
         if self.path != "/" {
+            self.path.reserve(component.len() + 1);
             self.path.push('/');
         }
         self.path.push_str(component);
@@ -264,7 +289,7 @@ impl AbsolutePathBuf {
     #[inline]
     pub fn push_all(mut self, components: &AbsolutePath) -> Self {
         if self.is_root() {
-            self.path = components.path.to_owned();
+            self.path.push_str(&components.path[1..]);
         } else {
             self.path.push_str(&components.path);
         }

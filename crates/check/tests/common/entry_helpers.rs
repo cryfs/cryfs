@@ -177,11 +177,7 @@ where
         .await
         .unwrap();
     add_dir_entry(&mut parent.blob, name, new_entry.blob_id());
-    CreatedDirBlob::new(
-        new_entry,
-        // TODO AbsolutePathBuf::clone allocates and push reallocates again. Once should be enough.
-        parent.path.clone().push(name.try_into().unwrap()),
-    )
+    CreatedDirBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
 pub fn add_dir_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
@@ -214,11 +210,7 @@ where
         .await
         .unwrap();
     add_file_entry(&mut parent.blob, name, new_entry.blob_id());
-    CreatedFileBlob::new(
-        new_entry,
-        // TODO AbsolutePathBuf::clone allocates and push reallocates again. Once should be enough.
-        parent.path.clone().push(name.try_into().unwrap()),
-    )
+    CreatedFileBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
 pub fn add_file_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
@@ -252,11 +244,7 @@ where
         .await
         .unwrap();
     add_symlink_entry(&mut parent.blob, name, new_entry.blob_id());
-    CreatedSymlinkBlob::new(
-        new_entry,
-        // TODO AbsolutePathBuf::clone allocates and push reallocates again. Once should be enough.
-        parent.path.clone().push(name.try_into().unwrap()),
-    )
+    CreatedSymlinkBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
 pub fn add_symlink_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)

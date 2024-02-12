@@ -393,8 +393,7 @@ where
                         BlobInfo {
                             blob_id: *entry.blob_id(),
                             blob_type: entry_type_to_blob_type(entry.entry_type()),
-                            // TODO path_of_blob.clone reallocates. push reallocates again. One reallocation should be enough.
-                            path: path_of_blob.clone().push(entry.name()),
+                            path: path_of_blob.join(entry.name()),
                         },
                         checks,
                         task_spawner,
