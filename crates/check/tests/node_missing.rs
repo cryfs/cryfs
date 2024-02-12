@@ -61,7 +61,7 @@ async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> B
     if blob_info.blob_id == some_blobs.root.blob_id {
         // If we're testing the root dir, we need to make it large enough that we can remove some nodes
         fs_fixture
-            .add_entries_to_make_dir_large(blob_info.blob_id)
+            .add_entries_to_make_dir_large(blob_info.clone())
             .await;
     }
 
@@ -156,7 +156,7 @@ async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> B
     if blob_info.blob_id == some_blobs.root.blob_id {
         // If we're testing the root dir, we need to make it large enough that we can remove some nodes
         fs_fixture
-            .add_entries_to_make_dir_large(blob_info.blob_id)
+            .add_entries_to_make_dir_large(blob_info.clone())
             .await;
     }
 

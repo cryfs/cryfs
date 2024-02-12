@@ -11,7 +11,7 @@ mod common;
 
 use common::{entry_helpers::SomeBlobs, fixture::FilesystemFixture};
 
-fn make_file(fs_fixture: &FilesystemFixture, parent: BlobId) -> BoxFuture<'_, BlobId> {
+fn make_file(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, BlobInfo> {
     Box::pin(async move {
         fs_fixture
             .create_empty_file_in_parent(parent, "my_filename1")
@@ -19,7 +19,7 @@ fn make_file(fs_fixture: &FilesystemFixture, parent: BlobId) -> BoxFuture<'_, Bl
     })
 }
 
-fn make_dir(fs_fixture: &FilesystemFixture, parent: BlobId) -> BoxFuture<'_, BlobId> {
+fn make_dir(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, BlobInfo> {
     Box::pin(async move {
         fs_fixture
             .create_empty_dir_in_parent(parent, "my_dirname1")
@@ -27,7 +27,7 @@ fn make_dir(fs_fixture: &FilesystemFixture, parent: BlobId) -> BoxFuture<'_, Blo
     })
 }
 
-fn make_symlink(fs_fixture: &FilesystemFixture, parent: BlobId) -> BoxFuture<'_, BlobId> {
+fn make_symlink(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, BlobInfo> {
     Box::pin(async move {
         fs_fixture
             .create_symlink_in_parent(parent, "my_symlink1", "target1")
@@ -91,10 +91,10 @@ async fn blob_referenced_multiple_times(
     #[values(same_dir, different_dirs)] parents: impl FnOnce(&SomeBlobs) -> (BlobInfo, BlobInfo),
     #[values(make_file, make_dir, make_symlink)] make_first_blob: impl for<'a> FnOnce(
         &'a FilesystemFixture,
-        BlobId,
+        BlobInfo,
     ) -> BoxFuture<
         'a,
-        BlobId,
+        BlobInfo,
     >,
     #[values(add_as_file_entry, add_as_dir_entry, add_as_symlink_entry)]
     add_to_second_parent: impl for<'a> FnOnce(
@@ -105,11 +105,9 @@ async fn blob_referenced_multiple_times(
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (parent1_info, parent2_info) = parents(&some_blobs);
-    let parent1_id = parent1_info.blob_id;
-    let parent2_id = parent2_info.blob_id;
 
-    let blob_id = make_first_blob(&fs_fixture, parent1_id).await;
-    add_to_second_parent(&fs_fixture, parent2_id, blob_id).await;
+    let blob_id = make_first_blob(&fs_fixture, parent1_info).await.blob_id;
+    add_to_second_parent(&fs_fixture, parent2_info.blob_id, blob_id).await;
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(

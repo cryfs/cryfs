@@ -1,4 +1,6 @@
+use anyhow::Result;
 use async_recursion::async_recursion;
+use async_trait::async_trait;
 use futures::{
     future::FutureExt,
     stream::{self, BoxStream, StreamExt},
@@ -18,11 +20,131 @@ use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
 };
-use cryfs_rustfs::AbsolutePathBuf;
+use cryfs_rustfs::{AbsolutePathBuf, FsError};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
+
+#[derive(Debug)]
+pub struct CreatedDirBlob<'a, B>
+where
+    B: BlobStore + Debug + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    blob: AsyncDropGuard<DirBlob<'a, B>>,
+    path: AbsolutePathBuf,
+}
+
+impl<'a, B> CreatedDirBlob<'a, B>
+where
+    B: BlobStore + Debug + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    pub fn new(
+        blob: AsyncDropGuard<DirBlob<'a, B>>,
+        path: AbsolutePathBuf,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { blob, path })
+    }
+
+    pub fn blob(&mut self) -> &mut DirBlob<'a, B> {
+        &mut self.blob
+    }
+}
+
+#[async_trait]
+impl<'a, B> AsyncDrop for CreatedDirBlob<'a, B>
+where
+    B: BlobStore + Debug + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        self.blob.async_drop().await
+    }
+}
+
+impl<'a, B> From<&CreatedDirBlob<'a, B>> for BlobInfo
+where
+    B: BlobStore + Debug + 'static,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    fn from(blob: &CreatedDirBlob<'a, B>) -> Self {
+        BlobInfo {
+            blob_id: blob.blob.blob_id(),
+            blob_type: BlobType::Dir,
+            path: blob.path.clone(),
+        }
+    }
+}
+
+pub struct CreatedFileBlob<'a, B>
+where
+    B: BlobStore + Debug + 'a,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    blob: FileBlob<'a, B>,
+    path: AbsolutePathBuf,
+}
+
+impl<'a, B> CreatedFileBlob<'a, B>
+where
+    B: BlobStore + Debug + 'a,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    pub fn new(blob: FileBlob<'a, B>, path: AbsolutePathBuf) -> Self {
+        Self { blob, path }
+    }
+}
+
+impl<'a, B> From<&CreatedFileBlob<'a, B>> for BlobInfo
+where
+    B: BlobStore + Debug + 'a,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    fn from(blob: &CreatedFileBlob<'a, B>) -> Self {
+        BlobInfo {
+            blob_id: blob.blob.blob_id(),
+            blob_type: BlobType::File,
+            path: blob.path.clone(),
+        }
+    }
+}
+
+pub struct CreatedSymlinkBlob<'a, B>
+where
+    B: BlobStore + Debug + 'a,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    blob: SymlinkBlob<'a, B>,
+    path: AbsolutePathBuf,
+}
+
+impl<'a, B> CreatedSymlinkBlob<'a, B>
+where
+    B: BlobStore + Debug + 'a,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    pub fn new(blob: SymlinkBlob<'a, B>, path: AbsolutePathBuf) -> Self {
+        Self { blob, path }
+    }
+}
+
+impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for BlobInfo
+where
+    B: BlobStore + Debug + 'a,
+    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+{
+    fn from(blob: &CreatedSymlinkBlob<'a, B>) -> Self {
+        BlobInfo {
+            blob_id: blob.blob.blob_id(),
+            blob_type: BlobType::Symlink,
+            path: blob.path.clone(),
+        }
+    }
+}
 
 pub fn large_symlink_target() -> String {
     (0..1_000)
@@ -44,18 +166,22 @@ where
 
 pub async fn create_empty_dir<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
-) -> AsyncDropGuard<DirBlob<'b, B>>
+) -> AsyncDropGuard<CreatedDirBlob<'b, B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let new_entry = fsblobstore
-        .create_dir_blob(&parent.blob_id())
+        .create_dir_blob(&parent.blob.blob_id())
         .await
         .unwrap();
-    add_dir_entry(parent, name, new_entry.blob_id());
-    new_entry
+    add_dir_entry(&mut parent.blob, name, new_entry.blob_id());
+    CreatedDirBlob::new(
+        new_entry,
+        // TODO AbsolutePathBuf::clone allocates and push reallocates again. Once should be enough.
+        parent.path.clone().push(name.try_into().unwrap()),
+    )
 }
 
 pub fn add_dir_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
@@ -77,18 +203,22 @@ where
 
 pub async fn create_empty_file<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
-) -> FileBlob<'b, B>
+) -> CreatedFileBlob<'b, B>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let new_entry = fsblobstore
-        .create_file_blob(&parent.blob_id())
+        .create_file_blob(&parent.blob.blob_id())
         .await
         .unwrap();
-    add_file_entry(parent, name, new_entry.blob_id());
-    new_entry
+    add_file_entry(&mut parent.blob, name, new_entry.blob_id());
+    CreatedFileBlob::new(
+        new_entry,
+        // TODO AbsolutePathBuf::clone allocates and push reallocates again. Once should be enough.
+        parent.path.clone().push(name.try_into().unwrap()),
+    )
 }
 
 pub fn add_file_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
@@ -110,19 +240,23 @@ where
 
 pub async fn create_symlink<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
     target: &str,
-) -> SymlinkBlob<'b, B>
+) -> CreatedSymlinkBlob<'b, B>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let new_entry = fsblobstore
-        .create_symlink_blob(&parent.blob_id(), target)
+        .create_symlink_blob(&parent.blob.blob_id(), target)
         .await
         .unwrap();
-    add_symlink_entry(parent, name, new_entry.blob_id());
-    new_entry
+    add_symlink_entry(&mut parent.blob, name, new_entry.blob_id());
+    CreatedSymlinkBlob::new(
+        new_entry,
+        // TODO AbsolutePathBuf::clone allocates and push reallocates again. Once should be enough.
+        parent.path.clone().push(name.try_into().unwrap()),
+    )
 }
 
 pub fn add_symlink_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
@@ -143,16 +277,16 @@ where
 
 pub async fn create_large_file<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
-) -> FileBlob<'b, B>
+) -> CreatedFileBlob<'b, B>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let mut file = create_empty_file(fsblobstore, parent, name).await;
-    file.write(&data(LARGE_FILE_SIZE, 0), 0).await.unwrap();
+    file.blob.write(&data(LARGE_FILE_SIZE, 0), 0).await.unwrap();
     assert!(
-        file.num_nodes().await.unwrap() > 1_000,
+        file.blob.num_nodes().await.unwrap() > 1_000,
         "If this fails, we need to make the data larger so it uses enough nodes."
     );
 
@@ -161,16 +295,16 @@ where
 
 pub async fn create_large_symlink<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
-) -> SymlinkBlob<'b, B>
+) -> CreatedSymlinkBlob<'b, B>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
     let target = large_symlink_target();
     let mut symlink = create_symlink(fsblobstore, parent, name, &target).await;
     assert!(
-        symlink.num_nodes().await.unwrap() > 1_000,
+        symlink.blob.num_nodes().await.unwrap() > 1_000,
         "If this fails, we need to make the target longer so it uses enough nodes."
     );
     symlink
@@ -178,9 +312,9 @@ where
 
 pub async fn create_large_dir<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
-) -> AsyncDropGuard<DirBlob<'b, B>>
+) -> AsyncDropGuard<CreatedDirBlob<'b, B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
@@ -191,7 +325,7 @@ where
 
 pub async fn add_entries_to_make_dir_large<B>(
     fsblobstore: &FsBlobStore<B>,
-    dir: &mut DirBlob<'_, B>,
+    dir: &mut CreatedDirBlob<'_, B>,
 ) where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
@@ -211,7 +345,7 @@ pub async fn add_entries_to_make_dir_large<B>(
         .await;
     }
     assert!(
-        dir.num_nodes().await.unwrap() > 1_000,
+        dir.blob.num_nodes().await.unwrap() > 1_000,
         "If this fails, we need to create even more entries to make the directory large enough."
     );
 }
@@ -219,10 +353,10 @@ pub async fn add_entries_to_make_dir_large<B>(
 #[async_recursion]
 pub async fn create_large_dir_with_large_entries<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut DirBlob<'c, B>,
+    parent: &'a mut CreatedDirBlob<'c, B>,
     name: &str,
     levels: usize,
-) -> AsyncDropGuard<DirBlob<'b, B>>
+) -> AsyncDropGuard<CreatedDirBlob<'b, B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
 {
@@ -274,118 +408,60 @@ pub struct SomeBlobs {
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
-    root: &'a mut DirBlob<'c, B>,
+    root: &'a mut CreatedDirBlob<'c, B>,
 ) -> SomeBlobs
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
 {
-    // TODO there's a lot of repetition of path here. We should probably come up with a different API where `create_empty_dir` etc take a `parent: BlobInfo` as argument and return a created `BlobInfo`
-    let root_info = blob_info(root.blob_id(), BlobType::Dir, "/");
     let mut dir1 = create_empty_dir(fsblobstore, root, "somedir1").await;
-    let dir1_info = blob_info(dir1.blob_id(), BlobType::Dir, "/somedir");
     let mut dir2 = create_empty_dir(fsblobstore, root, "somedir2").await;
-    let dir2_info = blob_info(dir2.blob_id(), BlobType::Dir, "/somedir2");
     let mut dir1_dir3 = create_empty_dir(fsblobstore, &mut dir1, "somedir3").await;
-    let dir1_dir3_info = blob_info(dir1_dir3.blob_id(), BlobType::Dir, "/somedir1/somedir3");
     let mut dir1_dir4 = create_empty_dir(fsblobstore, &mut dir1, "somedir4").await;
-    let dir1_dir4_info = blob_info(dir1_dir4.blob_id(), BlobType::Dir, "/somedir1/somedir4");
     let mut dir1_dir3_dir5 = create_empty_dir(fsblobstore, &mut dir1_dir3, "somedir5").await;
-    let dir1_dir3_dir5_info = blob_info(
-        dir1_dir3_dir5.blob_id(),
-        BlobType::Dir,
-        "/somedir1/somedir3/somedir5",
-    );
     let mut dir2_dir6 = create_empty_dir(fsblobstore, &mut dir2, "somedir6").await;
-    let dir2_dir6_info = blob_info(dir2_dir6.blob_id(), BlobType::Dir, "/somedir2/somedir6");
     let mut dir2_dir7 = create_empty_dir(fsblobstore, &mut dir2, "somedir7").await;
-    let dir2_dir7_info = blob_info(dir2_dir7.blob_id(), BlobType::Dir, "/somedir2/somedir7");
 
     // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
     let mut large_dir_1 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "some_large_dir_1", 2)
             .await;
-    let large_dir_1_info = blob_info(
-        large_dir_1.blob_id(),
-        BlobType::Dir,
-        "/somedir2/somedir6/some_large_dir_1",
-    );
     let mut large_dir_2 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir1_dir4, "some_large_dir_2", 2)
             .await;
-    let large_dir_2_info = blob_info(
-        large_dir_2.blob_id(),
-        BlobType::Dir,
-        "/somedir1/somedir4/some_large_dir_2",
-    );
     let dir2_dir7_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink_1").await;
-    let dir2_dir7_large_symlink_1_info = blob_info(
-        dir2_dir7_large_symlink_1.blob_id(),
-        BlobType::Symlink,
-        "/somedir2/somedir7/some_large_symlink_1",
-    );
     let dir2_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2, "some_large_symlink_2").await;
-    let dir2_large_symlink_1_info = blob_info(
-        dir2_large_symlink_1.blob_id(),
-        BlobType::Symlink,
-        "/somedir2/some_large_symlink_2",
-    );
     let dir2_dir7_large_file_1 =
         create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
-    let dir2_dir7_large_file_1_info = blob_info(
-        dir2_dir7_large_file_1.blob_id(),
-        BlobType::File,
-        "/somedir2/somedir7/some_large_file_1",
-    );
     let dir2_large_file_1 = create_large_file(fsblobstore, &mut dir2, "some_large_file_2").await;
-    let dir2_large_file_1_info = blob_info(
-        dir2_large_file_1.blob_id(),
-        BlobType::File,
-        "/somedir2/some_large_file_2",
-    );
 
     let empty_file = create_empty_file(fsblobstore, &mut dir1_dir3_dir5, "some_empty_file").await;
-    let empty_file_info = blob_info(
-        empty_file.blob_id(),
-        BlobType::File,
-        "/somedir1/somedir3/somedir5/some_empty_file",
-    );
     let mut empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
-    let empty_dir_info = blob_info(
-        empty_dir.blob_id(),
-        BlobType::Dir,
-        "/somedir2/somedir7/some_empty_dir",
-    );
     let empty_symlink = create_symlink(fsblobstore, &mut dir1_dir3, "some_empty_symlink", "").await;
-    let empty_symlink_info = blob_info(
-        empty_symlink.blob_id(),
-        BlobType::Symlink,
-        "/somedir1/somedir3/some_empty_symlink",
-    );
 
     let result = SomeBlobs {
-        root: root_info,
-        dir1: dir1_info,
-        dir2: dir2_info,
-        dir1_dir3: dir1_dir3_info,
-        dir1_dir4: dir1_dir4_info,
-        dir1_dir3_dir5: dir1_dir3_dir5_info,
-        dir2_dir6: dir2_dir6_info,
-        dir2_dir7: dir2_dir7_info,
-        dir2_dir7_large_file_1: dir2_dir7_large_file_1_info.clone(),
-        dir2_large_file_1: dir2_large_file_1_info.clone(),
-        large_file_1: dir2_dir7_large_file_1_info,
-        large_file_2: dir2_large_file_1_info,
-        large_dir_1: large_dir_1_info,
-        large_dir_2: large_dir_2_info,
-        dir2_dir7_large_symlink_1: dir2_dir7_large_symlink_1_info.clone(),
-        large_symlink_1: dir2_dir7_large_symlink_1_info,
-        dir2_large_symlink_1: dir2_large_symlink_1_info.clone(),
-        large_symlink_2: dir2_large_symlink_1_info,
-        empty_file: empty_file_info,
-        empty_dir: empty_dir_info,
-        empty_symlink: empty_symlink_info,
+        root: (&*root).into(),
+        dir1: (&*dir1).into(),
+        dir2: (&*dir2).into(),
+        dir1_dir3: (&*dir1_dir3).into(),
+        dir1_dir4: (&*dir1_dir4).into(),
+        dir1_dir3_dir5: (&*dir1_dir3_dir5).into(),
+        dir2_dir6: (&*dir2_dir6).into(),
+        dir2_dir7: (&*dir2_dir7).into(),
+        dir2_dir7_large_file_1: (&dir2_dir7_large_file_1).into(),
+        dir2_large_file_1: (&dir2_large_file_1).into(),
+        large_file_1: (&dir2_dir7_large_file_1).into(),
+        large_file_2: (&dir2_large_file_1).into(),
+        large_dir_1: (&*large_dir_1).into(),
+        large_dir_2: (&*large_dir_2).into(),
+        dir2_dir7_large_symlink_1: (&dir2_dir7_large_symlink_1).into(),
+        large_symlink_1: (&dir2_dir7_large_symlink_1).into(),
+        dir2_large_symlink_1: (&dir2_large_symlink_1).into(),
+        large_symlink_2: (&dir2_large_symlink_1).into(),
+        empty_file: (&empty_file).into(),
+        empty_dir: (&*empty_dir).into(),
+        empty_symlink: (&empty_symlink).into(),
     };
 
     large_dir_1.async_drop().await.unwrap();

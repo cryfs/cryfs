@@ -8,12 +8,13 @@ use std::time::SystemTime;
 use cryfs_blobstore::BlobId;
 use cryfs_check::CorruptedError;
 use cryfs_cryfs::utils::fs_types::{Gid, Uid};
+use cryfs_rustfs::AbsolutePathBuf;
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
 };
 
 mod common;
-use common::fixture::FilesystemFixture;
+use common::{entry_helpers::CreatedDirBlob, fixture::FilesystemFixture};
 
 fn parent_id() -> BlobId {
     blob_id(123456)
@@ -114,17 +115,21 @@ fn make_dir_blob_with_children(fs_fixture: &FilesystemFixture) -> BoxFuture<'_, 
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut dir_blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let dir_blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let mut dir_blob = CreatedDirBlob::new(
+                        dir_blob,
+                        AbsolutePathBuf::root().push("dummy".try_into().unwrap()),
+                    );
                     common::entry_helpers::add_entries_to_make_dir_large(
                         fsblobstore,
                         &mut dir_blob,
                     )
                     .await;
                     assert!(
-                        dir_blob.num_nodes().await.unwrap() > 1_000,
+                        dir_blob.blob().num_nodes().await.unwrap() > 1_000,
                         "If this fails, we need to make the data larger so it uses enough nodes."
                     );
-                    let blob_id = dir_blob.blob_id();
+                    let blob_id = dir_blob.blob().blob_id();
                     dir_blob.async_drop().await.unwrap();
                     blob_id
                 })
