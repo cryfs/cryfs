@@ -3,7 +3,7 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_check::{BlobInfo, CorruptedError};
+use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -16,7 +16,9 @@ use common::fixture::FilesystemFixture;
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn unreadable_blob_bad_format_version(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn unreadable_blob_bad_format_version(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture
@@ -48,7 +50,9 @@ async fn unreadable_blob_bad_format_version(#[case] blob: impl FnOnce(&SomeBlobs
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn unreadable_file_blob_bad_blob_type(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn unreadable_file_blob_bad_blob_type(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture

@@ -9,7 +9,9 @@ pub use cli::{check_filesystem, RecoverCli};
 mod checks;
 mod console;
 mod error;
-pub use error::{BlobInfo, BlobReference, CorruptedError};
+pub use error::{
+    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference, CorruptedError,
+};
 mod runner;
 mod task_queue;
 

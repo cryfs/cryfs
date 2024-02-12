@@ -2,9 +2,8 @@
 
 use rstest::rstest;
 
-use cryfs_check::{BlobInfo, CorruptedError};
+use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
-use cryfs_rustfs::AbsolutePathBuf;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -16,7 +15,9 @@ use common::fixture::{CorruptInnerNodeResult, CorruptSomeNodesResult, Filesystem
 #[case::dir(|some_blobs: &SomeBlobs| some_blobs.empty_dir.clone())]
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.empty_symlink.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_single_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_unreadable_single_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -63,11 +64,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
     let expected_errors =
         [
             CorruptedError::BlobUnreadable {
-                expected_blob_info: BlobInfo {
-                    blob_id: root,
-                    blob_type: BlobType::Dir,
-                    path: AbsolutePathBuf::root(),
-                },
+                expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(root),
             },
             CorruptedError::NodeUnreadable {
                 node_id: corrupted_node,
@@ -96,7 +93,9 @@ async fn root_dir_with_unreadable_single_node_without_children() {
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_unreadable_root_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture
@@ -143,7 +142,9 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_unreadable_inner_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {
@@ -198,7 +199,9 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_unreadable_leaf_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -237,7 +240,9 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_corrupted_some_nodes(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {

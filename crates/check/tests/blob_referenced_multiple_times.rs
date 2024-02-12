@@ -5,13 +5,16 @@ use futures::future::BoxFuture;
 use rstest::rstest;
 
 use cryfs_blobstore::BlobId;
-use cryfs_check::{BlobInfo, CorruptedError};
+use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 
 mod common;
 
 use common::{entry_helpers::SomeBlobs, fixture::FilesystemFixture};
 
-fn make_file(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, BlobInfo> {
+fn make_file(
+    fs_fixture: &FilesystemFixture,
+    parent: BlobInfoAsExpectedByEntryInParent,
+) -> BoxFuture<'_, BlobInfoAsExpectedByEntryInParent> {
     Box::pin(async move {
         fs_fixture
             .create_empty_file_in_parent(parent, "my_filename1")
@@ -19,7 +22,10 @@ fn make_file(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, 
     })
 }
 
-fn make_dir(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, BlobInfo> {
+fn make_dir(
+    fs_fixture: &FilesystemFixture,
+    parent: BlobInfoAsExpectedByEntryInParent,
+) -> BoxFuture<'_, BlobInfoAsExpectedByEntryInParent> {
     Box::pin(async move {
         fs_fixture
             .create_empty_dir_in_parent(parent, "my_dirname1")
@@ -27,7 +33,10 @@ fn make_dir(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, B
     })
 }
 
-fn make_symlink(fs_fixture: &FilesystemFixture, parent: BlobInfo) -> BoxFuture<'_, BlobInfo> {
+fn make_symlink(
+    fs_fixture: &FilesystemFixture,
+    parent: BlobInfoAsExpectedByEntryInParent,
+) -> BoxFuture<'_, BlobInfoAsExpectedByEntryInParent> {
     Box::pin(async move {
         fs_fixture
             .create_symlink_in_parent(parent, "my_symlink1", "target1")
@@ -71,14 +80,24 @@ fn add_as_symlink_entry<'a>(
     })
 }
 
-fn same_dir(some_blobs: &SomeBlobs) -> (BlobInfo, BlobInfo) {
+fn same_dir(
+    some_blobs: &SomeBlobs,
+) -> (
+    BlobInfoAsExpectedByEntryInParent,
+    BlobInfoAsExpectedByEntryInParent,
+) {
     (
         some_blobs.large_dir_1.clone(),
         some_blobs.large_dir_1.clone(),
     )
 }
 
-fn different_dirs(some_blobs: &SomeBlobs) -> (BlobInfo, BlobInfo) {
+fn different_dirs(
+    some_blobs: &SomeBlobs,
+) -> (
+    BlobInfoAsExpectedByEntryInParent,
+    BlobInfoAsExpectedByEntryInParent,
+) {
     (
         some_blobs.large_dir_1.clone(),
         some_blobs.large_dir_2.clone(),
@@ -88,13 +107,18 @@ fn different_dirs(some_blobs: &SomeBlobs) -> (BlobInfo, BlobInfo) {
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn blob_referenced_multiple_times(
-    #[values(same_dir, different_dirs)] parents: impl FnOnce(&SomeBlobs) -> (BlobInfo, BlobInfo),
+    #[values(same_dir, different_dirs)] parents: impl FnOnce(
+        &SomeBlobs,
+    ) -> (
+        BlobInfoAsExpectedByEntryInParent,
+        BlobInfoAsExpectedByEntryInParent,
+    ),
     #[values(make_file, make_dir, make_symlink)] make_first_blob: impl for<'a> FnOnce(
         &'a FilesystemFixture,
-        BlobInfo,
+        BlobInfoAsExpectedByEntryInParent,
     ) -> BoxFuture<
         'a,
-        BlobInfo,
+        BlobInfoAsExpectedByEntryInParent,
     >,
     #[values(add_as_file_entry, add_as_dir_entry, add_as_symlink_entry)]
     add_to_second_parent: impl for<'a> FnOnce(

@@ -3,7 +3,7 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_check::{BlobInfo, CorruptedError};
+use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
@@ -17,7 +17,9 @@ use common::fixture::{FilesystemFixture, RemoveInnerNodeResult, RemoveSomeNodesR
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_missing_root_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -61,7 +63,9 @@ async fn blob_with_missing_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Bl
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_missing_inner_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {
@@ -116,7 +120,9 @@ async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> B
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_missing_leaf_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -156,7 +162,9 @@ async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Bl
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_with_missing_some_nodes(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {

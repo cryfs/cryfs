@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 use thiserror::Error;
 
 use cryfs_blobstore::BlobId;
@@ -8,20 +8,15 @@ use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_rustfs::AbsolutePathBuf;
 
 // TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct BlobInfo {
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct BlobInfoAsSeenByLookingAtBlob {
     pub blob_id: BlobId,
     pub blob_type: BlobType,
-    pub path: AbsolutePathBuf,
+    pub parent_pointer: BlobId,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct BlobReference {
-    pub parent_id: BlobId,
-    pub expected_child_info: BlobInfo,
-}
-
-impl Display for BlobInfo {
+impl Display for BlobInfoAsSeenByLookingAtBlob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let blob_type = match self.blob_type {
             BlobType::File => "File",
@@ -30,11 +25,64 @@ impl Display for BlobInfo {
         };
         write!(
             f,
-            "{blob_type}[{blob_id:?}] @ {path}",
+            "{blob_type}[{blob_id:?}, parent_pointer={parent_pointer:?}]",
             blob_id = self.blob_id,
+            parent_pointer = self.parent_pointer,
+        )
+    }
+}
+
+impl Debug for BlobInfoAsSeenByLookingAtBlob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "BlobInfoAsSeenByLookingAtBlob({self})")
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct BlobInfoAsExpectedByEntryInParent {
+    pub blob_id: BlobId,
+    pub blob_type: BlobType,
+    pub parent_id: BlobId,
+    pub path: AbsolutePathBuf,
+}
+
+impl BlobInfoAsExpectedByEntryInParent {
+    pub fn root_dir(blob_id: BlobId) -> Self {
+        Self {
+            blob_id,
+            blob_type: BlobType::Dir,
+            parent_id: BlobId::zero(),
+            path: AbsolutePathBuf::root(),
+        }
+    }
+}
+
+impl Display for BlobInfoAsExpectedByEntryInParent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let blob_type = match self.blob_type {
+            BlobType::File => "File",
+            BlobType::Dir => "Dir",
+            BlobType::Symlink => "Symlink",
+        };
+        write!(
+            f,
+            "{blob_type}[{blob_id:?}, parent={parent_id:?}] @ {path}",
+            blob_id = self.blob_id,
+            parent_id = self.parent_id,
             path = self.path,
         )
     }
+}
+
+impl Debug for BlobInfoAsExpectedByEntryInParent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "BlobInfoAsExpectedByEntryInParent({self})")
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct BlobReference {
+    pub expected_child_info: BlobInfoAsExpectedByEntryInParent,
 }
 
 /// A [CorruptedError] is an error we found in the file system when analyzing it
@@ -75,25 +123,24 @@ pub enum CorruptedError {
     #[error("Blob {blob_id:?} is referenced multiple times")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
-        // TODO blob_type: BlobId,
-        // TODO blob_parent_pointer: BlobId,
+        // TODO replace with blob_info: BlobInfoAsSeenByLookingAtBlob
         // TODO referenced_as: BTreeSet<BlobReference>,
     },
 
     #[error("{expected_blob_info} is unreadable and likely corrupted")]
     BlobUnreadable {
-        expected_blob_info: BlobInfo,
+        expected_blob_info: BlobInfoAsExpectedByEntryInParent,
         // TODO error:  anyhow::Error,
     },
 
-    #[error("{expected_blob_info:?} is referenced but does not exist")]
-    BlobMissing { expected_blob_info: BlobInfo },
+    #[error("{expected_blob_info} is referenced but does not exist")]
+    BlobMissing {
+        expected_blob_info: BlobInfoAsExpectedByEntryInParent,
+    },
 
-    #[error("Blob({blob_type:?}) {blob_id:?} is referenced by {referenced_as:?} but has parent pointer {blob_parent_pointer:?}")]
+    #[error("{blob_info} is referenced by {referenced_as:?}, but the parent pointer doesn't match any of the references")]
     WrongParentPointer {
-        blob_id: BlobId,
-        blob_type: BlobType,
-        blob_parent_pointer: BlobId,
+        blob_info: BlobInfoAsSeenByLookingAtBlob,
         referenced_as: BTreeSet<BlobReference>,
     },
 

@@ -14,7 +14,7 @@ use cryfs_blobstore::{
     BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore, DataTree,
 };
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_check::BlobInfo;
+use cryfs_check::BlobInfoAsExpectedByEntryInParent;
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
@@ -66,15 +66,16 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedDirBlob<'a, B>> for BlobInfo
+impl<'a, B> From<&CreatedDirBlob<'a, B>> for BlobInfoAsExpectedByEntryInParent
 where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     fn from(blob: &CreatedDirBlob<'a, B>) -> Self {
-        BlobInfo {
+        BlobInfoAsExpectedByEntryInParent {
             blob_id: blob.blob.blob_id(),
             blob_type: BlobType::Dir,
+            parent_id: blob.blob.parent(),
             path: blob.path.clone(),
         }
     }
@@ -99,15 +100,16 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedFileBlob<'a, B>> for BlobInfo
+impl<'a, B> From<&CreatedFileBlob<'a, B>> for BlobInfoAsExpectedByEntryInParent
 where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     fn from(blob: &CreatedFileBlob<'a, B>) -> Self {
-        BlobInfo {
+        BlobInfoAsExpectedByEntryInParent {
             blob_id: blob.blob.blob_id(),
             blob_type: BlobType::File,
+            parent_id: blob.blob.parent(),
             path: blob.path.clone(),
         }
     }
@@ -132,15 +134,16 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for BlobInfo
+impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for BlobInfoAsExpectedByEntryInParent
 where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     fn from(blob: &CreatedSymlinkBlob<'a, B>) -> Self {
-        BlobInfo {
+        BlobInfoAsExpectedByEntryInParent {
             blob_id: blob.blob.blob_id(),
             blob_type: BlobType::Symlink,
+            parent_id: blob.blob.parent(),
             path: blob.path.clone(),
         }
     }
@@ -371,27 +374,27 @@ where
 
 #[derive(Debug)]
 pub struct SomeBlobs {
-    pub root: BlobInfo,
-    pub dir1: BlobInfo,
-    pub dir2: BlobInfo,
-    pub dir1_dir3: BlobInfo,
-    pub dir1_dir4: BlobInfo,
-    pub dir1_dir3_dir5: BlobInfo,
-    pub dir2_dir6: BlobInfo,
-    pub dir2_dir7: BlobInfo,
-    pub dir2_large_file_1: BlobInfo,
-    pub dir2_dir7_large_file_1: BlobInfo,
-    pub large_file_1: BlobInfo,
-    pub large_file_2: BlobInfo,
-    pub large_dir_1: BlobInfo,
-    pub large_dir_2: BlobInfo,
-    pub dir2_large_symlink_1: BlobInfo,
-    pub dir2_dir7_large_symlink_1: BlobInfo,
-    pub large_symlink_1: BlobInfo,
-    pub large_symlink_2: BlobInfo,
-    pub empty_file: BlobInfo,
-    pub empty_dir: BlobInfo,
-    pub empty_symlink: BlobInfo,
+    pub root: BlobInfoAsExpectedByEntryInParent,
+    pub dir1: BlobInfoAsExpectedByEntryInParent,
+    pub dir2: BlobInfoAsExpectedByEntryInParent,
+    pub dir1_dir3: BlobInfoAsExpectedByEntryInParent,
+    pub dir1_dir4: BlobInfoAsExpectedByEntryInParent,
+    pub dir1_dir3_dir5: BlobInfoAsExpectedByEntryInParent,
+    pub dir2_dir6: BlobInfoAsExpectedByEntryInParent,
+    pub dir2_dir7: BlobInfoAsExpectedByEntryInParent,
+    pub dir2_large_file_1: BlobInfoAsExpectedByEntryInParent,
+    pub dir2_dir7_large_file_1: BlobInfoAsExpectedByEntryInParent,
+    pub large_file_1: BlobInfoAsExpectedByEntryInParent,
+    pub large_file_2: BlobInfoAsExpectedByEntryInParent,
+    pub large_dir_1: BlobInfoAsExpectedByEntryInParent,
+    pub large_dir_2: BlobInfoAsExpectedByEntryInParent,
+    pub dir2_large_symlink_1: BlobInfoAsExpectedByEntryInParent,
+    pub dir2_dir7_large_symlink_1: BlobInfoAsExpectedByEntryInParent,
+    pub large_symlink_1: BlobInfoAsExpectedByEntryInParent,
+    pub large_symlink_2: BlobInfoAsExpectedByEntryInParent,
+    pub empty_file: BlobInfoAsExpectedByEntryInParent,
+    pub empty_dir: BlobInfoAsExpectedByEntryInParent,
+    pub empty_symlink: BlobInfoAsExpectedByEntryInParent,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -464,14 +467,6 @@ where
     empty_dir.async_drop().await.unwrap();
 
     result
-}
-
-fn blob_info(blob_id: BlobId, blob_type: BlobType, path: &str) -> BlobInfo {
-    BlobInfo {
-        blob_id,
-        blob_type,
-        path: AbsolutePathBuf::try_from_string(path.to_owned()).unwrap(),
-    }
 }
 
 pub fn data(size: usize, seed: u64) -> Data {

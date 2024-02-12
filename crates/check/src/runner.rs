@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
-use crate::error::BlobInfo;
+use crate::error::BlobInfoAsExpectedByEntryInParent;
 
 use super::checks::AllChecks;
 use super::error::{CheckError, CorruptedError};
@@ -100,7 +100,7 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
         };
         let processed_blobs = Arc::try_unwrap(processed_blobs)
             .expect("All tasks are finished here and we should be able to unwrap the Arc");
-        let reachable_blobs: Vec<BlobInfo> = processed_blobs
+        let reachable_blobs: Vec<BlobInfoAsExpectedByEntryInParent> = processed_blobs
             .into_values()
             .map(|(blob_info, _seen_blob_info)| blob_info)
             .collect();
@@ -203,7 +203,9 @@ where
 async fn check_all_reachable_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &HashSet<BlockId>,
-    already_processed_blobs: Arc<ProcessedItems<BlobId, (BlobInfo, SeenBlobInfo)>>,
+    already_processed_blobs: Arc<
+        ProcessedItems<BlobId, (BlobInfoAsExpectedByEntryInParent, SeenBlobInfo)>,
+    >,
     root_blob_id: BlobId,
     checks: &AllChecks,
     pb: impl Progress,
@@ -216,11 +218,7 @@ where
             blobstore,
             all_nodes,
             Arc::clone(&already_processed_blobs),
-            BlobInfo {
-                blob_id: root_blob_id,
-                blob_type: BlobType::Dir,
-                path: AbsolutePathBuf::root(),
-            },
+            BlobInfoAsExpectedByEntryInParent::root_dir(root_blob_id),
             checks,
             task_spawner,
             pb,
@@ -235,8 +233,10 @@ where
 async fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
-    already_processed_blobs: Arc<ProcessedItems<BlobId, (BlobInfo, SeenBlobInfo)>>,
-    blob_info: BlobInfo,
+    already_processed_blobs: Arc<
+        ProcessedItems<BlobId, (BlobInfoAsExpectedByEntryInParent, SeenBlobInfo)>,
+    >,
+    blob_info: BlobInfoAsExpectedByEntryInParent,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f>,
     pb: impl Progress + 'd,
@@ -251,7 +251,7 @@ where
 {
     // TODO Function too large, split into subfunctions
 
-    log::debug!("Entering blob {:?}", &blob_info);
+    log::debug!("Entering blob {blob_info}");
 
     let loaded = blobstore.load(&blob_info.blob_id).await;
 
@@ -280,7 +280,7 @@ where
             if prev_seen.1 != now_seen.1 {
                 Err(CheckError::FilesystemModified {
                     msg: format!(
-                        "Blob {blob_info:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
+                        "{blob_info} was previously seen as {prev_seen:?} but now as {now_seen:?}",
                         prev_seen = prev_seen,
                         now_seen = now_seen,
                     ),
@@ -292,12 +292,11 @@ where
                 Ok(Some(mut blob)) => {
                     if !all_nodes.contains(blob_info.blob_id.to_root_block_id()) {
                         Err(CheckError::FilesystemModified {
-                            msg: format!("Blob {blob_info:?} wasn't present before but is now."),
+                            msg: format!("{blob_info} wasn't present before but is now."),
                         })?;
                     }
 
-                    let process_result =
-                        checks.process_reachable_readable_blob(&blob, &blob_info.path);
+                    let process_result = checks.process_reachable_readable_blob(&blob, &blob_info);
 
                     // TODO Add this assert here and a real blob type check to the list of checks
                     // if expected_blob_type != blob.blob_type() {
@@ -345,14 +344,16 @@ where
         }
     }
 
-    log::debug!("Exiting blob {:?}", &blob_info);
+    log::debug!("Exiting blob {blob_info}");
     Ok(())
 }
 
 async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
-    already_processed_blobs: Arc<ProcessedItems<BlobId, (BlobInfo, SeenBlobInfo)>>,
+    already_processed_blobs: Arc<
+        ProcessedItems<BlobId, (BlobInfoAsExpectedByEntryInParent, SeenBlobInfo)>,
+    >,
     blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
     path_of_blob: AbsolutePathBuf,
     checks: &'d AllChecks,
@@ -394,9 +395,10 @@ where
                         blobstore,
                         all_nodes,
                         Arc::clone(&already_processed_blobs),
-                        BlobInfo {
+                        BlobInfoAsExpectedByEntryInParent {
                             blob_id: *entry.blob_id(),
                             blob_type: entry_type_to_blob_type(entry.entry_type()),
+                            parent_id: blob.blob_id(),
                             path: path_of_blob.join(entry.name()),
                         },
                         checks,
@@ -420,7 +422,7 @@ fn entry_type_to_blob_type(entry_type: EntryType) -> BlobType {
 
 async fn check_all_nodes_of_reachable_blobs<B>(
     nodestore: &DataNodeStore<B>,
-    all_blobs: Vec<BlobInfo>,
+    all_blobs: Vec<BlobInfoAsExpectedByEntryInParent>,
     allowed_nodes: &HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
     checks: &AllChecks,
@@ -455,7 +457,7 @@ where
 
 async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     nodestore: &'a DataNodeStore<B>,
-    blob_info: BlobInfo,
+    blob_info: BlobInfoAsExpectedByEntryInParent,
     current_node_id: BlockId,
     expected_nodes: &'b HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
@@ -570,7 +572,7 @@ where
 
 fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
     nodestore: &'a DataNodeStore<B>,
-    blob_info: BlobInfo,
+    blob_info: BlobInfoAsExpectedByEntryInParent,
     current_node: &DataNode<B>,
     expected_nodes: &'b HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,

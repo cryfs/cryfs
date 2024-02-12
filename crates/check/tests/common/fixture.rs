@@ -4,7 +4,7 @@ use cryfs_blockstore::{
     InMemoryBlockStore, IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation,
     SharedBlockStore,
 };
-use cryfs_check::{BlobInfo, CorruptedError};
+use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadResult, FixedPasswordProvider},
@@ -197,20 +197,20 @@ impl FilesystemFixture {
         .await
     }
 
-    fn root_blob_info(&self) -> BlobInfo {
-        BlobInfo {
-            blob_id: self.root_blob_id,
-            blob_type: BlobType::Dir,
-            path: AbsolutePathBuf::root(),
-        }
+    fn root_blob_info(&self) -> BlobInfoAsExpectedByEntryInParent {
+        BlobInfoAsExpectedByEntryInParent::root_dir(self.root_blob_id)
     }
 
-    pub async fn create_empty_file(&self) -> BlobInfo {
+    pub async fn create_empty_file(&self) -> BlobInfoAsExpectedByEntryInParent {
         let root = self.root_blob_info();
         self.create_empty_file_in_parent(root, "file_name").await
     }
 
-    pub async fn create_empty_file_in_parent(&self, parent_info: BlobInfo, name: &str) -> BlobInfo {
+    pub async fn create_empty_file_in_parent(
+        &self,
+        parent_info: BlobInfoAsExpectedByEntryInParent,
+        name: &str,
+    ) -> BlobInfoAsExpectedByEntryInParent {
         let name = name.to_owned();
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
@@ -221,7 +221,7 @@ impl FilesystemFixture {
                 let mut parent = CreatedDirBlob::new(parent, parent_info.path);
                 let result =
                     super::entry_helpers::create_empty_file(blobstore, &mut parent, &name).await;
-                let result: BlobInfo = (&result).into();
+                let result: BlobInfoAsExpectedByEntryInParent = (&result).into();
                 parent.async_drop().await.unwrap();
                 result
             })
@@ -229,12 +229,16 @@ impl FilesystemFixture {
         .await
     }
 
-    pub async fn create_empty_dir(&self) -> BlobInfo {
+    pub async fn create_empty_dir(&self) -> BlobInfoAsExpectedByEntryInParent {
         let root = self.root_blob_info();
         self.create_empty_dir_in_parent(root, "dir_name").await
     }
 
-    pub async fn create_empty_dir_in_parent(&self, parent_info: BlobInfo, name: &str) -> BlobInfo {
+    pub async fn create_empty_dir_in_parent(
+        &self,
+        parent_info: BlobInfoAsExpectedByEntryInParent,
+        name: &str,
+    ) -> BlobInfoAsExpectedByEntryInParent {
         let name = name.to_owned();
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
@@ -245,7 +249,7 @@ impl FilesystemFixture {
                 let mut parent = CreatedDirBlob::new(parent, parent_info.path);
                 let mut created_dir =
                     super::entry_helpers::create_empty_dir(blobstore, &mut parent, &name).await;
-                let result: BlobInfo = (&*created_dir).into();
+                let result: BlobInfoAsExpectedByEntryInParent = (&*created_dir).into();
                 created_dir.async_drop().await.unwrap();
                 parent.async_drop().await.unwrap();
                 result
@@ -254,7 +258,7 @@ impl FilesystemFixture {
         .await
     }
 
-    pub async fn create_symlink(&self, target: &str) -> BlobInfo {
+    pub async fn create_symlink(&self, target: &str) -> BlobInfoAsExpectedByEntryInParent {
         let root = self.root_blob_info();
         self.create_symlink_in_parent(root, "symlink_name", target)
             .await
@@ -262,10 +266,10 @@ impl FilesystemFixture {
 
     pub async fn create_symlink_in_parent(
         &self,
-        parent_info: BlobInfo,
+        parent_info: BlobInfoAsExpectedByEntryInParent,
         name: &str,
         target: &str,
-    ) -> BlobInfo {
+    ) -> BlobInfoAsExpectedByEntryInParent {
         let name = name.to_owned();
         let target = target.to_owned();
         self.update_fsblobstore(move |blobstore| {
@@ -278,7 +282,7 @@ impl FilesystemFixture {
                 let result =
                     super::entry_helpers::create_symlink(blobstore, &mut parent, &name, &target)
                         .await;
-                let result: BlobInfo = (&result).into();
+                let result: BlobInfoAsExpectedByEntryInParent = (&result).into();
                 parent.async_drop().await.unwrap();
                 result
             })
@@ -744,7 +748,10 @@ impl FilesystemFixture {
         result
     }
 
-    pub async fn add_entries_to_make_dir_large(&self, blob_info: BlobInfo) {
+    pub async fn add_entries_to_make_dir_large(
+        &self,
+        blob_info: BlobInfoAsExpectedByEntryInParent,
+    ) {
         assert_eq!(BlobType::Dir, blob_info.blob_type);
         self.update_fsblobstore(|fsblobstore| {
             Box::pin(async move {

@@ -1,12 +1,10 @@
 //! Tests where whole blobs are missing
 
-use cryfs_rustfs::AbsolutePathBuf;
 use rstest::rstest;
 use std::iter;
 
 use cryfs_blockstore::RemoveResult;
-use cryfs_check::{BlobInfo, CorruptedError};
-use cryfs_cryfs::filesystem::fsblobstore::BlobType;
+use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -20,7 +18,9 @@ use common::fixture::FilesystemFixture;
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir_with_children(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
+async fn blob_entirely_missing(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture
@@ -73,11 +73,7 @@ async fn root_dir_entirely_missing_without_children() {
         .await;
 
     let expected_errors = vec![CorruptedError::BlobMissing {
-        expected_blob_info: BlobInfo {
-            blob_id: root_dir_id,
-            blob_type: BlobType::Dir,
-            path: AbsolutePathBuf::root(),
-        },
+        expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(root_dir_id),
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;
