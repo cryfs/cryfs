@@ -14,6 +14,10 @@ use super::{
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
 
+// TODO BlobInfoAsSeenByLookingAtBlob, BlobInfoAsExpectedByEntryInParent, BlobReference all contain blob_id but we wouldn't need that because we store the
+//      blob id already in the key of the map. Should we replace them with new types BlobInfoAsSeenByLookingAtBlobWithoutBlobId and BlobInfoAsExpectedByEntryInParentWithoutBlobId?
+//      Same in other checks, e.g. `unreferenced_nodes`.
+
 #[derive(Eq, PartialEq)]
 enum SeenBlobInfo {
     Readable {
