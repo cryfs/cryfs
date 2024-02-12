@@ -19,7 +19,7 @@ use super::iter::ComponentIter;
 ///   - Must not contain any empty components (i.e. two slashes following each other)
 ///   - Must not contain any '.' or '..' components
 ///   - Must not contain any trailing slashes, except if it is the root path "/" itself
-#[derive(PartialEq, Eq, Hash, Debug, Display)]
+#[derive(PartialEq, Eq, Hash, Debug, Display, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct AbsolutePath {
     path: str,
@@ -229,7 +229,7 @@ impl<'a> IntoIterator for &'a AbsolutePath {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, PartialOrd, Ord)]
 pub struct AbsolutePathBuf {
     path: String,
 }

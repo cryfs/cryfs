@@ -5,7 +5,7 @@ use futures::future::BoxFuture;
 use rstest::rstest;
 
 use cryfs_blobstore::BlobId;
-use cryfs_check::CorruptedError;
+use cryfs_check::{BlobInfo, CorruptedError};
 
 mod common;
 
@@ -71,18 +71,24 @@ fn add_as_symlink_entry<'a>(
     })
 }
 
-fn same_dir(some_blobs: &SomeBlobs) -> (BlobId, BlobId) {
-    (some_blobs.large_dir_1, some_blobs.large_dir_1)
+fn same_dir(some_blobs: &SomeBlobs) -> (BlobInfo, BlobInfo) {
+    (
+        some_blobs.large_dir_1.clone(),
+        some_blobs.large_dir_1.clone(),
+    )
 }
 
-fn different_dirs(some_blobs: &SomeBlobs) -> (BlobId, BlobId) {
-    (some_blobs.large_dir_1, some_blobs.large_dir_2)
+fn different_dirs(some_blobs: &SomeBlobs) -> (BlobInfo, BlobInfo) {
+    (
+        some_blobs.large_dir_1.clone(),
+        some_blobs.large_dir_2.clone(),
+    )
 }
 
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn blob_referenced_multiple_times(
-    #[values(same_dir, different_dirs)] parents: impl FnOnce(&SomeBlobs) -> (BlobId, BlobId),
+    #[values(same_dir, different_dirs)] parents: impl FnOnce(&SomeBlobs) -> (BlobInfo, BlobInfo),
     #[values(make_file, make_dir, make_symlink)] make_first_blob: impl for<'a> FnOnce(
         &'a FilesystemFixture,
         BlobId,
@@ -98,7 +104,9 @@ async fn blob_referenced_multiple_times(
     ) -> BoxFuture<'a, ()>,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    let (parent1_id, parent2_id) = parents(&some_blobs);
+    let (parent1_info, parent2_info) = parents(&some_blobs);
+    let parent1_id = parent1_info.blob_id;
+    let parent2_id = parent2_info.blob_id;
 
     let blob_id = make_first_blob(&fs_fixture, parent1_id).await;
     add_to_second_parent(&fs_fixture, parent2_id, blob_id).await;

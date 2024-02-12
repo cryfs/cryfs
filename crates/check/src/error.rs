@@ -1,10 +1,35 @@
 use std::collections::BTreeSet;
+use std::fmt::{self, Display};
 use thiserror::Error;
 
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockId;
+use cryfs_cryfs::filesystem::fsblobstore::BlobType;
+use cryfs_rustfs::AbsolutePathBuf;
 
 // TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct BlobInfo {
+    pub blob_id: BlobId,
+    pub blob_type: BlobType,
+    pub path: AbsolutePathBuf,
+}
+
+impl Display for BlobInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let blob_type = match self.blob_type {
+            BlobType::File => "File",
+            BlobType::Dir => "Dir",
+            BlobType::Symlink => "Symlink",
+        };
+        write!(
+            f,
+            "{blob_type}[{blob_id:?}] @ {path}",
+            blob_id = self.blob_id,
+            path = self.path,
+        )
+    }
+}
 
 /// A [CorruptedError] is an error we found in the file system when analyzing it
 #[derive(Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -12,6 +37,7 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
+        // TODO blob_info: BlobInfo,
         // TODO referenced_by: BlockId,
         // TODO error: anyhow::Error,
         // TODO expected_depth: u8,
@@ -20,6 +46,7 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is referenced but does not exist")]
     NodeMissing {
         node_id: BlockId,
+        // TODO blob_info: BlobInfo,
         // TODO referenced_by: BlockId,
         // TODO expected_depth: u8,
     },
@@ -35,20 +62,20 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is referenced multiple times")]
     NodeReferencedMultipleTimes {
         node_id: BlockId,
-        // TODO referenced_by: BTreeSet<BlockId>,
+        // TODO referenced_by: BTreeSet<(BlockId, BlobInfo)>,
         // TODO expected_depths: u8,
     },
 
     #[error("Blob {blob_id:?} is referenced multiple times")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
-        // TODO blob_type: ,
-        // TODO referenced_by: BTreeSet<BlobId>,
+        // TODO replace blob_id with blob_info: BlobInfo,
+        // TODO referenced_by: BTreeSet<BlobInfo>,
     },
 
-    #[error("Blob {blob_id:?} is unreadable and likely corrupted")]
+    #[error("{expected_blob_info} is unreadable and likely corrupted")]
     BlobUnreadable {
-        blob_id: BlobId,
+        expected_blob_info: BlobInfo,
         // TODO expected_blob_type: ,
         // TODO referenced_by: BlobId,
         // TODO error:  anyhow::Error,
@@ -57,6 +84,7 @@ pub enum CorruptedError {
     #[error("Blob {blob_id:?} is referenced but does not exist")]
     BlobMissing {
         blob_id: BlobId,
+        // TODO replace blob_id with blob_info: BlobInfo,
         // TODO expected_blob_type: ,
         // TODO referenced_by: BlobId,
     },
@@ -64,8 +92,9 @@ pub enum CorruptedError {
     #[error("Blob {blob_id:?} is referenced by parent {referenced_by:?} but has parent pointer {parent_pointer:?}")]
     WrongParentPointer {
         blob_id: BlobId,
-        // TODO blob_type: ,
+        // TODO replace blob_id with blob_info: BlobInfo,
         referenced_by: BTreeSet<BlobId>,
+        // TODO replace referenced_by with referenced_by: BTreeSet<BlobInfo>,
         parent_pointer: BlobId,
     },
 

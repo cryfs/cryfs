@@ -3,8 +3,7 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_blobstore::BlobId;
-use cryfs_check::CorruptedError;
+use cryfs_check::{BlobInfo, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -12,19 +11,26 @@ use common::entry_helpers::SomeBlobs;
 use common::fixture::FilesystemFixture;
 
 #[rstest]
-#[case::file(|some_blobs: &SomeBlobs| some_blobs.large_file_1)]
-#[case::dir(|some_blobs: &SomeBlobs| some_blobs.large_dir_1)]
-#[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1)]
-#[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root)]
+#[case::file(|some_blobs: &SomeBlobs| some_blobs.large_file_1.clone())]
+#[case::dir(|some_blobs: &SomeBlobs| some_blobs.large_dir_1.clone())]
+#[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
+#[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn unreadable_blob_bad_format_version(#[case] blob_id: impl FnOnce(&SomeBlobs) -> BlobId) {
+async fn unreadable_blob_bad_format_version(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    let blob_id = blob_id(&some_blobs);
-    let orphaned_descendant_blobs = fs_fixture.get_descendants_if_dir_blob(blob_id).await;
+    let blob_info = blob(&some_blobs);
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_if_dir_blob(blob_info.blob_id)
+        .await;
 
-    fs_fixture.increment_format_version_of_blob(blob_id).await;
+    fs_fixture
+        .increment_format_version_of_blob(blob_info.blob_id)
+        .await;
 
-    let expected_errors = iter::once(CorruptedError::BlobUnreadable { blob_id })
+    let expected_errors =
+        iter::once(CorruptedError::BlobUnreadable {
+            expected_blob_info: blob_info,
+        })
         .chain(orphaned_descendant_blobs.into_iter().map(|child| {
             CorruptedError::NodeUnreferenced {
                 node_id: *child.to_root_block_id(),
@@ -37,19 +43,24 @@ async fn unreadable_blob_bad_format_version(#[case] blob_id: impl FnOnce(&SomeBl
 }
 
 #[rstest]
-#[case::file(|some_blobs: &SomeBlobs| some_blobs.large_file_1)]
-#[case::dir(|some_blobs: &SomeBlobs| some_blobs.large_dir_1)]
-#[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1)]
-#[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root)]
+#[case::file(|some_blobs: &SomeBlobs| some_blobs.large_file_1.clone())]
+#[case::dir(|some_blobs: &SomeBlobs| some_blobs.large_dir_1.clone())]
+#[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
+#[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn unreadable_file_blob_bad_blob_type(#[case] blob_id: impl FnOnce(&SomeBlobs) -> BlobId) {
+async fn unreadable_file_blob_bad_blob_type(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    let blob_id = blob_id(&some_blobs);
-    let orphaned_descendant_blobs = fs_fixture.get_descendants_if_dir_blob(blob_id).await;
+    let blob_info = blob(&some_blobs);
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_if_dir_blob(blob_info.blob_id)
+        .await;
 
-    fs_fixture.corrupt_blob_type(blob_id).await;
+    fs_fixture.corrupt_blob_type(blob_info.blob_id).await;
 
-    let expected_errors = iter::once(CorruptedError::BlobUnreadable { blob_id })
+    let expected_errors =
+        iter::once(CorruptedError::BlobUnreadable {
+            expected_blob_info: blob_info,
+        })
         .chain(orphaned_descendant_blobs.into_iter().map(|child| {
             CorruptedError::NodeUnreferenced {
                 node_id: *child.to_root_block_id(),

@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::BlobInfo;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
@@ -8,13 +9,12 @@ use super::{
     utils::reference_checker::ReferenceChecker, CheckError, CorruptedError, FilesystemCheck,
 };
 
-// TODO Tests
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
 
 #[derive(Eq, PartialEq)]
-enum BlobInfo {
+enum SeenBlobInfo {
     Readable { parent_pointer: BlobId },
-    Unreadable,
+    Unreadable { expected_blob_info: BlobInfo },
 }
 
 #[derive(Eq, PartialEq)]
@@ -23,7 +23,7 @@ struct ReferencedByParent(BlobId);
 /// Check that blob parent pointers go back to the parent that referenced the blob
 pub struct CheckParentPointers {
     // Stores the parent pointer of each blob and which parent blobs it is referenced by
-    reference_checker: ReferenceChecker<BlobId, BlobInfo, ReferencedByParent>,
+    reference_checker: ReferenceChecker<BlobId, SeenBlobInfo, ReferencedByParent>,
 }
 
 impl CheckParentPointers {
@@ -39,7 +39,7 @@ impl FilesystemCheck for CheckParentPointers {
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
     ) -> Result<(), CheckError> {
-        let blob_info = BlobInfo::Readable {
+        let blob_info = SeenBlobInfo::Readable {
             parent_pointer: blob.parent(),
         };
         self.reference_checker
@@ -60,9 +60,16 @@ impl FilesystemCheck for CheckParentPointers {
         Ok(())
     }
 
-    fn process_reachable_unreadable_blob(&mut self, blob_id: BlobId) -> Result<(), CheckError> {
-        self.reference_checker
-            .mark_as_seen(blob_id, BlobInfo::Unreadable);
+    fn process_reachable_unreadable_blob(
+        &mut self,
+        expected_blob_info: &BlobInfo,
+    ) -> Result<(), CheckError> {
+        self.reference_checker.mark_as_seen(
+            expected_blob_info.blob_id,
+            SeenBlobInfo::Unreadable {
+                expected_blob_info: expected_blob_info.clone(),
+            },
+        );
         Ok(())
     }
 
@@ -95,7 +102,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn finalize(self) -> Vec<CorruptedError> {
         self.reference_checker
             .finalize()
-            .flat_map(|(blob_id, blob_info, referenced_by)| {
+            .flat_map(|(blob_id, seen_blob_info, referenced_by)| {
                 let mut errors = vec![];
                 if referenced_by.len() > 1 {
                     errors.push(CorruptedError::BlobReferencedMultipleTimes { blob_id });
@@ -103,8 +110,8 @@ impl FilesystemCheck for CheckParentPointers {
                     panic!("Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs.");
                 }
 
-                match blob_info {
-                    Some(BlobInfo::Readable{parent_pointer}) => {
+                match seen_blob_info {
+                    Some(SeenBlobInfo::Readable{parent_pointer}) => {
                         if !referenced_by.contains(&ReferencedByParent(parent_pointer)) {
                             errors.push(CorruptedError::WrongParentPointer {
                                 blob_id,
@@ -116,8 +123,8 @@ impl FilesystemCheck for CheckParentPointers {
                             });
                         }
                     }
-                    Some(BlobInfo::Unreadable) => {
-                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { blob_id })));
+                    Some(SeenBlobInfo::Unreadable {expected_blob_info}) => {
+                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { expected_blob_info })));
                     }
                     None => {
                         errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobMissing { blob_id })));

@@ -24,6 +24,7 @@ cryfs-cli-utils = {path = "../cli-utils"}
 cryfs-cryfs = {path = "../cryfs"}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
+cryfs-rustfs = {path = "../rustfs"}
 log.workspace = true
 futures.workspace = true
 indicatif.workspace = true

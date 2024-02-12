@@ -86,9 +86,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
-    let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1).await;
+    let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1.blob_id).await;
     let blob_id = make_blob(&fs_fixture, old_parent).await;
-    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir2).await;
+    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir2.blob_id).await;
 
     set_parent(&fs_fixture, blob_id, new_parent).await;
 
@@ -120,13 +120,13 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
-    let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1).await;
+    let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1.blob_id).await;
     let blob_id = make_blob(&fs_fixture, old_parent).await;
-    let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2).await;
+    let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2.blob_id).await;
     fs_fixture
         .add_dir_entry_to_dir(old_parent_2, "name", blob_id)
         .await;
-    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
+    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3.blob_id).await;
 
     set_parent(&fs_fixture, blob_id, new_parent).await;
 
@@ -164,17 +164,17 @@ async fn blob_with_wrong_parent_pointer_referenced_from_three_dirs(
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
-    let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1).await;
+    let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1.blob_id).await;
     let blob_id = make_blob(&fs_fixture, old_parent).await;
-    let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2).await;
+    let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2.blob_id).await;
     fs_fixture
         .add_dir_entry_to_dir(old_parent_2, "name", blob_id)
         .await;
-    let old_parent_3 = make_old_parent(&fs_fixture, some_blobs.dir1_dir4).await;
+    let old_parent_3 = make_old_parent(&fs_fixture, some_blobs.dir1_dir4.blob_id).await;
     fs_fixture
         .add_dir_entry_to_dir(old_parent_3, "name", blob_id)
         .await;
-    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
+    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3.blob_id).await;
 
     set_parent(&fs_fixture, blob_id, new_parent).await;
 

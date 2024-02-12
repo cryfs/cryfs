@@ -647,6 +647,7 @@ dependencies = [
  "cryfs-blockstore",
  "cryfs-cli-utils",
  "cryfs-cryfs",
+ "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
  "futures",

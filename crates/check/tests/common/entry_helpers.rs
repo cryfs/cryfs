@@ -12,10 +12,13 @@ use cryfs_blobstore::{
     BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore, DataTree,
 };
 use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_check::BlobInfo;
+use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
 };
+use cryfs_rustfs::AbsolutePathBuf;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
@@ -246,27 +249,27 @@ where
 
 #[derive(Debug)]
 pub struct SomeBlobs {
-    pub root: BlobId,
-    pub dir1: BlobId,
-    pub dir2: BlobId,
-    pub dir1_dir3: BlobId,
-    pub dir1_dir4: BlobId,
-    pub dir1_dir3_dir5: BlobId,
-    pub dir2_dir6: BlobId,
-    pub dir2_dir7: BlobId,
-    pub dir2_large_file_1: BlobId,
-    pub dir2_dir7_large_file_1: BlobId,
-    pub large_file_1: BlobId,
-    pub large_file_2: BlobId,
-    pub large_dir_1: BlobId,
-    pub large_dir_2: BlobId,
-    pub dir2_large_symlink_1: BlobId,
-    pub dir2_dir7_large_symlink_1: BlobId,
-    pub large_symlink_1: BlobId,
-    pub large_symlink_2: BlobId,
-    pub empty_file: BlobId,
-    pub empty_dir: BlobId,
-    pub empty_symlink: BlobId,
+    pub root: BlobInfo,
+    pub dir1: BlobInfo,
+    pub dir2: BlobInfo,
+    pub dir1_dir3: BlobInfo,
+    pub dir1_dir4: BlobInfo,
+    pub dir1_dir3_dir5: BlobInfo,
+    pub dir2_dir6: BlobInfo,
+    pub dir2_dir7: BlobInfo,
+    pub dir2_large_file_1: BlobInfo,
+    pub dir2_dir7_large_file_1: BlobInfo,
+    pub large_file_1: BlobInfo,
+    pub large_file_2: BlobInfo,
+    pub large_dir_1: BlobInfo,
+    pub large_dir_2: BlobInfo,
+    pub dir2_large_symlink_1: BlobInfo,
+    pub dir2_dir7_large_symlink_1: BlobInfo,
+    pub large_symlink_1: BlobInfo,
+    pub large_symlink_2: BlobInfo,
+    pub empty_file: BlobInfo,
+    pub empty_dir: BlobInfo,
+    pub empty_symlink: BlobInfo,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
@@ -276,55 +279,113 @@ pub async fn create_some_blobs<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
 {
+    // TODO there's a lot of repetition of path here. We should probably come up with a different API where `create_empty_dir` etc take a `parent: BlobInfo` as argument and return a created `BlobInfo`
+    let root_info = blob_info(root.blob_id(), BlobType::Dir, "/");
     let mut dir1 = create_empty_dir(fsblobstore, root, "somedir1").await;
-    let mut dir2 = create_empty_dir(fsblobstore, &mut dir1, "somedir2").await;
+    let dir1_info = blob_info(dir1.blob_id(), BlobType::Dir, "/somedir");
+    let mut dir2 = create_empty_dir(fsblobstore, root, "somedir2").await;
+    let dir2_info = blob_info(dir2.blob_id(), BlobType::Dir, "/somedir2");
     let mut dir1_dir3 = create_empty_dir(fsblobstore, &mut dir1, "somedir3").await;
+    let dir1_dir3_info = blob_info(dir1_dir3.blob_id(), BlobType::Dir, "/somedir1/somedir3");
     let mut dir1_dir4 = create_empty_dir(fsblobstore, &mut dir1, "somedir4").await;
+    let dir1_dir4_info = blob_info(dir1_dir4.blob_id(), BlobType::Dir, "/somedir1/somedir4");
     let mut dir1_dir3_dir5 = create_empty_dir(fsblobstore, &mut dir1_dir3, "somedir5").await;
+    let dir1_dir3_dir5_info = blob_info(
+        dir1_dir3_dir5.blob_id(),
+        BlobType::Dir,
+        "/somedir1/somedir3/somedir5",
+    );
     let mut dir2_dir6 = create_empty_dir(fsblobstore, &mut dir2, "somedir6").await;
+    let dir2_dir6_info = blob_info(dir2_dir6.blob_id(), BlobType::Dir, "/somedir2/somedir6");
     let mut dir2_dir7 = create_empty_dir(fsblobstore, &mut dir2, "somedir7").await;
+    let dir2_dir7_info = blob_info(dir2_dir7.blob_id(), BlobType::Dir, "/somedir2/somedir7");
 
     // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
     let mut large_dir_1 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "some_large_dir_1", 2)
             .await;
+    let large_dir_1_info = blob_info(
+        large_dir_1.blob_id(),
+        BlobType::Dir,
+        "/somedir2/somedir6/some_large_dir_1",
+    );
     let mut large_dir_2 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir1_dir4, "some_large_dir_2", 2)
             .await;
+    let large_dir_2_info = blob_info(
+        large_dir_2.blob_id(),
+        BlobType::Dir,
+        "/somedir1/somedir4/some_large_dir_2",
+    );
     let dir2_dir7_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink_1").await;
+    let dir2_dir7_large_symlink_1_info = blob_info(
+        dir2_dir7_large_symlink_1.blob_id(),
+        BlobType::Symlink,
+        "/somedir2/somedir7/some_large_symlink_1",
+    );
     let dir2_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2, "some_large_symlink_2").await;
+    let dir2_large_symlink_1_info = blob_info(
+        dir2_large_symlink_1.blob_id(),
+        BlobType::Symlink,
+        "/somedir2/some_large_symlink_2",
+    );
     let dir2_dir7_large_file_1 =
         create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
+    let dir2_dir7_large_file_1_info = blob_info(
+        dir2_dir7_large_file_1.blob_id(),
+        BlobType::File,
+        "/somedir2/somedir7/some_large_file_1",
+    );
     let dir2_large_file_1 = create_large_file(fsblobstore, &mut dir2, "some_large_file_2").await;
+    let dir2_large_file_1_info = blob_info(
+        dir2_large_file_1.blob_id(),
+        BlobType::File,
+        "/somedir2/some_large_file_2",
+    );
 
     let empty_file = create_empty_file(fsblobstore, &mut dir1_dir3_dir5, "some_empty_file").await;
+    let empty_file_info = blob_info(
+        empty_file.blob_id(),
+        BlobType::File,
+        "/somedir1/somedir3/somedir5/some_empty_file",
+    );
     let mut empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
+    let empty_dir_info = blob_info(
+        empty_dir.blob_id(),
+        BlobType::Dir,
+        "/somedir2/somedir7/some_empty_dir",
+    );
     let empty_symlink = create_symlink(fsblobstore, &mut dir1_dir3, "some_empty_symlink", "").await;
+    let empty_symlink_info = blob_info(
+        empty_symlink.blob_id(),
+        BlobType::Symlink,
+        "/somedir1/somedir3/some_empty_symlink",
+    );
 
     let result = SomeBlobs {
-        root: root.blob_id(),
-        dir1: dir1.blob_id(),
-        dir2: dir2.blob_id(),
-        dir1_dir3: dir1_dir3.blob_id(),
-        dir1_dir4: dir1_dir4.blob_id(),
-        dir1_dir3_dir5: dir1_dir3_dir5.blob_id(),
-        dir2_dir6: dir2_dir6.blob_id(),
-        dir2_dir7: dir2_dir7.blob_id(),
-        dir2_dir7_large_file_1: dir2_dir7_large_file_1.blob_id(),
-        dir2_large_file_1: dir2_large_file_1.blob_id(),
-        large_file_1: dir2_dir7_large_file_1.blob_id(),
-        large_file_2: dir2_large_file_1.blob_id(),
-        large_dir_1: large_dir_1.blob_id(),
-        large_dir_2: large_dir_2.blob_id(),
-        dir2_dir7_large_symlink_1: dir2_dir7_large_symlink_1.blob_id(),
-        large_symlink_1: dir2_dir7_large_symlink_1.blob_id(),
-        dir2_large_symlink_1: dir2_large_symlink_1.blob_id(),
-        large_symlink_2: dir2_large_symlink_1.blob_id(),
-        empty_file: empty_file.blob_id(),
-        empty_dir: empty_dir.blob_id(),
-        empty_symlink: empty_symlink.blob_id(),
+        root: root_info,
+        dir1: dir1_info,
+        dir2: dir2_info,
+        dir1_dir3: dir1_dir3_info,
+        dir1_dir4: dir1_dir4_info,
+        dir1_dir3_dir5: dir1_dir3_dir5_info,
+        dir2_dir6: dir2_dir6_info,
+        dir2_dir7: dir2_dir7_info,
+        dir2_dir7_large_file_1: dir2_dir7_large_file_1_info.clone(),
+        dir2_large_file_1: dir2_large_file_1_info.clone(),
+        large_file_1: dir2_dir7_large_file_1_info,
+        large_file_2: dir2_large_file_1_info,
+        large_dir_1: large_dir_1_info,
+        large_dir_2: large_dir_2_info,
+        dir2_dir7_large_symlink_1: dir2_dir7_large_symlink_1_info.clone(),
+        large_symlink_1: dir2_dir7_large_symlink_1_info,
+        dir2_large_symlink_1: dir2_large_symlink_1_info.clone(),
+        large_symlink_2: dir2_large_symlink_1_info,
+        empty_file: empty_file_info,
+        empty_dir: empty_dir_info,
+        empty_symlink: empty_symlink_info,
     };
 
     large_dir_1.async_drop().await.unwrap();
@@ -339,6 +400,14 @@ where
     empty_dir.async_drop().await.unwrap();
 
     result
+}
+
+fn blob_info(blob_id: BlobId, blob_type: BlobType, path: &str) -> BlobInfo {
+    BlobInfo {
+        blob_id,
+        blob_type,
+        path: AbsolutePathBuf::try_from_string(path.to_owned()).unwrap(),
+    }
 }
 
 pub fn data(size: usize, seed: u64) -> Data {

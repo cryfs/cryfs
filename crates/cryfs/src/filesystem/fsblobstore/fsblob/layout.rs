@@ -10,7 +10,7 @@ const MAGIC_NUMBER_SYMLINK: u8 = 0x02;
 
 pub const FORMAT_VERSION_HEADER: u16 = 1;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum BlobType {
     Dir,
     File,

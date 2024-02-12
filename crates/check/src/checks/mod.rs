@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::sync::Mutex;
 
+use crate::BlobInfo;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
@@ -40,7 +41,10 @@ pub trait FilesystemCheck {
     ) -> Result<(), CheckError>;
 
     /// Called for each blob that is reachable from the root of the file system via its directory structure that was found but is not readable.
-    fn process_reachable_unreadable_blob(&mut self, blob_id: BlobId) -> Result<(), CheckError>;
+    fn process_reachable_unreadable_blob(
+        &mut self,
+        expected_blob_info: &BlobInfo,
+    ) -> Result<(), CheckError>;
 
     /// Called for each node that is part of a reachable blob
     fn process_reachable_node(
@@ -112,19 +116,22 @@ impl AllChecks {
         Ok(())
     }
 
-    pub fn process_reachable_unreadable_blob(&self, blob_id: BlobId) -> Result<(), CheckError> {
+    pub fn process_reachable_unreadable_blob(
+        &self,
+        expected_blob_info: &BlobInfo,
+    ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_unreadable_blob(blob_id)?;
+            .process_reachable_unreadable_blob(expected_blob_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_unreadable_blob(blob_id)?;
+            .process_reachable_unreadable_blob(expected_blob_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_unreadable_blob(blob_id)?;
+            .process_reachable_unreadable_blob(expected_blob_info)?;
         Ok(())
     }
 

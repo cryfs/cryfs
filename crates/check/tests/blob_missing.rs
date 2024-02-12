@@ -3,9 +3,8 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_blobstore::BlobId;
 use cryfs_blockstore::RemoveResult;
-use cryfs_check::CorruptedError;
+use cryfs_check::{BlobInfo, CorruptedError};
 
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
@@ -14,15 +13,15 @@ use common::entry_helpers::SomeBlobs;
 use common::fixture::FilesystemFixture;
 
 #[rstest]
-#[case::file(|some_blobs: &SomeBlobs| some_blobs.large_file_1)]
-#[case::dir_with_children(|some_blobs: &SomeBlobs| some_blobs.large_dir_1)]
-#[case::dir_without_children(|some_blobs: &SomeBlobs| some_blobs.empty_dir)]
-#[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1)]
-#[case::rootdir_with_children(|some_blobs: &SomeBlobs| some_blobs.root)]
+#[case::file(|some_blobs: &SomeBlobs| some_blobs.large_file_1.clone())]
+#[case::dir_with_children(|some_blobs: &SomeBlobs| some_blobs.large_dir_1.clone())]
+#[case::dir_without_children(|some_blobs: &SomeBlobs| some_blobs.empty_dir.clone())]
+#[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
+#[case::rootdir_with_children(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_entirely_missing(#[case] blob_id: impl FnOnce(&SomeBlobs) -> BlobId) {
+async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    let blob_id = blob_id(&some_blobs);
+    let blob_id = blob(&some_blobs).blob_id;
     let orphaned_descendant_blobs = fs_fixture.get_descendants_if_dir_blob(blob_id).await;
 
     fs_fixture

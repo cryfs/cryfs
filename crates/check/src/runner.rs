@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_recursion::async_recursion;
+use cryfs_cryfs::filesystem::fsblobstore::EntryType;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::{Either, Itertools};
 use std::collections::{HashMap, HashSet};
@@ -7,11 +8,13 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
+use crate::error::BlobInfo;
+
 use super::checks::AllChecks;
 use super::error::{CheckError, CorruptedError};
 use super::task_queue::{self, TaskSpawner};
 use cryfs_blobstore::{
-    BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore, LoadNodeError,
+    BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore,
 };
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
@@ -19,6 +22,8 @@ use cryfs_cryfs::{
     config::ConfigLoadResult,
     filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
 };
+// TODO Move AbsolutePathBuf to common crate and remove dependency on cryfs_rustfs.
+use cryfs_rustfs::AbsolutePathBuf;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     containers::{HashMapExt, OccupiedError},
@@ -195,7 +200,7 @@ where
 async fn check_all_reachable_blobs<B>(
     blobstore: &AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &HashSet<BlockId>,
-    already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
+    already_processed_blobs: Arc<ProcessedItems<BlobId, SeenBlobInfo>>,
     root_blob_id: BlobId,
     checks: &AllChecks,
     pb: impl Progress,
@@ -208,7 +213,11 @@ where
             blobstore,
             all_nodes,
             Arc::clone(&already_processed_blobs),
-            root_blob_id,
+            BlobInfo {
+                blob_id: root_blob_id,
+                blob_type: BlobType::Dir,
+                path: AbsolutePathBuf::root(),
+            },
             checks,
             task_spawner,
             pb,
@@ -223,8 +232,8 @@ where
 async fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
-    already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
-    root_blob_id: BlobId,
+    already_processed_blobs: Arc<ProcessedItems<BlobId, SeenBlobInfo>>,
+    blob_info: BlobInfo,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f>,
     pb: impl Progress + 'd,
@@ -239,16 +248,16 @@ where
 {
     // TODO Function too large, split into subfunctions
 
-    log::debug!("Entering blob {:?}", &root_blob_id);
+    log::debug!("Entering blob {:?}", &blob_info);
 
-    let loaded = blobstore.load(&root_blob_id).await;
+    let loaded = blobstore.load(&blob_info.blob_id).await;
 
-    let blob_info = match &loaded {
-        Ok(Some(blob)) => processed_blob_info(blob),
-        Ok(None) => BlobInfo::Missing,
-        Err(_) => BlobInfo::Unreadable,
+    let seen_blob_info = match &loaded {
+        Ok(Some(blob)) => blob_content_summary(blob),
+        Ok(None) => SeenBlobInfo::Missing,
+        Err(_) => SeenBlobInfo::Unreadable,
     };
-    match already_processed_blobs.add(root_blob_id, blob_info) {
+    match already_processed_blobs.add(blob_info.blob_id, seen_blob_info) {
         AlreadySeen::AlreadySeen {
             prev_seen,
             now_seen,
@@ -260,7 +269,7 @@ where
             // The blob was already seen before. This can only happen if the blob is referenced multiple times.
             checks.add_error(CorruptedError::Assert(Box::new(
                 CorruptedError::BlobReferencedMultipleTimes {
-                    blob_id: root_blob_id,
+                    blob_id: blob_info.blob_id,
                 },
             )));
 
@@ -268,8 +277,7 @@ where
             if prev_seen != now_seen {
                 Err(CheckError::FilesystemModified {
                     msg: format!(
-                        "Blob {blob_id:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
-                        blob_id = root_blob_id,
+                        "Blob {blob_info:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
                         prev_seen = prev_seen,
                         now_seen = now_seen,
                     ),
@@ -279,13 +287,20 @@ where
         AlreadySeen::NotSeenYet => {
             match loaded {
                 Ok(Some(mut blob)) => {
-                    if !all_nodes.contains(root_blob_id.to_root_block_id()) {
+                    if !all_nodes.contains(blob_info.blob_id.to_root_block_id()) {
                         Err(CheckError::FilesystemModified {
-                            msg: format!("Blob {root_blob_id:?} wasn't present before but is now."),
+                            msg: format!("Blob {blob_info:?} wasn't present before but is now."),
                         })?;
                     }
 
                     let process_result = checks.process_reachable_readable_blob(&blob);
+
+                    // TODO Add this assert here and a real blob type check to the list of checks
+                    // if expected_blob_type != blob.blob_type() {
+                    //     checks.add_error(CorruptedError::Assert(Box::new(
+                    //         CorruptedError::WrongBlobType,
+                    //     )));
+                    // }
 
                     // TODO Checking children blobs for directory blobs loads the nodes of this blob.
                     //      Then we load it again when we check the nodes of this blob. Can we only load it once?
@@ -295,6 +310,7 @@ where
                         all_nodes,
                         already_processed_blobs,
                         &blob,
+                        blob_info.path.clone(),
                         checks,
                         task_spawner,
                         pb.clone(),
@@ -309,14 +325,14 @@ where
                     // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
                     checks.add_error(CorruptedError::Assert(Box::new(
                         CorruptedError::BlobMissing {
-                            blob_id: root_blob_id,
+                            blob_id: blob_info.blob_id,
                         },
                     )));
                 }
                 Err(error) => {
-                    checks.process_reachable_unreadable_blob(root_blob_id)?;
+                    checks.process_reachable_unreadable_blob(&blob_info)?;
                     checks.add_error(CorruptedError::BlobUnreadable {
-                        blob_id: root_blob_id,
+                        expected_blob_info: blob_info.clone(),
                         // error,
                     });
                 }
@@ -325,15 +341,16 @@ where
         }
     }
 
-    log::debug!("Exiting blob {:?}", &root_blob_id);
+    log::debug!("Exiting blob {:?}", &blob_info);
     Ok(())
 }
 
 async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
-    already_processed_blobs: Arc<ProcessedItems<BlobId, BlobInfo>>,
+    already_processed_blobs: Arc<ProcessedItems<BlobId, SeenBlobInfo>>,
     blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
+    path_of_blob: AbsolutePathBuf,
     checks: &'d AllChecks,
     task_spawner: TaskSpawner<'f>,
     pb: impl Progress + 'e,
@@ -373,7 +390,12 @@ where
                         blobstore,
                         all_nodes,
                         Arc::clone(&already_processed_blobs),
-                        *entry.blob_id(),
+                        BlobInfo {
+                            blob_id: *entry.blob_id(),
+                            blob_type: entry_type_to_blob_type(entry.entry_type()),
+                            // TODO path_of_blob.clone reallocates. push reallocates again. One reallocation should be enough.
+                            path: path_of_blob.clone().push(entry.name()),
+                        },
                         checks,
                         task_spawner,
                         pb.clone(),
@@ -385,11 +407,19 @@ where
     Ok(())
 }
 
+fn entry_type_to_blob_type(entry_type: EntryType) -> BlobType {
+    match entry_type {
+        EntryType::File => BlobType::File,
+        EntryType::Dir => BlobType::Dir,
+        EntryType::Symlink => BlobType::Symlink,
+    }
+}
+
 async fn check_all_nodes_of_reachable_blobs<B>(
     nodestore: &DataNodeStore<B>,
     all_blobs: Vec<BlobId>,
     allowed_nodes: &HashSet<BlockId>,
-    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
     checks: &AllChecks,
     pb: impl Progress,
 ) -> Result<(), CheckError>
@@ -425,7 +455,7 @@ async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     blob_id: BlobId,
     current_node_id: BlockId,
     expected_nodes: &'b HashSet<BlockId>,
-    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f, CheckError>,
     pb: impl Progress + 'd,
@@ -441,9 +471,9 @@ where
 
     let node = nodestore.load(current_node_id).await;
     let node_info = match &node {
-        Ok(Some(node)) => processed_node_info(node),
-        Ok(None) => NodeInfo::Missing,
-        Err(err) => NodeInfo::Unreadable,
+        Ok(Some(node)) => node_content_summary(node),
+        Ok(None) => NodeContentSummary::Missing,
+        Err(err) => NodeContentSummary::Unreadable,
     };
 
     match already_processed_nodes.add(current_node_id, node_info) {
@@ -538,7 +568,7 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
     blob_id: BlobId,
     current_node: &DataNode<B>,
     expected_nodes: &'b HashSet<BlockId>,
-    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeInfo>>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f, CheckError>,
     pb: impl Progress + 'd,
@@ -600,12 +630,12 @@ fn run_assertions(errors: Vec<CorruptedError>) -> Vec<CorruptedError> {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-enum NodeInfo {
+enum NodeContentSummary {
     Unreadable,
     Missing,
     Leaf,
     Inner {
-        // We're storing children into the [NodeInfo] so that if the node comes up again,
+        // We're storing children into the [NodeContentSummary] so that if the node comes up again,
         // we can check that it still has the same children. This allows us to know that
         // we already processed those children when we saw the blob for the first time.
         // TODO Vec instead of HashSet should be enough
@@ -613,42 +643,42 @@ enum NodeInfo {
     },
 }
 
-fn processed_node_info<B>(node: &DataNode<B>) -> NodeInfo
+fn node_content_summary<B>(node: &DataNode<B>) -> NodeContentSummary
 where
     B: BlockStore + Send + Sync + 'static,
 {
     match node {
-        DataNode::Leaf(_) => NodeInfo::Leaf,
-        DataNode::Inner(node) => NodeInfo::Inner {
+        DataNode::Leaf(_) => NodeContentSummary::Leaf,
+        DataNode::Inner(node) => NodeContentSummary::Inner {
             children: node.children().collect(),
         },
     }
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-enum BlobInfo {
+enum SeenBlobInfo {
     Unreadable,
     Missing,
     File,
     Symlink,
     Dir {
-        // We're storing children into the [NodeInfo] so that if the node comes up again,
+        // We're storing children into the [NodeContentSummary] so that if the node comes up again,
         // we can check that it still has the same children. This allows us to know that
         // we already processed those children when we saw the blob for the first time.
         children: Vec<BlobId>,
     },
 }
 
-fn processed_blob_info<'a, B>(blob: &FsBlob<'a, B>) -> BlobInfo
+fn blob_content_summary<'a, B>(blob: &FsBlob<'a, B>) -> SeenBlobInfo
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     match blob {
-        FsBlob::File(_) => BlobInfo::File,
-        FsBlob::Symlink(_) => BlobInfo::Symlink,
-        FsBlob::Directory(blob) => BlobInfo::Dir {
+        FsBlob::File(_) => SeenBlobInfo::File,
+        FsBlob::Symlink(_) => SeenBlobInfo::Symlink,
+        FsBlob::Directory(blob) => SeenBlobInfo::Dir {
             children: blob.entries().map(|entry| *entry.blob_id()).collect(),
         },
     }
