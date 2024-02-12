@@ -15,6 +15,12 @@ pub struct BlobInfo {
     pub path: AbsolutePathBuf,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct BlobReference {
+    pub parent_id: BlobId,
+    pub expected_child_info: BlobInfo,
+}
+
 impl Display for BlobInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let blob_type = match self.blob_type {
@@ -54,7 +60,7 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is not referenced but exists")]
     NodeUnreferenced {
         node_id: BlockId,
-        // TODO depth: u8,
+        // TODO node_depth: u8,
     },
 
     // #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]
@@ -62,40 +68,33 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is referenced multiple times")]
     NodeReferencedMultipleTimes {
         node_id: BlockId,
-        // TODO referenced_by: BTreeSet<(BlockId, BlobInfo)>,
-        // TODO expected_depths: u8,
+        // TODO node_depth: u8,
+        // TODO referenced_as: BTreeSet<(BlobInfo, BlockId, expected_depth)>, probably should move this tuple into a NodeReference class
     },
 
     #[error("Blob {blob_id:?} is referenced multiple times")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
-        // TODO replace blob_id with blob_info: BlobInfo,
-        // TODO referenced_by: BTreeSet<BlobInfo>,
+        // TODO blob_type: BlobId,
+        // TODO blob_parent_pointer: BlobId,
+        // TODO referenced_as: BTreeSet<BlobReference>,
     },
 
     #[error("{expected_blob_info} is unreadable and likely corrupted")]
     BlobUnreadable {
         expected_blob_info: BlobInfo,
-        // TODO expected_blob_type: ,
-        // TODO referenced_by: BlobId,
         // TODO error:  anyhow::Error,
     },
 
     #[error("{expected_blob_info:?} is referenced but does not exist")]
-    BlobMissing {
-        expected_blob_info: BlobInfo,
-        // TODO replace blob_id with blob_info: BlobInfo,
-        // TODO expected_blob_type: ,
-        // TODO referenced_by: BlobId,
-    },
+    BlobMissing { expected_blob_info: BlobInfo },
 
-    #[error("Blob {blob_id:?} is referenced by parent {referenced_by:?} but has parent pointer {parent_pointer:?}")]
+    #[error("Blob({blob_type:?}) {blob_id:?} is referenced by {referenced_as:?} but has parent pointer {blob_parent_pointer:?}")]
     WrongParentPointer {
         blob_id: BlobId,
-        // TODO replace blob_id with blob_info: BlobInfo,
-        referenced_by: BTreeSet<BlobId>,
-        // TODO replace referenced_by with referenced_by: BTreeSet<BlobInfo>,
-        parent_pointer: BlobId,
+        blob_type: BlobType,
+        blob_parent_pointer: BlobId,
+        referenced_as: BTreeSet<BlobReference>,
     },
 
     /// Not an actual error but reported by a check to indicate that we need to assert that another check reported this error.

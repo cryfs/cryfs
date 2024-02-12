@@ -10,6 +10,7 @@ pub mod data;
 pub mod mutex;
 mod panic;
 pub mod path;
+pub mod peekable;
 pub mod periodic_task;
 pub mod progress;
 pub mod stream;

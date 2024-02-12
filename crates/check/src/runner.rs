@@ -296,7 +296,8 @@ where
                         })?;
                     }
 
-                    let process_result = checks.process_reachable_readable_blob(&blob, &blob_info);
+                    let process_result =
+                        checks.process_reachable_readable_blob(&blob, &blob_info.path);
 
                     // TODO Add this assert here and a real blob type check to the list of checks
                     // if expected_blob_type != blob.blob_type() {

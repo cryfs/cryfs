@@ -4,6 +4,7 @@ use crate::BlobInfo;
 use cryfs_blobstore::{BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
+use cryfs_rustfs::AbsolutePath;
 
 use super::{CheckError, CorruptedError, FilesystemCheck};
 
@@ -22,7 +23,7 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_readable_blob(
         &mut self,
         _blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        _blob_info: &BlobInfo,
+        _path: &AbsolutePath,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())

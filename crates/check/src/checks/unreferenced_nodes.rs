@@ -7,7 +7,7 @@ use crate::BlobInfo;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
-use cryfs_rustfs::AbsolutePathBuf;
+use cryfs_rustfs::{AbsolutePath, AbsolutePathBuf};
 
 enum ReferencedAs {
     RootNode {
@@ -82,7 +82,7 @@ impl UnreferencedNodesReferenceChecker {
     pub fn process_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfo,
+        path: &AbsolutePath,
     ) -> Result<(), CheckError> {
         match blob {
             FsBlob::File(_) | FsBlob::Symlink(_) => {
@@ -93,7 +93,7 @@ impl UnreferencedNodesReferenceChecker {
                     let child_blob_info = BlobInfo {
                         blob_id: *child.blob_id(),
                         blob_type: entry_type_to_blob_type(child.entry_type()),
-                        path: blob_info.path.join(child.name()),
+                        path: path.join(child.name()),
                     };
                     self.reference_checker.mark_as_referenced(
                         *child.blob_id().to_root_block_id(),
@@ -217,9 +217,9 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfo,
+        path: &AbsolutePath,
     ) -> Result<(), CheckError> {
-        self.reachable_nodes_checker.process_blob(blob, blob_info)
+        self.reachable_nodes_checker.process_blob(blob, path)
     }
 
     fn process_reachable_unreadable_blob(

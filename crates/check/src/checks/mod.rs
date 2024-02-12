@@ -5,6 +5,7 @@ use crate::BlobInfo;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
+use cryfs_rustfs::AbsolutePath;
 
 use super::error::{CheckError, CorruptedError};
 
@@ -38,7 +39,7 @@ pub trait FilesystemCheck {
     fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfo,
+        path: &AbsolutePath,
     ) -> Result<(), CheckError>;
 
     /// Called for each blob that is reachable from the root of the file system via its directory structure that was found but is not readable.
@@ -105,21 +106,21 @@ impl AllChecks {
     pub fn process_reachable_readable_blob(
         &self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfo,
+        path: &AbsolutePath,
     ) -> Result<(), CheckError> {
         // TODO Here and in other methods, avoid having to list all the members and risking to forget one. Maybe a macro?
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob, blob_info)?;
+            .process_reachable_readable_blob(blob, path)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob, blob_info)?;
+            .process_reachable_readable_blob(blob, path)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob, blob_info)?;
+            .process_reachable_readable_blob(blob, path)?;
         Ok(())
     }
 

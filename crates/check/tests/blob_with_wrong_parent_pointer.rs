@@ -2,9 +2,10 @@
 
 use futures::future::BoxFuture;
 use rstest::rstest;
+use std::iter;
 
 use cryfs_blobstore::BlobId;
-use cryfs_check::{BlobInfo, CorruptedError};
+use cryfs_check::{BlobInfo, BlobReference, CorruptedError};
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, FsBlob};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
@@ -114,8 +115,13 @@ async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
 
     let expected_errors: Vec<_> = vec![CorruptedError::WrongParentPointer {
         blob_id: blob_info.blob_id,
-        referenced_by: [old_parent.blob_id].into_iter().collect(),
-        parent_pointer: new_parent.blob_id,
+        blob_type: blob_info.blob_type,
+        blob_parent_pointer: new_parent.blob_id,
+        referenced_as: iter::once(BlobReference {
+            parent_id: old_parent.blob_id,
+            expected_child_info: blob_info,
+        })
+        .collect(),
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -145,7 +151,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
     let blob_info = make_blob(&fs_fixture, old_parent.clone()).await;
     let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2).await;
     fs_fixture
-        .add_dir_entry_to_dir(old_parent_2.blob_id, "name", blob_info.blob_id)
+        .add_dir_entry_to_dir(old_parent_2.blob_id, "dirname", blob_info.blob_id)
         .await;
     let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
 
@@ -154,10 +160,24 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
     let expected_errors: Vec<_> = vec![
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
-            referenced_by: [old_parent.blob_id, old_parent_2.blob_id]
-                .into_iter()
-                .collect(),
-            parent_pointer: new_parent.blob_id,
+            blob_type: blob_info.blob_type,
+            blob_parent_pointer: new_parent.blob_id,
+            referenced_as: [
+                BlobReference {
+                    parent_id: old_parent.blob_id,
+                    expected_child_info: blob_info.clone(),
+                },
+                BlobReference {
+                    parent_id: old_parent_2.blob_id,
+                    expected_child_info: BlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_type: BlobType::Dir,
+                        path: old_parent_2.path.join("dirname".try_into().unwrap()),
+                    },
+                },
+            ]
+            .into_iter()
+            .collect(),
         },
         CorruptedError::NodeReferencedMultipleTimes {
             node_id: *blob_info.blob_id.to_root_block_id(),
@@ -173,7 +193,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
 
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_wrong_parent_pointer_referenced_from_three_dirs(
+async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
     #[values(make_empty_dir, make_large_dir)] make_old_parent: fn(
         &FilesystemFixture,
         BlobInfo,
@@ -194,11 +214,15 @@ async fn blob_with_wrong_parent_pointer_referenced_from_three_dirs(
     let blob_info = make_blob(&fs_fixture, old_parent.clone()).await;
     let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2).await;
     fs_fixture
-        .add_dir_entry_to_dir(old_parent_2.blob_id, "name", blob_info.blob_id)
+        .add_dir_entry_to_dir(old_parent_2.blob_id, "dirname", blob_info.blob_id)
         .await;
     let old_parent_3 = make_old_parent(&fs_fixture, some_blobs.dir1_dir4).await;
     fs_fixture
-        .add_dir_entry_to_dir(old_parent_3.blob_id, "name", blob_info.blob_id)
+        .add_file_entry_to_dir(old_parent_3.blob_id, "filename", blob_info.blob_id)
+        .await;
+    let old_parent_4 = make_old_parent(&fs_fixture, some_blobs.dir2_dir6).await;
+    fs_fixture
+        .add_symlink_entry_to_dir(old_parent_4.blob_id, "symlinkname", blob_info.blob_id)
         .await;
     let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
 
@@ -207,14 +231,40 @@ async fn blob_with_wrong_parent_pointer_referenced_from_three_dirs(
     let expected_errors: Vec<_> = vec![
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
-            referenced_by: [
-                old_parent.blob_id,
-                old_parent_2.blob_id,
-                old_parent_3.blob_id,
+            blob_type: blob_info.blob_type,
+            blob_parent_pointer: new_parent.blob_id,
+            referenced_as: [
+                BlobReference {
+                    parent_id: old_parent.blob_id,
+                    expected_child_info: blob_info.clone(),
+                },
+                BlobReference {
+                    parent_id: old_parent_2.blob_id,
+                    expected_child_info: BlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_type: BlobType::Dir,
+                        path: old_parent_2.path.join("dirname".try_into().unwrap()),
+                    },
+                },
+                BlobReference {
+                    parent_id: old_parent_3.blob_id,
+                    expected_child_info: BlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_type: BlobType::File,
+                        path: old_parent_3.path.join("filename".try_into().unwrap()),
+                    },
+                },
+                BlobReference {
+                    parent_id: old_parent_4.blob_id,
+                    expected_child_info: BlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_type: BlobType::Symlink,
+                        path: old_parent_4.path.join("symlinkname".try_into().unwrap()),
+                    },
+                },
             ]
             .into_iter()
             .collect(),
-            parent_pointer: new_parent.blob_id,
         },
         CorruptedError::NodeReferencedMultipleTimes {
             node_id: *blob_info.blob_id.to_root_block_id(),
