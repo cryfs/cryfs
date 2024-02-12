@@ -81,9 +81,9 @@ pub enum CorruptedError {
         // TODO error:  anyhow::Error,
     },
 
-    #[error("Blob {blob_id:?} is referenced but does not exist")]
+    #[error("{expected_blob_info:?} is referenced but does not exist")]
     BlobMissing {
-        blob_id: BlobId,
+        expected_blob_info: BlobInfo,
         // TODO replace blob_id with blob_info: BlobInfo,
         // TODO expected_blob_type: ,
         // TODO referenced_by: BlobId,

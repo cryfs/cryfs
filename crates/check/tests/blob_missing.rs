@@ -1,11 +1,12 @@
 //! Tests where whole blobs are missing
 
+use cryfs_rustfs::AbsolutePathBuf;
 use rstest::rstest;
 use std::iter;
 
 use cryfs_blockstore::RemoveResult;
 use cryfs_check::{BlobInfo, CorruptedError};
-
+use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -21,19 +22,24 @@ use common::fixture::FilesystemFixture;
 #[tokio::test(flavor = "multi_thread")]
 async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    let blob_id = blob(&some_blobs).blob_id;
-    let orphaned_descendant_blobs = fs_fixture.get_descendants_if_dir_blob(blob_id).await;
+    let blob_info = blob(&some_blobs);
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_if_dir_blob(blob_info.blob_id)
+        .await;
 
     fs_fixture
         .update_fsblobstore(move |fsblobstore| {
             Box::pin(async move {
-                let remove_result = fsblobstore.remove_by_id(&blob_id).await.unwrap();
+                let remove_result = fsblobstore.remove_by_id(&blob_info.blob_id).await.unwrap();
                 assert_eq!(RemoveResult::SuccessfullyRemoved, remove_result);
             })
         })
         .await;
 
-    let expected_errors = iter::once(CorruptedError::BlobMissing { blob_id })
+    let expected_errors =
+        iter::once(CorruptedError::BlobMissing {
+            expected_blob_info: blob_info,
+        })
         .chain(orphaned_descendant_blobs.into_iter().map(|child| {
             CorruptedError::NodeUnreferenced {
                 node_id: *child.to_root_block_id(),
@@ -67,7 +73,11 @@ async fn root_dir_entirely_missing_without_children() {
         .await;
 
     let expected_errors = vec![CorruptedError::BlobMissing {
-        blob_id: root_dir_id,
+        expected_blob_info: BlobInfo {
+            blob_id: root_dir_id,
+            blob_type: BlobType::Dir,
+            path: AbsolutePathBuf::root(),
+        },
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;

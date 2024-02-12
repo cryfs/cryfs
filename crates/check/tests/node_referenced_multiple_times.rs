@@ -168,7 +168,7 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
                     },
                     // TODO Why is BlobMissing necessary here? Without it, tests seem to become flaky because it is sometimes thrown
                     CorruptedError::BlobMissing {
-                        blob_id: blob_info.blob_id,
+                        expected_blob_info: blob_info,
                     },
                 ]
                 .into_iter(),

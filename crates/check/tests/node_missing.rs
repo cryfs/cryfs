@@ -3,7 +3,6 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_blobstore::BlobId;
 use cryfs_check::{BlobInfo, CorruptedError};
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
@@ -20,18 +19,25 @@ use common::fixture::{FilesystemFixture, RemoveInnerNodeResult, RemoveSomeNodesR
 #[tokio::test(flavor = "multi_thread")]
 async fn blob_with_missing_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
-    let blob_id = blob(&some_blobs).blob_id;
+    let blob_info = blob(&some_blobs);
 
-    let orphaned_descendant_blobs = fs_fixture.get_descendants_if_dir_blob(blob_id).await;
+    let orphaned_descendant_blobs = fs_fixture
+        .get_descendants_if_dir_blob(blob_info.blob_id)
+        .await;
 
     let RemoveInnerNodeResult {
         removed_node,
         orphaned_nodes,
-    } = fs_fixture.remove_root_node_of_blob(blob_id).await;
+    } = fs_fixture.remove_root_node_of_blob(blob_info.blob_id).await;
+    assert_eq!(
+        removed_node,
+        *blob_info.blob_id.to_root_block_id(),
+        "test invariant"
+    );
 
     let expected_errors =
         iter::once(CorruptedError::BlobMissing {
-            blob_id: BlobId::from_root_block_id(removed_node),
+            expected_blob_info: blob_info,
         })
         .chain(
             orphaned_nodes

@@ -22,6 +22,7 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_readable_blob(
         &mut self,
         _blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
+        _blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())
@@ -38,12 +39,17 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_node(
         &mut self,
         _node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        _blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())
     }
 
-    fn process_reachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
+    fn process_reachable_unreadable_node(
+        &mut self,
+        node_id: BlockId,
+        _blob_info: &BlobInfo,
+    ) -> Result<(), CheckError> {
         self.errors.push(CorruptedError::NodeUnreadable { node_id });
         Ok(())
     }

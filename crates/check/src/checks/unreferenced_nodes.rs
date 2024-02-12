@@ -6,11 +6,17 @@ use crate::error::{CheckError, CorruptedError};
 use crate::BlobInfo;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
+use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
+use cryfs_rustfs::AbsolutePathBuf;
 
-enum NodeType {
-    RootNode,
-    NonrootNode,
+enum ReferencedAs {
+    RootNode {
+        belongs_to_blob: BlobInfo,
+    },
+    NonrootNode {
+        // Can be `None` if the node is unreferenced
+        belongs_to_blob: Option<BlobInfo>,
+    },
 }
 
 /// Check that
@@ -21,7 +27,7 @@ enum NodeType {
 /// Algorithm: While passing through each node, we mark the current node as **seen** and all referenced nodes as **referenced**.
 /// We make sure that each node id is both **seen** and **referenced** and that there are no nodes that are only one of the two.
 struct UnreferencedNodesReferenceChecker {
-    reference_checker: ReferenceChecker<BlockId, (), NodeType>,
+    reference_checker: ReferenceChecker<BlockId, (), ReferencedAs>,
     errors: Vec<CorruptedError>,
 }
 
@@ -36,6 +42,7 @@ impl UnreferencedNodesReferenceChecker {
     pub fn process_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        blob_info: Option<&BlobInfo>,
     ) -> Result<(), CheckError> {
         self.reference_checker.mark_as_seen(*node.block_id(), ());
 
@@ -46,8 +53,12 @@ impl UnreferencedNodesReferenceChecker {
             }
             DataNode::Inner(node) => {
                 for child in node.children() {
-                    self.reference_checker
-                        .mark_as_referenced(child, NodeType::NonrootNode);
+                    self.reference_checker.mark_as_referenced(
+                        child,
+                        ReferencedAs::NonrootNode {
+                            belongs_to_blob: blob_info.cloned(),
+                        },
+                    );
                 }
             }
         }
@@ -71,6 +82,7 @@ impl UnreferencedNodesReferenceChecker {
     pub fn process_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
         match blob {
             FsBlob::File(_) | FsBlob::Symlink(_) => {
@@ -78,9 +90,16 @@ impl UnreferencedNodesReferenceChecker {
             }
             FsBlob::Directory(blob) => {
                 for child in blob.entries() {
+                    let child_blob_info = BlobInfo {
+                        blob_id: *child.blob_id(),
+                        blob_type: entry_type_to_blob_type(child.entry_type()),
+                        path: blob_info.path.join(child.name()),
+                    };
                     self.reference_checker.mark_as_referenced(
                         *child.blob_id().to_root_block_id(),
-                        NodeType::RootNode,
+                        ReferencedAs::RootNode {
+                            belongs_to_blob: child_blob_info,
+                        },
                     );
                 }
             }
@@ -95,15 +114,15 @@ impl UnreferencedNodesReferenceChecker {
             |(node_id, seen, referenced_as)| {
                 let mut errors = vec![];
                 match referenced_as.first() {
-                    Some(node_type) => {
+                    Some(first_referenced_as) => {
                         if seen.is_none() {
-                            match node_type {
-                                NodeType::RootNode => {
+                            match first_referenced_as {
+                                ReferencedAs::RootNode { belongs_to_blob } => {
                                     errors.push(CorruptedError::BlobMissing {
-                                        blob_id: BlobId::from_root_block_id(node_id.into()),
+                                        expected_blob_info: belongs_to_blob.clone(),
                                     });
                                 }
-                                NodeType::NonrootNode => {
+                                ReferencedAs::NonrootNode { belongs_to_blob: _ } => {
                                     errors.push(CorruptedError::NodeMissing { node_id });
                                 }
                             }
@@ -147,7 +166,16 @@ impl CheckUnreferencedNodes {
         let mut reachable_nodes_checker = UnreferencedNodesReferenceChecker::new();
         reachable_nodes_checker
             .reference_checker
-            .mark_as_referenced(*root_blob_id.to_root_block_id(), NodeType::RootNode);
+            .mark_as_referenced(
+                *root_blob_id.to_root_block_id(),
+                ReferencedAs::RootNode {
+                    belongs_to_blob: BlobInfo {
+                        blob_id: root_blob_id,
+                        blob_type: BlobType::Dir,
+                        path: AbsolutePathBuf::root(),
+                    },
+                },
+            );
         Self {
             reachable_nodes_checker,
             unreachable_nodes_checker: UnreferencedNodesReferenceChecker::new(),
@@ -159,11 +187,17 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
-        self.reachable_nodes_checker.process_node(node)
+        self.reachable_nodes_checker
+            .process_node(node, Some(blob_info))
     }
 
-    fn process_reachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
+    fn process_reachable_unreadable_node(
+        &mut self,
+        node_id: BlockId,
+        _blob_info: &BlobInfo,
+    ) -> Result<(), CheckError> {
         self.reachable_nodes_checker
             .process_unreadable_node(node_id)
     }
@@ -172,7 +206,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
-        self.unreachable_nodes_checker.process_node(node)
+        self.unreachable_nodes_checker.process_node(node, None)
     }
 
     fn process_unreachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
@@ -183,8 +217,9 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
-        self.reachable_nodes_checker.process_blob(blob)
+        self.reachable_nodes_checker.process_blob(blob, blob_info)
     }
 
     fn process_reachable_unreadable_blob(
@@ -221,5 +256,14 @@ impl FilesystemCheck for CheckUnreferencedNodes {
         }
 
         errors
+    }
+}
+
+// TODO This exists in multiple places. Deduplicate.
+fn entry_type_to_blob_type(entry_type: EntryType) -> BlobType {
+    match entry_type {
+        EntryType::File => BlobType::File,
+        EntryType::Dir => BlobType::Dir,
+        EntryType::Symlink => BlobType::Symlink,
     }
 }

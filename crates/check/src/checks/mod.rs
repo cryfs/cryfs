@@ -38,6 +38,7 @@ pub trait FilesystemCheck {
     fn process_reachable_readable_blob(
         &mut self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError>;
 
     /// Called for each blob that is reachable from the root of the file system via its directory structure that was found but is not readable.
@@ -50,10 +51,15 @@ pub trait FilesystemCheck {
     fn process_reachable_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is part of a reachable blob but is unreadable
-    fn process_reachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError>;
+    fn process_reachable_unreadable_node(
+        &mut self,
+        node_id: BlockId,
+        blob_info: &BlobInfo,
+    ) -> Result<(), CheckError>;
 
     /// Called for each node that is not part of a reachable blob
     fn process_unreachable_node(
@@ -99,20 +105,21 @@ impl AllChecks {
     pub fn process_reachable_readable_blob(
         &self,
         blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
         // TODO Here and in other methods, avoid having to list all the members and risking to forget one. Maybe a macro?
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob)?;
+            .process_reachable_readable_blob(blob, blob_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob)?;
+            .process_reachable_readable_blob(blob, blob_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob)?;
+            .process_reachable_readable_blob(blob, blob_info)?;
         Ok(())
     }
 
@@ -138,35 +145,40 @@ impl AllChecks {
     pub fn process_reachable_node(
         &self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        blob_info: &BlobInfo,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_node(node)?;
+            .process_reachable_node(node, blob_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_node(node)?;
+            .process_reachable_node(node, blob_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_node(node)?;
+            .process_reachable_node(node, blob_info)?;
         Ok(())
     }
 
-    pub fn process_reachable_unreadable_node(&self, node_id: BlockId) -> Result<(), CheckError> {
+    pub fn process_reachable_unreadable_node(
+        &self,
+        node_id: BlockId,
+        blob_info: &BlobInfo,
+    ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_unreadable_node(node_id)?;
+            .process_reachable_unreadable_node(node_id, blob_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_unreadable_node(node_id)?;
+            .process_reachable_unreadable_node(node_id, blob_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_unreadable_node(node_id)?;
+            .process_reachable_unreadable_node(node_id, blob_info)?;
         Ok(())
     }
 
