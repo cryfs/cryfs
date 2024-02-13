@@ -120,7 +120,7 @@ pub enum CorruptedError {
         blob_id: BlobId,
         /// `blob_info` can be `None` if the blob itself is missing or unreadable
         blob_info: Option<BlobInfoAsSeenByLookingAtBlob>,
-        // TODO referenced_as: BTreeSet<BlobReference>,
+        referenced_as: BTreeSet<BlobReference>,
     },
 
     #[error("{blob_id:?}:{expected_blob_info} is unreadable and likely corrupted")]

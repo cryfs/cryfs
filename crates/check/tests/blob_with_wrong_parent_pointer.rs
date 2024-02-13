@@ -2,6 +2,7 @@
 
 use futures::future::BoxFuture;
 use rstest::rstest;
+use std::collections::BTreeSet;
 use std::iter;
 
 use cryfs_blobstore::BlobId;
@@ -162,18 +163,36 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         CreatedBlobInfo,
     >,
 ) {
+    const SECOND_NAME: &str = "dirname";
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
 
     let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1).await;
     let blob_info = make_blob(&fs_fixture, old_parent.clone()).await;
     let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2.clone()).await;
     fs_fixture
-        .add_dir_entry_to_dir(old_parent_2.blob_id, "dirname", blob_info.blob_id)
+        .add_dir_entry_to_dir(old_parent_2.blob_id, SECOND_NAME, blob_info.blob_id)
         .await;
     let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
+    let expected_blob_references: BTreeSet<BlobReference> = [
+        BlobReference {
+            expected_child_info: blob_info.blob_info.clone(),
+        },
+        BlobReference {
+            expected_child_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::Dir,
+                parent_id: old_parent_2.blob_id,
+                path: old_parent_2
+                    .blob_info
+                    .path
+                    .join(SECOND_NAME.try_into().unwrap()),
+            },
+        },
+    ]
+    .into_iter()
+    .collect();
     let expected_errors: Vec<_> = vec![
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
@@ -181,23 +200,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
                 blob_type: blob_info.blob_info.blob_type,
                 parent_pointer: new_parent.blob_id,
             },
-            referenced_as: [
-                BlobReference {
-                    expected_child_info: blob_info.blob_info.clone(),
-                },
-                BlobReference {
-                    expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                        blob_type: BlobType::Dir,
-                        parent_id: old_parent_2.blob_id,
-                        path: old_parent_2
-                            .blob_info
-                            .path
-                            .join("dirname".try_into().unwrap()),
-                    },
-                },
-            ]
-            .into_iter()
-            .collect(),
+            referenced_as: expected_blob_references.clone(),
         },
         CorruptedError::NodeReferencedMultipleTimes {
             node_id: *blob_info.blob_id.to_root_block_id(),
@@ -206,9 +209,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
             blob_id: blob_info.blob_id,
             blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
                 blob_type: blob_info.blob_info.blob_type,
-                // parent_pointer: blob_info.blob_info.parent_id,
                 parent_pointer: new_parent.blob_id,
             }),
+            referenced_as: expected_blob_references,
         },
     ];
 
@@ -257,6 +260,43 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
+    let expected_blob_references: BTreeSet<BlobReference> = [
+        BlobReference {
+            expected_child_info: blob_info.blob_info.clone(),
+        },
+        BlobReference {
+            expected_child_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::Dir,
+                parent_id: old_parent_2.blob_id,
+                path: old_parent_2
+                    .blob_info
+                    .path
+                    .join("dirname".try_into().unwrap()),
+            },
+        },
+        BlobReference {
+            expected_child_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::File,
+                parent_id: old_parent_3.blob_id,
+                path: old_parent_3
+                    .blob_info
+                    .path
+                    .join("filename".try_into().unwrap()),
+            },
+        },
+        BlobReference {
+            expected_child_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::Symlink,
+                parent_id: old_parent_4.blob_id,
+                path: old_parent_4
+                    .blob_info
+                    .path
+                    .join("symlinkname".try_into().unwrap()),
+            },
+        },
+    ]
+    .into_iter()
+    .collect();
     let expected_errors: Vec<_> = vec![
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
@@ -264,43 +304,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
                 blob_type: blob_info.blob_info.blob_type,
                 parent_pointer: new_parent.blob_id,
             },
-            referenced_as: [
-                BlobReference {
-                    expected_child_info: blob_info.blob_info.clone(),
-                },
-                BlobReference {
-                    expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                        blob_type: BlobType::Dir,
-                        parent_id: old_parent_2.blob_id,
-                        path: old_parent_2
-                            .blob_info
-                            .path
-                            .join("dirname".try_into().unwrap()),
-                    },
-                },
-                BlobReference {
-                    expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                        blob_type: BlobType::File,
-                        parent_id: old_parent_3.blob_id,
-                        path: old_parent_3
-                            .blob_info
-                            .path
-                            .join("filename".try_into().unwrap()),
-                    },
-                },
-                BlobReference {
-                    expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                        blob_type: BlobType::Symlink,
-                        parent_id: old_parent_4.blob_id,
-                        path: old_parent_4
-                            .blob_info
-                            .path
-                            .join("symlinkname".try_into().unwrap()),
-                    },
-                },
-            ]
-            .into_iter()
-            .collect(),
+            referenced_as: expected_blob_references.clone(),
         },
         CorruptedError::NodeReferencedMultipleTimes {
             node_id: *blob_info.blob_id.to_root_block_id(),
@@ -309,9 +313,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
             blob_id: blob_info.blob_id,
             blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
                 blob_type: blob_info.blob_info.blob_type,
-                //parent_pointer: blob_info.blob_info.parent_id,
                 parent_pointer: new_parent.blob_id,
             }),
+            referenced_as: expected_blob_references,
         },
     ];
 

@@ -284,12 +284,14 @@ where
             }
 
             // The blob was already seen before. This can only happen if the blob is referenced multiple times.
-            checks.add_error(CorruptedError::Assert(Box::new(
-                CorruptedError::BlobReferencedMultipleTimes {
-                    blob_id,
-                    blob_info: now_seen.1.to_blob_info_as_seen_by_looking_at_blob(),
-                },
-            )));
+            // TODO
+            // checks.add_error(CorruptedError::Assert(Box::new(
+            //     CorruptedError::BlobReferencedMultipleTimes {
+            //         blob_id,
+            //         blob_info: now_seen.1.to_blob_info_as_seen_by_looking_at_blob(),
+            //         referenced_as: todo!(),
+            //     },
+            // )));
         }
         AlreadySeen::NotSeenYet => {
             match loaded {

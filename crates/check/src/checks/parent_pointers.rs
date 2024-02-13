@@ -142,7 +142,12 @@ impl FilesystemCheck for CheckParentPointers {
                         Some(SeenBlobInfo::Readable { blob_info }) =>
                             Some(blob_info.clone())
                         };
-                    errors.push(CorruptedError::BlobReferencedMultipleTimes { blob_id, blob_info});
+                    errors.push(CorruptedError::BlobReferencedMultipleTimes { 
+                        blob_id,
+                        blob_info,
+                        // TODO How to handle the case where referenced_as Vec has duplicate entries?
+                        referenced_as: referenced_as.iter().cloned().collect(),
+                    });
                 } else if referenced_as.len() == 0 {
                     panic!("Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs.");
                 }
