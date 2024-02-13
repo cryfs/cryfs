@@ -136,7 +136,13 @@ impl FilesystemCheck for CheckParentPointers {
             .flat_map(|(blob_id, seen_blob_info, referenced_as)| {
                 let mut errors = vec![];
                 if referenced_as.len() > 1 {
-                    errors.push(CorruptedError::BlobReferencedMultipleTimes { blob_id });
+                    let blob_info = match &seen_blob_info {
+                        None => None,
+                        Some(SeenBlobInfo::Unreadable { .. }) => None,
+                        Some(SeenBlobInfo::Readable { blob_info }) =>
+                            Some(blob_info.clone())
+                        };
+                    errors.push(CorruptedError::BlobReferencedMultipleTimes { blob_id, blob_info});
                 } else if referenced_as.len() == 0 {
                     panic!("Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs.");
                 }

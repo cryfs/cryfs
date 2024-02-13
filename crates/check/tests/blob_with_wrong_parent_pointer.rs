@@ -204,6 +204,11 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         },
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
+            blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
+                blob_type: blob_info.blob_info.blob_type,
+                // parent_pointer: blob_info.blob_info.parent_id,
+                parent_pointer: new_parent.blob_id,
+            }),
         },
     ];
 
@@ -302,6 +307,11 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
         },
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
+            blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
+                blob_type: blob_info.blob_info.blob_type,
+                //parent_pointer: blob_info.blob_info.parent_id,
+                parent_pointer: new_parent.blob_id,
+            }),
         },
     ];
 

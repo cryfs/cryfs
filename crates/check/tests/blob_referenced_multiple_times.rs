@@ -5,7 +5,7 @@ use futures::future::BoxFuture;
 use rstest::rstest;
 
 use cryfs_blobstore::BlobId;
-use cryfs_check::CorruptedError;
+use cryfs_check::{BlobInfoAsSeenByLookingAtBlob, CorruptedError};
 
 mod common;
 
@@ -120,17 +120,23 @@ async fn blob_referenced_multiple_times(
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (parent1_info, parent2_info) = parents(&some_blobs);
 
-    let blob_id = make_first_blob(&fs_fixture, parent1_info).await.blob_id;
-    add_to_second_parent(&fs_fixture, parent2_info.blob_id, blob_id).await;
+    let blob_info = make_first_blob(&fs_fixture, parent1_info).await;
+    add_to_second_parent(&fs_fixture, parent2_info.blob_id, blob_info.blob_id).await;
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(
         vec![
             // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
             CorruptedError::NodeReferencedMultipleTimes {
-                node_id: *blob_id.to_root_block_id()
+                node_id: *blob_info.blob_id.to_root_block_id()
             },
-            CorruptedError::BlobReferencedMultipleTimes { blob_id }
+            CorruptedError::BlobReferencedMultipleTimes {
+                blob_id: blob_info.blob_id,
+                blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
+                    blob_type: blob_info.blob_info.blob_type,
+                    parent_pointer: blob_info.blob_info.parent_id,
+                })
+            }
         ],
         errors,
     );
@@ -145,3 +151,5 @@ async fn blob_referenced_multiple_times(
 //  - file blob referenced from grandparent dir
 //  - symlink blob referenced from parent dir (i.e. 2x from the same dir)
 //  - symlink blob referenced from grandparent dir
+
+// - Blob referenced multiple times but doesn't actually exist

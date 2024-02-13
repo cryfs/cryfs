@@ -9,6 +9,7 @@ use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
 use crate::error::BlobInfoAsExpectedByEntryInParent;
+use crate::BlobInfoAsSeenByLookingAtBlob;
 
 use super::checks::AllChecks;
 use super::error::{CheckError, CorruptedError};
@@ -271,11 +272,6 @@ where
                 blob.async_drop().await?;
             }
 
-            // The blob was already seen before. This can only happen if the blob is referenced multiple times.
-            checks.add_error(CorruptedError::Assert(Box::new(
-                CorruptedError::BlobReferencedMultipleTimes { blob_id },
-            )));
-
             // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip processing it.
             if prev_seen.1 != now_seen.1 {
                 Err(CheckError::FilesystemModified {
@@ -286,6 +282,14 @@ where
                     ),
                 })?;
             }
+
+            // The blob was already seen before. This can only happen if the blob is referenced multiple times.
+            checks.add_error(CorruptedError::Assert(Box::new(
+                CorruptedError::BlobReferencedMultipleTimes {
+                    blob_id,
+                    blob_info: now_seen.1.to_blob_info_as_seen_by_looking_at_blob(),
+                },
+            )));
         }
         AlreadySeen::NotSeenYet => {
             match loaded {
@@ -678,14 +682,42 @@ where
 enum SeenBlobInfo {
     Unreadable,
     Missing,
-    File,
-    Symlink,
+    File {
+        parent_pointer: BlobId,
+    },
+    Symlink {
+        parent_pointer: BlobId,
+    },
     Dir {
+        parent_pointer: BlobId,
         // We're storing children into the [NodeContentSummary] so that if the node comes up again,
         // we can check that it still has the same children. This allows us to know that
         // we already processed those children when we saw the blob for the first time.
         children: Vec<BlobId>,
     },
+}
+
+impl SeenBlobInfo {
+    pub fn to_blob_info_as_seen_by_looking_at_blob(&self) -> Option<BlobInfoAsSeenByLookingAtBlob> {
+        match self {
+            SeenBlobInfo::Unreadable | SeenBlobInfo::Missing => None,
+            SeenBlobInfo::File { parent_pointer } => Some(BlobInfoAsSeenByLookingAtBlob {
+                blob_type: BlobType::File,
+                parent_pointer: *parent_pointer,
+            }),
+            SeenBlobInfo::Symlink { parent_pointer } => Some(BlobInfoAsSeenByLookingAtBlob {
+                blob_type: BlobType::Symlink,
+                parent_pointer: *parent_pointer,
+            }),
+            SeenBlobInfo::Dir {
+                parent_pointer,
+                children: _children,
+            } => Some(BlobInfoAsSeenByLookingAtBlob {
+                blob_type: BlobType::Dir,
+                parent_pointer: *parent_pointer,
+            }),
+        }
+    }
 }
 
 fn blob_content_summary<'a, B>(blob: &FsBlob<'a, B>) -> SeenBlobInfo
@@ -695,9 +727,14 @@ where
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     match blob {
-        FsBlob::File(_) => SeenBlobInfo::File,
-        FsBlob::Symlink(_) => SeenBlobInfo::Symlink,
+        FsBlob::File(_) => SeenBlobInfo::File {
+            parent_pointer: blob.parent(),
+        },
+        FsBlob::Symlink(_) => SeenBlobInfo::Symlink {
+            parent_pointer: blob.parent(),
+        },
         FsBlob::Directory(blob) => SeenBlobInfo::Dir {
+            parent_pointer: blob.parent(),
             children: blob.entries().map(|entry| *entry.blob_id()).collect(),
         },
     }
@@ -736,10 +773,6 @@ where
 
     pub fn into_keys(self) -> impl Iterator<Item = ItemId> {
         self.nodes.into_inner().unwrap().into_keys()
-    }
-
-    pub fn into_values(self) -> impl Iterator<Item = ItemInfo> {
-        self.nodes.into_inner().unwrap().into_values()
     }
 
     pub fn into_iter(self) -> impl Iterator<Item = (ItemId, ItemInfo)> {

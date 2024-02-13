@@ -284,3 +284,5 @@ where
     source.retain(|item| !to_remove.contains(item));
     source
 }
+
+// TODO Test node referenced multiple times but doesn't actually exist

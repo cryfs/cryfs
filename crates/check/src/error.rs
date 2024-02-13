@@ -115,10 +115,11 @@ pub enum CorruptedError {
         // TODO referenced_as: BTreeSet<(BlobInfo, BlockId, expected_depth)>, probably should move this tuple into a NodeReference class
     },
 
-    #[error("Blob {blob_id:?} is referenced multiple times")]
+    #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
-        // TODO replace with blob_info: BlobInfoAsSeenByLookingAtBlob
+        /// `blob_info` can be `None` if the blob itself is missing or unreadable
+        blob_info: Option<BlobInfoAsSeenByLookingAtBlob>,
         // TODO referenced_as: BTreeSet<BlobReference>,
     },
 
