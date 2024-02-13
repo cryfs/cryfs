@@ -11,7 +11,6 @@ use cryfs_rustfs::AbsolutePathBuf;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BlobInfoAsSeenByLookingAtBlob {
-    pub blob_id: BlobId,
     pub blob_type: BlobType,
     pub parent_pointer: BlobId,
 }
@@ -25,8 +24,7 @@ impl Display for BlobInfoAsSeenByLookingAtBlob {
         };
         write!(
             f,
-            "{blob_type}[{blob_id:?}, parent_pointer={parent_pointer:?}]",
-            blob_id = self.blob_id,
+            "{blob_type}[parent_pointer={parent_pointer:?}]",
             parent_pointer = self.parent_pointer,
         )
     }
@@ -40,16 +38,14 @@ impl Debug for BlobInfoAsSeenByLookingAtBlob {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BlobInfoAsExpectedByEntryInParent {
-    pub blob_id: BlobId,
     pub blob_type: BlobType,
     pub parent_id: BlobId,
     pub path: AbsolutePathBuf,
 }
 
 impl BlobInfoAsExpectedByEntryInParent {
-    pub fn root_dir(blob_id: BlobId) -> Self {
+    pub fn root_dir() -> Self {
         Self {
-            blob_id,
             blob_type: BlobType::Dir,
             parent_id: BlobId::zero(),
             path: AbsolutePathBuf::root(),
@@ -66,8 +62,7 @@ impl Display for BlobInfoAsExpectedByEntryInParent {
         };
         write!(
             f,
-            "{blob_type}[{blob_id:?}, parent={parent_id:?}] @ {path}",
-            blob_id = self.blob_id,
+            "{blob_type}[parent={parent_id:?}] @ {path}",
             parent_id = self.parent_id,
             path = self.path,
         )
@@ -127,19 +122,22 @@ pub enum CorruptedError {
         // TODO referenced_as: BTreeSet<BlobReference>,
     },
 
-    #[error("{expected_blob_info} is unreadable and likely corrupted")]
+    #[error("{blob_id:?}:{expected_blob_info} is unreadable and likely corrupted")]
     BlobUnreadable {
+        blob_id: BlobId,
         expected_blob_info: BlobInfoAsExpectedByEntryInParent,
         // TODO error:  anyhow::Error,
     },
 
-    #[error("{expected_blob_info} is referenced but does not exist")]
+    #[error("{blob_id:?}:{expected_blob_info} is referenced but does not exist")]
     BlobMissing {
+        blob_id: BlobId,
         expected_blob_info: BlobInfoAsExpectedByEntryInParent,
     },
 
-    #[error("{blob_info} is referenced by {referenced_as:?}, but the parent pointer doesn't match any of the references")]
+    #[error("{blob_id:?}:{blob_info} is referenced by {referenced_as:?}, but the parent pointer doesn't match any of the references")]
     WrongParentPointer {
+        blob_id: BlobId,
         blob_info: BlobInfoAsSeenByLookingAtBlob,
         referenced_as: BTreeSet<BlobReference>,
     },

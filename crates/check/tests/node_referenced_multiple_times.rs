@@ -7,11 +7,12 @@ use std::collections::HashSet;
 use std::hash::Hash;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
-use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
+use cryfs_check::CorruptedError;
 
 mod common;
 use common::entry_helpers::{
-    find_inner_node_id_and_parent, find_leaf_id_and_parent, remove_subtree, SomeBlobs,
+    find_inner_node_id_and_parent, find_leaf_id_and_parent, remove_subtree, CreatedBlobInfo,
+    SomeBlobs,
 };
 use common::fixture::FilesystemFixture;
 
@@ -145,18 +146,13 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 // TODO #[case::symlink_referenced_from_grandparent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir2.clone(), some_blobs.dir2_dir7_large_symlink_1.clone()))]
 #[tokio::test(flavor = "multi_thread")]
 fn test_case_with_multiple_reference_scenarios(
-    #[case] blobs: impl FnOnce(
-        &SomeBlobs,
-    ) -> (
-        BlobInfoAsExpectedByEntryInParent,
-        BlobInfoAsExpectedByEntryInParent,
-    ),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
 ) {
 }
 
 async fn errors_allowed_from_dir_blob_being_unreadable(
     fs_fixture: &FilesystemFixture,
-    blob_info: BlobInfoAsExpectedByEntryInParent,
+    blob_info: CreatedBlobInfo,
 ) -> HashSet<CorruptedError> {
     if fs_fixture.is_dir_blob(blob_info.blob_id).await {
         fs_fixture
@@ -169,11 +165,13 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
             .chain(
                 [
                     CorruptedError::BlobUnreadable {
-                        expected_blob_info: blob_info.clone(),
+                        blob_id: blob_info.blob_id,
+                        expected_blob_info: blob_info.blob_info.clone(),
                     },
                     // TODO Why is BlobMissing necessary here? Without it, tests seem to become flaky because it is sometimes thrown
                     CorruptedError::BlobMissing {
-                        expected_blob_info: blob_info,
+                        blob_id: blob_info.blob_id,
+                        expected_blob_info: blob_info.blob_info,
                     },
                 ]
                 .into_iter(),
@@ -186,12 +184,7 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
 
 #[apply(test_case_with_multiple_reference_scenarios)]
 async fn leaf_node_referenced_multiple_times(
-    #[case] blobs: impl FnOnce(
-        &SomeBlobs,
-    ) -> (
-        BlobInfoAsExpectedByEntryInParent,
-        BlobInfoAsExpectedByEntryInParent,
-    ),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
@@ -221,12 +214,7 @@ async fn leaf_node_referenced_multiple_times(
 
 #[apply(test_case_with_multiple_reference_scenarios)]
 async fn inner_node_referenced_multiple_times(
-    #[case] blobs: impl FnOnce(
-        &SomeBlobs,
-    ) -> (
-        BlobInfoAsExpectedByEntryInParent,
-        BlobInfoAsExpectedByEntryInParent,
-    ),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
     // with_same_depth and with_different_depth
     #[values((5, 5), (5, 7))] depths: (u8, u8),
 ) {
@@ -260,12 +248,7 @@ async fn inner_node_referenced_multiple_times(
 
 #[apply(test_case_with_multiple_reference_scenarios)]
 async fn root_node_referenced(
-    #[case] blobs: impl FnOnce(
-        &SomeBlobs,
-    ) -> (
-        BlobInfoAsExpectedByEntryInParent,
-        BlobInfoAsExpectedByEntryInParent,
-    ),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);

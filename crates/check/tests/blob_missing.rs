@@ -8,7 +8,7 @@ use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::SomeBlobs;
+use common::entry_helpers::{CreatedBlobInfo, SomeBlobs};
 use common::fixture::FilesystemFixture;
 
 #[rstest]
@@ -18,9 +18,7 @@ use common::fixture::FilesystemFixture;
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir_with_children(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_entirely_missing(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
-) {
+async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture
@@ -38,7 +36,8 @@ async fn blob_entirely_missing(
 
     let expected_errors =
         iter::once(CorruptedError::BlobMissing {
-            expected_blob_info: blob_info,
+            blob_id: blob_info.blob_id,
+            expected_blob_info: blob_info.blob_info,
         })
         .chain(orphaned_descendant_blobs.into_iter().map(|child| {
             CorruptedError::NodeUnreferenced {
@@ -73,7 +72,8 @@ async fn root_dir_entirely_missing_without_children() {
         .await;
 
     let expected_errors = vec![CorruptedError::BlobMissing {
-        expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(root_dir_id),
+        blob_id: root_dir_id,
+        expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;

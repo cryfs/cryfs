@@ -3,12 +3,12 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
+use cryfs_check::CorruptedError;
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::SomeBlobs;
+use common::entry_helpers::{CreatedBlobInfo, SomeBlobs};
 use common::fixture::{FilesystemFixture, RemoveInnerNodeResult, RemoveSomeNodesResult};
 
 #[rstest]
@@ -17,9 +17,7 @@ use common::fixture::{FilesystemFixture, RemoveInnerNodeResult, RemoveSomeNodesR
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_root_node(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
-) {
+async fn blob_with_missing_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -39,7 +37,8 @@ async fn blob_with_missing_root_node(
 
     let expected_errors =
         iter::once(CorruptedError::BlobMissing {
-            expected_blob_info: blob_info,
+            blob_id: blob_info.blob_id,
+            expected_blob_info: blob_info.blob_info,
         })
         .chain(
             orphaned_nodes
@@ -63,9 +62,7 @@ async fn blob_with_missing_root_node(
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_inner_node(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
-) {
+async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {
@@ -86,17 +83,18 @@ async fn blob_with_missing_inner_node(
         .await;
     assert_eq!(
         orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_type != BlobType::Dir,
+        blob_info.blob_info.blob_type != BlobType::Dir,
         "test invariant"
     );
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node,
     }];
-    if blob_info.blob_type == BlobType::Dir {
+    if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(CorruptedError::BlobUnreadable {
-            expected_blob_info: blob_info,
+            blob_id: blob_info.blob_id,
+            expected_blob_info: blob_info.blob_info,
         });
     }
     expected_errors.extend(
@@ -120,9 +118,7 @@ async fn blob_with_missing_inner_node(
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_leaf_node(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
-) {
+async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -131,7 +127,7 @@ async fn blob_with_missing_leaf_node(
         .await;
     assert_eq!(
         orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_type != BlobType::Dir,
+        blob_info.blob_info.blob_type != BlobType::Dir,
         "test invariant"
     );
 
@@ -140,10 +136,11 @@ async fn blob_with_missing_leaf_node(
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node,
     }];
-    if blob_info.blob_type == BlobType::Dir {
+    if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(CorruptedError::BlobUnreadable {
-            expected_blob_info: blob_info,
+            blob_id: blob_info.blob_id,
+            expected_blob_info: blob_info.blob_info,
         });
     }
     expected_errors.extend(orphaned_descendant_blobs.into_iter().map(|child| {
@@ -162,9 +159,7 @@ async fn blob_with_missing_leaf_node(
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_missing_some_nodes(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobInfoAsExpectedByEntryInParent,
-) {
+async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {
@@ -186,15 +181,16 @@ async fn blob_with_missing_some_nodes(
         .await;
     assert_eq!(
         orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_type != BlobType::Dir,
+        blob_info.blob_info.blob_type != BlobType::Dir,
         "test invariant"
     );
 
     let mut expected_errors = vec![];
-    if blob_info.blob_type == BlobType::Dir {
+    if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(CorruptedError::BlobUnreadable {
-            expected_blob_info: blob_info,
+            blob_id: blob_info.blob_id,
+            expected_blob_info: blob_info.blob_info,
         });
     }
     expected_errors.extend(

@@ -14,10 +14,6 @@ use super::{
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
 
-// TODO BlobInfoAsSeenByLookingAtBlob, BlobInfoAsExpectedByEntryInParent, BlobReference all contain blob_id but we wouldn't need that because we store the
-//      blob id already in the key of the map. Should we replace them with new types BlobInfoAsSeenByLookingAtBlobWithoutBlobId and BlobInfoAsExpectedByEntryInParentWithoutBlobId?
-//      Same in other checks, e.g. `unreferenced_nodes`.
-
 #[derive(Eq, PartialEq)]
 enum SeenBlobInfo {
     Readable {
@@ -40,7 +36,7 @@ impl CheckParentPointers {
         reference_checker.mark_as_referenced(
             root_blob_id,
             BlobReference {
-                expected_child_info: BlobInfoAsExpectedByEntryInParent::root_dir(root_blob_id),
+                expected_child_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
             },
         );
         Self { reference_checker }
@@ -55,7 +51,6 @@ impl FilesystemCheck for CheckParentPointers {
     ) -> Result<(), CheckError> {
         let seen_blob_info = SeenBlobInfo::Readable {
             blob_info: BlobInfoAsSeenByLookingAtBlob {
-                blob_id: blob.blob_id(),
                 parent_pointer: blob.parent(),
                 blob_type: blob.blob_type(),
             },
@@ -73,7 +68,6 @@ impl FilesystemCheck for CheckParentPointers {
                         *entry.blob_id(),
                         BlobReference {
                             expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                                blob_id: *entry.blob_id(),
                                 blob_type: entry_type_to_blob_type(entry.entry_type()),
                                 parent_id: blob.blob_id(),
                                 path: blob_info_as_expected_by_entry_in_parent
@@ -91,10 +85,11 @@ impl FilesystemCheck for CheckParentPointers {
 
     fn process_reachable_unreadable_blob(
         &mut self,
+        blob_id: BlobId,
         expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
         self.reference_checker.mark_as_seen(
-            expected_blob_info.blob_id,
+            blob_id,
             SeenBlobInfo::Unreadable {
                 expected_blob_info: expected_blob_info.clone(),
             },
@@ -105,6 +100,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_node(
         &mut self,
         _node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        _blob_id: BlobId,
         _blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
         // do nothing
@@ -114,6 +110,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_unreadable_node(
         &mut self,
         _node_id: BlockId,
+        _blob_id: BlobId,
         _blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
         // do nothing
@@ -151,6 +148,7 @@ impl FilesystemCheck for CheckParentPointers {
                             .peekable();
                         if matching_parents.is_empty() {
                             errors.push(CorruptedError::WrongParentPointer {
+                                blob_id,
                                 blob_info,
                                 // TODO How to handle the case where referenced_as Vec has duplicate entries?
                                 referenced_as: referenced_as.into_iter().collect(),
@@ -160,11 +158,11 @@ impl FilesystemCheck for CheckParentPointers {
                         //      This should be an error caught by another check but we should do an assertion here.
                     }
                     Some(SeenBlobInfo::Unreadable {expected_blob_info}) => {
-                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { expected_blob_info })));
+                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { blob_id, expected_blob_info })));
                     }
                     None => {
                         errors.extend(referenced_as.into_iter().map(|BlobReference{expected_child_info}| {
-                            CorruptedError::Assert(Box::new(CorruptedError::BlobMissing { expected_blob_info: expected_child_info }))
+                            CorruptedError::Assert(Box::new(CorruptedError::BlobMissing { blob_id, expected_blob_info: expected_child_info }))
                         }));
                     }
                 }

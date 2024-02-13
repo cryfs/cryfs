@@ -26,6 +26,12 @@ use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
 
+#[derive(Debug, Clone)]
+pub struct CreatedBlobInfo {
+    pub blob_id: BlobId,
+    pub blob_info: BlobInfoAsExpectedByEntryInParent,
+}
+
 #[derive(Debug)]
 pub struct CreatedDirBlob<'a, B>
 where
@@ -66,21 +72,22 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedDirBlob<'a, B>> for BlobInfoAsExpectedByEntryInParent
+impl<'a, B> From<&CreatedDirBlob<'a, B>> for CreatedBlobInfo
 where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     fn from(blob: &CreatedDirBlob<'a, B>) -> Self {
-        BlobInfoAsExpectedByEntryInParent {
+        Self {
             blob_id: blob.blob.blob_id(),
-            blob_type: BlobType::Dir,
-            parent_id: blob.blob.parent(),
-            path: blob.path.clone(),
+            blob_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::Dir,
+                parent_id: blob.blob.parent(),
+                path: blob.path.clone(),
+            },
         }
     }
 }
-
 pub struct CreatedFileBlob<'a, B>
 where
     B: BlobStore + Debug + 'a,
@@ -100,17 +107,19 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedFileBlob<'a, B>> for BlobInfoAsExpectedByEntryInParent
+impl<'a, B> From<&CreatedFileBlob<'a, B>> for CreatedBlobInfo
 where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     fn from(blob: &CreatedFileBlob<'a, B>) -> Self {
-        BlobInfoAsExpectedByEntryInParent {
+        Self {
             blob_id: blob.blob.blob_id(),
-            blob_type: BlobType::File,
-            parent_id: blob.blob.parent(),
-            path: blob.path.clone(),
+            blob_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::File,
+                parent_id: blob.blob.parent(),
+                path: blob.path.clone(),
+            },
         }
     }
 }
@@ -134,17 +143,19 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for BlobInfoAsExpectedByEntryInParent
+impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for CreatedBlobInfo
 where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
     fn from(blob: &CreatedSymlinkBlob<'a, B>) -> Self {
-        BlobInfoAsExpectedByEntryInParent {
+        Self {
             blob_id: blob.blob.blob_id(),
-            blob_type: BlobType::Symlink,
-            parent_id: blob.blob.parent(),
-            path: blob.path.clone(),
+            blob_info: BlobInfoAsExpectedByEntryInParent {
+                blob_type: BlobType::Symlink,
+                parent_id: blob.blob.parent(),
+                path: blob.path.clone(),
+            },
         }
     }
 }
@@ -374,27 +385,27 @@ where
 
 #[derive(Debug)]
 pub struct SomeBlobs {
-    pub root: BlobInfoAsExpectedByEntryInParent,
-    pub dir1: BlobInfoAsExpectedByEntryInParent,
-    pub dir2: BlobInfoAsExpectedByEntryInParent,
-    pub dir1_dir3: BlobInfoAsExpectedByEntryInParent,
-    pub dir1_dir4: BlobInfoAsExpectedByEntryInParent,
-    pub dir1_dir3_dir5: BlobInfoAsExpectedByEntryInParent,
-    pub dir2_dir6: BlobInfoAsExpectedByEntryInParent,
-    pub dir2_dir7: BlobInfoAsExpectedByEntryInParent,
-    pub dir2_large_file_1: BlobInfoAsExpectedByEntryInParent,
-    pub dir2_dir7_large_file_1: BlobInfoAsExpectedByEntryInParent,
-    pub large_file_1: BlobInfoAsExpectedByEntryInParent,
-    pub large_file_2: BlobInfoAsExpectedByEntryInParent,
-    pub large_dir_1: BlobInfoAsExpectedByEntryInParent,
-    pub large_dir_2: BlobInfoAsExpectedByEntryInParent,
-    pub dir2_large_symlink_1: BlobInfoAsExpectedByEntryInParent,
-    pub dir2_dir7_large_symlink_1: BlobInfoAsExpectedByEntryInParent,
-    pub large_symlink_1: BlobInfoAsExpectedByEntryInParent,
-    pub large_symlink_2: BlobInfoAsExpectedByEntryInParent,
-    pub empty_file: BlobInfoAsExpectedByEntryInParent,
-    pub empty_dir: BlobInfoAsExpectedByEntryInParent,
-    pub empty_symlink: BlobInfoAsExpectedByEntryInParent,
+    pub root: CreatedBlobInfo,
+    pub dir1: CreatedBlobInfo,
+    pub dir2: CreatedBlobInfo,
+    pub dir1_dir3: CreatedBlobInfo,
+    pub dir1_dir4: CreatedBlobInfo,
+    pub dir1_dir3_dir5: CreatedBlobInfo,
+    pub dir2_dir6: CreatedBlobInfo,
+    pub dir2_dir7: CreatedBlobInfo,
+    pub dir2_large_file_1: CreatedBlobInfo,
+    pub dir2_dir7_large_file_1: CreatedBlobInfo,
+    pub large_file_1: CreatedBlobInfo,
+    pub large_file_2: CreatedBlobInfo,
+    pub large_dir_1: CreatedBlobInfo,
+    pub large_dir_2: CreatedBlobInfo,
+    pub dir2_large_symlink_1: CreatedBlobInfo,
+    pub dir2_dir7_large_symlink_1: CreatedBlobInfo,
+    pub large_symlink_1: CreatedBlobInfo,
+    pub large_symlink_2: CreatedBlobInfo,
+    pub empty_file: CreatedBlobInfo,
+    pub empty_dir: CreatedBlobInfo,
+    pub empty_symlink: CreatedBlobInfo,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(
