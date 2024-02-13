@@ -6,9 +6,10 @@ use itertools::{Either, Itertools};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::num::NonZeroU8;
 use std::sync::{Arc, Mutex};
 
-use crate::error::BlobInfoAsExpectedByEntryInParent;
+use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode};
 use crate::BlobInfoAsSeenByLookingAtBlob;
 
 use super::checks::AllChecks;
@@ -432,7 +433,7 @@ async fn check_all_nodes_of_reachable_blobs<B>(
     nodestore: &DataNodeStore<B>,
     all_blobs: Vec<(BlobId, BlobInfoAsExpectedByEntryInParent)>,
     allowed_nodes: &HashSet<BlockId>,
-    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, SeenNodeInfo>>,
     checks: &AllChecks,
     pb: impl Progress,
 ) -> Result<(), CheckError>
@@ -470,7 +471,7 @@ async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     blob_info: BlobInfoAsExpectedByEntryInParent,
     current_node_id: BlockId,
     expected_nodes: &'b HashSet<BlockId>,
-    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, SeenNodeInfo>>,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f, CheckError>,
     pb: impl Progress + 'd,
@@ -486,9 +487,9 @@ where
 
     let node = nodestore.load(current_node_id).await;
     let node_info = match &node {
-        Ok(Some(node)) => node_content_summary(node),
-        Ok(None) => NodeContentSummary::Missing,
-        Err(err) => NodeContentSummary::Unreadable,
+        Ok(Some(node)) => seen_node_info(node),
+        Ok(None) => SeenNodeInfo::Missing,
+        Err(err) => SeenNodeInfo::Unreadable,
     };
 
     match already_processed_nodes.add(current_node_id, node_info) {
@@ -496,22 +497,22 @@ where
             prev_seen,
             now_seen,
         } => {
+            // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip processing it.
+            if prev_seen != now_seen {
+                return Err(CheckError::FilesystemModified {
+                    msg: format!(
+                        "Node {current_node_id:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
+                    ),
+                });
+            }
+
             // The node was already seen before. This can only happen if the node is referenced multiple times.
             checks.add_error(CorruptedError::Assert(Box::new(
                 CorruptedError::NodeReferencedMultipleTimes {
                     node_id: current_node_id,
+                    node_info: now_seen.to_node_info_as_seen_by_looking_at_node(),
                 },
             )));
-
-            // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip processing it.
-
-            if prev_seen != now_seen {
-                return Err(CheckError::FilesystemModified {
-                        msg: format!(
-                            "Node {current_node_id:?} was previously seen as {prev_seen:?} but now as {now_seen:?}",
-                        ),
-                    });
-            }
         }
         AlreadySeen::NotSeenYet => {
             match node {
@@ -592,7 +593,7 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
     blob_info: BlobInfoAsExpectedByEntryInParent,
     current_node: &DataNode<B>,
     expected_nodes: &'b HashSet<BlockId>,
-    already_processed_nodes: Arc<ProcessedItems<BlockId, NodeContentSummary>>,
+    already_processed_nodes: Arc<ProcessedItems<BlockId, SeenNodeInfo>>,
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f, CheckError>,
     pb: impl Progress + 'd,
@@ -655,12 +656,13 @@ fn run_assertions(errors: Vec<CorruptedError>) -> Vec<CorruptedError> {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-enum NodeContentSummary {
+enum SeenNodeInfo {
     Unreadable,
     Missing,
     Leaf,
     Inner {
-        // We're storing children into the [NodeContentSummary] so that if the node comes up again,
+        depth: NonZeroU8,
+        // We're storing children into the [SeenNodeInfo] so that if the node comes up again,
         // we can check that it still has the same children. This allows us to know that
         // we already processed those children when we saw the blob for the first time.
         // TODO Vec instead of HashSet should be enough
@@ -668,13 +670,26 @@ enum NodeContentSummary {
     },
 }
 
-fn node_content_summary<B>(node: &DataNode<B>) -> NodeContentSummary
+impl SeenNodeInfo {
+    pub fn to_node_info_as_seen_by_looking_at_node(&self) -> Option<NodeInfoAsSeenByLookingAtNode> {
+        match self {
+            SeenNodeInfo::Unreadable | SeenNodeInfo::Missing => None,
+            SeenNodeInfo::Leaf => Some(NodeInfoAsSeenByLookingAtNode { depth: 0 }),
+            SeenNodeInfo::Inner { depth, .. } => {
+                Some(NodeInfoAsSeenByLookingAtNode { depth: depth.get() })
+            }
+        }
+    }
+}
+
+fn seen_node_info<B>(node: &DataNode<B>) -> SeenNodeInfo
 where
     B: BlockStore + Send + Sync + 'static,
 {
     match node {
-        DataNode::Leaf(_) => NodeContentSummary::Leaf,
-        DataNode::Inner(node) => NodeContentSummary::Inner {
+        DataNode::Leaf(_) => SeenNodeInfo::Leaf,
+        DataNode::Inner(node) => SeenNodeInfo::Inner {
+            depth: node.depth(),
             children: node.children().collect(),
         },
     }
@@ -692,7 +707,7 @@ enum SeenBlobInfo {
     },
     Dir {
         parent_pointer: BlobId,
-        // We're storing children into the [NodeContentSummary] so that if the node comes up again,
+        // We're storing children into the [SeenBlobInfo] so that if the node comes up again,
         // we can check that it still has the same children. This allows us to know that
         // we already processed those children when we saw the blob for the first time.
         children: Vec<BlobId>,

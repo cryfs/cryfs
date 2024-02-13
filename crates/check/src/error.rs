@@ -75,6 +75,54 @@ impl Debug for BlobInfoAsExpectedByEntryInParent {
     }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct NodeInfoAsSeenByLookingAtNode {
+    pub depth: u8,
+}
+
+impl Display for NodeInfoAsSeenByLookingAtNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.depth == 0 {
+            write!(f, "LeafNode")
+        } else {
+            write!(f, "InnerNode[depth={depth}]", depth = self.depth)
+        }
+    }
+}
+
+impl Debug for NodeInfoAsSeenByLookingAtNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "NodeInfoAsSeenByLookingAtNode({self})")
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct NodeInfoAsExpectedByEntryInParent {
+    pub depth: u8,
+    pub parent_id: BlockId,
+}
+
+impl Display for NodeInfoAsExpectedByEntryInParent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.depth == 0 {
+            write!(f, "LeafNode[parent={parent:?}]", parent = self.parent_id)
+        } else {
+            write!(
+                f,
+                "InnerNode[depth={depth}, parent={parent:?}]",
+                depth = self.depth,
+                parent = self.parent_id,
+            )
+        }
+    }
+}
+
+impl Debug for NodeInfoAsExpectedByEntryInParent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "NodeInfoAsExpectedByEntryInParent({self})")
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BlobReference {
     pub expected_child_info: BlobInfoAsExpectedByEntryInParent,
@@ -90,6 +138,7 @@ pub enum CorruptedError {
         // TODO referenced_by: BlockId,
         // TODO error: anyhow::Error,
         // TODO expected_depth: u8,
+        // TODO Re-think fields
     },
 
     #[error("Node {node_id:?} is referenced but does not exist")]
@@ -98,12 +147,13 @@ pub enum CorruptedError {
         // TODO blob_info: BlobInfo,
         // TODO referenced_by: BlockId,
         // TODO expected_depth: u8,
+        // TODO Re-think fields
     },
 
     #[error("Node {node_id:?} is not referenced but exists")]
     NodeUnreferenced {
         node_id: BlockId,
-        // TODO node_depth: u8,
+        // TODO node_info: NodeInfoAsSeenByLookingAtNode
     },
 
     // #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]
@@ -111,8 +161,10 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is referenced multiple times")]
     NodeReferencedMultipleTimes {
         node_id: BlockId,
-        // TODO node_depth: u8,
-        // TODO referenced_as: BTreeSet<(BlobInfo, BlockId, expected_depth)>, probably should move this tuple into a NodeReference class
+        /// `node_info` can be `None` if the node itself is missing or unreadable
+        node_info: Option<NodeInfoAsSeenByLookingAtNode>,
+        // TODO referenced_as: BTreeSet<(BlobInfo, NodeInfoAsExpectedByEntryInParent)>, probably should move this tuple into a NodeReference class
+        // TODO Should BlobInfo become part of NodeInfoAsExpectedByEntryInParent
     },
 
     #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times")]

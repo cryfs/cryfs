@@ -7,7 +7,8 @@ use std::iter;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
-    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference, CorruptedError,
+    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
+    CorruptedError, NodeInfoAsSeenByLookingAtNode,
 };
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, FsBlob};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
@@ -176,6 +177,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
+    let expected_depth = fs_fixture
+        .get_node_depth(*blob_info.blob_id.to_root_block_id())
+        .await;
     let expected_blob_references: BTreeSet<BlobReference> = [
         BlobReference {
             expected_child_info: blob_info.blob_info.clone(),
@@ -204,6 +208,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         },
         CorruptedError::NodeReferencedMultipleTimes {
             node_id: *blob_info.blob_id.to_root_block_id(),
+            node_info: Some(NodeInfoAsSeenByLookingAtNode {
+                depth: expected_depth,
+            }),
         },
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
@@ -260,6 +267,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
+    let expected_depth = fs_fixture
+        .get_node_depth(*blob_info.blob_id.to_root_block_id())
+        .await;
     let expected_blob_references: BTreeSet<BlobReference> = [
         BlobReference {
             expected_child_info: blob_info.blob_info.clone(),
@@ -308,6 +318,9 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
         },
         CorruptedError::NodeReferencedMultipleTimes {
             node_id: *blob_info.blob_id.to_root_block_id(),
+            node_info: Some(NodeInfoAsSeenByLookingAtNode {
+                depth: expected_depth,
+            }),
         },
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,

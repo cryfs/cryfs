@@ -10,7 +10,8 @@ mod checks;
 mod console;
 mod error;
 pub use error::{
-    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference, CorruptedError,
+    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
+    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
 };
 mod runner;
 mod task_queue;

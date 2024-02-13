@@ -374,6 +374,16 @@ impl FilesystemFixture {
         .await
     }
 
+    pub async fn get_node_depth<'a>(&'a self, node_id: BlockId) -> u8 {
+        self.update_nodestore(move |nodestore| {
+            Box::pin(async move {
+                let mut node = nodestore.load(node_id).await.unwrap().unwrap();
+                node.depth()
+            })
+        })
+        .await
+    }
+
     pub async fn is_dir_blob(&self, blob_id: BlobId) -> bool {
         self.update_fsblobstore(move |fsblobstore| {
             Box::pin(async move {

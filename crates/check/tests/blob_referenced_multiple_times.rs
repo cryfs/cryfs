@@ -6,7 +6,8 @@ use rstest::rstest;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
-    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference, CorruptedError,
+    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
+    CorruptedError, NodeInfoAsSeenByLookingAtNode,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
@@ -145,12 +146,19 @@ async fn blob_referenced_multiple_times(
     let blob_info = make_first_blob(&fs_fixture, parent1_info).await;
     let second_blob_info = add_to_second_parent(&fs_fixture, parent2_info, blob_info.blob_id).await;
 
+    let expected_depth = fs_fixture
+        .get_node_depth(*blob_info.blob_id.to_root_block_id())
+        .await;
+
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(
         vec![
             // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
             CorruptedError::NodeReferencedMultipleTimes {
-                node_id: *blob_info.blob_id.to_root_block_id()
+                node_id: *blob_info.blob_id.to_root_block_id(),
+                node_info: Some(NodeInfoAsSeenByLookingAtNode {
+                    depth: expected_depth
+                }),
             },
             CorruptedError::BlobReferencedMultipleTimes {
                 blob_id: blob_info.blob_id,

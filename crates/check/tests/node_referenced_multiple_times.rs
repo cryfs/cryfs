@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::hash::Hash;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
-use cryfs_check::CorruptedError;
+use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode};
 
 mod common;
 use common::entry_helpers::{
@@ -207,7 +207,10 @@ async fn leaf_node_referenced_multiple_times(
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
-        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        vec![CorruptedError::NodeReferencedMultipleTimes {
+            node_id,
+            node_info: Some(NodeInfoAsSeenByLookingAtNode { depth: 0 })
+        }],
         errors,
     );
 }
@@ -238,10 +241,17 @@ async fn inner_node_referenced_multiple_times(
     )
     .await;
 
+    let expected_depth = fs_fixture.get_node_depth(node_id).await;
+
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
-        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        vec![CorruptedError::NodeReferencedMultipleTimes {
+            node_id,
+            node_info: Some(NodeInfoAsSeenByLookingAtNode {
+                depth: expected_depth,
+            }),
+        }],
         errors
     );
 }
@@ -269,10 +279,17 @@ async fn root_node_referenced(
     )
     .await;
 
+    let expected_depth = fs_fixture.get_node_depth(node_id).await;
+
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
-        vec![CorruptedError::NodeReferencedMultipleTimes { node_id }],
+        vec![CorruptedError::NodeReferencedMultipleTimes {
+            node_id,
+            node_info: Some(NodeInfoAsSeenByLookingAtNode {
+                depth: expected_depth,
+            }),
+        }],
         errors
     );
 }
