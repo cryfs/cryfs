@@ -167,7 +167,7 @@ pub enum CorruptedError {
         // TODO Should BlobInfo become part of NodeInfoAsExpectedByEntryInParent
     },
 
-    #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times")]
+    #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times, by {referenced_as:?}")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
         /// `blob_info` can be `None` if the blob itself is missing or unreadable
