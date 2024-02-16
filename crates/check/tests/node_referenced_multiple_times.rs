@@ -5,9 +5,13 @@ use rstest::rstest;
 use rstest_reuse::{self, *};
 use std::collections::HashSet;
 use std::hash::Hash;
+use std::num::NonZeroU8;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
-use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode};
+use cryfs_check::{
+    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
+    NodeReference, ReferencingBlobInfo,
+};
 
 mod common;
 use common::entry_helpers::{
@@ -16,12 +20,19 @@ use common::entry_helpers::{
 };
 use common::fixture::FilesystemFixture;
 
+#[derive(Debug)]
+struct ReplaceInParentResult {
+    node_id: BlockId,
+    original_parent_id: BlockId,
+    additional_parent_id: BlockId,
+}
+
 /// get two leaves, delete leaf1 and replace the entry in its parent with leaf2 so that there are now two references to leaf2.
 async fn remove_leaf_and_replace_in_parent_with_another_existing_leaf(
     fs_fixture: &FilesystemFixture,
     root1: BlockId,
     root2: BlockId,
-) -> BlockId {
+) -> ReplaceInParentResult {
     fs_fixture
         .update_nodestore(|nodestore| {
             Box::pin(async move {
@@ -30,8 +41,10 @@ async fn remove_leaf_and_replace_in_parent_with_another_existing_leaf(
                     find_leaf_id_and_parent(nodestore, root1, &mut rng).await;
                 let (leaf2_id, parent2, _leaf2_index) =
                     find_leaf_id_and_parent(nodestore, root2, &mut rng).await;
+                let parent1_id = *parent1.block_id();
+                let parent2_id = *parent2.block_id();
                 assert_ne!(leaf1_id, leaf2_id);
-                assert_ne!(*parent1.block_id(), *parent2.block_id());
+                assert_ne!(parent1_id, parent2_id);
                 std::mem::drop(parent2);
 
                 parent1.update_child(leaf1_index, &leaf2_id);
@@ -39,7 +52,11 @@ async fn remove_leaf_and_replace_in_parent_with_another_existing_leaf(
                 let remove_result = nodestore.remove_by_id(&leaf1_id).await.unwrap();
                 assert_eq!(RemoveResult::SuccessfullyRemoved, remove_result);
 
-                leaf2_id
+                ReplaceInParentResult {
+                    node_id: leaf2_id,
+                    original_parent_id: parent2_id,
+                    additional_parent_id: parent1_id,
+                }
             })
         })
         .await
@@ -49,59 +66,90 @@ async fn remove_leaf_and_replace_in_parent_with_another_existing_leaf(
 async fn remove_inner_node_and_replace_in_parent_with_another_existing_inner_node(
     fs_fixture: &FilesystemFixture,
     root1: BlockId,
-    depth1: u8,
+    depth_distance_from_root_1: u8,
     root2: BlockId,
-    depth2: u8,
-) -> BlockId {
+    depth_distance_from_root_2: u8,
+) -> ReplaceInParentResult {
     fs_fixture
         .update_nodestore(|nodestore| {
             Box::pin(async move {
                 let mut rng = SmallRng::seed_from_u64(0);
-                let (node1_id, mut parent1, node1_index) =
-                    find_inner_node_id_and_parent(nodestore, root1, depth1, &mut rng).await;
-                let (node2_id, parent2, _node2_index) =
-                    find_inner_node_id_and_parent(nodestore, root2, depth2, &mut rng).await;
+                let (node1_id, mut parent1, node1_index) = find_inner_node_id_and_parent(
+                    nodestore,
+                    root1,
+                    depth_distance_from_root_1,
+                    &mut rng,
+                )
+                .await;
+                let (node2_id, parent2, _node2_index) = find_inner_node_id_and_parent(
+                    nodestore,
+                    root2,
+                    depth_distance_from_root_2,
+                    &mut rng,
+                )
+                .await;
+                let parent1_id = *parent1.block_id();
+                let parent2_id = *parent2.block_id();
                 assert_ne!(node2_id, node1_id);
-                assert_ne!(node1_id, *parent2.block_id());
-                assert_ne!(node2_id, *parent2.block_id());
-                assert_ne!(node1_id, *parent1.block_id());
-                assert_ne!(node2_id, *parent1.block_id());
-                assert_ne!(*parent1.block_id(), *parent2.block_id());
+                assert_ne!(node1_id, parent2_id);
+                assert_ne!(node2_id, parent2_id);
+                assert_ne!(node1_id, parent1_id);
+                assert_ne!(node2_id, parent1_id);
+                assert_ne!(parent1_id, parent2_id);
                 std::mem::drop(parent2);
 
                 parent1.update_child(node1_index, &node2_id);
                 std::mem::drop(parent1);
                 remove_subtree(nodestore, node1_id).await;
 
-                node2_id
+                ReplaceInParentResult {
+                    node_id: node2_id,
+                    original_parent_id: parent2_id,
+                    additional_parent_id: parent1_id,
+                }
             })
         })
         .await
+}
+
+#[derive(Debug)]
+struct ReplaceInParentWithRootResult {
+    node_id: BlockId,
+    additional_parent_id: BlockId,
 }
 
 /// get an inner node at the given depth, delete it and replace the entry in its parent with root2 so that there are now two references to root2.
 async fn remove_inner_node_and_replace_in_parent_with_root_node(
     fs_fixture: &FilesystemFixture,
     root1: BlockId,
-    depth: u8,
+    depth_distance_from_root: u8,
     root2: BlockId,
-) -> BlockId {
+) -> ReplaceInParentWithRootResult {
     fs_fixture
         .update_nodestore(|nodestore| {
             Box::pin(async move {
                 let mut rng = SmallRng::seed_from_u64(0);
-                let (node1_id, mut parent1, node1_index) =
-                    find_inner_node_id_and_parent(nodestore, root1, depth, &mut rng).await;
+                let (node1_id, mut parent1, node1_index) = find_inner_node_id_and_parent(
+                    nodestore,
+                    root1,
+                    depth_distance_from_root,
+                    &mut rng,
+                )
+                .await;
                 assert_ne!(root1, node1_id);
                 assert_ne!(root1, *parent1.block_id());
                 assert_ne!(root2, node1_id);
                 assert_ne!(root2, *parent1.block_id());
 
                 parent1.update_child(node1_index, &root2);
+                let parent1_id = *parent1.block_id();
                 std::mem::drop(parent1);
                 remove_subtree(nodestore, node1_id).await;
 
-                root2
+                ReplaceInParentWithRootResult {
+                    node_id: root2,
+                    additional_parent_id: parent1_id,
+                }
             })
         })
         .await
@@ -197,7 +245,7 @@ async fn leaf_node_referenced_multiple_times(
     let ignored_errors =
         errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
 
-    let node_id = remove_leaf_and_replace_in_parent_with_another_existing_leaf(
+    let replace_result = remove_leaf_and_replace_in_parent_with_another_existing_leaf(
         &fs_fixture,
         *blob1.blob_id.to_root_block_id(),
         *blob2.blob_id.to_root_block_id(),
@@ -208,8 +256,30 @@ async fn leaf_node_referenced_multiple_times(
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes {
-            node_id,
-            node_info: Some(NodeInfoAsSeenByLookingAtNode { depth: 0 })
+            node_id: replace_result.node_id,
+            node_info: Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
+            referenced_as: [
+                NodeReference {
+                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob1.blob_id,
+                            blob_info: blob1.blob_info,
+                        }),
+                        parent_id: replace_result.additional_parent_id,
+                    }
+                },
+                NodeReference {
+                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob2.blob_id,
+                            blob_info: blob2.blob_info,
+                        }),
+                        parent_id: replace_result.original_parent_id,
+                    }
+                },
+            ]
+            .into_iter()
+            .collect(),
         }],
         errors,
     );
@@ -219,7 +289,7 @@ async fn leaf_node_referenced_multiple_times(
 async fn inner_node_referenced_multiple_times(
     #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
     // with_same_depth and with_different_depth
-    #[values((5, 5), (5, 7))] depths: (u8, u8),
+    #[values((5, 5), (5, 7))] depths_distance_from_root: (u8, u8),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
@@ -232,25 +302,63 @@ async fn inner_node_referenced_multiple_times(
     let ignored_errors =
         errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
 
-    let node_id = remove_inner_node_and_replace_in_parent_with_another_existing_inner_node(
+    let replace_result = remove_inner_node_and_replace_in_parent_with_another_existing_inner_node(
         &fs_fixture,
         *blob1.blob_id.to_root_block_id(),
-        depths.0,
+        depths_distance_from_root.0,
         *blob2.blob_id.to_root_block_id(),
-        depths.1,
+        depths_distance_from_root.1,
     )
     .await;
 
-    let expected_depth = fs_fixture.get_node_depth(node_id).await;
+    let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
+    let expected_depth = NonZeroU8::new(expected_depth).expect("test invariant violated");
+
+    let expected_referenced_depth_1 = fs_fixture
+        .get_node_depth(*blob1.blob_id.to_root_block_id())
+        .await
+        - depths_distance_from_root.0;
+    let expected_referenced_depth_1 =
+        NonZeroU8::new(expected_referenced_depth_1).expect("test invariant violated");
+    let expected_referenced_depth_2 = fs_fixture
+        .get_node_depth(*blob2.blob_id.to_root_block_id())
+        .await
+        - depths_distance_from_root.1;
+    let expected_referenced_depth_2 =
+        NonZeroU8::new(expected_referenced_depth_2).expect("test invariant violated");
 
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes {
-            node_id,
-            node_info: Some(NodeInfoAsSeenByLookingAtNode {
+            node_id: replace_result.node_id,
+            node_info: Some(NodeInfoAsSeenByLookingAtNode::InnerNode {
                 depth: expected_depth,
             }),
+            referenced_as: [
+                NodeReference {
+                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob1.blob_id,
+                            blob_info: blob1.blob_info,
+                        }),
+                        parent_id: replace_result.additional_parent_id,
+                        depth: expected_referenced_depth_1,
+                    }
+                },
+                NodeReference {
+                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob2.blob_id,
+                            blob_info: blob2.blob_info,
+                        }),
+                        parent_id: replace_result.original_parent_id,
+                        depth: expected_referenced_depth_2,
+                    }
+                },
+            ]
+            .into_iter()
+            .collect(),
         }],
         errors
     );
@@ -271,24 +379,56 @@ async fn root_node_referenced(
     let ignored_errors =
         errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
 
-    let node_id = remove_inner_node_and_replace_in_parent_with_root_node(
+    const DEPTH_DISTANCE_FROM_ROOT: u8 = 5;
+    let replace_result = remove_inner_node_and_replace_in_parent_with_root_node(
         &fs_fixture,
         *blob1.blob_id.to_root_block_id(),
-        5,
+        DEPTH_DISTANCE_FROM_ROOT,
         *blob2.blob_id.to_root_block_id(),
     )
     .await;
 
-    let expected_depth = fs_fixture.get_node_depth(node_id).await;
+    let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
+    let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
+        NodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+    } else {
+        NodeInfoAsSeenByLookingAtNode::LeafNode
+    };
+    let expected_referenced_depth = fs_fixture
+        .get_node_depth(*blob1.blob_id.to_root_block_id())
+        .await
+        - DEPTH_DISTANCE_FROM_ROOT;
+    let expected_referenced_depth =
+        NonZeroU8::new(expected_referenced_depth).expect("test invariant violated");
 
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes {
-            node_id,
-            node_info: Some(NodeInfoAsSeenByLookingAtNode {
-                depth: expected_depth,
-            }),
+            node_id: replace_result.node_id,
+            node_info: Some(expected_node_info),
+            referenced_as: [
+                NodeReference {
+                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob1.blob_id,
+                            blob_info: blob1.blob_info,
+                        }),
+                        parent_id: replace_result.additional_parent_id,
+                        depth: expected_referenced_depth,
+                    }
+                },
+                NodeReference {
+                    node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo {
+                            blob_id: blob2.blob_id,
+                            blob_info: blob2.blob_info,
+                        },
+                    }
+                },
+            ]
+            .into_iter()
+            .collect(),
         }],
         errors
     );
@@ -303,3 +443,5 @@ where
 }
 
 // TODO Test node referenced multiple times but doesn't actually exist
+// TODO Do the tests already cover cases where a (leaf/inner/root) node is referenced as a different node type or do we have to add it?
+// TODO Tests where NodeReferencedMultipleTimes::referenced_as contains a `belongs_to_blob: None`

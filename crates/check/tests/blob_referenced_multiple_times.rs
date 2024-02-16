@@ -3,11 +3,13 @@
 
 use futures::future::BoxFuture;
 use rstest::rstest;
+use std::num::NonZeroU8;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
     BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
-    CorruptedError, NodeInfoAsSeenByLookingAtNode,
+    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
+    NodeReference, ReferencingBlobInfo,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
@@ -149,6 +151,11 @@ async fn blob_referenced_multiple_times(
     let expected_depth = fs_fixture
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;
+    let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
+        NodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+    } else {
+        NodeInfoAsSeenByLookingAtNode::LeafNode
+    };
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(
@@ -156,9 +163,27 @@ async fn blob_referenced_multiple_times(
             // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
             CorruptedError::NodeReferencedMultipleTimes {
                 node_id: *blob_info.blob_id.to_root_block_id(),
-                node_info: Some(NodeInfoAsSeenByLookingAtNode {
-                    depth: expected_depth
-                }),
+                node_info: Some(expected_node_info),
+                referenced_as: [
+                    NodeReference {
+                        node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
+                            belongs_to_blob: ReferencingBlobInfo {
+                                blob_id: blob_info.blob_id,
+                                blob_info: blob_info.blob_info.clone()
+                            },
+                        }
+                    },
+                    NodeReference {
+                        node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
+                            belongs_to_blob: ReferencingBlobInfo {
+                                blob_id: blob_info.blob_id,
+                                blob_info: second_blob_info.clone(),
+                            }
+                        }
+                    }
+                ]
+                .into_iter()
+                .collect(),
             },
             CorruptedError::BlobReferencedMultipleTimes {
                 blob_id: blob_info.blob_id,

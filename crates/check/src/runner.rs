@@ -507,12 +507,14 @@ where
             }
 
             // The node was already seen before. This can only happen if the node is referenced multiple times.
-            checks.add_error(CorruptedError::Assert(Box::new(
-                CorruptedError::NodeReferencedMultipleTimes {
-                    node_id: current_node_id,
-                    node_info: now_seen.to_node_info_as_seen_by_looking_at_node(),
-                },
-            )));
+            // TODO
+            // checks.add_error(CorruptedError::Assert(Box::new(
+            //     CorruptedError::NodeReferencedMultipleTimes {
+            //         node_id: current_node_id,
+            //         node_info: now_seen.to_node_info_as_seen_by_looking_at_node(),
+            //         referenced_as: todo!(),
+            //     },
+            // )));
         }
         AlreadySeen::NotSeenYet => {
             match node {
@@ -674,9 +676,9 @@ impl SeenNodeInfo {
     pub fn to_node_info_as_seen_by_looking_at_node(&self) -> Option<NodeInfoAsSeenByLookingAtNode> {
         match self {
             SeenNodeInfo::Unreadable | SeenNodeInfo::Missing => None,
-            SeenNodeInfo::Leaf => Some(NodeInfoAsSeenByLookingAtNode { depth: 0 }),
+            SeenNodeInfo::Leaf => Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
             SeenNodeInfo::Inner { depth, .. } => {
-                Some(NodeInfoAsSeenByLookingAtNode { depth: depth.get() })
+                Some(NodeInfoAsSeenByLookingAtNode::InnerNode { depth: *depth })
             }
         }
     }

@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 use std::fmt::{self, Debug, Display};
+use std::num::NonZeroU8;
 use thiserror::Error;
 
 use cryfs_blobstore::BlobId;
@@ -76,16 +77,16 @@ impl Debug for BlobInfoAsExpectedByEntryInParent {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct NodeInfoAsSeenByLookingAtNode {
-    pub depth: u8,
+pub enum NodeInfoAsSeenByLookingAtNode {
+    InnerNode { depth: NonZeroU8 },
+    LeafNode,
 }
 
 impl Display for NodeInfoAsSeenByLookingAtNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.depth == 0 {
-            write!(f, "LeafNode")
-        } else {
-            write!(f, "InnerNode[depth={depth}]", depth = self.depth)
+        match self {
+            Self::LeafNode => write!(f, "LeafNode"),
+            Self::InnerNode { depth } => write!(f, "InnerNode[depth={depth}]"),
         }
     }
 }
@@ -97,22 +98,71 @@ impl Debug for NodeInfoAsSeenByLookingAtNode {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct NodeInfoAsExpectedByEntryInParent {
-    pub depth: u8,
-    pub parent_id: BlockId,
+pub struct ReferencingBlobInfo {
+    pub blob_id: BlobId,
+    pub blob_info: BlobInfoAsExpectedByEntryInParent,
+}
+
+impl Display for ReferencingBlobInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{blob_id:?}:{blob_info}",
+            blob_id = self.blob_id,
+            blob_info = self.blob_info
+        )
+    }
+}
+
+impl Debug for ReferencingBlobInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ReferencingBlobInfo({self})")
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum NodeInfoAsExpectedByEntryInParent {
+    RootNode {
+        belongs_to_blob: ReferencingBlobInfo,
+    },
+    NonRootInnerNode {
+        // `belongs_to_blob` can be `None` if the node is not (transitively) referenced by a blob
+        belongs_to_blob: Option<ReferencingBlobInfo>,
+
+        depth: NonZeroU8,
+        parent_id: BlockId,
+    },
+    NonRootLeafNode {
+        // `belongs_to_blob` can be `None` if the node is not (transitively) referenced by a blob
+        belongs_to_blob: Option<ReferencingBlobInfo>,
+
+        parent_id: BlockId,
+    },
 }
 
 impl Display for NodeInfoAsExpectedByEntryInParent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.depth == 0 {
-            write!(f, "LeafNode[parent={parent:?}]", parent = self.parent_id)
-        } else {
-            write!(
-                f,
-                "InnerNode[depth={depth}, parent={parent:?}]",
-                depth = self.depth,
-                parent = self.parent_id,
-            )
+        // TODO Better format for belongs_to_blob. Maybe layout more hierarchically like show blob_info first, then node_info?
+        match self {
+            Self::RootNode { belongs_to_blob } => {
+                write!(f, "RootNode[belongs_to_blob={belongs_to_blob:?}]")
+            }
+            Self::NonRootInnerNode {
+                belongs_to_blob,
+                depth,
+                parent_id,
+            } => {
+                write!(f, "NonRootInnerNode[belongs_to_blob={belongs_to_blob:?}, depth={depth}, parent={parent_id:?}]")
+            }
+            Self::NonRootLeafNode {
+                belongs_to_blob,
+                parent_id,
+            } => {
+                write!(
+                    f,
+                    "NonRootLeafNode[belongs_to_blob={belongs_to_blob:?}, parent={parent_id:?}]",
+                )
+            }
         }
     }
 }
@@ -126,6 +176,11 @@ impl Debug for NodeInfoAsExpectedByEntryInParent {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BlobReference {
     pub expected_child_info: BlobInfoAsExpectedByEntryInParent,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct NodeReference {
+    pub node_info: NodeInfoAsExpectedByEntryInParent,
 }
 
 /// A [CorruptedError] is an error we found in the file system when analyzing it
@@ -158,13 +213,12 @@ pub enum CorruptedError {
 
     // #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]
     // UnreachableSubtreeWithCycle { node_id: BlockId },
-    #[error("Node {node_id:?} is referenced multiple times")]
+    #[error("{node_id:?} ({node_info:?}) is referenced multiple times, by {referenced_as:?}")]
     NodeReferencedMultipleTimes {
         node_id: BlockId,
         /// `node_info` can be `None` if the node itself is missing or unreadable
         node_info: Option<NodeInfoAsSeenByLookingAtNode>,
-        // TODO referenced_as: BTreeSet<(BlobInfo, NodeInfoAsExpectedByEntryInParent)>, probably should move this tuple into a NodeReference class
-        // TODO Should BlobInfo become part of NodeInfoAsExpectedByEntryInParent
+        referenced_as: BTreeSet<NodeReference>,
     },
 
     #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times, by {referenced_as:?}")]

@@ -1,29 +1,20 @@
 use std::fmt::Debug;
+use std::num::NonZeroU8;
 
 use super::utils::reference_checker::ReferenceChecker;
 use super::FilesystemCheck;
 use crate::error::{
-    BlobInfoAsExpectedByEntryInParent, CheckError, CorruptedError, NodeInfoAsSeenByLookingAtNode,
+    BlobInfoAsExpectedByEntryInParent, CheckError, CorruptedError,
+    NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode, NodeReference,
+    ReferencingBlobInfo,
 };
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_rustfs::AbsolutePath;
 
-#[derive(Debug, Clone)]
-struct ReferencedBlobInfo {
-    blob_id: BlobId,
-    blob_info: BlobInfoAsExpectedByEntryInParent,
-}
-
-enum ReferencedAs {
-    RootNode {
-        belongs_to_blob: ReferencedBlobInfo,
-    },
-    NonrootNode {
-        // Can be `None` if the node is unreferenced
-        belongs_to_blob: Option<ReferencedBlobInfo>,
-    },
+struct ReferencedAs {
+    expected_node: NodeInfoAsExpectedByEntryInParent,
 }
 
 #[derive(Debug, Clone)]
@@ -57,16 +48,16 @@ impl UnreferencedNodesReferenceChecker {
     pub fn process_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-        blob_info: Option<ReferencedBlobInfo>,
+        belongs_to_blob: Option<ReferencingBlobInfo>,
     ) -> Result<(), CheckError> {
-        self.reference_checker.mark_as_seen(
-            *node.block_id(),
-            SeenInfo::Readable {
-                node_info: NodeInfoAsSeenByLookingAtNode {
-                    depth: node.depth(),
-                },
-            },
-        );
+        let depth = NonZeroU8::new(node.depth());
+        let node_info = if let Some(depth) = depth {
+            NodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+        } else {
+            NodeInfoAsSeenByLookingAtNode::LeafNode
+        };
+        self.reference_checker
+            .mark_as_seen(*node.block_id(), SeenInfo::Readable { node_info });
 
         // Mark all referenced nodes within the same blob as referenced
         match node {
@@ -75,10 +66,24 @@ impl UnreferencedNodesReferenceChecker {
             }
             DataNode::Inner(node) => {
                 for child in node.children() {
+                    let parent_id = *node.block_id();
+                    let depth = node.depth().get() - 1;
+                    let child_blob_info = if depth == 0 {
+                        NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                            belongs_to_blob: belongs_to_blob.clone(),
+                            parent_id,
+                        }
+                    } else {
+                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            belongs_to_blob: belongs_to_blob.clone(),
+                            depth: NonZeroU8::new(depth).unwrap(),
+                            parent_id,
+                        }
+                    };
                     self.reference_checker.mark_as_referenced(
                         child,
-                        ReferencedAs::NonrootNode {
-                            belongs_to_blob: blob_info.clone(),
+                        ReferencedAs {
+                            expected_node: child_blob_info,
                         },
                     );
                 }
@@ -113,7 +118,7 @@ impl UnreferencedNodesReferenceChecker {
             }
             FsBlob::Directory(blob) => {
                 for child in blob.entries() {
-                    let child_blob_info = ReferencedBlobInfo {
+                    let child_blob_info = ReferencingBlobInfo {
                         blob_id: *child.blob_id(),
                         blob_info: BlobInfoAsExpectedByEntryInParent {
                             blob_type: entry_type_to_blob_type(child.entry_type()),
@@ -123,8 +128,10 @@ impl UnreferencedNodesReferenceChecker {
                     };
                     self.reference_checker.mark_as_referenced(
                         *child.blob_id().to_root_block_id(),
-                        ReferencedAs::RootNode {
-                            belongs_to_blob: child_blob_info,
+                        ReferencedAs {
+                            expected_node: NodeInfoAsExpectedByEntryInParent::RootNode {
+                                belongs_to_blob: child_blob_info,
+                            },
                         },
                     );
                 }
@@ -142,14 +149,18 @@ impl UnreferencedNodesReferenceChecker {
                 match referenced_as.first() {
                     Some(first_referenced_as) => {
                         if seen.is_none() {
-                            match first_referenced_as {
-                                ReferencedAs::RootNode { belongs_to_blob } => {
+                            match &first_referenced_as.expected_node {
+                                NodeInfoAsExpectedByEntryInParent::RootNode {
+                                    belongs_to_blob,
+                                    ..
+                                } => {
                                     errors.push(CorruptedError::BlobMissing {
                                         blob_id: belongs_to_blob.blob_id,
                                         expected_blob_info: belongs_to_blob.blob_info.clone(),
                                     });
                                 }
-                                ReferencedAs::NonrootNode { belongs_to_blob: _ } => {
+                                NodeInfoAsExpectedByEntryInParent::NonRootInnerNode { .. }
+                                | NodeInfoAsExpectedByEntryInParent::NonRootLeafNode { .. } => {
                                     errors.push(CorruptedError::NodeMissing { node_id });
                                 }
                             }
@@ -162,6 +173,13 @@ impl UnreferencedNodesReferenceChecker {
                             errors.push(CorruptedError::NodeReferencedMultipleTimes {
                                 node_id,
                                 node_info,
+                                // TODO How to handle the case where referenced_as Vec has duplicate entries?
+                                referenced_as: referenced_as
+                                    .into_iter()
+                                    .map(|referenced_as| NodeReference {
+                                        node_info: referenced_as.expected_node,
+                                    })
+                                    .collect(),
                             });
                         }
                     }
@@ -202,10 +220,12 @@ impl CheckUnreferencedNodes {
             .reference_checker
             .mark_as_referenced(
                 *root_blob_id.to_root_block_id(),
-                ReferencedAs::RootNode {
-                    belongs_to_blob: ReferencedBlobInfo {
-                        blob_id: root_blob_id,
-                        blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+                ReferencedAs {
+                    expected_node: NodeInfoAsExpectedByEntryInParent::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo {
+                            blob_id: root_blob_id,
+                            blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+                        },
                     },
                 },
             );
@@ -225,7 +245,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     ) -> Result<(), CheckError> {
         self.reachable_nodes_checker.process_node(
             node,
-            Some(ReferencedBlobInfo {
+            Some(ReferencingBlobInfo {
                 blob_id,
                 blob_info: blob_info.clone(),
             }),

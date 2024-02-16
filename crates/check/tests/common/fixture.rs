@@ -377,7 +377,7 @@ impl FilesystemFixture {
     pub async fn get_node_depth<'a>(&'a self, node_id: BlockId) -> u8 {
         self.update_nodestore(move |nodestore| {
             Box::pin(async move {
-                let mut node = nodestore.load(node_id).await.unwrap().unwrap();
+                let node = nodestore.load(node_id).await.unwrap().unwrap();
                 node.depth()
             })
         })
