@@ -200,20 +200,14 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
-        // TODO blob_info: BlobInfo,
-        // TODO referenced_by: BlockId,
+        // TODO expected_node_info: NodeInfoAsExpectedByEntryInParent,
         // TODO error: anyhow::Error,
-        // TODO expected_depth: u8,
-        // TODO Re-think fields
     },
 
     #[error("Node {node_id:?} is referenced but does not exist")]
     NodeMissing {
         node_id: BlockId,
-        // TODO blob_info: BlobInfo,
-        // TODO referenced_by: BlockId,
-        // TODO expected_depth: u8,
-        // TODO Re-think fields
+        // TODO expected_node_info: NodeInfoAsExpectedByEntryInParent,
     },
 
     #[error("Node {node_id:?} is not referenced but exists")]
