@@ -8,7 +8,9 @@ use cryfs_blockstore::BlockId;
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_rustfs::AbsolutePathBuf;
 
-// TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
+// TODO Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
+
+// TODO Improve error messages
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum BlobInfoAsSeenByLookingAtBlob {
