@@ -78,6 +78,7 @@ impl Debug for BlobInfoAsExpectedByEntryInParent {
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum NodeInfoAsSeenByLookingAtNode {
+    Unreadable,
     InnerNode { depth: NonZeroU8 },
     LeafNode,
 }
@@ -85,6 +86,7 @@ pub enum NodeInfoAsSeenByLookingAtNode {
 impl Display for NodeInfoAsSeenByLookingAtNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Unreadable => write!(f, "UnreadableNode"),
             Self::LeafNode => write!(f, "LeafNode"),
             Self::InnerNode { depth } => write!(f, "InnerNode[depth={depth}]"),
         }
@@ -216,7 +218,7 @@ pub enum CorruptedError {
     #[error("{node_id:?} ({node_info:?}) is referenced multiple times, by {referenced_as:?}")]
     NodeReferencedMultipleTimes {
         node_id: BlockId,
-        /// `node_info` can be `None` if the node itself is missing or unreadable
+        /// `node_info` is `None` if the node itself is missing
         node_info: Option<NodeInfoAsSeenByLookingAtNode>,
         referenced_as: BTreeSet<NodeReference>,
     },

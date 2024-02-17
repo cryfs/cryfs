@@ -443,5 +443,6 @@ where
 }
 
 // TODO Test node referenced multiple times but doesn't actually exist
+// TODO tests where we get NodeReferencedMultipleTimes::node_info == NodeInfoAsExpectedByEntryInParent::Unreadable
 // TODO Do the tests already cover cases where a (leaf/inner/root) node is referenced as a different node type or do we have to add it?
 // TODO Tests where NodeReferencedMultipleTimes::referenced_as contains a `belongs_to_blob: None`

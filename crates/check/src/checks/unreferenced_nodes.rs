@@ -18,11 +18,8 @@ struct ReferencedAs {
 }
 
 #[derive(Debug, Clone)]
-enum SeenInfo {
-    Unreadable,
-    Readable {
-        node_info: NodeInfoAsSeenByLookingAtNode,
-    },
+struct SeenInfo {
+    node_info: NodeInfoAsSeenByLookingAtNode,
 }
 
 /// Check that
@@ -57,7 +54,7 @@ impl UnreferencedNodesReferenceChecker {
             NodeInfoAsSeenByLookingAtNode::LeafNode
         };
         self.reference_checker
-            .mark_as_seen(*node.block_id(), SeenInfo::Readable { node_info });
+            .mark_as_seen(*node.block_id(), SeenInfo { node_info });
 
         // Mark all referenced nodes within the same blob as referenced
         match node {
@@ -94,8 +91,12 @@ impl UnreferencedNodesReferenceChecker {
     }
 
     pub fn process_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
-        self.reference_checker
-            .mark_as_seen(node_id, SeenInfo::Unreadable);
+        self.reference_checker.mark_as_seen(
+            node_id,
+            SeenInfo {
+                node_info: NodeInfoAsSeenByLookingAtNode::Unreadable,
+            },
+        );
 
         // Also make sure that the unreadable node was reported by a different check
         self.errors.push(CorruptedError::Assert(Box::new(
@@ -166,13 +167,9 @@ impl UnreferencedNodesReferenceChecker {
                             }
                         }
                         if referenced_as.len() > 1 {
-                            let node_info = match seen {
-                                None | Some(SeenInfo::Unreadable) => None,
-                                Some(SeenInfo::Readable { node_info }) => Some(node_info),
-                            };
                             errors.push(CorruptedError::NodeReferencedMultipleTimes {
                                 node_id,
-                                node_info,
+                                node_info: seen.map(|seen| seen.node_info),
                                 // TODO How to handle the case where referenced_as Vec has duplicate entries?
                                 referenced_as: referenced_as
                                     .into_iter()
