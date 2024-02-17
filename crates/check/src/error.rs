@@ -11,23 +11,30 @@ use cryfs_rustfs::AbsolutePathBuf;
 // TOOD Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct BlobInfoAsSeenByLookingAtBlob {
-    pub blob_type: BlobType,
-    pub parent_pointer: BlobId,
+pub enum BlobInfoAsSeenByLookingAtBlob {
+    Unreadable,
+    Readable {
+        blob_type: BlobType,
+        parent_pointer: BlobId,
+    },
 }
 
 impl Display for BlobInfoAsSeenByLookingAtBlob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let blob_type = match self.blob_type {
-            BlobType::File => "File",
-            BlobType::Dir => "Dir",
-            BlobType::Symlink => "Symlink",
-        };
-        write!(
-            f,
-            "{blob_type}[parent_pointer={parent_pointer:?}]",
-            parent_pointer = self.parent_pointer,
-        )
+        match self {
+            Self::Unreadable => write!(f, "UnreadableBlob"),
+            Self::Readable {
+                blob_type,
+                parent_pointer,
+            } => {
+                let blob_type = match blob_type {
+                    BlobType::File => "File",
+                    BlobType::Dir => "Dir",
+                    BlobType::Symlink => "Symlink",
+                };
+                write!(f, "{blob_type}[parent_pointer={parent_pointer:?}]",)
+            }
+        }
     }
 }
 
@@ -226,7 +233,7 @@ pub enum CorruptedError {
     #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times, by {referenced_as:?}")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,
-        /// `blob_info` can be `None` if the blob itself is missing or unreadable
+        /// `blob_info` is `None` if the blob itself is missing
         blob_info: Option<BlobInfoAsSeenByLookingAtBlob>,
         referenced_as: BTreeSet<BlobReference>,
     },

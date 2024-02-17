@@ -17,11 +17,21 @@ use super::{
 #[derive(Eq, PartialEq)]
 enum SeenBlobInfo {
     Readable {
-        blob_info: BlobInfoAsSeenByLookingAtBlob,
+        blob_type: BlobType,
+        parent_pointer: BlobId,
     },
     Unreadable {
         expected_blob_info: BlobInfoAsExpectedByEntryInParent,
     },
+}
+
+impl SeenBlobInfo {
+    pub fn to_blob_info_as_seen_by_looking_at_blob(&self) -> BlobInfoAsSeenByLookingAtBlob {
+        match self {
+            Self::Unreadable{..} => BlobInfoAsSeenByLookingAtBlob::Unreadable,
+            Self::Readable { blob_type, parent_pointer } => BlobInfoAsSeenByLookingAtBlob::Readable{blob_type: *blob_type, parent_pointer: *parent_pointer},
+        }
+    }
 }
 
 /// Check that blob parent pointers go back to the parent that referenced the blob
@@ -50,10 +60,8 @@ impl FilesystemCheck for CheckParentPointers {
         blob_info_as_expected_by_entry_in_parent: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
         let seen_blob_info = SeenBlobInfo::Readable {
-            blob_info: BlobInfoAsSeenByLookingAtBlob {
-                parent_pointer: blob.parent(),
-                blob_type: blob.blob_type(),
-            },
+            parent_pointer: blob.parent(),
+            blob_type: blob.blob_type(),
         };
         self.reference_checker
             .mark_as_seen(blob.blob_id(), seen_blob_info);
@@ -136,12 +144,7 @@ impl FilesystemCheck for CheckParentPointers {
             .flat_map(|(blob_id, seen_blob_info, referenced_as)| {
                 let mut errors = vec![];
                 if referenced_as.len() > 1 {
-                    let blob_info = match &seen_blob_info {
-                        None => None,
-                        Some(SeenBlobInfo::Unreadable { .. }) => None,
-                        Some(SeenBlobInfo::Readable { blob_info }) =>
-                            Some(blob_info.clone())
-                        };
+                    let blob_info = seen_blob_info.as_ref().map(|blob_info|  blob_info.to_blob_info_as_seen_by_looking_at_blob());
                     errors.push(CorruptedError::BlobReferencedMultipleTimes { 
                         blob_id,
                         blob_info,
@@ -153,14 +156,14 @@ impl FilesystemCheck for CheckParentPointers {
                 }
 
                 match seen_blob_info {
-                    Some(SeenBlobInfo::Readable{blob_info}) => {
+                    Some(SeenBlobInfo::Readable{parent_pointer, blob_type}) => {
                         let mut matching_parents = referenced_as.iter()
-                            .filter(|&BlobReference {expected_child_info}| blob_info.parent_pointer == expected_child_info.parent_id)
+                            .filter(|&BlobReference {expected_child_info}| parent_pointer == expected_child_info.parent_id)
                             .peekable();
                         if matching_parents.is_empty() {
                             errors.push(CorruptedError::WrongParentPointer {
                                 blob_id,
-                                blob_info,
+                                blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {parent_pointer, blob_type},
                                 // TODO How to handle the case where referenced_as Vec has duplicate entries?
                                 referenced_as: referenced_as.into_iter().collect(),
                             });

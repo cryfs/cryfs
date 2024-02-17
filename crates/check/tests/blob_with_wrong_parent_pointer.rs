@@ -131,7 +131,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
 
     let expected_errors: Vec<_> = vec![CorruptedError::WrongParentPointer {
         blob_id: blob_info.blob_id,
-        blob_info: BlobInfoAsSeenByLookingAtBlob {
+        blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
             blob_type: blob_info.blob_info.blob_type,
             parent_pointer: new_parent.blob_id,
         },
@@ -207,7 +207,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
     let expected_errors: Vec<_> = vec![
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
-            blob_info: BlobInfoAsSeenByLookingAtBlob {
+            blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
                 blob_type: blob_info.blob_info.blob_type,
                 parent_pointer: new_parent.blob_id,
             },
@@ -230,7 +230,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         },
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
-            blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
+            blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
                 blob_type: blob_info.blob_info.blob_type,
                 parent_pointer: new_parent.blob_id,
             }),
@@ -331,7 +331,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
     let expected_errors: Vec<_> = vec![
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
-            blob_info: BlobInfoAsSeenByLookingAtBlob {
+            blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
                 blob_type: blob_info.blob_info.blob_type,
                 parent_pointer: new_parent.blob_id,
             },
@@ -354,7 +354,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
         },
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
-            blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
+            blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
                 blob_type: blob_info.blob_info.blob_type,
                 parent_pointer: new_parent.blob_id,
             }),

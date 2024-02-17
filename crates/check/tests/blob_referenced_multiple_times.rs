@@ -187,7 +187,7 @@ async fn blob_referenced_multiple_times(
             },
             CorruptedError::BlobReferencedMultipleTimes {
                 blob_id: blob_info.blob_id,
-                blob_info: Some(BlobInfoAsSeenByLookingAtBlob {
+                blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
                     blob_type: blob_info.blob_info.blob_type,
                     parent_pointer: blob_info.blob_info.parent_id,
                 }),
@@ -218,3 +218,4 @@ async fn blob_referenced_multiple_times(
 //  - symlink blob referenced from grandparent dir
 
 // - Blob referenced multiple times but doesn't actually exist
+// - BlobReferencedMultipleTimes::blob_info is BlobInfoAsSeenByLookingAtBlob::Unreadable

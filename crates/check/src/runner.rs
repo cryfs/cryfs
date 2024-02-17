@@ -719,19 +719,24 @@ enum SeenBlobInfo {
 impl SeenBlobInfo {
     pub fn to_blob_info_as_seen_by_looking_at_blob(&self) -> Option<BlobInfoAsSeenByLookingAtBlob> {
         match self {
-            SeenBlobInfo::Unreadable | SeenBlobInfo::Missing => None,
-            SeenBlobInfo::File { parent_pointer } => Some(BlobInfoAsSeenByLookingAtBlob {
-                blob_type: BlobType::File,
-                parent_pointer: *parent_pointer,
-            }),
-            SeenBlobInfo::Symlink { parent_pointer } => Some(BlobInfoAsSeenByLookingAtBlob {
-                blob_type: BlobType::Symlink,
-                parent_pointer: *parent_pointer,
-            }),
+            SeenBlobInfo::Missing => None,
+            SeenBlobInfo::Unreadable => Some(BlobInfoAsSeenByLookingAtBlob::Unreadable),
+            SeenBlobInfo::File { parent_pointer } => {
+                Some(BlobInfoAsSeenByLookingAtBlob::Readable {
+                    blob_type: BlobType::File,
+                    parent_pointer: *parent_pointer,
+                })
+            }
+            SeenBlobInfo::Symlink { parent_pointer } => {
+                Some(BlobInfoAsSeenByLookingAtBlob::Readable {
+                    blob_type: BlobType::Symlink,
+                    parent_pointer: *parent_pointer,
+                })
+            }
             SeenBlobInfo::Dir {
                 parent_pointer,
                 children: _children,
-            } => Some(BlobInfoAsSeenByLookingAtBlob {
+            } => Some(BlobInfoAsSeenByLookingAtBlob::Readable {
                 blob_type: BlobType::Dir,
                 parent_pointer: *parent_pointer,
             }),
