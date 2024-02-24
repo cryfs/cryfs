@@ -72,6 +72,11 @@ where
     pub async fn num_nodes(&mut self) -> Result<u64> {
         self.blob.num_nodes().await
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn into_raw(self) -> B::ConcreteBlob<'a> {
+        self.blob.into_raw()
+    }
 }
 
 impl<'a, B> Debug for SymlinkBlob<'a, B>

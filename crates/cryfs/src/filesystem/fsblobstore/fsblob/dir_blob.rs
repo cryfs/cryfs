@@ -287,6 +287,13 @@ where
         self.flush().await?;
         self.blob.num_nodes().await
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn into_raw(mut this: AsyncDropGuard<Self>) -> Result<B::ConcreteBlob<'a>> {
+        this.flush().await?;
+        let this = this.unsafe_into_inner_dont_drop();
+        Ok(this.blob.into_raw())
+    }
 }
 
 impl<'a, B> Debug for DirBlob<'a, B>

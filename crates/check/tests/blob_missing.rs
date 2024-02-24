@@ -8,7 +8,9 @@ use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{CreatedBlobInfo, SomeBlobs};
+use common::entry_helpers::{
+    expect_blobs_to_have_unreferenced_root_nodes, CreatedBlobInfo, SomeBlobs,
+};
 use common::fixture::FilesystemFixture;
 
 #[rstest]
@@ -24,6 +26,8 @@ async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedB
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_if_dir_blob(blob_info.blob_id)
         .await;
+    let expected_errors_from_orphaned_descendant_blobs =
+        expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
 
     fs_fixture
         .update_fsblobstore(move |fsblobstore| {
@@ -34,17 +38,12 @@ async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedB
         })
         .await;
 
-    let expected_errors =
-        iter::once(CorruptedError::BlobMissing {
-            blob_id: blob_info.blob_id,
-            expected_blob_info: blob_info.blob_info,
-        })
-        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
-            CorruptedError::NodeUnreferenced {
-                node_id: *child.to_root_block_id(),
-            }
-        }))
-        .collect();
+    let expected_errors = iter::once(CorruptedError::BlobMissing {
+        blob_id: blob_info.blob_id,
+        expected_blob_info: blob_info.blob_info,
+    })
+    .chain(expected_errors_from_orphaned_descendant_blobs)
+    .collect();
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);

@@ -15,8 +15,8 @@ use cryfs_check::{
 
 mod common;
 use common::entry_helpers::{
-    find_inner_node_id_and_parent, find_leaf_id_and_parent, remove_subtree, CreatedBlobInfo,
-    SomeBlobs,
+    expect_blobs_to_have_unreferenced_root_nodes, find_inner_node_id_and_parent,
+    find_leaf_id_and_parent, remove_subtree, CreatedBlobInfo, SomeBlobs,
 };
 use common::fixture::FilesystemFixture;
 
@@ -203,28 +203,29 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
     blob_info: CreatedBlobInfo,
 ) -> HashSet<CorruptedError> {
     if fs_fixture.is_dir_blob(blob_info.blob_id).await {
-        fs_fixture
-            .get_descendants_of_dir_blob(blob_info.blob_id)
-            .await
-            .into_iter()
-            .map(|descendant| CorruptedError::NodeUnreferenced {
-                node_id: *descendant.to_root_block_id(),
-            })
-            .chain(
-                [
-                    CorruptedError::BlobUnreadable {
-                        blob_id: blob_info.blob_id,
-                        expected_blob_info: blob_info.blob_info.clone(),
-                    },
-                    // TODO Why is BlobMissing necessary here? Without it, tests seem to become flaky because it is sometimes thrown
-                    CorruptedError::BlobMissing {
-                        blob_id: blob_info.blob_id,
-                        expected_blob_info: blob_info.blob_info,
-                    },
-                ]
-                .into_iter(),
-            )
-            .collect()
+        expect_blobs_to_have_unreferenced_root_nodes(
+            fs_fixture,
+            fs_fixture
+                .get_descendants_of_dir_blob(blob_info.blob_id)
+                .await,
+        )
+        .await
+        .into_iter()
+        .chain(
+            [
+                CorruptedError::BlobUnreadable {
+                    blob_id: blob_info.blob_id,
+                    expected_blob_info: blob_info.blob_info.clone(),
+                },
+                // TODO Why is BlobMissing necessary here? Without it, tests seem to become flaky because it is sometimes thrown
+                CorruptedError::BlobMissing {
+                    blob_id: blob_info.blob_id,
+                    expected_blob_info: blob_info.blob_info,
+                },
+            ]
+            .into_iter(),
+        )
+        .collect()
     } else {
         HashSet::new()
     }
@@ -311,6 +312,7 @@ async fn inner_node_referenced_multiple_times(
     )
     .await;
 
+    // TODO expected_depth should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
     let expected_depth = NonZeroU8::new(expected_depth).expect("test invariant violated");
 
@@ -388,6 +390,7 @@ async fn root_node_referenced(
     )
     .await;
 
+    // TODO expected_depth should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
     let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
         NodeInfoAsSeenByLookingAtNode::InnerNode { depth }

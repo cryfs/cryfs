@@ -1,10 +1,11 @@
 //! Tests where there are nodes that aren't referenced from anywhere
 
 use cryfs_blockstore::BlockId;
-use cryfs_check::CorruptedError;
+use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode};
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
 };
+use std::num::NonZeroU8;
 
 mod common;
 use common::fixture::FilesystemFixture;
@@ -27,7 +28,10 @@ async fn leaf_node_unreferenced() {
         })
         .await;
 
-    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced { node_id }];
+    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced {
+        node_id,
+        node_info: NodeInfoAsSeenByLookingAtNode::LeafNode,
+    }];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(expected_errors, errors,);
@@ -35,12 +39,13 @@ async fn leaf_node_unreferenced() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn single_inner_node_unreferenced() {
+    const DEPTH: u8 = 3;
     let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let node_id = fs_fixture
         .update_nodestore(|nodestore| {
             Box::pin(async move {
                 *nodestore
-                    .create_new_inner_node(3, &[block_id(0), block_id(1)])
+                    .create_new_inner_node(DEPTH, &[block_id(0), block_id(1)])
                     .await
                     .unwrap()
                     .block_id()
@@ -49,7 +54,12 @@ async fn single_inner_node_unreferenced() {
         .await;
 
     let expected_errors: Vec<_> = vec![
-        CorruptedError::NodeUnreferenced { node_id },
+        CorruptedError::NodeUnreferenced {
+            node_id,
+            node_info: NodeInfoAsSeenByLookingAtNode::InnerNode {
+                depth: NonZeroU8::new(DEPTH).unwrap(),
+            },
+        },
         CorruptedError::NodeMissing {
             node_id: block_id(0),
         },
@@ -89,18 +99,18 @@ async fn inner_node_with_subtree_unreferenced() {
                     .unwrap()
                     .block_id();
                 let inner1 = *nodestore
-                    .create_new_inner_node(3, &[leaf1, leaf2])
+                    .create_new_inner_node(1, &[leaf1, leaf2])
                     .await
                     .unwrap()
                     .block_id();
                 let inner2 = *nodestore
-                    .create_new_inner_node(3, &[leaf3, leaf4])
+                    .create_new_inner_node(1, &[leaf3, leaf4])
                     .await
                     .unwrap()
                     .block_id();
 
                 *nodestore
-                    .create_new_inner_node(3, &[inner1, inner2])
+                    .create_new_inner_node(2, &[inner1, inner2])
                     .await
                     .unwrap()
                     .block_id()
@@ -108,7 +118,12 @@ async fn inner_node_with_subtree_unreferenced() {
         })
         .await;
 
-    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced { node_id }];
+    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced {
+        node_id,
+        node_info: NodeInfoAsSeenByLookingAtNode::InnerNode {
+            depth: NonZeroU8::new(2).unwrap(),
+        },
+    }];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);

@@ -213,7 +213,7 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is not referenced but exists")]
     NodeUnreferenced {
         node_id: BlockId,
-        // TODO node_info: NodeInfoAsSeenByLookingAtNode
+        node_info: NodeInfoAsSeenByLookingAtNode,
     },
 
     // #[error("Node {node_id:?} is referenced but is not reachable. Possibly there is a cycle in a unconnected subtree")]

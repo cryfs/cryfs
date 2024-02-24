@@ -7,7 +7,10 @@ use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{CreatedBlobInfo, SomeBlobs};
+use common::entry_helpers::{
+    expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced, CreatedBlobInfo,
+    SomeBlobs,
+};
 use common::fixture::{CorruptInnerNodeResult, CorruptSomeNodesResult, FilesystemFixture};
 
 #[rstest]
@@ -62,28 +65,15 @@ async fn root_dir_with_unreadable_single_node_without_children() {
     assert_eq!(0, orphaned_nodes.len(), "test precondition violated");
     assert_eq!(&corrupted_node, root.to_root_block_id());
 
-    let expected_errors =
-        [
-            CorruptedError::BlobUnreadable {
-                blob_id: root,
-                expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
-            },
-            CorruptedError::NodeUnreadable {
-                node_id: corrupted_node,
-            },
-        ]
-        .into_iter()
-        .chain(
-            orphaned_nodes
-                .into_iter()
-                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
-        )
-        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
-            CorruptedError::NodeUnreferenced {
-                node_id: *child.to_root_block_id(),
-            }
-        }))
-        .collect();
+    let expected_errors = vec![
+        CorruptedError::BlobUnreadable {
+            blob_id: root,
+            expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+        },
+        CorruptedError::NodeUnreadable {
+            node_id: corrupted_node,
+        },
+    ];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
@@ -101,6 +91,8 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_if_dir_blob(blob_info.blob_id)
         .await;
+    let expected_errors_from_orphaned_descendant_blobs =
+        expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
 
     let CorruptInnerNodeResult {
         corrupted_node,
@@ -109,29 +101,22 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
         .corrupt_root_node_of_blob(blob_info.blob_id)
         .await;
     assert_eq!(&corrupted_node, blob_info.blob_id.to_root_block_id());
+    let expected_errors_from_orphaned_nodes =
+        expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
-    let expected_errors =
-        [
-            CorruptedError::BlobUnreadable {
-                blob_id: blob_info.blob_id,
-                expected_blob_info: blob_info.blob_info,
-            },
-            CorruptedError::NodeUnreadable {
-                node_id: corrupted_node,
-            },
-        ]
-        .into_iter()
-        .chain(
-            orphaned_nodes
-                .into_iter()
-                .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
-        )
-        .chain(orphaned_descendant_blobs.into_iter().map(|child| {
-            CorruptedError::NodeUnreferenced {
-                node_id: *child.to_root_block_id(),
-            }
-        }))
-        .collect();
+    let expected_errors = [
+        CorruptedError::BlobUnreadable {
+            blob_id: blob_info.blob_id,
+            expected_blob_info: blob_info.blob_info,
+        },
+        CorruptedError::NodeUnreadable {
+            node_id: corrupted_node,
+        },
+    ]
+    .into_iter()
+    .chain(expected_errors_from_orphaned_nodes)
+    .chain(expected_errors_from_orphaned_descendant_blobs)
+    .collect();
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
@@ -156,17 +141,22 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_if_dir_blob(blob_info.blob_id)
         .await;
+    assert_eq!(
+        orphaned_descendant_blobs.is_empty(),
+        blob_info.blob_info.blob_type != BlobType::Dir,
+        "test invariant"
+    );
+    let expected_errors_from_orphaned_descendant_blobs =
+        expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
+
     let CorruptInnerNodeResult {
         corrupted_node,
         orphaned_nodes,
     } = fs_fixture
         .corrupt_an_inner_node_of_a_large_blob(blob_info.blob_id)
         .await;
-    assert_eq!(
-        orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_info.blob_type != BlobType::Dir,
-        "test invariant"
-    );
+    let expected_errors_from_orphaned_nodes =
+        expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: corrupted_node,
@@ -179,14 +169,7 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
         });
     }
     expected_errors.extend(
-        orphaned_nodes
-            .into_iter()
-            .map(|child| CorruptedError::NodeUnreferenced { node_id: child })
-            .chain(orphaned_descendant_blobs.into_iter().map(|child| {
-                CorruptedError::NodeUnreferenced {
-                    node_id: *child.to_root_block_id(),
-                }
-            })),
+        expected_errors_from_orphaned_nodes.chain(expected_errors_from_orphaned_descendant_blobs),
     );
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -211,6 +194,9 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
         blob_info.blob_info.blob_type != BlobType::Dir,
         "test invariant"
     );
+    let expected_errors_from_orphaned_descendant_blobs =
+        expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
+
     let removed_node = fs_fixture.corrupt_a_leaf_node(blob_info.blob_id).await;
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
@@ -223,11 +209,7 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
             expected_blob_info: blob_info.blob_info,
         });
     }
-    expected_errors.extend(orphaned_descendant_blobs.into_iter().map(|child| {
-        CorruptedError::NodeUnreferenced {
-            node_id: *child.to_root_block_id(),
-        }
-    }));
+    expected_errors.extend(expected_errors_from_orphaned_descendant_blobs);
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
@@ -252,17 +234,22 @@ async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) ->
     let orphaned_descendant_blobs = fs_fixture
         .get_descendants_if_dir_blob(blob_info.blob_id)
         .await;
+    assert_eq!(
+        orphaned_descendant_blobs.is_empty(),
+        blob_info.blob_info.blob_type != BlobType::Dir,
+        "test invariant"
+    );
+    let expected_errors_from_orphaned_descendant_blobs =
+        expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
+
     let CorruptSomeNodesResult {
         corrupted_nodes,
         orphaned_nodes,
     } = fs_fixture
         .corrupt_some_nodes_of_a_large_blob(blob_info.blob_id)
         .await;
-    assert_eq!(
-        orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_info.blob_type != BlobType::Dir,
-        "test invariant"
-    );
+    let expected_errors_from_orphaned_nodes =
+        expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
     let mut expected_errors = vec![];
     if blob_info.blob_info.blob_type == BlobType::Dir {
@@ -277,16 +264,8 @@ async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) ->
         corrupted_nodes
             .into_iter()
             .map(|node_id| CorruptedError::NodeUnreadable { node_id })
-            .chain(
-                orphaned_nodes
-                    .into_iter()
-                    .map(|child| CorruptedError::NodeUnreferenced { node_id: child }),
-            )
-            .chain(orphaned_descendant_blobs.into_iter().map(|child| {
-                CorruptedError::NodeUnreferenced {
-                    node_id: *child.to_root_block_id(),
-                }
-            })),
+            .chain(expected_errors_from_orphaned_nodes)
+            .chain(expected_errors_from_orphaned_descendant_blobs),
     );
 
     let errors = fs_fixture.run_cryfs_check().await;

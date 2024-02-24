@@ -4,7 +4,9 @@ use cryfs_blockstore::{
     InMemoryBlockStore, IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation,
     SharedBlockStore,
 };
-use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
+use cryfs_check::{
+    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeInfoAsSeenByLookingAtNode,
+};
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadResult, FixedPasswordProvider},
@@ -778,6 +780,36 @@ impl FilesystemFixture {
             })
         })
         .await;
+    }
+
+    pub async fn load_node_infos(
+        &self,
+        node_ids: impl Iterator<Item = BlockId> + Send + 'static,
+    ) -> impl Iterator<Item = (BlockId, NodeInfoAsSeenByLookingAtNode)> {
+        self.update_nodestore(move |nodestore| {
+            Box::pin(async move {
+                futures::future::join_all(node_ids.map(|child| async move {
+                    let node_info = match nodestore.load(child).await {
+                        Ok(Some(node)) => entry_helpers::load_node_info(&node),
+                        Ok(None) => panic!("Node not found"),
+                        Err(_) => NodeInfoAsSeenByLookingAtNode::Unreadable,
+                    };
+                    (child, node_info)
+                }))
+                .await
+            })
+        })
+        .await
+        .into_iter()
+    }
+
+    pub async fn load_node_info(&self, node_id: BlockId) -> NodeInfoAsSeenByLookingAtNode {
+        self.update_nodestore(move |nodestore| {
+            Box::pin(async move {
+                entry_helpers::load_node_info(&nodestore.load(node_id).await.unwrap().unwrap())
+            })
+        })
+        .await
     }
 }
 

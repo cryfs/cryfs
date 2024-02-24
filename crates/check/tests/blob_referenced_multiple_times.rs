@@ -148,6 +148,7 @@ async fn blob_referenced_multiple_times(
     let blob_info = make_first_blob(&fs_fixture, parent1_info).await;
     let second_blob_info = add_to_second_parent(&fs_fixture, parent2_info, blob_info.blob_id).await;
 
+    // TODO expected_depth/expected_node_info should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;

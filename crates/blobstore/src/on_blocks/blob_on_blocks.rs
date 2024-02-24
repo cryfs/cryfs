@@ -25,6 +25,11 @@ impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
     fn _tree_mut(&mut self) -> &mut DataTree<'a, B> {
         self.tree.as_mut().expect("BlobOnBlocks.tree is None")
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn into_data_tree(self) -> DataTree<'a, B> {
+        self.tree.expect("BlobOnBlocks.tree is none")
+    }
 }
 
 #[async_trait]

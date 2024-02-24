@@ -182,11 +182,13 @@ impl UnreferencedNodesReferenceChecker {
                     }
                     None => {
                         // This node is not referenced by any other node. This is an error.
-                        assert!(
-                            seen.is_some(),
-                            "Algorithm invariant violated: Node was neither seen nor referenced."
+                        let seen = seen.expect(
+                            "Algorithm invariant violated: Node was neither seen nor referenced.",
                         );
-                        errors.push(CorruptedError::NodeUnreferenced { node_id });
+                        errors.push(CorruptedError::NodeUnreferenced {
+                            node_id,
+                            node_info: seen.node_info,
+                        });
                     }
                 }
                 errors.into_iter()

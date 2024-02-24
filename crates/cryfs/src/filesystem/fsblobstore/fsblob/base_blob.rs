@@ -151,6 +151,11 @@ where
     pub async fn num_nodes(&mut self) -> Result<u64> {
         self.blob.num_nodes().await
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn into_raw(self) -> B::ConcreteBlob<'a> {
+        self.blob
+    }
 }
 
 fn create_data_for_new_blob(blob_type: layout::BlobType, parent: &BlobId, data: &[u8]) -> Data {

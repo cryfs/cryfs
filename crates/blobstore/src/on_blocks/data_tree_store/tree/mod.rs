@@ -50,13 +50,13 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         self.num_bytes_cache
             .get_or_calculate_num_bytes(
                 self.node_store,
-                self.root_node.as_ref().expect("root_node is None"),
+                self.root_node.as_ref().expect("DataTree.root_node is None"),
             )
             .await
     }
 
     pub async fn num_nodes(&mut self) -> Result<u64> {
-        let root_node = self.root_node.as_ref().expect("root_node is None");
+        let root_node = self.root_node.as_ref().expect("DataTree.root_node is None");
         let mut num_nodes_current_level = self
             .num_bytes_cache
             .get_or_calculate_num_leaves(self.node_store, root_node)
@@ -76,7 +76,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     pub fn root_node_id(&self) -> &BlockId {
         self.root_node
             .as_ref()
-            .expect("root_node is None")
+            .expect("DataTree.root_node is None")
             .block_id()
     }
 
@@ -244,7 +244,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     pub async fn flush(&mut self) -> Result<()> {
         // TODO This doesn't actually flush the whole tree And I have to double check that this actually flushes the node to disk and doesn't just
         // write it into the cache. I might have to find a different solution here.
-        let root = self.root_node.as_mut().expect("root_node is None");
+        let root = self.root_node.as_mut().expect("DataTree.root_node is None");
         self.node_store.flush_node(root).await
     }
 
@@ -332,7 +332,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         let new_last_leaf_size =
             u32::try_from(new_num_bytes - (new_num_leaves.get() - 1) * max_bytes_per_leaf).unwrap();
 
-        let root_node = self.root_node.take().expect("root_node is None");
+        let root_node = self.root_node.take().expect("DataTree.root_node is None");
         let new_root = self
             ._traverse_leaves_by_leaf_indices_return_new_root::<Callbacks<'_, B>, true>(
                 root_node,
@@ -625,7 +625,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     }
 
     pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
-        let root_node = self.root_node.as_ref().expect("root_node is None");
+        let root_node = self.root_node.as_ref().expect("DataTree.root_node is None");
         self._all_blocks_in_subtree(root_node)
     }
 
@@ -673,6 +673,11 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             .await?
             .ok_or_else(|| anyhow!("Didn't find block {:?}", subtree_root_id))?;
         self._all_blocks_in_subtree(&child)
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn into_root_node(self) -> DataNode<B> {
+        self.root_node.expect("DataTree.RootNode is none")
     }
 }
 

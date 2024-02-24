@@ -179,6 +179,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
+    // TODO expected_depth/expected_node_info should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;
@@ -283,6 +284,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
+    // TODO expected_depth/expected_node_info should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;

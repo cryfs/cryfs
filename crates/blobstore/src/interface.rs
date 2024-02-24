@@ -23,6 +23,8 @@ pub trait Blob: Sized + Debug {
     async fn write(&mut self, source: &[u8], offset: u64) -> Result<()>;
 
     async fn flush(&mut self) -> Result<()>;
+
+    // TODO `num_nodes` and `all_blocks` is a leaky abstraction because it gives away that we use blocks. Remove these.
     async fn num_nodes(&mut self) -> Result<u64>;
 
     async fn remove(self) -> Result<()>;

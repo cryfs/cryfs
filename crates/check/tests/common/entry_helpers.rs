@@ -10,11 +10,14 @@ use rand::{rngs::SmallRng, seq::IteratorRandom, SeedableRng};
 use std::fmt::Debug;
 use std::time::SystemTime;
 
+use crate::FilesystemFixture;
 use cryfs_blobstore::{
     BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore, DataTree,
 };
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_check::BlobInfoAsExpectedByEntryInParent;
+use cryfs_check::{
+    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeInfoAsSeenByLookingAtNode,
+};
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_cryfs::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
@@ -56,6 +59,10 @@ where
 
     pub fn blob(&mut self) -> &mut DirBlob<'a, B> {
         &mut self.blob
+    }
+
+    pub fn into_blob(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DirBlob<'a, B>> {
+        this.unsafe_into_inner_dont_drop().blob
     }
 }
 
@@ -832,4 +839,53 @@ where
 {
     let node = nodestore.load(root).await.unwrap().unwrap();
     DataTree::remove_subtree(nodestore, node).await.unwrap();
+}
+
+pub fn load_node_info<B>(node: &DataNode<B>) -> NodeInfoAsSeenByLookingAtNode
+where
+    B: BlockStore + Send + Sync,
+{
+    match node {
+        DataNode::Inner(node) => NodeInfoAsSeenByLookingAtNode::InnerNode {
+            depth: node.depth(),
+        },
+        DataNode::Leaf(_) => NodeInfoAsSeenByLookingAtNode::LeafNode,
+    }
+}
+
+pub async fn expect_blobs_to_have_unreferenced_root_nodes<I>(
+    fs_fixture: &FilesystemFixture,
+    blobs: I,
+) -> impl Iterator<Item = CorruptedError>
+where
+    I: IntoIterator<Item = BlobId>,
+    I::IntoIter: Send + 'static,
+{
+    expect_nodes_to_be_unreferenced(
+        fs_fixture,
+        blobs.into_iter().map(|blob_id| *blob_id.to_root_block_id()),
+    )
+    .await
+}
+
+pub async fn expect_nodes_to_be_unreferenced<I>(
+    fs_fixture: &FilesystemFixture,
+    nodes: I,
+) -> impl Iterator<Item = CorruptedError>
+where
+    I: IntoIterator<Item = BlockId>,
+    I::IntoIter: Send + 'static,
+{
+    fs_fixture
+        .load_node_infos(nodes.into_iter())
+        .await
+        .map(|(node_id, node_info)| CorruptedError::NodeUnreferenced { node_id, node_info })
+}
+
+pub async fn expect_node_to_be_unreferenced(
+    fs_fixture: &FilesystemFixture,
+    node_id: BlockId,
+) -> CorruptedError {
+    let node_info = fs_fixture.load_node_info(node_id).await;
+    CorruptedError::NodeUnreferenced { node_id, node_info }
 }

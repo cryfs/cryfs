@@ -71,9 +71,15 @@ where
         self.blob.all_blocks()
     }
 
+    // TODO Remove `num_nodes()` and let call sites call it after a call to `into_raw()` gives them a `BlobOnBlocks`
     #[cfg(any(test, feature = "testutils"))]
     pub async fn num_nodes(&mut self) -> Result<u64> {
         self.blob.num_nodes().await
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn into_raw(self) -> B::ConcreteBlob<'a> {
+        self.blob.into_raw()
     }
 }
 
