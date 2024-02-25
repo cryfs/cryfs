@@ -498,13 +498,38 @@ pub async fn find_an_inner_node_of_a_large_blob<B>(
 where
     B: BlockStore + Send + Sync,
 {
-    find_inner_node_with_distance_from_root(nodestore, *blob_id.to_root_block_id()).await
+    find_an_inner_node_of_a_large_blob_with_parent_id(nodestore, blob_id)
+        .await
+        .0
+}
+
+pub async fn find_an_inner_node_of_a_large_blob_with_parent_id<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+) -> (DataInnerNode<B>, BlockId)
+where
+    B: BlockStore + Send + Sync,
+{
+    find_inner_node_with_distance_from_root_with_parent_id(nodestore, *blob_id.to_root_block_id())
+        .await
 }
 
 pub async fn find_inner_node_with_distance_from_root<B>(
     nodestore: &DataNodeStore<B>,
     root: BlockId,
 ) -> DataInnerNode<B>
+where
+    B: BlockStore + Send + Sync,
+{
+    find_inner_node_with_distance_from_root_with_parent_id(nodestore, root)
+        .await
+        .0
+}
+
+pub async fn find_inner_node_with_distance_from_root_with_parent_id<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+) -> (DataInnerNode<B>, BlockId)
 where
     B: BlockStore + Send + Sync,
 {
@@ -528,7 +553,7 @@ where
         .unwrap()
         .into_inner_node()
         .expect("test blob too small to have more than three levels. We need to change the test and increase its size");
-    child_of_child_of_root
+    (child_of_child_of_root, child_of_root_id)
 }
 
 pub async fn find_an_inner_node_of_a_small_blob<B>(
@@ -538,13 +563,29 @@ pub async fn find_an_inner_node_of_a_small_blob<B>(
 where
     B: BlockStore + Send + Sync,
 {
-    find_inner_node_without_distance_from_root(nodestore, *blob_id.to_root_block_id()).await
+    find_an_inner_node_of_a_small_blob_with_parent_id(nodestore, blob_id)
+        .await
+        .0
 }
 
-pub async fn find_inner_node_without_distance_from_root<B>(
+pub async fn find_an_inner_node_of_a_small_blob_with_parent_id<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+) -> (DataInnerNode<B>, BlockId)
+where
+    B: BlockStore + Send + Sync,
+{
+    find_inner_node_without_distance_from_root_with_parent_id(
+        nodestore,
+        *blob_id.to_root_block_id(),
+    )
+    .await
+}
+
+pub async fn find_inner_node_without_distance_from_root_with_parent_id<B>(
     nodestore: &DataNodeStore<B>,
     root: BlockId,
-) -> DataInnerNode<B>
+) -> (DataInnerNode<B>, BlockId)
 where
     B: BlockStore + Send + Sync,
 {
@@ -560,7 +601,7 @@ where
     let child_of_root = nodestore.load(child_of_root_id).await.unwrap().unwrap().into_inner_node().expect(
         "test blob too small to have more than two levels. We need to change the test and increase its size"
     );
-    child_of_root
+    (child_of_root, root)
 }
 
 pub async fn find_leaf_node_of_blob<B>(
@@ -570,8 +611,20 @@ pub async fn find_leaf_node_of_blob<B>(
 where
     B: BlockStore + Send + Sync,
 {
+    find_leaf_node_of_blob_with_parent_id(nodestore, blob_id)
+        .await
+        .0
+}
+
+pub async fn find_leaf_node_of_blob_with_parent_id<B>(
+    nodestore: &DataNodeStore<B>,
+    blob_id: &BlobId,
+) -> (DataLeafNode<B>, BlockId)
+where
+    B: BlockStore + Send + Sync,
+{
     let mut rng = SmallRng::seed_from_u64(0);
-    find_leaf_node(nodestore, *blob_id.to_root_block_id(), &mut rng).await
+    find_leaf_node_with_parent_id(nodestore, *blob_id.to_root_block_id(), &mut rng).await
 }
 
 pub async fn find_leaf_id<B>(
@@ -586,6 +639,18 @@ where
         .await
         .0
         .block_id()
+}
+
+pub async fn find_leaf_node_with_parent_id<B>(
+    nodestore: &DataNodeStore<B>,
+    root: BlockId,
+    rng: &mut SmallRng,
+) -> (DataLeafNode<B>, BlockId)
+where
+    B: BlockStore + Send + Sync,
+{
+    let (leaf, parent, _index) = find_leaf_node_and_parent(nodestore, root, rng).await;
+    (leaf, *parent.block_id())
 }
 
 pub async fn find_leaf_node<B>(

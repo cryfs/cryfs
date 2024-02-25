@@ -1,7 +1,9 @@
 //! Tests where there are nodes that aren't referenced from anywhere
 
 use cryfs_blockstore::BlockId;
-use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode};
+use cryfs_check::{
+    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
+};
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
 };
@@ -53,6 +55,12 @@ async fn single_inner_node_unreferenced() {
         })
         .await;
 
+    let expected_node_info = NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+        belongs_to_blob: None,
+        depth: NonZeroU8::new(DEPTH - 1).unwrap(),
+        parent_id: node_id,
+    };
+
     let expected_errors: Vec<_> = vec![
         CorruptedError::NodeUnreferenced {
             node_id,
@@ -62,9 +70,11 @@ async fn single_inner_node_unreferenced() {
         },
         CorruptedError::NodeMissing {
             node_id: block_id(0),
+            expected_node_info: expected_node_info.clone(),
         },
         CorruptedError::NodeMissing {
             node_id: block_id(1),
+            expected_node_info,
         },
     ];
 

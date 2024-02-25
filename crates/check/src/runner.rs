@@ -10,7 +10,9 @@ use std::num::NonZeroU8;
 use std::sync::{Arc, Mutex};
 
 use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode};
-use crate::BlobInfoAsSeenByLookingAtBlob;
+use crate::{
+    BlobInfoAsSeenByLookingAtBlob, NodeInfoAsExpectedByEntryInParent, ReferencingBlobInfo,
+};
 
 use super::checks::AllChecks;
 use super::error::{CheckError, CorruptedError};
@@ -450,6 +452,9 @@ where
                     blob_id,
                     blob_info.clone(),
                     *blob_id.to_root_block_id(),
+                    NodeInfoAsExpectedByEntryInParent::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo { blob_id, blob_info },
+                    },
                     allowed_nodes,
                     already_processed_nodes,
                     checks,
@@ -470,6 +475,7 @@ async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     blob_id: BlobId,
     blob_info: BlobInfoAsExpectedByEntryInParent,
     current_node_id: BlockId,
+    current_expected_node_info: NodeInfoAsExpectedByEntryInParent,
     expected_nodes: &'b HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, SeenNodeInfo>>,
     checks: &'c AllChecks,
@@ -491,6 +497,8 @@ where
         Ok(None) => SeenNodeInfo::Missing,
         Err(err) => SeenNodeInfo::Unreadable,
     };
+
+    // TODO Check that current_expected_node_info is correct and otherwise checks.add_error(CorruptedError::Assert) for things that are wrong
 
     match already_processed_nodes.add(current_node_id, node_info) {
         AlreadySeen::AlreadySeen {
@@ -558,6 +566,7 @@ where
                         checks.add_error(CorruptedError::Assert(Box::new(
                             CorruptedError::NodeMissing {
                                 node_id: current_node_id,
+                                expected_node_info: current_expected_node_info,
                             },
                         )));
                     }
@@ -614,11 +623,29 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
             // Get all children and recurse into their nodes, concurrently.
             for child_id in node.children() {
                 task_spawner.spawn(|task_spawner| {
+                    let belongs_to_blob = Some(ReferencingBlobInfo {
+                        blob_id,
+                        blob_info: blob_info.clone(),
+                    });
+                    let child_expected_node_info =
+                        if let Some(child_depth) = NonZeroU8::new(node.depth().get() - 1) {
+                            NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                belongs_to_blob,
+                                depth: child_depth,
+                                parent_id: *node.block_id(),
+                            }
+                        } else {
+                            NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                                belongs_to_blob,
+                                parent_id: *node.block_id(),
+                            }
+                        };
                     check_all_nodes_of_reachable_blob(
                         nodestore,
                         blob_id,
                         blob_info.clone(),
                         child_id,
+                        child_expected_node_info,
                         expected_nodes,
                         Arc::clone(&already_processed_nodes),
                         checks,

@@ -32,8 +32,9 @@ async fn blob_with_missing_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Cr
 
     let RemoveInnerNodeResult {
         removed_node,
+        removed_node_info: _,
         orphaned_nodes,
-    } = fs_fixture.remove_root_node_of_blob(blob_info.blob_id).await;
+    } = fs_fixture.remove_root_node_of_blob(blob_info.clone()).await;
     assert_eq!(
         removed_node,
         *blob_info.blob_id.to_root_block_id(),
@@ -83,15 +84,17 @@ async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> C
 
     let RemoveInnerNodeResult {
         removed_node,
+        removed_node_info,
         orphaned_nodes,
     } = fs_fixture
-        .remove_an_inner_node_of_a_large_blob(blob_info.blob_id)
+        .remove_an_inner_node_of_a_large_blob(blob_info.clone())
         .await;
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node,
+        expected_node_info: removed_node_info,
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -129,10 +132,11 @@ async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Cr
     let expected_errors_from_orphaned_descendant_blobs =
         expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
 
-    let removed_node = fs_fixture.remove_a_leaf_node(blob_info.blob_id).await;
+    let removed_node = fs_fixture.remove_a_leaf_node(blob_info.clone()).await;
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
-        node_id: removed_node,
+        node_id: removed_node.removed_node,
+        expected_node_info: removed_node.removed_node_info,
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -178,7 +182,7 @@ async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> C
         removed_nodes,
         orphaned_nodes,
     } = fs_fixture
-        .remove_some_nodes_of_a_large_blob(blob_info.blob_id)
+        .remove_some_nodes_of_a_large_blob(blob_info.clone())
         .await;
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
@@ -194,7 +198,12 @@ async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> C
     expected_errors.extend(
         removed_nodes
             .into_iter()
-            .map(|node_id| CorruptedError::NodeMissing { node_id })
+            .map(
+                |(node_id, expected_node_info)| CorruptedError::NodeMissing {
+                    node_id,
+                    expected_node_info,
+                },
+            )
             .chain(expected_errors_from_orphaned_nodes)
             .chain(expected_errors_from_orphaned_descendant_blobs),
     );

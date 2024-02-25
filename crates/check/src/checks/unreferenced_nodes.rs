@@ -162,7 +162,12 @@ impl UnreferencedNodesReferenceChecker {
                                 }
                                 NodeInfoAsExpectedByEntryInParent::NonRootInnerNode { .. }
                                 | NodeInfoAsExpectedByEntryInParent::NonRootLeafNode { .. } => {
-                                    errors.push(CorruptedError::NodeMissing { node_id });
+                                    errors.push(CorruptedError::NodeMissing {
+                                        node_id,
+                                        expected_node_info: first_referenced_as
+                                            .expected_node
+                                            .clone(),
+                                    });
                                 }
                             }
                         }

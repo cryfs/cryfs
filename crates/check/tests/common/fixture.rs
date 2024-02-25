@@ -5,7 +5,8 @@ use cryfs_blockstore::{
     SharedBlockStore,
 };
 use cryfs_check::{
-    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeInfoAsSeenByLookingAtNode,
+    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeInfoAsExpectedByEntryInParent,
+    NodeInfoAsSeenByLookingAtNode, ReferencingBlobInfo,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
@@ -25,9 +26,12 @@ use std::path::PathBuf;
 use tempdir::TempDir;
 
 use super::entry_helpers::{
-    self, find_an_inner_node_of_a_large_blob, find_an_inner_node_of_a_small_blob,
-    find_inner_node_with_distance_from_root, find_leaf_node, find_leaf_node_of_blob,
-    CreatedDirBlob, SomeBlobs,
+    self, find_an_inner_node_of_a_large_blob, find_an_inner_node_of_a_large_blob_with_parent_id,
+    find_an_inner_node_of_a_small_blob, find_an_inner_node_of_a_small_blob_with_parent_id,
+    find_inner_node_with_distance_from_root,
+    find_inner_node_with_distance_from_root_with_parent_id, find_leaf_node, find_leaf_node_of_blob,
+    find_leaf_node_of_blob_with_parent_id, find_leaf_node_with_parent_id, CreatedDirBlob,
+    SomeBlobs,
 };
 use super::{console::FixtureCreationConsole, entry_helpers::CreatedBlobInfo};
 
@@ -435,11 +439,14 @@ impl FilesystemFixture {
         .await;
     }
 
-    pub async fn remove_root_node_of_blob(&self, blob_id: BlobId) -> RemoveInnerNodeResult {
+    pub async fn remove_root_node_of_blob(
+        &self,
+        blob_info: CreatedBlobInfo,
+    ) -> RemoveInnerNodeResult {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
                 let blob_root_node = nodestore
-                    .load(*blob_id.to_root_block_id())
+                    .load(*blob_info.blob_id.to_root_block_id())
                     .await
                     .unwrap()
                     .unwrap()
@@ -447,10 +454,16 @@ impl FilesystemFixture {
                     .expect("test blob too small to have more than one node. We need to change the test and increase its size");
                 let orphaned_nodes = blob_root_node.children().collect::<Vec<_>>();
                 let inner_node_id = *blob_root_node.block_id();
-                assert_eq!(blob_id.to_root_block_id(), blob_root_node.block_id());
+                assert_eq!(blob_info.blob_id.to_root_block_id(), blob_root_node.block_id());
                 blob_root_node.upcast().remove(nodestore).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
+                    removed_node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: blob_info.blob_info
+                        }
+                    },
                     orphaned_nodes,
                 }
             })
@@ -488,16 +501,29 @@ impl FilesystemFixture {
 
     pub async fn remove_an_inner_node_of_a_large_blob(
         &self,
-        blob_id: BlobId,
+        blob_info: CreatedBlobInfo,
     ) -> RemoveInnerNodeResult {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
-                let inner_node = find_an_inner_node_of_a_large_blob(nodestore, &blob_id).await;
+                let (inner_node, parent_id) = find_an_inner_node_of_a_large_blob_with_parent_id(
+                    nodestore,
+                    &blob_info.blob_id,
+                )
+                .await;
+                let depth = inner_node.depth();
                 let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
                 let inner_node_id = *inner_node.block_id();
                 inner_node.upcast().remove(nodestore).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
+                    removed_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: blob_info.blob_info,
+                        }),
+                        depth,
+                        parent_id,
+                    },
                     orphaned_nodes,
                 }
             })
@@ -528,16 +554,29 @@ impl FilesystemFixture {
 
     pub async fn remove_an_inner_node_of_a_small_blob(
         &self,
-        blob_id: BlobId,
+        blob_info: CreatedBlobInfo,
     ) -> RemoveInnerNodeResult {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
-                let inner_node = find_an_inner_node_of_a_small_blob(nodestore, &blob_id).await;
+                let (inner_node, parent_id) = find_an_inner_node_of_a_small_blob_with_parent_id(
+                    nodestore,
+                    &blob_info.blob_id,
+                )
+                .await;
+                let depth = inner_node.depth();
                 let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
                 let inner_node_id = *inner_node.block_id();
                 inner_node.upcast().remove(nodestore).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
+                    removed_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: blob_info.blob_info,
+                        }),
+                        depth,
+                        parent_id,
+                    },
                     orphaned_nodes,
                 }
             })
@@ -568,40 +607,73 @@ impl FilesystemFixture {
 
     pub async fn remove_some_nodes_of_a_large_blob(
         &self,
-        blob_id: BlobId,
+        blob_info: CreatedBlobInfo,
     ) -> RemoveSomeNodesResult {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
                 let mut rng = SmallRng::seed_from_u64(0);
-                let inner_node = find_an_inner_node_of_a_large_blob(nodestore, &blob_id).await;
+                let inner_node =
+                    find_an_inner_node_of_a_large_blob(nodestore, &blob_info.blob_id).await;
                 let mut children = inner_node.children();
                 let child1 = children.next().unwrap();
                 let child2 = children.next().unwrap();
+
+                let belongs_to_blob = Some(ReferencingBlobInfo {
+                    blob_id: blob_info.blob_id,
+                    blob_info: blob_info.blob_info,
+                });
 
                 let mut removed_nodes = vec![];
                 let mut orphaned_nodes = vec![];
 
                 // for child1, find an inner node A. Remove an inner node below A, a leaf below A, and A itself.
                 {
-                    let inner_node_a =
-                        find_inner_node_with_distance_from_root(nodestore, child1).await;
+                    let (inner_node_a, inner_node_a_parent_id) =
+                        find_inner_node_with_distance_from_root_with_parent_id(nodestore, child1)
+                            .await;
                     let mut children = inner_node_a.children();
                     let subchild1 = children.next().unwrap();
                     let subchild2 = children.next().unwrap();
                     std::mem::drop(children);
 
-                    let inner_below_a =
-                        find_inner_node_with_distance_from_root(nodestore, subchild1).await;
+                    let (inner_below_a, inner_below_a_parent_id) =
+                        find_inner_node_with_distance_from_root_with_parent_id(
+                            nodestore, subchild1,
+                        )
+                        .await;
                     orphaned_nodes.extend(inner_below_a.children());
-                    removed_nodes.push(*inner_below_a.block_id());
+                    removed_nodes.push((
+                        *inner_below_a.block_id(),
+                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            // `belongs_to_blob` is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
+                            belongs_to_blob: None,
+                            depth: inner_below_a.depth(),
+                            parent_id: inner_below_a_parent_id,
+                        },
+                    ));
                     inner_below_a.upcast().remove(nodestore).await.unwrap();
 
-                    let leaf_below_a = find_leaf_node(nodestore, subchild2, &mut rng).await;
-                    removed_nodes.push(*leaf_below_a.block_id());
+                    let (leaf_below_a, leaf_below_a_parent_id) =
+                        find_leaf_node_with_parent_id(nodestore, subchild2, &mut rng).await;
+                    removed_nodes.push((
+                        *leaf_below_a.block_id(),
+                        NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                            // `belongs_to_blob` is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
+                            belongs_to_blob: None,
+                            parent_id: leaf_below_a_parent_id,
+                        },
+                    ));
                     leaf_below_a.upcast().remove(nodestore).await.unwrap();
 
                     orphaned_nodes.extend(inner_node_a.children());
-                    removed_nodes.push(*inner_node_a.block_id());
+                    removed_nodes.push((
+                        *inner_node_a.block_id(),
+                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            belongs_to_blob: belongs_to_blob.clone(),
+                            depth: inner_node_a.depth(),
+                            parent_id: inner_node_a_parent_id,
+                        },
+                    ));
                     inner_node_a.upcast().remove(nodestore).await.unwrap();
                 }
 
@@ -614,14 +686,27 @@ impl FilesystemFixture {
                     let subchild2 = children.next().unwrap();
                     std::mem::drop(children);
 
-                    let inner_node_b =
-                        find_inner_node_with_distance_from_root(nodestore, subchild1).await;
+                    let (inner_node_b, inner_node_b_parent_id) =
+                        find_inner_node_with_distance_from_root_with_parent_id(
+                            nodestore, subchild1,
+                        )
+                        .await;
                     orphaned_nodes.extend(inner_node_b.children());
-                    removed_nodes.push(*inner_node_b.block_id());
+                    removed_nodes.push((
+                        *inner_node_b.block_id(),
+                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            belongs_to_blob: belongs_to_blob.clone(),
+                            depth: inner_node_b.depth(),
+                            parent_id: inner_node_b_parent_id,
+                        },
+                    ));
                     inner_node_b.upcast().remove(nodestore).await.unwrap();
 
-                    let inner_node_c =
-                        find_inner_node_with_distance_from_root(nodestore, subchild2).await;
+                    let (inner_node_c, inner_node_c_parent_id) =
+                        find_inner_node_with_distance_from_root_with_parent_id(
+                            nodestore, subchild2,
+                        )
+                        .await;
                     let mut children_of_c = inner_node_c.children();
                     let child_of_c_id = children_of_c.next().unwrap();
                     std::mem::drop(children_of_c);
@@ -642,7 +727,14 @@ impl FilesystemFixture {
                             .children()
                             .filter(|node_id| *node_id != child_of_c_id),
                     );
-                    removed_nodes.push(*inner_node_c.block_id());
+                    removed_nodes.push((
+                        *inner_node_c.block_id(),
+                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            belongs_to_blob,
+                            depth: inner_node_c.depth(),
+                            parent_id: inner_node_c_parent_id,
+                        },
+                    ));
                     inner_node_c.upcast().remove(nodestore).await.unwrap();
                 }
 
@@ -740,13 +832,23 @@ impl FilesystemFixture {
         result
     }
 
-    pub async fn remove_a_leaf_node(&self, blob_id: BlobId) -> BlockId {
+    pub async fn remove_a_leaf_node(&self, blob_info: CreatedBlobInfo) -> RemoveLeafNodeResult {
         self.update_nodestore(|nodestore| {
             Box::pin(async move {
-                let leaf_node = find_leaf_node_of_blob(nodestore, &blob_id).await;
+                let (leaf_node, leaf_node_parent_id) =
+                    find_leaf_node_of_blob_with_parent_id(nodestore, &blob_info.blob_id).await;
                 let leaf_node_id = *leaf_node.block_id();
                 leaf_node.upcast().remove(nodestore).await.unwrap();
-                leaf_node_id
+                RemoveLeafNodeResult {
+                    removed_node: leaf_node_id,
+                    removed_node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                        belongs_to_blob: Some(ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: blob_info.blob_info,
+                        }),
+                        parent_id: leaf_node_parent_id,
+                    },
+                }
             })
         })
         .await
@@ -815,6 +917,7 @@ impl FilesystemFixture {
 
 pub struct RemoveInnerNodeResult {
     pub removed_node: BlockId,
+    pub removed_node_info: NodeInfoAsExpectedByEntryInParent,
     pub orphaned_nodes: Vec<BlockId>,
 }
 
@@ -823,8 +926,13 @@ pub struct CorruptInnerNodeResult {
     pub orphaned_nodes: Vec<BlockId>,
 }
 
+pub struct RemoveLeafNodeResult {
+    pub removed_node: BlockId,
+    pub removed_node_info: NodeInfoAsExpectedByEntryInParent,
+}
+
 pub struct RemoveSomeNodesResult {
-    pub removed_nodes: Vec<BlockId>,
+    pub removed_nodes: Vec<(BlockId, NodeInfoAsExpectedByEntryInParent)>,
     pub orphaned_nodes: Vec<BlockId>,
 }
 

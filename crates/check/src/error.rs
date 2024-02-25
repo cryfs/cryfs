@@ -207,7 +207,7 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is referenced but does not exist")]
     NodeMissing {
         node_id: BlockId,
-        // TODO expected_node_info: NodeInfoAsExpectedByEntryInParent,
+        expected_node_info: NodeInfoAsExpectedByEntryInParent,
     },
 
     #[error("Node {node_id:?} is not referenced but exists")]
