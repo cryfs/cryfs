@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::error::BlobInfoAsExpectedByEntryInParent;
+use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeInfoAsExpectedByEntryInParent};
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
@@ -50,10 +50,14 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_unreadable_node(
         &mut self,
         node_id: BlockId,
+        expected_node_info: &NodeInfoAsExpectedByEntryInParent,
         _blob_id: BlobId,
         _blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
-        self.errors.push(CorruptedError::NodeUnreadable { node_id });
+        self.errors.push(CorruptedError::NodeUnreadable {
+            node_id,
+            expected_node_info: Some(expected_node_info.clone()),
+        });
         Ok(())
     }
 
@@ -66,7 +70,10 @@ impl FilesystemCheck for CheckNodesReadable {
     }
 
     fn process_unreachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
-        self.errors.push(CorruptedError::NodeUnreadable { node_id });
+        self.errors.push(CorruptedError::NodeUnreadable {
+            node_id,
+            expected_node_info: None,
+        });
         Ok(())
     }
 

@@ -471,16 +471,22 @@ impl FilesystemFixture {
         .await
     }
 
-    pub async fn corrupt_root_node_of_blob(&self, blob_id: BlobId) -> CorruptInnerNodeResult {
+    pub async fn corrupt_root_node_of_blob(
+        &self,
+        blob_info: CreatedBlobInfo,
+    ) -> CorruptInnerNodeResult {
         let result = self
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
                     let blob_root_node = nodestore
-                        .load(*blob_id.to_root_block_id())
+                        .load(*blob_info.blob_id.to_root_block_id())
                         .await
                         .unwrap()
                         .unwrap();
-                    assert_eq!(blob_id.to_root_block_id(), blob_root_node.block_id());
+                    assert_eq!(
+                        blob_info.blob_id.to_root_block_id(),
+                        blob_root_node.block_id()
+                    );
                     let orphaned_nodes =
                         if let Some(blob_root_node) = blob_root_node.into_inner_node() {
                             blob_root_node.children().collect::<Vec<_>>()
@@ -489,7 +495,13 @@ impl FilesystemFixture {
                         };
 
                     CorruptInnerNodeResult {
-                        corrupted_node: *blob_id.to_root_block_id(),
+                        corrupted_node: *blob_info.blob_id.to_root_block_id(),
+                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
+                            belongs_to_blob: ReferencingBlobInfo {
+                                blob_id: blob_info.blob_id,
+                                blob_info: blob_info.blob_info,
+                            },
+                        },
                         orphaned_nodes,
                     }
                 })
@@ -533,16 +545,29 @@ impl FilesystemFixture {
 
     pub async fn corrupt_an_inner_node_of_a_large_blob(
         &self,
-        blob_id: BlobId,
+        blob_info: CreatedBlobInfo,
     ) -> CorruptInnerNodeResult {
         let result = self
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
-                    let inner_node = find_an_inner_node_of_a_large_blob(nodestore, &blob_id).await;
+                    let (inner_node, inner_node_parent_id) =
+                        find_an_inner_node_of_a_large_blob_with_parent_id(
+                            nodestore,
+                            &blob_info.blob_id,
+                        )
+                        .await;
                     let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
                     let inner_node_id = *inner_node.block_id();
                     CorruptInnerNodeResult {
                         corrupted_node: inner_node_id,
+                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            belongs_to_blob: Some(ReferencingBlobInfo {
+                                blob_id: blob_info.blob_id,
+                                blob_info: blob_info.blob_info,
+                            }),
+                            depth: inner_node.depth(),
+                            parent_id: inner_node_parent_id,
+                        },
                         orphaned_nodes,
                     }
                 })
@@ -586,16 +611,29 @@ impl FilesystemFixture {
 
     pub async fn corrupt_an_inner_node_of_a_small_blob(
         &self,
-        blob_id: BlobId,
+        blob_info: CreatedBlobInfo,
     ) -> CorruptInnerNodeResult {
         let result = self
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
-                    let inner_node = find_an_inner_node_of_a_small_blob(nodestore, &blob_id).await;
+                    let (inner_node, inner_node_parent_id) =
+                        find_an_inner_node_of_a_small_blob_with_parent_id(
+                            nodestore,
+                            &blob_info.blob_id,
+                        )
+                        .await;
                     let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
                     let inner_node_id = *inner_node.block_id();
                     CorruptInnerNodeResult {
                         corrupted_node: inner_node_id,
+                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            belongs_to_blob: Some(ReferencingBlobInfo {
+                                blob_id: blob_info.blob_id,
+                                blob_info: blob_info.blob_info,
+                            }),
+                            depth: inner_node.depth(),
+                            parent_id: inner_node_parent_id,
+                        },
                         orphaned_nodes,
                     }
                 })
@@ -749,13 +787,14 @@ impl FilesystemFixture {
 
     pub async fn corrupt_some_nodes_of_a_large_blob(
         &self,
-        blob_id: BlobId,
+        blob_info: CreatedBlobInfo,
     ) -> CorruptSomeNodesResult {
         let result = self
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
                     let mut rng = SmallRng::seed_from_u64(0);
-                    let inner_node = find_an_inner_node_of_a_large_blob(nodestore, &blob_id).await;
+                    let inner_node =
+                        find_an_inner_node_of_a_large_blob(nodestore, &blob_info.blob_id).await;
                     let mut children = inner_node.children();
                     let child1 = children.next().unwrap();
                     let child2 = children.next().unwrap();
@@ -763,10 +802,18 @@ impl FilesystemFixture {
                     let mut corrupted_nodes = vec![];
                     let mut orphaned_nodes = vec![];
 
+                    let belongs_to_blob = Some(ReferencingBlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_info: blob_info.blob_info,
+                    });
+
                     // for child1, find an inner node A. Corrupt an inner node below A, a leaf below A, and A itself.
                     {
-                        let inner_node_a =
-                            find_inner_node_with_distance_from_root(nodestore, child1).await;
+                        let (inner_node_a, inner_node_a_parent_id) =
+                            find_inner_node_with_distance_from_root_with_parent_id(
+                                nodestore, child1,
+                            )
+                            .await;
                         let mut children = inner_node_a.children();
                         let subchild1 = children.next().unwrap();
                         let subchild2 = children.next().unwrap();
@@ -775,13 +822,22 @@ impl FilesystemFixture {
                         let inner_below_a =
                             find_inner_node_with_distance_from_root(nodestore, subchild1).await;
                         orphaned_nodes.extend(inner_below_a.children());
-                        corrupted_nodes.push(*inner_below_a.block_id());
+                        // node_info is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
+                        corrupted_nodes.push((*inner_below_a.block_id(), None));
 
                         let leaf_below_a = find_leaf_node(nodestore, subchild2, &mut rng).await;
-                        corrupted_nodes.push(*leaf_below_a.block_id());
+                        // node_info is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
+                        corrupted_nodes.push((*leaf_below_a.block_id(), None));
 
                         orphaned_nodes.extend(inner_node_a.children());
-                        corrupted_nodes.push(*inner_node_a.block_id());
+                        corrupted_nodes.push((
+                            *inner_node_a.block_id(),
+                            Some(NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                belongs_to_blob: belongs_to_blob.clone(),
+                                depth: inner_node_a.depth(),
+                                parent_id: inner_node_a_parent_id,
+                            }),
+                        ));
                     }
 
                     // for child2, find an inner node A. Corrupt an inner node B below A. Also corrupt an inner node C below A and its direct child. Don't corrupt A.
@@ -793,13 +849,26 @@ impl FilesystemFixture {
                         let subchild2 = children.next().unwrap();
                         std::mem::drop(children);
 
-                        let inner_node_b =
-                            find_inner_node_with_distance_from_root(nodestore, subchild1).await;
+                        let (inner_node_b, inner_node_b_parent_id) =
+                            find_inner_node_with_distance_from_root_with_parent_id(
+                                nodestore, subchild1,
+                            )
+                            .await;
                         orphaned_nodes.extend(inner_node_b.children());
-                        corrupted_nodes.push(*inner_node_b.block_id());
+                        corrupted_nodes.push((
+                            *inner_node_b.block_id(),
+                            Some(NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                belongs_to_blob: belongs_to_blob.clone(),
+                                depth: inner_node_b.depth(),
+                                parent_id: inner_node_b_parent_id,
+                            }),
+                        ));
 
-                        let inner_node_c =
-                            find_inner_node_with_distance_from_root(nodestore, subchild2).await;
+                        let (inner_node_c, inner_node_c_parent_id) =
+                            find_inner_node_with_distance_from_root_with_parent_id(
+                                nodestore, subchild2,
+                            )
+                            .await;
                         let mut children_of_c = inner_node_c.children();
                         let child_of_c_id = children_of_c.next().unwrap();
                         std::mem::drop(children_of_c);
@@ -812,10 +881,18 @@ impl FilesystemFixture {
                             .into_inner_node()
                             .unwrap();
                         orphaned_nodes.extend(child_of_c.children());
-                        corrupted_nodes.push(*child_of_c.block_id());
+                        // node_info is `None` because `inner_node_c` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
+                        corrupted_nodes.push((*child_of_c.block_id(), None));
 
                         orphaned_nodes.extend(inner_node_c.children());
-                        corrupted_nodes.push(*inner_node_c.block_id());
+                        corrupted_nodes.push((
+                            *inner_node_c.block_id(),
+                            Some(NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                belongs_to_blob,
+                                depth: inner_node_c.depth(),
+                                parent_id: inner_node_c_parent_id,
+                            }),
+                        ));
                     }
 
                     CorruptSomeNodesResult {
@@ -827,7 +904,7 @@ impl FilesystemFixture {
             .await;
 
         for node in &result.corrupted_nodes {
-            self.corrupt_block(*node).await;
+            self.corrupt_block(node.0).await;
         }
         result
     }
@@ -854,17 +931,27 @@ impl FilesystemFixture {
         .await
     }
 
-    pub async fn corrupt_a_leaf_node(&self, blob_id: BlobId) -> BlockId {
+    pub async fn corrupt_a_leaf_node(&self, blob_info: CreatedBlobInfo) -> CorruptLeafNodeResult {
         let result = self
             .update_nodestore(|nodestore| {
                 Box::pin(async move {
-                    let leaf_node = find_leaf_node_of_blob(nodestore, &blob_id).await;
+                    let (leaf_node, leaf_node_parent_id) =
+                        find_leaf_node_of_blob_with_parent_id(nodestore, &blob_info.blob_id).await;
                     let leaf_node_id = *leaf_node.block_id();
-                    leaf_node_id
+                    CorruptLeafNodeResult {
+                        corrupted_node: leaf_node_id,
+                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                            belongs_to_blob: Some(ReferencingBlobInfo {
+                                blob_id: blob_info.blob_id,
+                                blob_info: blob_info.blob_info,
+                            }),
+                            parent_id: leaf_node_parent_id,
+                        },
+                    }
                 })
             })
             .await;
-        self.corrupt_block(result).await;
+        self.corrupt_block(result.corrupted_node).await;
         result
     }
 
@@ -923,6 +1010,7 @@ pub struct RemoveInnerNodeResult {
 
 pub struct CorruptInnerNodeResult {
     pub corrupted_node: BlockId,
+    pub corrupted_node_info: NodeInfoAsExpectedByEntryInParent,
     pub orphaned_nodes: Vec<BlockId>,
 }
 
@@ -931,13 +1019,18 @@ pub struct RemoveLeafNodeResult {
     pub removed_node_info: NodeInfoAsExpectedByEntryInParent,
 }
 
+pub struct CorruptLeafNodeResult {
+    pub corrupted_node: BlockId,
+    pub corrupted_node_info: NodeInfoAsExpectedByEntryInParent,
+}
+
 pub struct RemoveSomeNodesResult {
     pub removed_nodes: Vec<(BlockId, NodeInfoAsExpectedByEntryInParent)>,
     pub orphaned_nodes: Vec<BlockId>,
 }
 
 pub struct CorruptSomeNodesResult {
-    pub corrupted_nodes: Vec<BlockId>,
+    pub corrupted_nodes: Vec<(BlockId, Option<NodeInfoAsExpectedByEntryInParent>)>,
     pub orphaned_nodes: Vec<BlockId>,
 }
 

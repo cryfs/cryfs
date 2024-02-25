@@ -11,7 +11,9 @@ use common::entry_helpers::{
     expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced, CreatedBlobInfo,
     SomeBlobs,
 };
-use common::fixture::{CorruptInnerNodeResult, CorruptSomeNodesResult, FilesystemFixture};
+use common::fixture::{
+    CorruptInnerNodeResult, CorruptLeafNodeResult, CorruptSomeNodesResult, FilesystemFixture,
+};
 
 #[rstest]
 #[case::file(|some_blobs: &SomeBlobs| some_blobs.empty_file.clone())]
@@ -26,9 +28,10 @@ async fn blob_with_unreadable_single_node(
 
     let CorruptInnerNodeResult {
         corrupted_node,
+        corrupted_node_info,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_root_node_of_blob(blob_info.blob_id)
+        .corrupt_root_node_of_blob(blob_info.clone())
         .await;
     assert_eq!(0, orphaned_nodes.len(), "test precondition violated");
     assert_eq!(&corrupted_node, blob_info.blob_id.to_root_block_id());
@@ -40,6 +43,7 @@ async fn blob_with_unreadable_single_node(
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
+            expected_node_info: Some(corrupted_node_info),
         },
     ];
 
@@ -60,8 +64,14 @@ async fn root_dir_with_unreadable_single_node_without_children() {
     );
     let CorruptInnerNodeResult {
         corrupted_node,
+        corrupted_node_info,
         orphaned_nodes,
-    } = fs_fixture.corrupt_root_node_of_blob(root).await;
+    } = fs_fixture
+        .corrupt_root_node_of_blob(CreatedBlobInfo {
+            blob_id: root,
+            blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+        })
+        .await;
     assert_eq!(0, orphaned_nodes.len(), "test precondition violated");
     assert_eq!(&corrupted_node, root.to_root_block_id());
 
@@ -72,6 +82,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
+            expected_node_info: Some(corrupted_node_info),
         },
     ];
 
@@ -96,9 +107,10 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
 
     let CorruptInnerNodeResult {
         corrupted_node,
+        corrupted_node_info,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_root_node_of_blob(blob_info.blob_id)
+        .corrupt_root_node_of_blob(blob_info.clone())
         .await;
     assert_eq!(&corrupted_node, blob_info.blob_id.to_root_block_id());
     let expected_errors_from_orphaned_nodes =
@@ -111,6 +123,7 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
+            expected_node_info: Some(corrupted_node_info),
         },
     ]
     .into_iter()
@@ -151,15 +164,17 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
 
     let CorruptInnerNodeResult {
         corrupted_node,
+        corrupted_node_info,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_an_inner_node_of_a_large_blob(blob_info.blob_id)
+        .corrupt_an_inner_node_of_a_large_blob(blob_info.clone())
         .await;
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: corrupted_node,
+        expected_node_info: Some(corrupted_node_info),
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -197,10 +212,14 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
     let expected_errors_from_orphaned_descendant_blobs =
         expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
 
-    let removed_node = fs_fixture.corrupt_a_leaf_node(blob_info.blob_id).await;
+    let CorruptLeafNodeResult {
+        corrupted_node,
+        corrupted_node_info,
+    } = fs_fixture.corrupt_a_leaf_node(blob_info.clone()).await;
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
-        node_id: removed_node,
+        node_id: corrupted_node,
+        expected_node_info: Some(corrupted_node_info),
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -246,7 +265,7 @@ async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) ->
         corrupted_nodes,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_some_nodes_of_a_large_blob(blob_info.blob_id)
+        .corrupt_some_nodes_of_a_large_blob(blob_info.clone())
         .await;
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
@@ -263,7 +282,12 @@ async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) ->
     expected_errors.extend(
         corrupted_nodes
             .into_iter()
-            .map(|node_id| CorruptedError::NodeUnreadable { node_id })
+            .map(
+                |(node_id, expected_node_info)| CorruptedError::NodeUnreadable {
+                    node_id,
+                    expected_node_info,
+                },
+            )
             .chain(expected_errors_from_orphaned_nodes)
             .chain(expected_errors_from_orphaned_descendant_blobs),
     );

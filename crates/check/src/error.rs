@@ -200,7 +200,9 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
-        // TODO expected_node_info: NodeInfoAsExpectedByEntryInParent,
+        // `expected_node_info` is `None` if the node itself isn't reachable from the root blob of the file system
+        // TODO Can this be Some but with NodeInfoAsExpectedByEntryInParent::belongs_to_blob==None? If yes, add tests for it. If not, change data model here.
+        expected_node_info: Option<NodeInfoAsExpectedByEntryInParent>,
         // TODO error: anyhow::Error,
     },
 

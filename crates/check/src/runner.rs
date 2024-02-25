@@ -581,12 +581,14 @@ where
                     }
                     checks.process_reachable_unreadable_node(
                         current_node_id,
+                        &current_expected_node_info,
                         blob_id,
                         &blob_info,
                     )?;
                     checks.add_error(CorruptedError::Assert(Box::new(
                         CorruptedError::NodeUnreadable {
                             node_id: current_node_id,
+                            expected_node_info: Some(current_expected_node_info),
                         },
                     )));
                 }

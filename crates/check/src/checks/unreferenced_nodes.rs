@@ -90,7 +90,11 @@ impl UnreferencedNodesReferenceChecker {
         Ok(())
     }
 
-    pub fn process_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
+    pub fn process_unreadable_node(
+        &mut self,
+        node_id: BlockId,
+        expected_node_info: Option<NodeInfoAsExpectedByEntryInParent>,
+    ) -> Result<(), CheckError> {
         self.reference_checker.mark_as_seen(
             node_id,
             SeenInfo {
@@ -100,7 +104,10 @@ impl UnreferencedNodesReferenceChecker {
 
         // Also make sure that the unreadable node was reported by a different check
         self.errors.push(CorruptedError::Assert(Box::new(
-            CorruptedError::NodeUnreadable { node_id },
+            CorruptedError::NodeUnreadable {
+                node_id,
+                expected_node_info,
+            },
         )));
 
         Ok(())
@@ -259,11 +266,12 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_unreadable_node(
         &mut self,
         node_id: BlockId,
+        expected_node_info: &NodeInfoAsExpectedByEntryInParent,
         _blob_id: BlobId,
         _blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
         self.reachable_nodes_checker
-            .process_unreadable_node(node_id)
+            .process_unreadable_node(node_id, Some(expected_node_info.clone()))
     }
 
     fn process_unreachable_node(
@@ -275,7 +283,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
 
     fn process_unreachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
         self.unreachable_nodes_checker
-            .process_unreadable_node(node_id)
+            .process_unreadable_node(node_id, None)
     }
 
     fn process_reachable_readable_blob(
