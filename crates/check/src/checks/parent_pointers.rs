@@ -157,9 +157,10 @@ impl FilesystemCheck for CheckParentPointers {
                         errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { blob_id, expected_blob_info })));
                     }
                     None => {
-                        errors.extend(referenced_as.into_iter().map(|BlobReference{expected_child_info}| {
-                            CorruptedError::Assert(Box::new(CorruptedError::BlobMissing { blob_id, expected_blob_info: expected_child_info }))
-                        }));
+                        // TODO This should be an assertion that there is a NodeMissing that contains a referenced_as for this blobs root node, but it can contain other referenced_as as well.
+                        // errors.extend(referenced_as.into_iter().map(|BlobReference{expected_child_info}| {
+                        //    CorruptedError::Assert(Box::new(CorruptedError::NodeMissing { blob_id, expected_blob_info: expected_child_info }))
+                        // }));
                     }
                 }
                 errors.into_iter()

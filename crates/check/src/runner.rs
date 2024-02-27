@@ -340,12 +340,13 @@ where
                 }
                 Ok(None) => {
                     // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
-                    checks.add_error(CorruptedError::Assert(Box::new(
-                        CorruptedError::BlobMissing {
-                            blob_id,
-                            expected_blob_info: blob_info.clone(),
-                        },
-                    )));
+                    // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
+                    // checks.add_error(CorruptedError::Assert(Box::new(
+                    //     CorruptedError::NodeMissing {
+                    //         blob_id,
+                    //         expected_blob_info: blob_info.clone(),
+                    //     },
+                    // )));
                 }
                 Err(error) => {
                     checks.process_reachable_blob(
@@ -566,41 +567,45 @@ where
                             .blob_id
                             .to_root_block_id()
                     {
-                        checks.add_error(CorruptedError::Assert(Box::new(
-                            CorruptedError::BlobMissing {
-                                blob_id: current_expected_node_info.blob_info.blob_id,
-                                expected_blob_info: current_expected_node_info
-                                    .blob_info
-                                    .blob_info
-                                    .clone(),
-                            },
-                        )));
+                        // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
+                        // checks.add_error(CorruptedError::Assert(Box::new(
+                        //     CorruptedError::NodeMissing {
+                        //         node_id: *current_expected_node_info
+                        //             .blob_info
+                        //             .blob_id
+                        //             .to_root_block_id(),
+                        //         referenced_as: NodeReference::RootNode {
+                        //             belongs_to_blob: current_expected_node_info.blob_info,
+                        //         },
+                        //     },
+                        // )));
                     } else {
                         let belongs_to_blob = current_expected_node_info.blob_info.clone();
-                        checks.add_error(CorruptedError::Assert(Box::new(
-                            CorruptedError::NodeMissing {
-                                node_id: current_node_id,
-                                referenced_as: match current_expected_node_info.node_info {
-                                    NodeInfoAsExpectedByEntryInParent::RootNode => {
-                                        NodeReference::RootNode { belongs_to_blob }
-                                    }
-                                    NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                                        depth,
-                                        parent_id,
-                                    } => NodeReference::NonRootInnerNode {
-                                        depth,
-                                        parent_id,
-                                        belongs_to_blob: Some(belongs_to_blob),
-                                    },
-                                    NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
-                                        parent_id,
-                                    } => NodeReference::NonRootLeafNode {
-                                        parent_id,
-                                        belongs_to_blob: Some(belongs_to_blob),
-                                    },
-                                },
-                            },
-                        )));
+                        // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
+                        // checks.add_error(CorruptedError::Assert(Box::new(
+                        //     CorruptedError::NodeMissing {
+                        //         node_id: current_node_id,
+                        //         referenced_as: match current_expected_node_info.node_info {
+                        //             NodeInfoAsExpectedByEntryInParent::RootNode => {
+                        //                 NodeReference::RootNode { belongs_to_blob }
+                        //             }
+                        //             NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        //                 depth,
+                        //                 parent_id,
+                        //             } => NodeReference::NonRootInnerNode {
+                        //                 depth,
+                        //                 parent_id,
+                        //                 belongs_to_blob: Some(belongs_to_blob),
+                        //             },
+                        //             NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                        //                 parent_id,
+                        //             } => NodeReference::NonRootLeafNode {
+                        //                 parent_id,
+                        //                 belongs_to_blob: Some(belongs_to_blob),
+                        //             },
+                        //         },
+                        //     },
+                        // )));
                     }
                     None
                 }

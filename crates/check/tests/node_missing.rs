@@ -3,7 +3,7 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_check::CorruptedError;
+use cryfs_check::{CorruptedError, NodeReference, ReferencingBlobInfo};
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
@@ -43,9 +43,16 @@ async fn blob_with_missing_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Cr
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
-    let expected_errors = iter::once(CorruptedError::BlobMissing {
-        blob_id: blob_info.blob_id,
-        expected_blob_info: blob_info.blob_info,
+    let expected_errors = iter::once(CorruptedError::NodeMissing {
+        node_id: *blob_info.blob_id.to_root_block_id(),
+        referenced_as: [NodeReference::RootNode {
+            belongs_to_blob: ReferencingBlobInfo {
+                blob_id: blob_info.blob_id,
+                blob_info: blob_info.blob_info,
+            },
+        }]
+        .into_iter()
+        .collect(),
     })
     .chain(expected_errors_from_orphaned_nodes)
     .chain(expected_errors_from_orphaned_descendant_blobs)
@@ -94,7 +101,7 @@ async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> C
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node,
-        referenced_as: removed_node_info.into(),
+        referenced_as: [removed_node_info.into()].into_iter().collect(),
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -136,7 +143,9 @@ async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Cr
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node.removed_node,
-        referenced_as: removed_node.removed_node_info.into(),
+        referenced_as: [removed_node.removed_node_info.into()]
+            .into_iter()
+            .collect(),
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -200,7 +209,7 @@ async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> C
             .into_iter()
             .map(|(node_id, referenced_as)| CorruptedError::NodeMissing {
                 node_id,
-                referenced_as,
+                referenced_as: [referenced_as].into_iter().collect(),
             })
             .chain(expected_errors_from_orphaned_nodes)
             .chain(expected_errors_from_orphaned_descendant_blobs),
@@ -209,3 +218,5 @@ async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> C
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
 }
+
+// TODO Test NodeMissing with multiple referenced_as

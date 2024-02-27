@@ -4,7 +4,9 @@ use rstest::rstest;
 use std::iter;
 
 use cryfs_blockstore::RemoveResult;
-use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
+use cryfs_check::{
+    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeReference, ReferencingBlobInfo,
+};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -38,9 +40,16 @@ async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedB
         })
         .await;
 
-    let expected_errors = iter::once(CorruptedError::BlobMissing {
-        blob_id: blob_info.blob_id,
-        expected_blob_info: blob_info.blob_info,
+    let expected_errors = iter::once(CorruptedError::NodeMissing {
+        node_id: *blob_info.blob_id.to_root_block_id(),
+        referenced_as: [NodeReference::RootNode {
+            belongs_to_blob: ReferencingBlobInfo {
+                blob_id: blob_info.blob_id,
+                blob_info: blob_info.blob_info,
+            },
+        }]
+        .into_iter()
+        .collect(),
     })
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();
@@ -70,11 +79,21 @@ async fn root_dir_entirely_missing_without_children() {
         })
         .await;
 
-    let expected_errors = vec![CorruptedError::BlobMissing {
-        blob_id: root_dir_id,
-        expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+    let expected_errors = vec![CorruptedError::NodeMissing {
+        node_id: *root_dir_id.to_root_block_id(),
+        referenced_as: [NodeReference::RootNode {
+            belongs_to_blob: ReferencingBlobInfo {
+                blob_id: root_dir_id,
+                blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+            },
+        }]
+        .into_iter()
+        .collect(),
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
 }
+
+// TODO Test NodeMissing with multiple referenced_as
+// TODO Also test where they are referenced as both a blob and as a node within a blob

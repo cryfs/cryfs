@@ -290,8 +290,7 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is referenced but does not exist")]
     NodeMissing {
         node_id: BlockId,
-        referenced_as: NodeReference,
-        // TODO referenced_as: BTreeSet<NodeReference>,
+        referenced_as: BTreeSet<NodeReference>,
     },
 
     #[error("Node {node_id:?} is not referenced but exists")]
@@ -323,12 +322,6 @@ pub enum CorruptedError {
         blob_id: BlobId,
         expected_blob_info: BlobInfoAsExpectedByEntryInParent,
         // TODO error:  anyhow::Error,
-    },
-
-    #[error("{blob_id:?}:{expected_blob_info} is referenced but does not exist")]
-    BlobMissing {
-        blob_id: BlobId,
-        expected_blob_info: BlobInfoAsExpectedByEntryInParent,
     },
 
     #[error("{blob_id:?}:{blob_info} is referenced by {referenced_as:?}, but the parent pointer doesn't match any of the references")]

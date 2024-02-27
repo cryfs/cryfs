@@ -216,10 +216,17 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
                     blob_id: blob_info.blob_id,
                     expected_blob_info: blob_info.blob_info.clone(),
                 },
-                // TODO Why is BlobMissing necessary here? Without it, tests seem to become flaky because it is sometimes thrown
-                CorruptedError::BlobMissing {
-                    blob_id: blob_info.blob_id,
-                    expected_blob_info: blob_info.blob_info,
+                // TODO Why is NodeMissing necessary here? Without it, tests seem to become flaky because it seems to be sometimes thrown
+                CorruptedError::NodeMissing {
+                    node_id: *blob_info.blob_id.to_root_block_id(),
+                    referenced_as: [NodeReference::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: blob_info.blob_info,
+                        },
+                    }]
+                    .into_iter()
+                    .collect(),
                 },
             ]
             .into_iter(),

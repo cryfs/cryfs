@@ -68,11 +68,11 @@ async fn single_inner_node_unreferenced() {
         },
         CorruptedError::NodeMissing {
             node_id: block_id(0),
-            referenced_as: referenced_as.clone(),
+            referenced_as: [referenced_as.clone()].into_iter().collect(),
         },
         CorruptedError::NodeMissing {
             node_id: block_id(1),
-            referenced_as,
+            referenced_as: [referenced_as].into_iter().collect(),
         },
     ];
 

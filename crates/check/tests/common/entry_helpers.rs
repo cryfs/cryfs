@@ -29,6 +29,7 @@ use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
 
+// TODO Can we use replace CreatedBlobInfo with ReferencingBlobInfo?
 #[derive(Debug, Clone)]
 pub struct CreatedBlobInfo {
     pub blob_id: BlobId,

@@ -166,49 +166,35 @@ impl UnreferencedNodesReferenceChecker {
         errors.extend(self.reference_checker.finalize().flat_map(
             |(node_id, seen, referenced_as)| {
                 let mut errors = vec![];
-                match referenced_as.first() {
-                    Some(first_referenced_as) => {
-                        if seen.is_none() {
-                            match &first_referenced_as.referenced_as {
-                                NodeReference::RootNode {
-                                    belongs_to_blob, ..
-                                } => {
-                                    errors.push(CorruptedError::BlobMissing {
-                                        blob_id: belongs_to_blob.blob_id,
-                                        expected_blob_info: belongs_to_blob.blob_info.clone(),
-                                    });
-                                }
-                                NodeReference::NonRootInnerNode { .. }
-                                | NodeReference::NonRootLeafNode { .. } => {
-                                    errors.push(CorruptedError::NodeMissing {
-                                        node_id,
-                                        referenced_as: first_referenced_as.referenced_as.clone(),
-                                    });
-                                }
-                            }
-                        }
-                        if referenced_as.len() > 1 {
-                            errors.push(CorruptedError::NodeReferencedMultipleTimes {
-                                node_id,
-                                node_info: seen.map(|seen| seen.node_info),
-                                // TODO How to handle the case where referenced_as Vec has duplicate entries?
-                                referenced_as: referenced_as
-                                    .into_iter()
-                                    .map(|referenced_as| referenced_as.referenced_as)
-                                    .collect(),
-                            });
-                        }
-                    }
-                    None => {
-                        // This node is not referenced by any other node. This is an error.
-                        let seen = seen.expect(
-                            "Algorithm invariant violated: Node was neither seen nor referenced.",
-                        );
-                        errors.push(CorruptedError::NodeUnreferenced {
-                            node_id,
-                            node_info: seen.node_info,
-                        });
-                    }
+                if seen.is_none() && !referenced_as.is_empty() {
+                    errors.push(CorruptedError::NodeMissing {
+                        node_id,
+                        referenced_as: referenced_as
+                            .iter()
+                            .map(|referenced_as| referenced_as.referenced_as.clone())
+                            .collect(),
+                    })
+                }
+                if referenced_as.len() > 1 {
+                    errors.push(CorruptedError::NodeReferencedMultipleTimes {
+                        node_id,
+                        node_info: seen.as_ref().map(|seen| seen.node_info.clone()),
+                        // TODO How to handle the case where referenced_as Vec has duplicate entries?
+                        referenced_as: referenced_as
+                            .iter()
+                            .map(|referenced_as| referenced_as.referenced_as.clone())
+                            .collect(),
+                    });
+                }
+                if referenced_as.is_empty() {
+                    // This node is not referenced by any other node. This is an error.
+                    let seen = seen.expect(
+                        "Algorithm invariant violated: Node was neither seen nor referenced.",
+                    );
+                    errors.push(CorruptedError::NodeUnreferenced {
+                        node_id,
+                        node_info: seen.node_info,
+                    });
                 }
                 errors.into_iter()
             },
@@ -303,7 +289,6 @@ impl FilesystemCheck for CheckUnreferencedNodes {
                 CorruptedError::NodeReferencedMultipleTimes { .. }
                 | CorruptedError::NodeUnreadable { .. }
                 | CorruptedError::NodeMissing { .. }
-                | CorruptedError::BlobMissing { .. }
                 | CorruptedError::Assert(_) => {
                     errors.push(error);
                 }
