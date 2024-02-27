@@ -94,7 +94,7 @@ async fn blob_with_missing_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> C
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node,
-        expected_node_info: removed_node_info,
+        referenced_as: removed_node_info.into(),
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -136,7 +136,7 @@ async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Cr
 
     let mut expected_errors = vec![CorruptedError::NodeMissing {
         node_id: removed_node.removed_node,
-        expected_node_info: removed_node.removed_node_info,
+        referenced_as: removed_node.removed_node_info.into(),
     }];
     if blob_info.blob_info.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -198,12 +198,10 @@ async fn blob_with_missing_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> C
     expected_errors.extend(
         removed_nodes
             .into_iter()
-            .map(
-                |(node_id, expected_node_info)| CorruptedError::NodeMissing {
-                    node_id,
-                    expected_node_info,
-                },
-            )
+            .map(|(node_id, referenced_as)| CorruptedError::NodeMissing {
+                node_id,
+                referenced_as,
+            })
             .chain(expected_errors_from_orphaned_nodes)
             .chain(expected_errors_from_orphaned_descendant_blobs),
     );

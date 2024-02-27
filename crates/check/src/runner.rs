@@ -9,7 +9,10 @@ use std::hash::Hash;
 use std::num::NonZeroU8;
 use std::sync::{Arc, Mutex};
 
-use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode};
+use crate::error::{
+    BlobInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode, NodeReference,
+    NodeReferenceFromReachableBlob,
+};
 use crate::{
     BlobInfoAsSeenByLookingAtBlob, NodeInfoAsExpectedByEntryInParent, ReferencingBlobInfo,
 };
@@ -454,11 +457,10 @@ where
             task_spawner.spawn(|task_spawner| {
                 check_all_nodes_of_reachable_blob(
                     nodestore,
-                    blob_id,
-                    blob_info.clone(),
                     *blob_id.to_root_block_id(),
-                    NodeInfoAsExpectedByEntryInParent::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo { blob_id, blob_info },
+                    NodeReferenceFromReachableBlob {
+                        node_info: NodeInfoAsExpectedByEntryInParent::RootNode,
+                        blob_info: ReferencingBlobInfo { blob_id, blob_info },
                     },
                     allowed_nodes,
                     already_processed_nodes,
@@ -477,10 +479,8 @@ where
 
 async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     nodestore: &'a DataNodeStore<B>,
-    blob_id: BlobId,
-    blob_info: BlobInfoAsExpectedByEntryInParent,
     current_node_id: BlockId,
-    current_expected_node_info: NodeInfoAsExpectedByEntryInParent,
+    current_expected_node_info: NodeReferenceFromReachableBlob,
     expected_nodes: &'b HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, SeenNodeInfo>>,
     checks: &'c AllChecks,
@@ -541,8 +541,8 @@ where
                     }
                     check_all_children_of_reachable_blob_node(
                         nodestore,
-                        blob_id,
-                        blob_info.clone(),
+                        current_expected_node_info.blob_info.blob_id,
+                        current_expected_node_info.blob_info.blob_info.clone(),
                         &node,
                         expected_nodes,
                         already_processed_nodes,
@@ -560,18 +560,45 @@ where
                             ),
                         });
                     }
-                    if current_node_id == *blob_id.to_root_block_id() {
+                    if current_node_id
+                        == *current_expected_node_info
+                            .blob_info
+                            .blob_id
+                            .to_root_block_id()
+                    {
                         checks.add_error(CorruptedError::Assert(Box::new(
                             CorruptedError::BlobMissing {
-                                blob_id,
-                                expected_blob_info: blob_info.clone(),
+                                blob_id: current_expected_node_info.blob_info.blob_id,
+                                expected_blob_info: current_expected_node_info
+                                    .blob_info
+                                    .blob_info
+                                    .clone(),
                             },
                         )));
                     } else {
+                        let belongs_to_blob = current_expected_node_info.blob_info.clone();
                         checks.add_error(CorruptedError::Assert(Box::new(
                             CorruptedError::NodeMissing {
                                 node_id: current_node_id,
-                                expected_node_info: current_expected_node_info.clone(),
+                                referenced_as: match current_expected_node_info.node_info {
+                                    NodeInfoAsExpectedByEntryInParent::RootNode => {
+                                        NodeReference::RootNode { belongs_to_blob }
+                                    }
+                                    NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                        depth,
+                                        parent_id,
+                                    } => NodeReference::NonRootInnerNode {
+                                        depth,
+                                        parent_id,
+                                        belongs_to_blob: Some(belongs_to_blob),
+                                    },
+                                    NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                                        parent_id,
+                                    } => NodeReference::NonRootLeafNode {
+                                        parent_id,
+                                        belongs_to_blob: Some(belongs_to_blob),
+                                    },
+                                },
                             },
                         )));
                     }
@@ -595,12 +622,7 @@ where
                 }
             };
             if let Some(node_to_process) = node_to_process {
-                checks.process_reachable_node(
-                    &node_to_process,
-                    &current_expected_node_info,
-                    blob_id,
-                    &blob_info,
-                )?;
+                checks.process_reachable_node(&node_to_process, &current_expected_node_info)?;
             }
             pb.inc(1);
         }
@@ -634,27 +656,26 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
             // Get all children and recurse into their nodes, concurrently.
             for child_id in node.children() {
                 task_spawner.spawn(|task_spawner| {
-                    let belongs_to_blob = Some(ReferencingBlobInfo {
-                        blob_id,
-                        blob_info: blob_info.clone(),
-                    });
                     let child_expected_node_info =
                         if let Some(child_depth) = NonZeroU8::new(node.depth().get() - 1) {
                             NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                                belongs_to_blob,
                                 depth: child_depth,
                                 parent_id: *node.block_id(),
                             }
                         } else {
                             NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
-                                belongs_to_blob,
                                 parent_id: *node.block_id(),
                             }
                         };
+                    let child_expected_node_info = NodeReferenceFromReachableBlob {
+                        node_info: child_expected_node_info,
+                        blob_info: ReferencingBlobInfo {
+                            blob_id,
+                            blob_info: blob_info.clone(),
+                        },
+                    };
                     check_all_nodes_of_reachable_blob(
                         nodestore,
-                        blob_id,
-                        blob_info.clone(),
                         child_id,
                         child_expected_node_info,
                         expected_nodes,

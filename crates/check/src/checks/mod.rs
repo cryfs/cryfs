@@ -2,7 +2,7 @@ use derivative::Derivative;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
-use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeInfoAsExpectedByEntryInParent};
+use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeReferenceFromReachableBlob};
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
@@ -65,9 +65,7 @@ pub trait FilesystemCheck {
     fn process_reachable_node(
         &mut self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeInfoAsExpectedByEntryInParent,
-        blob_id: BlobId,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
+        expected_node_info: &NodeReferenceFromReachableBlob,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is not part of a reachable blob
@@ -132,22 +130,20 @@ impl AllChecks {
     pub fn process_reachable_node<'a>(
         &self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeInfoAsExpectedByEntryInParent,
-        blob_id: BlobId,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
+        expected_node_info: &NodeReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_node(node, expected_node_info, blob_id, blob_info)?;
+            .process_reachable_node(node, expected_node_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_node(node, expected_node_info, blob_id, blob_info)?;
+            .process_reachable_node(node, expected_node_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_node(node, expected_node_info, blob_id, blob_info)?;
+            .process_reachable_node(node, expected_node_info)?;
         Ok(())
     }
 

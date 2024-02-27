@@ -8,8 +8,7 @@ use std::num::NonZeroU8;
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
     BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
-    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
-    NodeReference, ReferencingBlobInfo,
+    CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeReference, ReferencingBlobInfo,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
@@ -166,20 +165,16 @@ async fn blob_referenced_multiple_times(
                 node_id: *blob_info.blob_id.to_root_block_id(),
                 node_info: Some(expected_node_info),
                 referenced_as: [
-                    NodeReference {
-                        node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                            belongs_to_blob: ReferencingBlobInfo {
-                                blob_id: blob_info.blob_id,
-                                blob_info: blob_info.blob_info.clone()
-                            },
+                    NodeReference::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: blob_info.blob_info.clone()
                         }
                     },
-                    NodeReference {
-                        node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                            belongs_to_blob: ReferencingBlobInfo {
-                                blob_id: blob_info.blob_id,
-                                blob_info: second_blob_info.clone(),
-                            }
+                    NodeReference::RootNode {
+                        belongs_to_blob: ReferencingBlobInfo {
+                            blob_id: blob_info.blob_id,
+                            blob_info: second_blob_info.clone(),
                         }
                     }
                 ]

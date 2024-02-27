@@ -12,7 +12,7 @@ mod error;
 pub use error::{
     BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
     CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
-    NodeReference, ReferencingBlobInfo,
+    NodeReference, NodeReferenceFromReachableBlob, ReferencingBlobInfo,
 };
 mod runner;
 mod task_queue;

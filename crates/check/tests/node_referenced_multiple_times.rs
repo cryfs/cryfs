@@ -9,8 +9,7 @@ use std::num::NonZeroU8;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
 use cryfs_check::{
-    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
-    NodeReference, ReferencingBlobInfo,
+    CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeReference, ReferencingBlobInfo,
 };
 
 mod common;
@@ -260,24 +259,20 @@ async fn leaf_node_referenced_multiple_times(
             node_id: replace_result.node_id,
             node_info: Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
             referenced_as: [
-                NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
-                            blob_id: blob1.blob_id,
-                            blob_info: blob1.blob_info,
-                        }),
-                        parent_id: replace_result.additional_parent_id,
-                    }
+                NodeReference::NonRootLeafNode {
+                    belongs_to_blob: Some(ReferencingBlobInfo {
+                        blob_id: blob1.blob_id,
+                        blob_info: blob1.blob_info,
+                    }),
+                    parent_id: replace_result.additional_parent_id,
                 },
-                NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
-                            blob_id: blob2.blob_id,
-                            blob_info: blob2.blob_info,
-                        }),
-                        parent_id: replace_result.original_parent_id,
-                    }
-                },
+                NodeReference::NonRootLeafNode {
+                    belongs_to_blob: Some(ReferencingBlobInfo {
+                        blob_id: blob2.blob_id,
+                        blob_info: blob2.blob_info,
+                    }),
+                    parent_id: replace_result.original_parent_id,
+                }
             ]
             .into_iter()
             .collect(),
@@ -338,26 +333,22 @@ async fn inner_node_referenced_multiple_times(
                 depth: expected_depth,
             }),
             referenced_as: [
-                NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
-                            blob_id: blob1.blob_id,
-                            blob_info: blob1.blob_info,
-                        }),
-                        parent_id: replace_result.additional_parent_id,
-                        depth: expected_referenced_depth_1,
-                    }
+                NodeReference::NonRootInnerNode {
+                    belongs_to_blob: Some(ReferencingBlobInfo {
+                        blob_id: blob1.blob_id,
+                        blob_info: blob1.blob_info,
+                    }),
+                    parent_id: replace_result.additional_parent_id,
+                    depth: expected_referenced_depth_1,
                 },
-                NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
-                            blob_id: blob2.blob_id,
-                            blob_info: blob2.blob_info,
-                        }),
-                        parent_id: replace_result.original_parent_id,
-                        depth: expected_referenced_depth_2,
-                    }
-                },
+                NodeReference::NonRootInnerNode {
+                    belongs_to_blob: Some(ReferencingBlobInfo {
+                        blob_id: blob2.blob_id,
+                        blob_info: blob2.blob_info,
+                    }),
+                    parent_id: replace_result.original_parent_id,
+                    depth: expected_referenced_depth_2,
+                }
             ]
             .into_iter()
             .collect(),
@@ -411,22 +402,18 @@ async fn root_node_referenced(
             node_id: replace_result.node_id,
             node_info: Some(expected_node_info),
             referenced_as: [
-                NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
-                            blob_id: blob1.blob_id,
-                            blob_info: blob1.blob_info,
-                        }),
-                        parent_id: replace_result.additional_parent_id,
-                        depth: expected_referenced_depth,
-                    }
+                NodeReference::NonRootInnerNode {
+                    belongs_to_blob: Some(ReferencingBlobInfo {
+                        blob_id: blob1.blob_id,
+                        blob_info: blob1.blob_info,
+                    }),
+                    parent_id: replace_result.additional_parent_id,
+                    depth: expected_referenced_depth,
                 },
-                NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo {
-                            blob_id: blob2.blob_id,
-                            blob_info: blob2.blob_info,
-                        },
+                NodeReference::RootNode {
+                    belongs_to_blob: ReferencingBlobInfo {
+                        blob_id: blob2.blob_id,
+                        blob_info: blob2.blob_info,
                     }
                 },
             ]

@@ -12,6 +12,8 @@ use cryfs_rustfs::AbsolutePathBuf;
 
 // TODO Improve error messages
 
+// TODO Split this into submodules, put general Info types somewhere else
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum BlobInfoAsSeenByLookingAtBlob {
     Unreadable,
@@ -131,22 +133,14 @@ impl Debug for ReferencingBlobInfo {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum NodeInfoAsExpectedByEntryInParent {
-    RootNode {
-        belongs_to_blob: ReferencingBlobInfo,
-    },
+    RootNode,
     NonRootInnerNode {
-        // `belongs_to_blob` can be `None` if the node is not (transitively) referenced by a blob
-        belongs_to_blob: Option<ReferencingBlobInfo>,
-
         depth: NonZeroU8,
         parent_id: BlockId,
     },
     NonRootLeafNode {
-        // `belongs_to_blob` can be `None` if the node is not (transitively) referenced by a blob
-        belongs_to_blob: Option<ReferencingBlobInfo>,
-
         parent_id: BlockId,
     },
 }
@@ -155,24 +149,14 @@ impl Display for NodeInfoAsExpectedByEntryInParent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO Better format for belongs_to_blob. Maybe layout more hierarchically like show blob_info first, then node_info?
         match self {
-            Self::RootNode { belongs_to_blob } => {
-                write!(f, "RootNode[belongs_to_blob={belongs_to_blob:?}]")
+            Self::RootNode => {
+                write!(f, "RootNode")
             }
-            Self::NonRootInnerNode {
-                belongs_to_blob,
-                depth,
-                parent_id,
-            } => {
-                write!(f, "NonRootInnerNode[belongs_to_blob={belongs_to_blob:?}, depth={depth}, parent={parent_id:?}]")
+            Self::NonRootInnerNode { depth, parent_id } => {
+                write!(f, "NonRootInnerNode[depth={depth}, parent={parent_id:?}]")
             }
-            Self::NonRootLeafNode {
-                belongs_to_blob,
-                parent_id,
-            } => {
-                write!(
-                    f,
-                    "NonRootLeafNode[belongs_to_blob={belongs_to_blob:?}, parent={parent_id:?}]",
-                )
+            Self::NonRootLeafNode { parent_id } => {
+                write!(f, "NonRootLeafNode[parent={parent_id:?}]",)
             }
         }
     }
@@ -184,14 +168,112 @@ impl Debug for NodeInfoAsExpectedByEntryInParent {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct BlobReference {
-    pub expected_child_info: BlobInfoAsExpectedByEntryInParent,
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct NodeReferenceFromReachableBlob {
+    pub node_info: NodeInfoAsExpectedByEntryInParent,
+    pub blob_info: ReferencingBlobInfo,
+}
+
+impl Display for NodeReferenceFromReachableBlob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO Better format
+        write!(
+            f,
+            "{blob_info}:{node_info}",
+            blob_info = self.blob_info,
+            node_info = self.node_info,
+        )
+    }
+}
+
+impl Debug for NodeReferenceFromReachableBlob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "NodeReferenceFromReachableBlob({self})")
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum NodeReference {
+    RootNode {
+        belongs_to_blob: ReferencingBlobInfo,
+    },
+    NonRootInnerNode {
+        // `belongs_to_blob` can be `None` if the node is part of a subtree that is unreachable from the filesystem root
+        belongs_to_blob: Option<ReferencingBlobInfo>,
+
+        depth: NonZeroU8,
+        parent_id: BlockId,
+    },
+    NonRootLeafNode {
+        // `belongs_to_blob` can be `None` if the node is part of a subtree that is unreachable from the filesystem root
+        belongs_to_blob: Option<ReferencingBlobInfo>,
+
+        parent_id: BlockId,
+    },
+}
+
+impl Display for NodeReference {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO Better format
+        match self {
+            Self::RootNode { belongs_to_blob } => {
+                write!(f, "{belongs_to_blob}:RootNode")
+            }
+            Self::NonRootInnerNode {
+                belongs_to_blob,
+                depth,
+                parent_id,
+            } => {
+                write!(
+                    f,
+                    "{belongs_to_blob:?}:NonRootInnerNode[depth={depth}, parent={parent_id:?}]"
+                )
+            }
+            Self::NonRootLeafNode {
+                belongs_to_blob,
+                parent_id,
+            } => {
+                write!(
+                    f,
+                    "{belongs_to_blob:?}:NonRootLeafNode[parent={parent_id:?}]",
+                )
+            }
+        }
+    }
+}
+
+impl Debug for NodeReference {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "NodeReference({self})")
+    }
+}
+
+impl From<NodeReferenceFromReachableBlob> for NodeReference {
+    fn from(node_reference: NodeReferenceFromReachableBlob) -> Self {
+        match node_reference.node_info {
+            NodeInfoAsExpectedByEntryInParent::RootNode => Self::RootNode {
+                belongs_to_blob: node_reference.blob_info,
+            },
+            NodeInfoAsExpectedByEntryInParent::NonRootInnerNode { depth, parent_id } => {
+                Self::NonRootInnerNode {
+                    belongs_to_blob: Some(node_reference.blob_info),
+                    depth,
+                    parent_id,
+                }
+            }
+            NodeInfoAsExpectedByEntryInParent::NonRootLeafNode { parent_id } => {
+                Self::NonRootLeafNode {
+                    belongs_to_blob: Some(node_reference.blob_info),
+                    parent_id,
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct NodeReference {
-    pub node_info: NodeInfoAsExpectedByEntryInParent,
+pub struct BlobReference {
+    pub expected_child_info: BlobInfoAsExpectedByEntryInParent,
 }
 
 /// A [CorruptedError] is an error we found in the file system when analyzing it
@@ -201,15 +283,15 @@ pub enum CorruptedError {
     NodeUnreadable {
         node_id: BlockId,
         // `expected_node_info` is `None` if the node itself isn't reachable from the root blob of the file system
-        // TODO Can this be Some but with NodeInfoAsExpectedByEntryInParent::belongs_to_blob==None? If yes, add tests for it. If not, change data model here.
-        expected_node_info: Option<NodeInfoAsExpectedByEntryInParent>,
+        expected_node_info: Option<NodeReferenceFromReachableBlob>,
         // TODO error: anyhow::Error,
     },
 
     #[error("Node {node_id:?} is referenced but does not exist")]
     NodeMissing {
         node_id: BlockId,
-        expected_node_info: NodeInfoAsExpectedByEntryInParent,
+        referenced_as: NodeReference,
+        // TODO referenced_as: BTreeSet<NodeReference>,
     },
 
     #[error("Node {node_id:?} is not referenced but exists")]

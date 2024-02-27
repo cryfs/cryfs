@@ -9,8 +9,7 @@ use std::num::NonZeroU8;
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
     BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
-    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
-    NodeReference, ReferencingBlobInfo,
+    CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeReference, ReferencingBlobInfo,
 };
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, FsBlob};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
@@ -219,12 +218,10 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
             node_info: Some(expected_node_info),
             referenced_as: expected_blob_references
                 .iter()
-                .map(|blob_reference| NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo {
-                            blob_id: blob_info.blob_id,
-                            blob_info: blob_reference.expected_child_info.clone(),
-                        },
+                .map(|blob_reference| NodeReference::RootNode {
+                    belongs_to_blob: ReferencingBlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_info: blob_reference.expected_child_info.clone(),
                     },
                 })
                 .collect(),
@@ -344,12 +341,10 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
             node_info: Some(expected_node_info),
             referenced_as: expected_blob_references
                 .iter()
-                .map(|blob_reference| NodeReference {
-                    node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo {
-                            blob_id: blob_info.blob_id,
-                            blob_info: blob_reference.expected_child_info.clone(),
-                        },
+                .map(|blob_reference| NodeReference::RootNode {
+                    belongs_to_blob: ReferencingBlobInfo {
+                        blob_id: blob_info.blob_id,
+                        blob_info: blob_reference.expected_child_info.clone(),
                     },
                 })
                 .collect(),

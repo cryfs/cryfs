@@ -6,7 +6,8 @@ use cryfs_blockstore::{
 };
 use cryfs_check::{
     BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeInfoAsExpectedByEntryInParent,
-    NodeInfoAsSeenByLookingAtNode, ReferencingBlobInfo,
+    NodeInfoAsSeenByLookingAtNode, NodeReference, NodeReferenceFromReachableBlob,
+    ReferencingBlobInfo,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
@@ -27,9 +28,8 @@ use tempdir::TempDir;
 
 use super::entry_helpers::{
     self, find_an_inner_node_of_a_large_blob, find_an_inner_node_of_a_large_blob_with_parent_id,
-    find_an_inner_node_of_a_small_blob, find_an_inner_node_of_a_small_blob_with_parent_id,
-    find_inner_node_with_distance_from_root,
-    find_inner_node_with_distance_from_root_with_parent_id, find_leaf_node, find_leaf_node_of_blob,
+    find_an_inner_node_of_a_small_blob_with_parent_id, find_inner_node_with_distance_from_root,
+    find_inner_node_with_distance_from_root_with_parent_id, find_leaf_node,
     find_leaf_node_of_blob_with_parent_id, find_leaf_node_with_parent_id, CreatedDirBlob,
     SomeBlobs,
 };
@@ -458,8 +458,9 @@ impl FilesystemFixture {
                 blob_root_node.upcast().remove(nodestore).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
-                    removed_node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo {
+                    removed_node_info: NodeReferenceFromReachableBlob {
+                        node_info: NodeInfoAsExpectedByEntryInParent::RootNode,
+                        blob_info: ReferencingBlobInfo {
                             blob_id: blob_info.blob_id,
                             blob_info: blob_info.blob_info
                         }
@@ -496,8 +497,9 @@ impl FilesystemFixture {
 
                     CorruptInnerNodeResult {
                         corrupted_node: *blob_info.blob_id.to_root_block_id(),
-                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::RootNode {
-                            belongs_to_blob: ReferencingBlobInfo {
+                        corrupted_node_info: NodeReferenceFromReachableBlob {
+                            node_info: NodeInfoAsExpectedByEntryInParent::RootNode,
+                            blob_info: ReferencingBlobInfo {
                                 blob_id: blob_info.blob_id,
                                 blob_info: blob_info.blob_info,
                             },
@@ -528,13 +530,15 @@ impl FilesystemFixture {
                 inner_node.upcast().remove(nodestore).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
-                    removed_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
+                    removed_node_info: NodeReferenceFromReachableBlob {
+                        blob_info: ReferencingBlobInfo {
                             blob_id: blob_info.blob_id,
                             blob_info: blob_info.blob_info,
-                        }),
-                        depth,
-                        parent_id,
+                        },
+                        node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            depth,
+                            parent_id,
+                        },
                     },
                     orphaned_nodes,
                 }
@@ -560,13 +564,15 @@ impl FilesystemFixture {
                     let inner_node_id = *inner_node.block_id();
                     CorruptInnerNodeResult {
                         corrupted_node: inner_node_id,
-                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                            belongs_to_blob: Some(ReferencingBlobInfo {
+                        corrupted_node_info: NodeReferenceFromReachableBlob {
+                            blob_info: ReferencingBlobInfo {
                                 blob_id: blob_info.blob_id,
                                 blob_info: blob_info.blob_info,
-                            }),
-                            depth: inner_node.depth(),
-                            parent_id: inner_node_parent_id,
+                            },
+                            node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                depth: inner_node.depth(),
+                                parent_id: inner_node_parent_id,
+                            },
                         },
                         orphaned_nodes,
                     }
@@ -594,13 +600,15 @@ impl FilesystemFixture {
                 inner_node.upcast().remove(nodestore).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
-                    removed_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
+                    removed_node_info: NodeReferenceFromReachableBlob {
+                        node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                            depth,
+                            parent_id,
+                        },
+                        blob_info: ReferencingBlobInfo {
                             blob_id: blob_info.blob_id,
                             blob_info: blob_info.blob_info,
-                        }),
-                        depth,
-                        parent_id,
+                        },
                     },
                     orphaned_nodes,
                 }
@@ -626,13 +634,15 @@ impl FilesystemFixture {
                     let inner_node_id = *inner_node.block_id();
                     CorruptInnerNodeResult {
                         corrupted_node: inner_node_id,
-                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                            belongs_to_blob: Some(ReferencingBlobInfo {
+                        corrupted_node_info: NodeReferenceFromReachableBlob {
+                            node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                depth: inner_node.depth(),
+                                parent_id: inner_node_parent_id,
+                            },
+                            blob_info: ReferencingBlobInfo {
                                 blob_id: blob_info.blob_id,
                                 blob_info: blob_info.blob_info,
-                            }),
-                            depth: inner_node.depth(),
-                            parent_id: inner_node_parent_id,
+                            },
                         },
                         orphaned_nodes,
                     }
@@ -682,7 +692,7 @@ impl FilesystemFixture {
                     orphaned_nodes.extend(inner_below_a.children());
                     removed_nodes.push((
                         *inner_below_a.block_id(),
-                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        NodeReference::NonRootInnerNode {
                             // `belongs_to_blob` is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
                             belongs_to_blob: None,
                             depth: inner_below_a.depth(),
@@ -695,7 +705,7 @@ impl FilesystemFixture {
                         find_leaf_node_with_parent_id(nodestore, subchild2, &mut rng).await;
                     removed_nodes.push((
                         *leaf_below_a.block_id(),
-                        NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                        NodeReference::NonRootLeafNode {
                             // `belongs_to_blob` is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
                             belongs_to_blob: None,
                             parent_id: leaf_below_a_parent_id,
@@ -706,7 +716,7 @@ impl FilesystemFixture {
                     orphaned_nodes.extend(inner_node_a.children());
                     removed_nodes.push((
                         *inner_node_a.block_id(),
-                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        NodeReference::NonRootInnerNode {
                             belongs_to_blob: belongs_to_blob.clone(),
                             depth: inner_node_a.depth(),
                             parent_id: inner_node_a_parent_id,
@@ -732,7 +742,7 @@ impl FilesystemFixture {
                     orphaned_nodes.extend(inner_node_b.children());
                     removed_nodes.push((
                         *inner_node_b.block_id(),
-                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        NodeReference::NonRootInnerNode {
                             belongs_to_blob: belongs_to_blob.clone(),
                             depth: inner_node_b.depth(),
                             parent_id: inner_node_b_parent_id,
@@ -767,7 +777,7 @@ impl FilesystemFixture {
                     );
                     removed_nodes.push((
                         *inner_node_c.block_id(),
-                        NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                        NodeReference::NonRootInnerNode {
                             belongs_to_blob,
                             depth: inner_node_c.depth(),
                             parent_id: inner_node_c_parent_id,
@@ -802,10 +812,10 @@ impl FilesystemFixture {
                     let mut corrupted_nodes = vec![];
                     let mut orphaned_nodes = vec![];
 
-                    let belongs_to_blob = Some(ReferencingBlobInfo {
+                    let belongs_to_blob = ReferencingBlobInfo {
                         blob_id: blob_info.blob_id,
                         blob_info: blob_info.blob_info,
-                    });
+                    };
 
                     // for child1, find an inner node A. Corrupt an inner node below A, a leaf below A, and A itself.
                     {
@@ -832,10 +842,12 @@ impl FilesystemFixture {
                         orphaned_nodes.extend(inner_node_a.children());
                         corrupted_nodes.push((
                             *inner_node_a.block_id(),
-                            Some(NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                                belongs_to_blob: belongs_to_blob.clone(),
-                                depth: inner_node_a.depth(),
-                                parent_id: inner_node_a_parent_id,
+                            Some(NodeReferenceFromReachableBlob {
+                                blob_info: belongs_to_blob.clone(),
+                                node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                    depth: inner_node_a.depth(),
+                                    parent_id: inner_node_a_parent_id,
+                                },
                             }),
                         ));
                     }
@@ -857,10 +869,12 @@ impl FilesystemFixture {
                         orphaned_nodes.extend(inner_node_b.children());
                         corrupted_nodes.push((
                             *inner_node_b.block_id(),
-                            Some(NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                                belongs_to_blob: belongs_to_blob.clone(),
-                                depth: inner_node_b.depth(),
-                                parent_id: inner_node_b_parent_id,
+                            Some(NodeReferenceFromReachableBlob {
+                                blob_info: belongs_to_blob.clone(),
+                                node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                    depth: inner_node_b.depth(),
+                                    parent_id: inner_node_b_parent_id,
+                                },
                             }),
                         ));
 
@@ -887,10 +901,12 @@ impl FilesystemFixture {
                         orphaned_nodes.extend(inner_node_c.children());
                         corrupted_nodes.push((
                             *inner_node_c.block_id(),
-                            Some(NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
-                                belongs_to_blob,
-                                depth: inner_node_c.depth(),
-                                parent_id: inner_node_c_parent_id,
+                            Some(NodeReferenceFromReachableBlob {
+                                blob_info: belongs_to_blob,
+                                node_info: NodeInfoAsExpectedByEntryInParent::NonRootInnerNode {
+                                    depth: inner_node_c.depth(),
+                                    parent_id: inner_node_c_parent_id,
+                                },
                             }),
                         ));
                     }
@@ -918,12 +934,14 @@ impl FilesystemFixture {
                 leaf_node.upcast().remove(nodestore).await.unwrap();
                 RemoveLeafNodeResult {
                     removed_node: leaf_node_id,
-                    removed_node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
-                        belongs_to_blob: Some(ReferencingBlobInfo {
+                    removed_node_info: NodeReferenceFromReachableBlob {
+                        blob_info: ReferencingBlobInfo {
                             blob_id: blob_info.blob_id,
                             blob_info: blob_info.blob_info,
-                        }),
-                        parent_id: leaf_node_parent_id,
+                        },
+                        node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                            parent_id: leaf_node_parent_id,
+                        },
                     },
                 }
             })
@@ -940,12 +958,14 @@ impl FilesystemFixture {
                     let leaf_node_id = *leaf_node.block_id();
                     CorruptLeafNodeResult {
                         corrupted_node: leaf_node_id,
-                        corrupted_node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
-                            belongs_to_blob: Some(ReferencingBlobInfo {
+                        corrupted_node_info: NodeReferenceFromReachableBlob {
+                            blob_info: ReferencingBlobInfo {
                                 blob_id: blob_info.blob_id,
                                 blob_info: blob_info.blob_info,
-                            }),
-                            parent_id: leaf_node_parent_id,
+                            },
+                            node_info: NodeInfoAsExpectedByEntryInParent::NonRootLeafNode {
+                                parent_id: leaf_node_parent_id,
+                            },
                         },
                     }
                 })
@@ -1004,33 +1024,33 @@ impl FilesystemFixture {
 
 pub struct RemoveInnerNodeResult {
     pub removed_node: BlockId,
-    pub removed_node_info: NodeInfoAsExpectedByEntryInParent,
+    pub removed_node_info: NodeReferenceFromReachableBlob,
     pub orphaned_nodes: Vec<BlockId>,
 }
 
 pub struct CorruptInnerNodeResult {
     pub corrupted_node: BlockId,
-    pub corrupted_node_info: NodeInfoAsExpectedByEntryInParent,
+    pub corrupted_node_info: NodeReferenceFromReachableBlob,
     pub orphaned_nodes: Vec<BlockId>,
 }
 
 pub struct RemoveLeafNodeResult {
     pub removed_node: BlockId,
-    pub removed_node_info: NodeInfoAsExpectedByEntryInParent,
+    pub removed_node_info: NodeReferenceFromReachableBlob,
 }
 
 pub struct CorruptLeafNodeResult {
     pub corrupted_node: BlockId,
-    pub corrupted_node_info: NodeInfoAsExpectedByEntryInParent,
+    pub corrupted_node_info: NodeReferenceFromReachableBlob,
 }
 
 pub struct RemoveSomeNodesResult {
-    pub removed_nodes: Vec<(BlockId, NodeInfoAsExpectedByEntryInParent)>,
+    pub removed_nodes: Vec<(BlockId, NodeReference)>,
     pub orphaned_nodes: Vec<BlockId>,
 }
 
 pub struct CorruptSomeNodesResult {
-    pub corrupted_nodes: Vec<(BlockId, Option<NodeInfoAsExpectedByEntryInParent>)>,
+    pub corrupted_nodes: Vec<(BlockId, Option<NodeReferenceFromReachableBlob>)>,
     pub orphaned_nodes: Vec<BlockId>,
 }
 

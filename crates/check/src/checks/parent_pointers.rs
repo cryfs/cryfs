@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::error::{
-    BlobInfoAsExpectedByEntryInParent, NodeInfoAsExpectedByEntryInParent,BlobInfoAsSeenByLookingAtBlob, BlobReference,
+    BlobInfoAsExpectedByEntryInParent, NodeReferenceFromReachableBlob,BlobInfoAsSeenByLookingAtBlob, BlobReference,
 };
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockStore;
@@ -106,9 +106,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        _expected_node_info: &NodeInfoAsExpectedByEntryInParent,
-        _blob_id: BlobId,
-        _blob_info: &BlobInfoAsExpectedByEntryInParent,
+        _expected_node_info: &NodeReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())
