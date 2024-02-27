@@ -13,6 +13,7 @@ use super::{
 use crate::{
     assertion::Assertion,
     node_info::{BlobInfoAsSeenByLookingAtBlob, BlobReference},
+    BlobReferenceWithId, NodeAndBlobReference,
 };
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
@@ -170,10 +171,21 @@ impl FilesystemCheck for CheckParentPointers {
                     ));
                 }
                 None => {
-                    // TODO This should be an assertion that there is a NodeMissing that contains a referenced_as for this blobs root node, but it can contain other referenced_as as well.
-                    // errors.extend(referenced_as.into_iter().map(|BlobReference{expected_child_info}| {
-                    //    CorruptedError::Assert(Box::new(CorruptedError::NodeMissing { blob_id, expected_blob_info: expected_child_info }))
-                    // }));
+                    // TODO This should be an assertion that there is a NodeMissing that contains a referenced_as for this blobs root node, but it can contain other referenced_as as well, e.g. from an inner node within another blob
+                    // errors.add_assertion(Assertion::exact_error_was_reported(
+                    //     CorruptedError::NodeMissing {
+                    //         node_id: *blob_id.to_root_block_id(),
+                    //         referenced_as: referenced_as
+                    //             .into_iter()
+                    //             .map(|referenced_as| NodeAndBlobReference::RootNode {
+                    //                 belongs_to_blob: BlobReferenceWithId {
+                    //                     blob_id,
+                    //                     referenced_as,
+                    //                 },
+                    //             })
+                    //             .collect(),
+                    //     },
+                    // ));
                 }
             }
         }
