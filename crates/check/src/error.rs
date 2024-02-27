@@ -59,7 +59,6 @@ pub enum CorruptedError {
     BlobUnreadable {
         blob_id: BlobId,
         referenced_as: BlobReference,
-        // TODO referenced_as: BTreeSet<BlobReference>,
         // TODO error:  anyhow::Error,
     },
 
