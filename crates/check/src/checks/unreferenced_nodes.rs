@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::num::NonZeroU8;
 
 use super::utils::reference_checker::ReferenceChecker;
-use super::FilesystemCheck;
+use super::{BlobToProcess, FilesystemCheck, NodeToProcess};
 use crate::error::{
     BlobInfoAsExpectedByEntryInParent, CheckError, CorruptedError,
     NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode, NodeReference,
@@ -248,59 +248,61 @@ impl CheckUnreferencedNodes {
 }
 
 impl FilesystemCheck for CheckUnreferencedNodes {
-    fn process_reachable_node(
+    fn process_reachable_node<'a>(
         &mut self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        expected_node_info: &NodeInfoAsExpectedByEntryInParent,
         blob_id: BlobId,
         blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
-        self.reachable_nodes_checker.process_node(
-            node,
-            Some(ReferencingBlobInfo {
-                blob_id,
-                blob_info: blob_info.clone(),
-            }),
-        )
+        match node {
+            NodeToProcess::Readable(node) => {
+                self.reachable_nodes_checker.process_node(
+                    node,
+                    Some(ReferencingBlobInfo {
+                        blob_id,
+                        blob_info: blob_info.clone(),
+                    }),
+                )?;
+            }
+            NodeToProcess::Unreadable(node_id) => {
+                self.reachable_nodes_checker
+                    .process_unreadable_node(*node_id, Some(expected_node_info.clone()))?;
+            }
+        }
+        Ok(())
     }
 
-    fn process_reachable_unreadable_node(
+    fn process_unreachable_node<'a>(
         &mut self,
-        node_id: BlockId,
-        expected_node_info: &NodeInfoAsExpectedByEntryInParent,
-        _blob_id: BlobId,
-        _blob_info: &BlobInfoAsExpectedByEntryInParent,
+        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
-        self.reachable_nodes_checker
-            .process_unreadable_node(node_id, Some(expected_node_info.clone()))
+        match node {
+            NodeToProcess::Readable(node) => {
+                self.unreachable_nodes_checker.process_node(node, None)?;
+            }
+            NodeToProcess::Unreadable(node_id) => {
+                self.unreachable_nodes_checker
+                    .process_unreadable_node(*node_id, None)?;
+            }
+        }
+        Ok(())
     }
 
-    fn process_unreachable_node(
+    fn process_reachable_blob<'a, 'b>(
         &mut self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
-        self.unreachable_nodes_checker.process_node(node, None)
-    }
-
-    fn process_unreachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError> {
-        self.unreachable_nodes_checker
-            .process_unreadable_node(node_id, None)
-    }
-
-    fn process_reachable_readable_blob(
-        &mut self,
-        blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError> {
-        self.reachable_nodes_checker
-            .process_blob(blob, &blob_info.path)
-    }
-
-    fn process_reachable_unreadable_blob(
-        &mut self,
-        _blob_id: BlobId,
-        _expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError> {
-        // do nothing
+        match blob {
+            BlobToProcess::Readable(blob) => {
+                self.reachable_nodes_checker
+                    .process_blob(blob, &expected_blob_info.path)?;
+            }
+            BlobToProcess::Unreadable(_blob_id) => {
+                // do nothing
+            }
+        }
         Ok(())
     }
 

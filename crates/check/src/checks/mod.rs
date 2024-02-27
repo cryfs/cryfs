@@ -1,3 +1,4 @@
+use derivative::Derivative;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
@@ -28,6 +29,25 @@ use super::error::{CheckError, CorruptedError};
 //  - do we need to check integrity block store in-block-block-id matches the real block id? We might have to check it separately because I think we're using integrity block store with AllowIntegrityViolations.
 //    Do we then also need to check for any other integrity violations?
 
+#[derive(Debug, Derivative)]
+#[derivative(Clone(bound = ""), Copy(bound = ""))]
+pub enum BlobToProcess<'a, 'b, B>
+where
+    B: BlockStore + Send + Sync + Debug + 'static,
+{
+    Readable(&'a FsBlob<'b, BlobStoreOnBlocks<B>>),
+    Unreadable(BlobId),
+}
+
+#[derive(Debug)]
+pub enum NodeToProcess<B>
+where
+    B: BlockStore + Send + Sync + Debug + 'static,
+{
+    Readable(DataNode<B>),
+    Unreadable(BlockId),
+}
+
 /// The trait that all filesystem checks must implement.
 /// The cryfs-check program will call the methods of this trait for blobs/nodes it encounters.
 /// The order of these calls is not specified but it guarantees that it calls [Self::process_reachable_blob]
@@ -35,44 +55,26 @@ use super::error::{CheckError, CorruptedError};
 /// At the end, it will call `finalize` to get a list of all the errors found.
 pub trait FilesystemCheck {
     /// Called for each blob that is reachable from the root of the file system via its directory structure.
-    fn process_reachable_readable_blob(
+    fn process_reachable_blob<'a, 'b>(
         &mut self,
-        blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError>;
-
-    /// Called for each blob that is reachable from the root of the file system via its directory structure that was found but is not readable.
-    fn process_reachable_unreadable_blob(
-        &mut self,
-        blob_id: BlobId,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
         expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is part of a reachable blob
     fn process_reachable_node(
         &mut self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-        blob_id: BlobId,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError>;
-
-    /// Called for each node that is part of a reachable blob but is unreadable
-    fn process_reachable_unreadable_node(
-        &mut self,
-        node_id: BlockId,
+        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
         expected_node_info: &NodeInfoAsExpectedByEntryInParent,
         blob_id: BlobId,
         blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is not part of a reachable blob
-    fn process_unreachable_node(
+    fn process_unreachable_node<'a>(
         &mut self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError>;
-
-    /// Called for each node that is not part of a reachable blob and is unreadable
-    fn process_unreachable_unreadable_node(&mut self, node_id: BlockId) -> Result<(), CheckError>;
 
     /// Called to get the results and all accumulated errors
     fn finalize(self) -> Vec<CorruptedError>;
@@ -106,71 +108,30 @@ impl AllChecks {
         }
     }
 
-    pub fn process_reachable_readable_blob(
+    pub fn process_reachable_blob<'a, 'b>(
         &self,
-        blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
         // TODO Here and in other methods, avoid having to list all the members and risking to forget one. Maybe a macro?
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob, blob_info)?;
+            .process_reachable_blob(blob, expected_blob_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob, blob_info)?;
+            .process_reachable_blob(blob, expected_blob_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_readable_blob(blob, blob_info)?;
+            .process_reachable_blob(blob, expected_blob_info)?;
         Ok(())
     }
 
-    pub fn process_reachable_unreadable_blob(
+    pub fn process_reachable_node<'a>(
         &self,
-        blob_id: BlobId,
-        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError> {
-        self.check_unreachable_nodes
-            .lock()
-            .unwrap()
-            .process_reachable_unreadable_blob(blob_id, expected_blob_info)?;
-        self.check_nodes_readable
-            .lock()
-            .unwrap()
-            .process_reachable_unreadable_blob(blob_id, expected_blob_info)?;
-        self.check_parent_pointers
-            .lock()
-            .unwrap()
-            .process_reachable_unreadable_blob(blob_id, expected_blob_info)?;
-        Ok(())
-    }
-
-    pub fn process_reachable_node(
-        &self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-        blob_id: BlobId,
-        blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError> {
-        self.check_unreachable_nodes
-            .lock()
-            .unwrap()
-            .process_reachable_node(node, blob_id, blob_info)?;
-        self.check_nodes_readable
-            .lock()
-            .unwrap()
-            .process_reachable_node(node, blob_id, blob_info)?;
-        self.check_parent_pointers
-            .lock()
-            .unwrap()
-            .process_reachable_node(node, blob_id, blob_info)?;
-        Ok(())
-    }
-
-    pub fn process_reachable_unreadable_node(
-        &self,
-        node_id: BlockId,
+        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
         expected_node_info: &NodeInfoAsExpectedByEntryInParent,
         blob_id: BlobId,
         blob_info: &BlobInfoAsExpectedByEntryInParent,
@@ -178,21 +139,21 @@ impl AllChecks {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_unreadable_node(node_id, expected_node_info, blob_id, blob_info)?;
+            .process_reachable_node(node, expected_node_info, blob_id, blob_info)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_unreadable_node(node_id, expected_node_info, blob_id, blob_info)?;
+            .process_reachable_node(node, expected_node_info, blob_id, blob_info)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_unreadable_node(node_id, expected_node_info, blob_id, blob_info)?;
+            .process_reachable_node(node, expected_node_info, blob_id, blob_info)?;
         Ok(())
     }
 
-    pub fn process_unreachable_node(
+    pub fn process_unreachable_node<'a>(
         &self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()
@@ -206,22 +167,6 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_unreachable_node(node)?;
-        Ok(())
-    }
-
-    pub fn process_unreachable_unreadable_node(&self, node_id: BlockId) -> Result<(), CheckError> {
-        self.check_unreachable_nodes
-            .lock()
-            .unwrap()
-            .process_unreachable_unreadable_node(node_id)?;
-        self.check_nodes_readable
-            .lock()
-            .unwrap()
-            .process_unreachable_unreadable_node(node_id)?;
-        self.check_parent_pointers
-            .lock()
-            .unwrap()
-            .process_unreachable_unreadable_node(node_id)?;
         Ok(())
     }
 

@@ -3,13 +3,13 @@ use std::fmt::Debug;
 use crate::error::{
     BlobInfoAsExpectedByEntryInParent, NodeInfoAsExpectedByEntryInParent,BlobInfoAsSeenByLookingAtBlob, BlobReference,
 };
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blobstore::BlobId;
+use cryfs_blockstore::BlockStore;
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_utils::peekable::PeekableExt;
 
 use super::{
-    utils::reference_checker::ReferenceChecker, CheckError, CorruptedError, FilesystemCheck,
+    utils::reference_checker::ReferenceChecker, NodeToProcess, BlobToProcess, CheckError, CorruptedError, FilesystemCheck,
 };
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
@@ -54,70 +54,58 @@ impl CheckParentPointers {
 }
 
 impl FilesystemCheck for CheckParentPointers {
-    fn process_reachable_readable_blob(
+    fn process_reachable_blob<'a, 'b>(
         &mut self,
-        blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
-        blob_info_as_expected_by_entry_in_parent: &BlobInfoAsExpectedByEntryInParent,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
     ) -> Result<(), CheckError> {
-        let seen_blob_info = SeenBlobInfo::Readable {
-            parent_pointer: blob.parent(),
-            blob_type: blob.blob_type(),
-        };
-        self.reference_checker
-            .mark_as_seen(blob.blob_id(), seen_blob_info);
-
         match blob {
-            FsBlob::File(_) | FsBlob::Symlink(_) => {
-                // Files and Symlinks don't have children
-            }
-            FsBlob::Directory(blob) => {
-                for entry in blob.entries() {
-                    self.reference_checker.mark_as_referenced(
-                        *entry.blob_id(),
-                        BlobReference {
-                            expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                                blob_type: entry_type_to_blob_type(entry.entry_type()),
-                                parent_id: blob.blob_id(),
-                                path: blob_info_as_expected_by_entry_in_parent
-                                    .path
-                                    .join(entry.name()),
-                            },
-                        },
-                    );
+            BlobToProcess::Readable(blob) => {
+                let seen_blob_info = SeenBlobInfo::Readable {
+                    parent_pointer: blob.parent(),
+                    blob_type: blob.blob_type(),
+                };
+                self.reference_checker
+                    .mark_as_seen(blob.blob_id(), seen_blob_info);
+        
+                match blob {
+                    FsBlob::File(_) | FsBlob::Symlink(_) => {
+                        // Files and Symlinks don't have children
+                    }
+                    FsBlob::Directory(blob) => {
+                        for entry in blob.entries() {
+                            self.reference_checker.mark_as_referenced(
+                                *entry.blob_id(),
+                                BlobReference {
+                                    expected_child_info: BlobInfoAsExpectedByEntryInParent {
+                                        blob_type: entry_type_to_blob_type(entry.entry_type()),
+                                        parent_id: blob.blob_id(),
+                                        path: expected_blob_info
+                                            .path
+                                            .join(entry.name()),
+                                    },
+                                },
+                            );
+                        }
+                    }
                 }
+            }
+            BlobToProcess::Unreadable(blob_id) => {
+                self.reference_checker.mark_as_seen(
+                    blob_id,
+                    SeenBlobInfo::Unreadable {
+                        expected_blob_info: expected_blob_info.clone(),
+                    },
+                );
             }
         }
 
         Ok(())
     }
 
-    fn process_reachable_unreadable_blob(
+    fn process_reachable_node<'a>(
         &mut self,
-        blob_id: BlobId,
-        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError> {
-        self.reference_checker.mark_as_seen(
-            blob_id,
-            SeenBlobInfo::Unreadable {
-                expected_blob_info: expected_blob_info.clone(),
-            },
-        );
-        Ok(())
-    }
-
-    fn process_reachable_node(
-        &mut self,
-        _node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-        _blob_id: BlobId,
-        _blob_info: &BlobInfoAsExpectedByEntryInParent,
-    ) -> Result<(), CheckError> {
-        // do nothing
-        Ok(())
-    }
-
-    fn process_reachable_unreadable_node(
-        &mut self,
-        _node_id: BlockId,
+        _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
         _expected_node_info: &NodeInfoAsExpectedByEntryInParent,
         _blob_id: BlobId,
         _blob_info: &BlobInfoAsExpectedByEntryInParent,
@@ -126,15 +114,10 @@ impl FilesystemCheck for CheckParentPointers {
         Ok(())
     }
 
-    fn process_unreachable_node(
+    fn process_unreachable_node<'a>(
         &mut self,
-        _node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
-        // do nothing
-        Ok(())
-    }
-
-    fn process_unreachable_unreadable_node(&mut self, _node_id: BlockId) -> Result<(), CheckError> {
         // do nothing
         Ok(())
     }

@@ -14,7 +14,7 @@ use crate::{
     BlobInfoAsSeenByLookingAtBlob, NodeInfoAsExpectedByEntryInParent, ReferencingBlobInfo,
 };
 
-use super::checks::AllChecks;
+use super::checks::{AllChecks, BlobToProcess, NodeToProcess};
 use super::error::{CheckError, CorruptedError};
 use super::task_queue::{self, TaskSpawner};
 use cryfs_blobstore::{
@@ -181,9 +181,9 @@ where
             let pb = pb.clone();
             async move {
                 let loaded = nodestore.load(node_id).await;
-                match loaded {
+                let node_to_process = match loaded {
                     Ok(Some(node)) => {
-                        checks.process_unreachable_node(&node)?;
+                        NodeToProcess::Readable(node)
                     }
                     Ok(None) => {
                         return Err(CheckError::FilesystemModified { msg: format!(
@@ -191,9 +191,10 @@ where
                         )});
                     }
                     Err(error) => {
-                        checks.process_unreachable_unreadable_node(node_id)?;
+                        NodeToProcess::Unreadable(node_id)
                     }
                 };
+                checks.process_unreachable_node(&node_to_process)?;
                 pb.inc(1);
                 Ok(())
             }
@@ -305,8 +306,6 @@ where
                         })?;
                     }
 
-                    let process_result = checks.process_reachable_readable_blob(&blob, &blob_info);
-
                     // TODO Add this assert here and a real blob type check to the list of checks
                     // if expected_blob_type != blob.blob_type() {
                     //     checks.add_error(CorruptedError::Assert(Box::new(
@@ -329,9 +328,12 @@ where
                     )
                     .await;
 
+                    let process_result =
+                        checks.process_reachable_blob(BlobToProcess::Readable(&blob), &blob_info);
+
                     blob.async_drop().await?;
-                    process_result?;
                     subresult?;
+                    process_result?;
                 }
                 Ok(None) => {
                     // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
@@ -343,7 +345,10 @@ where
                     )));
                 }
                 Err(error) => {
-                    checks.process_reachable_unreadable_blob(blob_id, &blob_info)?;
+                    checks.process_reachable_blob(
+                        BlobToProcess::<B>::Unreadable(blob_id),
+                        &blob_info,
+                    )?;
                     checks.add_error(CorruptedError::BlobUnreadable {
                         blob_id,
                         expected_blob_info: blob_info.clone(),
@@ -525,7 +530,7 @@ where
             // )));
         }
         AlreadySeen::NotSeenYet => {
-            match node {
+            let node_to_process = match node {
                 Ok(Some(node)) => {
                     if !expected_nodes.contains(&current_node_id) {
                         return Err(CheckError::FilesystemModified {
@@ -545,7 +550,7 @@ where
                         task_spawner,
                         pb.clone(),
                     );
-                    checks.process_reachable_node(&node, blob_id, &blob_info)?;
+                    Some(NodeToProcess::Readable(node))
                 }
                 Ok(None) => {
                     if expected_nodes.contains(&current_node_id) {
@@ -559,17 +564,18 @@ where
                         checks.add_error(CorruptedError::Assert(Box::new(
                             CorruptedError::BlobMissing {
                                 blob_id,
-                                expected_blob_info: blob_info,
+                                expected_blob_info: blob_info.clone(),
                             },
                         )));
                     } else {
                         checks.add_error(CorruptedError::Assert(Box::new(
                             CorruptedError::NodeMissing {
                                 node_id: current_node_id,
-                                expected_node_info: current_expected_node_info,
+                                expected_node_info: current_expected_node_info.clone(),
                             },
                         )));
                     }
+                    None
                 }
                 Err(error) => {
                     if !expected_nodes.contains(&current_node_id) {
@@ -579,20 +585,23 @@ where
                             ),
                         });
                     }
-                    checks.process_reachable_unreadable_node(
-                        current_node_id,
-                        &current_expected_node_info,
-                        blob_id,
-                        &blob_info,
-                    )?;
                     checks.add_error(CorruptedError::Assert(Box::new(
                         CorruptedError::NodeUnreadable {
                             node_id: current_node_id,
-                            expected_node_info: Some(current_expected_node_info),
+                            expected_node_info: Some(current_expected_node_info.clone()),
                         },
                     )));
+                    Some(NodeToProcess::Unreadable(current_node_id))
                 }
             };
+            if let Some(node_to_process) = node_to_process {
+                checks.process_reachable_node(
+                    &node_to_process,
+                    &current_expected_node_info,
+                    blob_id,
+                    &blob_info,
+                )?;
+            }
             pb.inc(1);
         }
     }
