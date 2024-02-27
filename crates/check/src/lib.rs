@@ -15,6 +15,7 @@ pub use node_info::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
 };
+mod assertion;
 mod runner;
 mod task_queue;
 

@@ -2,17 +2,22 @@ use std::fmt::Debug;
 
 use cryfs_blockstore::BlockStore;
 
-use super::{BlobToProcess, CheckError, CorruptedError, FilesystemCheck, NodeToProcess};
+use super::{
+    check_result::CheckResult, BlobToProcess, CheckError, CorruptedError, FilesystemCheck,
+    NodeToProcess,
+};
 use crate::node_info::{BlobReference, NodeAndBlobReferenceFromReachableBlob};
 
 /// Check that each node is readable
 pub struct CheckNodesReadable {
-    errors: Vec<CorruptedError>,
+    errors: CheckResult,
 }
 
 impl CheckNodesReadable {
     pub fn new() -> Self {
-        Self { errors: Vec::new() }
+        Self {
+            errors: CheckResult::new(),
+        }
     }
 }
 
@@ -36,7 +41,7 @@ impl FilesystemCheck for CheckNodesReadable {
                 // do nothing
             }
             NodeToProcess::Unreadable(node_id) => {
-                self.errors.push(CorruptedError::NodeUnreadable {
+                self.errors.add_error(CorruptedError::NodeUnreadable {
                     node_id: *node_id,
                     expected_node_info: Some(expected_node_info.clone()),
                 });
@@ -54,7 +59,7 @@ impl FilesystemCheck for CheckNodesReadable {
                 // do nothing
             }
             NodeToProcess::Unreadable(node_id) => {
-                self.errors.push(CorruptedError::NodeUnreadable {
+                self.errors.add_error(CorruptedError::NodeUnreadable {
                     node_id: *node_id,
                     expected_node_info: None,
                 });
@@ -63,7 +68,7 @@ impl FilesystemCheck for CheckNodesReadable {
         Ok(())
     }
 
-    fn finalize(self) -> Vec<CorruptedError> {
+    fn finalize(self) -> CheckResult {
         self.errors
     }
 }

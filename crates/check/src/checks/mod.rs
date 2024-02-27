@@ -6,6 +6,7 @@ use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
 
+use super::assertion::Assertion;
 use super::error::{CheckError, CorruptedError};
 use crate::node_info::{BlobReference, NodeAndBlobReferenceFromReachableBlob};
 
@@ -75,7 +76,7 @@ pub trait FilesystemCheck {
     ) -> Result<(), CheckError>;
 
     /// Called to get the results and all accumulated errors
-    fn finalize(self) -> Vec<CorruptedError>;
+    fn finalize(self) -> CheckResult;
 }
 
 mod utils;
@@ -89,11 +90,14 @@ use nodes_readable::CheckNodesReadable;
 mod parent_pointers;
 use parent_pointers::CheckParentPointers;
 
+mod check_result;
+use check_result::CheckResult;
+
 pub struct AllChecks {
     check_unreachable_nodes: Mutex<CheckUnreferencedNodes>,
     check_nodes_readable: Mutex<CheckNodesReadable>,
     check_parent_pointers: Mutex<CheckParentPointers>,
-    additional_errors: Mutex<Vec<CorruptedError>>,
+    additional_errors: Mutex<CheckResult>,
 }
 
 impl AllChecks {
@@ -102,7 +106,7 @@ impl AllChecks {
             check_unreachable_nodes: Mutex::new(CheckUnreferencedNodes::new(root_blob_id)),
             check_nodes_readable: Mutex::new(CheckNodesReadable::new()),
             check_parent_pointers: Mutex::new(CheckParentPointers::new(root_blob_id)),
-            additional_errors: Mutex::new(Vec::new()),
+            additional_errors: Mutex::new(CheckResult::new()),
         }
     }
 
@@ -167,35 +171,28 @@ impl AllChecks {
     }
 
     pub fn finalize(self) -> Vec<CorruptedError> {
-        self.additional_errors
-            .into_inner()
-            .unwrap()
-            .into_iter()
-            .chain(
-                self.check_unreachable_nodes
-                    .into_inner()
-                    .unwrap()
-                    .finalize()
-                    .into_iter(),
-            )
-            .chain(
-                self.check_nodes_readable
-                    .into_inner()
-                    .unwrap()
-                    .finalize()
-                    .into_iter(),
-            )
-            .chain(
-                self.check_parent_pointers
-                    .into_inner()
-                    .unwrap()
-                    .finalize()
-                    .into_iter(),
-            )
-            .collect()
+        let mut reported_errors = self.additional_errors.into_inner().unwrap();
+
+        reported_errors.add_all(
+            self.check_unreachable_nodes
+                .into_inner()
+                .unwrap()
+                .finalize(),
+        );
+        reported_errors.add_all(self.check_nodes_readable.into_inner().unwrap().finalize());
+        reported_errors.add_all(self.check_parent_pointers.into_inner().unwrap().finalize());
+
+        reported_errors.finalize()
     }
 
     pub fn add_error(&self, error: CorruptedError) {
-        self.additional_errors.lock().unwrap().push(error);
+        self.additional_errors.lock().unwrap().add_error(error);
+    }
+
+    pub fn add_assertion(&self, assertion: Assertion) {
+        self.additional_errors
+            .lock()
+            .unwrap()
+            .add_assertion(assertion);
     }
 }

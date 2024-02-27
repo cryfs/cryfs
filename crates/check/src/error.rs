@@ -68,12 +68,6 @@ pub enum CorruptedError {
         blob_info: BlobInfoAsSeenByLookingAtBlob,
         referenced_as: BTreeSet<BlobReference>,
     },
-
-    /// Not an actual error but reported by a check to indicate that we need to assert that another check reported this error.
-    /// This is reported by checks who aren't the main responsible check for a condition but discovered something on the side
-    /// that another check should have reported.
-    #[error("We need to assert that {0} was reported")]
-    Assert(Box<CorruptedError>),
 }
 
 /// A CheckError is an error found in the analysis itself. This doesn't necessarily mean that the file system is corrupted

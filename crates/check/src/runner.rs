@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 use super::checks::{AllChecks, BlobToProcess, NodeToProcess};
 use super::error::{CheckError, CorruptedError};
 use super::task_queue::{self, TaskSpawner};
+use crate::assertion::Assertion;
 use crate::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
@@ -149,8 +150,6 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
         };
 
         let errors = checks.finalize();
-
-        let errors = run_assertions(errors);
 
         nodestore.async_drop().await?;
         Ok(errors)
@@ -617,12 +616,12 @@ where
                             ),
                         });
                     }
-                    checks.add_error(CorruptedError::Assert(Box::new(
+                    checks.add_assertion(Assertion::exact_error_was_reported(
                         CorruptedError::NodeUnreadable {
                             node_id: current_node_id,
                             expected_node_info: Some(current_expected_node_info.clone()),
                         },
-                    )));
+                    ));
                     Some(NodeToProcess::Unreadable(current_node_id))
                 }
             };
@@ -699,22 +698,6 @@ fn set_remove_all<T: Hash + Eq>(
         set.remove(&item);
     }
     set
-}
-
-fn run_assertions(errors: Vec<CorruptedError>) -> Vec<CorruptedError> {
-    // Run assertions to make sure all errors that some checks found on the side were reported by the check responsible for them
-    let (errors, assertions): (Vec<CorruptedError>, Vec<CorruptedError>) =
-        errors.into_iter().partition_map(|error| match error {
-            CorruptedError::Assert(err) => Either::Right(*err),
-            err => Either::Left(err),
-        });
-    for assertion in assertions {
-        assert!(
-            errors.contains(&assertion),
-            "CorruptedError::Assert failed: {assertion:?}"
-        );
-    }
-    errors
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
