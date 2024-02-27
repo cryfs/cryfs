@@ -481,7 +481,7 @@ where
 async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     nodestore: &'a DataNodeStore<B>,
     current_node_id: BlockId,
-    current_expected_node_info: NodeAndBlobReferenceFromReachableBlob,
+    current_node_referenced_as: NodeAndBlobReferenceFromReachableBlob,
     expected_nodes: &'b HashSet<BlockId>,
     already_processed_nodes: Arc<ProcessedItems<BlockId, SeenNodeInfo>>,
     checks: &'c AllChecks,
@@ -542,7 +542,7 @@ where
                     }
                     check_all_children_of_reachable_blob_node(
                         nodestore,
-                        current_expected_node_info.blob_info.clone(),
+                        current_node_referenced_as.blob_info.clone(),
                         &node,
                         expected_nodes,
                         already_processed_nodes,
@@ -561,7 +561,7 @@ where
                         });
                     }
                     if current_node_id
-                        == *current_expected_node_info
+                        == *current_node_referenced_as
                             .blob_info
                             .blob_id
                             .to_root_block_id()
@@ -569,22 +569,22 @@ where
                         // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
                         // checks.add_error(CorruptedError::Assert(Box::new(
                         //     CorruptedError::NodeMissing {
-                        //         node_id: *current_expected_node_info
+                        //         node_id: *current_node_referenced_as
                         //             .blob_info
                         //             .blob_id
                         //             .to_root_block_id(),
                         //         referenced_as: NodeReference::RootNode {
-                        //             belongs_to_blob: current_expected_node_info.blob_info,
+                        //             belongs_to_blob: current_node_referenced_as.blob_info,
                         //         },
                         //     },
                         // )));
                     } else {
-                        let belongs_to_blob = current_expected_node_info.blob_info.clone();
+                        let belongs_to_blob = current_node_referenced_as.blob_info.clone();
                         // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
                         // checks.add_error(CorruptedError::Assert(Box::new(
                         //     CorruptedError::NodeMissing {
                         //         node_id: current_node_id,
-                        //         referenced_as: match current_expected_node_info.node_info {
+                        //         referenced_as: match current_node_referenced_as.node_info {
                         //             NodeReferenceInfo::RootNode => {
                         //                 NodeReference::RootNode { belongs_to_blob }
                         //             }
@@ -619,14 +619,14 @@ where
                     checks.add_assertion(Assertion::exact_error_was_reported(
                         CorruptedError::NodeUnreadable {
                             node_id: current_node_id,
-                            expected_node_info: Some(current_expected_node_info.clone()),
+                            referenced_as: Some(current_node_referenced_as.clone()),
                         },
                     ));
                     Some(NodeToProcess::Unreadable(current_node_id))
                 }
             };
             if let Some(node_to_process) = node_to_process {
-                checks.process_reachable_node(&node_to_process, &current_expected_node_info)?;
+                checks.process_reachable_node(&node_to_process, &current_node_referenced_as)?;
             }
             pb.inc(1);
         }

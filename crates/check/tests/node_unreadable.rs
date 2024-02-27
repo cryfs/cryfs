@@ -42,7 +42,7 @@ async fn blob_with_unreadable_single_node(
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
-            expected_node_info: Some(corrupted_node_info),
+            referenced_as: Some(corrupted_node_info),
         },
     ];
 
@@ -81,7 +81,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
-            expected_node_info: Some(corrupted_node_info),
+            referenced_as: Some(corrupted_node_info),
         },
     ];
 
@@ -124,7 +124,7 @@ async fn blob_with_unreadable_root_node(
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
-            expected_node_info: Some(corrupted_node_info),
+            referenced_as: Some(corrupted_node_info),
         },
     ]
     .into_iter()
@@ -177,7 +177,7 @@ async fn blob_with_unreadable_inner_node(
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: corrupted_node,
-        expected_node_info: Some(corrupted_node_info),
+        referenced_as: Some(corrupted_node_info),
     }];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -224,7 +224,7 @@ async fn blob_with_unreadable_leaf_node(
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: corrupted_node,
-        expected_node_info: Some(corrupted_node_info),
+        referenced_as: Some(corrupted_node_info),
     }];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -289,12 +289,10 @@ async fn blob_with_corrupted_some_nodes(
     expected_errors.extend(
         corrupted_nodes
             .into_iter()
-            .map(
-                |(node_id, expected_node_info)| CorruptedError::NodeUnreadable {
-                    node_id,
-                    expected_node_info,
-                },
-            )
+            .map(|(node_id, referenced_as)| CorruptedError::NodeUnreadable {
+                node_id,
+                referenced_as,
+            })
             .chain(expected_errors_from_orphaned_nodes)
             .chain(expected_errors_from_orphaned_descendant_blobs),
     );

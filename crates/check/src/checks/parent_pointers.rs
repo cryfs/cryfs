@@ -107,7 +107,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        _expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
+        _referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())

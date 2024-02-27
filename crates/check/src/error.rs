@@ -20,8 +20,9 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
-        // `expected_node_info` is `None` if the node itself isn't reachable from the root blob of the file system
-        expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
+        // `referenced_as` is `None` if the node itself isn't reachable from the root blob of the file system
+        referenced_as: Option<NodeAndBlobReferenceFromReachableBlob>,
+        // TODO referenced_as: BTreeSet<NodeAndBlobReference>,
         // TODO error: anyhow::Error,
     },
 

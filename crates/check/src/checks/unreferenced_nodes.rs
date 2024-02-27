@@ -109,7 +109,7 @@ impl UnreferencedNodesReferenceChecker {
     fn process_unreadable_node(
         &mut self,
         node_id: BlockId,
-        expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
+        referenced_as: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
         self.reference_checker.mark_as_seen(
             node_id,
@@ -123,7 +123,7 @@ impl UnreferencedNodesReferenceChecker {
             .add_assertion(Assertion::exact_error_was_reported(
                 CorruptedError::NodeUnreadable {
                     node_id,
-                    expected_node_info,
+                    referenced_as,
                 },
             ));
 

@@ -34,7 +34,7 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_node<'a>(
         &mut self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
+        referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         match node {
             NodeToProcess::Readable(_node) => {
@@ -43,7 +43,7 @@ impl FilesystemCheck for CheckNodesReadable {
             NodeToProcess::Unreadable(node_id) => {
                 self.errors.add_error(CorruptedError::NodeUnreadable {
                     node_id: *node_id,
-                    expected_node_info: Some(expected_node_info.clone()),
+                    referenced_as: Some(referenced_as.clone()),
                 });
             }
         }
@@ -61,7 +61,7 @@ impl FilesystemCheck for CheckNodesReadable {
             NodeToProcess::Unreadable(node_id) => {
                 self.errors.add_error(CorruptedError::NodeUnreadable {
                     node_id: *node_id,
-                    expected_node_info: None,
+                    referenced_as: None,
                 });
             }
         }

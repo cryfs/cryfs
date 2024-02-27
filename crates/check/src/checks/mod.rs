@@ -134,20 +134,20 @@ impl AllChecks {
     pub fn process_reachable_node<'a>(
         &self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
+        referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_node(node, expected_node_info)?;
+            .process_reachable_node(node, referenced_as)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_node(node, expected_node_info)?;
+            .process_reachable_node(node, referenced_as)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_node(node, expected_node_info)?;
+            .process_reachable_node(node, referenced_as)?;
         Ok(())
     }
 
