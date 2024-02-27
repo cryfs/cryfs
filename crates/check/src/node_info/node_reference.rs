@@ -24,10 +24,10 @@ impl Display for NodeReference {
                 write!(f, "RootNode")
             }
             Self::NonRootInnerNode { depth, parent_id } => {
-                write!(f, "NonRootInnerNode[depth={depth}, parent={parent_id:?}]")
+                write!(f, "NonRootInnerNode[depth={depth}, parent={parent_id}]")
             }
             Self::NonRootLeafNode { parent_id } => {
-                write!(f, "NonRootLeafNode[parent={parent_id:?}]",)
+                write!(f, "NonRootLeafNode[parent={parent_id}]",)
             }
         }
     }
@@ -36,5 +36,34 @@ impl Display for NodeReference {
 impl Debug for NodeReference {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "NodeReference({self})")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::num::NonZeroU8;
+
+    #[test]
+    fn test_display() {
+        let parent_id = BlockId::from_hex("A370E99ADA93EF706935F4693039C90D").unwrap();
+
+        assert_eq!("RootNode", format!("{}", NodeReference::RootNode));
+
+        assert_eq!(
+            "NonRootInnerNode[depth=3, parent=A370E99ADA93EF706935F4693039C90D]",
+            format!(
+                "{}",
+                NodeReference::NonRootInnerNode {
+                    depth: NonZeroU8::new(3).unwrap(),
+                    parent_id,
+                }
+            ),
+        );
+
+        assert_eq!(
+            "NonRootLeafNode[parent=A370E99ADA93EF706935F4693039C90D]",
+            format!("{}", NodeReference::NonRootLeafNode { parent_id },),
+        );
     }
 }

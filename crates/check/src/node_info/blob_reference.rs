@@ -31,7 +31,7 @@ impl Display for BlobReference {
         };
         write!(
             f,
-            "{blob_type}[parent={parent_id:?}] @ {path}",
+            "{blob_type}[path={path}, parent={parent_id}]",
             parent_id = self.parent_id,
             path = self.path,
         )
@@ -41,5 +41,52 @@ impl Display for BlobReference {
 impl Debug for BlobReference {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlobReference({self})")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let parent_id = BlobId::from_hex("A370E99ADA93EF706935F4693039C90D").unwrap();
+        let path = AbsolutePathBuf::try_from_string("/path/to/blob".to_string()).unwrap();
+
+        assert_eq!(
+            "File[path=/path/to/blob, parent=A370E99ADA93EF706935F4693039C90D]",
+            format!(
+                "{}",
+                BlobReference {
+                    blob_type: BlobType::File,
+                    parent_id,
+                    path: path.clone(),
+                }
+            ),
+        );
+
+        assert_eq!(
+            "Dir[path=/path/to/blob, parent=A370E99ADA93EF706935F4693039C90D]",
+            format!(
+                "{}",
+                BlobReference {
+                    blob_type: BlobType::Dir,
+                    parent_id,
+                    path: path.clone(),
+                }
+            ),
+        );
+
+        assert_eq!(
+            "Symlink[path=/path/to/blob, parent=A370E99ADA93EF706935F4693039C90D]",
+            format!(
+                "{}",
+                BlobReference {
+                    blob_type: BlobType::Symlink,
+                    parent_id,
+                    path: path.clone(),
+                }
+            ),
+        );
     }
 }

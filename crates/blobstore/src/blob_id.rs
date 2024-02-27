@@ -62,8 +62,40 @@ impl BlobId {
     }
 }
 
-impl std::fmt::Debug for BlobId {
+impl std::fmt::Display for BlobId {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BlobId({})", self.root.to_hex())
+        write!(f, "{}", self.root)
     }
+}
+
+impl std::fmt::Debug for BlobId {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BlobId({self})")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        const HEX: &str = "0070E99ADA93EF706935F4693039C900";
+        let blob_id = BlobId::from_hex(HEX).unwrap();
+        assert_eq!(HEX, format!("{blob_id}"));
+    }
+
+    #[test]
+    fn test_debug() {
+        const HEX: &str = "0070E99ADA93EF706935F4693039C900";
+        let blob_id = BlobId::from_hex(HEX).unwrap();
+        assert_eq!(
+            "BlobId(0070E99ADA93EF706935F4693039C900)",
+            format!("{:?}", blob_id),
+        );
+    }
+
+    // TODO Other tests
 }

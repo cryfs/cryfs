@@ -50,9 +50,17 @@ impl BlockId {
     }
 }
 
-impl std::fmt::Debug for BlockId {
+impl std::fmt::Display for BlockId {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BlockId({})", self.to_hex())
+        write!(f, "{}", self.to_hex())
+    }
+}
+
+impl std::fmt::Debug for BlockId {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BlockId({self})")
     }
 }
 
@@ -95,4 +103,23 @@ mod tests {
             BlockId::deserialize_from_complete_stream(&mut Cursor::new(serialized)).unwrap();
         assert_eq!(blockid, deserialized);
     }
+
+    #[test]
+    fn test_display() {
+        const HEX: &str = "0070E99ADA93EF706935F4693039C900";
+        let blob_id = BlockId::from_hex(HEX).unwrap();
+        assert_eq!(HEX, format!("{blob_id}"));
+    }
+
+    #[test]
+    fn test_debug() {
+        const HEX: &str = "0070E99ADA93EF706935F4693039C900";
+        let blob_id = BlockId::from_hex(HEX).unwrap();
+        assert_eq!(
+            "BlockId(0070E99ADA93EF706935F4693039C900)",
+            format!("{:?}", blob_id),
+        );
+    }
+
+    // TODO Other tests
 }
