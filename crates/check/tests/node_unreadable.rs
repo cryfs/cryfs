@@ -2,14 +2,13 @@
 
 use rstest::rstest;
 
-use cryfs_check::{BlobInfoAsExpectedByEntryInParent, CorruptedError};
+use cryfs_check::{BlobReference, BlobReferenceWithId, CorruptedError};
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
 use common::entry_helpers::{
-    expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced, CreatedBlobInfo,
-    SomeBlobs,
+    expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced, SomeBlobs,
 };
 use common::fixture::{
     CorruptInnerNodeResult, CorruptLeafNodeResult, CorruptSomeNodesResult, FilesystemFixture,
@@ -21,7 +20,7 @@ use common::fixture::{
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.empty_symlink.clone())]
 #[tokio::test(flavor = "multi_thread")]
 async fn blob_with_unreadable_single_node(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo,
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
@@ -39,7 +38,7 @@ async fn blob_with_unreadable_single_node(
     let expected_errors = vec![
         CorruptedError::BlobUnreadable {
             blob_id: blob_info.blob_id,
-            expected_blob_info: blob_info.blob_info,
+            referenced_as: blob_info.referenced_as,
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
@@ -67,9 +66,9 @@ async fn root_dir_with_unreadable_single_node_without_children() {
         corrupted_node_info,
         orphaned_nodes,
     } = fs_fixture
-        .corrupt_root_node_of_blob(CreatedBlobInfo {
+        .corrupt_root_node_of_blob(BlobReferenceWithId {
             blob_id: root,
-            blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+            referenced_as: BlobReference::root_dir(),
         })
         .await;
     assert_eq!(0, orphaned_nodes.len(), "test precondition violated");
@@ -78,7 +77,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
     let expected_errors = vec![
         CorruptedError::BlobUnreadable {
             blob_id: root,
-            expected_blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+            referenced_as: BlobReference::root_dir(),
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
@@ -96,7 +95,9 @@ async fn root_dir_with_unreadable_single_node_without_children() {
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
+async fn blob_with_unreadable_root_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture
@@ -119,7 +120,7 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
     let expected_errors = [
         CorruptedError::BlobUnreadable {
             blob_id: blob_info.blob_id,
-            expected_blob_info: blob_info.blob_info,
+            referenced_as: blob_info.referenced_as,
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
@@ -141,7 +142,9 @@ async fn blob_with_unreadable_root_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
+async fn blob_with_unreadable_inner_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {
@@ -156,7 +159,7 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
         .await;
     assert_eq!(
         orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_info.blob_type != BlobType::Dir,
+        blob_info.referenced_as.blob_type != BlobType::Dir,
         "test invariant"
     );
     let expected_errors_from_orphaned_descendant_blobs =
@@ -176,11 +179,11 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
         node_id: corrupted_node,
         expected_node_info: Some(corrupted_node_info),
     }];
-    if blob_info.blob_info.blob_type == BlobType::Dir {
+    if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(CorruptedError::BlobUnreadable {
             blob_id: blob_info.blob_id,
-            expected_blob_info: blob_info.blob_info,
+            referenced_as: blob_info.referenced_as,
         });
     }
     expected_errors.extend(
@@ -197,7 +200,9 @@ async fn blob_with_unreadable_inner_node(#[case] blob: impl FnOnce(&SomeBlobs) -
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
+async fn blob_with_unreadable_leaf_node(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
 
@@ -206,7 +211,7 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
         .await;
     assert_eq!(
         orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_info.blob_type != BlobType::Dir,
+        blob_info.referenced_as.blob_type != BlobType::Dir,
         "test invariant"
     );
     let expected_errors_from_orphaned_descendant_blobs =
@@ -221,11 +226,11 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
         node_id: corrupted_node,
         expected_node_info: Some(corrupted_node_info),
     }];
-    if blob_info.blob_info.blob_type == BlobType::Dir {
+    if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(CorruptedError::BlobUnreadable {
             blob_id: blob_info.blob_id,
-            expected_blob_info: blob_info.blob_info,
+            referenced_as: blob_info.referenced_as,
         });
     }
     expected_errors.extend(expected_errors_from_orphaned_descendant_blobs);
@@ -240,7 +245,9 @@ async fn blob_with_unreadable_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) ->
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
+async fn blob_with_corrupted_some_nodes(
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
+) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     if blob_info.blob_id == some_blobs.root.blob_id {
@@ -255,7 +262,7 @@ async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) ->
         .await;
     assert_eq!(
         orphaned_descendant_blobs.is_empty(),
-        blob_info.blob_info.blob_type != BlobType::Dir,
+        blob_info.referenced_as.blob_type != BlobType::Dir,
         "test invariant"
     );
     let expected_errors_from_orphaned_descendant_blobs =
@@ -271,11 +278,11 @@ async fn blob_with_corrupted_some_nodes(#[case] blob: impl FnOnce(&SomeBlobs) ->
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
     let mut expected_errors = vec![];
-    if blob_info.blob_info.blob_type == BlobType::Dir {
+    if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(CorruptedError::BlobUnreadable {
             blob_id: blob_info.blob_id,
-            expected_blob_info: blob_info.blob_info,
+            referenced_as: blob_info.referenced_as,
         });
     }
 

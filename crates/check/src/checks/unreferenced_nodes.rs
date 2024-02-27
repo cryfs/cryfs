@@ -1,19 +1,21 @@
 use std::fmt::Debug;
 use std::num::NonZeroU8;
 
-use super::utils::reference_checker::ReferenceChecker;
-use super::{BlobToProcess, FilesystemCheck, NodeToProcess};
-use crate::error::{
-    BlobInfoAsExpectedByEntryInParent, CheckError, CorruptedError, NodeInfoAsSeenByLookingAtNode,
-    NodeReference, NodeReferenceFromReachableBlob, ReferencingBlobInfo,
-};
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_rustfs::AbsolutePath;
 
+use super::utils::reference_checker::ReferenceChecker;
+use super::{BlobToProcess, FilesystemCheck, NodeToProcess};
+use crate::error::{CheckError, CorruptedError};
+use crate::node_info::{
+    BlobReference, BlobReferenceWithId, NodeAndBlobReference,
+    NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode,
+};
+
 struct ReferencedAs {
-    referenced_as: NodeReference,
+    referenced_as: NodeAndBlobReference,
 }
 
 #[derive(Debug, Clone)]
@@ -44,7 +46,7 @@ impl UnreferencedNodesReferenceChecker {
     pub fn process_node(
         &mut self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: Option<NodeReferenceFromReachableBlob>,
+        expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
         match node {
             NodeToProcess::Readable(node) => self.process_readable_node(node, expected_node_info),
@@ -57,7 +59,7 @@ impl UnreferencedNodesReferenceChecker {
     fn process_readable_node(
         &mut self,
         node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: Option<NodeReferenceFromReachableBlob>,
+        expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
         let depth = NonZeroU8::new(node.depth());
         let node_info = if let Some(depth) = depth {
@@ -78,14 +80,14 @@ impl UnreferencedNodesReferenceChecker {
                     let parent_id = *node.block_id();
                     let depth = node.depth().get() - 1;
                     let referenced_as = if depth == 0 {
-                        NodeReference::NonRootLeafNode {
+                        NodeAndBlobReference::NonRootLeafNode {
                             belongs_to_blob: expected_node_info
                                 .as_ref()
                                 .map(|a| a.blob_info.clone()),
                             parent_id,
                         }
                     } else {
-                        NodeReference::NonRootInnerNode {
+                        NodeAndBlobReference::NonRootInnerNode {
                             belongs_to_blob: expected_node_info
                                 .as_ref()
                                 .map(|a| a.blob_info.clone()),
@@ -105,7 +107,7 @@ impl UnreferencedNodesReferenceChecker {
     fn process_unreadable_node(
         &mut self,
         node_id: BlockId,
-        expected_node_info: Option<NodeReferenceFromReachableBlob>,
+        expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
         self.reference_checker.mark_as_seen(
             node_id,
@@ -138,9 +140,9 @@ impl UnreferencedNodesReferenceChecker {
             }
             FsBlob::Directory(blob) => {
                 for child in blob.entries() {
-                    let child_blob_info = ReferencingBlobInfo {
+                    let child_blob_info = BlobReferenceWithId {
                         blob_id: *child.blob_id(),
-                        blob_info: BlobInfoAsExpectedByEntryInParent {
+                        referenced_as: BlobReference {
                             blob_type: entry_type_to_blob_type(child.entry_type()),
                             parent_id: blob.blob_id(),
                             path: path.join(child.name()),
@@ -149,7 +151,7 @@ impl UnreferencedNodesReferenceChecker {
                     self.reference_checker.mark_as_referenced(
                         *child.blob_id().to_root_block_id(),
                         ReferencedAs {
-                            referenced_as: NodeReference::RootNode {
+                            referenced_as: NodeAndBlobReference::RootNode {
                                 belongs_to_blob: child_blob_info,
                             },
                         },
@@ -225,10 +227,10 @@ impl CheckUnreferencedNodes {
             .mark_as_referenced(
                 *root_blob_id.to_root_block_id(),
                 ReferencedAs {
-                    referenced_as: NodeReference::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo {
+                    referenced_as: NodeAndBlobReference::RootNode {
+                        belongs_to_blob: BlobReferenceWithId {
                             blob_id: root_blob_id,
-                            blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+                            referenced_as: BlobReference::root_dir(),
                         },
                     },
                 },
@@ -244,7 +246,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_node<'a>(
         &mut self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeReferenceFromReachableBlob,
+        expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         self.reachable_nodes_checker
             .process_node(node, Some(expected_node_info.clone()))?;
@@ -262,12 +264,12 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_blob<'a, 'b>(
         &mut self,
         blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
+        referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         match blob {
             BlobToProcess::Readable(blob) => {
                 self.reachable_nodes_checker
-                    .process_blob(blob, &expected_blob_info.path)?;
+                    .process_blob(blob, &referenced_as.path)?;
             }
             BlobToProcess::Unreadable(_blob_id) => {
                 // do nothing

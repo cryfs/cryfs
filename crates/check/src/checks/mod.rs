@@ -2,12 +2,12 @@ use derivative::Derivative;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
-use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeReferenceFromReachableBlob};
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_cryfs::filesystem::fsblobstore::FsBlob;
 
 use super::error::{CheckError, CorruptedError};
+use crate::node_info::{BlobReference, NodeAndBlobReferenceFromReachableBlob};
 
 // TODO Check
 //  ( some of these should probably be added as checks into general loading code so they run in regular cryfs as well and then cryfs-check just catches the loading error )
@@ -58,14 +58,14 @@ pub trait FilesystemCheck {
     fn process_reachable_blob<'a, 'b>(
         &mut self,
         blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
+        referenced_as: &BlobReference,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is part of a reachable blob
     fn process_reachable_node(
         &mut self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeReferenceFromReachableBlob,
+        expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is not part of a reachable blob
@@ -109,28 +109,28 @@ impl AllChecks {
     pub fn process_reachable_blob<'a, 'b>(
         &self,
         blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
+        referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         // TODO Here and in other methods, avoid having to list all the members and risking to forget one. Maybe a macro?
         self.check_unreachable_nodes
             .lock()
             .unwrap()
-            .process_reachable_blob(blob, expected_blob_info)?;
+            .process_reachable_blob(blob, referenced_as)?;
         self.check_nodes_readable
             .lock()
             .unwrap()
-            .process_reachable_blob(blob, expected_blob_info)?;
+            .process_reachable_blob(blob, referenced_as)?;
         self.check_parent_pointers
             .lock()
             .unwrap()
-            .process_reachable_blob(blob, expected_blob_info)?;
+            .process_reachable_blob(blob, referenced_as)?;
         Ok(())
     }
 
     pub fn process_reachable_node<'a>(
         &self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeReferenceFromReachableBlob,
+        expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()

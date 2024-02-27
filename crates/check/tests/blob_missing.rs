@@ -4,15 +4,11 @@ use rstest::rstest;
 use std::iter;
 
 use cryfs_blockstore::RemoveResult;
-use cryfs_check::{
-    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeReference, ReferencingBlobInfo,
-};
+use cryfs_check::{BlobReference, BlobReferenceWithId, CorruptedError, NodeAndBlobReference};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{
-    expect_blobs_to_have_unreferenced_root_nodes, CreatedBlobInfo, SomeBlobs,
-};
+use common::entry_helpers::{expect_blobs_to_have_unreferenced_root_nodes, SomeBlobs};
 use common::fixture::FilesystemFixture;
 
 #[rstest]
@@ -22,7 +18,7 @@ use common::fixture::FilesystemFixture;
 #[case::symlink(|some_blobs: &SomeBlobs| some_blobs.large_symlink_1.clone())]
 #[case::rootdir_with_children(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
-async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo) {
+async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
     let orphaned_descendant_blobs = fs_fixture
@@ -42,10 +38,10 @@ async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> CreatedB
 
     let expected_errors = iter::once(CorruptedError::NodeMissing {
         node_id: *blob_info.blob_id.to_root_block_id(),
-        referenced_as: [NodeReference::RootNode {
-            belongs_to_blob: ReferencingBlobInfo {
+        referenced_as: [NodeAndBlobReference::RootNode {
+            belongs_to_blob: BlobReferenceWithId {
                 blob_id: blob_info.blob_id,
-                blob_info: blob_info.blob_info,
+                referenced_as: blob_info.referenced_as,
             },
         }]
         .into_iter()
@@ -81,10 +77,10 @@ async fn root_dir_entirely_missing_without_children() {
 
     let expected_errors = vec![CorruptedError::NodeMissing {
         node_id: *root_dir_id.to_root_block_id(),
-        referenced_as: [NodeReference::RootNode {
-            belongs_to_blob: ReferencingBlobInfo {
+        referenced_as: [NodeAndBlobReference::RootNode {
+            belongs_to_blob: BlobReferenceWithId {
                 blob_id: root_dir_id,
-                blob_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
+                referenced_as: BlobReference::root_dir(),
             },
         }]
         .into_iter()

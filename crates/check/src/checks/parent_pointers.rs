@@ -1,15 +1,13 @@
 use std::fmt::Debug;
 
-use crate::error::{
-    BlobInfoAsExpectedByEntryInParent, NodeReferenceFromReachableBlob,BlobInfoAsSeenByLookingAtBlob, BlobReference,
-};
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockStore;
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_utils::peekable::PeekableExt;
 
+use crate::node_info::{BlobInfoAsSeenByLookingAtBlob, BlobReference};
 use super::{
-    utils::reference_checker::ReferenceChecker, NodeToProcess, BlobToProcess, CheckError, CorruptedError, FilesystemCheck,
+    utils::reference_checker::ReferenceChecker, NodeAndBlobReferenceFromReachableBlob, NodeToProcess, BlobToProcess, CheckError, CorruptedError, FilesystemCheck,
 };
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
@@ -21,7 +19,7 @@ enum SeenBlobInfo {
         parent_pointer: BlobId,
     },
     Unreadable {
-        expected_blob_info: BlobInfoAsExpectedByEntryInParent,
+        referenced_as: BlobReference,
     },
 }
 
@@ -45,9 +43,7 @@ impl CheckParentPointers {
         let mut reference_checker = ReferenceChecker::new();
         reference_checker.mark_as_referenced(
             root_blob_id,
-            BlobReference {
-                expected_child_info: BlobInfoAsExpectedByEntryInParent::root_dir(),
-            },
+            BlobReference::root_dir(),
         );
         Self { reference_checker }
     }
@@ -57,7 +53,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_blob<'a, 'b>(
         &mut self,
         blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
+        referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         match blob {
             BlobToProcess::Readable(blob) => {
@@ -77,14 +73,12 @@ impl FilesystemCheck for CheckParentPointers {
                             self.reference_checker.mark_as_referenced(
                                 *entry.blob_id(),
                                 BlobReference {
-                                    expected_child_info: BlobInfoAsExpectedByEntryInParent {
                                         blob_type: entry_type_to_blob_type(entry.entry_type()),
                                         parent_id: blob.blob_id(),
-                                        path: expected_blob_info
+                                        path: referenced_as
                                             .path
                                             .join(entry.name()),
                                     },
-                                },
                             );
                         }
                     }
@@ -94,7 +88,7 @@ impl FilesystemCheck for CheckParentPointers {
                 self.reference_checker.mark_as_seen(
                     blob_id,
                     SeenBlobInfo::Unreadable {
-                        expected_blob_info: expected_blob_info.clone(),
+                        referenced_as: referenced_as.clone(),
                     },
                 );
             }
@@ -106,7 +100,7 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        _expected_node_info: &NodeReferenceFromReachableBlob,
+        _expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())
@@ -140,7 +134,7 @@ impl FilesystemCheck for CheckParentPointers {
                 match seen_blob_info {
                     Some(SeenBlobInfo::Readable{parent_pointer, blob_type}) => {
                         let mut matching_parents = referenced_as.iter()
-                            .filter(|&BlobReference {expected_child_info}| parent_pointer == expected_child_info.parent_id)
+                            .filter(|blob_reference| parent_pointer == blob_reference.parent_id)
                             .peekable();
                         if matching_parents.is_empty() {
                             errors.push(CorruptedError::WrongParentPointer {
@@ -153,8 +147,8 @@ impl FilesystemCheck for CheckParentPointers {
                         // TODO If matching_parents does not contain one with the right blob type, generate an assertion for blob type mismatch.
                         //      This should be an error caught by another check but we should do an assertion here.
                     }
-                    Some(SeenBlobInfo::Unreadable {expected_blob_info}) => {
-                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { blob_id, expected_blob_info })));
+                    Some(SeenBlobInfo::Unreadable {referenced_as}) => {
+                        errors.push(CorruptedError::Assert(Box::new(CorruptedError::BlobUnreadable { blob_id, referenced_as })));
                     }
                     None => {
                         // TODO This should be an assertion that there is a NodeMissing that contains a referenced_as for this blobs root node, but it can contain other referenced_as as well.

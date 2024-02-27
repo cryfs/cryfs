@@ -16,7 +16,7 @@ use cryfs_blobstore::{
 };
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_check::{
-    BlobInfoAsExpectedByEntryInParent, CorruptedError, NodeInfoAsSeenByLookingAtNode,
+    BlobReference, BlobReferenceWithId, CorruptedError, NodeInfoAsSeenByLookingAtNode,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_cryfs::{
@@ -28,13 +28,6 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
-
-// TODO Can we use replace CreatedBlobInfo with ReferencingBlobInfo?
-#[derive(Debug, Clone)]
-pub struct CreatedBlobInfo {
-    pub blob_id: BlobId,
-    pub blob_info: BlobInfoAsExpectedByEntryInParent,
-}
 
 #[derive(Debug)]
 pub struct CreatedDirBlob<'a, B>
@@ -80,7 +73,7 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedDirBlob<'a, B>> for CreatedBlobInfo
+impl<'a, B> From<&CreatedDirBlob<'a, B>> for BlobReferenceWithId
 where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
@@ -88,7 +81,7 @@ where
     fn from(blob: &CreatedDirBlob<'a, B>) -> Self {
         Self {
             blob_id: blob.blob.blob_id(),
-            blob_info: BlobInfoAsExpectedByEntryInParent {
+            referenced_as: BlobReference {
                 blob_type: BlobType::Dir,
                 parent_id: blob.blob.parent(),
                 path: blob.path.clone(),
@@ -115,7 +108,7 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedFileBlob<'a, B>> for CreatedBlobInfo
+impl<'a, B> From<&CreatedFileBlob<'a, B>> for BlobReferenceWithId
 where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
@@ -123,7 +116,7 @@ where
     fn from(blob: &CreatedFileBlob<'a, B>) -> Self {
         Self {
             blob_id: blob.blob.blob_id(),
-            blob_info: BlobInfoAsExpectedByEntryInParent {
+            referenced_as: BlobReference {
                 blob_type: BlobType::File,
                 parent_id: blob.blob.parent(),
                 path: blob.path.clone(),
@@ -151,7 +144,7 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for CreatedBlobInfo
+impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for BlobReferenceWithId
 where
     B: BlobStore + Debug + 'a,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
@@ -159,7 +152,7 @@ where
     fn from(blob: &CreatedSymlinkBlob<'a, B>) -> Self {
         Self {
             blob_id: blob.blob.blob_id(),
-            blob_info: BlobInfoAsExpectedByEntryInParent {
+            referenced_as: BlobReference {
                 blob_type: BlobType::Symlink,
                 parent_id: blob.blob.parent(),
                 path: blob.path.clone(),
@@ -393,27 +386,27 @@ where
 
 #[derive(Debug)]
 pub struct SomeBlobs {
-    pub root: CreatedBlobInfo,
-    pub dir1: CreatedBlobInfo,
-    pub dir2: CreatedBlobInfo,
-    pub dir1_dir3: CreatedBlobInfo,
-    pub dir1_dir4: CreatedBlobInfo,
-    pub dir1_dir3_dir5: CreatedBlobInfo,
-    pub dir2_dir6: CreatedBlobInfo,
-    pub dir2_dir7: CreatedBlobInfo,
-    pub dir2_large_file_1: CreatedBlobInfo,
-    pub dir2_dir7_large_file_1: CreatedBlobInfo,
-    pub large_file_1: CreatedBlobInfo,
-    pub large_file_2: CreatedBlobInfo,
-    pub large_dir_1: CreatedBlobInfo,
-    pub large_dir_2: CreatedBlobInfo,
-    pub dir2_large_symlink_1: CreatedBlobInfo,
-    pub dir2_dir7_large_symlink_1: CreatedBlobInfo,
-    pub large_symlink_1: CreatedBlobInfo,
-    pub large_symlink_2: CreatedBlobInfo,
-    pub empty_file: CreatedBlobInfo,
-    pub empty_dir: CreatedBlobInfo,
-    pub empty_symlink: CreatedBlobInfo,
+    pub root: BlobReferenceWithId,
+    pub dir1: BlobReferenceWithId,
+    pub dir2: BlobReferenceWithId,
+    pub dir1_dir3: BlobReferenceWithId,
+    pub dir1_dir4: BlobReferenceWithId,
+    pub dir1_dir3_dir5: BlobReferenceWithId,
+    pub dir2_dir6: BlobReferenceWithId,
+    pub dir2_dir7: BlobReferenceWithId,
+    pub dir2_large_file_1: BlobReferenceWithId,
+    pub dir2_dir7_large_file_1: BlobReferenceWithId,
+    pub large_file_1: BlobReferenceWithId,
+    pub large_file_2: BlobReferenceWithId,
+    pub large_dir_1: BlobReferenceWithId,
+    pub large_dir_2: BlobReferenceWithId,
+    pub dir2_large_symlink_1: BlobReferenceWithId,
+    pub dir2_dir7_large_symlink_1: BlobReferenceWithId,
+    pub large_symlink_1: BlobReferenceWithId,
+    pub large_symlink_2: BlobReferenceWithId,
+    pub empty_file: BlobReferenceWithId,
+    pub empty_dir: BlobReferenceWithId,
+    pub empty_symlink: BlobReferenceWithId,
 }
 
 pub async fn create_some_blobs<'a, 'b, 'c, B>(

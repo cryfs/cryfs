@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 
-use crate::error::{BlobInfoAsExpectedByEntryInParent, NodeReferenceFromReachableBlob};
 use cryfs_blockstore::BlockStore;
 
 use super::{BlobToProcess, CheckError, CorruptedError, FilesystemCheck, NodeToProcess};
+use crate::node_info::{BlobReference, NodeAndBlobReferenceFromReachableBlob};
 
 /// Check that each node is readable
 pub struct CheckNodesReadable {
@@ -20,7 +20,7 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_blob<'a, 'b>(
         &mut self,
         _blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
-        _expected_blob_info: &BlobInfoAsExpectedByEntryInParent,
+        _referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())
@@ -29,7 +29,7 @@ impl FilesystemCheck for CheckNodesReadable {
     fn process_reachable_node<'a>(
         &mut self,
         node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
-        expected_node_info: &NodeReferenceFromReachableBlob,
+        expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         match node {
             NodeToProcess::Readable(_node) => {

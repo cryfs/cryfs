@@ -3,13 +3,11 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_check::CorruptedError;
+use cryfs_check::{BlobReferenceWithId, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{
-    expect_blobs_to_have_unreferenced_root_nodes, CreatedBlobInfo, SomeBlobs,
-};
+use common::entry_helpers::{expect_blobs_to_have_unreferenced_root_nodes, SomeBlobs};
 use common::fixture::FilesystemFixture;
 
 #[rstest]
@@ -19,7 +17,7 @@ use common::fixture::FilesystemFixture;
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
 async fn unreadable_blob_bad_format_version(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo,
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
@@ -35,7 +33,7 @@ async fn unreadable_blob_bad_format_version(
 
     let expected_errors = iter::once(CorruptedError::BlobUnreadable {
         blob_id: blob_info.blob_id,
-        expected_blob_info: blob_info.blob_info,
+        referenced_as: blob_info.referenced_as,
     })
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();
@@ -51,7 +49,7 @@ async fn unreadable_blob_bad_format_version(
 #[case::rootdir(|some_blobs: &SomeBlobs| some_blobs.root.clone())]
 #[tokio::test(flavor = "multi_thread")]
 async fn unreadable_file_blob_bad_blob_type(
-    #[case] blob: impl FnOnce(&SomeBlobs) -> CreatedBlobInfo,
+    #[case] blob: impl FnOnce(&SomeBlobs) -> BlobReferenceWithId,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let blob_info = blob(&some_blobs);
@@ -65,7 +63,7 @@ async fn unreadable_file_blob_bad_blob_type(
 
     let expected_errors = iter::once(CorruptedError::BlobUnreadable {
         blob_id: blob_info.blob_id,
-        expected_blob_info: blob_info.blob_info,
+        referenced_as: blob_info.referenced_as,
     })
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();

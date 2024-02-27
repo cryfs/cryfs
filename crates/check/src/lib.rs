@@ -9,10 +9,11 @@ pub use cli::{check_filesystem, RecoverCli};
 mod checks;
 mod console;
 mod error;
-pub use error::{
-    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
-    CorruptedError, NodeInfoAsExpectedByEntryInParent, NodeInfoAsSeenByLookingAtNode,
-    NodeReference, NodeReferenceFromReachableBlob, ReferencingBlobInfo,
+pub use error::CorruptedError;
+mod node_info;
+pub use node_info::{
+    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, NodeAndBlobReference,
+    NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
 };
 mod runner;
 mod task_queue;

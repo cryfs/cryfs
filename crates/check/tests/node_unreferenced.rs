@@ -1,7 +1,7 @@
 //! Tests where there are nodes that aren't referenced from anywhere
 
 use cryfs_blockstore::BlockId;
-use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeReference};
+use cryfs_check::{CorruptedError, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode};
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
 };
@@ -53,7 +53,7 @@ async fn single_inner_node_unreferenced() {
         })
         .await;
 
-    let referenced_as = NodeReference::NonRootInnerNode {
+    let referenced_as = NodeAndBlobReference::NonRootInnerNode {
         belongs_to_blob: None,
         depth: NonZeroU8::new(DEPTH - 1).unwrap(),
         parent_id: node_id,

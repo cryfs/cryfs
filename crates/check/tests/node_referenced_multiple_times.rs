@@ -9,13 +9,13 @@ use std::num::NonZeroU8;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
 use cryfs_check::{
-    CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeReference, ReferencingBlobInfo,
+    BlobReferenceWithId, CorruptedError, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode,
 };
 
 mod common;
 use common::entry_helpers::{
     expect_blobs_to_have_unreferenced_root_nodes, find_inner_node_id_and_parent,
-    find_leaf_id_and_parent, remove_subtree, CreatedBlobInfo, SomeBlobs,
+    find_leaf_id_and_parent, remove_subtree, SomeBlobs,
 };
 use common::fixture::FilesystemFixture;
 
@@ -193,13 +193,13 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 // TODO #[case::symlink_referenced_from_grandparent_dir(|some_blobs: &SomeBlobs| (some_blobs.dir2.clone(), some_blobs.dir2_dir7_large_symlink_1.clone()))]
 #[tokio::test(flavor = "multi_thread")]
 fn test_case_with_multiple_reference_scenarios(
-    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobReferenceWithId, BlobReferenceWithId),
 ) {
 }
 
 async fn errors_allowed_from_dir_blob_being_unreadable(
     fs_fixture: &FilesystemFixture,
-    blob_info: CreatedBlobInfo,
+    blob_info: BlobReferenceWithId,
 ) -> HashSet<CorruptedError> {
     if fs_fixture.is_dir_blob(blob_info.blob_id).await {
         expect_blobs_to_have_unreferenced_root_nodes(
@@ -214,15 +214,15 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
             [
                 CorruptedError::BlobUnreadable {
                     blob_id: blob_info.blob_id,
-                    expected_blob_info: blob_info.blob_info.clone(),
+                    referenced_as: blob_info.referenced_as.clone(),
                 },
                 // TODO Why is NodeMissing necessary here? Without it, tests seem to become flaky because it seems to be sometimes thrown
                 CorruptedError::NodeMissing {
                     node_id: *blob_info.blob_id.to_root_block_id(),
-                    referenced_as: [NodeReference::RootNode {
-                        belongs_to_blob: ReferencingBlobInfo {
+                    referenced_as: [NodeAndBlobReference::RootNode {
+                        belongs_to_blob: BlobReferenceWithId {
                             blob_id: blob_info.blob_id,
-                            blob_info: blob_info.blob_info,
+                            referenced_as: blob_info.referenced_as,
                         },
                     }]
                     .into_iter()
@@ -239,7 +239,7 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
 
 #[apply(test_case_with_multiple_reference_scenarios)]
 async fn leaf_node_referenced_multiple_times(
-    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobReferenceWithId, BlobReferenceWithId),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
@@ -266,17 +266,17 @@ async fn leaf_node_referenced_multiple_times(
             node_id: replace_result.node_id,
             node_info: Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
             referenced_as: [
-                NodeReference::NonRootLeafNode {
-                    belongs_to_blob: Some(ReferencingBlobInfo {
+                NodeAndBlobReference::NonRootLeafNode {
+                    belongs_to_blob: Some(BlobReferenceWithId {
                         blob_id: blob1.blob_id,
-                        blob_info: blob1.blob_info,
+                        referenced_as: blob1.referenced_as,
                     }),
                     parent_id: replace_result.additional_parent_id,
                 },
-                NodeReference::NonRootLeafNode {
-                    belongs_to_blob: Some(ReferencingBlobInfo {
+                NodeAndBlobReference::NonRootLeafNode {
+                    belongs_to_blob: Some(BlobReferenceWithId {
                         blob_id: blob2.blob_id,
-                        blob_info: blob2.blob_info,
+                        referenced_as: blob2.referenced_as,
                     }),
                     parent_id: replace_result.original_parent_id,
                 }
@@ -290,7 +290,7 @@ async fn leaf_node_referenced_multiple_times(
 
 #[apply(test_case_with_multiple_reference_scenarios)]
 async fn inner_node_referenced_multiple_times(
-    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobReferenceWithId, BlobReferenceWithId),
     // with_same_depth and with_different_depth
     #[values((5, 5), (5, 7))] depths_distance_from_root: (u8, u8),
 ) {
@@ -340,18 +340,18 @@ async fn inner_node_referenced_multiple_times(
                 depth: expected_depth,
             }),
             referenced_as: [
-                NodeReference::NonRootInnerNode {
-                    belongs_to_blob: Some(ReferencingBlobInfo {
+                NodeAndBlobReference::NonRootInnerNode {
+                    belongs_to_blob: Some(BlobReferenceWithId {
                         blob_id: blob1.blob_id,
-                        blob_info: blob1.blob_info,
+                        referenced_as: blob1.referenced_as,
                     }),
                     parent_id: replace_result.additional_parent_id,
                     depth: expected_referenced_depth_1,
                 },
-                NodeReference::NonRootInnerNode {
-                    belongs_to_blob: Some(ReferencingBlobInfo {
+                NodeAndBlobReference::NonRootInnerNode {
+                    belongs_to_blob: Some(BlobReferenceWithId {
                         blob_id: blob2.blob_id,
-                        blob_info: blob2.blob_info,
+                        referenced_as: blob2.referenced_as,
                     }),
                     parent_id: replace_result.original_parent_id,
                     depth: expected_referenced_depth_2,
@@ -366,7 +366,7 @@ async fn inner_node_referenced_multiple_times(
 
 #[apply(test_case_with_multiple_reference_scenarios)]
 async fn root_node_referenced(
-    #[case] blobs: impl FnOnce(&SomeBlobs) -> (CreatedBlobInfo, CreatedBlobInfo),
+    #[case] blobs: impl FnOnce(&SomeBlobs) -> (BlobReferenceWithId, BlobReferenceWithId),
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
@@ -409,18 +409,18 @@ async fn root_node_referenced(
             node_id: replace_result.node_id,
             node_info: Some(expected_node_info),
             referenced_as: [
-                NodeReference::NonRootInnerNode {
-                    belongs_to_blob: Some(ReferencingBlobInfo {
+                NodeAndBlobReference::NonRootInnerNode {
+                    belongs_to_blob: Some(BlobReferenceWithId {
                         blob_id: blob1.blob_id,
-                        blob_info: blob1.blob_info,
+                        referenced_as: blob1.referenced_as,
                     }),
                     parent_id: replace_result.additional_parent_id,
                     depth: expected_referenced_depth,
                 },
-                NodeReference::RootNode {
-                    belongs_to_blob: ReferencingBlobInfo {
+                NodeAndBlobReference::RootNode {
+                    belongs_to_blob: BlobReferenceWithId {
                         blob_id: blob2.blob_id,
-                        blob_info: blob2.blob_info,
+                        referenced_as: blob2.referenced_as,
                     }
                 },
             ]

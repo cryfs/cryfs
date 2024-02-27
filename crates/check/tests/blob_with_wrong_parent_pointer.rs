@@ -8,23 +8,23 @@ use std::num::NonZeroU8;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
-    BlobInfoAsExpectedByEntryInParent, BlobInfoAsSeenByLookingAtBlob, BlobReference,
-    CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeReference, ReferencingBlobInfo,
+    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, CorruptedError,
+    NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode,
 };
 use cryfs_cryfs::filesystem::fsblobstore::{BlobType, FsBlob};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
 use common::{
-    entry_helpers::{self, CreatedBlobInfo, CreatedDirBlob},
+    entry_helpers::{self, CreatedDirBlob},
     fixture::FilesystemFixture,
 };
 
 fn make_file(
     fs_fixture: &FilesystemFixture,
-    parent: CreatedBlobInfo,
-) -> BoxFuture<'_, CreatedBlobInfo> {
-    assert!(parent.blob_info.blob_type == BlobType::Dir);
+    parent: BlobReferenceWithId,
+) -> BoxFuture<'_, BlobReferenceWithId> {
+    assert!(parent.referenced_as.blob_type == BlobType::Dir);
     Box::pin(async move {
         fs_fixture
             .create_empty_file_in_parent(parent, "filename")
@@ -34,9 +34,9 @@ fn make_file(
 
 fn make_symlink(
     fs_fixture: &FilesystemFixture,
-    parent: CreatedBlobInfo,
-) -> BoxFuture<'_, CreatedBlobInfo> {
-    assert!(parent.blob_info.blob_type == BlobType::Dir);
+    parent: BlobReferenceWithId,
+) -> BoxFuture<'_, BlobReferenceWithId> {
+    assert!(parent.referenced_as.blob_type == BlobType::Dir);
     Box::pin(async move {
         fs_fixture
             .create_symlink_in_parent(parent, "symlinkname", "target")
@@ -46,9 +46,9 @@ fn make_symlink(
 
 fn make_empty_dir<'a>(
     fs_fixture: &'a FilesystemFixture,
-    parent: CreatedBlobInfo,
-) -> BoxFuture<'a, CreatedBlobInfo> {
-    assert!(parent.blob_info.blob_type == BlobType::Dir);
+    parent: BlobReferenceWithId,
+) -> BoxFuture<'a, BlobReferenceWithId> {
+    assert!(parent.referenced_as.blob_type == BlobType::Dir);
     Box::pin(async move {
         fs_fixture
             .create_empty_dir_in_parent(parent, "my_empty_dir")
@@ -58,9 +58,9 @@ fn make_empty_dir<'a>(
 
 fn make_large_dir<'a>(
     fs_fixture: &'a FilesystemFixture,
-    parent_info: CreatedBlobInfo,
-) -> BoxFuture<'a, CreatedBlobInfo> {
-    assert!(parent_info.blob_info.blob_type == BlobType::Dir);
+    parent_info: BlobReferenceWithId,
+) -> BoxFuture<'a, BlobReferenceWithId> {
+    assert!(parent_info.referenced_as.blob_type == BlobType::Dir);
     Box::pin(async move {
         fs_fixture
             .update_fsblobstore(move |fsblobstore| {
@@ -74,7 +74,7 @@ fn make_large_dir<'a>(
                     )
                     .await
                     .unwrap();
-                    let mut parent = CreatedDirBlob::new(parent, parent_info.blob_info.path);
+                    let mut parent = CreatedDirBlob::new(parent, parent_info.referenced_as.path);
                     let mut dir =
                         entry_helpers::create_large_dir(fsblobstore, &mut *parent, "dirname").await;
                     let result = (&*dir).into();
@@ -104,20 +104,24 @@ async fn set_parent(fs_fixture: &FilesystemFixture, blob_id: BlobId, new_parent:
 async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
     #[values(make_empty_dir, make_large_dir)] make_old_parent: fn(
         &FilesystemFixture,
-        CreatedBlobInfo,
-    )
-        -> BoxFuture<'_, CreatedBlobInfo>,
-    #[values(make_empty_dir, make_large_dir)] make_new_parent: fn(
-        &FilesystemFixture,
-        CreatedBlobInfo,
-    )
-        -> BoxFuture<'_, CreatedBlobInfo>,
-    #[values(make_file, make_empty_dir, make_symlink)] make_blob: fn(
-        &FilesystemFixture,
-        CreatedBlobInfo,
+        BlobReferenceWithId,
     ) -> BoxFuture<
         '_,
-        CreatedBlobInfo,
+        BlobReferenceWithId,
+    >,
+    #[values(make_empty_dir, make_large_dir)] make_new_parent: fn(
+        &FilesystemFixture,
+        BlobReferenceWithId,
+    ) -> BoxFuture<
+        '_,
+        BlobReferenceWithId,
+    >,
+    #[values(make_file, make_empty_dir, make_symlink)] make_blob: fn(
+        &FilesystemFixture,
+        BlobReferenceWithId,
+    ) -> BoxFuture<
+        '_,
+        BlobReferenceWithId,
     >,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
@@ -131,13 +135,10 @@ async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
     let expected_errors: Vec<_> = vec![CorruptedError::WrongParentPointer {
         blob_id: blob_info.blob_id,
         blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
-            blob_type: blob_info.blob_info.blob_type,
+            blob_type: blob_info.referenced_as.blob_type,
             parent_pointer: new_parent.blob_id,
         },
-        referenced_as: iter::once(BlobReference {
-            expected_child_info: blob_info.blob_info,
-        })
-        .collect(),
+        referenced_as: iter::once(blob_info.referenced_as).collect(),
     }];
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -149,20 +150,24 @@ async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
 async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
     #[values(make_empty_dir, make_large_dir)] make_old_parent: fn(
         &FilesystemFixture,
-        CreatedBlobInfo,
-    )
-        -> BoxFuture<'_, CreatedBlobInfo>,
-    #[values(make_empty_dir, make_large_dir)] make_new_parent: fn(
-        &FilesystemFixture,
-        CreatedBlobInfo,
-    )
-        -> BoxFuture<'_, CreatedBlobInfo>,
-    #[values(make_file, make_empty_dir, make_symlink)] make_blob: fn(
-        &FilesystemFixture,
-        CreatedBlobInfo,
+        BlobReferenceWithId,
     ) -> BoxFuture<
         '_,
-        CreatedBlobInfo,
+        BlobReferenceWithId,
+    >,
+    #[values(make_empty_dir, make_large_dir)] make_new_parent: fn(
+        &FilesystemFixture,
+        BlobReferenceWithId,
+    ) -> BoxFuture<
+        '_,
+        BlobReferenceWithId,
+    >,
+    #[values(make_file, make_empty_dir, make_symlink)] make_blob: fn(
+        &FilesystemFixture,
+        BlobReferenceWithId,
+    ) -> BoxFuture<
+        '_,
+        BlobReferenceWithId,
     >,
 ) {
     const SECOND_NAME: &str = "dirname";
@@ -188,18 +193,14 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         NodeInfoAsSeenByLookingAtNode::LeafNode
     };
     let expected_blob_references: BTreeSet<BlobReference> = [
+        blob_info.referenced_as.clone(),
         BlobReference {
-            expected_child_info: blob_info.blob_info.clone(),
-        },
-        BlobReference {
-            expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                blob_type: BlobType::Dir,
-                parent_id: old_parent_2.blob_id,
-                path: old_parent_2
-                    .blob_info
-                    .path
-                    .join(SECOND_NAME.try_into().unwrap()),
-            },
+            blob_type: BlobType::Dir,
+            parent_id: old_parent_2.blob_id,
+            path: old_parent_2
+                .referenced_as
+                .path
+                .join(SECOND_NAME.try_into().unwrap()),
         },
     ]
     .into_iter()
@@ -208,7 +209,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
             blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
-                blob_type: blob_info.blob_info.blob_type,
+                blob_type: blob_info.referenced_as.blob_type,
                 parent_pointer: new_parent.blob_id,
             },
             referenced_as: expected_blob_references.clone(),
@@ -218,10 +219,10 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
             node_info: Some(expected_node_info),
             referenced_as: expected_blob_references
                 .iter()
-                .map(|blob_reference| NodeReference::RootNode {
-                    belongs_to_blob: ReferencingBlobInfo {
+                .map(|blob_reference| NodeAndBlobReference::RootNode {
+                    belongs_to_blob: BlobReferenceWithId {
                         blob_id: blob_info.blob_id,
-                        blob_info: blob_reference.expected_child_info.clone(),
+                        referenced_as: blob_reference.clone(),
                     },
                 })
                 .collect(),
@@ -229,7 +230,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
             blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
-                blob_type: blob_info.blob_info.blob_type,
+                blob_type: blob_info.referenced_as.blob_type,
                 parent_pointer: new_parent.blob_id,
             }),
             referenced_as: expected_blob_references,
@@ -245,20 +246,24 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
 async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
     #[values(make_empty_dir, make_large_dir)] make_old_parent: fn(
         &FilesystemFixture,
-        CreatedBlobInfo,
-    )
-        -> BoxFuture<'_, CreatedBlobInfo>,
-    #[values(make_empty_dir, make_large_dir)] make_new_parent: fn(
-        &FilesystemFixture,
-        CreatedBlobInfo,
-    )
-        -> BoxFuture<'_, CreatedBlobInfo>,
-    #[values(make_file, make_empty_dir, make_symlink)] make_blob: fn(
-        &FilesystemFixture,
-        CreatedBlobInfo,
+        BlobReferenceWithId,
     ) -> BoxFuture<
         '_,
-        CreatedBlobInfo,
+        BlobReferenceWithId,
+    >,
+    #[values(make_empty_dir, make_large_dir)] make_new_parent: fn(
+        &FilesystemFixture,
+        BlobReferenceWithId,
+    ) -> BoxFuture<
+        '_,
+        BlobReferenceWithId,
+    >,
+    #[values(make_file, make_empty_dir, make_symlink)] make_blob: fn(
+        &FilesystemFixture,
+        BlobReferenceWithId,
+    ) -> BoxFuture<
+        '_,
+        BlobReferenceWithId,
     >,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
@@ -291,38 +296,30 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
         NodeInfoAsSeenByLookingAtNode::LeafNode
     };
     let expected_blob_references: BTreeSet<BlobReference> = [
+        blob_info.referenced_as.clone(),
         BlobReference {
-            expected_child_info: blob_info.blob_info.clone(),
+            blob_type: BlobType::Dir,
+            parent_id: old_parent_2.blob_id,
+            path: old_parent_2
+                .referenced_as
+                .path
+                .join("dirname".try_into().unwrap()),
         },
         BlobReference {
-            expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                blob_type: BlobType::Dir,
-                parent_id: old_parent_2.blob_id,
-                path: old_parent_2
-                    .blob_info
-                    .path
-                    .join("dirname".try_into().unwrap()),
-            },
+            blob_type: BlobType::File,
+            parent_id: old_parent_3.blob_id,
+            path: old_parent_3
+                .referenced_as
+                .path
+                .join("filename".try_into().unwrap()),
         },
         BlobReference {
-            expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                blob_type: BlobType::File,
-                parent_id: old_parent_3.blob_id,
-                path: old_parent_3
-                    .blob_info
-                    .path
-                    .join("filename".try_into().unwrap()),
-            },
-        },
-        BlobReference {
-            expected_child_info: BlobInfoAsExpectedByEntryInParent {
-                blob_type: BlobType::Symlink,
-                parent_id: old_parent_4.blob_id,
-                path: old_parent_4
-                    .blob_info
-                    .path
-                    .join("symlinkname".try_into().unwrap()),
-            },
+            blob_type: BlobType::Symlink,
+            parent_id: old_parent_4.blob_id,
+            path: old_parent_4
+                .referenced_as
+                .path
+                .join("symlinkname".try_into().unwrap()),
         },
     ]
     .into_iter()
@@ -331,7 +328,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
         CorruptedError::WrongParentPointer {
             blob_id: blob_info.blob_id,
             blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
-                blob_type: blob_info.blob_info.blob_type,
+                blob_type: blob_info.referenced_as.blob_type,
                 parent_pointer: new_parent.blob_id,
             },
             referenced_as: expected_blob_references.clone(),
@@ -341,10 +338,10 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
             node_info: Some(expected_node_info),
             referenced_as: expected_blob_references
                 .iter()
-                .map(|blob_reference| NodeReference::RootNode {
-                    belongs_to_blob: ReferencingBlobInfo {
+                .map(|blob_reference| NodeAndBlobReference::RootNode {
+                    belongs_to_blob: BlobReferenceWithId {
                         blob_id: blob_info.blob_id,
-                        blob_info: blob_reference.expected_child_info.clone(),
+                        referenced_as: blob_reference.clone(),
                     },
                 })
                 .collect(),
@@ -352,7 +349,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
         CorruptedError::BlobReferencedMultipleTimes {
             blob_id: blob_info.blob_id,
             blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
-                blob_type: blob_info.blob_info.blob_type,
+                blob_type: blob_info.referenced_as.blob_type,
                 parent_pointer: new_parent.blob_id,
             }),
             referenced_as: expected_blob_references,
