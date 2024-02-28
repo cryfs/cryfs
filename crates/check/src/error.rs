@@ -7,7 +7,7 @@ use cryfs_blockstore::BlockId;
 
 use crate::node_info::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, NodeAndBlobReference,
-    NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode,
+    NodeInfoAsSeenByLookingAtNode,
 };
 
 // TODO Add more info to each error, e.g. parent pointers, blob a node belongs to, path in filesystem, ...
@@ -20,9 +20,8 @@ pub enum CorruptedError {
     #[error("Node {node_id:?} is unreadable and likely corrupted")]
     NodeUnreadable {
         node_id: BlockId,
-        // `referenced_as` is `None` if the node itself isn't reachable from the root blob of the file system
-        referenced_as: Option<NodeAndBlobReferenceFromReachableBlob>,
-        // TODO referenced_as: BTreeSet<NodeAndBlobReference>,
+        // `referenced_as` can be empty if the node itself isn't reachable from the root blob of the file system
+        referenced_as: BTreeSet<NodeAndBlobReference>,
         // TODO error: anyhow::Error,
     },
 

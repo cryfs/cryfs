@@ -22,16 +22,15 @@ use cryfs_utils::{
 use futures::{future::BoxFuture, stream::StreamExt, Future};
 use rand::{rngs::SmallRng, SeedableRng};
 use std::fmt::{Debug, Formatter};
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
 use super::entry_helpers::{
     self, find_an_inner_node_of_a_large_blob, find_an_inner_node_of_a_large_blob_with_parent_id,
     find_an_inner_node_of_a_small_blob_with_parent_id, find_inner_node_with_distance_from_root,
-    find_inner_node_with_distance_from_root_with_parent_id, find_leaf_node,
-    find_leaf_node_of_blob_with_parent_id, find_leaf_node_with_parent_id, CreatedDirBlob,
-    SomeBlobs,
+    find_inner_node_with_distance_from_root_with_parent_id, find_leaf_node_of_blob_with_parent_id,
+    find_leaf_node_with_parent_id, CreatedDirBlob, SomeBlobs,
 };
 
 const PASSWORD: &str = "mypassword";
@@ -822,26 +821,46 @@ impl FilesystemFixture {
                         let subchild2 = children.next().unwrap();
                         std::mem::drop(children);
 
-                        let inner_below_a =
-                            find_inner_node_with_distance_from_root(nodestore, subchild1).await;
+                        let (inner_below_a, inner_below_a_parent_id) =
+                            find_inner_node_with_distance_from_root_with_parent_id(
+                                nodestore, subchild1,
+                            )
+                            .await;
                         orphaned_nodes.extend(inner_below_a.children());
-                        // node_info is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
-                        corrupted_nodes.push((*inner_below_a.block_id(), None));
+                        corrupted_nodes.push((
+                            *inner_below_a.block_id(),
+                            [NodeAndBlobReference::NonRootInnerNode {
+                                belongs_to_blob: None, // This is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to reach this from any blob
+                                depth: inner_below_a.depth(),
+                                parent_id: inner_below_a_parent_id,
+                            }]
+                            .into_iter()
+                            .collect(),
+                        ));
 
-                        let leaf_below_a = find_leaf_node(nodestore, subchild2, &mut rng).await;
-                        // node_info is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
-                        corrupted_nodes.push((*leaf_below_a.block_id(), None));
+                        let (leaf_below_a, leaf_below_a_parent_id) =
+                            find_leaf_node_with_parent_id(nodestore, subchild2, &mut rng).await;
+                        // node_info is empty `[]` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
+                        corrupted_nodes.push((
+                            *leaf_below_a.block_id(),
+                            [NodeAndBlobReference::NonRootLeafNode {
+                                belongs_to_blob: None, // This is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to reach this from any blob
+                                parent_id: leaf_below_a_parent_id,
+                            }]
+                            .into_iter()
+                            .collect(),
+                        ));
 
                         orphaned_nodes.extend(inner_node_a.children());
                         corrupted_nodes.push((
                             *inner_node_a.block_id(),
-                            Some(NodeAndBlobReferenceFromReachableBlob {
-                                blob_info: belongs_to_blob.clone(),
-                                node_info: NodeReference::NonRootInnerNode {
-                                    depth: inner_node_a.depth(),
-                                    parent_id: inner_node_a_parent_id,
-                                },
-                            }),
+                            [NodeAndBlobReference::NonRootInnerNode {
+                                belongs_to_blob: Some(belongs_to_blob.clone()),
+                                depth: inner_node_a.depth(),
+                                parent_id: inner_node_a_parent_id,
+                            }]
+                            .into_iter()
+                            .collect(),
                         ));
                     }
 
@@ -862,13 +881,13 @@ impl FilesystemFixture {
                         orphaned_nodes.extend(inner_node_b.children());
                         corrupted_nodes.push((
                             *inner_node_b.block_id(),
-                            Some(NodeAndBlobReferenceFromReachableBlob {
-                                blob_info: belongs_to_blob.clone(),
-                                node_info: NodeReference::NonRootInnerNode {
-                                    depth: inner_node_b.depth(),
-                                    parent_id: inner_node_b_parent_id,
-                                },
-                            }),
+                            [NodeAndBlobReference::NonRootInnerNode {
+                                belongs_to_blob: Some(belongs_to_blob.clone()),
+                                depth: inner_node_b.depth(),
+                                parent_id: inner_node_b_parent_id,
+                            }]
+                            .into_iter()
+                            .collect(),
                         ));
 
                         let (inner_node_c, inner_node_c_parent_id) =
@@ -888,19 +907,19 @@ impl FilesystemFixture {
                             .into_inner_node()
                             .unwrap();
                         orphaned_nodes.extend(child_of_c.children());
-                        // node_info is `None` because `inner_node_c` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
-                        corrupted_nodes.push((*child_of_c.block_id(), None));
+                        // node_info is empty `[]` because `inner_node_c` gets removed as well, so when cryfs-check is running, it won't be able to figure out which node referenced the corrupted one
+                        corrupted_nodes.push((*child_of_c.block_id(), [].into_iter().collect()));
 
                         orphaned_nodes.extend(inner_node_c.children());
                         corrupted_nodes.push((
                             *inner_node_c.block_id(),
-                            Some(NodeAndBlobReferenceFromReachableBlob {
-                                blob_info: belongs_to_blob,
-                                node_info: NodeReference::NonRootInnerNode {
-                                    depth: inner_node_c.depth(),
-                                    parent_id: inner_node_c_parent_id,
-                                },
-                            }),
+                            [NodeAndBlobReference::NonRootInnerNode {
+                                belongs_to_blob: Some(belongs_to_blob),
+                                depth: inner_node_c.depth(),
+                                parent_id: inner_node_c_parent_id,
+                            }]
+                            .into_iter()
+                            .collect(),
                         ));
                     }
 
@@ -1046,7 +1065,7 @@ pub struct RemoveSomeNodesResult {
 }
 
 pub struct CorruptSomeNodesResult {
-    pub corrupted_nodes: Vec<(BlockId, Option<NodeAndBlobReferenceFromReachableBlob>)>,
+    pub corrupted_nodes: Vec<(BlockId, BTreeSet<NodeAndBlobReference>)>,
     pub orphaned_nodes: Vec<BlockId>,
 }
 

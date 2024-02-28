@@ -42,7 +42,7 @@ async fn blob_with_unreadable_single_node(
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
-            referenced_as: Some(corrupted_node_info),
+            referenced_as: [corrupted_node_info.into()].into_iter().collect(),
         },
     ];
 
@@ -81,7 +81,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
-            referenced_as: Some(corrupted_node_info),
+            referenced_as: [corrupted_node_info.into()].into_iter().collect(),
         },
     ];
 
@@ -124,7 +124,7 @@ async fn blob_with_unreadable_root_node(
         },
         CorruptedError::NodeUnreadable {
             node_id: corrupted_node,
-            referenced_as: Some(corrupted_node_info),
+            referenced_as: [corrupted_node_info.into()].into_iter().collect(),
         },
     ]
     .into_iter()
@@ -177,7 +177,7 @@ async fn blob_with_unreadable_inner_node(
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: corrupted_node,
-        referenced_as: Some(corrupted_node_info),
+        referenced_as: [corrupted_node_info.into()].into_iter().collect(),
     }];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -224,7 +224,7 @@ async fn blob_with_unreadable_leaf_node(
 
     let mut expected_errors = vec![CorruptedError::NodeUnreadable {
         node_id: corrupted_node,
-        referenced_as: Some(corrupted_node_info),
+        referenced_as: [corrupted_node_info.into()].into_iter().collect(),
     }];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
@@ -300,3 +300,5 @@ async fn blob_with_corrupted_some_nodes(
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
 }
+
+// TODO Tests where CorruptedError::NodeUnreadable::referenced_as has zero or multiple references

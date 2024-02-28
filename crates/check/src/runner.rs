@@ -616,12 +616,13 @@ where
                             ),
                         });
                     }
-                    checks.add_assertion(Assertion::exact_error_was_reported(
-                        CorruptedError::NodeUnreadable {
-                            node_id: current_node_id,
-                            referenced_as: Some(current_node_referenced_as.clone()),
-                        },
-                    ));
+                    // TODO This assertion should check that there is a `NodeUnreadable` that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
+                    // checks.add_assertion(Assertion::exact_error_was_reported(
+                    //     CorruptedError::NodeUnreadable {
+                    //         node_id: current_node_id,
+                    //         referenced_as: Some(current_node_referenced_as.clone()),
+                    //     },
+                    // ));
                     Some(NodeToProcess::Unreadable(current_node_id))
                 }
             };

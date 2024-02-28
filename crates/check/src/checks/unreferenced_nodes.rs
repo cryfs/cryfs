@@ -28,6 +28,7 @@ struct SeenInfo {
 /// Check that
 /// - each existing node is referenced
 /// - each referenced node exists (i.e. no dangling node exists and no node is missing)
+/// - each node is readable
 /// - no node is referenced multiple times
 ///
 /// Algorithm: While passing through each node, we mark the current node as **seen** and all referenced nodes as **referenced**.
@@ -118,14 +119,16 @@ impl UnreferencedNodesReferenceChecker {
             },
         );
 
-        // Also make sure that the unreadable node was reported by a different check
-        self.errors
-            .add_assertion(Assertion::exact_error_was_reported(
-                CorruptedError::NodeUnreadable {
-                    node_id,
-                    referenced_as,
-                },
-            ));
+        // Also make sure that the referenced_as one is part of the reported references
+        // It should be added to the list of references when that node is processed, but let's add an assertion for that.
+        // TODO
+        // self.errors
+        //     .add_assertion(Assertion::exact_error_was_reported(
+        //         CorruptedError::NodeUnreadable {
+        //             node_id,
+        //             referenced_as,
+        //         },
+        //     ));
 
         Ok(())
     }
@@ -177,6 +180,20 @@ impl UnreferencedNodesReferenceChecker {
                         .map(|referenced_as| referenced_as.referenced_as.clone())
                         .collect(),
                 })
+            }
+            if matches!(
+                seen,
+                Some(SeenInfo {
+                    node_info: NodeInfoAsSeenByLookingAtNode::Unreadable
+                })
+            ) {
+                errors.add_error(CorruptedError::NodeUnreadable {
+                    node_id,
+                    referenced_as: referenced_as
+                        .iter()
+                        .map(|referenced_as| referenced_as.referenced_as.clone())
+                        .collect(),
+                });
             }
             if referenced_as.len() > 1 {
                 errors.add_error(CorruptedError::NodeReferencedMultipleTimes {
