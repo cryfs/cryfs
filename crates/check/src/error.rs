@@ -47,6 +47,7 @@ pub enum CorruptedError {
         referenced_as: BTreeSet<NodeAndBlobReference>,
     },
 
+    // TODO Should we unify NodeReferencedMultipleTimes with BlobReferencedMultipleTimes?
     #[error("{blob_id:?} ({blob_info:?}) is referenced multiple times, by {referenced_as:?}")]
     BlobReferencedMultipleTimes {
         blob_id: BlobId,

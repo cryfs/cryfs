@@ -121,14 +121,25 @@ impl UnreferencedNodesReferenceChecker {
 
         // Also make sure that the referenced_as one is part of the reported references
         // It should be added to the list of references when that node is processed, but let's add an assertion for that.
-        // TODO
-        // self.errors
-        //     .add_assertion(Assertion::exact_error_was_reported(
-        //         CorruptedError::NodeUnreadable {
-        //             node_id,
-        //             referenced_as,
-        //         },
-        //     ));
+        let referenced_as: Option<NodeAndBlobReference> = referenced_as.map(|r| r.into());
+        self.errors
+            .add_assertion(Assertion::error_matching_predicate_was_reported(
+                move |error| match error {
+                    CorruptedError::NodeUnreadable {
+                        node_id: reported_node_id,
+                        referenced_as: reported_referenced_as,
+                    } => {
+                        *reported_node_id == node_id
+                            && referenced_as
+                                .as_ref()
+                                .map(|referenced_as| {
+                                    reported_referenced_as.contains(&referenced_as)
+                                })
+                                .unwrap_or(true)
+                    }
+                    _ => false,
+                },
+            ));
 
         Ok(())
     }

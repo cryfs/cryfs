@@ -2,7 +2,6 @@ use anyhow::Result;
 use async_recursion::async_recursion;
 use cryfs_cryfs::filesystem::fsblobstore::EntryType;
 use futures::stream::{self, StreamExt, TryStreamExt};
-use itertools::{Either, Itertools};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -14,7 +13,7 @@ use super::error::{CheckError, CorruptedError};
 use super::task_queue::{self, TaskSpawner};
 use crate::assertion::Assertion;
 use crate::{
-    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
+    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
 };
 use cryfs_blobstore::{
@@ -286,14 +285,21 @@ where
             }
 
             // The blob was already seen before. This can only happen if the blob is referenced multiple times.
-            // TODO
-            // checks.add_error(CorruptedError::Assert(Box::new(
-            //     CorruptedError::BlobReferencedMultipleTimes {
-            //         blob_id,
-            //         blob_info: now_seen.1.to_blob_info_as_seen_by_looking_at_blob(),
-            //         referenced_as: todo!(),
-            //     },
-            // )));
+            // Let's assert that our checks find that.
+            checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                move |error| match error {
+                    CorruptedError::BlobReferencedMultipleTimes {
+                        blob_id: reported_blob_id,
+                        referenced_as: reported_referenced_as,
+                        ..
+                    } => {
+                        *reported_blob_id == blob_referenced_as.blob_id
+                            && reported_referenced_as.contains(&prev_seen.0)
+                            && reported_referenced_as.contains(&now_seen.0)
+                    }
+                    _ => false,
+                },
+            ));
         }
         AlreadySeen::NotSeenYet => {
             match loaded {
@@ -336,14 +342,24 @@ where
                     process_result?;
                 }
                 Ok(None) => {
-                    // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is
-                    // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
-                    // checks.add_error(CorruptedError::Assert(Box::new(
-                    //     CorruptedError::NodeMissing {
-                    //         blob_id,
-                    //         expected_blob_info: blob_info.clone(),
-                    //     },
-                    // )));
+                    // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is.
+                    let blob_referenced_as = blob_referenced_as.clone();
+                    checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                        move |error| match error {
+                            CorruptedError::NodeMissing {
+                                node_id: reported_node_id,
+                                referenced_as: reported_referenced_as,
+                            } => {
+                                *reported_node_id == *blob_referenced_as.blob_id.to_root_block_id()
+                                    && reported_referenced_as.contains(
+                                        &NodeAndBlobReference::RootNode {
+                                            belongs_to_blob: blob_referenced_as.clone(),
+                                        },
+                                    )
+                            }
+                            _ => false,
+                        },
+                    ));
                 }
                 Err(error) => {
                     checks.process_reachable_blob(
@@ -521,14 +537,21 @@ where
             }
 
             // The node was already seen before. This can only happen if the node is referenced multiple times.
-            // TODO
-            // checks.add_error(CorruptedError::Assert(Box::new(
-            //     CorruptedError::NodeReferencedMultipleTimes {
-            //         node_id: current_node_id,
-            //         node_info: now_seen.to_node_info_as_seen_by_looking_at_node(),
-            //         referenced_as: todo!(),
-            //     },
-            // )));
+            let current_node_referenced_as = current_node_referenced_as.into();
+            checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                move |error| match error {
+                    CorruptedError::NodeReferencedMultipleTimes {
+                        node_id: reported_node_id,
+                        referenced_as: reported_referenced_as,
+                        node_info,
+                    } => {
+                        *reported_node_id == current_node_id
+                            && *node_info == now_seen.to_node_info_as_seen_by_looking_at_node()
+                            && reported_referenced_as.contains(&current_node_referenced_as)
+                    }
+                    _ => false,
+                },
+            ));
         }
         AlreadySeen::NotSeenYet => {
             let node_to_process = match node {
@@ -560,52 +583,19 @@ where
                             ),
                         });
                     }
-                    if current_node_id
-                        == *current_node_referenced_as
-                            .blob_info
-                            .blob_id
-                            .to_root_block_id()
-                    {
-                        // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
-                        // checks.add_error(CorruptedError::Assert(Box::new(
-                        //     CorruptedError::NodeMissing {
-                        //         node_id: *current_node_referenced_as
-                        //             .blob_info
-                        //             .blob_id
-                        //             .to_root_block_id(),
-                        //         referenced_as: NodeReference::RootNode {
-                        //             belongs_to_blob: current_node_referenced_as.blob_info,
-                        //         },
-                        //     },
-                        // )));
-                    } else {
-                        let belongs_to_blob = current_node_referenced_as.blob_info.clone();
-                        // TODO The following needs to be an Assert that a `NodeMissing` is there that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
-                        // checks.add_error(CorruptedError::Assert(Box::new(
-                        //     CorruptedError::NodeMissing {
-                        //         node_id: current_node_id,
-                        //         referenced_as: match current_node_referenced_as.node_info {
-                        //             NodeReferenceInfo::RootNode => {
-                        //                 NodeReference::RootNode { belongs_to_blob }
-                        //             }
-                        //             NodeReferenceInfo::NonRootInnerNode {
-                        //                 depth,
-                        //                 parent_id,
-                        //             } => NodeReference::NonRootInnerNode {
-                        //                 depth,
-                        //                 parent_id,
-                        //                 belongs_to_blob: Some(belongs_to_blob),
-                        //             },
-                        //             NodeReferenceInfo::NonRootLeafNode {
-                        //                 parent_id,
-                        //             } => NodeReference::NonRootLeafNode {
-                        //                 parent_id,
-                        //                 belongs_to_blob: Some(belongs_to_blob),
-                        //             },
-                        //         },
-                        //     },
-                        // )));
-                    }
+                    let current_node_referenced_as = current_node_referenced_as.clone().into();
+                    checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                        move |error| match error {
+                            CorruptedError::NodeMissing {
+                                node_id: reported_node_id,
+                                referenced_as: reported_referenced_as,
+                            } => {
+                                *reported_node_id == current_node_id
+                                    && reported_referenced_as.contains(&current_node_referenced_as)
+                            }
+                            _ => false,
+                        },
+                    ));
                     None
                 }
                 Err(error) => {
@@ -616,13 +606,19 @@ where
                             ),
                         });
                     }
-                    // TODO This assertion should check that there is a `NodeUnreadable` that contains the correct `NodeReference`, but there could be other `NodeReference`s as well.
-                    // checks.add_assertion(Assertion::exact_error_was_reported(
-                    //     CorruptedError::NodeUnreadable {
-                    //         node_id: current_node_id,
-                    //         referenced_as: Some(current_node_referenced_as.clone()),
-                    //     },
-                    // ));
+                    let current_node_referenced_as = current_node_referenced_as.clone().into();
+                    checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                        move |error| match error {
+                            CorruptedError::NodeUnreadable {
+                                node_id: reported_node_id,
+                                referenced_as: reported_referenced_as,
+                            } => {
+                                *reported_node_id == current_node_id
+                                    && reported_referenced_as.contains(&current_node_referenced_as)
+                            }
+                            _ => false,
+                        },
+                    ));
                     Some(NodeToProcess::Unreadable(current_node_id))
                 }
             };

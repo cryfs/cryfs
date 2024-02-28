@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::fmt::Debug;
 
 use cryfs_blobstore::BlobId;
@@ -13,7 +14,6 @@ use super::{
 use crate::{
     assertion::Assertion,
     node_info::{BlobInfoAsSeenByLookingAtBlob, BlobReference},
-    BlobReferenceWithId, NodeAndBlobReference,
 };
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
@@ -171,21 +171,28 @@ impl FilesystemCheck for CheckParentPointers {
                     ));
                 }
                 None => {
-                    // TODO This should be an assertion that there is a NodeMissing that contains a referenced_as for this blobs root node, but it can contain other referenced_as as well, e.g. from an inner node within another blob
-                    // errors.add_assertion(Assertion::exact_error_was_reported(
-                    //     CorruptedError::NodeMissing {
-                    //         node_id: *blob_id.to_root_block_id(),
-                    //         referenced_as: referenced_as
-                    //             .into_iter()
-                    //             .map(|referenced_as| NodeAndBlobReference::RootNode {
-                    //                 belongs_to_blob: BlobReferenceWithId {
-                    //                     blob_id,
-                    //                     referenced_as,
-                    //                 },
-                    //             })
-                    //             .collect(),
-                    //     },
-                    // ));
+                    // Assert that there is a NodeMissing reported that contains all referenced_as we know about here, but it can contain other referenced_as as well, e.g. from an inner node within another blob
+                    errors.add_assertion(Assertion::error_matching_predicate_was_reported(
+                        move |error| match error {
+                            CorruptedError::NodeMissing {
+                                node_id: reported_node_id,
+                                referenced_as: reported_referenced_as,
+                            } => {
+                                *reported_node_id == *blob_id.to_root_block_id()
+                                    && referenced_as.iter().all(|referenced_as| {
+                                        reported_referenced_as
+                                            .into_iter()
+                                            .filter_map(|reported_reference| {
+                                                reported_reference
+                                                    .blob_info()
+                                                    .map(|blob_info| &blob_info.referenced_as)
+                                            })
+                                            .contains(referenced_as)
+                                    })
+                            }
+                            _ => false,
+                        },
+                    ));
                 }
             }
         }
