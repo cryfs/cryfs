@@ -10,7 +10,10 @@ use super::check_result::CheckResult;
 use super::utils::reference_checker::ReferenceChecker;
 use super::{BlobToProcess, FilesystemCheck, NodeToProcess};
 use crate::assertion::Assertion;
-use crate::error::{CheckError, CorruptedError};
+use crate::error::{
+    CheckError, CorruptedError, NodeMissingError, NodeReferencedMultipleTimesError,
+    NodeUnreadableError, NodeUnreferencedError,
+};
 use crate::node_info::{
     BlobReference, BlobReferenceWithId, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode,
@@ -125,10 +128,10 @@ impl UnreferencedNodesReferenceChecker {
         self.errors
             .add_assertion(Assertion::error_matching_predicate_was_reported(
                 move |error| match error {
-                    CorruptedError::NodeUnreadable {
+                    CorruptedError::NodeUnreadable(NodeUnreadableError {
                         node_id: reported_node_id,
                         referenced_as: reported_referenced_as,
-                    } => {
+                    }) => {
                         *reported_node_id == node_id
                             && referenced_as
                                 .as_ref()
@@ -184,13 +187,13 @@ impl UnreferencedNodesReferenceChecker {
         let mut errors = self.errors;
         for (node_id, seen, referenced_as) in self.reference_checker.finalize() {
             if seen.is_none() && !referenced_as.is_empty() {
-                errors.add_error(CorruptedError::NodeMissing {
+                errors.add_error(NodeMissingError::new(
                     node_id,
-                    referenced_as: referenced_as
+                    referenced_as
                         .iter()
                         .map(|referenced_as| referenced_as.referenced_as.clone())
                         .collect(),
-                })
+                ))
             }
             if matches!(
                 seen,
@@ -198,33 +201,30 @@ impl UnreferencedNodesReferenceChecker {
                     node_info: NodeInfoAsSeenByLookingAtNode::Unreadable
                 })
             ) {
-                errors.add_error(CorruptedError::NodeUnreadable {
+                errors.add_error(NodeUnreadableError::new(
                     node_id,
-                    referenced_as: referenced_as
+                    referenced_as
                         .iter()
                         .map(|referenced_as| referenced_as.referenced_as.clone())
                         .collect(),
-                });
+                ));
             }
             if referenced_as.len() > 1 {
-                errors.add_error(CorruptedError::NodeReferencedMultipleTimes {
+                errors.add_error(NodeReferencedMultipleTimesError::new(
                     node_id,
-                    node_info: seen.as_ref().map(|seen| seen.node_info.clone()),
+                    seen.as_ref().map(|seen| seen.node_info.clone()),
                     // TODO How to handle the case where referenced_as Vec has duplicate entries?
-                    referenced_as: referenced_as
+                    referenced_as
                         .iter()
                         .map(|referenced_as| referenced_as.referenced_as.clone())
                         .collect(),
-                });
+                ));
             }
             if referenced_as.is_empty() {
                 // This node is not referenced by any other node. This is an error.
                 let seen = seen
                     .expect("Algorithm invariant violated: Node was neither seen nor referenced.");
-                errors.add_error(CorruptedError::NodeUnreferenced {
-                    node_id,
-                    node_info: seen.node_info,
-                });
+                errors.add_error(NodeUnreferencedError::new(node_id, seen.node_info));
             }
         }
 

@@ -9,7 +9,11 @@ pub use cli::{check_filesystem, RecoverCli};
 mod checks;
 mod console;
 mod error;
-pub use error::CorruptedError;
+pub use error::{
+    BlobReferencedMultipleTimesError, BlobUnreadableError, CorruptedError, NodeMissingError,
+    NodeReferencedMultipleTimesError, NodeUnreadableError, NodeUnreferencedError,
+    WrongParentPointerError,
+};
 mod node_info;
 pub use node_info::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, NodeAndBlobReference,

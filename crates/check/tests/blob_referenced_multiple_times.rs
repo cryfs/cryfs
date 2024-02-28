@@ -7,8 +7,9 @@ use std::num::NonZeroU8;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
-    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, CorruptedError,
-    NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode,
+    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
+    BlobReferencedMultipleTimesError, CorruptedError, NodeAndBlobReference,
+    NodeInfoAsSeenByLookingAtNode, NodeReferencedMultipleTimesError,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
@@ -156,11 +157,11 @@ async fn blob_referenced_multiple_times(
         NodeInfoAsSeenByLookingAtNode::LeafNode
     };
 
-    let errors = fs_fixture.run_cryfs_check().await;
+    let errors: Vec<CorruptedError> = fs_fixture.run_cryfs_check().await;
     assert_eq!(
         vec![
             // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
-            CorruptedError::NodeReferencedMultipleTimes {
+            CorruptedError::NodeReferencedMultipleTimes(NodeReferencedMultipleTimesError {
                 node_id: *blob_info.blob_id.to_root_block_id(),
                 node_info: Some(expected_node_info),
                 referenced_as: [
@@ -179,8 +180,8 @@ async fn blob_referenced_multiple_times(
                 ]
                 .into_iter()
                 .collect(),
-            },
-            CorruptedError::BlobReferencedMultipleTimes {
+            }),
+            CorruptedError::BlobReferencedMultipleTimes(BlobReferencedMultipleTimesError {
                 blob_id: blob_info.blob_id,
                 blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
                     blob_type: blob_info.referenced_as.blob_type,
@@ -189,7 +190,7 @@ async fn blob_referenced_multiple_times(
                 referenced_as: [blob_info.referenced_as.clone(), second_blob_info]
                     .into_iter()
                     .collect(),
-            }
+            }),
         ],
         errors,
     );

@@ -7,7 +7,7 @@ use std::num::NonZeroU8;
 use std::time::SystemTime;
 
 use cryfs_blobstore::BlobId;
-use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode};
+use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeUnreferencedError};
 use cryfs_cryfs::{
     filesystem::fsblobstore::DirBlob,
     utils::fs_types::{Gid, Uid},
@@ -252,10 +252,11 @@ async fn blob_unreferenced(
     let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob_id, root_node_info) = make_blob(&fs_fixture).await;
 
-    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced {
+    let expected_errors: Vec<CorruptedError> = vec![NodeUnreferencedError {
         node_id: *blob_id.to_root_block_id(),
         node_info: root_node_info,
-    }];
+    }
+    .into()];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(expected_errors, errors,);
@@ -269,10 +270,13 @@ async fn dir_blob_with_children_unreferenced() {
     let expected_errors_from_orphaned_descendant_blobs =
         expect_blobs_to_have_unreferenced_root_nodes(&fs_fixture, orphaned_descendant_blobs).await;
 
-    let expected_errors: Vec<_> = iter::once(CorruptedError::NodeUnreferenced {
-        node_id: *blob_id.to_root_block_id(),
-        node_info: root_node_info,
-    })
+    let expected_errors: Vec<_> = iter::once(
+        NodeUnreferencedError {
+            node_id: *blob_id.to_root_block_id(),
+            node_info: root_node_info,
+        }
+        .into(),
+    )
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();
 

@@ -12,8 +12,8 @@ pub enum Assertion {
 }
 
 impl Assertion {
-    pub fn exact_error_was_reported(error: CorruptedError) -> Self {
-        Self::ExactErrorWasReported(error)
+    pub fn exact_error_was_reported(error: impl Into<CorruptedError>) -> Self {
+        Self::ExactErrorWasReported(error.into())
     }
 
     #[track_caller]

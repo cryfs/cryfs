@@ -18,8 +18,8 @@ impl CheckResult {
         self.assertions.extend(other.assertions);
     }
 
-    pub fn add_error(&mut self, error: CorruptedError) {
-        self.errors.push(error);
+    pub fn add_error(&mut self, error: impl Into<CorruptedError>) {
+        self.errors.push(error.into());
     }
 
     pub fn add_assertion(&mut self, assertion: Assertion) {

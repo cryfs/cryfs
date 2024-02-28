@@ -3,7 +3,7 @@
 use rstest::rstest;
 use std::iter;
 
-use cryfs_check::{BlobReferenceWithId, CorruptedError};
+use cryfs_check::{BlobReferenceWithId, BlobUnreadableError, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -31,10 +31,13 @@ async fn unreadable_blob_bad_format_version(
         .increment_format_version_of_blob(blob_info.blob_id)
         .await;
 
-    let expected_errors = iter::once(CorruptedError::BlobUnreadable {
-        blob_id: blob_info.blob_id,
-        referenced_as: blob_info.referenced_as,
-    })
+    let expected_errors = iter::once(
+        BlobUnreadableError {
+            blob_id: blob_info.blob_id,
+            referenced_as: blob_info.referenced_as,
+        }
+        .into(),
+    )
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();
 
@@ -61,10 +64,13 @@ async fn unreadable_file_blob_bad_blob_type(
 
     fs_fixture.corrupt_blob_type(blob_info.blob_id).await;
 
-    let expected_errors = iter::once(CorruptedError::BlobUnreadable {
-        blob_id: blob_info.blob_id,
-        referenced_as: blob_info.referenced_as,
-    })
+    let expected_errors: Vec<CorruptedError> = iter::once(
+        BlobUnreadableError {
+            blob_id: blob_info.blob_id,
+            referenced_as: blob_info.referenced_as,
+        }
+        .into(),
+    )
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();
 

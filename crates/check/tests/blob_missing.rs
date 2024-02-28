@@ -4,7 +4,7 @@ use rstest::rstest;
 use std::iter;
 
 use cryfs_blockstore::RemoveResult;
-use cryfs_check::{BlobReference, BlobReferenceWithId, CorruptedError, NodeAndBlobReference};
+use cryfs_check::{BlobReference, BlobReferenceWithId, NodeAndBlobReference, NodeMissingError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -36,17 +36,20 @@ async fn blob_entirely_missing(#[case] blob: impl FnOnce(&SomeBlobs) -> BlobRefe
         })
         .await;
 
-    let expected_errors = iter::once(CorruptedError::NodeMissing {
-        node_id: *blob_info.blob_id.to_root_block_id(),
-        referenced_as: [NodeAndBlobReference::RootNode {
-            belongs_to_blob: BlobReferenceWithId {
-                blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
-            },
-        }]
-        .into_iter()
-        .collect(),
-    })
+    let expected_errors = iter::once(
+        NodeMissingError {
+            node_id: *blob_info.blob_id.to_root_block_id(),
+            referenced_as: [NodeAndBlobReference::RootNode {
+                belongs_to_blob: BlobReferenceWithId {
+                    blob_id: blob_info.blob_id,
+                    referenced_as: blob_info.referenced_as,
+                },
+            }]
+            .into_iter()
+            .collect(),
+        }
+        .into(),
+    )
     .chain(expected_errors_from_orphaned_descendant_blobs)
     .collect();
 
@@ -75,7 +78,7 @@ async fn root_dir_entirely_missing_without_children() {
         })
         .await;
 
-    let expected_errors = vec![CorruptedError::NodeMissing {
+    let expected_errors = vec![NodeMissingError {
         node_id: *root_dir_id.to_root_block_id(),
         referenced_as: [NodeAndBlobReference::RootNode {
             belongs_to_blob: BlobReferenceWithId {
@@ -85,7 +88,8 @@ async fn root_dir_entirely_missing_without_children() {
         }]
         .into_iter()
         .collect(),
-    }];
+    }
+    .into()];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);

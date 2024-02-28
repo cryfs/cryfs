@@ -1,7 +1,10 @@
 //! Tests where there are nodes that aren't referenced from anywhere
 
 use cryfs_blockstore::BlockId;
-use cryfs_check::{CorruptedError, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode};
+use cryfs_check::{
+    CorruptedError, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode, NodeMissingError,
+    NodeUnreferencedError,
+};
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
 };
@@ -28,10 +31,10 @@ async fn leaf_node_unreferenced() {
         })
         .await;
 
-    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced {
+    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced(NodeUnreferencedError {
         node_id,
         node_info: NodeInfoAsSeenByLookingAtNode::LeafNode,
-    }];
+    })];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(expected_errors, errors,);
@@ -60,20 +63,23 @@ async fn single_inner_node_unreferenced() {
     };
 
     let expected_errors: Vec<_> = vec![
-        CorruptedError::NodeUnreferenced {
+        NodeUnreferencedError {
             node_id,
             node_info: NodeInfoAsSeenByLookingAtNode::InnerNode {
                 depth: NonZeroU8::new(DEPTH).unwrap(),
             },
-        },
-        CorruptedError::NodeMissing {
+        }
+        .into(),
+        NodeMissingError {
             node_id: block_id(0),
             referenced_as: [referenced_as.clone()].into_iter().collect(),
-        },
-        CorruptedError::NodeMissing {
+        }
+        .into(),
+        NodeMissingError {
             node_id: block_id(1),
             referenced_as: [referenced_as].into_iter().collect(),
-        },
+        }
+        .into(),
     ];
 
     let errors = fs_fixture.run_cryfs_check().await;
@@ -126,12 +132,13 @@ async fn inner_node_with_subtree_unreferenced() {
         })
         .await;
 
-    let expected_errors: Vec<_> = vec![CorruptedError::NodeUnreferenced {
+    let expected_errors: Vec<_> = vec![NodeUnreferencedError {
         node_id,
         node_info: NodeInfoAsSeenByLookingAtNode::InnerNode {
             depth: NonZeroU8::new(2).unwrap(),
         },
-    }];
+    }
+    .into()];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);

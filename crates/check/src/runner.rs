@@ -9,9 +9,12 @@ use std::num::NonZeroU8;
 use std::sync::{Arc, Mutex};
 
 use super::checks::{AllChecks, BlobToProcess, NodeToProcess};
-use super::error::{CheckError, CorruptedError};
 use super::task_queue::{self, TaskSpawner};
 use crate::assertion::Assertion;
+use crate::error::{
+    BlobReferencedMultipleTimesError, BlobUnreadableError, CheckError, CorruptedError,
+    NodeMissingError, NodeReferencedMultipleTimesError, NodeUnreadableError,
+};
 use crate::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
@@ -288,11 +291,13 @@ where
             // Let's assert that our checks find that.
             checks.add_assertion(Assertion::error_matching_predicate_was_reported(
                 move |error| match error {
-                    CorruptedError::BlobReferencedMultipleTimes {
-                        blob_id: reported_blob_id,
-                        referenced_as: reported_referenced_as,
-                        ..
-                    } => {
+                    CorruptedError::BlobReferencedMultipleTimes(
+                        BlobReferencedMultipleTimesError {
+                            blob_id: reported_blob_id,
+                            referenced_as: reported_referenced_as,
+                            ..
+                        },
+                    ) => {
                         *reported_blob_id == blob_referenced_as.blob_id
                             && reported_referenced_as.contains(&prev_seen.0)
                             && reported_referenced_as.contains(&now_seen.0)
@@ -346,10 +351,10 @@ where
                     let blob_referenced_as = blob_referenced_as.clone();
                     checks.add_assertion(Assertion::error_matching_predicate_was_reported(
                         move |error| match error {
-                            CorruptedError::NodeMissing {
+                            CorruptedError::NodeMissing(NodeMissingError {
                                 node_id: reported_node_id,
                                 referenced_as: reported_referenced_as,
-                            } => {
+                            }) => {
                                 *reported_node_id == *blob_referenced_as.blob_id.to_root_block_id()
                                     && reported_referenced_as.contains(
                                         &NodeAndBlobReference::RootNode {
@@ -366,11 +371,11 @@ where
                         BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
                         &blob_referenced_as.referenced_as,
                     )?;
-                    checks.add_error(CorruptedError::BlobUnreadable {
-                        blob_id: blob_referenced_as.blob_id,
-                        referenced_as: blob_referenced_as.referenced_as.clone(),
+                    checks.add_error(BlobUnreadableError::new(
+                        blob_referenced_as.blob_id,
+                        blob_referenced_as.referenced_as.clone(),
                         // error,
-                    });
+                    ));
                 }
             };
             pb.inc(1);
@@ -540,11 +545,13 @@ where
             let current_node_referenced_as = current_node_referenced_as.into();
             checks.add_assertion(Assertion::error_matching_predicate_was_reported(
                 move |error| match error {
-                    CorruptedError::NodeReferencedMultipleTimes {
-                        node_id: reported_node_id,
-                        referenced_as: reported_referenced_as,
-                        node_info,
-                    } => {
+                    CorruptedError::NodeReferencedMultipleTimes(
+                        NodeReferencedMultipleTimesError {
+                            node_id: reported_node_id,
+                            referenced_as: reported_referenced_as,
+                            node_info,
+                        },
+                    ) => {
                         *reported_node_id == current_node_id
                             && *node_info == now_seen.to_node_info_as_seen_by_looking_at_node()
                             && reported_referenced_as.contains(&current_node_referenced_as)
@@ -586,10 +593,10 @@ where
                     let current_node_referenced_as = current_node_referenced_as.clone().into();
                     checks.add_assertion(Assertion::error_matching_predicate_was_reported(
                         move |error| match error {
-                            CorruptedError::NodeMissing {
+                            CorruptedError::NodeMissing(NodeMissingError {
                                 node_id: reported_node_id,
                                 referenced_as: reported_referenced_as,
-                            } => {
+                            }) => {
                                 *reported_node_id == current_node_id
                                     && reported_referenced_as.contains(&current_node_referenced_as)
                             }
@@ -609,10 +616,10 @@ where
                     let current_node_referenced_as = current_node_referenced_as.clone().into();
                     checks.add_assertion(Assertion::error_matching_predicate_was_reported(
                         move |error| match error {
-                            CorruptedError::NodeUnreadable {
+                            CorruptedError::NodeUnreadable(NodeUnreadableError {
                                 node_id: reported_node_id,
                                 referenced_as: reported_referenced_as,
-                            } => {
+                            }) => {
                                 *reported_node_id == current_node_id
                                     && reported_referenced_as.contains(&current_node_referenced_as)
                             }

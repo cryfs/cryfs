@@ -8,11 +8,14 @@ use cryfs_utils::peekable::PeekableExt;
 
 use super::{
     check_result::CheckResult, utils::reference_checker::ReferenceChecker, BlobToProcess,
-    CheckError, CorruptedError, FilesystemCheck, NodeAndBlobReferenceFromReachableBlob,
-    NodeToProcess,
+    CheckError, FilesystemCheck, NodeAndBlobReferenceFromReachableBlob, NodeToProcess,
 };
 use crate::{
     assertion::Assertion,
+    error::{
+        BlobReferencedMultipleTimesError, BlobUnreadableError, CorruptedError, NodeMissingError,
+        WrongParentPointerError,
+    },
     node_info::{BlobInfoAsSeenByLookingAtBlob, BlobReference},
 };
 
@@ -129,12 +132,12 @@ impl FilesystemCheck for CheckParentPointers {
                 let blob_info = seen_blob_info
                     .as_ref()
                     .map(|blob_info| blob_info.to_blob_info_as_seen_by_looking_at_blob());
-                errors.add_error(CorruptedError::BlobReferencedMultipleTimes {
+                errors.add_error(BlobReferencedMultipleTimesError::new(
                     blob_id,
                     blob_info,
                     // TODO How to handle the case where referenced_as Vec has duplicate entries?
-                    referenced_as: referenced_as.iter().cloned().collect(),
-                });
+                    referenced_as.iter().cloned().collect(),
+                ));
             } else if referenced_as.len() == 0 {
                 panic!("Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs.");
             }
@@ -149,35 +152,32 @@ impl FilesystemCheck for CheckParentPointers {
                         .filter(|blob_reference| parent_pointer == blob_reference.parent_id)
                         .peekable();
                     if matching_parents.is_empty() {
-                        errors.add_error(CorruptedError::WrongParentPointer {
+                        errors.add_error(WrongParentPointerError::new(
                             blob_id,
-                            blob_info: BlobInfoAsSeenByLookingAtBlob::Readable {
+                            BlobInfoAsSeenByLookingAtBlob::Readable {
                                 parent_pointer,
                                 blob_type,
                             },
                             // TODO How to handle the case where referenced_as Vec has duplicate entries?
-                            referenced_as: referenced_as.into_iter().collect(),
-                        });
+                            referenced_as.into_iter().collect(),
+                        ));
                     }
                     // TODO If matching_parents does not contain one with the right blob type, generate an assertion for blob type mismatch.
                     //      This should be an error caught by another check but we should do an assertion here.
                 }
                 Some(SeenBlobInfo::Unreadable { referenced_as }) => {
                     errors.add_assertion(Assertion::exact_error_was_reported(
-                        CorruptedError::BlobUnreadable {
-                            blob_id,
-                            referenced_as,
-                        },
+                        BlobUnreadableError::new(blob_id, referenced_as),
                     ));
                 }
                 None => {
                     // Assert that there is a NodeMissing reported that contains all referenced_as we know about here, but it can contain other referenced_as as well, e.g. from an inner node within another blob
                     errors.add_assertion(Assertion::error_matching_predicate_was_reported(
                         move |error| match error {
-                            CorruptedError::NodeMissing {
+                            CorruptedError::NodeMissing(NodeMissingError {
                                 node_id: reported_node_id,
                                 referenced_as: reported_referenced_as,
-                            } => {
+                            }) => {
                                 *reported_node_id == *blob_id.to_root_block_id()
                                     && referenced_as.iter().all(|referenced_as| {
                                         reported_referenced_as

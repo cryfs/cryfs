@@ -17,6 +17,7 @@ use cryfs_blobstore::{
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_check::{
     BlobReference, BlobReferenceWithId, CorruptedError, NodeInfoAsSeenByLookingAtNode,
+    NodeUnreferencedError,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 use cryfs_cryfs::{
@@ -938,7 +939,7 @@ where
     fs_fixture
         .load_node_infos(nodes.into_iter())
         .await
-        .map(|(node_id, node_info)| CorruptedError::NodeUnreferenced { node_id, node_info })
+        .map(|(node_id, node_info)| NodeUnreferencedError { node_id, node_info }.into())
 }
 
 pub async fn expect_node_to_be_unreferenced(
@@ -946,5 +947,5 @@ pub async fn expect_node_to_be_unreferenced(
     node_id: BlockId,
 ) -> CorruptedError {
     let node_info = fs_fixture.load_node_info(node_id).await;
-    CorruptedError::NodeUnreferenced { node_id, node_info }
+    NodeUnreferencedError { node_id, node_info }.into()
 }

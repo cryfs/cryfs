@@ -167,7 +167,7 @@ impl AllChecks {
         reported_errors.finalize()
     }
 
-    pub fn add_error(&self, error: CorruptedError) {
+    pub fn add_error(&self, error: impl Into<CorruptedError>) {
         self.additional_errors.lock().unwrap().add_error(error);
     }
 

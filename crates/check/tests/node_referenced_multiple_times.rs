@@ -9,7 +9,8 @@ use std::num::NonZeroU8;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
 use cryfs_check::{
-    BlobReferenceWithId, CorruptedError, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode,
+    BlobReferenceWithId, BlobUnreadableError, CorruptedError, NodeAndBlobReference,
+    NodeInfoAsSeenByLookingAtNode, NodeMissingError, NodeReferencedMultipleTimesError,
 };
 
 mod common;
@@ -212,12 +213,13 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
         .into_iter()
         .chain(
             [
-                CorruptedError::BlobUnreadable {
+                BlobUnreadableError {
                     blob_id: blob_info.blob_id,
                     referenced_as: blob_info.referenced_as.clone(),
-                },
+                }
+                .into(),
                 // TODO Why is NodeMissing necessary here? Without it, tests seem to become flaky because it seems to be sometimes thrown
-                CorruptedError::NodeMissing {
+                NodeMissingError {
                     node_id: *blob_info.blob_id.to_root_block_id(),
                     referenced_as: [NodeAndBlobReference::RootNode {
                         belongs_to_blob: BlobReferenceWithId {
@@ -227,7 +229,8 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
                     }]
                     .into_iter()
                     .collect(),
-                },
+                }
+                .into(),
             ]
             .into_iter(),
         )
@@ -262,28 +265,30 @@ async fn leaf_node_referenced_multiple_times(
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
-        vec![CorruptedError::NodeReferencedMultipleTimes {
-            node_id: replace_result.node_id,
-            node_info: Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
-            referenced_as: [
-                NodeAndBlobReference::NonRootLeafNode {
-                    belongs_to_blob: Some(BlobReferenceWithId {
-                        blob_id: blob1.blob_id,
-                        referenced_as: blob1.referenced_as,
-                    }),
-                    parent_id: replace_result.additional_parent_id,
-                },
-                NodeAndBlobReference::NonRootLeafNode {
-                    belongs_to_blob: Some(BlobReferenceWithId {
-                        blob_id: blob2.blob_id,
-                        referenced_as: blob2.referenced_as,
-                    }),
-                    parent_id: replace_result.original_parent_id,
-                }
-            ]
-            .into_iter()
-            .collect(),
-        }],
+        vec![CorruptedError::NodeReferencedMultipleTimes(
+            NodeReferencedMultipleTimesError {
+                node_id: replace_result.node_id,
+                node_info: Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
+                referenced_as: [
+                    NodeAndBlobReference::NonRootLeafNode {
+                        belongs_to_blob: Some(BlobReferenceWithId {
+                            blob_id: blob1.blob_id,
+                            referenced_as: blob1.referenced_as,
+                        }),
+                        parent_id: replace_result.additional_parent_id,
+                    },
+                    NodeAndBlobReference::NonRootLeafNode {
+                        belongs_to_blob: Some(BlobReferenceWithId {
+                            blob_id: blob2.blob_id,
+                            referenced_as: blob2.referenced_as,
+                        }),
+                        parent_id: replace_result.original_parent_id,
+                    }
+                ]
+                .into_iter()
+                .collect(),
+            }
+        )],
         errors,
     );
 }
@@ -334,32 +339,34 @@ async fn inner_node_referenced_multiple_times(
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
-        vec![CorruptedError::NodeReferencedMultipleTimes {
-            node_id: replace_result.node_id,
-            node_info: Some(NodeInfoAsSeenByLookingAtNode::InnerNode {
-                depth: expected_depth,
-            }),
-            referenced_as: [
-                NodeAndBlobReference::NonRootInnerNode {
-                    belongs_to_blob: Some(BlobReferenceWithId {
-                        blob_id: blob1.blob_id,
-                        referenced_as: blob1.referenced_as,
-                    }),
-                    parent_id: replace_result.additional_parent_id,
-                    depth: expected_referenced_depth_1,
-                },
-                NodeAndBlobReference::NonRootInnerNode {
-                    belongs_to_blob: Some(BlobReferenceWithId {
-                        blob_id: blob2.blob_id,
-                        referenced_as: blob2.referenced_as,
-                    }),
-                    parent_id: replace_result.original_parent_id,
-                    depth: expected_referenced_depth_2,
-                }
-            ]
-            .into_iter()
-            .collect(),
-        }],
+        vec![CorruptedError::NodeReferencedMultipleTimes(
+            NodeReferencedMultipleTimesError {
+                node_id: replace_result.node_id,
+                node_info: Some(NodeInfoAsSeenByLookingAtNode::InnerNode {
+                    depth: expected_depth,
+                }),
+                referenced_as: [
+                    NodeAndBlobReference::NonRootInnerNode {
+                        belongs_to_blob: Some(BlobReferenceWithId {
+                            blob_id: blob1.blob_id,
+                            referenced_as: blob1.referenced_as,
+                        }),
+                        parent_id: replace_result.additional_parent_id,
+                        depth: expected_referenced_depth_1,
+                    },
+                    NodeAndBlobReference::NonRootInnerNode {
+                        belongs_to_blob: Some(BlobReferenceWithId {
+                            blob_id: blob2.blob_id,
+                            referenced_as: blob2.referenced_as,
+                        }),
+                        parent_id: replace_result.original_parent_id,
+                        depth: expected_referenced_depth_2,
+                    }
+                ]
+                .into_iter()
+                .collect(),
+            }
+        )],
         errors
     );
 }
@@ -405,28 +412,30 @@ async fn root_node_referenced(
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
     assert_eq!(
-        vec![CorruptedError::NodeReferencedMultipleTimes {
-            node_id: replace_result.node_id,
-            node_info: Some(expected_node_info),
-            referenced_as: [
-                NodeAndBlobReference::NonRootInnerNode {
-                    belongs_to_blob: Some(BlobReferenceWithId {
-                        blob_id: blob1.blob_id,
-                        referenced_as: blob1.referenced_as,
-                    }),
-                    parent_id: replace_result.additional_parent_id,
-                    depth: expected_referenced_depth,
-                },
-                NodeAndBlobReference::RootNode {
-                    belongs_to_blob: BlobReferenceWithId {
-                        blob_id: blob2.blob_id,
-                        referenced_as: blob2.referenced_as,
-                    }
-                },
-            ]
-            .into_iter()
-            .collect(),
-        }],
+        vec![CorruptedError::NodeReferencedMultipleTimes(
+            NodeReferencedMultipleTimesError {
+                node_id: replace_result.node_id,
+                node_info: Some(expected_node_info),
+                referenced_as: [
+                    NodeAndBlobReference::NonRootInnerNode {
+                        belongs_to_blob: Some(BlobReferenceWithId {
+                            blob_id: blob1.blob_id,
+                            referenced_as: blob1.referenced_as,
+                        }),
+                        parent_id: replace_result.additional_parent_id,
+                        depth: expected_referenced_depth,
+                    },
+                    NodeAndBlobReference::RootNode {
+                        belongs_to_blob: BlobReferenceWithId {
+                            blob_id: blob2.blob_id,
+                            referenced_as: blob2.referenced_as,
+                        }
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            }
+        )],
         errors
     );
 }
