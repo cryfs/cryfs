@@ -15,7 +15,7 @@ use crate::error::{
     NodeUnreadableError, NodeUnreferencedError,
 };
 use crate::node_info::{
-    BlobReference, BlobReferenceWithId, NodeAndBlobReference,
+    BlobReference, BlobReferenceWithId, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode,
 };
 
@@ -210,9 +210,13 @@ impl UnreferencedNodesReferenceChecker {
                 ));
             }
             if referenced_as.len() > 1 {
+                let node_info = seen
+                    .as_ref()
+                    .map(|seen| seen.node_info.clone().into())
+                    .unwrap_or(MaybeNodeInfoAsSeenByLookingAtNode::Missing);
                 errors.add_error(NodeReferencedMultipleTimesError::new(
                     node_id,
-                    seen.as_ref().map(|seen| seen.node_info.clone()),
+                    node_info,
                     // TODO How to handle the case where referenced_as Vec has duplicate entries?
                     referenced_as
                         .iter()

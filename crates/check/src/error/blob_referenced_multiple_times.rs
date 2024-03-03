@@ -4,20 +4,19 @@ use thiserror::Error;
 
 use cryfs_blobstore::BlobId;
 
-use crate::node_info::{BlobInfoAsSeenByLookingAtBlob, BlobReference};
+use crate::node_info::{BlobReference, MaybeBlobInfoAsSeenByLookingAtBlob};
 
 #[derive(Error, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BlobReferencedMultipleTimesError {
     pub blob_id: BlobId,
-    /// `blob_info` is `None` if the blob itself is missing
-    pub blob_info: Option<BlobInfoAsSeenByLookingAtBlob>,
+    pub blob_info: MaybeBlobInfoAsSeenByLookingAtBlob,
     pub referenced_as: BTreeSet<BlobReference>,
 }
 
 impl BlobReferencedMultipleTimesError {
     pub fn new(
         blob_id: BlobId,
-        blob_info: Option<BlobInfoAsSeenByLookingAtBlob>,
+        blob_info: MaybeBlobInfoAsSeenByLookingAtBlob,
         referenced_as: BTreeSet<BlobReference>,
     ) -> Self {
         assert!(
@@ -40,10 +39,15 @@ impl Display for BlobReferencedMultipleTimesError {
             "Blob {blob_id} is referenced multiple times",
             blob_id = self.blob_id,
         )?;
-        if let Some(blob_info) = self.blob_info {
-            write!(f, " and exists as {blob_info}.")?;
-        } else {
-            write!(f, " and is missing.")?;
+
+        match self.blob_info {
+            MaybeBlobInfoAsSeenByLookingAtBlob::Missing => write!(f, " and is missing.")?,
+            MaybeBlobInfoAsSeenByLookingAtBlob::Unreadable => {
+                write!(f, " and is unreadable and likely corrupted.")?
+            }
+            MaybeBlobInfoAsSeenByLookingAtBlob::Readable { .. } => {
+                write!(f, " and exists as {blob_info}.", blob_info = self.blob_info)?
+            }
         }
         write!(f, " It is referenced as:\n")?;
 

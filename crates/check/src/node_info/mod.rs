@@ -1,6 +1,9 @@
 mod blob_info_as_seen_by_looking_at_blob;
 pub use blob_info_as_seen_by_looking_at_blob::BlobInfoAsSeenByLookingAtBlob;
 
+mod maybe_blob_info_as_seen_by_looking_at_blob;
+pub use maybe_blob_info_as_seen_by_looking_at_blob::MaybeBlobInfoAsSeenByLookingAtBlob;
+
 mod blob_reference;
 pub use blob_reference::BlobReference;
 
@@ -9,6 +12,9 @@ pub use blob_reference_with_id::BlobReferenceWithId;
 
 mod node_info_as_seen_by_looking_at_node;
 pub use node_info_as_seen_by_looking_at_node::NodeInfoAsSeenByLookingAtNode;
+
+mod maybe_node_info_as_seen_by_looking_at_node;
+pub use maybe_node_info_as_seen_by_looking_at_node::MaybeNodeInfoAsSeenByLookingAtNode;
 
 mod node_reference;
 pub use node_reference::NodeReference;

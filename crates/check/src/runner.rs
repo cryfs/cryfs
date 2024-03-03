@@ -16,7 +16,8 @@ use crate::error::{
     NodeMissingError, NodeReferencedMultipleTimesError, NodeUnreadableError,
 };
 use crate::{
-    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId, NodeAndBlobReference,
+    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
+    MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
 };
 use cryfs_blobstore::{
@@ -706,8 +707,8 @@ fn set_remove_all<T: Hash + Eq>(
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 enum SeenNodeInfo {
-    Unreadable,
     Missing,
+    Unreadable,
     Leaf,
     Inner {
         depth: NonZeroU8,
@@ -720,12 +721,13 @@ enum SeenNodeInfo {
 }
 
 impl SeenNodeInfo {
-    pub fn to_node_info_as_seen_by_looking_at_node(&self) -> Option<NodeInfoAsSeenByLookingAtNode> {
+    pub fn to_node_info_as_seen_by_looking_at_node(&self) -> MaybeNodeInfoAsSeenByLookingAtNode {
         match self {
-            SeenNodeInfo::Unreadable | SeenNodeInfo::Missing => None,
-            SeenNodeInfo::Leaf => Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
+            SeenNodeInfo::Missing => MaybeNodeInfoAsSeenByLookingAtNode::Missing,
+            SeenNodeInfo::Unreadable => MaybeNodeInfoAsSeenByLookingAtNode::Unreadable,
+            SeenNodeInfo::Leaf => MaybeNodeInfoAsSeenByLookingAtNode::LeafNode,
             SeenNodeInfo::Inner { depth, .. } => {
-                Some(NodeInfoAsSeenByLookingAtNode::InnerNode { depth: *depth })
+                MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth: *depth }
             }
         }
     }

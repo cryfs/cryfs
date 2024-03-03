@@ -7,9 +7,9 @@ use std::num::NonZeroU8;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
-    BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
-    BlobReferencedMultipleTimesError, CorruptedError, NodeAndBlobReference,
-    NodeInfoAsSeenByLookingAtNode, NodeReferencedMultipleTimesError,
+    BlobReference, BlobReferenceWithId, BlobReferencedMultipleTimesError, CorruptedError,
+    MaybeBlobInfoAsSeenByLookingAtBlob, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
+    NodeReferencedMultipleTimesError,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
@@ -152,9 +152,9 @@ async fn blob_referenced_multiple_times(
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;
     let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
-        NodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+        MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
     } else {
-        NodeInfoAsSeenByLookingAtNode::LeafNode
+        MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
     };
 
     let errors: Vec<CorruptedError> = fs_fixture.run_cryfs_check().await;
@@ -163,7 +163,7 @@ async fn blob_referenced_multiple_times(
             // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
             CorruptedError::NodeReferencedMultipleTimes(NodeReferencedMultipleTimesError {
                 node_id: *blob_info.blob_id.to_root_block_id(),
-                node_info: Some(expected_node_info),
+                node_info: expected_node_info,
                 referenced_as: [
                     NodeAndBlobReference::RootNode {
                         belongs_to_blob: BlobReferenceWithId {
@@ -183,10 +183,10 @@ async fn blob_referenced_multiple_times(
             }),
             CorruptedError::BlobReferencedMultipleTimes(BlobReferencedMultipleTimesError {
                 blob_id: blob_info.blob_id,
-                blob_info: Some(BlobInfoAsSeenByLookingAtBlob::Readable {
+                blob_info: MaybeBlobInfoAsSeenByLookingAtBlob::Readable {
                     blob_type: blob_info.referenced_as.blob_type,
                     parent_pointer: blob_info.referenced_as.parent_id,
-                }),
+                },
                 referenced_as: [blob_info.referenced_as.clone(), second_blob_info]
                     .into_iter()
                     .collect(),
@@ -207,4 +207,4 @@ async fn blob_referenced_multiple_times(
 //  - symlink blob referenced from grandparent dir
 
 // - Blob referenced multiple times but doesn't actually exist
-// - BlobReferencedMultipleTimes::blob_info is BlobInfoAsSeenByLookingAtBlob::Unreadable
+// - BlobReferencedMultipleTimes::blob_info is MaybeBlobInfoAsSeenByLookingAtBlob::Unreadable|Missing

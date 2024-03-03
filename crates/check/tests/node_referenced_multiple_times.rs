@@ -9,8 +9,8 @@ use std::num::NonZeroU8;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
 use cryfs_check::{
-    BlobReferenceWithId, BlobUnreadableError, CorruptedError, NodeAndBlobReference,
-    NodeInfoAsSeenByLookingAtNode, NodeMissingError, NodeReferencedMultipleTimesError,
+    BlobReferenceWithId, BlobUnreadableError, CorruptedError, MaybeNodeInfoAsSeenByLookingAtNode,
+    NodeAndBlobReference, NodeMissingError, NodeReferencedMultipleTimesError,
 };
 
 mod common;
@@ -268,7 +268,7 @@ async fn leaf_node_referenced_multiple_times(
         vec![CorruptedError::NodeReferencedMultipleTimes(
             NodeReferencedMultipleTimesError {
                 node_id: replace_result.node_id,
-                node_info: Some(NodeInfoAsSeenByLookingAtNode::LeafNode),
+                node_info: MaybeNodeInfoAsSeenByLookingAtNode::LeafNode,
                 referenced_as: [
                     NodeAndBlobReference::NonRootLeafNode {
                         belongs_to_blob: Some(BlobReferenceWithId {
@@ -342,9 +342,9 @@ async fn inner_node_referenced_multiple_times(
         vec![CorruptedError::NodeReferencedMultipleTimes(
             NodeReferencedMultipleTimesError {
                 node_id: replace_result.node_id,
-                node_info: Some(NodeInfoAsSeenByLookingAtNode::InnerNode {
+                node_info: MaybeNodeInfoAsSeenByLookingAtNode::InnerNode {
                     depth: expected_depth,
-                }),
+                },
                 referenced_as: [
                     NodeAndBlobReference::NonRootInnerNode {
                         belongs_to_blob: Some(BlobReferenceWithId {
@@ -398,9 +398,9 @@ async fn root_node_referenced(
     // TODO expected_depth should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
     let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
-        NodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+        MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
     } else {
-        NodeInfoAsSeenByLookingAtNode::LeafNode
+        MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
     };
     let expected_referenced_depth = fs_fixture
         .get_node_depth(*blob1.blob_id.to_root_block_id())
@@ -415,7 +415,7 @@ async fn root_node_referenced(
         vec![CorruptedError::NodeReferencedMultipleTimes(
             NodeReferencedMultipleTimesError {
                 node_id: replace_result.node_id,
-                node_info: Some(expected_node_info),
+                node_info: expected_node_info,
                 referenced_as: [
                     NodeAndBlobReference::NonRootInnerNode {
                         belongs_to_blob: Some(BlobReferenceWithId {
