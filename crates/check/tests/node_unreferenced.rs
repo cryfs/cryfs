@@ -2,8 +2,8 @@
 
 use cryfs_blockstore::BlockId;
 use cryfs_check::{
-    CorruptedError, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode, NodeMissingError,
-    NodeUnreferencedError,
+    CorruptedError, MaybeBlobReferenceWithId, NodeAndBlobReference, NodeInfoAsSeenByLookingAtNode,
+    NodeMissingError, NodeUnreferencedError,
 };
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
@@ -57,7 +57,7 @@ async fn single_inner_node_unreferenced() {
         .await;
 
     let referenced_as = NodeAndBlobReference::NonRootInnerNode {
-        belongs_to_blob: None,
+        belongs_to_blob: MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot,
         depth: NonZeroU8::new(DEPTH - 1).unwrap(),
         parent_id: node_id,
     };

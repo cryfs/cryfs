@@ -16,7 +16,10 @@ use crate::{
         BlobReferencedMultipleTimesError, BlobUnreadableError, CorruptedError, NodeMissingError,
         WrongParentPointerError,
     },
-    node_info::{BlobInfoAsSeenByLookingAtBlob, BlobReference, MaybeBlobInfoAsSeenByLookingAtBlob},
+    node_info::{
+        BlobInfoAsSeenByLookingAtBlob, BlobReference, MaybeBlobInfoAsSeenByLookingAtBlob,
+        MaybeBlobReferenceWithId,
+    },
 };
 
 // TODO Rename to blob reference checks to contrast with unreferenced_nodes.rs?
@@ -182,9 +185,10 @@ impl FilesystemCheck for CheckParentPointers {
                                         reported_referenced_as
                                             .into_iter()
                                             .filter_map(|reported_reference| {
-                                                reported_reference
-                                                    .blob_info()
-                                                    .map(|blob_info| &blob_info.referenced_as)
+                                                match reported_reference.clone().blob_info() {
+                                                    MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot => None,
+                                                    MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {  referenced_as, .. } => Some(referenced_as),
+                                                }
                                             })
                                             .contains(referenced_as)
                                     })

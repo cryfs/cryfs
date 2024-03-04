@@ -2,8 +2,12 @@ use std::fmt::{self, Debug, Display};
 use std::num::NonZeroU8;
 
 use cryfs_blockstore::BlockId;
+use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
-use super::{BlobReferenceWithId, NodeAndBlobReferenceFromReachableBlob, NodeReference};
+use super::{
+    BlobReferenceWithId, MaybeBlobReferenceWithId, NodeAndBlobReferenceFromReachableBlob,
+    NodeReference,
+};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum NodeAndBlobReference {
@@ -11,30 +15,28 @@ pub enum NodeAndBlobReference {
         belongs_to_blob: BlobReferenceWithId,
     },
     NonRootInnerNode {
-        // `belongs_to_blob` can be `None` if the node is part of a subtree that is unreachable from the filesystem root
-        belongs_to_blob: Option<BlobReferenceWithId>,
+        belongs_to_blob: MaybeBlobReferenceWithId,
 
         depth: NonZeroU8,
         parent_id: BlockId,
     },
     NonRootLeafNode {
-        // `belongs_to_blob` can be `None` if the node is part of a subtree that is unreachable from the filesystem root
-        belongs_to_blob: Option<BlobReferenceWithId>,
+        belongs_to_blob: MaybeBlobReferenceWithId,
 
         parent_id: BlockId,
     },
 }
 
 impl NodeAndBlobReference {
-    pub fn blob_info(&self) -> Option<&BlobReferenceWithId> {
+    pub fn blob_info(self) -> MaybeBlobReferenceWithId {
         match self {
-            Self::RootNode { belongs_to_blob } => Some(belongs_to_blob),
+            Self::RootNode { belongs_to_blob } => belongs_to_blob.into(),
             Self::NonRootInnerNode {
                 belongs_to_blob, ..
-            } => belongs_to_blob.as_ref(),
+            } => belongs_to_blob,
             Self::NonRootLeafNode {
                 belongs_to_blob, ..
-            } => belongs_to_blob.as_ref(),
+            } => belongs_to_blob,
         }
     }
 
@@ -56,12 +58,30 @@ impl NodeAndBlobReference {
 
 impl Display for NodeAndBlobReference {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let belongs_to_blob = self.blob_info();
+        let belongs_to_blob = self.clone().blob_info();
 
-        if let Some(blob) = belongs_to_blob {
-            write!(f, "{blob}:")?;
-        } else {
-            write!(f, "UnreachableBlob:")?;
+        match belongs_to_blob {
+            MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot => {
+                write!(f, "UnreachableBlob:")?
+            }
+            MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
+                blob_id,
+                referenced_as,
+            } => {
+                let blob_type = match referenced_as.blob_type {
+                    BlobType::File => "File",
+                    BlobType::Dir => "Dir",
+                    BlobType::Symlink => "Symlink",
+                };
+                write!(
+                    f,
+                    "{blob_type}[path={path}, id={blob_id}, parent={parent_id}]:",
+                    blob_id = blob_id,
+                    parent_id = referenced_as.parent_id,
+                    path = referenced_as.path,
+                    blob_type = blob_type,
+                )?;
+            }
         }
 
         write!(f, "{}", self.node_info())
@@ -81,12 +101,12 @@ impl From<NodeAndBlobReferenceFromReachableBlob> for NodeAndBlobReference {
                 belongs_to_blob: node_reference.blob_info,
             },
             NodeReference::NonRootInnerNode { depth, parent_id } => Self::NonRootInnerNode {
-                belongs_to_blob: Some(node_reference.blob_info),
+                belongs_to_blob: node_reference.blob_info.into(),
                 depth,
                 parent_id,
             },
             NodeReference::NonRootLeafNode { parent_id } => Self::NonRootLeafNode {
-                belongs_to_blob: Some(node_reference.blob_info),
+                belongs_to_blob: node_reference.blob_info.into(),
                 parent_id,
             },
         }
@@ -129,7 +149,7 @@ mod tests {
             format!(
                 "{}",
                 NodeAndBlobReference::NonRootInnerNode {
-                    belongs_to_blob: None,
+                    belongs_to_blob: MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot,
                     depth: NonZeroU8::new(3).unwrap(),
                     parent_id: BlockId::from_hex("DA93EF706935F4693039C90DA370E99A").unwrap(),
                 }
@@ -141,7 +161,7 @@ mod tests {
             format!(
                 "{}",
                 NodeAndBlobReference::NonRootInnerNode {
-                    belongs_to_blob: Some(belongs_to_blob.clone()),
+                    belongs_to_blob: belongs_to_blob.clone().into(),
                     depth: NonZeroU8::new(3).unwrap(),
                     parent_id: BlockId::from_hex("DA93EF706935F4693039C90DA370E99A").unwrap(),
                 }
@@ -153,7 +173,7 @@ mod tests {
             format!(
                 "{}",
                 NodeAndBlobReference::NonRootLeafNode {
-                    belongs_to_blob: None,
+                    belongs_to_blob: MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot,
                     parent_id: BlockId::from_hex("DA93EF706935F4693039C90DA370E99A").unwrap(),
                 }
             ),
@@ -164,7 +184,7 @@ mod tests {
             format!(
                 "{}",
                 NodeAndBlobReference::NonRootLeafNode {
-                    belongs_to_blob: Some(belongs_to_blob.clone()),
+                    belongs_to_blob: belongs_to_blob.clone().into(),
                     parent_id: BlockId::from_hex("DA93EF706935F4693039C90DA370E99A").unwrap(),
                 }
             ),
@@ -177,7 +197,10 @@ mod tests {
             blob_info: blob_info.clone(),
         });
         assert_eq!(node_info, converted.node_info());
-        assert_eq!(Some(&blob_info), converted.blob_info());
+        assert_eq!(
+            MaybeBlobReferenceWithId::from(blob_info),
+            converted.blob_info(),
+        );
     }
 
     #[test]

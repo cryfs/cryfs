@@ -15,7 +15,8 @@ use crate::error::{
     NodeUnreadableError, NodeUnreferencedError,
 };
 use crate::node_info::{
-    BlobReference, BlobReferenceWithId, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
+    BlobReference, BlobReferenceWithId, MaybeBlobReferenceWithId,
+    MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode,
 };
 
@@ -89,14 +90,16 @@ impl UnreferencedNodesReferenceChecker {
                         NodeAndBlobReference::NonRootLeafNode {
                             belongs_to_blob: expected_node_info
                                 .as_ref()
-                                .map(|a| a.blob_info.clone()),
+                                .map(|a| a.blob_info.clone().into())
+                                .unwrap_or(MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot),
                             parent_id,
                         }
                     } else {
                         NodeAndBlobReference::NonRootInnerNode {
                             belongs_to_blob: expected_node_info
                                 .as_ref()
-                                .map(|a| a.blob_info.clone()),
+                                .map(|a| a.blob_info.clone().into())
+                                .unwrap_or(MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot),
                             depth: NonZeroU8::new(depth).unwrap(),
                             parent_id,
                         }

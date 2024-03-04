@@ -10,6 +10,9 @@ pub use blob_reference::BlobReference;
 mod blob_reference_with_id;
 pub use blob_reference_with_id::BlobReferenceWithId;
 
+mod maybe_blob_reference_with_id;
+pub use maybe_blob_reference_with_id::MaybeBlobReferenceWithId;
+
 mod node_info_as_seen_by_looking_at_node;
 pub use node_info_as_seen_by_looking_at_node::NodeInfoAsSeenByLookingAtNode;
 

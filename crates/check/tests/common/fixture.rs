@@ -5,8 +5,9 @@ use cryfs_blockstore::{
     SharedBlockStore,
 };
 use cryfs_check::{
-    BlobReference, BlobReferenceWithId, CorruptedError, NodeAndBlobReference,
-    NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
+    BlobReference, BlobReferenceWithId, CorruptedError, MaybeBlobReferenceWithId,
+    NodeAndBlobReference, NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode,
+    NodeReference,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_cryfs::{
@@ -658,10 +659,10 @@ impl FilesystemFixture {
                 let child1 = children.next().unwrap();
                 let child2 = children.next().unwrap();
 
-                let belongs_to_blob = Some(BlobReferenceWithId {
+                let belongs_to_blob = MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                     blob_id: blob_info.blob_id,
                     referenced_as: blob_info.referenced_as,
-                });
+                };
 
                 let mut removed_nodes = vec![];
                 let mut orphaned_nodes = vec![];
@@ -685,8 +686,9 @@ impl FilesystemFixture {
                     removed_nodes.push((
                         *inner_below_a.block_id(),
                         NodeAndBlobReference::NonRootInnerNode {
-                            // `belongs_to_blob` is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
-                            belongs_to_blob: None,
+                            // `belongs_to_blob` is `UnreachableFromFilesystemRoot` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
+                            belongs_to_blob:
+                                MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot,
                             depth: inner_below_a.depth(),
                             parent_id: inner_below_a_parent_id,
                         },
@@ -698,8 +700,9 @@ impl FilesystemFixture {
                     removed_nodes.push((
                         *leaf_below_a.block_id(),
                         NodeAndBlobReference::NonRootLeafNode {
-                            // `belongs_to_blob` is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
-                            belongs_to_blob: None,
+                            // `belongs_to_blob` is `UnreachableFromFilesystemRoot` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to figure out which blob the removed node belonged to
+                            belongs_to_blob:
+                                MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot,
                             parent_id: leaf_below_a_parent_id,
                         },
                     ));
@@ -804,7 +807,7 @@ impl FilesystemFixture {
                     let mut corrupted_nodes = vec![];
                     let mut orphaned_nodes = vec![];
 
-                    let belongs_to_blob = BlobReferenceWithId {
+                    let belongs_to_blob = MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                         blob_id: blob_info.blob_id,
                         referenced_as: blob_info.referenced_as,
                     };
@@ -830,7 +833,8 @@ impl FilesystemFixture {
                         corrupted_nodes.push((
                             *inner_below_a.block_id(),
                             [NodeAndBlobReference::NonRootInnerNode {
-                                belongs_to_blob: None, // This is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to reach this from any blob
+                                belongs_to_blob:
+                                    MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot, // This is `UnreachableFromFilesystemRoot` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to reach this from any blob
                                 depth: inner_below_a.depth(),
                                 parent_id: inner_below_a_parent_id,
                             }]
@@ -844,7 +848,8 @@ impl FilesystemFixture {
                         corrupted_nodes.push((
                             *leaf_below_a.block_id(),
                             [NodeAndBlobReference::NonRootLeafNode {
-                                belongs_to_blob: None, // This is `None` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to reach this from any blob
+                                belongs_to_blob:
+                                    MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot, // This is `UnreachableFromFilesystemRoot` because `inner_node_a` gets removed as well, so when cryfs-check is running, it won't be able to reach this from any blob
                                 parent_id: leaf_below_a_parent_id,
                             }]
                             .into_iter()
@@ -855,7 +860,7 @@ impl FilesystemFixture {
                         corrupted_nodes.push((
                             *inner_node_a.block_id(),
                             [NodeAndBlobReference::NonRootInnerNode {
-                                belongs_to_blob: Some(belongs_to_blob.clone()),
+                                belongs_to_blob: belongs_to_blob.clone(),
                                 depth: inner_node_a.depth(),
                                 parent_id: inner_node_a_parent_id,
                             }]
@@ -882,7 +887,7 @@ impl FilesystemFixture {
                         corrupted_nodes.push((
                             *inner_node_b.block_id(),
                             [NodeAndBlobReference::NonRootInnerNode {
-                                belongs_to_blob: Some(belongs_to_blob.clone()),
+                                belongs_to_blob: belongs_to_blob.clone(),
                                 depth: inner_node_b.depth(),
                                 parent_id: inner_node_b_parent_id,
                             }]
@@ -914,7 +919,7 @@ impl FilesystemFixture {
                         corrupted_nodes.push((
                             *inner_node_c.block_id(),
                             [NodeAndBlobReference::NonRootInnerNode {
-                                belongs_to_blob: Some(belongs_to_blob),
+                                belongs_to_blob,
                                 depth: inner_node_c.depth(),
                                 parent_id: inner_node_c_parent_id,
                             }]

@@ -17,7 +17,8 @@ pub use error::{
 mod node_info;
 pub use node_info::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
-    MaybeBlobInfoAsSeenByLookingAtBlob, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
+    MaybeBlobInfoAsSeenByLookingAtBlob, MaybeBlobReferenceWithId,
+    MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
     NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
 };
 mod assertion;

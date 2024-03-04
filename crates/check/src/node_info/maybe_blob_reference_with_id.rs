@@ -3,34 +3,54 @@ use std::fmt::{self, Debug, Display};
 use cryfs_blobstore::BlobId;
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
 
-use crate::node_info::BlobReference;
+use crate::{node_info::BlobReference, BlobReferenceWithId};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
-pub struct BlobReferenceWithId {
-    pub blob_id: BlobId,
-    pub referenced_as: BlobReference,
+pub enum MaybeBlobReferenceWithId {
+    UnreachableFromFilesystemRoot,
+    ReachableFromFilesystemRoot {
+        blob_id: BlobId,
+        referenced_as: BlobReference,
+    },
 }
 
-impl Display for BlobReferenceWithId {
+impl Display for MaybeBlobReferenceWithId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let blob_type = match self.referenced_as.blob_type {
-            BlobType::File => "File",
-            BlobType::Dir => "Dir",
-            BlobType::Symlink => "Symlink",
-        };
-        write!(
-            f,
-            "{blob_type}[path={path}, id={blob_id}, parent={parent_id}]",
-            blob_id = self.blob_id,
-            parent_id = self.referenced_as.parent_id,
-            path = self.referenced_as.path,
-        )
+        match self {
+            Self::UnreachableFromFilesystemRoot => write!(f, "UnreachableBlob"),
+            Self::ReachableFromFilesystemRoot {
+                blob_id,
+                referenced_as,
+            } => {
+                let blob_type = match referenced_as.blob_type {
+                    BlobType::File => "File",
+                    BlobType::Dir => "Dir",
+                    BlobType::Symlink => "Symlink",
+                };
+                write!(
+                    f,
+                    "{blob_type}[path={path}, id={blob_id}, parent={parent_id}]",
+                    blob_id = blob_id,
+                    parent_id = referenced_as.parent_id,
+                    path = referenced_as.path,
+                )
+            }
+        }
     }
 }
 
-impl Debug for BlobReferenceWithId {
+impl Debug for MaybeBlobReferenceWithId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "BlobReferenceWithId({self})")
+        write!(f, "MaybeBlobReferenceWithId({self})")
+    }
+}
+
+impl From<BlobReferenceWithId> for MaybeBlobReferenceWithId {
+    fn from(blob_reference_with_id: BlobReferenceWithId) -> Self {
+        Self::ReachableFromFilesystemRoot {
+            blob_id: blob_reference_with_id.blob_id,
+            referenced_as: blob_reference_with_id.referenced_as,
+        }
     }
 }
 
@@ -47,10 +67,18 @@ mod tests {
         let path = AbsolutePathBuf::try_from_string("/path/to/blob".to_string()).unwrap();
 
         assert_eq!(
+            "UnreachableBlob",
+            format!(
+                "{}",
+                MaybeBlobReferenceWithId::UnreachableFromFilesystemRoot,
+            ),
+        );
+
+        assert_eq!(
             "File[path=/path/to/blob, id=3EF706935F4693039C90DA370E99ADA9, parent=A370E99ADA93EF706935F4693039C90D]",
             format!(
                 "{}",
-                BlobReferenceWithId {
+                MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                     blob_id,
                     referenced_as: BlobReference {
                         blob_type: BlobType::File,
@@ -65,7 +93,7 @@ mod tests {
             "Dir[path=/path/to/blob, id=3EF706935F4693039C90DA370E99ADA9, parent=A370E99ADA93EF706935F4693039C90D]",
             format!(
                 "{}",
-                BlobReferenceWithId {
+                MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                     blob_id,
                     referenced_as: BlobReference {
                         blob_type: BlobType::Dir,
@@ -80,7 +108,7 @@ mod tests {
             "Symlink[path=/path/to/blob, id=3EF706935F4693039C90DA370E99ADA9, parent=A370E99ADA93EF706935F4693039C90D]",
             format!(
                 "{}",
-                BlobReferenceWithId {
+                MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                     blob_id,
                     referenced_as: BlobReference {
                         blob_type: BlobType::Symlink,

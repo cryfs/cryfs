@@ -9,8 +9,9 @@ use std::num::NonZeroU8;
 
 use cryfs_blockstore::{BlockId, RemoveResult};
 use cryfs_check::{
-    BlobReferenceWithId, BlobUnreadableError, CorruptedError, MaybeNodeInfoAsSeenByLookingAtNode,
-    NodeAndBlobReference, NodeMissingError, NodeReferencedMultipleTimesError,
+    BlobReferenceWithId, BlobUnreadableError, CorruptedError, MaybeBlobReferenceWithId,
+    MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference, NodeMissingError,
+    NodeReferencedMultipleTimesError,
 };
 
 mod common;
@@ -271,17 +272,17 @@ async fn leaf_node_referenced_multiple_times(
                 node_info: MaybeNodeInfoAsSeenByLookingAtNode::LeafNode,
                 referenced_as: [
                     NodeAndBlobReference::NonRootLeafNode {
-                        belongs_to_blob: Some(BlobReferenceWithId {
+                        belongs_to_blob: MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                             blob_id: blob1.blob_id,
                             referenced_as: blob1.referenced_as,
-                        }),
+                        },
                         parent_id: replace_result.additional_parent_id,
                     },
                     NodeAndBlobReference::NonRootLeafNode {
-                        belongs_to_blob: Some(BlobReferenceWithId {
+                        belongs_to_blob: MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                             blob_id: blob2.blob_id,
                             referenced_as: blob2.referenced_as,
-                        }),
+                        },
                         parent_id: replace_result.original_parent_id,
                     }
                 ]
@@ -347,18 +348,18 @@ async fn inner_node_referenced_multiple_times(
                 },
                 referenced_as: [
                     NodeAndBlobReference::NonRootInnerNode {
-                        belongs_to_blob: Some(BlobReferenceWithId {
+                        belongs_to_blob: MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                             blob_id: blob1.blob_id,
                             referenced_as: blob1.referenced_as,
-                        }),
+                        },
                         parent_id: replace_result.additional_parent_id,
                         depth: expected_referenced_depth_1,
                     },
                     NodeAndBlobReference::NonRootInnerNode {
-                        belongs_to_blob: Some(BlobReferenceWithId {
+                        belongs_to_blob: MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                             blob_id: blob2.blob_id,
                             referenced_as: blob2.referenced_as,
-                        }),
+                        },
                         parent_id: replace_result.original_parent_id,
                         depth: expected_referenced_depth_2,
                     }
@@ -418,10 +419,10 @@ async fn root_node_referenced(
                 node_info: expected_node_info,
                 referenced_as: [
                     NodeAndBlobReference::NonRootInnerNode {
-                        belongs_to_blob: Some(BlobReferenceWithId {
+                        belongs_to_blob: MaybeBlobReferenceWithId::ReachableFromFilesystemRoot {
                             blob_id: blob1.blob_id,
                             referenced_as: blob1.referenced_as,
-                        }),
+                        },
                         parent_id: replace_result.additional_parent_id,
                         depth: expected_referenced_depth,
                     },
@@ -451,4 +452,4 @@ where
 // TODO Test node referenced multiple times but doesn't actually exist
 // TODO tests where we get NodeReferencedMultipleTimes::node_info == NodeInfoAsExpectedByEntryInParent::Unreadable
 // TODO Do the tests already cover cases where a (leaf/inner/root) node is referenced as a different node type or do we have to add it?
-// TODO Tests where NodeReferencedMultipleTimes::referenced_as contains a `belongs_to_blob: None`
+// TODO Tests where NodeReferencedMultipleTimes::referenced_as contains a `belongs_to_blob: Unreachable`
