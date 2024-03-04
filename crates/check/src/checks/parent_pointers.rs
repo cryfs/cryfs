@@ -153,15 +153,13 @@ impl FilesystemCheck for CheckParentPointers {
                         .filter(|blob_reference| parent_pointer == blob_reference.parent_id)
                         .peekable();
                     if matching_parents.is_empty() {
-                        errors.add_error(WrongParentPointerError::new(
+                        errors.add_error(WrongParentPointerError {
                             blob_id,
-                            BlobInfoAsSeenByLookingAtBlob::Readable {
-                                parent_pointer,
-                                blob_type,
-                            },
+                            parent_pointer,
+                            blob_type,
                             // TODO How to handle the case where referenced_as Vec has duplicate entries?
-                            referenced_as.into_iter().collect(),
-                        ));
+                            referenced_as: referenced_as.into_iter().collect(),
+                        });
                     }
                     // TODO If matching_parents does not contain one with the right blob type, generate an assertion for blob type mismatch.
                     //      This should be an error caught by another check but we should do an assertion here.
