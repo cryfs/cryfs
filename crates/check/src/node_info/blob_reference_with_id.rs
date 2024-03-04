@@ -20,10 +20,10 @@ impl Display for BlobReferenceWithId {
         };
         write!(
             f,
-            "{blob_type}[path={path}, id={blob_id}, parent={parent_id}]",
+            "{blob_type}(path={path}, blob_id={blob_id}, parent_blob={parent_id})",
+            path = self.referenced_as.path,
             blob_id = self.blob_id,
             parent_id = self.referenced_as.parent_id,
-            path = self.referenced_as.path,
         )
     }
 }
@@ -38,17 +38,18 @@ impl Debug for BlobReferenceWithId {
 mod tests {
     use super::*;
 
+    use console::strip_ansi_codes;
     use cryfs_rustfs::AbsolutePathBuf;
 
     #[test]
     fn test_display() {
-        let blob_id = BlobId::from_hex("3EF706935F4693039C90DA370E99ADA9").unwrap();
-        let parent_id = BlobId::from_hex("A370E99ADA93EF706935F4693039C90D").unwrap();
+        let blob_id = BlobId::from_hex("3ef706935f4693039c90da370e99ada9").unwrap();
+        let parent_id = BlobId::from_hex("a370e99ada93ef706935f4693039c90d").unwrap();
         let path = AbsolutePathBuf::try_from_string("/path/to/blob".to_string()).unwrap();
 
         assert_eq!(
-            "File[path=/path/to/blob, id=3EF706935F4693039C90DA370E99ADA9, parent=A370E99ADA93EF706935F4693039C90D]",
-            format!(
+            "File(path=/path/to/blob, blob_id=3ef706935f4693039c90da370e99ada9, parent_blob=a370e99ada93ef706935f4693039c90d)",
+            strip_ansi_codes(&format!(
                 "{}",
                 BlobReferenceWithId {
                     blob_id,
@@ -58,12 +59,12 @@ mod tests {
                         path: path.clone(),
                     }
                 }
-            ),
+            )),
         );
 
         assert_eq!(
-            "Dir[path=/path/to/blob, id=3EF706935F4693039C90DA370E99ADA9, parent=A370E99ADA93EF706935F4693039C90D]",
-            format!(
+            "Dir(path=/path/to/blob, blob_id=3ef706935f4693039c90da370e99ada9, parent_blob=a370e99ada93ef706935f4693039c90d)",
+            strip_ansi_codes(&format!(
                 "{}",
                 BlobReferenceWithId {
                     blob_id,
@@ -73,12 +74,12 @@ mod tests {
                         path: path.clone(),
                     }
                 }
-            ),
+            )),
         );
 
         assert_eq!(
-            "Symlink[path=/path/to/blob, id=3EF706935F4693039C90DA370E99ADA9, parent=A370E99ADA93EF706935F4693039C90D]",
-            format!(
+            "Symlink(path=/path/to/blob, blob_id=3ef706935f4693039c90da370e99ada9, parent_blob=a370e99ada93ef706935f4693039c90d)",
+            strip_ansi_codes(&format!(
                 "{}",
                 BlobReferenceWithId {
                     blob_id,
@@ -88,7 +89,7 @@ mod tests {
                         path: path.clone(),
                     }
                 }
-            ),
+            )),
         );
     }
 }

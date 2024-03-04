@@ -21,6 +21,8 @@ pub use blob_unreadable::BlobUnreadableError;
 mod wrong_parent_pointer;
 pub use wrong_parent_pointer::WrongParentPointerError;
 
+mod display;
+
 /// A [CorruptedError] is an error we found in the file system when analyzing it
 #[derive(Debug, Error, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum CorruptedError {

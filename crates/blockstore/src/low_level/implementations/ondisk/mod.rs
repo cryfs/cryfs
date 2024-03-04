@@ -342,7 +342,8 @@ async fn _store(path: &Path, data: BlockData) -> Result<()> {
 }
 
 fn _block_path(basedir: &Path, block_id: &BlockId) -> PathBuf {
-    let block_id_str = block_id.to_hex();
+    // TODO Switch to lower-case hex, but if a block isn't found, fall back to reading the upper-case hex file for backwards compatibility.
+    let block_id_str = block_id.to_hex_upper();
     assert!(
         block_id_str.chars().all(_is_allowed_blockid_character),
         "Created invalid block_id_str"

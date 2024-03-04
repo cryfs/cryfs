@@ -46,6 +46,10 @@ impl BlockId {
     }
 
     pub fn to_hex(&self) -> String {
+        hex::encode(self.data())
+    }
+
+    pub fn to_hex_upper(&self) -> String {
         hex::encode_upper(self.data())
     }
 }

@@ -69,7 +69,7 @@ impl Application for RecoverCli {
         .await?;
 
         for error in &errors {
-            println!("- {error}");
+            println!("{error}\n");
         }
         println!("Found {} errors", errors.len());
 
