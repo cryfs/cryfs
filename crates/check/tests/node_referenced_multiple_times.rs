@@ -333,7 +333,6 @@ async fn inner_node_referenced_multiple_times(
     )
     .await;
 
-
     let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
     let expected_depth = NonZeroU8::new(expected_depth).expect("test invariant violated");
 

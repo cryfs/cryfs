@@ -279,7 +279,7 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
     } else {
         MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
     };
-    
+
     let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2).await;
     fs_fixture
         .add_dir_entry_to_dir(old_parent_2.blob_id, "dirname", blob_info.blob_id)
