@@ -175,15 +175,6 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
 
     let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1).await;
     let blob_info = make_blob(&fs_fixture, old_parent.clone()).await;
-    let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2.clone()).await;
-    fs_fixture
-        .add_dir_entry_to_dir(old_parent_2.blob_id, SECOND_NAME, blob_info.blob_id)
-        .await;
-    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
-
-    set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
-
-    // TODO expected_depth/expected_node_info should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;
@@ -192,6 +183,15 @@ async fn blob_with_wrong_parent_pointer_referenced_from_two_dirs(
     } else {
         MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
     };
+
+    let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2.clone()).await;
+    fs_fixture
+        .add_dir_entry_to_dir(old_parent_2.blob_id, SECOND_NAME, blob_info.blob_id)
+        .await;
+    let new_parent = make_new_parent(&fs_fixture, some_blobs.dir1_dir3).await;
+
+    set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
+
     let expected_blob_references: BTreeSet<BlobReference> = [
         blob_info.referenced_as.clone(),
         BlobReference {
@@ -271,6 +271,15 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
 
     let old_parent = make_old_parent(&fs_fixture, some_blobs.dir1).await;
     let blob_info = make_blob(&fs_fixture, old_parent.clone()).await;
+    let expected_depth = fs_fixture
+        .get_node_depth(*blob_info.blob_id.to_root_block_id())
+        .await;
+    let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
+        MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+    } else {
+        MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
+    };
+    
     let old_parent_2 = make_old_parent(&fs_fixture, some_blobs.dir2).await;
     fs_fixture
         .add_dir_entry_to_dir(old_parent_2.blob_id, "dirname", blob_info.blob_id)
@@ -287,15 +296,6 @@ async fn blob_with_wrong_parent_pointer_referenced_from_four_dirs(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
-    // TODO expected_depth/expected_node_info should probably be calculated above before we introduce errors to the file system.
-    let expected_depth = fs_fixture
-        .get_node_depth(*blob_info.blob_id.to_root_block_id())
-        .await;
-    let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
-        MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
-    } else {
-        MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
-    };
     let expected_blob_references: BTreeSet<BlobReference> = [
         blob_info.referenced_as.clone(),
         BlobReference {

@@ -303,6 +303,19 @@ async fn inner_node_referenced_multiple_times(
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
 
+    let expected_referenced_depth_1 = fs_fixture
+        .get_node_depth(*blob1.blob_id.to_root_block_id())
+        .await
+        - depths_distance_from_root.0;
+    let expected_referenced_depth_1 =
+        NonZeroU8::new(expected_referenced_depth_1).expect("test invariant violated");
+    let expected_referenced_depth_2 = fs_fixture
+        .get_node_depth(*blob2.blob_id.to_root_block_id())
+        .await
+        - depths_distance_from_root.1;
+    let expected_referenced_depth_2 =
+        NonZeroU8::new(expected_referenced_depth_2).expect("test invariant violated");
+
     // Depending on how this modifies the dir blob, it could make it unreadable.
     // So let's ignore any errors that could be caused by that.
     // Note: This is indeterministic. Dir entries are ordered by blob id and in some test
@@ -320,22 +333,9 @@ async fn inner_node_referenced_multiple_times(
     )
     .await;
 
-    // TODO expected_depth should probably be calculated above before we introduce errors to the file system.
+
     let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
     let expected_depth = NonZeroU8::new(expected_depth).expect("test invariant violated");
-
-    let expected_referenced_depth_1 = fs_fixture
-        .get_node_depth(*blob1.blob_id.to_root_block_id())
-        .await
-        - depths_distance_from_root.0;
-    let expected_referenced_depth_1 =
-        NonZeroU8::new(expected_referenced_depth_1).expect("test invariant violated");
-    let expected_referenced_depth_2 = fs_fixture
-        .get_node_depth(*blob2.blob_id.to_root_block_id())
-        .await
-        - depths_distance_from_root.1;
-    let expected_referenced_depth_2 =
-        NonZeroU8::new(expected_referenced_depth_2).expect("test invariant violated");
 
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
@@ -379,6 +379,13 @@ async fn root_node_referenced(
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob1, blob2) = blobs(&some_blobs);
 
+    let expected_referenced_depth = fs_fixture
+        .get_node_depth(*blob1.blob_id.to_root_block_id())
+        .await
+        - DEPTH_DISTANCE_FROM_ROOT;
+    let expected_referenced_depth =
+        NonZeroU8::new(expected_referenced_depth).expect("test invariant violated");
+
     // Depending on how this modifies the dir blob, it could make it unreadable.
     // So let's ignore any errors that could be caused by that.
     // Note: This is indeterministic. Dir entries are ordered by blob id and in some test
@@ -396,19 +403,12 @@ async fn root_node_referenced(
     )
     .await;
 
-    // TODO expected_depth should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture.get_node_depth(replace_result.node_id).await;
     let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
         MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
     } else {
         MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
     };
-    let expected_referenced_depth = fs_fixture
-        .get_node_depth(*blob1.blob_id.to_root_block_id())
-        .await
-        - DEPTH_DISTANCE_FROM_ROOT;
-    let expected_referenced_depth =
-        NonZeroU8::new(expected_referenced_depth).expect("test invariant violated");
 
     let errors = fs_fixture.run_cryfs_check().await;
     let errors = remove_all(errors, ignored_errors);
