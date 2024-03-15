@@ -116,7 +116,7 @@ async fn blob_with_missing_inner_node(
         expected_errors.push(
             BlobUnreadableError {
                 blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
+                referenced_as: [blob_info.referenced_as].into_iter().collect(),
             }
             .into(),
         );
@@ -164,7 +164,7 @@ async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Bl
         expected_errors.push(
             BlobUnreadableError {
                 blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
+                referenced_as: [blob_info.referenced_as].into_iter().collect(),
             }
             .into(),
         );
@@ -219,7 +219,7 @@ async fn blob_with_missing_some_nodes(
         expected_errors.push(
             BlobUnreadableError {
                 blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
+                referenced_as: [blob_info.referenced_as].into_iter().collect(),
             }
             .into(),
         );

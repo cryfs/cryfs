@@ -62,6 +62,14 @@ pub trait FilesystemCheck {
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError>;
 
+    /// Like [Self::process_reachable_blob], but this is called whenever a blob is referenced **for the second or later time**,
+    /// i.e. there are multiple references to it in the file system.
+    fn process_reachable_blob_again<'a, 'b>(
+        &mut self,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        referenced_as: &BlobReference,
+    ) -> Result<(), CheckError>;
+
     /// Called for each node that is part of a reachable blob
     fn process_reachable_node(
         &mut self,
@@ -87,12 +95,16 @@ use unreferenced_nodes::CheckUnreferencedNodes;
 mod parent_pointers;
 use parent_pointers::CheckParentPointers;
 
+mod blobs_readable;
+use blobs_readable::CheckBlobsReadable;
+
 mod check_result;
 use check_result::CheckResult;
 
 pub struct AllChecks {
     check_unreachable_nodes: Mutex<CheckUnreferencedNodes>,
     check_parent_pointers: Mutex<CheckParentPointers>,
+    check_blobs_readable: Mutex<CheckBlobsReadable>,
     additional_errors: Mutex<CheckResult>,
 }
 
@@ -101,6 +113,7 @@ impl AllChecks {
         Self {
             check_unreachable_nodes: Mutex::new(CheckUnreferencedNodes::new(root_blob_id)),
             check_parent_pointers: Mutex::new(CheckParentPointers::new(root_blob_id)),
+            check_blobs_readable: Mutex::new(CheckBlobsReadable::new()),
             additional_errors: Mutex::new(CheckResult::new()),
         }
     }
@@ -119,6 +132,30 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_reachable_blob(blob, referenced_as)?;
+        self.check_blobs_readable
+            .lock()
+            .unwrap()
+            .process_reachable_blob(blob, referenced_as)?;
+        Ok(())
+    }
+
+    pub fn process_reachable_blob_again<'a, 'b>(
+        &self,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        referenced_as: &BlobReference,
+    ) -> Result<(), CheckError> {
+        self.check_unreachable_nodes
+            .lock()
+            .unwrap()
+            .process_reachable_blob_again(blob, referenced_as)?;
+        self.check_parent_pointers
+            .lock()
+            .unwrap()
+            .process_reachable_blob_again(blob, referenced_as)?;
+        self.check_blobs_readable
+            .lock()
+            .unwrap()
+            .process_reachable_blob_again(blob, referenced_as)?;
         Ok(())
     }
 
@@ -132,6 +169,10 @@ impl AllChecks {
             .unwrap()
             .process_reachable_node(node, referenced_as)?;
         self.check_parent_pointers
+            .lock()
+            .unwrap()
+            .process_reachable_node(node, referenced_as)?;
+        self.check_blobs_readable
             .lock()
             .unwrap()
             .process_reachable_node(node, referenced_as)?;
@@ -150,6 +191,10 @@ impl AllChecks {
             .lock()
             .unwrap()
             .process_unreachable_node(node)?;
+        self.check_blobs_readable
+            .lock()
+            .unwrap()
+            .process_unreachable_node(node)?;
         Ok(())
     }
 
@@ -163,6 +208,7 @@ impl AllChecks {
                 .finalize(),
         );
         reported_errors.add_all(self.check_parent_pointers.into_inner().unwrap().finalize());
+        reported_errors.add_all(self.check_blobs_readable.into_inner().unwrap().finalize());
 
         reported_errors.finalize()
     }

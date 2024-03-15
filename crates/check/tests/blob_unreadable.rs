@@ -34,7 +34,7 @@ async fn unreadable_blob_bad_format_version(
     let expected_errors = iter::once(
         BlobUnreadableError {
             blob_id: blob_info.blob_id,
-            referenced_as: blob_info.referenced_as,
+            referenced_as: [blob_info.referenced_as].into_iter().collect(),
         }
         .into(),
     )
@@ -67,7 +67,7 @@ async fn unreadable_file_blob_bad_blob_type(
     let expected_errors: Vec<CorruptedError> = iter::once(
         BlobUnreadableError {
             blob_id: blob_info.blob_id,
-            referenced_as: blob_info.referenced_as,
+            referenced_as: [blob_info.referenced_as].into_iter().collect(),
         }
         .into(),
     )

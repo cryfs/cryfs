@@ -110,6 +110,15 @@ impl FilesystemCheck for CheckParentPointers {
         Ok(())
     }
 
+    fn process_reachable_blob_again<'a, 'b>(
+        &mut self,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        referenced_as: &BlobReference,
+    ) -> Result<(), CheckError> {
+        // TODO What should we do here?
+        Ok(())
+    }
+
     fn process_reachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
@@ -168,8 +177,17 @@ impl FilesystemCheck for CheckParentPointers {
                     //      This should be an error caught by another check but we should do an assertion here.
                 }
                 Some(SeenBlobInfo::Unreadable { referenced_as }) => {
-                    errors.add_assertion(Assertion::exact_error_was_reported(
-                        BlobUnreadableError::new(blob_id, referenced_as),
+                    errors.add_assertion(Assertion::error_matching_predicate_was_reported(
+                        move |error| match error {
+                            CorruptedError::BlobUnreadable(BlobUnreadableError {
+                                blob_id: reported_blob_id,
+                                referenced_as: reported_referenced_as,
+                            }) => {
+                                *reported_blob_id == blob_id
+                                    && reported_referenced_as.contains(&referenced_as)
+                            }
+                            _ => false,
+                        },
                     ));
                 }
                 None => {

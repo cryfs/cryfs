@@ -312,6 +312,15 @@ impl FilesystemCheck for CheckUnreferencedNodes {
         Ok(())
     }
 
+    fn process_reachable_blob_again<'a, 'b>(
+        &mut self,
+        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        referenced_as: &BlobReference,
+    ) -> Result<(), CheckError> {
+        // TODO What should we do here?
+        Ok(())
+    }
+
     fn finalize(self) -> CheckResult {
         let mut errors = self.unreachable_nodes_checker.finalize();
         let reachable_nodes_errors = self.reachable_nodes_checker.finalize();

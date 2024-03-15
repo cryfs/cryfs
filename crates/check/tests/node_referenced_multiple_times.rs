@@ -216,7 +216,7 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
             [
                 BlobUnreadableError {
                     blob_id: blob_info.blob_id,
-                    referenced_as: blob_info.referenced_as.clone(),
+                    referenced_as: [blob_info.referenced_as.clone()].into_iter().collect(),
                 }
                 .into(),
                 // TODO Why is NodeMissing necessary here? Without it, tests seem to become flaky because it seems to be sometimes thrown

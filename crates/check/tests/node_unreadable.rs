@@ -38,7 +38,7 @@ async fn blob_with_unreadable_single_node(
     let expected_errors = vec![
         BlobUnreadableError {
             blob_id: blob_info.blob_id,
-            referenced_as: blob_info.referenced_as,
+            referenced_as: [blob_info.referenced_as].into_iter().collect(),
         }
         .into(),
         NodeUnreadableError {
@@ -79,7 +79,7 @@ async fn root_dir_with_unreadable_single_node_without_children() {
     let expected_errors = vec![
         BlobUnreadableError {
             blob_id: root,
-            referenced_as: BlobReference::root_dir(),
+            referenced_as: [BlobReference::root_dir()].into_iter().collect(),
         }
         .into(),
         NodeUnreadableError {
@@ -124,7 +124,7 @@ async fn blob_with_unreadable_root_node(
     let expected_errors = [
         BlobUnreadableError {
             blob_id: blob_info.blob_id,
-            referenced_as: blob_info.referenced_as,
+            referenced_as: [blob_info.referenced_as].into_iter().collect(),
         }
         .into(),
         NodeUnreadableError {
@@ -191,7 +191,7 @@ async fn blob_with_unreadable_inner_node(
         expected_errors.push(
             BlobUnreadableError {
                 blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
+                referenced_as: [blob_info.referenced_as].into_iter().collect(),
             }
             .into(),
         );
@@ -242,7 +242,7 @@ async fn blob_with_unreadable_leaf_node(
         expected_errors.push(
             BlobUnreadableError {
                 blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
+                referenced_as: [blob_info.referenced_as].into_iter().collect(),
             }
             .into(),
         );
@@ -297,7 +297,7 @@ async fn blob_with_corrupted_some_nodes(
         expected_errors.push(
             BlobUnreadableError {
                 blob_id: blob_info.blob_id,
-                referenced_as: blob_info.referenced_as,
+                referenced_as: [blob_info.referenced_as].into_iter().collect(),
             }
             .into(),
         );

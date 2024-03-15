@@ -273,11 +273,7 @@ where
             prev_seen,
             now_seen,
         } => {
-            if let Ok(Some(mut blob)) = loaded {
-                blob.async_drop().await?;
-            }
-
-            // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip processing it.
+            // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip descending into it
             if prev_seen.1 != now_seen.1 {
                 Err(CheckError::FilesystemModified {
                     msg: format!(
@@ -286,6 +282,29 @@ where
                         now_seen = now_seen,
                     ),
                 })?;
+            }
+
+            // But we do still want to process it so checks can notice this
+            // TODO Can we deduplicate this with the AlreadySeen::NotSeenYet branch below?
+            //      Also, do we want to add the same assertions here that we have below?
+            match loaded {
+                Ok(Some(mut blob)) => {
+                    let result = checks.process_reachable_blob_again(
+                        BlobToProcess::Readable(&blob),
+                        &blob_referenced_as.referenced_as,
+                    );
+                    blob.async_drop().await?;
+                    result?;
+                }
+                Ok(None) => {
+                    // do nothing
+                }
+                Err(error) => {
+                    checks.process_reachable_blob_again(
+                        BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
+                        &blob_referenced_as.referenced_as,
+                    )?;
+                }
             }
 
             // The blob was already seen before. This can only happen if the blob is referenced multiple times.
@@ -372,10 +391,19 @@ where
                         BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
                         &blob_referenced_as.referenced_as,
                     )?;
-                    checks.add_error(BlobUnreadableError::new(
-                        blob_referenced_as.blob_id,
-                        blob_referenced_as.referenced_as.clone(),
-                        // error,
+                    let blob_referenced_as = blob_referenced_as.clone();
+                    checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                        move |error| match error {
+                            CorruptedError::BlobUnreadable(BlobUnreadableError {
+                                blob_id: reported_blob_id,
+                                referenced_as: reported_referenced_as,
+                            }) => {
+                                *reported_blob_id == blob_referenced_as.blob_id
+                                    && reported_referenced_as
+                                        .contains(&blob_referenced_as.referenced_as)
+                            }
+                            _ => false,
+                        },
                     ));
                 }
             };
