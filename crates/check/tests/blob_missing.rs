@@ -95,5 +95,4 @@ async fn root_dir_entirely_missing_without_children() {
     assert_unordered_vec_eq(expected_errors, errors);
 }
 
-// TODO Test NodeMissing with multiple referenced_as
-// TODO Also test where they are referenced as both a blob and as a node within a blob
+// Test for blob_missing and referenced_multiple_times is in [super::blob_referenced_multiple_times]

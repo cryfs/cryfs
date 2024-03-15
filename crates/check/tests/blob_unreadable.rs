@@ -77,3 +77,5 @@ async fn unreadable_file_blob_bad_blob_type(
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);
 }
+
+// Test for blob_unreadable and referenced_multiple_times is in [super::blob_referenced_multiple_times]

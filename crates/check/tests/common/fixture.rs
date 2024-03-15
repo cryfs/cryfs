@@ -1,4 +1,4 @@
-use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore};
+use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore, RemoveResult};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockId, BlockStoreReader, BlockStoreWriter, DynBlockStore,
     InMemoryBlockStore, IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation,
@@ -469,6 +469,18 @@ impl FilesystemFixture {
             })
         })
         .await
+    }
+
+    pub async fn remove_blob(&self, blob_info: BlobReferenceWithId) {
+        self.update_blobstore(move |blobstore| {
+            Box::pin(async move {
+                assert_eq!(
+                    RemoveResult::SuccessfullyRemoved,
+                    blobstore.remove_by_id(&blob_info.blob_id).await.unwrap(),
+                );
+            })
+        })
+        .await;
     }
 
     pub async fn corrupt_root_node_of_blob(

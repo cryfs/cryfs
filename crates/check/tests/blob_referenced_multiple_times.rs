@@ -3,15 +3,17 @@
 
 use futures::future::BoxFuture;
 use rstest::rstest;
+use std::collections::BTreeSet;
 use std::num::NonZeroU8;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{
-    BlobReference, BlobReferenceWithId, BlobReferencedMultipleTimesError, CorruptedError,
-    MaybeBlobInfoAsSeenByLookingAtBlob, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
-    NodeReferencedMultipleTimesError,
+    BlobReference, BlobReferenceWithId, BlobReferencedMultipleTimesError, BlobUnreadableError,
+    CorruptedError, MaybeBlobInfoAsSeenByLookingAtBlob, MaybeNodeInfoAsSeenByLookingAtNode,
+    NodeAndBlobReference, NodeMissingError, NodeReferencedMultipleTimesError, NodeUnreadableError,
 };
 use cryfs_cryfs::filesystem::fsblobstore::BlobType;
+use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
 
@@ -118,6 +120,12 @@ fn different_dirs(some_blobs: &SomeBlobs) -> (BlobReferenceWithId, BlobReference
     )
 }
 
+enum BlobStatus {
+    Readable,
+    Unreadable,
+    Missing,
+}
+
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn blob_referenced_multiple_times(
@@ -140,60 +148,118 @@ async fn blob_referenced_multiple_times(
         BlobReferenceWithId,
         BlobId,
     ) -> BoxFuture<'a, BlobReference>,
+    #[values(BlobStatus::Readable, BlobStatus::Unreadable, BlobStatus::Missing)]
+    blob_status: BlobStatus,
 ) {
     let (fs_fixture, some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (parent1_info, parent2_info) = parents(&some_blobs);
 
     let blob_info = make_first_blob(&fs_fixture, parent1_info).await;
-    let second_blob_info = add_to_second_parent(&fs_fixture, parent2_info, blob_info.blob_id).await;
 
-    // TODO expected_depth/expected_node_info should probably be calculated above before we introduce errors to the file system.
     let expected_depth = fs_fixture
         .get_node_depth(*blob_info.blob_id.to_root_block_id())
         .await;
-    let expected_node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
-        MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
-    } else {
-        MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
+
+    let second_blob_info = add_to_second_parent(&fs_fixture, parent2_info, blob_info.blob_id).await;
+
+    // Depending on whether the blob_status is readable,unreadable or missing, set up the file system correspondingly.
+    let (expected_node_info, expected_blob_info) = match blob_status {
+        BlobStatus::Readable => {
+            let node_info = if let Some(depth) = NonZeroU8::new(expected_depth) {
+                MaybeNodeInfoAsSeenByLookingAtNode::InnerNode { depth }
+            } else {
+                MaybeNodeInfoAsSeenByLookingAtNode::LeafNode
+            };
+            let blob_info = MaybeBlobInfoAsSeenByLookingAtBlob::Readable {
+                blob_type: blob_info.referenced_as.blob_type,
+                parent_pointer: blob_info.referenced_as.parent_id,
+            };
+            (node_info, blob_info)
+        }
+        BlobStatus::Unreadable => {
+            fs_fixture
+                .corrupt_root_node_of_blob(blob_info.clone())
+                .await;
+            (
+                MaybeNodeInfoAsSeenByLookingAtNode::Unreadable,
+                MaybeBlobInfoAsSeenByLookingAtBlob::Unreadable,
+            )
+        }
+        BlobStatus::Missing => {
+            fs_fixture.remove_blob(blob_info.clone()).await;
+            (
+                MaybeNodeInfoAsSeenByLookingAtNode::Missing,
+                MaybeBlobInfoAsSeenByLookingAtBlob::Missing,
+            )
+        }
     };
 
-    let errors: Vec<CorruptedError> = fs_fixture.run_cryfs_check().await;
-    assert_eq!(
-        vec![
-            // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
-            CorruptedError::NodeReferencedMultipleTimes(NodeReferencedMultipleTimesError {
-                node_id: *blob_info.blob_id.to_root_block_id(),
-                node_info: expected_node_info,
-                referenced_as: [
-                    NodeAndBlobReference::RootNode {
-                        belongs_to_blob: BlobReferenceWithId {
-                            blob_id: blob_info.blob_id,
-                            referenced_as: blob_info.referenced_as.clone()
-                        }
-                    },
-                    NodeAndBlobReference::RootNode {
-                        belongs_to_blob: BlobReferenceWithId {
-                            blob_id: blob_info.blob_id,
-                            referenced_as: second_blob_info.clone(),
-                        }
-                    }
-                ]
-                .into_iter()
-                .collect(),
-            }),
-            CorruptedError::BlobReferencedMultipleTimes(BlobReferencedMultipleTimesError {
+    let expected_blob_referenced_as: BTreeSet<_> =
+        [blob_info.referenced_as.clone(), second_blob_info.clone()]
+            .into_iter()
+            .collect();
+    let expected_node_referenced_as: BTreeSet<_> = [
+        NodeAndBlobReference::RootNode {
+            belongs_to_blob: BlobReferenceWithId {
                 blob_id: blob_info.blob_id,
-                blob_info: MaybeBlobInfoAsSeenByLookingAtBlob::Readable {
-                    blob_type: blob_info.referenced_as.blob_type,
-                    parent_pointer: blob_info.referenced_as.parent_id,
-                },
-                referenced_as: [blob_info.referenced_as.clone(), second_blob_info]
-                    .into_iter()
-                    .collect(),
-            }),
-        ],
-        errors,
-    );
+                referenced_as: blob_info.referenced_as.clone(),
+            },
+        },
+        NodeAndBlobReference::RootNode {
+            belongs_to_blob: BlobReferenceWithId {
+                blob_id: blob_info.blob_id,
+                referenced_as: second_blob_info.clone(),
+            },
+        },
+    ]
+    .into_iter()
+    .collect();
+
+    let mut expected_errors = vec![
+        // TODO Do we want to report `NodeReferencedMultipleTimes` or only report `BlobReferencedMultipleTimes`?
+        CorruptedError::NodeReferencedMultipleTimes(NodeReferencedMultipleTimesError {
+            node_id: *blob_info.blob_id.to_root_block_id(),
+            node_info: expected_node_info,
+            referenced_as: expected_node_referenced_as.clone(),
+        }),
+        CorruptedError::BlobReferencedMultipleTimes(BlobReferencedMultipleTimesError {
+            blob_id: blob_info.blob_id,
+            blob_info: expected_blob_info,
+            referenced_as: expected_blob_referenced_as.clone(),
+        }),
+    ];
+
+    // Depending on whether the blob_status is readable,unreadable or missing, add expected errors
+    match blob_status {
+        BlobStatus::Readable => {
+            // No additional errors expected
+        }
+        BlobStatus::Unreadable => expected_errors.extend(
+            [
+                BlobUnreadableError {
+                    blob_id: blob_info.blob_id,
+                    referenced_as: expected_blob_referenced_as,
+                }
+                .into(),
+                NodeUnreadableError {
+                    node_id: *blob_info.blob_id.to_root_block_id(),
+                    referenced_as: expected_node_referenced_as,
+                }
+                .into(),
+            ]
+            .into_iter(),
+        ),
+        BlobStatus::Missing => expected_errors.push(
+            NodeMissingError {
+                node_id: *blob_info.blob_id.to_root_block_id(),
+                referenced_as: expected_node_referenced_as,
+            }
+            .into(),
+        ),
+    }
+
+    let errors: Vec<CorruptedError> = fs_fixture.run_cryfs_check().await;
+    assert_unordered_vec_eq(expected_errors, errors);
 }
 
 // TODO Test
@@ -206,5 +272,4 @@ async fn blob_referenced_multiple_times(
 //  - symlink blob referenced from parent dir (i.e. 2x from the same dir)
 //  - symlink blob referenced from grandparent dir
 
-// - Blob referenced multiple times but doesn't actually exist
-// - BlobReferencedMultipleTimes::blob_info is MaybeBlobInfoAsSeenByLookingAtBlob::Unreadable|Missing
+// TODO Also test where they are referenced as both a blob and as a node within a blob
