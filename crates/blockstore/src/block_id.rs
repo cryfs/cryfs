@@ -110,17 +110,17 @@ mod tests {
 
     #[test]
     fn test_display() {
-        const HEX: &str = "0070E99ADA93EF706935F4693039C900";
+        const HEX: &str = "0070e99ada93ef706935f4693039c900";
         let blob_id = BlockId::from_hex(HEX).unwrap();
         assert_eq!(HEX, format!("{blob_id}"));
     }
 
     #[test]
     fn test_debug() {
-        const HEX: &str = "0070E99ADA93EF706935F4693039C900";
+        const HEX: &str = "0070e99ada93ef706935f4693039c900";
         let blob_id = BlockId::from_hex(HEX).unwrap();
         assert_eq!(
-            "BlockId(0070E99ADA93EF706935F4693039C900)",
+            "BlockId(0070e99ada93ef706935f4693039c900)",
             format!("{:?}", blob_id),
         );
     }

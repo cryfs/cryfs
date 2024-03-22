@@ -35,7 +35,6 @@ impl TestConfig {
             use cryfs_cli_utils::{
                 reexports_for_tests::{
                     anyhow::Result,
-                    async_trait::async_trait,
                     clap::{self, Args},
                     cryfs_version::{Version, VersionInfo},
                 },
@@ -82,7 +81,6 @@ impl TestConfig {
 
                 {main_cli}
 
-                #[async_trait]
                 impl Application for Cli {{
                     {main_app}
 
@@ -129,7 +127,7 @@ lazy_static! {
                 struct MyArgs {}
             ),
             main: stringify!(
-                async fn main(&self) -> Result<()> {
+                async fn main(self) -> Result<()> {
                     println!("my-testbin:main");
                     Ok(())
                 }
@@ -151,7 +149,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(&self) -> Result<()> {
+                async fn main(self) -> Result<()> {
                     println!("my-testbin:main:{:?}", self.args.flag);
                     Ok(())
                 }
@@ -171,7 +169,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(&self) -> Result<()> {
+                async fn main(self) -> Result<()> {
                     println!("my-testbin:main:{}", self.args.mandatory_positional);
                     Ok(())
                 }
@@ -191,7 +189,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(&self) -> Result<()> {
+                async fn main(self) -> Result<()> {
                     println!("my-testbin:main:{:?}", self.args.optional_positional);
                     Ok(())
                 }
@@ -213,7 +211,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(&self) -> Result<()> {
+                async fn main(self) -> Result<()> {
                     println!("my-testbin:main:{}", self.args.mandatory_argument);
                     Ok(())
                 }
@@ -235,7 +233,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(&self) -> Result<()> {
+                async fn main(self) -> Result<()> {
                     println!("my-testbin:main:{:?}", self.args.optional_argument);
                     Ok(())
                 }
