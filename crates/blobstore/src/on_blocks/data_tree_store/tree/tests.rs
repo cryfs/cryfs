@@ -253,7 +253,12 @@ mod testutils {
                     children.len()
                 );
                 future::join_all(children.map(|child_id| async move {
-                    Box::pin(assert_is_max_data_tree(child_id, next_expected_depth, nodestore)).await;
+                    Box::pin(assert_is_max_data_tree(
+                        child_id,
+                        next_expected_depth,
+                        nodestore,
+                    ))
+                    .await;
                 }))
                 .await;
             }
