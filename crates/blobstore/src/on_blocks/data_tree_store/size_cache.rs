@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, Result};
-use async_recursion::async_recursion;
 use std::num::NonZeroU64;
 
 use crate::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout};
@@ -162,7 +161,6 @@ struct NumLeavesAndRightmostLeafId {
     pub rightmost_leaf_id: BlockId,
 }
 
-#[async_recursion]
 async fn calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + Send + Sync>(
     node_store: &DataNodeStore<B>,
     root_node: &DataInnerNode<B>,
@@ -210,7 +208,11 @@ async fn calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + Send + Sync>
                 );
             }
             DataNode::Inner(last_child) => {
-                calculate_num_leaves_and_rightmost_leaf_id(node_store, &last_child).await?
+                Box::pin(calculate_num_leaves_and_rightmost_leaf_id(
+                    node_store,
+                    &last_child,
+                ))
+                .await?
             }
         };
         let num_leaves = num_leaves_in_right_child

@@ -16,7 +16,6 @@ name = "cryfs-check"
 # TODO cryfs-check indirectly depends on cryfs-rustfs. This shouldn't be necessary.
 anyhow.workspace = true
 async-trait.workspace = true
-async-recursion.workspace = true
 clap = {workspace = true, features = ["derive"]}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-blobstore = {path = "../blobstore"}

@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, ensure, Result};
-use async_recursion::async_recursion;
 use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
@@ -134,7 +133,6 @@ pub async fn traverse_and_return_new_root<
     .await
 }
 
-#[async_recursion]
 async fn _traverse_and_return_new_root<
     B: BlockStore + Send + Sync,
     C: TraversalCallbacks<B> + Sync,
@@ -204,14 +202,14 @@ async fn _traverse_and_return_new_root<
     if ALLOW_WRITES && should_increase_tree_depth {
         // TODO Test cases that increase tree depth by 0, 1, 2, ... levels
         let root = _increase_tree_depth(node_store, root).await?;
-        _traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
+        Box::pin(_traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
             node_store,
             root,
             begin_index.max(max_leaves_for_depth.get()),
             end_index,
             false,
             callbacks,
-        )
+        ))
         .await
     } else {
         // Once we're done growing the tree and done with the traversal, we might have to decrease tree depth,
@@ -224,7 +222,6 @@ async fn _traverse_and_return_new_root<
 }
 
 // TODO leaf_offset u32 or u64?
-#[async_recursion]
 async fn _traverse_existing_subtree<
     B: BlockStore + Send + Sync,
     C: TraversalCallbacks<B> + Sync,
@@ -358,17 +355,19 @@ async fn _traverse_existing_subtree_of_inner_node<
                 panic!("We don't actually traverse any leaves");
             }
         }
-        _traverse_existing_subtree::<B, PanicCallbacks, ALLOW_WRITES>(
-            node_store,
-            child_block_id,
-            root.depth().get() - 1,
-            leaves_per_child,
-            leaves_per_child,
-            child_offset,
-            true,
-            false,
-            true,
-            &PanicCallbacks,
+        Box::pin(
+            _traverse_existing_subtree::<B, PanicCallbacks, ALLOW_WRITES>(
+                node_store,
+                child_block_id,
+                root.depth().get() - 1,
+                leaves_per_child,
+                leaves_per_child,
+                child_offset,
+                true,
+                false,
+                true,
+                &PanicCallbacks,
+            ),
         )
         .await?;
     }
@@ -402,7 +401,7 @@ async fn _traverse_existing_subtree_of_inner_node<
         let is_last_existing_child: bool = child_index == num_children - 1;
         let is_last_child = is_last_existing_child && num_children == end_child;
         assert!(local_end_index <= leaves_per_child, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
-        _traverse_existing_subtree::<B, C, ALLOW_WRITES>(
+        Box::pin(_traverse_existing_subtree::<B, C, ALLOW_WRITES>(
             node_store,
             child_block_id,
             root.depth().get() - 1,
@@ -419,7 +418,7 @@ async fn _traverse_existing_subtree_of_inner_node<
             is_right_border_node && is_last_child,
             should_grow_last_existing_leaf && is_last_existing_child,
             callbacks,
-        )
+        ))
         .await?;
     }
 
@@ -523,7 +522,6 @@ trait CreateNewSubtreeCallbacks<B: BlockStore + Send + Sync> {
 }
 
 // TODO leaf_offset u32 or u64?
-#[async_recursion]
 async fn _create_new_subtree<
     B: BlockStore + Send + Sync,
     C: CreateNewSubtreeCallbacks<B> + Sync,
@@ -587,14 +585,14 @@ async fn _create_new_subtree<
                     Ok(())
                 }
             }
-            let child = _create_new_subtree(
+            let child = Box::pin(_create_new_subtree(
                 node_store,
                 leaves_per_child,
                 leaves_per_child,
                 leaf_offset + child_offset,
                 depth - 1,
                 &Callbacks,
-            )
+            ))
             .await?;
             assert_eq!(
                 child.depth(),
@@ -608,14 +606,14 @@ async fn _create_new_subtree<
             let child_offset = child_index * leaves_per_child;
             let local_begin_index = begin_index.saturating_sub(child_offset);
             let local_end_index = leaves_per_child.min(end_index - child_offset);
-            let child = _create_new_subtree(
+            let child = Box::pin(_create_new_subtree(
                 node_store,
                 local_begin_index,
                 local_end_index,
                 leaf_offset + child_offset,
                 depth - 1,
                 callbacks,
-            )
+            ))
             .await?;
             assert_eq!(
                 child.depth(),
@@ -673,8 +671,7 @@ async fn _while_root_has_only_one_child_replace_root_with_its_child<
     }
 }
 
-// TODO Iterative instead of recursive implementation? We wouldn't need #[async_recursion] then
-#[async_recursion]
+// TODO Iterative instead of recursive implementation? We wouldn't need the Box::pin for the async recursion then.
 async fn _while_root_has_only_one_child_remove_root_return_child<B: BlockStore + Send + Sync>(
     node_store: &DataNodeStore<B>,
     root_block_id: &BlockId,
@@ -691,13 +688,13 @@ async fn _while_root_has_only_one_child_remove_root_return_child<B: BlockStore +
             let num_children = inner.num_children().get();
             assert!(num_children >= 1);
             if num_children == 1 {
-                let result = _while_root_has_only_one_child_remove_root_return_child(
+                let result = Box::pin(_while_root_has_only_one_child_remove_root_return_child(
                     node_store,
                     &inner
                         .children()
                         .next()
                         .expect("Inner node must have at least one child"),
-                )
+                ))
                 .await?;
                 current.remove(node_store).await?;
                 Ok(result)

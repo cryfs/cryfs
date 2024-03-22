@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_recursion::async_recursion;
 use async_trait::async_trait;
 use futures::{
     future::FutureExt,
@@ -354,7 +353,6 @@ pub async fn add_entries_to_make_dir_large<B>(
     );
 }
 
-#[async_recursion]
 pub async fn create_large_dir_with_large_entries<'a, 'b, 'c, B>(
     fsblobstore: &'b FsBlobStore<B>,
     parent: &'a mut CreatedDirBlob<'c, B>,
@@ -375,11 +373,16 @@ where
             .await
             .unwrap();
     } else {
-        create_large_dir_with_large_entries(fsblobstore, &mut dir, "large_dir", levels - 1)
-            .await
-            .async_drop()
-            .await
-            .unwrap();
+        Box::pin(create_large_dir_with_large_entries(
+            fsblobstore,
+            &mut dir,
+            "large_dir",
+            levels - 1,
+        ))
+        .await
+        .async_drop()
+        .await
+        .unwrap();
     }
 
     dir
@@ -690,7 +693,6 @@ where
     _find_leaf_node_and_parent(nodestore, blob_root_node, rng).await
 }
 
-#[async_recursion]
 pub async fn _find_leaf_node_and_parent<B>(
     nodestore: &DataNodeStore<B>,
     root: DataInnerNode<B>,
@@ -706,7 +708,7 @@ where
         .expect("Inner node has no children");
     let child = nodestore.load(child).await.unwrap().unwrap();
     match child {
-        DataNode::Inner(inner) => _find_leaf_node_and_parent(nodestore, inner, rng).await,
+        DataNode::Inner(inner) => Box::pin(_find_leaf_node_and_parent(nodestore, inner, rng)).await,
         DataNode::Leaf(leaf) => (leaf, root, index),
     }
 }
@@ -792,7 +794,6 @@ where
     _find_inner_node_and_parent(nodestore, blob_root_node, depth_distance_from_root, rng).await
 }
 
-#[async_recursion]
 pub async fn _find_inner_node_and_parent<B>(
     nodestore: &DataNodeStore<B>,
     root: DataInnerNode<B>,
@@ -816,7 +817,13 @@ where
     if depth_distance_from_root == 1 {
         (child, root, index)
     } else {
-        _find_inner_node_and_parent(nodestore, child, depth_distance_from_root - 1, rng).await
+        Box::pin(_find_inner_node_and_parent(
+            nodestore,
+            child,
+            depth_distance_from_root - 1,
+            rng,
+        ))
+        .await
     }
 }
 

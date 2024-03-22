@@ -1,11 +1,12 @@
 use anyhow::Result;
-use async_recursion::async_recursion;
 use cryfs_cryfs::filesystem::fsblobstore::EntryType;
 use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::Future;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::num::NonZeroU8;
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 use super::checks::{AllChecks, BlobToProcess, NodeToProcess};
@@ -236,8 +237,8 @@ where
     Ok(())
 }
 
-#[async_recursion]
-async fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, B>(
+// TODO Use `async` syntax
+fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, 'async_recursion, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
     already_processed_blobs: Arc<ProcessedItems<BlobId, (BlobReference, SeenBlobInfo)>>,
@@ -245,7 +246,7 @@ async fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, B>(
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f>,
     pb: impl Progress + 'd,
-) -> Result<()>
+) -> Pin<Box<dyn Future<Output = Result<()>> + 'async_recursion + Send>>
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
@@ -255,164 +256,168 @@ where
     'f: 'async_recursion,
 {
     // TODO Function too large, split into subfunctions
+    Box::pin(async move {
+        log::debug!("Entering blob {blob_referenced_as}");
 
-    log::debug!("Entering blob {blob_referenced_as}");
+        let loaded = blobstore.load(&blob_referenced_as.blob_id).await;
 
-    let loaded = blobstore.load(&blob_referenced_as.blob_id).await;
-
-    let seen_blob_info = match &loaded {
-        Ok(Some(blob)) => blob_content_summary(blob),
-        Ok(None) => SeenBlobInfo::Missing,
-        Err(_) => SeenBlobInfo::Unreadable,
-    };
-    match already_processed_blobs.add(
-        blob_referenced_as.blob_id,
-        (blob_referenced_as.referenced_as.clone(), seen_blob_info),
-    ) {
-        AlreadySeen::AlreadySeen {
-            prev_seen,
-            now_seen,
-        } => {
-            // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip descending into it
-            if prev_seen.1 != now_seen.1 {
-                Err(CheckError::FilesystemModified {
+        let seen_blob_info = match &loaded {
+            Ok(Some(blob)) => blob_content_summary(blob),
+            Ok(None) => SeenBlobInfo::Missing,
+            Err(_) => SeenBlobInfo::Unreadable,
+        };
+        match already_processed_blobs.add(
+            blob_referenced_as.blob_id,
+            (blob_referenced_as.referenced_as.clone(), seen_blob_info),
+        ) {
+            AlreadySeen::AlreadySeen {
+                prev_seen,
+                now_seen,
+            } => {
+                // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip descending into it
+                if prev_seen.1 != now_seen.1 {
+                    Err(CheckError::FilesystemModified {
                     msg: format!(
                         "{blob_referenced_as} was previously seen as {prev_seen:?} but now as {now_seen:?}",
                         prev_seen = prev_seen,
                         now_seen = now_seen,
                     ),
                 })?;
-            }
+                }
 
-            // But we do still want to process it so checks can notice this
-            // TODO Can we deduplicate this with the AlreadySeen::NotSeenYet branch below?
-            //      Also, do we want to add the same assertions here that we have below?
-            match loaded {
-                Ok(Some(mut blob)) => {
-                    let result = checks.process_reachable_blob_again(
-                        BlobToProcess::Readable(&blob),
-                        &blob_referenced_as.referenced_as,
-                    );
-                    blob.async_drop().await?;
-                    result?;
-                }
-                Ok(None) => {
-                    // do nothing
-                }
-                Err(error) => {
-                    checks.process_reachable_blob_again(
-                        BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
-                        &blob_referenced_as.referenced_as,
-                    )?;
-                }
-            }
-
-            // The blob was already seen before. This can only happen if the blob is referenced multiple times.
-            // Let's assert that our checks find that.
-            checks.add_assertion(Assertion::error_matching_predicate_was_reported(
-                move |error| match error {
-                    CorruptedError::BlobReferencedMultipleTimes(
-                        BlobReferencedMultipleTimesError {
-                            blob_id: reported_blob_id,
-                            referenced_as: reported_referenced_as,
-                            ..
-                        },
-                    ) => {
-                        *reported_blob_id == blob_referenced_as.blob_id
-                            && reported_referenced_as.contains(&prev_seen.0)
-                            && reported_referenced_as.contains(&now_seen.0)
+                // But we do still want to process it so checks can notice this
+                // TODO Can we deduplicate this with the AlreadySeen::NotSeenYet branch below?
+                //      Also, do we want to add the same assertions here that we have below?
+                match loaded {
+                    Ok(Some(mut blob)) => {
+                        let result = checks.process_reachable_blob_again(
+                            BlobToProcess::Readable(&blob),
+                            &blob_referenced_as.referenced_as,
+                        );
+                        blob.async_drop().await?;
+                        result?;
                     }
-                    _ => false,
-                },
-            ));
-        }
-        AlreadySeen::NotSeenYet => {
-            match loaded {
-                Ok(Some(mut blob)) => {
-                    if !all_nodes.contains(blob_referenced_as.blob_id.to_root_block_id()) {
-                        Err(CheckError::FilesystemModified {
-                            msg: format!("{blob_referenced_as} wasn't present before but is now."),
-                        })?;
+                    Ok(None) => {
+                        // do nothing
                     }
-
-                    // TODO Add this assert here and a real blob type check to the list of checks
-                    // if expected_blob_type != blob.blob_type() {
-                    //     checks.add_error(CorruptedError::Assert(Box::new(
-                    //         CorruptedError::WrongBlobType,
-                    //     )));
-                    // }
-
-                    // TODO Checking children blobs for directory blobs loads the nodes of this blob.
-                    //      Then we load it again when we check the nodes of this blob. Can we only load it once?
-
-                    let subresult = check_all_reachable_children_blobs(
-                        blobstore,
-                        all_nodes,
-                        already_processed_blobs,
-                        &blob,
-                        blob_referenced_as.referenced_as.path.clone(),
-                        checks,
-                        task_spawner,
-                        pb.clone(),
-                    )
-                    .await;
-
-                    let process_result = checks.process_reachable_blob(
-                        BlobToProcess::Readable(&blob),
-                        &blob_referenced_as.referenced_as,
-                    );
-
-                    blob.async_drop().await?;
-                    subresult?;
-                    process_result?;
+                    Err(error) => {
+                        checks.process_reachable_blob_again(
+                            BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
+                            &blob_referenced_as.referenced_as,
+                        )?;
+                    }
                 }
-                Ok(None) => {
-                    // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is.
-                    let blob_referenced_as = blob_referenced_as.clone();
-                    checks.add_assertion(Assertion::error_matching_predicate_was_reported(
-                        move |error| match error {
-                            CorruptedError::NodeMissing(NodeMissingError {
-                                node_id: reported_node_id,
-                                referenced_as: reported_referenced_as,
-                            }) => {
-                                *reported_node_id == *blob_referenced_as.blob_id.to_root_block_id()
-                                    && reported_referenced_as.contains(
-                                        &NodeAndBlobReference::RootNode {
-                                            belongs_to_blob: blob_referenced_as.clone(),
-                                        },
-                                    )
-                            }
-                            _ => false,
-                        },
-                    ));
-                }
-                Err(error) => {
-                    checks.process_reachable_blob(
-                        BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
-                        &blob_referenced_as.referenced_as,
-                    )?;
-                    let blob_referenced_as = blob_referenced_as.clone();
-                    checks.add_assertion(Assertion::error_matching_predicate_was_reported(
-                        move |error| match error {
-                            CorruptedError::BlobUnreadable(BlobUnreadableError {
+
+                // The blob was already seen before. This can only happen if the blob is referenced multiple times.
+                // Let's assert that our checks find that.
+                checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                    move |error| match error {
+                        CorruptedError::BlobReferencedMultipleTimes(
+                            BlobReferencedMultipleTimesError {
                                 blob_id: reported_blob_id,
                                 referenced_as: reported_referenced_as,
-                            }) => {
-                                *reported_blob_id == blob_referenced_as.blob_id
-                                    && reported_referenced_as
-                                        .contains(&blob_referenced_as.referenced_as)
-                            }
-                            _ => false,
-                        },
-                    ));
-                }
-            };
-            pb.inc(1);
-        }
-    }
+                                ..
+                            },
+                        ) => {
+                            *reported_blob_id == blob_referenced_as.blob_id
+                                && reported_referenced_as.contains(&prev_seen.0)
+                                && reported_referenced_as.contains(&now_seen.0)
+                        }
+                        _ => false,
+                    },
+                ));
+            }
+            AlreadySeen::NotSeenYet => {
+                match loaded {
+                    Ok(Some(mut blob)) => {
+                        if !all_nodes.contains(blob_referenced_as.blob_id.to_root_block_id()) {
+                            Err(CheckError::FilesystemModified {
+                                msg: format!(
+                                    "{blob_referenced_as} wasn't present before but is now."
+                                ),
+                            })?;
+                        }
 
-    log::debug!("Exiting blob {blob_referenced_as}");
-    Ok(())
+                        // TODO Add this assert here and a real blob type check to the list of checks
+                        // if expected_blob_type != blob.blob_type() {
+                        //     checks.add_error(CorruptedError::Assert(Box::new(
+                        //         CorruptedError::WrongBlobType,
+                        //     )));
+                        // }
+
+                        // TODO Checking children blobs for directory blobs loads the nodes of this blob.
+                        //      Then we load it again when we check the nodes of this blob. Can we only load it once?
+
+                        let subresult = check_all_reachable_children_blobs(
+                            blobstore,
+                            all_nodes,
+                            already_processed_blobs,
+                            &blob,
+                            blob_referenced_as.referenced_as.path.clone(),
+                            checks,
+                            task_spawner,
+                            pb.clone(),
+                        )
+                        .await;
+
+                        let process_result = checks.process_reachable_blob(
+                            BlobToProcess::Readable(&blob),
+                            &blob_referenced_as.referenced_as,
+                        );
+
+                        blob.async_drop().await?;
+                        subresult?;
+                        process_result?;
+                    }
+                    Ok(None) => {
+                        // This is already reported by the [super::unreferenced_nodes] check but let's assert that it is.
+                        let blob_referenced_as = blob_referenced_as.clone();
+                        checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                            move |error| match error {
+                                CorruptedError::NodeMissing(NodeMissingError {
+                                    node_id: reported_node_id,
+                                    referenced_as: reported_referenced_as,
+                                }) => {
+                                    *reported_node_id
+                                        == *blob_referenced_as.blob_id.to_root_block_id()
+                                        && reported_referenced_as.contains(
+                                            &NodeAndBlobReference::RootNode {
+                                                belongs_to_blob: blob_referenced_as.clone(),
+                                            },
+                                        )
+                                }
+                                _ => false,
+                            },
+                        ));
+                    }
+                    Err(error) => {
+                        checks.process_reachable_blob(
+                            BlobToProcess::<B>::Unreadable(blob_referenced_as.blob_id),
+                            &blob_referenced_as.referenced_as,
+                        )?;
+                        let blob_referenced_as = blob_referenced_as.clone();
+                        checks.add_assertion(Assertion::error_matching_predicate_was_reported(
+                            move |error| match error {
+                                CorruptedError::BlobUnreadable(BlobUnreadableError {
+                                    blob_id: reported_blob_id,
+                                    referenced_as: reported_referenced_as,
+                                }) => {
+                                    *reported_blob_id == blob_referenced_as.blob_id
+                                        && reported_referenced_as
+                                            .contains(&blob_referenced_as.referenced_as)
+                                }
+                                _ => false,
+                            },
+                        ));
+                    }
+                };
+                pb.inc(1);
+            }
+        }
+
+        log::debug!("Exiting blob {blob_referenced_as}");
+        Ok(())
+    })
 }
 
 async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(

@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, ensure, Result};
-use async_recursion::async_recursion;
 use async_trait::async_trait;
 use divrem::DivCeil;
 use futures::{
@@ -585,7 +584,6 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         Ok(())
     }
 
-    #[async_recursion]
     async fn _remove_subtree_by_root_id(
         node_store: &DataNodeStore<B>,
         depth: u8,

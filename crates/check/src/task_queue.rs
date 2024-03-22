@@ -45,6 +45,7 @@ impl<'f, E> TaskSpawner<'f, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::pin::Pin;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
@@ -71,18 +72,21 @@ mod tests {
     async fn spawn_100_tasks_recursively() {
         let counter = Arc::new(AtomicUsize::new(0));
 
-        #[async_recursion::async_recursion]
-        async fn task(
+        // TODO Use `async` syntax
+        fn task(
             spawner: TaskSpawner<'static, ()>,
             counter: Arc<AtomicUsize>,
             index: usize,
-        ) -> Result<(), ()> {
-            counter.fetch_add(1, Ordering::SeqCst);
-            if index < 100 {
-                spawner
-                    .spawn(move |spawner| async move { task(spawner, counter, index + 1).await });
-            }
-            Ok(())
+        ) -> Pin<Box<dyn Future<Output = Result<(), ()>> + Send>> {
+            Box::pin(async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                if index < 100 {
+                    spawner.spawn(move |spawner| async move {
+                        Box::pin(task(spawner, counter, index + 1)).await
+                    });
+                }
+                Ok(())
+            })
         }
 
         run_to_completion(10, |spawner| task(spawner, Arc::clone(&counter), 1))
@@ -95,20 +99,22 @@ mod tests {
     async fn spawn_error_task() {
         let counter = Arc::new(AtomicUsize::new(0));
 
-        #[async_recursion::async_recursion]
-        async fn task(
+        fn task(
             spawner: TaskSpawner<'static, &'static str>,
             counter: Arc<AtomicUsize>,
             index: usize,
-        ) -> Result<(), &'static str> {
-            counter.fetch_add(1, Ordering::SeqCst);
-            if index < 100 {
-                spawner
-                    .spawn(move |spawner| async move { task(spawner, counter, index + 1).await });
-                Ok(())
-            } else {
-                Err("error message")
-            }
+        ) -> Pin<Box<dyn Future<Output = Result<(), &'static str>> + Send>> {
+            Box::pin(async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                if index < 100 {
+                    spawner.spawn(move |spawner| async move {
+                        Box::pin(task(spawner, counter, index + 1)).await
+                    });
+                    Ok(())
+                } else {
+                    Err("error message")
+                }
+            })
         }
 
         let result = run_to_completion(10, |spawner| task(spawner, Arc::clone(&counter), 1)).await;

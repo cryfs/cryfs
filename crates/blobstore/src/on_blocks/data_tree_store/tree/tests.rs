@@ -29,8 +29,6 @@ mod testutils {
     use super::*;
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    use async_recursion::async_recursion;
-    #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
     use futures::future;
 
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -228,7 +226,6 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    #[async_recursion]
     pub async fn assert_is_max_data_tree<B: BlockStore + Send + Sync>(
         root_id: BlockId,
         expected_depth: u8,
@@ -256,7 +253,7 @@ mod testutils {
                     children.len()
                 );
                 future::join_all(children.map(|child_id| async move {
-                    assert_is_max_data_tree(child_id, next_expected_depth, nodestore).await;
+                    Box::pin(assert_is_max_data_tree(child_id, next_expected_depth, nodestore)).await;
                 }))
                 .await;
             }
@@ -264,7 +261,6 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    #[async_recursion]
     pub async fn assert_is_left_max_data_tree<B: BlockStore + Send + Sync>(
         root_id: BlockId,
         expected_depth: u8,
@@ -292,11 +288,11 @@ mod testutils {
                         .enumerate()
                         .map(|(child_index, child_id)| async move {
                             if child_index == children_len - 1 {
-                                assert_is_left_max_data_tree(
+                                Box::pin(assert_is_left_max_data_tree(
                                     child_id,
                                     next_expected_depth,
                                     nodestore,
-                                )
+                                ))
                                 .await;
                             } else {
                                 // Children not on the right boundary need to be full
@@ -370,7 +366,6 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    #[async_recursion]
     pub async fn for_each_leaf<B: BlockStore + Send + Sync>(
         root_id: BlockId,
         first_leaf_index: u64,
@@ -393,12 +388,12 @@ mod testutils {
                     .pow(inner.depth().get() as u32 - 1);
                 let children = inner.children();
                 future::join_all(children.enumerate().map(|(child_index, child_id)| {
-                    for_each_leaf(
+                    Box::pin(for_each_leaf(
                         child_id,
                         first_leaf_index + child_index as u64 * num_leaves_per_child,
                         nodestore,
                         leaf_callback,
-                    )
+                    ))
                 }))
                 .await;
             }
