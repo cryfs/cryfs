@@ -44,7 +44,7 @@ void _save(const bf::path &metadataFilePath, const ptree& data) {
 }
 
 string jsonPathForBasedir(const bf::path &basedir) {
-  return bf::canonical(basedir).string() + ".filesystemId";
+  return bf::absolute(basedir).lexically_normal().string() + ".filesystemId";
 }
 
 }
