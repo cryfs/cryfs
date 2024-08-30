@@ -203,19 +203,6 @@ jobs:
             install_dependencies_manually: true
             run_build: true
             run_tests: true
-          - name: Local dependencies
-            os: ubuntu-22.04
-            compiler:
-              cxx: clang++-11
-              cc: clang-11
-              apt_package: clang-11 libomp5-11 libomp-11-dev
-            build_type: RelWithDebInfo
-            extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
-            extra_cxxflags: ""
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: true
-            run_build: true
-            run_tests: true
           - name: Werror gcc
             os: ubuntu-22.04
             compiler:
