@@ -333,15 +333,12 @@ jobs:
       - name: Install local dependencies
         if: ${{ matrix.install_dependencies_manually }}
         uses: ./.github/workflows/actions/install_local_dependencies
-      - name: Find pip cache location
-        id: pip_cache_dir
+      - name: Find pipx cache location
+        id: pipx_cache_dir
         run: |
-          # We need at least pip 20.1 to get the "pip cache dir" command. Ubuntu doesn't have pip 20.1 by default yet, let's upgrade it
-          python3 -m pip install -U pip
-          python3 -m pip --version
-          echo "::set-output name=pip_cache_dir::$(python3 -m pip cache dir)"
+          echo "::set-output name=pipx_cache_dir::${PIPX_HOME}"
         shell: bash
-      - name: Retrieve pip cache
+      - name: Retrieve pipx cache
         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
         continue-on-error: true
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
@@ -353,16 +350,15 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
+          key: v1-${{ runner.os }}-${{ matrix.os }}-setup-pipx
       - name: Install Conan
         shell: bash
         run: |
           set -v
           set -e
-          # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
-          python3 -m pip install conan==1.65
+          pipx install conan==1.65
           conan --version
-      - name: Save pip cache
+      - name: Save pipx cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{github.event_name == 'push' }}
         # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
@@ -374,8 +370,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
-          artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
+          key: v1-${{ runner.os }}-${{ matrix.os }}-setup-pipx
+          artifacts: ${{ steps.pipx_cache_dir.outputs.pipx_cache_dir }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Configure ccache
         shell: bash
@@ -540,15 +536,12 @@ jobs:
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Setup Windows
         uses: ./.github/workflows/actions/setup_windows
-      - name: Find pip cache location
-        id: pip_cache_dir
+      - name: Find pipx cache location
+        id: pipx_cache_dir
         run: |
-          # We need at least pip 20.1 to get the "pip cache dir" command. Ubuntu doesn't have pip 20.1 by default yet, let's upgrade it
-          python3 -m pip install -U pip
-          python3 -m pip --version
-          echo "::set-output name=pip_cache_dir::$(python3 -m pip cache dir)"
+          echo "::set-output name=pipx_cache_dir::${PIPX_HOME}"
         shell: bash
-      - name: Retrieve pip cache
+      - name: Retrieve pipx cache
         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
         continue-on-error: true
         # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
@@ -560,16 +553,15 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
+          key: v1-${{ runner.os }}-${{ matrix.os }}-setup-pipx
       - name: Install Conan
         shell: bash
         run: |
           set -v
           set -e
-          # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
-          python3 -m pip install conan==1.65
+          pipx install conan==1.65
           conan --version
-      - name: Save pip cache
+      - name: Save pipx cache
         # note: this access key has write access to the cache. This can't run on PRs.
         if: ${{github.event_name == 'push' }}
         # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
@@ -581,8 +573,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pip
-          artifacts: ${{ steps.pip_cache_dir.outputs.pip_cache_dir }}
+          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pipx
+          artifacts: ${{ steps.pipx_cache_dir.outputs.pipx_cache_dir }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       # - name: Configure ccache
       #   shell: bash
