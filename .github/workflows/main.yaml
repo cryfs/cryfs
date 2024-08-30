@@ -151,16 +151,26 @@ jobs:
             compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
           - os: macos-13
             compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
-          # Ubuntu 20.04 doesn't have GCC 12, 13 yet
+          - os: macos-13
+            compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
+          - os: macos-13
+            compiler: {cxx: g++-8, cc: gcc-8, macos_cxx: g++-8, macos_cc: gcc-8, homebrew_package: gcc@8, apt_package: g++-8}
+          - os: macos-13
+            compiler: {cxx: g++-9, cc: gcc-9, macos_cxx: g++-9, macos_cc: gcc-9, homebrew_package: gcc@9, apt_package: g++-9}
+          # Ubuntu 20.04 doesn't have GCC 11, 12, 13 yet
+          - os: ubuntu-20.04
+            compiler: {cxx: g++-11, cc: gcc-11, macos_cxx: g++-11, macos_cc: gcc-11, homebrew_package: gcc@11, apt_package: g++-11}
           - os: ubuntu-20.04
             compiler: {cxx: g++-12, cc: gcc-12, macos_cxx: g++-12, macos_cc: gcc-12, homebrew_package: gcc@12, apt_package: g++-12}
           - os: ubuntu-20.04
             compiler: {cxx: g++-13, cc: gcc-13, macos_cxx: g++-13, macos_cc: gcc-13, homebrew_package: gcc@13, apt_package: g++-13}
-          # Ubuntu 22.04 doesn't have gcc 7, 8 or clang 7, 8, 9, 10 anymore
+          # Ubuntu 22.04 doesn't have gcc 7, 8 or clang 7, 8, 9, 10 anymore, and doesn't have gcc 13 yet
           - os: ubuntu-22.04
             compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: ubuntu-22.04
             compiler: {cxx: g++-8, cc: gcc-8, macos_cxx: g++-8, macos_cc: gcc-8, homebrew_package: gcc@8, apt_package: g++-8}
+          - os: ubuntu-22.04
+            compiler: {cxx: g++-13, cc: gcc-13, macos_cxx: g++-13, macos_cc: gcc-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: ubuntu-22.04
             compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
           - os: ubuntu-22.04
@@ -169,7 +179,13 @@ jobs:
             compiler: {cxx: clang++-9, cc: clang-9, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, macos_cc: /usr/local/opt/llvm@9/bin/clang, apt_package: clang-9, homebrew_package: llvm@9}
           - os: ubuntu-22.04
             compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
-          # Clang 11 on Ubuntu seems to have a bug that fails CI
+          # Ubuntu 22.04 can't install clang-12 due to a apt package misconfiguration
+          - os: ubuntu-22.04
+            compiler: {cxx: clang++-12, cc: clang-12, macos_cxx: /usr/local/opt/llvm@12/bin/clang++, macos_cc: /usr/local/opt/llvm@12/bin/clang, apt_package: "clang-12 libomp5-12 libomp-12-dev", homebrew_package: llvm@12}
+          # Clang 11 on Ubuntu seems to have a bug that fails CI, see https://github.com/gabime/spdlog/issues/2812
+          - os: ubuntu-20.04
+            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+            build_type: Debug
           - os: ubuntu-22.04
             compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
             build_type: Debug
