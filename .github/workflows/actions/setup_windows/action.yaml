@@ -6,5 +6,7 @@ runs:
     - name: Install Windows dependencies
       shell: bash
       run: |
+        set -v
+        set -e
         choco install -y ninja
         choco install -y dokany --version 1.2.2.1001 --installargs INSTALLDEVFILES=1
