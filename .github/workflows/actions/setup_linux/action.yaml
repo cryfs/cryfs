@@ -13,6 +13,8 @@ runs:
     - name: Install Linux dependencies
       shell: bash
       run: |
+        set -v
+        set -e
         echo 'Acquire::Retries "20";' | sudo tee -a /etc/apt/apt.conf.d/80-retries
         if [[ "${{inputs.os}}" == "ubuntu-22.04" ]]; then
           echo Adding apt repositories for newer clang versions on Ubuntu 22.04

@@ -23,6 +23,7 @@ runs:
       shell: bash
       run: |
         set -v
+        set -e
         echo CMake version:
         cmake --version
         echo Ninja version:
@@ -38,6 +39,7 @@ runs:
       shell: bash
       run: |
         set -v
+        set -e
         export CXXFLAGS="$CXXFLAGS ${{inputs.extra_cxxflags}}"
         if [[ "${{inputs.cxx}}" == clang* && "${{inputs.build_type}}" == "Debug" ]]; then
           # TODO Our linux clang build actually use libstdc++11 instead of libc++, we need to fix this check
@@ -52,5 +54,6 @@ runs:
       shell: bash
       run: |
         set -v
+        set -e
         cd build
         ninja

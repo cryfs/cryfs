@@ -370,6 +370,8 @@ jobs:
       - name: Install Conan
         shell: bash
         run: |
+          set -v
+          set -e
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
           python3 -m pip install conan==1.60.1
       - name: Save pip cache
@@ -575,6 +577,8 @@ jobs:
       - name: Install Conan
         shell: bash
         run: |
+          set -v
+          set -e
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
           python3 -m pip install conan==1.60.1
       - name: Save pip cache
