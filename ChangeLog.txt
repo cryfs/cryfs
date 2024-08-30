@@ -9,6 +9,7 @@ Version 0.12.0 (unreleased)
   * range-v3/0.12.0
   * boost 1.79
   * spdlog/1.11.0
+* Remove Windows 32bit build, only 64bit remains supported
 
 Version 0.11.5 (unreleased)
 ---------------

@@ -510,7 +510,6 @@ jobs:
         os:
           - windows-2019
         arch:
-          - Win32
           - x64
         build_type:
           - Debug
