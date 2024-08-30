@@ -9,6 +9,7 @@ set(SOURCES
   Symlink.cpp
   Types.cpp
   Context.cpp
+  dummy.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
