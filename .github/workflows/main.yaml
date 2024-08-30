@@ -360,7 +360,7 @@ jobs:
           set -v
           set -e
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
-          python3 -m pip install conan==1.62
+          python3 -m pip install conan==1.65
           conan --version
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
@@ -567,7 +567,7 @@ jobs:
           set -v
           set -e
           # Using "python3 -m pip" instead of "pip3" to make sure we get the same pip that we queried the cache dir for the Github Cache action
-          python3 -m pip install conan==1.62
+          python3 -m pip install conan==1.65
           conan --version
       - name: Save pip cache
         # note: this access key has write access to the cache. This can't run on PRs.
