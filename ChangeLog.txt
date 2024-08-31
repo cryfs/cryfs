@@ -1,6 +1,7 @@
 Version 0.11.5 (unreleased)
 ---------------
 * Fix an issue when using `-o` atime mount options
+* Fix some MacOS build issues
 
 Version 0.11.4
 ---------------
