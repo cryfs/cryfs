@@ -5,7 +5,7 @@ class CryFSConan(ConanFile):
 	requires = [
 		"range-v3/0.12.0",
 		"spdlog/1.11.0",
-		"boost/1.79.0",
+		"boost/1.84.0",
 		"libcurl/8.1.2",
 	]
 	generators = "cmake"

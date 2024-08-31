@@ -7,7 +7,7 @@ Version 0.12.0 (unreleased)
   * Fuse 2.9
   * DokanY 2.0.6.1000
   * range-v3/0.12.0
-  * boost 1.79
+  * boost 1.84
   * spdlog/1.11.0
 * Remove Windows 32bit build, only 64bit remains supported
 
