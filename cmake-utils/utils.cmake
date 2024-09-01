@@ -1,25 +1,20 @@
 include(CheckCXXCompilerFlag)
 
 ###################################################
-#  Activate C++14
+#  Activate C++17
 #
-#  Uses: target_activate_cpp14(buildtarget)
+#  Uses: target_activate_cpp17(buildtarget)
 ###################################################
 function(target_activate_cpp14 TARGET)
-    if(MSVC)
-        # Required by range-v3, see its README.md
-        set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 17)
-    else()
-        set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 14)
-    endif()
+    set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 17)
     set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD_REQUIRED ON)
     # Ideally, we'd like to use libc++ on linux as well, but:
     #    - http://stackoverflow.com/questions/37096062/get-a-basic-c-program-to-compile-using-clang-on-ubuntu-16
     #    - https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=808086
     # so only use it on Apple systems...
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
-        target_compile_options(${TARGET} PUBLIC -stdlib=libc++)
-    endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+    # if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
+    #     target_compile_options(${TARGET} PUBLIC -stdlib=libc++)
+    # endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND APPLE)
 
     # We need ENABLE_EXPORTS so that boost::stacktrace works correctly
     set_property(TARGET ${TARGET} PROPERTY ENABLE_EXPORTS 1)

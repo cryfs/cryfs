@@ -14,105 +14,139 @@ jobs:
           - ubuntu-20.04
           - ubuntu-22.04
         compiler:
-          - cxx: g++-7
+          - compiler: gcc
+            version: 7
+            libcxx: libstdc++11
             cc: gcc-7
-            macos_cxx: g++-7
-            macos_cc: gcc-7
+            cxx: g++-7
             homebrew_package: gcc@7
             apt_package: g++-7
-          - cxx: g++-8
+          - compiler: gcc
+            version: 8
+            libcxx: libstdc++11
             cc: gcc-8
-            macos_cxx: g++-8
-            macos_cc: gcc-8
+            cxx: g++-8
             homebrew_package: gcc@8
             apt_package: g++-8
-          - cxx: g++-9
+          - compiler: gcc
+            version: 9
+            libcxx: libstdc++11
             cc: gcc-9
-            macos_cxx: g++-9
-            macos_cc: gcc-9
+            cxx: g++-9
             apt_package: g++-9
             homebrew_package: gcc@9
-          - cxx: g++-10
+          - compiler: gcc
+            version: 10
+            libcxx: libstdc++11
             cc: gcc-10
-            macos_cxx: g++-10
-            macos_cc: gcc-10
+            cxx: g++-10
             apt_package: g++-10
             homebrew_package: gcc@10
-          - cxx: g++-11
+          - compiler: gcc
+            version: 11
+            libcxx: libstdc++11
             cc: gcc-11
-            macos_cxx: g++-11
-            macos_cc: gcc-11
+            cxx: g++-11
             apt_package: g++-11
             homebrew_package: gcc@11
-          - cxx: g++-12
+          - compiler: gcc
+            version: 12
+            libcxx: libstdc++11
             cc: gcc-12
-            macos_cxx: g++-12
-            macos_cc: gcc-12
+            cxx: g++-12
             apt_package: g++-12
             homebrew_package: gcc@12
-          - cxx: g++-13
+          - compiler: gcc
+            version: 13
+            libcxx: libstdc++11
             cc: gcc-13
-            macos_cxx: g++-13
-            macos_cc: gcc-13
+            cxx: g++-13
             apt_package: g++-13
             homebrew_package: gcc@13
-          - cxx: clang++-7
+          - compiler: clang
+            version: 7.1
+            libcxx: libc++
             cc: clang-7
-            macos_cxx: /usr/local/opt/llvm@7/bin/clang++
+            cxx: clang++-7
             macos_cc: /usr/local/opt/llvm@7/bin/clang
-            apt_package: clang-7
+            macos_cxx: /usr/local/opt/llvm@7/bin/clang++
+            apt_package: clang-7 libc++-7-dev libc++abi-7-dev
             homebrew_package: llvm@7
-          - cxx: clang++-8
+          - compiler: clang
+            version: 8
+            libcxx: libc++
             cc: clang-8
-            macos_cxx: /usr/local/opt/llvm@8/bin/clang++
+            cxx: clang++-8
             macos_cc: /usr/local/opt/llvm@8/bin/clang
-            apt_package: clang-8
+            macos_cxx: /usr/local/opt/llvm@8/bin/clang++
+            apt_package: clang-8 libc++-8-dev libc++abi-8-dev
             homebrew_package: llvm@8
-          - cxx: clang++-9
+          - compiler: clang
+            version: 9
+            libcxx: libc++
             cc: clang-9
-            macos_cxx: /usr/local/opt/llvm@9/bin/clang++
+            cxx: clang++-9
             macos_cc: /usr/local/opt/llvm@9/bin/clang
-            apt_package: clang-9
+            macos_cxx: /usr/local/opt/llvm@9/bin/clang++
+            apt_package: clang-9 libc++-9-dev libc++abi-9-dev
             homebrew_package: llvm@9
-          - cxx: clang++-10
+          - compiler: clang
+            version: 10
+            libcxx: libc++
             cc: clang-10
-            macos_cxx: /usr/local/opt/llvm@10/bin/clang++
+            cxx: clang++-10
             macos_cc: /usr/local/opt/llvm@10/bin/clang
-            apt_package: clang-10
+            macos_cxx: /usr/local/opt/llvm@10/bin/clang++
+            apt_package: clang-10 libc++-10-dev libc++abi-10-dev
             homebrew_package: llvm@10
-          - cxx: clang++-11
+          - compiler: clang
+            version: 11
+            libcxx: libc++
             cc: clang-11
-            macos_cxx: /usr/local/opt/llvm@11/bin/clang++
+            cxx: clang++-11
             macos_cc: /usr/local/opt/llvm@11/bin/clang
-            apt_package: clang-11 libomp5-11 libomp-11-dev
+            macos_cxx: /usr/local/opt/llvm@11/bin/clang++
+            apt_package: clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev
             homebrew_package: llvm@11
-          - cxx: clang++-12
+          - compiler: clang
+            version: 12
+            libcxx: libc++
             cc: clang-12
-            macos_cxx: /usr/local/opt/llvm@12/bin/clang++
+            cxx: clang++-12
             macos_cc: /usr/local/opt/llvm@12/bin/clang
-            apt_package: clang-12 libomp5-12 libomp-12-dev
+            macos_cxx: /usr/local/opt/llvm@12/bin/clang++
+            apt_package: clang-12 libc++-12-dev libc++abi-12-dev libomp5-12 libomp-12-dev
             homebrew_package: llvm@12
-          - cxx: clang++-13
+          - compiler: clang
+            version: 13
+            libcxx: libc++
             cc: clang-13
-            macos_cxx: /usr/local/opt/llvm@13/bin/clang++
+            cxx: clang++-13
             macos_cc: /usr/local/opt/llvm@13/bin/clang
-            apt_package: clang-13 libomp5-13 libomp-13-dev
+            macos_cxx: /usr/local/opt/llvm@13/bin/clang++
+            apt_package: clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev
             homebrew_package: llvm@13
-          - cxx: clang++-14
+          - compiler: clang
+            version: 14
+            libcxx: libc++
             cc: clang-14
-            macos_cxx: /usr/local/opt/llvm@14/bin/clang++
+            cxx: clang++-14
             macos_cc: /usr/local/opt/llvm@14/bin/clang
-            apt_package: clang-14 libomp5-14 libomp-14-dev
+            macos_cxx: /usr/local/opt/llvm@14/bin/clang++
+            apt_package: clang-14 libc++-14-dev libc++abi-14-dev libomp5-14 libomp-14-dev
             homebrew_package: llvm@14
-          - cxx: clang++-15
+          - compiler: clang
+            version: 15
+            libcxx: libc++
             cc: clang-15
-            macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+            cxx: clang++-15
             macos_cc: /usr/local/opt/llvm@15/bin/clang
-            apt_package: clang-15 libomp5-15 libomp-15-dev
+            macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+            apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             homebrew_package: llvm@15
           # Apple Clang
-#           - cxx: clang++
-#             cc: clang
+#           - compiler: apple-clang
+#             version: xxx
 #             homebrew_package: ""
         build_type:
           - Debug
@@ -128,92 +162,98 @@ jobs:
         exclude:
           # MacOS CI doesn't have Clang 7, 8, 9, 10, 11 or GCC 7, 8 anymore. And other GCC versions are often incompatible, so we don't support them officially.
           - os: macos-12
-            compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
+            compiler: {compiler: clang, version: 7.1, libcxx: libc++, cc: clang-7, cxx: clang++-7, macos_cc: /usr/local/opt/llvm@7/bin/clang, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, apt_package: "clang-7 libc++-7-dev libc++abi-7-dev", homebrew_package: llvm@7}
           - os: macos-12
-            compiler: {cxx: clang++-8, cc: clang-8, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, macos_cc: /usr/local/opt/llvm@8/bin/clang, apt_package: clang-8, homebrew_package: llvm@8}
+            compiler: {compiler: clang, version: 8, libcxx: libc++, cc: clang-8, cxx: clang++-8, macos_cc: /usr/local/opt/llvm@8/bin/clang, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, apt_package: "clang-8 libc++-8-dev libc++abi-8-dev", homebrew_package: llvm@8}
           - os: macos-12
-            compiler: {cxx: clang++-9, cc: clang-9, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, macos_cc: /usr/local/opt/llvm@9/bin/clang, apt_package: clang-9, homebrew_package: llvm@9}
+            compiler: {compiler: clang, version: 9, libcxx: libc++, cc: clang-9, cxx: clang++-9, macos_cc: /usr/local/opt/llvm@9/bin/clang, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, apt_package: "clang-9 libc++-9-dev libc++abi-9-dev", homebrew_package: llvm@9}
           - os: macos-12
-            compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
+            compiler: {compiler: clang, version: 10, libcxx: libc++, cc: clang-10, cxx: clang++-10, macos_cc: /usr/local/opt/llvm@10/bin/clang, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, apt_package: "clang-10 libc++-10-dev libc++abi-10-dev", homebrew_package: llvm@10}
           - os: macos-12
-            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+            compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: /usr/local/opt/llvm@11/bin/clang, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
           - os: macos-12
-            compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
+            compiler: {compiler: gcc, version: 7, libcxx: libstdc++11, cc: gcc-7, cxx: g++-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: macos-12
-            compiler: {cxx: g++-8, cc: gcc-8, macos_cxx: g++-8, macos_cc: gcc-8, homebrew_package: gcc@8, apt_package: g++-8}
+            compiler: {compiler: gcc, version: 8, libcxx: libstdc++11, cc: gcc-8, cxx: g++-8, homebrew_package: gcc@8, apt_package: g++-8}
           - os: macos-12
-            compiler: {cxx: g++-9, cc: gcc-9, macos_cxx: g++-9, macos_cc: gcc-9, homebrew_package: gcc@9, apt_package: g++-9}
+            compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-12
-            compiler: {cxx: g++-10, cc: gcc-10, macos_cxx: g++-10, macos_cc: gcc-10, homebrew_package: gcc@10, apt_package: g++-10}
+            compiler: {compiler: gcc, version: 10, libcxx: libstdc++11, cc: gcc-10, cxx: g++-10, homebrew_package: gcc@10, apt_package: g++-10}
           - os: macos-12
-            compiler: {cxx: g++-11, cc: gcc-11, macos_cxx: g++-11, macos_cc: gcc-11, homebrew_package: gcc@11, apt_package: g++-11}
+            compiler: {compiler: gcc, version: 11, libcxx: libstdc++11, cc: gcc-11, cxx: g++-11, homebrew_package: gcc@11, apt_package: g++-11}
           - os: macos-12
-            compiler: {cxx: g++-12, cc: gcc-12, macos_cxx: g++-12, macos_cc: gcc-12, homebrew_package: gcc@12, apt_package: g++-12}
+            compiler: {compiler: gcc, version: 12, libcxx: libstdc++11, cc: gcc-12, cxx: g++-12, homebrew_package: gcc@12, apt_package: g++-12}
           - os: macos-12
-            compiler: {cxx: g++-13, cc: gcc-13, macos_cxx: g++-13, macos_cc: gcc-13, homebrew_package: gcc@13, apt_package: g++-13}
+            compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: macos-13
-            compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
+            compiler: {compiler: clang, version: 7.1, libcxx: libc++, cc: clang-7, cxx: clang++-7, macos_cc: /usr/local/opt/llvm@7/bin/clang, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, apt_package: "clang-7 libc++-7-dev libc++abi-7-dev", homebrew_package: llvm@7}
           - os: macos-13
-            compiler: {cxx: clang++-8, cc: clang-8, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, macos_cc: /usr/local/opt/llvm@8/bin/clang, apt_package: clang-8, homebrew_package: llvm@8}
+            compiler: {compiler: clang, version: 8, libcxx: libc++, cc: clang-8, cxx: clang++-8, macos_cc: /usr/local/opt/llvm@8/bin/clang, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, apt_package: "clang-8 libc++-8-dev libc++abi-8-dev", homebrew_package: llvm@8}
           - os: macos-13
-            compiler: {cxx: clang++-9, cc: clang-9, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, macos_cc: /usr/local/opt/llvm@9/bin/clang, apt_package: clang-9, homebrew_package: llvm@9}
+            compiler: {compiler: clang, version: 9, libcxx: libc++, cc: clang-9, cxx: clang++-9, macos_cc: /usr/local/opt/llvm@9/bin/clang, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, apt_package: "clang-9 libc++-9-dev libc++abi-9-dev", homebrew_package: llvm@9}
           - os: macos-13
-            compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
+            compiler: {compiler: clang, version: 10, libcxx: libc++, cc: clang-10, cxx: clang++-10, macos_cc: /usr/local/opt/llvm@10/bin/clang, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, apt_package: "clang-10 libc++-10-dev libc++abi-10-dev", homebrew_package: llvm@10}
           - os: macos-13
-            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+            compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: /usr/local/opt/llvm@11/bin/clang, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
           - os: macos-13
-            compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
+            compiler: {compiler: gcc, version: 7, libcxx: libstdc++11, cc: gcc-7, cxx: g++-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: macos-13
-            compiler: {cxx: g++-8, cc: gcc-8, macos_cxx: g++-8, macos_cc: gcc-8, homebrew_package: gcc@8, apt_package: g++-8}
+            compiler: {compiler: gcc, version: 8, libcxx: libstdc++11, cc: gcc-8, cxx: g++-8, homebrew_package: gcc@8, apt_package: g++-8}
           - os: macos-13
-            compiler: {cxx: g++-9, cc: gcc-9, macos_cxx: g++-9, macos_cc: gcc-9, homebrew_package: gcc@9, apt_package: g++-9}
+            compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-13
-            compiler: {cxx: g++-10, cc: gcc-10, macos_cxx: g++-10, macos_cc: gcc-10, homebrew_package: gcc@10, apt_package: g++-10}
+            compiler: {compiler: gcc, version: 10, libcxx: libstdc++11, cc: gcc-10, cxx: g++-10, homebrew_package: gcc@10, apt_package: g++-10}
           - os: macos-13
-            compiler: {cxx: g++-11, cc: gcc-11, macos_cxx: g++-11, macos_cc: gcc-11, homebrew_package: gcc@11, apt_package: g++-11}
+            compiler: {compiler: gcc, version: 11, libcxx: libstdc++11, cc: gcc-11, cxx: g++-11, homebrew_package: gcc@11, apt_package: g++-11}
           - os: macos-13
-            compiler: {cxx: g++-12, cc: gcc-12, macos_cxx: g++-12, macos_cc: gcc-12, homebrew_package: gcc@12, apt_package: g++-12}
+            compiler: {compiler: gcc, version: 12, libcxx: libstdc++11, cc: gcc-12, cxx: g++-12, homebrew_package: gcc@12, apt_package: g++-12}
           - os: macos-13
-            compiler: {cxx: g++-13, cc: gcc-13, macos_cxx: g++-13, macos_cc: gcc-13, homebrew_package: gcc@13, apt_package: g++-13}
+            compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           # Ubuntu 20.04 doesn't have GCC 11, 12, 13 yet
           - os: ubuntu-20.04
-            compiler: {cxx: g++-11, cc: gcc-11, macos_cxx: g++-11, macos_cc: gcc-11, homebrew_package: gcc@11, apt_package: g++-11}
+            compiler: {compiler: gcc, version: 11, libcxx: libstdc++11, cc: gcc-11, cxx: g++-11, homebrew_package: gcc@11, apt_package: g++-11}
           - os: ubuntu-20.04
-            compiler: {cxx: g++-12, cc: gcc-12, macos_cxx: g++-12, macos_cc: gcc-12, homebrew_package: gcc@12, apt_package: g++-12}
+            compiler: {compiler: gcc, version: 12, libcxx: libstdc++11, cc: gcc-12, cxx: g++-12, homebrew_package: gcc@12, apt_package: g++-12}
           - os: ubuntu-20.04
-            compiler: {cxx: g++-13, cc: gcc-13, macos_cxx: g++-13, macos_cc: gcc-13, homebrew_package: gcc@13, apt_package: g++-13}
+            compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           # Ubuntu 22.04 doesn't have gcc 7, 8 or clang 7, 8, 9, 10 anymore, and doesn't have gcc 13 yet
           - os: ubuntu-22.04
-            compiler: {cxx: g++-7, cc: gcc-7, macos_cxx: g++-7, macos_cc: gcc-7, homebrew_package: gcc@7, apt_package: g++-7}
+            compiler: {compiler: gcc, version: 7, libcxx: libstdc++11, cc: gcc-7, cxx: g++-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: ubuntu-22.04
-            compiler: {cxx: g++-8, cc: gcc-8, macos_cxx: g++-8, macos_cc: gcc-8, homebrew_package: gcc@8, apt_package: g++-8}
+            compiler: {compiler: gcc, version: 8, libcxx: libstdc++11, cc: gcc-8, cxx: g++-8, homebrew_package: gcc@8, apt_package: g++-8}
           - os: ubuntu-22.04
-            compiler: {cxx: g++-13, cc: gcc-13, macos_cxx: g++-13, macos_cc: gcc-13, homebrew_package: gcc@13, apt_package: g++-13}
+            compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: ubuntu-22.04
-            compiler: {cxx: clang++-7, cc: clang-7, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, macos_cc: /usr/local/opt/llvm@7/bin/clang, apt_package: clang-7, homebrew_package: llvm@7}
+            compiler: {compiler: clang, version: 7.1, libcxx: libc++, cc: clang-7, cxx: clang++-7, macos_cc: /usr/local/opt/llvm@7/bin/clang, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, apt_package: "clang-7 libc++-7-dev libc++abi-7-dev", homebrew_package: llvm@7}
           - os: ubuntu-22.04
-            compiler: {cxx: clang++-8, cc: clang-8, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, macos_cc: /usr/local/opt/llvm@8/bin/clang, apt_package: clang-8, homebrew_package: llvm@8}
+            compiler: {compiler: clang, version: 8, libcxx: libc++, cc: clang-8, cxx: clang++-8, macos_cc: /usr/local/opt/llvm@8/bin/clang, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, apt_package: "clang-8 libc++-8-dev libc++abi-8-dev", homebrew_package: llvm@8}
           - os: ubuntu-22.04
-            compiler: {cxx: clang++-9, cc: clang-9, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, macos_cc: /usr/local/opt/llvm@9/bin/clang, apt_package: clang-9, homebrew_package: llvm@9}
+            compiler: {compiler: clang, version: 9, libcxx: libc++, cc: clang-9, cxx: clang++-9, macos_cc: /usr/local/opt/llvm@9/bin/clang, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, apt_package: "clang-9 libc++-9-dev libc++abi-9-dev", homebrew_package: llvm@9}
           - os: ubuntu-22.04
-            compiler: {cxx: clang++-10, cc: clang-10, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, macos_cc: /usr/local/opt/llvm@10/bin/clang, apt_package: clang-10, homebrew_package: llvm@10}
+            compiler: {compiler: clang, version: 10, libcxx: libc++, cc: clang-10, cxx: clang++-10, macos_cc: /usr/local/opt/llvm@10/bin/clang, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, apt_package: "clang-10 libc++-10-dev libc++abi-10-dev", homebrew_package: llvm@10}
           # Ubuntu 22.04 can't install clang-12 due to a apt package misconfiguration
           - os: ubuntu-22.04
-            compiler: {cxx: clang++-12, cc: clang-12, macos_cxx: /usr/local/opt/llvm@12/bin/clang++, macos_cc: /usr/local/opt/llvm@12/bin/clang, apt_package: "clang-12 libomp5-12 libomp-12-dev", homebrew_package: llvm@12}
+            compiler: {compiler: clang, version: 12, libcxx: libc++, cc: clang-12, cxx: clang++-12, macos_cc: /usr/local/opt/llvm@12/bin/clang, macos_cxx: /usr/local/opt/llvm@12/bin/clang++, apt_package: "clang-12 libc++-12-dev libc++abi-12-dev libomp5-12 libomp-12-dev", homebrew_package: llvm@12}
           # Clang 11 on Ubuntu seems to have a bug that fails CI, see https://github.com/gabime/spdlog/issues/2812
           - os: ubuntu-20.04
-            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+            compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: /usr/local/opt/llvm@11/bin/clang, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
             build_type: Debug
           - os: ubuntu-22.04
-            compiler: {cxx: clang++-11, cc: clang-11, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, macos_cc: /usr/local/opt/llvm@11/bin/clang, apt_package: "clang-11 libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+            compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: /usr/local/opt/llvm@11/bin/clang, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
             build_type: Debug
         include:
+          # TODO Make sure this actually builds with local dependencies
           - name: Local dependencies
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              libcxx: libc++
               cc: clang-15
-              apt_package: clang-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: -DDEPENDENCY_CONFIG=../cmake-utils/DependenciesFromLocalSystem.cmake
             extra_cxxflags: ""
@@ -224,8 +264,11 @@ jobs:
           - name: Werror gcc
             os: ubuntu-22.04
             compiler:
-              cxx: g++-9
+              compiler: gcc
+              version: 9
+              libcxx: libstdc++
               cc: gcc-9
+              cxx: g++-9
               apt_package: g++-9
             build_type: RelWithDebInfo
             extra_cmake_flags: -DUSE_WERROR=on
@@ -236,9 +279,14 @@ jobs:
           - name: Werror clang
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              libcxx: libc++
               cc: clang-15
-              apt_package: clang-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: -DUSE_WERROR=on
             extra_cxxflags: ""
@@ -248,9 +296,14 @@ jobs:
           - name: No compatibility
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              libcxx: libc++
               cc: clang-15
-              apt_package: clang-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: ""
             extra_cxxflags: "-DCRYFS_NO_COMPATIBILITY"
@@ -261,9 +314,17 @@ jobs:
           - name: ASAN
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              # Using libstdc++11 instead of libc++ for ASAN because of
+              # - https://github.com/llvm/llvm-project/issues/52771
+              # - https://github.com/llvm/llvm-project/issues/59432
+              libcxx: libstdc++11
               cc: clang-15
-              apt_package: clang-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: Debug
             # OpenMP crashes under asan. Disable OpenMP.
             # TODO is it enough to replace this with omp_num_threads: 1 ?
@@ -276,9 +337,14 @@ jobs:
           - name: UBSAN
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              libcxx: libc++
               cc: clang-15
-              apt_package: clang-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: Debug
             # OpenMP crashes under ubsan. Disable OpenMP.
             # TODO is it enough to replace this with omp_num_threads: 1 ?
@@ -291,9 +357,14 @@ jobs:
           - name: TSAN
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              libcxx: libc++
               cc: clang-15
-              apt_package: clang-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: Debug
             extra_cmake_flags: ""
             extra_cxxflags: "-O2 -fsanitize=thread -fno-omit-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common"
@@ -305,9 +376,14 @@ jobs:
           - name: clang-tidy
             os: ubuntu-22.04
             compiler:
-              cxx: clang++-15
+              compiler: clang
+              version: 15
+              libcxx: libc++
               cc: clang-15
-              apt_package: clang-15 clang-tidy-15 libomp5-15 libomp-15-dev
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 clang-tidy-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
             build_type: RelWithDebInfo
             extra_cmake_flags: ""
             extra_cxxflags: ""
@@ -361,7 +437,7 @@ jobs:
         run: |
           set -v
           set -e
-          pipx install conan==1.65
+          pipx install conan==2.7.0
           conan --version
       - name: Save pipx cache
         # note: this access key has write access to the cache. This can't run on PRs.
@@ -411,7 +487,7 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Show ccache statistics
         shell: bash
         run: |
@@ -430,20 +506,38 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v1-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+      - name: Setup conan
+        uses: ./.github/workflows/actions/conan/setup
+        with:
+          compiler: ${{ matrix.compiler.compiler }}
+          compiler_version: ${{ matrix.compiler.version }}
+          compiler_libcxx: ${{ matrix.compiler.libcxx }}
+          compiler_executable_c: ${{ runner.os == 'macOS' && matrix.compiler.macos_cc || matrix.compiler.cc }}
+          compiler_executable_cxx: ${{ runner.os == 'macOS' && matrix.compiler.macos_cxx || matrix.compiler.cxx }}
+          build_type: ${{ matrix.build_type }}
+          extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Build (macOS)
         if: ${{ matrix.run_build  && runner.os == 'macOS' }}
         uses: ./.github/workflows/actions/run_build
         with:
-          cxx: ${{ matrix.compiler.macos_cxx }}
-          cc: ${{ matrix.compiler.macos_cc }}
+          compiler: ${{ matrix.compiler.compiler }}
+          compiler_version: ${{ matrix.compiler.version }}
+          compiler_libcxx: ${{ matrix.compiler.libcxx }}
+          compiler_executable_c: ${{ matrix.compiler.macos_cc }}
+          compiler_executable_cxx: ${{ matrix.compiler.macos_cxx }}
           build_type: ${{ matrix.build_type }}
+          extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
+          extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Build (Linux)
         if: ${{ matrix.run_build && runner.os == 'Linux' }}
         uses: ./.github/workflows/actions/run_build
         with:
-          cxx: ${{ matrix.compiler.cxx }}
-          cc: ${{ matrix.compiler.cc }}
+          compiler: ${{ matrix.compiler.compiler }}
+          compiler_version: ${{ matrix.compiler.version }}
+          compiler_libcxx: ${{ matrix.compiler.libcxx }}
+          compiler_executable_c: ${{ matrix.compiler.cc }}
+          compiler_executable_cxx: ${{ matrix.compiler.cxx }}
           build_type: ${{ matrix.build_type }}
           extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
           extra_cxxflags: ${{ matrix.extra_cxxflags }}
@@ -453,9 +547,7 @@ jobs:
         shell: bash
         run: |
           set -v
-          mkdir cmake
-          cd cmake
-          if ! ../run-clang-tidy.sh -fix ; then
+          if ! ./run-clang-tidy.sh -fix ; then
             git diff > /tmp/clang-tidy-fixes
             echo Found clang tidy fixes:
             cat /tmp/clang-tidy-fixes
@@ -493,7 +585,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           artifacts: ${{ github.workspace }}/.ccache
       - name: Save conan cache
         # note: this access key has write access to the cache. This can't run on PRs.
@@ -507,12 +599,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v1-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
           artifacts: ${{ env.CONAN_USER_HOME }}
       - name: Test
         if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
         with:
+          build_type: ${{matrix.build_type}}
           gtest_args: ${{matrix.gtest_args}}
           extra_env_vars: ${{matrix.extra_env_vars_for_test}}
 
@@ -564,7 +657,7 @@ jobs:
         run: |
           set -v
           set -e
-          pipx install conan==1.65
+          pipx install conan==2.7.0 --force
           conan --version
       - name: Save pipx cache
         # note: this access key has write access to the cache. This can't run on PRs.
@@ -614,12 +707,18 @@ jobs:
       #     aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
       #     aws-region: eu-west-1
       #     bucket: ci-cache.cryfs
-      #     key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+      #     key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       # - name: Show ccache statistics
       #   shell: bash
       #   run: |
       #     set -v
       #     ccache -s
+      - name: Setup conan
+        uses: ./.github/workflows/actions/conan/setup
+        with:
+          compiler: "msvc"
+          compiler_version: "192"
+          build_type: ${{ matrix.build_type }}
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Retrieve conan cache
         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
@@ -633,18 +732,16 @@ jobs:
           aws-secret-access-key: qqqE8j/73w2EEJ984rVvxbDzdvnL93hk3X5ba1ac
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v5-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Build
         shell: bash
         run: |
           set -v
           # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
           # note: The CMAKE_SYSTEM_VERSION variable is set to 10.0.18362.0 because as of this writing, appveyor uses 10.0.17763.0 and that has a bug, see https://developercommunity.visualstudio.com/content/problem/343296/sdk-and-experimentalpreprocessor.html
-          # TODO CMAKE_SYSTEM_VERSION is probably not needed anymore
-          mkdir build
-          cd build
-          cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-2.0.6" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
-          cmake --build . --config ${{matrix.build_type}}
+          conan build . --build=missing -o '&:build_tests=True' -o '&:windows_ci_workaround=True'
+          # TODO See if there's anything from the legacy cmake invocation below we need to port to conan
+          # cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-2.0.6" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
       # - name: Show ccache statistics
       #   shell: bash
       #   run: |
@@ -669,7 +766,7 @@ jobs:
       #     aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       #     aws-region: eu-west-1
       #     bucket: ci-cache.cryfs
-      #     key: v0-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+      #     key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       #     artifacts: ${{ github.workspace }}/.ccache
       - name: Save conan cache
         # note: this access key has write access to the cache. This can't run on PRs.
@@ -683,7 +780,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v5-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.cxx}}__${{matrix.compiler.cc}}__${{matrix.build_type}}__
+          key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
           artifacts: |
             ${{ env.CONAN_USER_HOME }}
             ${{ env.CONAN_USER_HOME_SHORT }}

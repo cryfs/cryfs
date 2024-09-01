@@ -1,6 +1,9 @@
 name: 'Test'
 description: 'Run CryFS Tests'
 inputs:
+  build_type:
+    description: "Which cmake build type was used to build (e.g. Release, Debug, RelWithDebInfo)"
+    required: true
   gtest_args:
     description: "Extra arguments for gtest runners, for example tests to exclude"
     required: true
@@ -16,16 +19,16 @@ runs:
         set -v
         set -e
         echo Running on ${{runner.os}}
-        cd build
+        cd build/${{inputs.build_type}}/test
 
         export ${{ inputs.extra_env_vars }}
 
-        ./test/gitversion/gitversion-test ${{inputs.gtest_args}}
-        ./test/cpp-utils/cpp-utils-test ${{inputs.gtest_args}}
-        ./test/parallelaccessstore/parallelaccessstore-test ${{inputs.gtest_args}}
-        ./test/blockstore/blockstore-test ${{inputs.gtest_args}}
-        ./test/blobstore/blobstore-test ${{inputs.gtest_args}}
-        ./test/cryfs/cryfs-test ${{inputs.gtest_args}}
+        ./gitversion/gitversion-test ${{inputs.gtest_args}}
+        ./cpp-utils/cpp-utils-test ${{inputs.gtest_args}}
+        ./parallelaccessstore/parallelaccessstore-test ${{inputs.gtest_args}}
+        ./blockstore/blockstore-test ${{inputs.gtest_args}}
+        ./blobstore/blobstore-test ${{inputs.gtest_args}}
+        ./cryfs/cryfs-test ${{inputs.gtest_args}}
 
         # TODO Also run on macOS once fixed
         if [[ "${{runner.os}}" == "macOS" ]]; then
@@ -33,7 +36,7 @@ runs:
         else
           # TODO Also run with TSAN once fixed
           if [[ "${{matrix.name}}" != "TSAN" ]]; then
-            ./test/fspp/fspp-test ${{inputs.gtest_args}}
+            ./fspp/fspp-test ${{inputs.gtest_args}}
           fi
-          ./test/cryfs-cli/cryfs-cli-test ${{inputs.gtest_args}}
+          ./cryfs-cli/cryfs-cli-test ${{inputs.gtest_args}}
         fi

@@ -23,10 +23,9 @@ option(USE_CLANG_TIDY "build with clang-tidy checks enabled" OFF)
 option(USE_IWYU "build with iwyu checks enabled" OFF)
 option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
 
-set(DEPENDENCY_CONFIG "cmake-utils/DependenciesFromConan.cmake" CACHE FILEPATH "cmake configuration file defining how to get dependencies")
-
 if (MSVC)
-    option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-2.0.6" "")
+  # TODO Add DOKAN_PATH to conanfile options or remove it here if not needed anymore
+  option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-2.0.6" "")
 endif()
 
 # Default value is to build in release mode but with debug symbols
@@ -41,7 +40,7 @@ if(MSVC)
   add_definitions(/bigobj)
 endif()
 
-include(${DEPENDENCY_CONFIG})
+include(cmake-utils/Dependencies.cmake)
 
 add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)

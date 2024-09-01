@@ -88,7 +88,7 @@ Requirements
   - GCC version >= 7 or Clang >= 7
   - CMake version >= 3.10
   - pkg-config (on Unix)
-  - Conan package manager (version 1.x)
+  - Conan package manager (version 2.x)
   - libFUSE version >= 2.9 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
   - Python >= 3.5
   - OpenMP
@@ -97,18 +97,19 @@ You can use the following commands to install these requirements
 
         # Ubuntu
         $ sudo apt install git g++ cmake make pkg-config libfuse-dev python3 python3-pip
-        $ sudo pip3 install conan==1.60.1
+        $ sudo pip3 install conan==2.7.0
 
         # Fedora
         $ sudo dnf install git gcc-c++ cmake make pkgconf fuse-devel python3 python3-pip
-        $ sudo pip3 install conan==1.60.1
+        $ sudo pip3 install conan==2.7.0
 
         # Macintosh
         $ brew install cmake pkg-config libomp macfuse
-        $ sudo pip3 install conan==1.60.1
+        $ sudo pip3 install conan==2.7.0
 
 Build & Install
 ---------------
+See further below in this README for instructions on how to build a .deb/.rpm package instead of installing CryFS directly.
 
  1. Clone repository
 
@@ -117,21 +118,46 @@ Build & Install
 
  2. Build
 
-        $ mkdir build && cd build
-        $ cmake ..
-        $ make
+        $ conan build . -s build_type=RelWithDebInfo --build=missing
+        
+        The executable will be generated at `build/Release/src/cryfs-cli/cryfs`
 
  3. Install
 
+        $ cd build/RelWithDebInfo
         $ sudo make install
 
-You can pass the following variables to the *cmake* command (using *-Dvariablename=value*):
- - **-DCMAKE_BUILD_TYPE**=[Release|Debug]: Whether to run code optimization or add debug symbols. Default: Release
- - **-DBUILD_TESTING**=[on|off]: Whether to build the test cases (can take a long time). Default: off
- - **-DCRYFS_UPDATE_CHECKS**=off: Build a CryFS that doesn't check online for updates and security vulnerabilities.
+You can pass the following build types to the *conan build* command (using *-s build_type=value*):
+ - **Debug**: No optimizations, debug symbols, and assertions enabled
+ - **RelWithDebInfo**: Optimizations enabled, debug symbols, and assertions enabled
+ - **Release**: Optimizations enabled, no debug symbols, and assertions disabled
+
+You can pass the following options to the *conan build* command (using *-o "&:key=value"*):
+ - **build_tests**=[True|False]: Whether to build the test cases (can take a long time). Default: False.
+ - **update_checks**=[True|False]: Build a CryFS that doesn't check online for updates and security vulnerabilities. Default: True.
+ - **disable_openmp**=[True|False]: Disable OpenMP support. Default: False.
+
+
+Run tests
+---------
+Follow the build & install steps from above, but add the `-o "&:build_tests=True"` parameter to conan:
+
+$ conan build . -s build_type=RelWithDebInfo --build=missing -s build_type=Debug -o "&:build_tests=True"
+
+Then run the tests:
+$ cd build/Debug/test
+$ ./blobstore/blobstore-test
+$ ./blockstore/blockstore-test
+$ ./cpp-utils/cpp-utils-test
+$ ./cryfs/cryfs-test
+$ ./cryfs-cli/cryfs-cli-test
+$ ./fspp/fspp-test
+$ ./gitversion/gitversion-test
+$ ./parallelaccessstore/parallelaccessstore-test
 
 Building on Windows (experimental)
 ----------------------------------
+TODO Rewrite this section
 
 1. Install conan. If you want to use "pip install conan", you may have to install Python first.
 2. Install DokanY 2.0.6.1000. Other versions may not work.
@@ -147,6 +173,7 @@ $ cd build && cmake --build . --config RelWithDebInfo
 
 Troubleshooting
 ---------------
+TODO Rewrite this section
 
 On most systems, CMake should find the libraries automatically. However, that doesn't always work.
 
@@ -184,6 +211,8 @@ On most systems, CMake should find the libraries automatically. However, that do
 
 Using local dependencies
 -------------------------------
+TODO Rewrite this section
+
 Starting with CryFS 0.11, Conan is used for dependency management.
 When you build CryFS, Conan downloads the exact version of each dependency library that was also used for development.
 All dependencies are linked statically, so there should be no incompatibility with locally installed libraries.
@@ -217,9 +246,12 @@ If you want to create a .rpm package, you need to install rpmbuild.
 
  2. Build
 
-        $ mkdir cmake && cd cmake
-        $ cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=off
+        $ conan build . -s build_type=RelWithDebInfo --build=missing
+        $ cd build/RelWithDebInfo
         $ make package
+
+        If you're not creating a `.rpm` package, you will see an error in the `make package` step about the `rpmbuild` executable not being foud,
+        but the `.deb` package will still haven been created successfully.
 
 
 Disclaimer

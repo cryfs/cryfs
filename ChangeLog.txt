@@ -3,6 +3,7 @@ Version 0.12.0 (unreleased)
 * Added a man page for `cryfs-unmount`
 * Fixed small inaccuracy in calculation of free space in statvfs
 * Use libcurl dependency from conan instead of requiring it to be preinstalled
+* Migrate build from Conan 1.x to Conan 2.x
 * Updated dependencies to
   * Fuse 2.9
   * DokanY 2.0.6.1000
