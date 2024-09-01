@@ -578,7 +578,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
           bucket: ci-cache.cryfs
-          key: v0-${{ runner.os }}-${{ matrix.os }}-setup-pipx
+          key: v1-${{ runner.os }}-${{ matrix.os }}-setup-pipx
           artifacts: ${{ steps.pipx_cache_dir.outputs.pipx_cache_dir }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       # - name: Configure ccache
