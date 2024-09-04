@@ -476,37 +476,24 @@ jobs:
           rm /tmp/hash_flags
         shell: bash
       - name: Retrieve ccache cache
-        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-        continue-on-error: true
-        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        uses: ./.github/workflows/actions/s3_cache
         with:
-          action: get
-          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          action: load
+          paths: ${{github.workspace}}/.ccache
+          cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
       - name: Show ccache statistics
         shell: bash
         run: |
           set -v
           ccache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Retrieve conan cache
-        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-        continue-on-error: true
-        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      - name: Restore conan cache
+        uses: ./.github/workflows/actions/s3_cache
         with:
-          action: get
-          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+          action: load
+          paths: ${{ env.CONAN_USER_HOME }}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Setup conan
         uses: ./.github/workflows/actions/conan/setup
         with:
@@ -574,33 +561,17 @@ jobs:
           ccache --evict-older-than 7d
           ccache -s
       - name: Save ccache cache
-        # note: this access key has write access to the cache. This can't run on PRs.
-        if: ${{ github.event_name == 'push' }}
-        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
-        continue-on-error: true
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        uses: ./.github/workflows/actions/s3_cache
         with:
-          action: put
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
-          artifacts: ${{ github.workspace }}/.ccache
+          action: save
+          paths: ${{github.workspace}}/.ccache
+          cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Save conan cache
-        # note: this access key has write access to the cache. This can't run on PRs.
-        if: ${{ github.event_name == 'push' }}
-        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
-        continue-on-error: true
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        uses: ./.github/workflows/actions/s3_cache
         with:
-          action: put
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
-          artifacts: ${{ env.CONAN_USER_HOME }}
+          action: save
+          paths: ${{ env.CONAN_USER_HOME }}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Test
         if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
@@ -696,18 +667,11 @@ jobs:
       #     rm /tmp/hash_flags
       #   shell: bash
       # - name: Retrieve ccache cache
-      #   # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-      #   continue-on-error: true
-      #   # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-      #   uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      #   uses: ./.github/workflows/actions/s3_cache
       #   with:
-      #     action: get
-      #     # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-      #     aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-      #     aws-secret-access-key: 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
-      #     aws-region: eu-west-1
-      #     bucket: ci-cache.cryfs
-      #     key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+      #     action: load
+      #     paths: ${{github.workspace}}/.ccache
+      #     cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       # - name: Show ccache statistics
       #   shell: bash
       #   run: |
@@ -720,19 +684,12 @@ jobs:
           compiler_version: "192"
           build_type: ${{ matrix.build_type }}
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Retrieve conan cache
-        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-        continue-on-error: true
-        # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      - name: Restore conan cache
+        uses: ./.github/workflows/actions/s3_cache
         with:
-          action: get
-          # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-          aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-          aws-secret-access-key: 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
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+          action: load
+          paths: ${{ env.CONAN_USER_HOME }}
+          cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Build
         shell: bash
         run: |
@@ -755,33 +712,17 @@ jobs:
       #     ccache --evict-older-than 7d
       #     ccache -s
       # - name: Save ccache cache
-      #   # note: this access key has write access to the cache. This can't run on PRs.
-      #   if: ${{ github.event_name == 'push' }}
-      #   # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
-      #   continue-on-error: true
-      #   uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      #   uses: ./.github/workflows/actions/s3_cache
       #   with:
-      #     action: put
-      #     aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: eu-west-1
-      #     bucket: ci-cache.cryfs
-      #     key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
-      #     artifacts: ${{ github.workspace }}/.ccache
+      #     action: save
+      #     paths: ${{github.workspace}}/.ccache
+      #     cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Save conan cache
-        # note: this access key has write access to the cache. This can't run on PRs.
-        if: ${{ github.event_name == 'push' }}
-        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
-        continue-on-error: true
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        uses: ./.github/workflows/actions/s3_cache
         with:
-          action: put
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
-          artifacts: |
+          action: save
+          cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+          paths: |
             ${{ env.CONAN_USER_HOME }}
             ${{ env.CONAN_USER_HOME_SHORT }}
       - name: Test

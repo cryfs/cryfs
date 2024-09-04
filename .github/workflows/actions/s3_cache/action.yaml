@@ -1,0 +1,44 @@
+name: 'S3 Cache'
+description: 'S3 Cache'
+inputs:
+  action:
+    description: "`load` or `save` the cache"
+    required: true
+  paths:
+    description: "Directory paths to cache"
+    required: true
+  cache_key:
+    description: "Cache key"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Retrieve cache
+      if: ${{ inputs.action == 'load' }}
+      # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
+      continue-on-error: true
+      # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+      uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      with:
+        action: get
+        # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+        aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+        aws-secret-access-key: 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
+        aws-region: eu-west-1
+        bucket: ci-cache.cryfs
+        key: ${{ inputs.cache_key }}
+
+    - name: Save cache
+        # note: this access key has write access to the cache. This can't run on PRs.
+        if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
+        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+        continue-on-error: true
+        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+        with:
+          action: put
+          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+          bucket: ci-cache.cryfs
+          key: ${{ inputs.cache_key }}
+          artifacts: ${{ inputs.paths }}
