@@ -1,0 +1,22 @@
+name: 'Install packages via pipx'
+description: 'Install packages via pipx'
+inputs:
+  packages:
+    description: "List of packages to install"
+    required: true
+  secret_aws_access_key_id:
+    description: "AWS access key ID"
+    required: false
+  secret_aws_secret_access_key:
+    description: "AWS secret access key"
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Install packages
+      shell: bash
+      run: |
+        set -v
+        set -e
+        pipx install ${{ inputs.packages }}
+        pipx ensurepath

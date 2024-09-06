@@ -10,6 +10,12 @@ inputs:
   cache_key:
     description: "Cache key"
     required: true
+  secret_aws_access_key_id:
+    description: "AWS access key ID"
+    required: false
+  secret_aws_secret_access_key:
+    description: "AWS secret access key"
+    required: false
 runs:
   using: "composite"
   steps:
@@ -29,16 +35,17 @@ runs:
         key: ${{ inputs.cache_key }}
 
     - name: Save cache
-        # note: this access key has write access to the cache. This can't run on PRs.
-        if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
-        # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
-        continue-on-error: true
-        uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
-        with:
-          action: put
-          aws-access-key-id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-1
-          bucket: ci-cache.cryfs
-          key: ${{ inputs.cache_key }}
-          artifacts: ${{ inputs.paths }}
+      # note: this access key has write access to the cache. This can't run on PRs.
+      if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
+      # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
+      continue-on-error: true
+      uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      with:
+        action: put
+        # TODO Test this works in PRs where the secrets aren't available
+        aws-access-key-id: ${{ inputs.secret_aws_access_key_id }}
+        aws-secret-access-key: ${{ inputs.secret_aws_secret_access_key }}
+        aws-region: eu-west-1
+        bucket: ci-cache.cryfs
+        key: ${{ inputs.cache_key }}
+        artifacts: ${{ inputs.paths }}
