@@ -50,6 +50,7 @@ runs:
         set -v
         set -e
         conan profile show
+        # TODO Remove this env logging
         env
 
         # TODO Check those CXXFLAGS actually work

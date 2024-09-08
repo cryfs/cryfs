@@ -3,7 +3,7 @@ on: ['push', 'pull_request']
 
 jobs:
   linux_macos:
-    name: CI (Linux/macOS)
+    name: CI
     strategy:
       fail-fast: false
       matrix:
@@ -552,7 +552,7 @@ jobs:
           extra_env_vars: ${{matrix.extra_env_vars_for_test}}
 
   windows:
-    name: CI (Windows)
+    name: CI
     strategy:
       fail-fast: false
       matrix:
