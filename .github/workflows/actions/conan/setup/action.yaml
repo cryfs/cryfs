@@ -31,6 +31,17 @@ runs:
       uses: ./.github/workflows/actions/pipx/install
       with:
         packages: conan==2.7.0 --force
+    - name: Make sure conan cache directory exists
+      shell: bash
+      run: |
+        set -e
+        set -v
+        echo "Creating CONAN_USER_HOME in $CONAN_USER_HOME"
+        mkdir -p "$CONAN_USER_HOME"
+        if [ "$CONAN_USER_HOME_SHORT" != "" ]; then
+          echo "Creating CONAN_USER_HOME_SHORT in $CONAN_USER_HOME_SHORT"
+          mkdir -p "$CONAN_USER_HOME_SHORT"
+        fi
     - name: Configure conan profile
       uses: ./.github/workflows/actions/conan/configure_profile
       with:

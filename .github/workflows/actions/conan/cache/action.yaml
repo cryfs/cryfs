@@ -23,6 +23,4 @@ runs:
         cache_key: ${{ inputs.cache_key}}
         secret_aws_access_key_id: ${{ inputs.secret_aws_access_key_id }}
         secret_aws_secret_access_key: ${{ inputs.secret_aws_secret_access_key }}
-        paths: |
-          ${{ env.CONAN_USER_HOME }}
-          ${{ env.CONAN_USER_HOME_SHORT }}
+        paths: ${{format('"{0}"{1}', env.CONAN_USER_HOME, env.CONAN_USER_HOME_SHORT != '' && format(' "{0}"', env.CONAN_USER_HOME_SHORT) || '')}}
