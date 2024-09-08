@@ -1,0 +1,28 @@
+name: 'Cache conan build'
+description: 'Cache conan build'
+inputs:
+  action:
+    description: "`load` or `save` the cache"
+    required: true
+  secret_aws_access_key_id:
+    description: "AWS access key ID"
+    required: false
+  secret_aws_secret_access_key:
+    description: "AWS secret access key"
+    required: false
+  cache_key:
+    description: "Cache key"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Cache conan build
+      uses: ./.github/workflows/actions/s3_cache
+      with:
+        action: ${{ inputs.action }}
+        cache_key: ${{ inputs.cache_key}}
+        secret_aws_access_key_id: ${{ inputs.secret_aws_access_key_id }}
+        secret_aws_secret_access_key: ${{ inputs.secret_aws_secret_access_key }}
+        paths: |
+          ${{ env.CONAN_USER_HOME }}
+          ${{ env.CONAN_USER_HOME_SHORT }}

@@ -414,12 +414,16 @@ jobs:
       - name: Install local dependencies
         if: ${{ matrix.install_dependencies_manually }}
         uses: ./.github/workflows/actions/install_local_dependencies
-      - name: Install conan
-        uses: ./.github/workflows/actions/pipx/install
+      - name: Setup conan
+        uses: ./.github/workflows/actions/conan/setup
         with:
-          packages: conan==2.7.0
-          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          compiler: ${{ matrix.compiler.compiler }}
+          compiler_version: ${{ matrix.compiler.version }}
+          compiler_libcxx: ${{ matrix.compiler.libcxx }}
+          compiler_executable_c: ${{ runner.os == 'macOS' && matrix.compiler.macos_cc || matrix.compiler.cc }}
+          compiler_executable_cxx: ${{ runner.os == 'macOS' && matrix.compiler.macos_cxx || matrix.compiler.cxx }}
+          build_type: ${{ matrix.build_type }}
+          extra_cxxflags: ${{ matrix.extra_cxxflags }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Configure ccache
         shell: bash
@@ -456,21 +460,12 @@ jobs:
           ccache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
-        uses: ./.github/workflows/actions/s3_cache
+        uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          paths: ${{ env.CONAN_USER_HOME }}
+          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
-      - name: Setup conan
-        uses: ./.github/workflows/actions/conan/setup
-        with:
-          compiler: ${{ matrix.compiler.compiler }}
-          compiler_version: ${{ matrix.compiler.version }}
-          compiler_libcxx: ${{ matrix.compiler.libcxx }}
-          compiler_executable_c: ${{ runner.os == 'macOS' && matrix.compiler.macos_cc || matrix.compiler.cc }}
-          compiler_executable_cxx: ${{ runner.os == 'macOS' && matrix.compiler.macos_cxx || matrix.compiler.cxx }}
-          build_type: ${{ matrix.build_type }}
-          extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Build (macOS)
         if: ${{ matrix.run_build  && runner.os == 'macOS' }}
         uses: ./.github/workflows/actions/run_build
@@ -536,13 +531,12 @@ jobs:
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       - name: Save conan cache
-        uses: ./.github/workflows/actions/s3_cache
+        uses: ./.github/workflows/actions/conan/cache
         with:
           action: save
-          paths: ${{ env.CONAN_USER_HOME }}
-          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Test
         if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
@@ -576,12 +570,12 @@ jobs:
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Setup Windows
         uses: ./.github/workflows/actions/setup_windows
-      - name: Install conan
-        uses: ./.github/workflows/actions/pipx/install
+      - name: Setup conan
+        uses: ./.github/workflows/actions/conan/setup
         with:
-          packages: conan==2.7.0 --force
-          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          compiler: "msvc"
+          compiler_version: "192"
+          build_type: ${{ matrix.build_type }}
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       # - name: Configure ccache
       #   shell: bash
@@ -615,18 +609,13 @@ jobs:
       #   run: |
       #     set -v
       #     ccache -s
-      - name: Setup conan
-        uses: ./.github/workflows/actions/conan/setup
-        with:
-          compiler: "msvc"
-          compiler_version: "192"
-          build_type: ${{ matrix.build_type }}
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
-        uses: ./.github/workflows/actions/s3_cache
+        uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          paths: ${{ env.CONAN_USER_HOME }}
+          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Build
         shell: bash
@@ -656,15 +645,12 @@ jobs:
       #     paths: ${{github.workspace}}/.ccache
       #     cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Save conan cache
-        uses: ./.github/workflows/actions/s3_cache
+        uses: ./.github/workflows/actions/conan/cache
         with:
           action: save
-          cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          paths: |
-            ${{ env.CONAN_USER_HOME }}
-            ${{ env.CONAN_USER_HOME_SHORT }}
+          cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
       - name: Test
         shell: bash
         run: |

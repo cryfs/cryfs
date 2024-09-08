@@ -1,7 +1,7 @@
-name: 'Setup conan'
-description: 'Setup conan'
+name: 'Install conan package manager'
+description: 'Install conan package manager'
 inputs:
-  # Note: Many arguments are only supported on Linux/macOS, not on Windows
+# Note: Many arguments are only supported on Linux/macOS, not on Windows
   compiler:
     description: "Which compiler to use for the build"
     required: true
@@ -27,65 +27,17 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Show autodetected conan profile
-      shell: bash
-      run: |
-        set -e
-        set -v
-        echo Autodetected profile that we do not use
-        conan profile detect
-        conan profile show
-    - name: Setup conan profile (Linux/macOS)
-      if: runner.os == 'Linux' || runner.os == 'macOS'
-      shell: bash
-      run: |
-        set -e
-        set -v
-        mkdir -p ~/.conan2/profiles
-        cat <<EOF > ~/.conan2/profiles/default
-        [settings]
-        os=${{ runner.os == 'macOS' && 'Macos' || runner.os }}
-        arch=x86_64
-        build_type=${{inputs.build_type}}
-        compiler=${{inputs.compiler}}
-        compiler.cppstd=17
-        compiler.libcxx=${{inputs.compiler_libcxx}}
-        compiler.version=${{inputs.compiler_version}}
-        [conf]
-        tools.cmake.cmaketoolchain:generator=Ninja
-        tools.build:compiler_executables={"cpp": "${{inputs.compiler_executable_cxx}}", "c": "${{inputs.compiler_executable_c}}"}
-        EOF
-        # TODO Add above: tools.build:cxxflags="${{inputs.extra_cxxflags}}"
-
-        # TODO Ensure that the CI jobs actually use the right compiler and flags
-    - name: Setup conan profile (Windows)
-      if: runner.os == 'Windows'
-      shell: bash
-      run: |
-        set -e
-        set -v
-        mkdir -p ~/.conan2/profiles
-        cat <<EOF > ~/.conan2/profiles/default
-        [settings]
-        os=${{ runner.os }}
-        arch=x86_64
-        build_type=${{inputs.build_type}}
-        compiler=${{inputs.compiler}}
-        compiler.cppstd=17
-        compiler.runtime=dynamic
-        compiler.version=${{inputs.compiler_version}}
-        EOF
-        # TODO Ninja doesn't seem to work on Windows, otherwise add the following to the conan profile
-        # [conf]
-        # tools.cmake.cmaketoolchain:generator=Ninja
-    - name: Show generated conan profile
-      shell: bash
-      run: |
-        set -e
-        set -v
-        echo Listing conan profiles
-        conan profile list
-        echo Default profile path
-        conan profile path default
-        echo "New conan profile:"
-        conan profile show
+    - name: Install conan
+      uses: ./.github/workflows/actions/pipx/install
+      with:
+        packages: conan==2.7.0 --force
+    - name: Configure conan profile
+      uses: ./.github/workflows/actions/conan/configure_profile
+      with:
+        compiler: ${{ inputs.compiler }}
+        compiler_version: ${{ inputs.compiler_version }}
+        compiler_libcxx: ${{ inputs.compiler_libcxx }}
+        compiler_executable_c: ${{ inputs.compiler_executable_c }}
+        compiler_executable_cxx: ${{ inputs.compiler_executable_cxx }}
+        build_type: ${{ inputs.build_type }}
+        extra_cxxflags: ${{ inputs.extra_cxxflags }}
