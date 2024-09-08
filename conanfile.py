@@ -39,6 +39,7 @@ class CryFSConan(ConanFile):
         "boost/*:filesystem_no_deprecated": True,
         "boost/*:without_atomic": False,  # needed by boost thread
         "boost/*:without_chrono": False,  # needed by CryFS
+        "boost/*:without_cobalt": True,
         "boost/*:without_container": False,  # needed by boost thread
         "boost/*:without_context": True,
         "boost/*:without_contract": True,
@@ -70,6 +71,7 @@ class CryFSConan(ConanFile):
         "boost/*:without_thread": False,  # needed by CryFS
         "boost/*:without_timer": True,
         "boost/*:without_type_erasure": True,
+        "boost/*:without_url": True,
         "boost/*:without_wave": True,
     }
 
