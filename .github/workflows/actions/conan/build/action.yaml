@@ -1,6 +1,7 @@
 name: 'Build'
 description: 'Compile CryFS'
 inputs:
+  # TODO Remove most of these inputs, they're not needed anymore
   compiler:
     description: "Which compiler to use for the build"
     required: true

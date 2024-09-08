@@ -1,0 +1,14 @@
+name: 'Install dependencies'
+description: 'Install dependencies'
+runs:
+  using: "composite"
+  steps:
+    - name: Install dependencies via conan
+      shell: bash
+      run: |
+        set -v
+        set -e
+        conan profile show
+
+        # TODO ccache
+        conan install . --build=missing

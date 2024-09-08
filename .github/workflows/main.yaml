@@ -466,9 +466,12 @@ jobs:
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+      - name: Install dependencies
+        if: ${{ matrix.run_build }}
+        uses: ./.github/workflows/actions/conan/install_dependencies
       - name: Build (macOS)
         if: ${{ matrix.run_build  && runner.os == 'macOS' }}
-        uses: ./.github/workflows/actions/run_build
+        uses: ./.github/workflows/actions/conan/build
         with:
           compiler: ${{ matrix.compiler.compiler }}
           compiler_version: ${{ matrix.compiler.version }}
@@ -480,7 +483,7 @@ jobs:
           extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Build (Linux)
         if: ${{ matrix.run_build && runner.os == 'Linux' }}
-        uses: ./.github/workflows/actions/run_build
+        uses: ./.github/workflows/actions/conan/build
         with:
           compiler: ${{ matrix.compiler.compiler }}
           compiler_version: ${{ matrix.compiler.version }}
