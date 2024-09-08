@@ -54,10 +54,8 @@ runs:
         [conf]
         tools.cmake.cmaketoolchain:generator=Ninja
         tools.build:compiler_executables={"cpp": "${{inputs.compiler_executable_cxx}}", "c": "${{inputs.compiler_executable_c}}"}
+        tools.build:cxxflags=${{ inputs.extra_cxxflags }}
         EOF
-        # TODO Add above: tools.build:cxxflags="${{inputs.extra_cxxflags}}"
-
-        # TODO Ensure that the CI jobs actually use the right compiler and flags
     - name: Setup conan profile (Windows)
       if: runner.os == 'Windows'
       shell: bash
