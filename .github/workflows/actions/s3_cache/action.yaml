@@ -19,44 +19,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: TODO REMOVE Show loaded cache size
-      if: ${{ inputs.action == 'load' }}
-      shell: bash
-      run: |
-        for path in ${{ inputs.paths }}; do
-          if [ ! -d $path ]; then
-            echo "Warning: $path not found in cache"
-          else
-            echo "Loaded size of $path:"
-            du -sh $path
-          fi
-        done
-    - name: Retrieve cache
-      if: ${{ inputs.action == 'load' }}
-      # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-      continue-on-error: true
-      # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
-      uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
-      with:
-        action: get
-        # note: this access key has read-only access to the cache. It's public so it runs on PRs.
-        aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
-        aws-secret-access-key: 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
-        aws-region: eu-west-1
-        bucket: ci-cache.cryfs
-        key: ${{ inputs.cache_key }}
-    - name: Show loaded cache size
-      if: ${{ inputs.action == 'load' }}
-      shell: bash
-      run: |
-        for path in ${{ inputs.paths }}; do
-          if [ ! -d $path ]; then
-            echo "Warning: $path not found in cache"
-          else
-            echo "Loaded size of $path:"
-            du -sh $path
-          fi
-        done
     - name: Show cache size to save
       if: ${{ inputs.action == 'save' }}
       shell: bash
@@ -70,7 +32,25 @@ runs:
             du -sh $path
           fi
         done
-    - name: Save cache
+    - name: Zip cache files
+      if: ${{ inputs.action == 'save' }}
+      shell: bash
+      run: |
+        mkdir -p "/tmp/s3_cache/${{inputs.cache_key}}"
+        for path in ${{ inputs.paths }}; do
+          if [ ! -d $path ]; then
+            echo "Warning: $path not found so cannot cache it"
+            exit 0
+            # TODO exit 1
+          else
+            echo "Loaded size of $path:"
+            du -sh $path
+          fi
+        done
+        tar --zstd --create -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ${{ inputs.paths }}
+        echo "Zipped cache:"
+        ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
+    - name: Store cache
       # note: this access key has write access to the cache. This can't run on PRs.
       if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
       # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
@@ -83,5 +63,52 @@ runs:
         aws-secret-access-key: ${{ inputs.secret_aws_secret_access_key }}
         aws-region: eu-west-1
         bucket: ci-cache.cryfs
-        key: ${{ inputs.cache_key }}
-        artifacts: ${{ inputs.paths }}
+        key: v1-${{ inputs.cache_key }}
+        artifacts: "/tmp/s3_cache/${{inputs.cache_key}}"
+
+
+    - name: Retrieve cache
+      if: ${{ inputs.action == 'load' }}
+      # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
+      continue-on-error: true
+      # We're using an S3 based cache because the standard GitHub Action cache (actions/cache) only gives us 5GB of storage and we need more
+      uses: leroy-merlin-br/action-s3-cache@8d75079437b388688b9ea9c7d73dff4ef975c5fa # v1.0.5
+      with:
+        action: get
+        # note: this access key has read-only access to the cache. It's public so it runs on PRs.
+        aws-access-key-id: AKIAV5S2KH4F5OUZXV5E
+        aws-secret-access-key: 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
+        aws-region: eu-west-1
+        bucket: ci-cache.cryfs
+        key: v1-${{ inputs.cache_key }}
+    - name: Unzip cache files
+      if: ${{ inputs.action == 'load' }}
+      shell: bash
+      run: |
+        if [ -f "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ]; then
+          echo "Zipped cache:"
+          ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
+          tar --extract --zstd -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ${{ inputs.paths }}
+          for path in ${{ inputs.paths }}; do
+            if [ ! -d $path ]; then
+              echo "Warning: $path not found"
+            else
+              echo "Loaded size of $path:"
+              du -sh $path
+            fi
+          done
+        else
+          echo "Warning: Cache not found"
+        fi
+    - name: Show loaded cache size
+      if: ${{ inputs.action == 'load' }}
+      shell: bash
+      run: |
+        for path in ${{ inputs.paths }}; do
+          if [ ! -d $path ]; then
+            echo "Warning: $path not found in cache"
+          else
+            echo "Loaded size of $path:"
+            du -sh $path
+          fi
+        done
