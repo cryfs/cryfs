@@ -19,5 +19,3 @@ runs:
         ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
         echo CCache config:
         ccache -p
-        echo Clearing ccache statistics
-        ccache -z

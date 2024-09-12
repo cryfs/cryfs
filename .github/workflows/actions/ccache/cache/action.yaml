@@ -28,28 +28,12 @@ runs:
         cache_key: ${{ inputs.cache_key }}
 
     - name: Show ccache statistics
-      if: ${{ runner.os == 'macOS' || runner.os == 'Windows'}}
-      shell: bash
-      run: |
-        set -e
-        set -v
-        ccache -sv
-    - name: Show ccache statistics
-      if: ${{ runner.os != 'macOS' && runner.os != 'Windows'}}
-      shell: bash
-      run: |
-        set -e
-        set -v
-        ccache -s
-
+      # They're only useful on save, because on load the cache_dir isn't configured yet so it would use the wrong directory. Also, ccache/setup action actually shows the statistics on load.
+      if: ${{ inputs.action == 'save' }}
+      uses: ./.github/workflows/actions/ccache/stats/show
     - name: Reduce ccache size
-      if: ${{ inputs.action == 'save' && (runner.os == 'macOS' || runner.os == 'Windows') }}
-      shell: bash
-      run: |
-        set -e
-        set -v
-        ccache --evict-older-than 7d
-        ccache -s
+      if: ${{ inputs.action == 'save' }}
+      uses: ./.github/workflows/actions/ccache/prune
     - name: Store ccache cache
       if: ${{ inputs.action == 'save' }}
       uses: ./.github/workflows/actions/s3_cache

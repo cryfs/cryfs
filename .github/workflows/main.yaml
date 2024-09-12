@@ -416,19 +416,14 @@ jobs:
         if: ${{ matrix.install_dependencies_manually }}
         uses: ./.github/workflows/actions/install_local_dependencies
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      - name: Configure ccache
-        uses: ./.github/workflows/actions/ccache/configure
-        with:
-          ccache_dir: ${{github.workspace}}/.ccache
       - name: Hash flags
         id: hash_flags
         shell: bash
         run: |
           echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | (echo -n "hash_flags=" && sha256sum | awk '{print $1}') > $GITHUB_OUTPUT
-      - name: Restore ccache
-        uses: ./.github/workflows/actions/ccache/cache
+      - name: Setup ccache
+        uses: ./.github/workflows/actions/ccache/setup
         with:
-          action: 'load'
           ccache_dir: ${{github.workspace}}/.ccache
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
@@ -531,14 +526,9 @@ jobs:
           # Windows CI has backwards slashes in github.workspace, so we need to convert that to forward slashes
           CCACHE_DIR="${{github.workspace}}/.ccache"
           echo "ccache_dir=${CCACHE_DIR//\\//}" > $GITHUB_OUTPUT
-      - name: Configure ccache
-        uses: ./.github/workflows/actions/ccache/configure
+      - name: Setup ccache
+        uses: ./.github/workflows/actions/ccache/setup
         with:
-          ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
-      - name: Restore ccache
-        uses: ./.github/workflows/actions/ccache/cache
-        with:
-          action: 'load'
           ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.build_type}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862

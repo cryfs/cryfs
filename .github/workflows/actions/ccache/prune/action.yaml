@@ -1,0 +1,15 @@
+name: 'Prune old ccache entries'
+description: 'Prune old ccache entries'
+runs:
+  using: "composite"
+  steps:
+    - name: Reduce ccache size
+      # Only supported on macOS and Windows
+      if: ${{ runner.os == 'macOS' || runner.os == 'Windows' }}
+      shell: bash
+      run: |
+        set -e
+        set -v
+        ccache --evict-older-than 7d
+    - name: Show ccache statistics
+      uses: ./.github/workflows/actions/ccache/stats/show

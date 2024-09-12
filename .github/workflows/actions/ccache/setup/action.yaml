@@ -1,0 +1,26 @@
+name: 'Setup ccache'
+description: 'Setup ccache'
+inputs:
+  cache_key:
+    description: "Cache key"
+    required: true
+  ccache_dir:
+    description: "ccache directory"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Restore ccache
+      uses: ./.github/workflows/actions/ccache/cache
+      with:
+        action: 'load'
+        ccache_dir: ${{inputs.ccache_dir}}
+        cache_key: ${{inputs.cache_key}}
+    - name: Configure ccache
+      uses: ./.github/workflows/actions/ccache/configure
+      with:
+        ccache_dir: ${{inputs.ccache_dir}}
+    - name: Clear ccache statistics
+      uses: ./.github/workflows/actions/ccache/stats/clear
+    - name: Show ccache statistics
+      uses: ./.github/workflows/actions/ccache/stats/show

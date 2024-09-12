@@ -1,0 +1,11 @@
+name: 'Clear ccache statistics'
+description: 'Clear ccache statistics'
+runs:
+  using: "composite"
+  steps:
+    - name: Clear ccache statistics
+      shell: bash
+      run: |
+        set -e
+        set -v
+        ccache -z
