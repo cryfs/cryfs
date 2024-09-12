@@ -467,28 +467,13 @@ jobs:
       - name: Install dependencies
         if: ${{ matrix.run_build }}
         uses: ./.github/workflows/actions/conan/install_dependencies
-      - name: Build (macOS)
-        if: ${{ matrix.run_build  && runner.os == 'macOS' }}
+      - name: Build
+        if: ${{ matrix.run_build }}
         uses: ./.github/workflows/actions/conan/build
         with:
-          compiler: ${{ matrix.compiler.compiler }}
-          compiler_version: ${{ matrix.compiler.version }}
-          compiler_libcxx: ${{ matrix.compiler.libcxx }}
-          compiler_executable_c: ${{ matrix.compiler.macos_cc }}
-          compiler_executable_cxx: ${{ matrix.compiler.macos_cxx }}
-          build_type: ${{ matrix.build_type }}
-          extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
-      - name: Build (Linux)
-        if: ${{ matrix.run_build && runner.os == 'Linux' }}
-        uses: ./.github/workflows/actions/conan/build
-        with:
-          compiler: ${{ matrix.compiler.compiler }}
-          compiler_version: ${{ matrix.compiler.version }}
-          compiler_libcxx: ${{ matrix.compiler.libcxx }}
-          compiler_executable_c: ${{ matrix.compiler.cc }}
-          compiler_executable_cxx: ${{ matrix.compiler.cxx }}
-          build_type: ${{ matrix.build_type }}
-          extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
+          # TODO Make sure extra_cmake_flags work
+          # extra_cmake_flags: ${{ matrix.extra_cmake_flags }}
+          extra_conan_flags: ""
       - name: Run clang-tidy
         id: clang_tidy
         if: ${{ matrix.run_clang_tidy }}
@@ -616,15 +601,15 @@ jobs:
           compiler: "msvc"
           compiler_version: "192"
           build_type: ${{ matrix.build_type }}
+      - name: Install dependencies
+        uses: ./.github/workflows/actions/conan/install_dependencies
       - name: Build
-        shell: bash
-        run: |
-          set -v
-          # note: The cmake+ninja workflow requires us to set build type in both cmake commands ('cmake' and 'cmake --build'), otherwise the cryfs.exe will depend on debug versions of the visual studio c++ runtime (i.e. msvcp140d.dll)
-          # note: The CMAKE_SYSTEM_VERSION variable is set to 10.0.18362.0 because as of this writing, appveyor uses 10.0.17763.0 and that has a bug, see https://developercommunity.visualstudio.com/content/problem/343296/sdk-and-experimentalpreprocessor.html
-          conan build . --build=missing -o '&:build_tests=True' -o '&:windows_ci_workaround=True'
+        uses: ./.github/workflows/actions/conan/build
+        with:
+          extra_conan_flags: "-o '&:windows_ci_workaround=True'"
           # TODO See if there's anything from the legacy cmake invocation below we need to port to conan
           # cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-2.0.6" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
+          
       # - name: Show ccache statistics
       #   shell: bash
       #   run: |

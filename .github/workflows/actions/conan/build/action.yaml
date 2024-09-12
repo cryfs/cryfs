@@ -1,66 +1,20 @@
 name: 'Build'
 description: 'Compile CryFS'
 inputs:
-  # TODO Remove most of these inputs, they're not needed anymore
-  compiler:
-    description: "Which compiler to use for the build"
-    required: true
-  compiler_version:
-    description: "Which compiler version to use for the build"
-    required: true
-  compiler_executable_cxx:
-    description: "Which C++ compiler executable to use for the build"
-    required: true
-  compiler_executable_c:
-    description: "Which C compiler to use for the build"
-    required: true
-  compiler_libcxx:
-    description: "Which C++ standard library to use (e.g. libstdc++11, libc++)"
-    required: true
-  build_type:
-    description: "Which cmake build type to use (e.g. Release, Debug, RelWithDebInfo)"
-    required: true
-  # TODO Make extra_cmake_flags work
-  extra_cmake_flags:
+  extra_conan_flags:
     description: "Extra flags to add to the cmake command"
     required: true
 runs:
   using: "composite"
   steps:
-    - name: Show build system information
-      shell: bash
-      run: |
-        set -v
-        set -e
-        echo Conan version:
-        conan --version
-        echo CMake version:
-        cmake --version
-        echo Ninja version:
-        ninja --version
-        echo CCache:
-        ccache --version
-        ccache -s
     - name: Run build
       shell: bash
       run: |
         set -v
         set -e
         conan profile show
-        # TODO Remove this env logging
-        env
 
-        # TODO Check those CXXFLAGS actually work
-        # export CXXFLAGS="$CXXFLAGS ${{inputs.extra_cxxflags}}"
-        # if [[ "${{inputs.compiler}}" == "clang" && "${{inputs.build_type}}" == "Debug" ]]; then
-        #   # TODO Our linux clang build actually use libstdc++11 instead of libc++, we need to fix this check
-        #   # TODO Add the corresponding libstdc++11 debug macros when building with gcc
-        #   echo We are doing a debug build on clang. Adding some more debug flags for libc++
-        #   # TODO Add this to cxxflags in the conan profile instead
-        #   export CXXFLAGS="$CXXFLAGS -D_LIBCPP_ENABLE_NODISCARD=1 -D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"
-        # fi
-
-        # TODO Check these arguments from the old build setup and add stuff (e.g. ccache)
+        # TODO Add ccache
         # cmake .. -GNinja -DCMAKE_CXX_COMPILER=${{inputs.cxx}} -DCMAKE_C_COMPILER=${{inputs.cc}} -DBUILD_TESTING=on -DCMAKE_BUILD_TYPE=${{inputs.build_type}} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache ${{inputs.extra_cmake_flags}}
 
-        conan build . --build=missing -o "&:build_tests=True"
+        conan build . --build=missing -o "&:build_tests=True" ${{ inputs.extra_conan_flags }}
