@@ -473,7 +473,7 @@ jobs:
           fi
       - name: Upload fixes as artifact
         if: ${{ always() && matrix.run_clang_tidy }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: clang-tidy-fixes
           path: /tmp/clang-tidy-fixes
@@ -597,7 +597,7 @@ jobs:
           cd build
           cpack -C ${{matrix.build_type}} --verbose -G WIX
       - name: Upload installers as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: cryfs-${{matrix.arch}}-${{matrix.build_type}}.msi
           path: build/cryfs-*.msi
