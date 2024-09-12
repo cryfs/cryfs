@@ -24,7 +24,6 @@ option(USE_IWYU "build with iwyu checks enabled" OFF)
 option(CLANG_TIDY_WARNINGS_AS_ERRORS "treat clang-tidy warnings as errors" OFF)
 
 if (MSVC)
-  # TODO Add DOKAN_PATH to conanfile options or remove it here if not needed anymore
   option(DOKAN_PATH "Location of the Dokan library, e.g. C:\\Program Files\\Dokan\\DokanLibrary-2.0.6" "")
 endif()
 
