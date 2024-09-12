@@ -397,9 +397,11 @@ jobs:
       # Setting conan cache dir to a location where our Github Cache Action can find it
       CONAN_HOME: "${{ github.workspace }}/conan-cache/"
     steps:
-      # TODO Update versions of dependency actions
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history because we need that to determine our version number
+          fetch-depth: 0
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Setup MacOS
         if: ${{ runner.os == 'macOS' }}
@@ -515,7 +517,10 @@ jobs:
       CONAN_HOME: "D:/.conan/"
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history because we need that to determine our version number
+          fetch-depth: 0
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Setup Windows
         uses: ./.github/workflows/actions/setup_windows
