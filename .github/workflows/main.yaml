@@ -596,8 +596,8 @@ jobs:
         run: |
           set -v
           set -e
-          cd build
-          cpack -C ${{matrix.build_type}} --verbose -G WIX
+          cd build/${{matrix.build_type}}
+          cpack -C . --verbose -G WIX
       - name: Upload installers as artifact
         uses: actions/upload-artifact@v4
         with:
