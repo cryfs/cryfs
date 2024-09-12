@@ -397,6 +397,7 @@ jobs:
       # Setting conan cache dir to a location where our Github Cache Action can find it
       CONAN_HOME: "${{ github.workspace }}/conan-cache/"
     steps:
+      # TODO Update versions of dependency actions
       - name: Checkout
         uses: actions/checkout@v1
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
@@ -465,7 +466,6 @@ jobs:
           build_type: ${{ matrix.build_type }}
           extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Install dependencies
-        if: ${{ matrix.run_build }}
         uses: ./.github/workflows/actions/conan/install_dependencies
       - name: Build
         if: ${{ matrix.run_build }}
