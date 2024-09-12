@@ -20,7 +20,6 @@ inputs:
   build_type:
     description: "Which cmake build type to use (e.g. Release, Debug, RelWithDebInfo)"
     required: true
-  # TODO Make sure extra_cxxflags work
   extra_cxxflags:
     description: "Extra flags to add to the compiler"
     required: true
