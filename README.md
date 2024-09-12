@@ -158,6 +158,7 @@ $ ./parallelaccessstore/parallelaccessstore-test
 Building on Windows (experimental)
 ----------------------------------
 TODO Rewrite this section
+# TODO Probably needs a -o &:windows_dokany_path="C:/Program Files/Dokan/DokanLibrary-2.0.6"
 
 1. Install conan. If you want to use "pip install conan", you may have to install Python first.
 2. Install DokanY 2.0.6.1000. Other versions may not work.

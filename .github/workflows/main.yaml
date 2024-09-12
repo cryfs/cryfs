@@ -606,9 +606,7 @@ jobs:
       - name: Build
         uses: ./.github/workflows/actions/conan/build
         with:
-          extra_conan_flags: "-o '&:windows_ci_workaround=True'"
-          # TODO See if there's anything from the legacy cmake invocation below we need to port to conan
-          # cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=on -DDOKAN_PATH="C:/Program Files/Dokan/DokanLibrary-2.0.6" -A ${{matrix.arch}} -DCMAKE_SYSTEM_VERSION="10.0.18362.0"
+          extra_conan_flags: "-o '&:windows_ci_workaround=True' -o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6'"
           
       # - name: Show ccache statistics
       #   shell: bash

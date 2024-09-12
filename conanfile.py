@@ -22,6 +22,7 @@ class CryFSConan(ConanFile):
         "use_iwyu": [True, False],
         "clang_tidy_warnings_as_errors": [True, False],
         "windows_ci_workaround": [True, False],
+        "windows_dokany_path": ["ANY"],
     }
     default_options = {
         "build_tests": False,
@@ -33,6 +34,7 @@ class CryFSConan(ConanFile):
         "use_iwyu": False,
         "clang_tidy_warnings_as_errors": False,
         "windows_ci_workaround": False,
+        "windows_dokany_path": "",
         # Options of our dependencies
         "boost/*:system_no_deprecated": True,
         "boost/*:asio_no_deprecated": True,
@@ -103,7 +105,7 @@ class CryFSConan(ConanFile):
         if self.options.windows_ci_workaround:
             cmake_vars["CMAKE_SYSTEM_VERSION"] = "10.0.18362.0"
             # TODO Update CMAKE_SYSTEM_VERSION? Or can we fully remove it?
-            # TODO How to set DOKAN_PATH for non-ci builds?
-            cmake_vars["DOKAN_PATH"] = "C:/Program Files/Dokan/DokanLibrary-2.0.6"
+        if self.options.windows_dokany_path != "":
+            cmake_vars["DOKAN_PATH"] = self.options.windows_dokany_path
         cmake.configure(cmake_vars)
         cmake.build()
