@@ -13,6 +13,9 @@ inputs:
   cache_key:
     description: "Cache key"
     required: true
+  ccache_dir:
+    description: "ccache directory"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -21,7 +24,7 @@ runs:
       uses: ./.github/workflows/actions/s3_cache
       with:
         action: load
-        paths: ${{github.workspace}}/.ccache
+        paths: ${{ inputs.ccache_dir }}
         cache_key: ${{ inputs.cache_key }}
     - name: Show ccache statistics
       if: ${{ inputs.action == 'load' }}
@@ -52,7 +55,7 @@ runs:
       uses: ./.github/workflows/actions/s3_cache
       with:
         action: save
-        paths: ${{github.workspace}}/.ccache
+        paths: ${{ inputs.ccache_dir }}
         secret_aws_access_key_id: ${{ inputs.secret_aws_access_key_id }}
         secret_aws_secret_access_key: ${{ inputs.secret_aws_secret_access_key }}
         cache_key: ${{ inputs.cache_key }}

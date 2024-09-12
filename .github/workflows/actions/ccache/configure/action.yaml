@@ -1,5 +1,9 @@
 name: 'Configure ccache'
 description: 'Configure ccache'
+inputs:
+  ccache_dir:
+    description: "Directory to store ccache cache in"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -10,7 +14,7 @@ runs:
         set -v
         ccache --set-config=compiler_check=content
         ccache --set-config=max_size=500M
-        ccache --set-config=cache_dir=${{github.workspace}}/.ccache
+        ccache --set-config=cache_dir="${{ inputs.ccache_dir }}"
         ccache --set-config=compression=true
         ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
         echo CCache config:

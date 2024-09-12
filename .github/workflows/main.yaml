@@ -418,23 +418,24 @@ jobs:
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Configure ccache
         uses: ./.github/workflows/actions/ccache/configure
+        with:
+          ccache_dir: ${{github.workspace}}/.ccache
       - name: Hash flags
         id: hash_flags
+        shell: bash
         run: |
           echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | (echo -n "hash_flags=" && sha256sum | awk '{print $1}') > $GITHUB_OUTPUT
-        shell: bash
       - name: Restore ccache
         uses: ./.github/workflows/actions/ccache/cache
         with:
           action: 'load'
+          ccache_dir: ${{github.workspace}}/.ccache
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
         uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{steps.hash_flags.outputs.hash_flags}}__
       # Setup conan is after restoring the cache so the cache doesn't overwrite the conan profile
       - name: Setup conan
@@ -480,6 +481,7 @@ jobs:
         uses: ./.github/workflows/actions/ccache/cache
         with:
           action: 'save'
+          ccache_dir: ${{github.workspace}}/.ccache
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
@@ -522,47 +524,30 @@ jobs:
       #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Setup Windows
         uses: ./.github/workflows/actions/setup_windows
-      #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
-      # - name: Configure ccache
-      #   shell: bash
-      #   run: |
-      #     set -v
-      #     ccache --set-config=compiler_check=content
-      #     ccache --set-config=max_size=500M
-      #     ccache --set-config=cache_dir=${{github.workspace}}/.ccache
-      #     ccache --set-config=compression=true
-      #     ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
-      #     echo CCache config:
-      #     ccache -p
-      #     echo Clearing ccache statistics
-      #     ccache -z
-      # - name: Hash flags
-      #   id: hash_flags
-      #   run: |
-      #     # Write it into file first so we fail if the command fails. Errors inside $() are ignored by bash unfortunately.
-      #     echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | md5sum > /tmp/hash_flags
-      #     echo "::set-output name=hash_flags::$(cat /tmp/hash_flags)"
-      #     rm /tmp/hash_flags
-      #   shell: bash
-      # - name: Retrieve ccache cache
-      #   uses: ./.github/workflows/actions/s3_cache
-      #   with:
-      #     action: load
-      #     paths: ${{github.workspace}}/.ccache
-      #     cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
-      # - name: Show ccache statistics
-      #   shell: bash
-      #   run: |
-      #     set -v
-      #     ccache -s
+      - name: Get ccache dir
+        id: ccache_dir
+        shell: bash
+        run: |
+          # Windows CI has backwards slashes in github.workspace, so we need to convert that to forward slashes
+          CCACHE_DIR="${{github.workspace}}/.ccache"
+          echo "ccache_dir=${CCACHE_DIR//\\//}" > $GITHUB_OUTPUT
+      # TODO ccache doesn't seem to work. Maybe because it only works with Ninja generator, see https://github.com/ccache/ccache/discussions/1148
+      - name: Configure ccache
+        uses: ./.github/workflows/actions/ccache/configure
+        with:
+          ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
+      - name: Restore ccache
+        uses: ./.github/workflows/actions/ccache/cache
+        with:
+          action: 'load'
+          ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.build_type}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
         uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
-          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          cache_key: v9-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+          cache_key: v9-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.build_type}}__
       # Setup conan is after restoring the conan cache so that the cache doesn't overwrite the conan profile
       - name: Setup conan
         uses: ./.github/workflows/actions/conan/setup
@@ -576,32 +561,21 @@ jobs:
         uses: ./.github/workflows/actions/conan/build
         with:
           extra_conan_flags: "-o '&:windows_ci_workaround=True' -o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6'"
-          
-      # - name: Show ccache statistics
-      #   shell: bash
-      #   run: |
-      #     set -v
-      #     ccache -s
-      # - name: Reduce ccache size
-      #   if: ${{ runner.os == 'macOS' }}
-      #   shell: bash
-      #   run: |
-      #     set -v
-      #     ccache --evict-older-than 7d
-      #     ccache -s
-      # - name: Save ccache cache
-      #   uses: ./.github/workflows/actions/s3_cache
-      #   with:
-      #     action: save
-      #     paths: ${{github.workspace}}/.ccache
-      #     cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+      - name: Save ccache
+        uses: ./.github/workflows/actions/ccache/cache
+        with:
+          action: 'save'
+          ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.build_type}}__
+          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       - name: Save conan cache
         uses: ./.github/workflows/actions/conan/cache
         with:
           action: save
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          cache_key: v9-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__
+          cache_key: v9-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.build_type}}__
       - name: Test
         shell: bash
         run: |
