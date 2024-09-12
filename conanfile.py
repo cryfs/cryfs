@@ -23,6 +23,7 @@ class CryFSConan(ConanFile):
         "clang_tidy_warnings_as_errors": [True, False],
         "windows_ci_workaround": [True, False],
         "windows_dokany_path": ["ANY"],
+        "use_ccache": [True, False],
     }
     default_options = {
         "build_tests": False,
@@ -35,6 +36,7 @@ class CryFSConan(ConanFile):
         "clang_tidy_warnings_as_errors": False,
         "windows_ci_workaround": False,
         "windows_dokany_path": "",
+        "use_ccache": "False",
         # Options of our dependencies
         "boost/*:system_no_deprecated": True,
         "boost/*:asio_no_deprecated": True,
@@ -102,6 +104,9 @@ class CryFSConan(ConanFile):
             "USE_IWYU": self.options.use_iwyu,
             "CLANG_TIDY_WARNINGS_AS_ERRORS": self.options.clang_tidy_warnings_as_errors,
         }
+        if self.options.use_ccache:
+            cmake_vars["CMAKE_C_COMPILER_LAUNCHER"] = "ccache"
+            cmake_vars["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
         if self.options.windows_ci_workaround:
             cmake_vars["CMAKE_SYSTEM_VERSION"] = "10.0.18362.0"
             # TODO Update CMAKE_SYSTEM_VERSION? Or can we fully remove it?

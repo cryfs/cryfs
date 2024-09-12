@@ -438,7 +438,7 @@ jobs:
         with:
           action: load
           paths: ${{github.workspace}}/.ccache
-          cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
         # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
       - name: Show ccache statistics
         shell: bash
@@ -511,7 +511,7 @@ jobs:
         with:
           action: save
           paths: ${{github.workspace}}/.ccache
-          cache_key: v1-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       - name: Save conan cache
