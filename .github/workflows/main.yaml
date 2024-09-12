@@ -531,7 +531,6 @@ jobs:
           # Windows CI has backwards slashes in github.workspace, so we need to convert that to forward slashes
           CCACHE_DIR="${{github.workspace}}/.ccache"
           echo "ccache_dir=${CCACHE_DIR//\\//}" > $GITHUB_OUTPUT
-      # TODO on my local machine, ccache didn't work and 'ccache -sv' said "uncacheable call because of unsupported compiler option". Does it work on CI?
       - name: Configure ccache
         uses: ./.github/workflows/actions/ccache/configure
         with:

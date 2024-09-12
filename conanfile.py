@@ -107,6 +107,11 @@ class CryFSConan(ConanFile):
         if self.options.use_ccache:
             cmake_vars["CMAKE_C_COMPILER_LAUNCHER"] = "ccache"
             cmake_vars["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
+            # ccache is incomptible with `/Zi` or `/ZI` and needs `/Z7`, see
+            # - https://discourse.cmake.org/t/early-experiences-with-msvc-debug-information-format-and-cmp0141/6859
+            # - https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
+            # - https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_DEBUG_INFORMATION_FORMAT.html
+            cmake_vars["CMAKE_MSVC_DEBUG_INFORMATION_FORMAT"] = "Embedded"
         if self.options.windows_ci_workaround:
             cmake_vars["CMAKE_SYSTEM_VERSION"] = "10.0.18362.0"
             # TODO Update CMAKE_SYSTEM_VERSION? Or can we fully remove it?
