@@ -1,0 +1,19 @@
+name: 'Configure ccache'
+description: 'Configure ccache'
+runs:
+  using: "composite"
+  steps:
+    - name: Configure ccache
+      shell: bash
+      run: |
+        set -e
+        set -v
+        ccache --set-config=compiler_check=content
+        ccache --set-config=max_size=500M
+        ccache --set-config=cache_dir=${{github.workspace}}/.ccache
+        ccache --set-config=compression=true
+        ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
+        echo CCache config:
+        ccache -p
+        echo Clearing ccache statistics
+        ccache -z

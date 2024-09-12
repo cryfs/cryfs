@@ -1,0 +1,58 @@
+name: 'Cache ccache'
+description: 'Cache ccache'
+inputs:
+  action:
+    description: "`load` or `save` the cache"
+    required: true
+  secret_aws_access_key_id:
+    description: "AWS access key ID"
+    required: false
+  secret_aws_secret_access_key:
+    description: "AWS secret access key"
+    required: false
+  cache_key:
+    description: "Cache key"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Retrieve ccache cache
+      if: ${{ inputs.action == 'load' }}
+      uses: ./.github/workflows/actions/s3_cache
+      with:
+        action: load
+        paths: ${{github.workspace}}/.ccache
+        cache_key: ${{ inputs.cache_key }}
+    - name: Show ccache statistics
+      if: ${{ inputs.action == 'load' }}
+      shell: bash
+      run: |
+        set -e
+        set -v
+        ccache -s
+
+
+    - name: Show ccache statistics
+      if: ${{ inputs.action == 'save' }}
+      shell: bash
+      run: |
+        set -e
+        set -v
+        ccache -s
+    - name: Reduce ccache size
+      if: ${{ inputs.action == 'save' && runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        set -e
+        set -v
+        ccache --evict-older-than 7d
+        ccache -s
+    - name: Retrieve ccache cache
+      if: ${{ inputs.action == 'save' }}
+      uses: ./.github/workflows/actions/s3_cache
+      with:
+        action: save
+        paths: ${{github.workspace}}/.ccache
+        secret_aws_access_key_id: ${{ inputs.secret_aws_access_key_id }}
+        secret_aws_secret_access_key: ${{ inputs.secret_aws_secret_access_key }}
+        cache_key: ${{ inputs.cache_key }}

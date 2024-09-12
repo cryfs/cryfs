@@ -417,35 +417,17 @@ jobs:
         uses: ./.github/workflows/actions/install_local_dependencies
       #TODO Ideally, the Setup ccache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Configure ccache
-        shell: bash
-        run: |
-          set -v
-          ccache --set-config=compiler_check=content
-          ccache --set-config=max_size=500M
-          ccache --set-config=cache_dir=${{github.workspace}}/.ccache
-          ccache --set-config=compression=true
-          ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
-          echo CCache config:
-          ccache -p
-          echo Clearing ccache statistics
-          ccache -z
+        uses: ./.github/workflows/actions/ccache/configure
       - name: Hash flags
         id: hash_flags
         run: |
           echo __${{matrix.extra_cmake_flags}}__${{matrix.extra_cxxflags}}__ | (echo -n "hash_flags=" && sha256sum | awk '{print $1}') > $GITHUB_OUTPUT
         shell: bash
-      - name: Retrieve ccache cache
-        uses: ./.github/workflows/actions/s3_cache
+      - name: Restore ccache
+        uses: ./.github/workflows/actions/ccache/cache
         with:
-          action: load
-          paths: ${{github.workspace}}/.ccache
+          action: 'load'
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
-        # Many jobs access the cache in parallel an we might observe an incomplete state that isn't valid. This would fail with a checksum error. Let's not fail the CI job but continue it, later on this job will upload a new new cache as part of the regular job run.
-      - name: Show ccache statistics
-        shell: bash
-        run: |
-          set -v
-          ccache -s
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
         uses: ./.github/workflows/actions/conan/cache
@@ -494,23 +476,10 @@ jobs:
         with:
           name: clang-tidy-fixes
           path: /tmp/clang-tidy-fixes
-      - name: Show ccache statistics
-        shell: bash
-        run: |
-          set -v
-          ccache -s
-      - name: Reduce ccache size
-        if: ${{ runner.os == 'macOS' }}
-        shell: bash
-        run: |
-          set -v
-          ccache --evict-older-than 7d
-          ccache -s
-      - name: Save ccache cache
-        uses: ./.github/workflows/actions/s3_cache
+      - name: Save ccache
+        uses: ./.github/workflows/actions/ccache/cache
         with:
-          action: save
-          paths: ${{github.workspace}}/.ccache
+          action: 'save'
           cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
