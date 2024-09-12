@@ -19,19 +19,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Show cache size to save
-      if: ${{ inputs.action == 'save' }}
-      shell: bash
-      run: |
-        for path in ${{ inputs.paths }}; do
-          if [ ! -d $path ]; then
-            echo "Error: $path not found"
-            # TODO exit 1
-          else
-            echo "Saving size of $path:"
-            du -sh $path
-          fi
-        done
     - name: Zip cache files
       if: ${{ inputs.action == 'save' }}
       shell: bash
@@ -100,15 +87,3 @@ runs:
         else
           echo "Warning: Cache not found"
         fi
-    - name: Show loaded cache size
-      if: ${{ inputs.action == 'load' }}
-      shell: bash
-      run: |
-        for path in ${{ inputs.paths }}; do
-          if [ ! -d $path ]; then
-            echo "Warning: $path not found in cache"
-          else
-            echo "Loaded size of $path:"
-            du -sh $path
-          fi
-        done

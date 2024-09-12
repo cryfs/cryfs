@@ -24,9 +24,3 @@ runs:
         secret_aws_access_key_id: ${{ inputs.secret_aws_access_key_id }}
         secret_aws_secret_access_key: ${{ inputs.secret_aws_secret_access_key }}
         paths: ${{ env.CONAN_HOME }}
-    - name: Show files
-      shell: bash
-      run: |
-        set -e
-        set -v
-        find ${{ env.CONAN_HOME }} || echo error in find
