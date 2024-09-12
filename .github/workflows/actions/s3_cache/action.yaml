@@ -24,16 +24,6 @@ runs:
       shell: bash
       run: |
         mkdir -p "/tmp/s3_cache/${{inputs.cache_key}}"
-        for path in ${{ inputs.paths }}; do
-          if [ ! -d $path ]; then
-            echo "Warning: $path not found so cannot cache it"
-            exit 0
-            # TODO exit 1
-          else
-            echo "Loaded size of $path:"
-            du -sh $path
-          fi
-        done
         tar --zstd --create -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ${{ inputs.paths }}
         echo "Zipped cache:"
         ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
@@ -76,14 +66,6 @@ runs:
           echo "Zipped cache:"
           ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
           tar --extract --zstd -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ${{ inputs.paths }}
-          for path in ${{ inputs.paths }}; do
-            if [ ! -d $path ]; then
-              echo "Warning: $path not found"
-            else
-              echo "Loaded size of $path:"
-              du -sh $path
-            fi
-          done
         else
           echo "Warning: Cache not found"
         fi
