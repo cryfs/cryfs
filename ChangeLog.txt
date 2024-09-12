@@ -13,6 +13,7 @@ Version 0.12.0 (unreleased)
 * Remove Windows 32bit build, only 64bit remains supported
 * Remove MacOS gcc build, only clang remains supported
 
+
 Version 0.11.5 (unreleased)
 ---------------
 * Fix an issue when using `-o` atime mount options

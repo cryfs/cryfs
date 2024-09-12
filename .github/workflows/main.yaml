@@ -580,20 +580,22 @@ jobs:
         shell: bash
         run: |
           set -v
-          cd build
-          ./test/gitversion/${{matrix.build_type}}/gitversion-test.exe
-          ./test/cpp-utils/${{matrix.build_type}}/cpp-utils-test.exe
-          # ./test/fspp/${{matrix.build_type}}/fspp-test.exe
-          ./test/parallelaccessstore/${{matrix.build_type}}/parallelaccessstore-test.exe
-          ./test/blockstore/${{matrix.build_type}}/blockstore-test.exe
-          ./test/blobstore/${{matrix.build_type}}/blobstore-test.exe
-          ./test/cryfs/${{matrix.build_type}}/cryfs-test.exe
+          set -e
+          cd build/${{matrix.build_type}}/test
+          ./gitversion/gitversion-test.exe
+          ./cpp-utils/cpp-utils-test.exe
+          # ./fspp/fspp-test.exe
+          ./parallelaccessstore/parallelaccessstore-test.exe
+          ./blockstore/blockstore-test.exe
+          ./blobstore/blobstore-test.exe
+          ./cryfs/cryfs-test.exe
           # TODO Enable cryfs-cli-test on Windows
-          # ./test/cryfs-cli/${{matrix.build_type}}/cryfs-cli-test.exe
+          # ./cryfs-cli/cryfs-cli-test.exe
       - name: CPack
         shell: bash
         run: |
           set -v
+          set -e
           cd build
           cpack -C ${{matrix.build_type}} --verbose -G WIX
       - name: Upload installers as artifact

@@ -11,10 +11,10 @@ set(SOURCES
         program_options/Parser.cpp
 )
 
-add_library(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC cryfs cpp-utils gitversion fspp-fuse)
-target_enable_style_warnings(${PROJECT_NAME})
-target_activate_cpp14(${PROJECT_NAME})
+add_library(${PROJECT_NAME}_lib ${SOURCES})
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC cryfs cpp-utils gitversion fspp-fuse)
+target_enable_style_warnings(${PROJECT_NAME}_lib)
+target_activate_cpp14(${PROJECT_NAME}_lib)
 
 if(NOT CRYFS_UPDATE_CHECKS)
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DCRYFS_NO_UPDATE_CHECKS)
@@ -22,7 +22,7 @@ endif(NOT CRYFS_UPDATE_CHECKS)
 
 add_executable(${PROJECT_NAME}_bin main.cpp)
 set_target_properties(${PROJECT_NAME}_bin PROPERTIES OUTPUT_NAME cryfs)
-target_link_libraries(${PROJECT_NAME}_bin PUBLIC ${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME}_bin PUBLIC ${PROJECT_NAME}_lib)
 target_enable_style_warnings(${PROJECT_NAME}_bin)
 target_activate_cpp14(${PROJECT_NAME}_bin)
 

@@ -63,10 +63,9 @@ runs:
         compiler.cppstd=17
         compiler.runtime=dynamic
         compiler.version=${{inputs.compiler_version}}
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
         EOF
-        # TODO Ninja doesn't seem to work on Windows, otherwise add the following to the conan profile
-        # [conf]
-        # tools.cmake.cmaketoolchain:generator=Ninja
     - name: Show generated conan profile
       shell: bash
       run: |
