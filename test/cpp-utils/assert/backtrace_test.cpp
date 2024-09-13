@@ -39,7 +39,7 @@ TEST(BacktraceTest, ContainsTopLevelLine)
 
 namespace
 {
-#if !(defined(__clang__) && defined(NDEBUG))
+#if !(defined(__clang__)) || (defined(_MSC_VER) && defined(NDEBUG))
 	std::string call_process_exiting_with_nullptr_violation()
 	{
 		return call_process_exiting_with("nullptr");
@@ -50,6 +50,7 @@ namespace
 		return call_process_exiting_with("exception", message);
 	}
 }
+
 #if defined(_MSC_VER)
 #include <Windows.h>
 namespace

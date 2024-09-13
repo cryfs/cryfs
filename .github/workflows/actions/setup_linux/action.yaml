@@ -53,3 +53,4 @@ runs:
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
       shell: bash
+

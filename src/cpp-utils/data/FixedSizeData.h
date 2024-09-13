@@ -108,7 +108,10 @@ template<size_t SIZE> template<size_t size>
 FixedSizeData<size> FixedSizeData<SIZE>::take() const {
   static_assert(size <= SIZE, "Out of bounds");
   FixedSizeData<size> result;
-  std::memcpy(result._data.data(), _data.data(), size);
+  auto* result_data = result._data.data();
+  if (result_data != nullptr) {
+    std::memcpy(result_data, _data.data(), size);
+  }
   return result;
 }
 
@@ -116,7 +119,10 @@ template<size_t SIZE> template<size_t size>
 FixedSizeData<SIZE-size> FixedSizeData<SIZE>::drop() const {
   static_assert(size <= SIZE, "Out of bounds");
   FixedSizeData<SIZE-size> result;
-  std::memcpy(result._data.data(), _data.data()+size, SIZE-size);
+  auto* result_data = result._data.data();
+  if (result_data != nullptr) {
+    std::memcpy(result_data, _data.data()+size, SIZE-size);
+  }
   return result;
 }
 
