@@ -84,9 +84,10 @@ Building from source
 
 Requirements
 ------------
+# TODO Update this list
   - Git (for getting the source code)
   - GCC version >= 7 or Clang >= 7
-  - CMake version >= 3.10
+  - CMake version >= 3.25
   - pkg-config (on Unix)
   - Conan package manager (version 2.x)
   - libFUSE version >= 2.9 (including development headers), on Mac OS X instead install macFUSE from https://osxfuse.github.io/
@@ -94,6 +95,8 @@ Requirements
   - OpenMP
 
 You can use the following commands to install these requirements
+
+# TODO Update the package list
 
         # Ubuntu
         $ sudo apt install git g++ cmake make pkg-config libfuse-dev python3 python3-pip
@@ -212,8 +215,6 @@ On most systems, CMake should find the libraries automatically. However, that do
 
 Using local dependencies
 -------------------------------
-TODO Rewrite this section
-
 Starting with CryFS 0.11, Conan is used for dependency management.
 When you build CryFS, Conan downloads the exact version of each dependency library that was also used for development.
 All dependencies are linked statically, so there should be no incompatibility with locally installed libraries.
@@ -224,14 +225,16 @@ So if you're building a package for such a distribution, you have the option of 
 If you follow this workflow, please make sure to extensively test your build of CryFS.
 You're using a setup that wasn't tested by the CryFS developers.
 
-To use local dependencies, you need to tell the CryFS build how to get these dependencies.
-You can do this by writing a small CMake configuration file and passing it to the CryFS build using `-DDEPENDENCY_CONFIG=filename`.
-This configuration file needs to define a cmake target for each of the dependencies.
+To use local dependencies, you can install all of CryFS's dependencies (e.g. boost, spdlog) manually and run cmake directly without invoking conan first:
 
-Here's an [example config file](cmake-utils/DependenciesFromConan.cmake) that gets the dependencies from conan.
-And here's another [example config file](cmake-utils/DependenciesFromLocalSystem.cmake) that works for getting dependencies that are locally installed in Ubuntu.
-You can create your own configuration file to tell the build how to get its dependencies and, for example, mix and match. Get some dependencies from Conan and others from the local system.
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
 
+It is recommended to use the same versions of the dependencies as stated in the conanfile.py in this repository.
+
+CMake will use pkg-config to find those dependencies.
 
 Creating .deb and .rpm packages
 -------------------------------
