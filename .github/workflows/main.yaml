@@ -596,4 +596,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cryfs-${{matrix.arch}}-${{matrix.build_type}}.msi
-          path: build/cryfs-*.msi
+          path: build/${{matrix.build_type}}/cryfs-*.msi
