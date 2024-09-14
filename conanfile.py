@@ -7,8 +7,7 @@ class CryFSConan(ConanFile):
     name = "cryfs"
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
-    # TODO See if this cmake is actually being used or if it's a system installed one. Probably by changing it here and confirming it changes.
-    tool_requires = "cmake/3.30.1"
+    tool_requires = "cmake/3.25.3"
     generators = ["CMakeToolchain", "CMakeDeps"]
     options = {
         "build_tests": [True, False],
