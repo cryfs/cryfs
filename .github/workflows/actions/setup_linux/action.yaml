@@ -46,7 +46,7 @@ runs:
           sudo chmod o-w /etc/apt/sources.list.d/clang.list
         fi
         sudo apt-get update
-        sudo apt-get install ninja-build libcurl4-openssl-dev libfuse-dev ccache ${{inputs.extra_apt_packages}}
+        sudo apt-get install ninja-build libfuse-dev ccache ${{inputs.extra_apt_packages}}
     - name: Speed up random generator
       run: |
         set -v

@@ -81,7 +81,7 @@ namespace cryfs_cli {
         }
     }
 
-    void Cli::_showVersion(unique_ref<HttpClient> httpClient) {
+    void Cli::_showVersion() {
         cout << "CryFS Version " << gitversion::VersionString() << endl;
         if (gitversion::IsDevVersion()) {
             cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
@@ -92,7 +92,11 @@ namespace cryfs_cli {
 #ifndef NDEBUG
         cout << "WARNING! This is a debug build. Performance might be slow." << endl;
 #endif
-#ifndef CRYFS_NO_UPDATE_CHECKS
+        cout << endl;
+    }
+
+#ifdef CRYFS_UPDATE_CHECKS
+    void Cli::_maybeCheckForUpdates(unique_ref<HttpClient> httpClient) {
         if (Environment::noUpdateCheck()) {
             cout << "Automatic checking for security vulnerabilities and updates is disabled." << endl;
         } else if (Environment::isNoninteractive()) {
@@ -100,11 +104,6 @@ namespace cryfs_cli {
         } else {
             _checkForUpdates(std::move(httpClient));
         }
-#else
-# warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
-        UNUSED(httpClient);
-#endif
-        cout << endl;
     }
 
     void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
@@ -120,6 +119,7 @@ namespace cryfs_cli {
             cout << *securityWarning << endl;
         }
     }
+#endif
 
     bool Cli::_checkPassword(const string &password) {
         if (password == "") {
@@ -443,12 +443,20 @@ namespace cryfs_cli {
         return false;
     }
 
-    int Cli::main(int argc, const char **argv, unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
+    int Cli::main(int argc, const char **argv,
+        #ifdef CRYFS_UPDATE_CHECKS
+        unique_ref<HttpClient> httpClient,
+        #endif
+        std::function<void()> onMounted
+    ) {
         cpputils::showBacktraceOnCrash();
         cpputils::set_thread_name("cryfs");
 
         try {
-            _showVersion(std::move(httpClient));
+            _showVersion();
+            #ifdef CRYFS_UPDATE_CHECKS
+            _maybeCheckForUpdates(std::move(httpClient));
+            #endif
             const ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
             _sanityChecks(options);
             _runFilesystem(options, std::move(onMounted));

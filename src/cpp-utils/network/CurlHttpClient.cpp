@@ -1,4 +1,5 @@
 // Base version taken from https://techoverflow.net/blog/2013/03/15/c-simple-http-download-using-libcurl-easy-api/
+#ifdef CRYFS_UPDATE_CHECKS
 
 #include "CurlHttpClient.h"
 #include <sstream>
@@ -67,3 +68,5 @@ namespace cpputils {
     }
 
 }
+
+#endif

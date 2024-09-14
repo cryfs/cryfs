@@ -1,17 +1,25 @@
 Version 0.12.0 (unreleased)
 ---------------
-* Added a man page for `cryfs-unmount`
-* Fixed small inaccuracy in calculation of free space in statvfs
-* Use libcurl dependency from conan instead of requiring it to be preinstalled
-* Migrate build from Conan 1.x to Conan 2.x
+* Fixes/Improvements
+  * Added a man page for `cryfs-unmount`
+  * Fixed small inaccuracy in calculation of free space in statvfs
+* Updated Build requirements
+  * CMake 3.25
+  * Remove Windows 32bit build, only 64bit remains supported
+  * Remove MacOS gcc build, only clang remains supported
+  * Migrate build from Conan 1.x to Conan 2.x
+  * Easier way to opt-out of conan. CMake now works directly and without conan if the necessary dependencies are already installed.
 * Updated dependencies to
   * Fuse 2.9
   * DokanY 2.0.6.1000
   * range-v3/0.12.0
   * boost 1.84
   * spdlog/1.11.0
-* Remove Windows 32bit build, only 64bit remains supported
-* Remove MacOS gcc build, only clang remains supported
+  * Use libcurl dependency from conan instead of requiring it to be preinstalled
+  * We now only link to libcurl if CRYFS_UPDATE_CHECKS is enabled. If the compile time flag is disabled,
+    that already disabled update checks in previous versions, but needlessly still linked to libcurl.
+    Now the flag will fully remove the libcurl dependency.
+
 
 Version 0.11.5 (unreleased)
 ---------------

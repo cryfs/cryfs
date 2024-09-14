@@ -1,3 +1,5 @@
+#ifdef CRYFS_UPDATE_CHECKS
+
 #include <gtest/gtest.h>
 #include <cryfs-cli/VersionChecker.h>
 #include <cpp-utils/network/FakeHttpClient.h>
@@ -121,3 +123,5 @@ TEST_F(VersionCheckerTest, SecurityWarningFor_InvalidVersionInfo) {
     setVersionInfo("invalid-json");
     EXPECT_EQ(none, versionChecker()->securityWarningFor("0.8.2"));
 }
+
+#endif

@@ -54,7 +54,14 @@ public:
         ON_CALL(*console, askPassword(testing::StrEq("Password: "))).WillByDefault(testing::Return("pass"));
         ON_CALL(*console, askPassword(testing::StrEq("Confirm Password: "))).WillByDefault(testing::Return("pass"));
         // Run Cryfs
-        return cryfs_cli::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(_args.size(), _args.data(), _httpClient(), std::move(onMounted));
+        return cryfs_cli::Cli(keyGenerator, cpputils::SCrypt::TestSettings, console).main(
+            _args.size(),
+            _args.data(),
+            #ifdef CRYFS_UPDATE_CHECKS
+            _httpClient(),
+            #endif
+            std::move(onMounted)
+        );
     }
 
     void EXPECT_EXIT_WITH_HELP_MESSAGE(const std::vector<std::string>& args, const std::string &message, cryfs::ErrorCode errorCode) {

@@ -2,6 +2,8 @@
 #ifndef MESSMER_CPPUTILS_NETWORK_CURLHTTPCLIENT_HPP
 #define MESSMER_CPPUTILS_NETWORK_CURLHTTPCLIENT_HPP
 
+#ifdef CRYFS_UPDATE_CHECKS
+
 #include "HttpClient.h"
 #include "../macros.h"
 #include <mutex>
@@ -40,5 +42,7 @@ namespace cpputils {
     };
 
 }
+
+#endif
 
 #endif

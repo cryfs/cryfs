@@ -18,10 +18,20 @@ namespace cryfs_cli {
     class Cli final {
     public:
         Cli(cpputils::RandomGenerator *keyGenerator, const cpputils::SCryptSettings& scryptSettings, std::shared_ptr<cpputils::Console> console);
-        int main(int argc, const char **argv, cpputils::unique_ref<cpputils::HttpClient> httpClient, std::function<void()> onMounted);
+
+        int main(
+            int argc,
+            const char **argv,
+            #ifdef CRYFS_UPDATE_CHECKS
+            cpputils::unique_ref<cpputils::HttpClient> httpClient,
+            #endif
+            std::function<void()> onMounted);
 
     private:
+        #ifdef CRYFS_UPDATE_CHECKS
+        void _maybeCheckForUpdates(cpputils::unique_ref<cpputils::HttpClient> httpClient);
         void _checkForUpdates(cpputils::unique_ref<cpputils::HttpClient> httpClient);
+        #endif
         void _runFilesystem(const program_options::ProgramOptions &options, std::function<void()> onMounted);
         cryfs::CryConfigLoader::ConfigLoadResult _loadOrCreateConfig(const program_options::ProgramOptions &options, const cryfs::LocalStateDir& localStateDir);
         void _checkConfigIntegrity(const boost::filesystem::path& basedir, const cryfs::LocalStateDir& localStateDir, const cryfs::CryConfigFile& config, bool allowReplacedFilesystem);
@@ -32,7 +42,7 @@ namespace cryfs_cli {
         static std::function<std::string()> _askPasswordNoninteractive(std::shared_ptr<cpputils::Console> console);
         static bool _confirmPassword(cpputils::Console* console, const std::string &password);
         static bool _checkPassword(const std::string &password);
-        void _showVersion(cpputils::unique_ref<cpputils::HttpClient> httpClient);
+        void _showVersion();
         void _initLogfile(const program_options::ProgramOptions &options);
         void _sanityChecks(const program_options::ProgramOptions &options);
         void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);

@@ -1,6 +1,8 @@
 #ifndef MESSMER_CRYFSCLI_VERSIONCHECKER_H
 #define MESSMER_CRYFSCLI_VERSIONCHECKER_H
 
+#ifdef CRYFS_UPDATE_CHECKS
+
 #include <cpp-utils/macros.h>
 #include <string>
 #include <boost/optional.hpp>
@@ -25,5 +27,7 @@ namespace cryfs_cli {
         DISALLOW_COPY_AND_ASSIGN(VersionChecker);
     };
 }
+
+#endif
 
 #endif

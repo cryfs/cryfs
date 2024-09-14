@@ -12,7 +12,9 @@ using namespace cryfs_cli;
 using cpputils::Random;
 using cpputils::SCrypt;
 using cpputils::IOStreamConsole;
+#ifdef CRYFS_UPDATE_CHECKS
 using cpputils::make_unique_ref;
+#endif
 using std::make_shared;
 using std::cerr;
 
@@ -26,9 +28,16 @@ int main(int argc, const char *argv[]) {
 
     try {
         auto *keyGenerator = Random::OSRandom();
-        auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
+
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
-            .main(argc, argv, std::move(httpClient), []{});
+            .main(
+                argc,
+                argv,
+                #ifdef CRYFS_UPDATE_CHECKS
+                make_unique_ref<cpputils::CurlHttpClient>(),
+                #endif
+                []{}
+            );
     } catch (const cryfs::CryfsException &e) {
         if (e.what() != string()) {
             std::cerr << "Error: " << e.what() << std::endl;
