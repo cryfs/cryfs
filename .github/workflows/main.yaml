@@ -562,7 +562,7 @@ jobs:
       - name: Build
         uses: ./.github/workflows/actions/conan/build
         with:
-          extra_conan_flags: "-o '&:windows_ci_workaround=True' -o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6'"
+          extra_conan_flags: "-o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6'"
       - name: Save ccache
         uses: ./.github/workflows/actions/ccache/cache
         with:

@@ -20,7 +20,6 @@ class CryFSConan(ConanFile):
         "export_compile_commands": [True, False],
         "use_iwyu": [True, False],
         "clang_tidy_warnings_as_errors": [True, False],
-        "windows_ci_workaround": [True, False],
         "windows_dokany_path": ["ANY"],
         "use_ccache": [True, False],
     }
@@ -33,7 +32,6 @@ class CryFSConan(ConanFile):
         "export_compile_commands": False,
         "use_iwyu": False,
         "clang_tidy_warnings_as_errors": False,
-        "windows_ci_workaround": False,
         "windows_dokany_path": "",
         "use_ccache": "False",
         # Options of our dependencies
@@ -112,9 +110,6 @@ class CryFSConan(ConanFile):
             # - https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
             # - https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_DEBUG_INFORMATION_FORMAT.html
             cmake_vars["CMAKE_MSVC_DEBUG_INFORMATION_FORMAT"] = "Embedded"
-        if self.options.windows_ci_workaround:
-            cmake_vars["CMAKE_SYSTEM_VERSION"] = "10.0.18362.0"
-            # TODO Update CMAKE_SYSTEM_VERSION? Or can we fully remove it?
         if self.options.windows_dokany_path != "":
             cmake_vars["DOKAN_PATH"] = self.options.windows_dokany_path
         cmake.configure(cmake_vars)
