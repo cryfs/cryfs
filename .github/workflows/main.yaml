@@ -404,6 +404,7 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         uses: ./.github/workflows/actions/setup_macos
         with:
+          macos_version: ${{ matrix.os }}
           extra_homebrew_packages: ${{ matrix.compiler.homebrew_package }}
       - name: Setup Linux
         if: ${{ runner.os == 'Linux' }}

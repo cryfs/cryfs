@@ -4,10 +4,27 @@ inputs:
   extra_homebrew_packages:
     description: "Job-specific homebrew packages to install (e.g. the compiler)"
     required: true
+  macos_version:
+    description: "Exact macos version this runs on"
+    required: true
 runs:
   using: "composite"
   steps:
     - name: Install macOS dependencies
+      if: ${{ inputs.macos_version == 'macos-12' }}
       shell: bash
       run: |
-        brew install coreutils ninja macfuse libomp ccache pkg-config ${{inputs.extra_homebrew_packages}}
+        set -e
+        set -v
+        # Unset GITHUB_ACTIONS so homebrew doesn't spam our logs, see https://github.com/orgs/Homebrew/discussions/5602
+        unset GITHUB_ACTIONS
+        brew install coreutils ninja macfuse ccache ${{inputs.extra_homebrew_packages}}
+    - name: Install macOS dependencies
+      if: ${{ inputs.macos_version == 'macos-13' }}
+      shell: bash
+      run: |
+        set -e
+        set -v
+        # Unset GITHUB_ACTIONS so homebrew doesn't spam our logs, see https://github.com/orgs/Homebrew/discussions/5602
+        unset GITHUB_ACTIONS
+        brew install coreutils ninja macfuse libomp ccache ${{inputs.extra_homebrew_packages}}
