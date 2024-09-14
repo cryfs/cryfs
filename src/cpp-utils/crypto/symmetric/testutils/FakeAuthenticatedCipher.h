@@ -20,9 +20,9 @@ namespace cpputils {
           return sizeof(uint64_t);
         }
 
-        static FakeKey CreateKey(RandomGenerator &randomGenerator, size_t keySize) {
+        static FakeKey CreateKey(RandomGenerator *randomGenerator, size_t keySize) {
             ASSERT(keySize == sizeof(uint64_t), "Wrong key size");
-            auto data = randomGenerator.getFixedSize<sizeof(uint64_t)>();
+            auto data = randomGenerator->getFixedSize<sizeof(uint64_t)>();
             return FakeKey {*reinterpret_cast<uint64_t*>(data.data())};
         }
 

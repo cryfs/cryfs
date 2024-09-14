@@ -51,7 +51,7 @@ inline IdWrapper<Tag>::IdWrapper(const IdData& id): id_(id) {}
 
 template<class Tag>
 inline IdWrapper<Tag> IdWrapper<Tag>::Random() {
-    return IdWrapper(cpputils::Random::PseudoRandom().getFixedSize<BINARY_LENGTH>());
+    return IdWrapper(cpputils::Random::PseudoRandom()->getFixedSize<BINARY_LENGTH>());
 }
 
 template<class Tag>

@@ -27,7 +27,7 @@ EncryptionKey _derive(size_t keySize, const std::string& password, const SCryptP
 }
 
 SCryptParameters _createNewSCryptParameters(const SCryptSettings& settings) {
-    return SCryptParameters(Random::PseudoRandom().get(settings.SALT_LEN), settings.N, settings.r, settings.p);
+    return SCryptParameters(Random::PseudoRandom()->get(settings.SALT_LEN), settings.N, settings.r, settings.p);
 }
 }
 

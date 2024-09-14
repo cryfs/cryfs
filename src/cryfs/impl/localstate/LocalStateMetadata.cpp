@@ -58,10 +58,11 @@ void LocalStateMetadata::save_(const bf::path &metadataFilePath) const {
 
 namespace {
 uint32_t generateClientId_() {
-  uint32_t result = 0;
-  do {
-    result = cpputils::deserialize<uint32_t>(Random::PseudoRandom().getFixedSize<sizeof(uint32_t)>().data());
-  } while(result == KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK); // Safety check - CLIENT_ID_FOR_DELETED_BLOCK shouldn't be used by any valid client.
+  uint32_t result = KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK;
+  // Safety check - CLIENT_ID_FOR_DELETED_BLOCK shouldn't be used by any valid client.
+  while(result == KnownBlockVersions::CLIENT_ID_FOR_DELETED_BLOCK) {
+    result = cpputils::deserialize<uint32_t>(Random::PseudoRandom()->getFixedSize<sizeof(uint32_t)>().data());
+  }
   return result;
 }
 

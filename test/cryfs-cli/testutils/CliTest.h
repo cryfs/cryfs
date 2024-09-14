@@ -50,7 +50,7 @@ public:
         for (const std::string& arg : args) {
             _args.emplace_back(arg.c_str());
         }
-        auto &keyGenerator = cpputils::Random::PseudoRandom();
+        auto *keyGenerator = cpputils::Random::PseudoRandom();
         ON_CALL(*console, askPassword(testing::StrEq("Password: "))).WillByDefault(testing::Return("pass"));
         ON_CALL(*console, askPassword(testing::StrEq("Confirm Password: "))).WillByDefault(testing::Return("pass"));
         // Run Cryfs

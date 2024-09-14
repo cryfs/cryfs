@@ -98,7 +98,7 @@ public:
   }
 
 private:
-  const blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
+  blockstore::BlockId blockId = blockstore::BlockId::FromString("1491BB4932A389EE14BC7090AC772972");
   cpputils::unique_ref<blockstore::BlockStore> blockStore;
   size_t size;
 

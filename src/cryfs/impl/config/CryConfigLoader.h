@@ -15,7 +15,7 @@ namespace cryfs {
 class CryConfigLoader final {
 public:
   // note: keyGenerator generates the inner (i.e. file system) key. keyProvider asks for the password and generates the outer (i.e. config file) key.
-  CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator &keyGenerator, cpputils::unique_ref<CryKeyProvider> keyProvider, LocalStateDir localStateDir, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine);
+  CryConfigLoader(std::shared_ptr<cpputils::Console> console, cpputils::RandomGenerator *keyGenerator, cpputils::unique_ref<CryKeyProvider> keyProvider, LocalStateDir localStateDir, const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine);
   CryConfigLoader(CryConfigLoader &&rhs) = default;
 
   struct ConfigLoadResult {

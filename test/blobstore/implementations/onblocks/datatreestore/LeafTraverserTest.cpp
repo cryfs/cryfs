@@ -23,6 +23,7 @@ public:
   MOCK_METHOD(shared_ptr<Data>, calledCreateLeaf, (uint32_t));
 };
 
+//NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
 MATCHER_P(KeyEq, expected, "node blockId equals") {
   return arg->blockId() == expected;
 }

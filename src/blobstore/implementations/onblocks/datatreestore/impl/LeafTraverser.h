@@ -35,7 +35,7 @@ namespace blobstore {
 
             private:
                 datanodestore::DataNodeStore *_nodeStore;
-                const bool _readOnlyTraversal;
+                bool _readOnlyTraversal;
 
                 void _traverseAndUpdateRoot(
                       cpputils::unique_ref<datanodestore::DataNode>* root, uint32_t beginIndex, uint32_t endIndex, bool isLeftBorderOfTraversal,

@@ -22,7 +22,7 @@ Hash hash(const Data& data, Salt salt) {
 }
 
 Salt generateSalt() {
-  return Random::PseudoRandom().getFixedSize<8>();
+  return Random::PseudoRandom()->getFixedSize<8>();
 }
 
 }

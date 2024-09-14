@@ -16,11 +16,11 @@ class FixedSizeDataTest: public Test {
 public:
   static constexpr size_t SIZE = 16;
 
-  const string DATA1_AS_STRING = "1491BB4932A389EE14BC7090AC772972";
-  const string DATA2_AS_STRING = "272EE5517627CFA147A971A8E6E747E0";
+  string DATA1_AS_STRING = "1491BB4932A389EE14BC7090AC772972";
+  string DATA2_AS_STRING = "272EE5517627CFA147A971A8E6E747E0";
 
-  const Data DATA3_AS_BINARY;
-  const Data DATA4_AS_BINARY;
+  Data DATA3_AS_BINARY;
+  Data DATA4_AS_BINARY;
 
   FixedSizeDataTest() : DATA3_AS_BINARY(DataFixture::generate(SIZE, 1)), DATA4_AS_BINARY(DataFixture::generate(SIZE, 2)) {}
 

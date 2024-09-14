@@ -71,7 +71,7 @@ using gitversion::VersionCompare;
 
 namespace cryfs_cli {
 
-    Cli::Cli(RandomGenerator &keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
+    Cli::Cli(RandomGenerator *keyGenerator, const SCryptSettings &scryptSettings, shared_ptr<Console> console):
             _keyGenerator(keyGenerator), _scryptSettings(scryptSettings), _console(), _noninteractive(Environment::isNoninteractive()), _idleUnmounter(none), _device(none) {
         
         if (_noninteractive) {
@@ -143,8 +143,8 @@ namespace cryfs_cli {
         //TODO Ask confirmation if using insecure password (<8 characters)
         return [console] () {
             string password;
-            bool again = false;
-            do {
+            bool again = true;
+            while(again) {
                 password = console->askPassword("Password: ");
                 if (!_checkPassword(password)) {
                     again = true;
@@ -155,7 +155,7 @@ namespace cryfs_cli {
                     continue;
                 }
                 again = false;
-            } while (again);
+            }
             return password;
         };
     }

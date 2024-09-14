@@ -40,7 +40,7 @@ public:
     virtual std::string cipherName() const = 0;
     virtual const boost::optional<std::string> &warning() const = 0;
     virtual cpputils::unique_ref<blockstore::BlockStore2> createEncryptedBlockstore(cpputils::unique_ref<blockstore::BlockStore2> baseBlockStore, const std::string &encKey) const = 0;
-    virtual std::string createKey(cpputils::RandomGenerator &randomGenerator) const = 0;
+    virtual std::string createKey(cpputils::RandomGenerator *randomGenerator) const = 0;
     virtual cpputils::unique_ref<InnerEncryptor> createInnerConfigEncryptor(const cpputils::EncryptionKey &key) const = 0;
 };
 

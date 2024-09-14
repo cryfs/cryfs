@@ -25,7 +25,7 @@ int main(int argc, const char *argv[]) {
 #endif
 
     try {
-        auto &keyGenerator = Random::OSRandom();
+        auto *keyGenerator = Random::OSRandom();
         auto httpClient = make_unique_ref<cpputils::CurlHttpClient>();
         return Cli(keyGenerator, SCrypt::DefaultSettings, make_shared<IOStreamConsole>())
             .main(argc, argv, std::move(httpClient), []{});

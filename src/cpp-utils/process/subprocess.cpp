@@ -84,9 +84,9 @@ namespace cpputils
 		class InputPipeHandler final
 		{
 		public:
-			explicit InputPipeHandler(ba::io_context* ctx, const std::string& input)
+			explicit InputPipeHandler(ba::io_context* ctx, const std::string* input)
 			: input_(input)
-			, buffer_(ba::buffer(input_))
+			, buffer_(ba::buffer(*input_))
 			, pipe_(*ctx) {
 
 			}
@@ -109,7 +109,7 @@ namespace cpputils
 				);
 			}
 		private:
-			const std::string& input_;
+			const std::string* input_;
 			ba::const_buffer buffer_;
 			bp::async_pipe pipe_;
 		};
@@ -140,7 +140,7 @@ namespace cpputils
 
 		OutputPipeHandler stdout_handler(&ctx);
 		OutputPipeHandler stderr_handler(&ctx);
-		InputPipeHandler stdin_handler(&ctx, input);
+		InputPipeHandler stdin_handler(&ctx, &input);
 
 		bp::child child(
 			bp::exe = executable.string(),

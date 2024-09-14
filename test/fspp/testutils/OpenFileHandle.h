@@ -40,7 +40,7 @@ public:
 
 private:
     int fd_;
-    const int errno_;
+    int errno_;
 
     DISALLOW_COPY_AND_ASSIGN(OpenFileHandle);
 };

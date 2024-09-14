@@ -292,12 +292,10 @@ void Fuse::runInBackground(const bf::path &mountdir, vector<string> fuseOptions)
 
 void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string &option) {
   auto found = std::find(fuseOptions->begin(), fuseOptions->end(), option);
-  if (found != fuseOptions->end()) {
+  while (found != fuseOptions->end()) {
     LOG(WARN, "The fuse option {} only works when running in foreground. Removing fuse option.", option);
-    do {
-      fuseOptions->erase(found);
-      found = std::find(fuseOptions->begin(), fuseOptions->end(), option);
-    } while (found != fuseOptions->end());
+    fuseOptions->erase(found);
+    found = std::find(fuseOptions->begin(), fuseOptions->end(), option);
   }
 }
 

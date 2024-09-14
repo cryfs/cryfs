@@ -15,7 +15,7 @@ public:
   void remove();
 
 private:
-  const boost::filesystem::path _path;
+  boost::filesystem::path _path;
 
   DISALLOW_COPY_AND_ASSIGN(TempDir);
 };

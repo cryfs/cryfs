@@ -63,12 +63,12 @@ public:
         return result;
     }
 
-    static EncryptionKey CreateKey(RandomGenerator &randomGenerator, size_t keySize) {
+    static EncryptionKey CreateKey(RandomGenerator *randomGenerator, size_t keySize) {
         EncryptionKey result(std::make_shared<Data>(
             keySize,
             make_unique_ref<UnswappableAllocator>() // the allocator makes sure key data is never swapped to disk
         ));
-        randomGenerator.write(result._keyData->data(), keySize);
+        randomGenerator->write(result._keyData->data(), keySize);
         return result;
     }
 

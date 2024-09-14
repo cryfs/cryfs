@@ -43,7 +43,7 @@ template<class CryptoPPCipher, unsigned int KEYSIZE_, unsigned int IV_SIZE_, uns
 Data AEADCipher<CryptoPPCipher, KEYSIZE_, IV_SIZE_, TAG_SIZE_>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
     ASSERT(encKey.binaryLength() == AEADCipher::KEYSIZE, "Wrong key size");
 
-    FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
+    FixedSizeData<IV_SIZE> iv = Random::PseudoRandom()->getFixedSize<IV_SIZE>();
     typename CryptoPPCipher::Encryption encryption;
     encryption.SetKeyWithIV(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.binaryLength(), iv.data(), IV_SIZE);
     Data ciphertext(ciphertextSize(plaintextSize));

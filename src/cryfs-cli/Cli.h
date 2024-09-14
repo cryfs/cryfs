@@ -17,7 +17,7 @@
 namespace cryfs_cli {
     class Cli final {
     public:
-        Cli(cpputils::RandomGenerator &keyGenerator, const cpputils::SCryptSettings& scryptSettings, std::shared_ptr<cpputils::Console> console);
+        Cli(cpputils::RandomGenerator *keyGenerator, const cpputils::SCryptSettings& scryptSettings, std::shared_ptr<cpputils::Console> console);
         int main(int argc, const char **argv, cpputils::unique_ref<cpputils::HttpClient> httpClient, std::function<void()> onMounted);
 
     private:
@@ -44,7 +44,7 @@ namespace cryfs_cli {
         void _sanityCheckFilesystem(cryfs::CryDevice *device);
 
 
-        cpputils::RandomGenerator &_keyGenerator;
+        cpputils::RandomGenerator *_keyGenerator;
         cpputils::SCryptSettings _scryptSettings;
         std::shared_ptr<cpputils::Console> _console;
         bool _noninteractive;

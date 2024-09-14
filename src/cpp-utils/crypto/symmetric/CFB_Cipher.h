@@ -44,7 +44,7 @@ template<typename BlockCipher, unsigned int KeySize>
 Data CFB_Cipher<BlockCipher, KeySize>::encrypt(const CryptoPP::byte *plaintext, unsigned int plaintextSize, const EncryptionKey &encKey) {
   ASSERT(encKey.binaryLength() == KeySize, "Wrong key size");
 
-  FixedSizeData<IV_SIZE> iv = Random::PseudoRandom().getFixedSize<IV_SIZE>();
+  FixedSizeData<IV_SIZE> iv = Random::PseudoRandom()->getFixedSize<IV_SIZE>();
   auto encryption = typename CryptoPP::CFB_Mode<BlockCipher>::Encryption(static_cast<const CryptoPP::byte*>(encKey.data()), encKey.binaryLength(), iv.data());
   Data ciphertext(ciphertextSize(plaintextSize));
   iv.ToBinary(ciphertext.data());

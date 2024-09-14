@@ -7,7 +7,7 @@
 
 class FuseFlushTest: public FuseTest {
 public:
-  const std::string FILENAME = "/myfile";
+  std::string FILENAME = "/myfile";
 
   void OpenAndCloseFile(const std::string &filename);
   cpputils::unique_ref<OpenFileHandle> OpenFile(const TempTestFS *fs, const std::string &filename);

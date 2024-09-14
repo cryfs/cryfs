@@ -17,8 +17,8 @@ public:
   uint32_t myClientId() const;
 
 private:
-  const uint32_t _myClientId;
-  const cpputils::hash::Hash _encryptionKeyHash;
+  uint32_t _myClientId;
+  cpputils::hash::Hash _encryptionKeyHash;
 
   static boost::optional<LocalStateMetadata> load_(const boost::filesystem::path &metadataFilePath);
   static LocalStateMetadata deserialize_(std::istream& stream);

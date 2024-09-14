@@ -15,6 +15,7 @@ public:
   static struct timespec makeTimespec(time_t tv_sec, long tv_nsec);
 };
 
+//NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
 MATCHER_P(TimeSpecEq, expected, "") {
   return expected.tv_sec == arg.tv_sec && expected.tv_nsec == arg.tv_nsec;
 }

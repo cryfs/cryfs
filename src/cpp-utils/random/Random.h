@@ -11,16 +11,16 @@
 namespace cpputils {
     class Random final {
     public:
-        static PseudoRandomPool &PseudoRandom() {
+        static PseudoRandomPool *PseudoRandom() {
             const std::unique_lock <std::mutex> lock(_mutex);
             static PseudoRandomPool random;
-            return random;
+            return &random;
         }
 
-        static OSRandomGenerator &OSRandom() {
+        static OSRandomGenerator *OSRandom() {
             const std::unique_lock <std::mutex> lock(_mutex);
             static OSRandomGenerator random;
-            return random;
+            return &random;
         }
 
     private:

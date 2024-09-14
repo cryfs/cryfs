@@ -131,7 +131,7 @@ public:
 
     void CreateWithEncryptionKey(const string &encKey, const string &password = "mypassword") {
         FakeRandomGenerator generator(Data::FromString(encKey));
-        auto loader = CryConfigLoader(console, generator, keyProvider(password), localStateDir, none, none, none);
+        auto loader = CryConfigLoader(console, &generator, keyProvider(password), localStateDir, none, none, none);
         ASSERT_TRUE(loader.loadOrCreate(file.path(), false, false).is_right());
     }
 

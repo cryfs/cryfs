@@ -32,7 +32,7 @@ protected:
   Block(const BlockId &blockId) : _blockId(blockId) {}
 
 private:
-  const BlockId _blockId;
+  BlockId _blockId;
 };
 
 }

@@ -60,7 +60,7 @@ CryConfig CryConfig::load(const Data &data) {
 
   optional<string> filesystemIdOpt = pt.get_optional<string>("cryfs.filesystemId");
   if (filesystemIdOpt == none) {
-    cfg._filesystemId = Random::PseudoRandom().getFixedSize<FilesystemID::BINARY_LENGTH>();
+    cfg._filesystemId = Random::PseudoRandom()->getFixedSize<FilesystemID::BINARY_LENGTH>();
   } else {
     cfg._filesystemId = FilesystemID::FromString(*filesystemIdOpt);
   }

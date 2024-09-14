@@ -20,8 +20,8 @@ public:
     TempDir tempdir;
     bf::path basedir1;
     bf::path basedir2;
-    const FilesystemID id1;
-    const FilesystemID id2;
+    FilesystemID id1;
+    FilesystemID id2;
 
   BasedirMetadataTest()
       : tempLocalStateDir()

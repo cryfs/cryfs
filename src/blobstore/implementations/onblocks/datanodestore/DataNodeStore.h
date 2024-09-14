@@ -56,7 +56,7 @@ public:
 private:
 
   cpputils::unique_ref<blockstore::BlockStore> _blockstore;
-  const DataNodeLayout _layout;
+  DataNodeLayout _layout;
   uint64_t _physicalBlockSizeBytes;
 
   DISALLOW_COPY_AND_ASSIGN(DataNodeStore);

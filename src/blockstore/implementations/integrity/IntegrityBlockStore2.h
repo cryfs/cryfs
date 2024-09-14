@@ -81,8 +81,8 @@ private:
 
   cpputils::unique_ref<BlockStore2> _baseBlockStore;
   mutable KnownBlockVersions _knownBlockVersions;
-  const bool _allowIntegrityViolations;
-  const bool _missingBlockIsIntegrityViolation;
+  bool _allowIntegrityViolations;
+  bool _missingBlockIsIntegrityViolation;
   std::function<void ()> _onIntegrityViolation;
 
   DISALLOW_COPY_AND_ASSIGN(IntegrityBlockStore2);

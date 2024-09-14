@@ -12,7 +12,7 @@ namespace cpputils {
         if (size >= targetSize - sizeof(size)) {
             throw std::runtime_error("Data too large. We should increase padding target size.");
         }
-        Data randomData = Random::PseudoRandom().get(targetSize-sizeof(size)-size);
+        Data randomData = Random::PseudoRandom()->get(targetSize-sizeof(size)-size);
         ASSERT(sizeof(size) + size + randomData.size() == targetSize, "Calculated size of randomData incorrectly");
         Data result(targetSize);
         serialize<uint32_t>(result.data(), size);
