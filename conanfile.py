@@ -86,6 +86,7 @@ class CryFSConan(ConanFile):
         self.requires("range-v3/0.12.0")
         self.requires("spdlog/1.11.0")
         self.requires("boost/1.84.0")
+        # TODO libcurl should only be a dependency if the update checks are enabled.
         self.requires("libcurl/8.1.2")
 
     def layout(self):
