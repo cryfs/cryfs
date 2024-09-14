@@ -424,13 +424,13 @@ jobs:
         uses: ./.github/workflows/actions/ccache/setup
         with:
           ccache_dir: ${{github.workspace}}/.ccache
-          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v3-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.install_dependencies_manually}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
         uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v7-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
       # Setup conan is after restoring the cache so the cache doesn't overwrite the conan profile
       - name: Setup conan
         uses: ./.github/workflows/actions/conan/setup
@@ -487,7 +487,7 @@ jobs:
         with:
           action: 'save'
           ccache_dir: ${{github.workspace}}/.ccache
-          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v3-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.install_dependencies_manually}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       - name: Save conan cache
@@ -496,7 +496,7 @@ jobs:
           action: save
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          cache_key: v6-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v7-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Test
         if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
