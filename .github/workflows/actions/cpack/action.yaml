@@ -1,0 +1,52 @@
+name: 'Generate cpack packages'
+description: 'Generate cpack packages'
+inputs:
+  build_type:
+    description: "Which cmake build type was used in the build (e.g. Release, Debug, RelWithDebInfo)"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    # Linux/macOS
+    - name: CPack
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -v
+        set -e
+        cd build/${{inputs.build_type}}
+        ninja package
+    - name: Upload .deb as artifact
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: cryfs-${{inputs.build_type}}.deb
+        path: build/${{inputs.build_type}}/cryfs-*.deb
+    - name: Upload .rpm as artifact
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: cryfs-${{inputs.build_type}}.rpm
+        path: build/${{inputs.build_type}}/cryfs-*.rpm
+    - name: Upload .tar.gz as artifact
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: cryfs-${{inputs.build_type}}.tar.gz
+        path: build/${{inputs.build_type}}/cryfs-*.tar.gz
+
+    # Windows
+    - name: CPack
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        set -v
+        set -e
+        cd build/${{inputs.build_type}}
+        cpack -C . --verbose -G WIX
+    - name: Upload installers as artifact
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: cryfs-${{inputs.build_type}}.msi
+        path: build/${{inputs.build_type}}/cryfs-*.msi
