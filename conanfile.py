@@ -90,7 +90,6 @@ class CryFSConan(ConanFile):
         cmake_layout(self)
 
     def build(self):
-        # TODO I saw "RelWithDebInfo" show up in a supposed debug build log, in the cmake step. Other steps seemed to use Debug. Check that it's using the right build type everywhere.
         cmake = CMake(self)
         cmake_vars = {
             "BUILD_TESTING": self.options.build_tests,
