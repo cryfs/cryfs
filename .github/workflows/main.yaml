@@ -529,6 +529,7 @@ jobs:
         with:
           name: clang-tidy-fixes
           path: /tmp/clang-tidy-fixes
+          if-no-files-found: ignore
       - name: Save ccache
         uses: ./.github/workflows/actions/ccache/cache
         with:
