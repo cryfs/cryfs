@@ -311,6 +311,24 @@ jobs:
             install_dependencies_manually: false
             run_build: true
             run_tests: true
+          - name: No update checks
+            os: ubuntu-22.04
+            compiler:
+              compiler: clang
+              version: 15
+              libcxx: libc++
+              cc: clang-15
+              cxx: clang++-15
+              macos_cc: /usr/local/opt/llvm@15/bin/clang
+              macos_cxx: /usr/local/opt/llvm@15/bin/clang++
+              apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp5-15 libomp-15-dev
+            build_type: RelWithDebInfo
+            extra_conan_flags: "-o '&:update_checks=False'"
+            extra_cxxflags: '[]'
+            extra_env_vars_for_test: ""
+            install_dependencies_manually: false
+            run_build: true
+            run_tests: true
           - name: ASAN
             os: ubuntu-22.04
             compiler:
