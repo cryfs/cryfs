@@ -77,14 +77,13 @@ This is why the version number hasn't reached 1.0 yet.
 - In addition to the scenarios above that can corrupt your file system, note that there is currently no fsck-like tool for CryFS that could recover your data. Although such a tool is in theory, possible,
   it hasn't been implemented yet and a corrupted file system will most likely cause a loss of your data.
 
-If the scenarios mentioned above don't apply to you, then you can consider CryFS 0.10.x as stable. The 0.9.x versions are not recommended anymore.
+If the scenarios mentioned above don't apply to you, then you can consider CryFS 0.10.x and later as stable. The 0.9.x versions are not recommended anymore.
 
 Building from source
 ====================
 
 Requirements
 ------------
-# TODO Update this list
   - Git (for getting the source code)
   - GCC version >= 7 or Clang >= 7
   - CMake version >= 3.25
@@ -96,19 +95,29 @@ Requirements
 
 You can use the following commands to install these requirements
 
-# TODO Update the package list
-
         # Ubuntu
-        $ sudo apt install git g++ cmake make pkg-config libfuse-dev python3 python3-pip
-        $ sudo pip3 install conan==2.7.0
+        $ sudo apt install git python3 g++ cmake libomp-dev pkg-config libfuse-dev fuse
 
         # Fedora
+        # TODO Update the package list
         $ sudo dnf install git gcc-c++ cmake make pkgconf fuse-devel python3 python3-pip
-        $ sudo pip3 install conan==2.7.0
 
         # Macintosh
+        # TODO Update the package list
         $ brew install cmake pkg-config libomp macfuse
-        $ sudo pip3 install conan==2.7.0
+
+To install conan, follow the [official installation instructions](https://docs.conan.io/2/installation.html). The following steps should work on Ubuntu/Debian based systems:
+
+        $ sudo apt install pipx
+        $ pipx install conan==2.7.0
+        $ pipx ensurepath
+
+Restart your shell so that conan is on your PATH, and then let it find your compiler
+
+        $ conan profile detect
+
+You can edit the generated profile file (usually `~/.conan2/profiles/default`) if you want to use different compiler settings.
+
 
 Build & Install
 ---------------
@@ -123,7 +132,7 @@ See further below in this README for instructions on how to build a .deb/.rpm pa
 
         $ conan build . -s build_type=RelWithDebInfo --build=missing
         
-        The executable will be generated at `build/Release/src/cryfs-cli/cryfs`
+        The executable will be generated at `build/RelWithDebInfo/src/cryfs-cli/cryfs`
 
  3. Install
 
@@ -248,15 +257,15 @@ If you want to create a .rpm package, you need to install rpmbuild.
         $ git clone https://github.com/cryfs/cryfs.git cryfs
         $ cd cryfs
 
- 2. Build
+ 2. Make sure you have the required dependencies
+
+        $ sudo apt install file dpkg-dev rpm
+
+ 3. Build
 
         $ conan build . -s build_type=RelWithDebInfo --build=missing
         $ cd build/RelWithDebInfo
         $ make package
-
-        If you're not creating a `.rpm` package, you will see an error in the `make package` step about the `rpmbuild` executable not being foud,
-        but the `.deb` package will still haven been created successfully.
-
 
 Disclaimer
 ----------------------
