@@ -13,6 +13,10 @@ jobs:
           - macos-13
           - ubuntu-20.04
           - ubuntu-22.04
+        build_type:
+          - Debug
+          - Release
+          - RelWithDebInfo
         compiler:
           - compiler: gcc
             version: 7
@@ -148,10 +152,6 @@ jobs:
 #           - compiler: apple-clang
 #             version: xxx
 #             homebrew_package: ""
-        build_type:
-          - Debug
-          - Release
-          - RelWithDebInfo
         extra_conan_flags: [""]
         extra_cxxflags: ['[]']
         extra_env_vars_for_test: [""]
