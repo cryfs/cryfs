@@ -23,10 +23,6 @@ if("${CMAKE_VERSION}" VERSION_LESS "3.3")
     # and asks the user whether they really want to install it. Cmake 3.3 fixes this.
     message(WARNING "Distribution package generation is only supported for CMake version >= 3.3. You're using ${CMAKE_VERSION}. You will be able to build and install CryFS, but you won't be able to generate .deb packages.")
 else()
-    # Fix debfiles permissions. Unfortunately, git doesn't store file permissions.
-    # When installing the .deb package and these files have the wrong permissions, the package manager complains.
-    execute_process(COMMAND /bin/bash -c "chmod 0755 ${CMAKE_CURRENT_SOURCE_DIR}/debfiles/*")
-
     set(CPACK_PACKAGE_NAME "cryfs")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Encrypt your files and store them in the cloud.")
     set(CPACK_PACKAGE_DESCRIPTION "CryFS encrypts your files, so you can safely store them anywhere. It works well together with cloud services like Dropbox, iCloud, OneDrive and others.")
@@ -59,14 +55,14 @@ else()
     set(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-    # Needs gnupg2, lsb-release for postinst script
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "fuse, gnupg2, lsb-release")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "fuse")
 
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://www.cryfs.org")
     set(CPACK_RPM_PACKAGE_LICENSE "LGPLv3")
     set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/usr/bin;/usr/share/man;/usr/share/man/man1")
-    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/debfiles/postinst;${CMAKE_CURRENT_SOURCE_DIR}/debfiles/postrm")
 
     include(CPack)
+
+    # TODO For some reason, the generated .deb file installs binaries into /usr/usr/bin/cryfs. Fix that.
 endif()
