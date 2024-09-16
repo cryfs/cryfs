@@ -437,7 +437,7 @@ jobs:
         id: hash_flags
         shell: bash
         run: |
-          echo __${{matrix.extra_conan_flags}}__${{matrix.extra_cxxflags}}__ | (echo -n "hash_flags=" && sha256sum | awk '{print $1}') > $GITHUB_OUTPUT
+          echo __${{matrix.extra_conan_flags}}__${{matrix.extra_cxxflags}}__ | (echo -n "hash_flags=" && sha256sum | awk '{print $1}') >> $GITHUB_OUTPUT
       - name: Setup ccache
         uses: ./.github/workflows/actions/ccache/setup
         with:
@@ -556,7 +556,7 @@ jobs:
         run: |
           # Windows CI has backwards slashes in github.workspace, so we need to convert that to forward slashes
           CCACHE_DIR="${{github.workspace}}/.ccache"
-          echo "ccache_dir=${CCACHE_DIR//\\//}" > $GITHUB_OUTPUT
+          echo "ccache_dir=${CCACHE_DIR//\\//}" >> $GITHUB_OUTPUT
       - name: Setup ccache
         uses: ./.github/workflows/actions/ccache/setup
         with:
