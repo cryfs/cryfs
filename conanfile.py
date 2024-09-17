@@ -9,7 +9,7 @@ class CryFSConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     tool_requires = "cmake/3.25.3"
     generators = ["CMakeToolchain", "CMakeDeps"]
-    package_folder = "/"
+    package_folder = "/usr"
     options = {
         "build_tests": [True, False],
         "update_checks": [True, False],

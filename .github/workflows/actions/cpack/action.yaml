@@ -16,6 +16,80 @@ runs:
         set -e
         cd build/${{inputs.build_type}}
         ninja package
+    - name: Test .tar.gz installation
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -v
+        set -e
+        if [ -d /tmp/installdest ]; then
+          echo "Error: Tempdir already exists"
+          exit 1
+        fi
+        mkdir /tmp/installdest
+        tar -xzf ./build/${{inputs.build_type}}/cryfs-*.tar.gz -C /tmp/installdest
+        # Test CryFS was installed
+        find /tmp/installdest
+        /tmp/installdest/cryfs-*/bin/cryfs --version
+        # And let's remove it again
+        rm -r /tmp/installdest
+          if [ -d /tmp/installdest ]; then
+          echo "Error: Wasn't able to remove cryfs"
+          exit 1
+        fi
+    - name: Test .deb installation
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -v
+        set -e
+        if [ -f /usr/bin/cryfs ]; then
+          echo "Error: CryFS already installed"
+          exit 1
+        fi
+        sudo dpkg -i ./build/${{inputs.build_type}}/cryfs-*.deb
+        # Test CryFS was installed
+        /usr/bin/cryfs --version
+        # And let's remove it again
+        sudo apt-get remove cryfs
+        if [ -f /usr/bin/cryfs ]; then
+          echo "Error: Wasn't able to remove cryfs"
+          exit 1
+        fi
+    - name: Test .rpm installation
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -v
+        set -e
+        if [ -f /usr/bin/cryfs ]; then
+          echo "Error: CryFS already installed"
+          exit 1
+        fi
+        cd build/${{inputs.build_type}}
+        sudo rpm -i --nodeps cryfs-*.rpm
+        # Test CryFS was installed
+        /usr/bin/cryfs --version
+        # And let's remove it again
+        sudo rpm -e cryfs
+        if [ -f /usr/bin/cryfs ]; then
+          echo "Error: Wasn't able to remove cryfs"
+          exit 1
+        fi
+    - name: Test `make install`
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -v
+        set -e
+        if [ -f /usr/bin/cryfs ]; then
+          echo "Error: CryFS already installed"
+          exit 1
+        fi
+        cd build/${{inputs.build_type}}
+        sudo ninja install
+        # Test CryFS was installed
+        /usr/bin/cryfs --version
     - name: Upload .deb as artifact
       if: runner.os == 'Linux' || runner.os == 'macOS'
       uses: actions/upload-artifact@v4
