@@ -34,9 +34,8 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # We don't use LTO because crypto++ has problems with it, see https://github.com/weidai11/cryptopp/issues/1031 and https://www.cryptopp.com/wiki/Link_Time_Optimization
 
-# The MSVC version on AppVeyor CI needs this
-# TODO We can probably remove this now since we're using Github Actions
 if(MSVC)
+  # Needed to avoid a msvc build error "fatal error C1128: number of sections exceeded object file format limit: compile with /bigobj"
   add_definitions(/bigobj)
 endif()
 
