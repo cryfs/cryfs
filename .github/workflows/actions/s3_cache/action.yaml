@@ -35,7 +35,6 @@ runs:
       uses: leroy-merlin-br/action-s3-cache@7fad0a81b31884660211f24b62e29b4777a6ac4c # v1.0.6
       with:
         action: put
-        # TODO Test this works in PRs where the secrets aren't available
         aws-access-key-id: ${{ inputs.secret_aws_access_key_id }}
         aws-secret-access-key: ${{ inputs.secret_aws_secret_access_key }}
         aws-region: eu-west-1
