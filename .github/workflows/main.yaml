@@ -658,8 +658,7 @@ jobs:
         name: [""]
         os:
           - windows-2019
-        arch:
-          - x64
+          - windows-2022
         build_type:
           - Debug
           - Release
@@ -701,7 +700,7 @@ jobs:
         with:
           arch: "x86_64"
           compiler: "msvc"
-          compiler_version: "192"
+          compiler_version: ${{ matrix.os == 'windows-2022' && '194' || '192' }}
           build_type: ${{ matrix.build_type }}
       - name: Install dependencies
         uses: ./.github/workflows/actions/conan/install_dependencies
@@ -741,5 +740,6 @@ jobs:
           # ./cryfs-cli/cryfs-cli-test.exe
       - name: CPack
         uses: ./.github/workflows/actions/cpack
+        if: ${{ matrix.os == 'windows-2022' }}
         with:
           build_type: ${{matrix.build_type}}
