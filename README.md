@@ -95,25 +95,25 @@ Requirements
 
 You can use the following commands to install these requirements
 
-        # Ubuntu
-        $ sudo apt install git python3 g++ cmake libomp-dev pkg-config libfuse-dev fuse
+    # Ubuntu
+    $ sudo apt install git python3 g++ cmake libomp-dev pkg-config libfuse-dev fuse
 
-        # Fedora
-        $ sudo dnf install git python3 gcc-c++ cmake pkgconf fuse-devel perl
+    # Fedora
+    $ sudo dnf install git python3 gcc-c++ cmake pkgconf fuse-devel perl
 
-        # Macintosh
-        # TODO Update the package list
-        $ brew install cmake pkg-config libomp macfuse
+    # Macintosh
+    # TODO Update the package list
+    $ brew install cmake pkg-config libomp macfuse
 
 To install conan, follow the [official installation instructions](https://docs.conan.io/2/installation.html). The following steps should work on Ubuntu/Debian based systems:
 
-        $ sudo apt install pipx
-        $ pipx install conan==2.7.0
-        $ pipx ensurepath
+    $ sudo apt install pipx
+    $ pipx install conan==2.7.0
+    $ pipx ensurepath
 
 Restart your shell so that conan is on your PATH, and then let it find your compiler
 
-        $ conan profile detect
+    $ conan profile detect
 
 You can edit the generated profile file (usually `~/.conan2/profiles/default`) if you want to use different compiler settings.
 
@@ -131,7 +131,7 @@ See further below in this README for instructions on how to build a .deb/.rpm pa
 
         $ conan build . -s build_type=RelWithDebInfo --build=missing
         
-        The executable will be generated at `build/RelWithDebInfo/src/cryfs-cli/cryfs`
+    The executable will be generated at `build/RelWithDebInfo/src/cryfs-cli/cryfs`
 
  3. Install
 
@@ -153,18 +153,19 @@ Run tests
 ---------
 Follow the build & install steps from above, but add the `-o "&:build_tests=True"` parameter to conan:
 
-$ conan build . -s build_type=RelWithDebInfo --build=missing -s build_type=Debug -o "&:build_tests=True"
+    $ conan build . -s build_type=RelWithDebInfo --build=missing -s build_type=Debug -o "&:build_tests=True"
 
 Then run the tests:
-$ cd build/Debug/test
-$ ./blobstore/blobstore-test
-$ ./blockstore/blockstore-test
-$ ./cpp-utils/cpp-utils-test
-$ ./cryfs/cryfs-test
-$ ./cryfs-cli/cryfs-cli-test
-$ ./fspp/fspp-test
-$ ./gitversion/gitversion-test
-$ ./parallelaccessstore/parallelaccessstore-test
+
+    $ cd build/Debug/test
+    $ ./blobstore/blobstore-test
+    $ ./blockstore/blockstore-test
+    $ ./cpp-utils/cpp-utils-test
+    $ ./cryfs/cryfs-test
+    $ ./cryfs-cli/cryfs-cli-test
+    $ ./fspp/fspp-test
+    $ ./gitversion/gitversion-test
+    $ ./parallelaccessstore/parallelaccessstore-test
 
 Building on Windows (experimental)
 ----------------------------------
