@@ -175,44 +175,6 @@ Building on Windows (experimental)
 
         $ conan build . --build=missing -o "&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6"
 
-Troubleshooting
----------------
-TODO Rewrite this section
-
-On most systems, CMake should find the libraries automatically. However, that doesn't always work.
-
-1. **Fuse library not found**
-
-    Pass in the library path with
-
-        PKG_CONFIG_PATH=/path-to-fuse-or-macFUSE/lib/pkgconfig cmake ..
-
-2. **Fuse headers not found**
-
-    Pass in the include path with
-
-        PKG_CONFIG_PATH=/path-to-fuse-or-macFUSE/lib/pkgconfig cmake ..
-
-3. **Openssl headers not found**
-
-    Pass in the include path with
-
-        cmake .. -DCMAKE_C_FLAGS="-I/path/to/openssl/include"
-
-4. **OpenMP not found (osx)**
-
-    Either build it without OpenMP
-
-        cmake .. -DDISABLE_OPENMP=on
-
-    but this will cause slower file system mount times (performance after mounting will be unaffected).
-    If you installed OpenMP with homebrew or macports, it will be autodetected.
-    If that doesn't work for some reason (or you want to use a different installation than the autodetected one),
-    pass in these flags:
-
-        cmake .. -DOpenMP_CXX_FLAGS='-Xpreprocessor -fopenmp -I/path/to/openmp/include' -DOpenMP_CXX_LIB_NAMES=omp -DOpenMP_omp_LIBRARY=/path/to/libomp.dylib
-
-
 Using local dependencies
 -------------------------------
 Starting with CryFS 0.11, Conan is used for dependency management.
