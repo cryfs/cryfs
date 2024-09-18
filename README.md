@@ -99,8 +99,7 @@ You can use the following commands to install these requirements
         $ sudo apt install git python3 g++ cmake libomp-dev pkg-config libfuse-dev fuse
 
         # Fedora
-        # TODO Update the package list
-        $ sudo dnf install git gcc-c++ cmake make pkgconf fuse-devel python3 python3-pip
+        $ sudo dnf install git python3 gcc-c++ cmake pkgconf fuse-devel perl
 
         # Macintosh
         # TODO Update the package list
@@ -140,9 +139,9 @@ See further below in this README for instructions on how to build a .deb/.rpm pa
         $ sudo make install
 
 You can pass the following build types to the *conan build* command (using *-s build_type=value*):
- - **Debug**: No optimizations, debug symbols, and assertions enabled
- - **RelWithDebInfo**: Optimizations enabled, debug symbols, and assertions enabled
- - **Release**: Optimizations enabled, no debug symbols, and assertions disabled
+ - **Debug**: No optimizations, debug symbols enabled, assertions enabled
+ - **RelWithDebInfo**: Optimizations enabled, debug symbols enabled, assertions enabled
+ - **Release**: Optimizations enabled, no debug symbols, no assertions
 
 You can pass the following options to the *conan build* command (using *-o "&:key=value"*):
  - **build_tests**=[True|False]: Whether to build the test cases (can take a long time). Default: False.
