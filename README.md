@@ -173,7 +173,7 @@ Building on Windows (experimental)
 2. Install DokanY 2.0.6.1000. Other versions may not work.
 3. Build the project
 
-    $ conan build . --build=missing -o "&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6"
+        $ conan build . --build=missing -o "&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6"
 
 Troubleshooting
 ---------------
