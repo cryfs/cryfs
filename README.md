@@ -195,6 +195,7 @@ To use local dependencies, you can install all of CryFS's dependencies (e.g. boo
     $ make
 
 It is recommended to use the same versions of the dependencies as stated in the conanfile.py in this repository.
+It might be useful to take a look at [how our CI setup installs those dependencies](https://github.com/cryfs/cryfs/blob/develop/.github/workflows/actions/install_local_dependencies/action.yaml) to get you started.
 
 CMake will use pkg-config to find those dependencies.
 
