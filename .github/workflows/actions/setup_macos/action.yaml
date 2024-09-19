@@ -28,3 +28,12 @@ runs:
         # Unset GITHUB_ACTIONS so homebrew doesn't spam our logs, see https://github.com/orgs/Homebrew/discussions/5602
         unset GITHUB_ACTIONS
         brew install coreutils ninja macfuse libomp ccache ${{inputs.extra_homebrew_packages}}
+    - name: Install macOS dependencies
+      if: ${{ inputs.macos_version == 'macos-14' }}
+      shell: bash
+      run: |
+        set -e
+        set -v
+        # Unset GITHUB_ACTIONS so homebrew doesn't spam our logs, see https://github.com/orgs/Homebrew/discussions/5602
+        unset GITHUB_ACTIONS
+        brew install coreutils ninja macfuse libomp ccache ${{inputs.extra_homebrew_packages}}

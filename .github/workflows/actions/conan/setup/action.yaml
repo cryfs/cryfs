@@ -2,6 +2,9 @@ name: 'Install conan package manager'
 description: 'Install conan package manager'
 inputs:
   # Note: Many arguments are only supported on Linux/macOS, not on Windows
+  arch:
+    description: "Which architecture to use for the build"
+    required: true
   compiler:
     description: "Which compiler to use for the build"
     required: true
@@ -33,6 +36,7 @@ runs:
     - name: Configure conan profile
       uses: ./.github/workflows/actions/conan/configure_profile
       with:
+        arch: ${{ inputs.arch }}
         compiler: ${{ inputs.compiler }}
         compiler_version: ${{ inputs.compiler_version }}
         compiler_libcxx: ${{ inputs.compiler_libcxx }}

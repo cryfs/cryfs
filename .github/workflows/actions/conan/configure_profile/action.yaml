@@ -2,6 +2,9 @@ name: 'Configure conan profile'
 description: 'Configure conan profile'
 inputs:
   # Note: Many arguments are only supported on Linux/macOS, not on Windows
+  arch:
+    description: "Which architecture to use for the build"
+    required: true
   compiler:
     description: "Which compiler to use for the build"
     required: true
@@ -36,7 +39,7 @@ runs:
         cat <<EOF > "$CONAN_HOME/profiles/default"
         [settings]
         os=${{ runner.os == 'macOS' && 'Macos' || runner.os }}
-        arch=x86_64
+        arch=${{inputs.arch}}
         build_type=${{inputs.build_type}}
         compiler=${{inputs.compiler}}
         compiler.cppstd=17
