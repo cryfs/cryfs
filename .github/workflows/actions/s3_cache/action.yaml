@@ -41,6 +41,7 @@ runs:
         aws-secret-access-key: ${{ inputs.secret_aws_secret_access_key }}
         aws-region: eu-west-1
         bucket: ci-cache.cryfs
+        s3-class: ONEZONE_IA
         key: v2-${{ inputs.cache_key }}
         artifacts: "/tmp/s3_cache/${{inputs.cache_key}}"
     - name: Not saving cache on PRs
