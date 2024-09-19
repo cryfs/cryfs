@@ -13,6 +13,7 @@ jobs:
           - macos-13
           - ubuntu-20.04
           - ubuntu-22.04
+          - ubuntu-24.04
         build_type:
           - Debug
           - Release
@@ -235,6 +236,25 @@ jobs:
           # Ubuntu 22.04 can't install clang-12 due to a apt package misconfiguration
           - os: ubuntu-22.04
             compiler: {compiler: clang, version: 12, libcxx: libc++, cc: clang-12, cxx: clang++-12, macos_cc: /usr/local/opt/llvm@12/bin/clang, macos_cxx: /usr/local/opt/llvm@12/bin/clang++, apt_package: "clang-12 libc++-12-dev libc++abi-12-dev libomp5-12 libomp-12-dev", homebrew_package: llvm@12}
+          # Ubuntu 24.04 doesn't have gcc 7, 8 or clang 7, 8, 9, 10, 11, 12, 13 anymore
+          - os: ubuntu-24.04
+            compiler: {compiler: gcc, version: 7, libcxx: libstdc++11, cc: gcc-7, cxx: g++-7, homebrew_package: gcc@7, apt_package: g++-7}
+          - os: ubuntu-24.04
+            compiler: {compiler: gcc, version: 8, libcxx: libstdc++11, cc: gcc-8, cxx: g++-8, homebrew_package: gcc@8, apt_package: g++-8}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 7.1, libcxx: libc++, cc: clang-7, cxx: clang++-7, macos_cc: /usr/local/opt/llvm@7/bin/clang, macos_cxx: /usr/local/opt/llvm@7/bin/clang++, apt_package: "clang-7 libc++-7-dev libc++abi-7-dev", homebrew_package: llvm@7}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 8, libcxx: libc++, cc: clang-8, cxx: clang++-8, macos_cc: /usr/local/opt/llvm@8/bin/clang, macos_cxx: /usr/local/opt/llvm@8/bin/clang++, apt_package: "clang-8 libc++-8-dev libc++abi-8-dev", homebrew_package: llvm@8}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 9, libcxx: libc++, cc: clang-9, cxx: clang++-9, macos_cc: /usr/local/opt/llvm@9/bin/clang, macos_cxx: /usr/local/opt/llvm@9/bin/clang++, apt_package: "clang-9 libc++-9-dev libc++abi-9-dev", homebrew_package: llvm@9}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 10, libcxx: libc++, cc: clang-10, cxx: clang++-10, macos_cc: /usr/local/opt/llvm@10/bin/clang, macos_cxx: /usr/local/opt/llvm@10/bin/clang++, apt_package: "clang-10 libc++-10-dev libc++abi-10-dev", homebrew_package: llvm@10}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: /usr/local/opt/llvm@11/bin/clang, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 12, libcxx: libc++, cc: clang-12, cxx: clang++-12, macos_cc: /usr/local/opt/llvm@12/bin/clang, macos_cxx: /usr/local/opt/llvm@12/bin/clang++, apt_package: "clang-12 libc++-12-dev libc++abi-12-dev libomp5-12 libomp-12-dev", homebrew_package: llvm@12}
+          - os: ubuntu-24.04
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: /usr/local/opt/llvm@13/bin/clang, macos_cxx: /usr/local/opt/llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev", homebrew_package: llvm@13}
           # Clang 11 on Ubuntu seems to have a bug that fails CI, see https://github.com/gabime/spdlog/issues/2812
           - os: ubuntu-20.04
             compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: /usr/local/opt/llvm@11/bin/clang, macos_cxx: /usr/local/opt/llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
