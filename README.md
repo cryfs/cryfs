@@ -108,7 +108,7 @@ You can use the following commands to install these requirements
 To install conan, follow the [official installation instructions](https://docs.conan.io/2/installation.html). The following steps should work on Ubuntu/Debian based systems:
 
     $ sudo apt install pipx
-    $ pipx install conan==2.7.0
+    $ pipx install conan~=2.7.0
     $ pipx ensurepath
 
 Restart your shell so that conan is on your PATH, and then let it find your compiler
