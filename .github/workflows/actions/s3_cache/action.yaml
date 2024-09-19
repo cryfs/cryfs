@@ -20,9 +20,11 @@ runs:
   using: "composite"
   steps:
     - name: Zip cache files
-      if: ${{ inputs.action == 'save' }}
+      if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
       shell: bash
       run: |
+        set -e
+        set -v
         mkdir -p "/tmp/s3_cache/${{inputs.cache_key}}"
         tar --zstd --create -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ${{ inputs.paths }}
         echo "Zipped cache:"
@@ -41,6 +43,11 @@ runs:
         bucket: ci-cache.cryfs
         key: v2-${{ inputs.cache_key }}
         artifacts: "/tmp/s3_cache/${{inputs.cache_key}}"
+    - name: Not saving cache on PRs
+      if: ${{ inputs.action == 'save' && github.event_name != 'push' }}
+      shell: bash
+      run: |
+        echo "Not saving cache because this is a PR"
 
 
     - name: Retrieve cache
@@ -63,6 +70,8 @@ runs:
       continue-on-error: true
       shell: bash
       run: |
+        set -e
+        set -v
         if [ -f "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ]; then
           echo "Zipped cache:"
           ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
