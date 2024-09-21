@@ -18,6 +18,7 @@ void raise_signal(int signal) {
 }
 
 TEST(SignalHandlerTest, givenNoSignalHandler_whenRaisingSigint_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         raise_signal(SIGINT),
         ""
@@ -25,6 +26,7 @@ TEST(SignalHandlerTest, givenNoSignalHandler_whenRaisingSigint_thenDies) {
 }
 
 TEST(SignalHandlerTest, givenNoSignalHandler_whenRaisingSigterm_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         raise_signal(SIGTERM),
         ""
@@ -41,6 +43,7 @@ TEST(SignalHandlerTest, givenSigIntHandler_whenRaisingSigInt_thenCatches) {
 }
 
 TEST(SignalHandlerTest, givenSigIntHandler_whenRaisingSigTerm_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     const SignalHandlerRAII<&trigger> handler(SIGINT);
 
     EXPECT_DEATH(
@@ -59,6 +62,7 @@ TEST(SignalHandlerTest, givenSigTermHandler_whenRaisingSigTerm_thenCatches) {
 }
 
 TEST(SignalHandlerTest, givenSigTermHandler_whenRaisingSigInt_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     const SignalHandlerRAII<&trigger> handler(SIGTERM);
 
     EXPECT_DEATH(
@@ -95,6 +99,7 @@ void trigger2(int) {
 }
 
 TEST(SignalHandlerTest, givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     triggered_count_1 = 0;
     triggered_count_2 = 0;
 

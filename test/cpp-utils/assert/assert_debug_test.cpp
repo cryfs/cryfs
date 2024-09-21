@@ -15,6 +15,7 @@ TEST(AssertTest_DebugBuild, DoesntDieIfTrue) {
 }
 
 TEST(AssertTest_DebugBuild, DiesIfFalse) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
       ASSERT(false, "bla"),
       ""
@@ -30,6 +31,7 @@ TEST(AssertTest_DebugBuild, whenDisablingAbort_thenThrowsIfFalse) {
 }
 
 TEST(AssertTest_DebugBuild, AssertMessage) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
 #if defined(_MSC_VER)
     constexpr const char* EXPECTED = R"(Assertion \[2==5\] failed in .*assert_debug_test.cpp:\d+: my message)";
 #else
@@ -43,6 +45,7 @@ TEST(AssertTest_DebugBuild, AssertMessage) {
 
 #if !(defined(_MSC_VER) && defined(REAL_NDEBUG_))
 TEST(AssertTest_DebugBuild, AssertMessageContainsBacktrace) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         ASSERT(2==5, "my message"),
         "cpputils::"
@@ -50,6 +53,7 @@ TEST(AssertTest_DebugBuild, AssertMessageContainsBacktrace) {
 }
 #else
 TEST(AssertTest_DebugBuild, AssertMessageContainsBacktrace) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         ASSERT(2==5, "my message"),
         "#1"

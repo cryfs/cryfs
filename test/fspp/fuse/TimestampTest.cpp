@@ -54,12 +54,14 @@ TEST_F(FuseTimestampTest, whenCalledWithAtimeAtimeFlag_withSeparateFlags_thenHas
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithAtimeNoatimeFlag_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "atime,noatime"}),
         "Cannot have both, noatime and atime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithAtimeNoatimeFlag_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "atime", "-o", "noatime"}),
         "Cannot have both, noatime and atime flags set.");
@@ -76,12 +78,14 @@ TEST_F(FuseTimestampTest, whenCalledWithAtimeRelatimeFlag_withSeparateFlags_then
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithAtimeStrictatimeFlag_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "atime,strictatime"}),
         "Cannot have both, atime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithAtimeStrictatimeFlag_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "atime", "-o", "strictatime"}),
         "Cannot have both, atime and strictatime flags set.");
@@ -98,12 +102,14 @@ TEST_F(FuseTimestampTest, whenCalledWithAtimeNodiratimeFlag_withSeparateFlags_th
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeAtime_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "noatime,atime"}),
         "Cannot have both, noatime and atime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeAtime_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "noatime", "-o", "atime"}),
         "Cannot have both, noatime and atime flags set.");
@@ -120,24 +126,28 @@ TEST_F(FuseTimestampTest, whenCalledWithNoatimeNoatimeFlag_withSeparateFlags_the
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeRelatime_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "noatime,relatime"}),
         "Cannot have both, noatime and relatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeRelatime_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "noatime", "-o", "relatime"}),
         "Cannot have both, noatime and relatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeStrictatime_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "noatime,strictatime"}),
         "Cannot have both, noatime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithNoatimeStrictatime_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "noatime", "-o", "strictatime"}),
         "Cannot have both, noatime and strictatime flags set.");
@@ -164,12 +174,14 @@ TEST_F(FuseTimestampTest, whenCalledWithRelatimeAtimeFlag_withSeparateFlags_then
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithRelatimeNoatime_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "relatime,noatime"}),
         "Cannot have both, noatime and relatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithRelatimeNoatime_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "relatime", "-o", "noatime"}),
         "Cannot have both, noatime and relatime flags set.");
@@ -186,12 +198,14 @@ TEST_F(FuseTimestampTest, whenCalledWithRelatimeRelatimeFlag_withSeparateFlags_t
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithRelatimeStrictatime_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "relatime,strictatime"}),
         "Cannot have both, relatime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithRelatimeStrictatime_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "relatime", "-o", "strictatime"}),
         "Cannot have both, relatime and strictatime flags set.");
@@ -208,36 +222,42 @@ TEST_F(FuseTimestampTest, whenCalledWithRelatimeNodiratimeFlag_withSeparateFlags
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithStrictatimeAtimeFlag_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "strictatime,atime"}),
         "Cannot have both, atime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithStrictatimeAtimeFlag_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "strictatime", "-o", "atime"}),
         "Cannot have both, atime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithStrictatimeNoatimeFlag_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "strictatime,noatime"}),
         "Cannot have both, noatime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithStrictatimeNoatimeFlag_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "strictatime", "-o", "noatime"}),
         "Cannot have both, noatime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithStrictatimeRelatimeFlag_withCsv_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "strictatime,relatime"}),
         "Cannot have both, relatime and strictatime flags set.");
 }
 
 TEST_F(FuseTimestampTest, whenCalledWithStrictatimeRelatimeFlag_withSeparateFlags_thenFails) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         TestFS({"-o", "strictatime", "-o", "relatime"}),
         "Cannot have both, relatime and strictatime flags set.");

@@ -14,6 +14,7 @@ void raise_signal(int signal) {
 }
 
 TEST(SignalCatcherTest, givenNoSignalCatcher_whenRaisingSigint_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         raise_signal(SIGINT),
         ""
@@ -21,6 +22,7 @@ TEST(SignalCatcherTest, givenNoSignalCatcher_whenRaisingSigint_thenDies) {
 }
 
 TEST(SignalCatcherTest, givenNoSignalCatcher_whenRaisingSigterm_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     EXPECT_DEATH(
         raise_signal(SIGTERM),
         ""
@@ -136,6 +138,7 @@ TEST(SignalCatcherTest, givenNestedSigIntCatchers_whenRaisingSignals_thenCorrect
 }
 
 TEST(SignalCatcherTest, givenExpiredSigIntCatcher_whenRaisingSigInt_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     {
         const SignalCatcher catcher({SIGINT});
     }
@@ -147,6 +150,7 @@ TEST(SignalCatcherTest, givenExpiredSigIntCatcher_whenRaisingSigInt_thenDies) {
 }
 
 TEST(SignalCatcherTest, givenExpiredSigTermCatcher_whenRaisingSigTerm_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     {
         const SignalCatcher catcher({SIGTERM});
     }
@@ -158,6 +162,7 @@ TEST(SignalCatcherTest, givenExpiredSigTermCatcher_whenRaisingSigTerm_thenDies) 
 }
 
 TEST(SignalCatcherTest, givenExpiredSigIntCatcherAndSigTermCatcher_whenRaisingSigTerm_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     {
         const SignalCatcher sigIntCatcher({SIGTERM});
         const SignalCatcher sigTermCatcer({SIGTERM});
@@ -181,6 +186,7 @@ TEST(SignalCatcherTest, givenSigTermCatcherAndExpiredSigIntCatcher_whenRaisingSi
 }
 
 TEST(SignalCatcherTest, givenSigTermCatcherAndExpiredSigIntCatcher_whenRaisingSigInt_thenDies) {
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
     const SignalCatcher sigTermCacher({SIGTERM});
     {
         const SignalCatcher sigIntCatcher({SIGINT});
