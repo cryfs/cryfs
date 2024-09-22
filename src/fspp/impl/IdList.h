@@ -25,7 +25,7 @@ private:
   std::unordered_map<int, cpputils::unique_ref<Entry>> _entries;
   int _id_counter;
 
-  DISALLOW_COPY_AND_ASSIGN(IdList<Entry>);
+  DISALLOW_COPY_AND_ASSIGN(IdList);
 };
 
 template<class Entry>
