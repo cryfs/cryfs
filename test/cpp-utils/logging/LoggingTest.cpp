@@ -91,7 +91,7 @@ TEST_F(LoggingTest, ErrorLog) {
 }
 
 void logAndExit(const string &message) {
-    LOG(INFO, message);
+    LOG(INFO, "{}" , message);
     cpputils::logging::flush();
     exit(1);
 }
@@ -120,7 +120,7 @@ TEST_F(LoggingTest, MessageIsConstChar) {
 TEST_F(LoggingTest, MessageIsString) {
     setLogger(mockLogger.get());
     const string msg = "My log message";
-    LOG(INFO, msg);
+    LOG(INFO, "{}", msg);
     cpputils::logging::flush();
 	// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
 	//EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[info\\].*My log message.*"));

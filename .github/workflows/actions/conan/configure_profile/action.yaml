@@ -42,7 +42,7 @@ runs:
         arch=${{inputs.arch}}
         build_type=${{inputs.build_type}}
         compiler=${{inputs.compiler}}
-        compiler.cppstd=17
+        compiler.cppstd=20
         compiler.libcxx=${{inputs.compiler_libcxx}}
         compiler.version=${{inputs.compiler_version}}
         [conf]
@@ -63,7 +63,7 @@ runs:
         arch=x86_64
         build_type=${{inputs.build_type}}
         compiler=${{inputs.compiler}}
-        compiler.cppstd=17
+        compiler.cppstd=20
         compiler.runtime=dynamic
         compiler.version=${{inputs.compiler_version}}
         [conf]

@@ -54,28 +54,24 @@ namespace cpputils {
             logger().setLevel(spdlog::level::debug);
         }
 
-        template<class LogType> inline void LOG(LogType logType, const std::string &msg) {
-          LOG(logType, msg.c_str());
+        template <typename... Args>
+        inline void LOG(ERROR_TYPE, spdlog::format_string_t<Args...> fmt, Args&&... args) {
+            logger()->error(fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
-        inline void LOG(ERROR_TYPE, const char* fmt, const Args&... args) {
-            logger()->error(fmt, args...);
+        inline void LOG(WARN_TYPE, spdlog::format_string_t<Args...> fmt, Args&&... args) {
+            logger()->warn(fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
-        inline void LOG(WARN_TYPE, const char* fmt, const Args&... args) {
-            logger()->warn(fmt, args...);
+        inline void LOG(INFO_TYPE, spdlog::format_string_t<Args...> fmt, Args&&... args) {
+            logger()->info(fmt, std::forward<Args>(args)...);
         }
 
         template <typename... Args>
-        inline void LOG(INFO_TYPE, const char* fmt, const Args&... args) {
-            logger()->info(fmt, args...);
-        }
-
-        template <typename... Args>
-        inline void LOG(DEBUG_TYPE, const char* fmt, const Args&... args) {
-            logger()->debug(fmt, args...);
+        inline void LOG(DEBUG_TYPE, spdlog::format_string_t<Args...> fmt, Args&&... args) {
+            logger()->debug(fmt, std::forward<Args>(args)...);
         }
 
         inline std::shared_ptr<spdlog::logger> system_logger(const std::string& name) {

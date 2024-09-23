@@ -88,7 +88,7 @@ namespace cpputils {
 
     template<typename DataType>
     inline DataType Deserializer::_read() {
-        static_assert(std::is_pod<DataType>::value, "Can only deserialize PODs");
+        static_assert(std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>, "Can only deserialize PODs");
         if (_pos + sizeof(DataType) > _source->size()) {
             throw std::runtime_error("Deserialization failed - size overflow");
         }

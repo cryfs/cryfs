@@ -79,7 +79,7 @@ endif()
 
 target_add_boost(${PROJECT_NAME})
 target_enable_style_warnings(${PROJECT_NAME})
-target_activate_cpp14(${PROJECT_NAME})
+target_activate_cpp20(${PROJECT_NAME})
 
 if(MSVC)
     # Required by range-v3, see its README.md

@@ -126,7 +126,7 @@ class CryFSConan(ConanFile):
         self.options["libcurl/*"].with_ssl = "darwinssl" if is_apple_os(self) else "schannel" if is_msvc(self) else "openssl"
 
     def validate(self):
-        check_min_cppstd(self, "17")
+        check_min_cppstd(self, "20")
      
     def requirements(self):
         self.requires("range-v3/0.12.0")

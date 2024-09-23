@@ -64,10 +64,10 @@ set(SOURCES
 )
 
 add_executable(${PROJECT_NAME}_exit_status process/exit_status.cpp)
-target_activate_cpp14(${PROJECT_NAME}_exit_status)
+target_activate_cpp20(${PROJECT_NAME}_exit_status)
 
 add_executable(${PROJECT_NAME}_exit_signal assert/exit_signal.cpp)
-target_activate_cpp14(${PROJECT_NAME}_exit_signal)
+target_activate_cpp20(${PROJECT_NAME}_exit_signal)
 target_link_libraries(${PROJECT_NAME}_exit_signal cpp-utils)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -76,4 +76,4 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_exit_status ${PROJECT_NAME}_exi
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
 
 target_enable_style_warnings(${PROJECT_NAME})
-target_activate_cpp14(${PROJECT_NAME})
+target_activate_cpp20(${PROJECT_NAME})

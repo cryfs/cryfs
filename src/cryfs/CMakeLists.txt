@@ -54,7 +54,7 @@ add_library(${PROJECT_NAME} STATIC ${LIB_SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC cpp-utils fspp-interface blockstore blobstore gitversion)
 target_add_boost(${PROJECT_NAME}) # TODO Check that dependent projects don't get boost added (use PRIVATE here)
 target_enable_style_warnings(${PROJECT_NAME})
-target_activate_cpp14(${PROJECT_NAME})
+target_activate_cpp20(${PROJECT_NAME})
 
 #install(TARGETS ${PROJECT_NAME}
 #        DESTINATION lib

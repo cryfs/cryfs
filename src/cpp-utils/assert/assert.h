@@ -41,21 +41,20 @@ namespace cpputils {
         };
 
         inline std::string format(const char *expr, const std::string &message, const char *file, int line) {
-            std::string result = std::string()+"Assertion ["+expr+"] failed in "+file+":"+std::to_string(line)+": "+message+"\n\n" + backtrace();
-            return result;
+            return fmt::format("Assertion [{}] failed in {}:{}: {}\n\n{}", expr, file, line, message, backtrace());
         }
 
         inline void assert_fail_release [[noreturn]] (const char *expr, const std::string &message, const char *file, int line) {
             using namespace logging;
             auto msg = format(expr, message, file, line);
-            LOG(ERR, msg);
+            LOG(ERR, "{}", msg);
             throw AssertFailed(msg);
         }
 
         inline void assert_fail_debug [[noreturn]] (const char *expr, const std::string &message, const char *file, int line) {
             using namespace logging;
             auto msg = format(expr, message, file, line);
-            LOG(ERR, msg);
+            LOG(ERR, "{}", msg);
             if (DisableAbortOnFailedAssertionRAII::num_instances() > 0) {
                 throw AssertFailed(msg);
             } else {

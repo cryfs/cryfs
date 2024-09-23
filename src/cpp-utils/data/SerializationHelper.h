@@ -19,7 +19,7 @@ template<class DataType, class Enable = void> struct serialize;
 // Specialize for 1-byte types for faster performance with direct pointer access (no memcpy).
 template<class DataType>
 struct serialize<DataType, typename std::enable_if<sizeof(DataType) == 1>::type> final {
-    static_assert(std::is_pod<DataType>::value, "Can only serialize PODs");
+    static_assert(std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>, "Can only serialize PODs");
     static void call(void *dst, const DataType &obj) {
         *static_cast<DataType *>(dst) = obj;
     }
@@ -28,7 +28,7 @@ struct serialize<DataType, typename std::enable_if<sizeof(DataType) == 1>::type>
 // Specialize for larger types with memcpy because unaligned data accesses through pointers are undefined behavior.
 template<class DataType>
 struct serialize<DataType, typename std::enable_if<greater_than(sizeof(DataType), 1)>::type> final {
-    static_assert(std::is_pod<DataType>::value, "Can only serialize PODs");
+    static_assert(std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>, "Can only serialize PODs");
     static void call(void *dst, const DataType &obj) {
         std::memcpy(dst, &obj, sizeof(DataType));
     }
@@ -39,7 +39,7 @@ template<class DataType, class Enable = void> struct deserialize;
 // Specialize for 1-byte types for faster performance with direct pointer access (no memcpy).
 template<class DataType>
 struct deserialize<DataType, typename std::enable_if<sizeof(DataType) == 1>::type> final {
-    static_assert(std::is_pod<DataType>::value, "Can only serialize PODs");
+    static_assert(std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>, "Can only serialize PODs");
     static DataType call(const void *src) {
         return *static_cast<const DataType *>(src);
     }
@@ -48,7 +48,7 @@ struct deserialize<DataType, typename std::enable_if<sizeof(DataType) == 1>::typ
 // Specialize for larger types with memcpy because unaligned data accesses through pointers are undefined behavior.
 template<class DataType>
 struct deserialize<DataType, typename std::enable_if<greater_than(sizeof(DataType), 1)>::type> final {
-    static_assert(std::is_pod<DataType>::value, "Can only deserialize PODs");
+    static_assert(std::is_standard_layout_v<DataType> && std::is_trivial_v<DataType>, "Can only deserialize PODs");
     static DataType call(const void *src) {
         typename std::remove_const<DataType>::type result{};
         std::memcpy(&result, src, sizeof(DataType));
