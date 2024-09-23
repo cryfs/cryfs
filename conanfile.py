@@ -5,7 +5,7 @@ import os
 
 class CryFSConan(ConanFile):
     name = "cryfs"
-    version = "1.0"
+    version = "na"
     settings = "os", "compiler", "build_type", "arch"
     tool_requires = "cmake/3.25.3"
     generators = ["CMakeToolchain", "CMakeDeps"]
