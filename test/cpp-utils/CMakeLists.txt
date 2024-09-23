@@ -71,7 +71,7 @@ target_activate_cpp14(${PROJECT_NAME}_exit_signal)
 target_link_libraries(${PROJECT_NAME}_exit_signal cpp-utils)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} my-gtest-main googletest cpp-utils)
+target_link_libraries(${PROJECT_NAME} my-gtest-main cpp-utils)
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_exit_status ${PROJECT_NAME}_exit_signal)
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
 

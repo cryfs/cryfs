@@ -86,6 +86,8 @@ class CryFSConan(ConanFile):
         self.requires("boost/1.84.0")
         if self.options.update_checks:
             self.requires("libcurl/8.9.1")
+        if self.options.build_tests:
+            self.requires("gtest/1.15.0")
 
     def layout(self):
         cmake_layout(self)

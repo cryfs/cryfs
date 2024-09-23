@@ -5,7 +5,7 @@ set(SOURCES
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC googletest cpp-utils)
+target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_gtest cpp-utils)
 target_add_boost(${PROJECT_NAME} filesystem system)
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 

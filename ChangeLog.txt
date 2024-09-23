@@ -13,10 +13,12 @@ Version 0.12.0 (unreleased)
 * Updated dependencies to
   * Fuse 2.9
   * DokanY 2.0.6.1000
-  * range-v3/0.12.0
+  * range-v3 0.12.0
   * boost 1.84
-  * spdlog/1.11.0
+  * spdlog 1.11.0
+  * gtest 1.15.0
   * Use libcurl dependency from conan instead of requiring it to be preinstalled
+  * Use gtest dependency from conan instead of having it in the vendor/ directory of the repository
   * We now only link to libcurl if CRYFS_UPDATE_CHECKS is enabled. If the compile time flag is disabled,
     that already disabled update checks in previous versions, but needlessly still linked to libcurl.
     Now the flag will fully remove the libcurl dependency.

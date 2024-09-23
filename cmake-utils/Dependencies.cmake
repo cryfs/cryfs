@@ -24,3 +24,10 @@ target_link_libraries(CryfsDependencies_spdlog INTERFACE spdlog::spdlog)
 find_package(CURL REQUIRED)
 add_library(CryfsDependencies_libcurl INTERFACE)
 target_link_libraries(CryfsDependencies_libcurl INTERFACE CURL::libcurl)
+
+# Setup gtest dependency
+if (BUILD_TESTING)
+    find_package(GTest REQUIRED)
+    add_library(CryfsDependencies_gtest INTERFACE)
+    target_link_libraries(CryfsDependencies_gtest INTERFACE GTest::gtest GTest::gmock)
+endif()
