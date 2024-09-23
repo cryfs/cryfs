@@ -55,7 +55,7 @@ public:
             throw std::logic_error("Issued LeftRight::read() after the destructor started running");
         }
 
-        return readFunc(_data[_foregroundDataIndex.load()]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+        return std::forward<F>(readFunc)(_data[_foregroundDataIndex.load()]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
     }
 
     // Throwing an exception in writeFunc is ok but causes the state to be either the old or the new state,
@@ -68,7 +68,7 @@ public:
             throw std::logic_error("Issued LeftRight::read() after the destructor started running");
         }
 
-        return _write(writeFunc);
+        return _write(std::forward<F>(writeFunc));
     }
 
 private:

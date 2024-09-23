@@ -163,6 +163,8 @@ inline bool operator!=(const unique_ref<T, D> &lhs, const unique_ref<T, D> &rhs)
 
 // NOLINTBEGIN(cert-dcl58-cpp) -- intentional change of namespace std
 namespace std {
+    // NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved) -- arguments don't need to be moved for swapping, they're passed by reference
+
     template<class T, class D>
     inline void swap(cpputils::unique_ref<T, D>& lhs, cpputils::unique_ref<T, D>& rhs) noexcept {
         lhs.swap(rhs);
@@ -177,6 +179,8 @@ namespace std {
     inline void swap(cpputils::unique_ref<T, D>& lhs, cpputils::unique_ref<T, D>&& rhs) noexcept {
         lhs.swap(rhs);
     }
+
+    // NOLINTEND(cppcoreguidelines-rvalue-reference-param-not-moved)
 
     // Allow using it in std::unordered_set / std::unordered_map
     template<class T, class D> struct hash<cpputils::unique_ref<T, D>> {

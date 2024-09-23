@@ -63,6 +63,8 @@ public:
     using underlying_type = UnderlyingType;
     using concrete_type = ConcreteType;
 
+    // NOLINTBEGIN(cppcoreguidelines-noexcept-move-operations) -- we're only noexcept if the underlying type is
+
     constexpr IdValueType(IdValueType&& rhs) noexcept(noexcept(UnderlyingType(std::move(std::declval<UnderlyingType>())))) = default;
     constexpr IdValueType(const IdValueType& rhs) noexcept(noexcept(UnderlyingType(std::declval<UnderlyingType>()))) = default;
     constexpr IdValueType& operator=(IdValueType&& rhs) noexcept(noexcept(*std::declval<UnderlyingType*>() = std::move(rhs.value_))) {
@@ -73,6 +75,8 @@ public:
         // NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
         return operator=(IdValueType(rhs));
     }
+
+    // NOLINTEND(cppcoreguidelines-noexcept-move-operations)
 
 protected:
     constexpr explicit IdValueType(underlying_type value) noexcept(noexcept(UnderlyingType(value)))

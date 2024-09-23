@@ -29,7 +29,7 @@ public:
         auto oldStat = statOld();
         ensureNodeTimestampsAreOld(oldStat);
         const timespec timeBeforeOperation = cpputils::time::now();
-        operation();
+        std::forward<Operation>(operation)();
         const timespec timeAfterOperation = cpputils::time::now();
         auto newStat = statNew();
         for (auto behaviorCheck : behaviorChecks) {

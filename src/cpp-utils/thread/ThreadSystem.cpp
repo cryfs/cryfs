@@ -100,7 +100,7 @@ namespace cpputils {
                 cont = loopIteration(); // This might also be interrupted.
             }
             //The thread is terminated gracefully.
-        } catch (const boost::thread_interrupted &e) {
+        } catch (const boost::thread_interrupted &e) { // NOLINT(bugprone-empty-catch)
             //Do nothing, exit thread.
         } catch (const std::exception &e) {
             LOG(ERR, "LoopThread crashed: {}", e.what());

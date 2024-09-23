@@ -3,6 +3,7 @@
 # TODO Enable more checks (google-*, hicpp-*, llvm-*, modernize-*, mpi-*, performance-*, readability-*)
 # TODO Maybe just enable * and disable a list instead?
 # TODO Check if there's new checks in clang-tidy-9 and later and potentially enable them
+# TODO Enable misc-include-cleaner
 Checks: |
   clang-diagnostic-*,
   clang-analyzer-*,
@@ -34,32 +35,36 @@ Checks: |
   -cppcoreguidelines-non-private-member-variables-in-classes,
   -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-narrowing-conversions,
+  -cppcoreguidelines-use-default-member-init,
   -clang-analyzer-optin.cplusplus.VirtualCall,
   -clang-analyzer-cplusplus.NewDeleteLeaks,
   -misc-macro-parentheses,
   -misc-non-private-member-variables-in-classes,
   -misc-unused-raii
+  -misc-include-cleaner
 WarningsAsErrors: '*'
 HeaderFilterRegex: '/src/|/test/'
 CheckOptions:
-  - key:             google-readability-braces-around-statements.ShortStatementLines
-    value:           '1'
-  - key:             google-readability-function-size.StatementThreshold
-    value:           '800'
-  - key:             google-readability-namespace-comments.ShortNamespaceLines
-    value:           '10'
-  - key:             google-readability-namespace-comments.SpacesBeforeComments
-    value:           '2'
-  - key:             modernize-loop-convert.MaxCopySize
-    value:           '16'
-  - key:             modernize-loop-convert.MinConfidence
-    value:           reasonable
-  - key:             modernize-loop-convert.NamingStyle
-    value:           CamelCase
-  - key:             modernize-pass-by-value.IncludeStyle
-    value:           llvm
-  - key:             modernize-replace-auto-ptr.IncludeStyle
-    value:           llvm
-  - key:             modernize-use-nullptr.NullMacros
-    value:           'NULL'
+  - key:   google-readability-braces-around-statements.ShortStatementLines
+    value: '1'
+  - key:   google-readability-function-size.StatementThreshold
+    value: '800'
+  - key:   google-readability-namespace-comments.ShortNamespaceLines
+    value: '10'
+  - key:   google-readability-namespace-comments.SpacesBeforeComments
+    value: '2'
+  - key:   modernize-loop-convert.MaxCopySize
+    value: '16'
+  - key:   modernize-loop-convert.MinConfidence
+    value: reasonable
+  - key:   modernize-loop-convert.NamingStyle
+    value: CamelCase
+  - key:   modernize-pass-by-value.IncludeStyle
+    value: llvm
+  - key:   modernize-replace-auto-ptr.IncludeStyle
+    value: llvm
+  - key:   modernize-use-nullptr.NullMacros
+    value: 'NULL'
+  - key:   cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove
+    value: true
 ...

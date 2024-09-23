@@ -23,11 +23,11 @@ public:
     MovableOnly(const MovableOnly&) = delete;
     MovableOnly& operator=(const MovableOnly&) = delete;
 
-    MovableOnly(MovableOnly&& rhs): _value(rhs._value) {
+    MovableOnly(MovableOnly&& rhs) noexcept : _value(rhs._value) {
       rhs._value = 0;
     }
 
-    MovableOnly& operator=(MovableOnly&& rhs) {
+    MovableOnly& operator=(MovableOnly&& rhs)  noexcept {
       _value = rhs._value;
       rhs._value = 0;
       return *this;
@@ -1148,7 +1148,7 @@ private:
 class OnlyMoveableClassWithDestructorCallback {
 public:
   OnlyMoveableClassWithDestructorCallback(const DestructorCallback *destructorCallback) : _destructorCallback(destructorCallback) { }
-  OnlyMoveableClassWithDestructorCallback(OnlyMoveableClassWithDestructorCallback &&source): _destructorCallback(source._destructorCallback) {}
+  OnlyMoveableClassWithDestructorCallback(OnlyMoveableClassWithDestructorCallback &&source) noexcept : _destructorCallback(source._destructorCallback) {}
 
   ~OnlyMoveableClassWithDestructorCallback() {
     _destructorCallback->call();

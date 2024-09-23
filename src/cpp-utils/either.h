@@ -33,6 +33,7 @@ namespace cpputils {
             }
         }
 
+        // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations) -- we're only noexcept if the underlying types are
         either(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right))))
                 : _side(rhs._side) {
             if(_side == Side::left) {
@@ -63,6 +64,7 @@ namespace cpputils {
             return *this;
         }
 
+        // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations) -- we're only noexcept if the underlying types are
         either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right)))) {
             if (this == &rhs) {
                 return *this;

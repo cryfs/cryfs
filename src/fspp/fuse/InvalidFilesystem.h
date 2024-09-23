@@ -7,6 +7,7 @@
 namespace fspp {
     namespace fuse {
         class InvalidFilesystem final : public Filesystem {
+            // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
             void setContext(Context&&) override {
                 throw std::logic_error("Filesystem not initialized yet");
             }

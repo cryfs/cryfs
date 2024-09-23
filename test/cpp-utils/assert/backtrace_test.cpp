@@ -95,7 +95,7 @@ TEST(BacktraceTest, DoesntCrashOnCaughtException)
 	{
 		throw std::logic_error("exception");
 	}
-	catch (const std::logic_error &e)
+	catch (const std::logic_error &e) // NOLINT(bugprone-empty-catch)
 	{
 		// intentionally empty
 	}
