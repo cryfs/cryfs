@@ -1,6 +1,7 @@
+#include "../../testutils/BlockStoreTest.h"
 #include "blockstore/implementations/parallelaccess/ParallelAccessBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include "../../testutils/BlockStoreTest.h"
+#include "blockstore/interface/BlockStore.h"
 #include <gtest/gtest.h>
 
 

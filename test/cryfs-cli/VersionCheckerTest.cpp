@@ -1,3 +1,5 @@
+#include <boost/none.hpp>
+#include <string>
 #ifdef CRYFS_UPDATE_CHECKS
 
 #include <gtest/gtest.h>

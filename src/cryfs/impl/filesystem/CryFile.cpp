@@ -2,7 +2,17 @@
 
 #include "CryDevice.h"
 #include "CryOpenFile.h"
-#include <fspp/fs_interface/FuseErrnoException.h>
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/macros.h"
+#include "cryfs/impl/filesystem/CryNode.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
+#include "fspp/fs_interface/Dir.h"
+#include "fspp/fs_interface/OpenFile.h"
+#include "fspp/fs_interface/Types.h"
+#include <boost/none.hpp>
+#include <utility>
 
 
 //TODO Get rid of this in favor of exception hierarchy

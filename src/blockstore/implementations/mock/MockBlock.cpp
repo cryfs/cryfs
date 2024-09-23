@@ -1,5 +1,7 @@
 #include "MockBlock.h"
 #include "MockBlockStore.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace blockstore {
     namespace mock {

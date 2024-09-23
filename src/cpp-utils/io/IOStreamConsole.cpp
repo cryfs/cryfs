@@ -1,7 +1,14 @@
 #include "IOStreamConsole.h"
-#include <boost/algorithm/string/trim.hpp>
 #include "DontEchoStdinToStdoutRAII.h"
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/none.hpp>
 #include <cpp-utils/assert/assert.h>
+#include <cstddef>
+#include <iostream>
+#include <istream>
+#include <ostream>
+#include <stdexcept>
+#include <string>
 
 using std::ostream;
 using std::istream;

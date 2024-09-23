@@ -1,3 +1,7 @@
+#include "cpp-utils/data/Data.h"
+#include <cstddef>
+#include <cstring>
+#include <string>
 #if !defined(_MSC_VER)
 
 #include "memory.h"

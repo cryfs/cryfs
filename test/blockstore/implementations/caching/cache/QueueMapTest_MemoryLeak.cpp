@@ -1,4 +1,7 @@
+#include "testutils/MinimalKeyType.h"
+#include "testutils/MinimalValueType.h"
 #include "testutils/QueueMapTest.h"
+#include <gtest/gtest.h>
 
 // Tests that QueueMap calls destructors correctly.
 // This is needed, because QueueMap does its own memory management.

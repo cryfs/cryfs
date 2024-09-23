@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
-#include "cpp-utils/pointer/optional_ownership_ptr.h"
 #include "cpp-utils/macros.h"
+#include "cpp-utils/pointer/optional_ownership_ptr.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <gtest/gtest.h>
 
 using std::unique_ptr;
 using std::function;

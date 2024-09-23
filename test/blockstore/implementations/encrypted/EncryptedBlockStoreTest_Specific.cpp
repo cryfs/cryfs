@@ -1,12 +1,18 @@
-#include <gtest/gtest.h>
-#include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 #include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
-#include "blockstore/utils/BlockStoreUtils.h"
-#include "../../testutils/gtest_printers.h"
+#include "blockstore/utils/BlockId.h"
+#include "config_int.h"
+#include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/macros.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <boost/none.hpp>
 #include <cpp-utils/data/DataFixture.h>
+#include <cstring>
+#include <gtest/gtest.h>
 
-#include <cstddef>
+#include <memory>
+#include <utility>
 
 using ::testing::Test;
 

@@ -1,8 +1,18 @@
 #include "CryConfigFile.h"
-#include <fstream>
-#include <boost/filesystem.hpp>
-#include <sstream>
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include "cryfs/impl/config/crypto/CryConfigEncryptor.h"
+#include "cryfs/impl/config/crypto/CryConfigEncryptorFactory.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
 #include <cpp-utils/logging/logging.h>
+#include <fstream>
+#include <istream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 using boost::none;
 using std::ifstream;

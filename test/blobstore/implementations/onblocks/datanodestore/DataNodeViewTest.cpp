@@ -1,10 +1,15 @@
 #include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include <cstdint>
+#include <cstring>
 #include <gtest/gtest.h>
 
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include "blockstore/interface/BlockStore.h"
+#include "cpp-utils/data/Data.h"
 #include <blockstore/implementations/testfake/FakeBlock.h>
-#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <string>
+#include <utility>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;

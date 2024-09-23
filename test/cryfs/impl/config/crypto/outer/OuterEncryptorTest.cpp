@@ -1,7 +1,13 @@
-#include <gtest/gtest.h>
-#include <cryfs/impl/config/crypto/outer/OuterEncryptor.h>
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/crypto/outer/OuterConfig.h"
+#include <boost/none.hpp>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <cryfs/impl/config/crypto/outer/OuterEncryptor.h>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <ostream>
+#include <stdexcept>
 
 using std::ostream;
 using boost::none;
@@ -19,7 +25,6 @@ namespace boost {
         return stream << "cpputils::Data()";
     }
 }
-#include <boost/optional/optional_io.hpp>
 
 class OuterEncryptorTest : public ::testing::Test {
 public:

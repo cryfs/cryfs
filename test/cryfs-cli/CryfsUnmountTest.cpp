@@ -1,6 +1,9 @@
 #include "testutils/CliTest.h"
-#include <cryfs-cli/Cli.h>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
 #include <cryfs-unmount/Cli.h>
+#include <gtest/gtest.h>
+#include <vector>
 
 using CliTest_Unmount = CliTest;
 namespace bf = boost::filesystem;

@@ -1,4 +1,13 @@
 #include "FuseLstatTest.h"
+#include "fspp/fuse/stat_compatibility.h"
+#include "gmock/gmock.h"
+#include <boost/filesystem/path.hpp>
+#include <cerrno>
+#include <fcntl.h>
+#include <gtest/gtest.h>
+#include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using std::function;
 using ::testing::Eq;

@@ -1,4 +1,5 @@
 #include "versionstring.h"
+#include <string>
 
 using std::string;
 

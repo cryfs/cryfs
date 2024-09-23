@@ -1,14 +1,22 @@
 #include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/macros.h"
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <gtest/gtest.h>
 
 #include <cpp-utils/pointer/cast.h>
 
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <blockstore/implementations/testfake/FakeBlock.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <string>
+#include <utility>
 
 using ::testing::Test;
 using ::testing::WithParamInterface;

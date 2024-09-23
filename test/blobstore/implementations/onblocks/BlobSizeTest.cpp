@@ -1,6 +1,12 @@
+#include "blobstore/interface/Blob.h"
+#include "blockstore/utils/BlockId.h"
 #include "testutils/BlobStoreTest.h"
 #include <cpp-utils/data/Data.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <cstdint>
+#include <cstring>
+#include <gtest/gtest.h>
+#include <utility>
 
 using namespace blobstore;
 using blockstore::BlockId;

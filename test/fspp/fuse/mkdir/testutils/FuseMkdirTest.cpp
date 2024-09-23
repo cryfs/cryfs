@@ -1,4 +1,9 @@
 #include "FuseMkdirTest.h"
+#include <boost/filesystem/path.hpp>
+#include <cerrno>
+#include <gtest/gtest.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using ::testing::Action;
 using ::testing::Invoke;

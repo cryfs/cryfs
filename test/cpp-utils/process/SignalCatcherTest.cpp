@@ -1,6 +1,7 @@
 #include <cpp-utils/process/SignalCatcher.h>
-#include <gtest/gtest.h>
 #include <csignal>
+#include <gtest/gtest.h>
+#include <stdexcept>
 
 using cpputils::SignalCatcher;
 

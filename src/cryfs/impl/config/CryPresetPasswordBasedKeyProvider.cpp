@@ -1,4 +1,10 @@
 #include "CryPresetPasswordBasedKeyProvider.h"
+#include "cpp-utils/crypto/kdf/PasswordBasedKDF.h"
+#include "cpp-utils/crypto/symmetric/EncryptionKey.h"
+#include "cpp-utils/data/Data.h"
+#include <cstddef>
+#include <string>
+#include <utility>
 
 using cpputils::unique_ref;
 using cpputils::EncryptionKey;

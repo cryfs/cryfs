@@ -1,5 +1,8 @@
-#include <gtest/gtest.h>
+#include <atomic>
 #include <cpp-utils/process/SignalHandler.h>
+#include <csignal>
+#include <gtest/gtest.h>
+#include <stdexcept>
 
 using namespace cpputils;
 

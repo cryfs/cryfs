@@ -1,4 +1,12 @@
 #include "SCryptParameters.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/data/Deserializer.h"
+#include "cpp-utils/data/Serializer.h"
+#include <cstddef>
+#include <cstdint>
+#include <istream>
+#include <ostream>
+#include <utility>
 
 using std::istream;
 using std::ostream;

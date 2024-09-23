@@ -1,9 +1,17 @@
 #include "CrySymlink.h"
 
-#include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
 #include "CrySymlink.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/CryNode.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include "fspp/fs_interface/Dir.h"
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <string>
+#include <utility>
 
 //TODO Get rid of this in favor of exception hierarchy
 

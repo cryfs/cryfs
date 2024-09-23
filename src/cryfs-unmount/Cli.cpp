@@ -1,8 +1,11 @@
 #include "Cli.h"
-#include <fspp/fuse/Fuse.h>
+#include "cryfs-unmount/program_options/ProgramOptions.h"
+#include "cryfs/impl/ErrorCodes.h"
+#include "gitversion/versionstring.h"
+#include <boost/filesystem/operations.hpp>
 #include <cryfs-unmount/program_options/Parser.h>
-#include <gitversion/gitversion.h>
 #include <cryfs/impl/CryfsException.h>
+#include <fspp/fuse/Fuse.h>
 
 #include <iostream>
 

@@ -1,8 +1,11 @@
-#include <cpp-utils/data/DataFixture.h>
-#include "testutils/FuseWriteTest.h"
 #include "../../testutils/InMemoryFile.h"
+#include "cpp-utils/data/Data.h"
+#include "fspp/fs_interface/Types.h"
+#include "testutils/FuseWriteTest.h"
+#include "gmock/gmock.h"
+#include <cpp-utils/data/DataFixture.h>
+#include <gtest/gtest.h>
 
-#include "fspp/fs_interface/FuseErrnoException.h"
 
 using ::testing::Invoke;
 using ::testing::Action;

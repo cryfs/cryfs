@@ -1,8 +1,16 @@
 #include "blockstore/interface/BlockStore.h"
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include "blockstore/interface/Block.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include <boost/none.hpp>
 #include <cpp-utils/data/DataFixture.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <string>
 
 using ::testing::Test;
 using ::testing::Return;

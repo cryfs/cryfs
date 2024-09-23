@@ -1,6 +1,12 @@
 #include "testutils/FuseCreateAndOpenTest.h"
 
 #include "fspp/fs_interface/FuseErrnoException.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <asm-generic/errno.h>
+#include <cerrno>
+#include <fcntl.h>
+#include <gtest/gtest.h>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

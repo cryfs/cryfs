@@ -1,6 +1,11 @@
 #include "LeafHandle.h"
 #include "../datanodestore/DataLeafNode.h"
 #include "../datanodestore/DataNodeStore.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/pointer/optional_ownership_ptr.h"
+#include <boost/none.hpp>
+#include <utility>
 
 using cpputils::WithOwnership;
 using cpputils::WithoutOwnership;

@@ -1,8 +1,8 @@
 #include "BlobStoreTest.h"
 
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
-#include <cpp-utils/pointer/gcc_4_8_compatibility.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <cstdint>
 
 using blobstore::onblocks::BlobStoreOnBlocks;
 using blockstore::testfake::FakeBlockStore;

@@ -1,10 +1,26 @@
 #include "Parser.h"
+#include "cpp-utils/logging/logging.h"
+#include "cryfs-cli/program_options/ProgramOptions.h"
+#include "cryfs/impl/ErrorCodes.h"
 #include "utils.h"
-#include <iostream>
-#include <boost/optional.hpp>
-#include <cryfs/impl/config/CryConfigConsole.h>
-#include <cryfs/impl/CryfsException.h>
+#include <algorithm>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/positional_options.hpp>
+#include <boost/program_options/value_semantic.hpp>
+#include <boost/program_options/variables_map.hpp>
 #include <cryfs-cli/Environment.h>
+#include <cryfs/impl/CryfsException.h>
+#include <cryfs/impl/config/CryConfigConsole.h>
+#include <cstdint>
+#include <exception>
+#include <iostream>
+#include <string>
+#include <tuple>
+#include <utility>
 
 namespace po = boost::program_options;
 namespace bf = boost::filesystem;

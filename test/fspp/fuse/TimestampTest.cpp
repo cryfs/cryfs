@@ -1,6 +1,8 @@
 #include "../testutils/FuseTest.h"
+#include "fspp/fs_interface/Context.h"
 
-#include <gmock/gmock.h>
+#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 using namespace fspp::fuse;
 

@@ -1,5 +1,8 @@
+#include "cpp-utils/logging/logging.h"
 #include "testutils/LoggingTest.h"
+#include <gtest/gtest.h>
 #include <regex>
+#include <string>
 
 using namespace cpputils::logging;
 using std::string;

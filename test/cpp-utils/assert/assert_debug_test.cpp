@@ -1,5 +1,5 @@
+#include "cpp-utils/assert/AssertFailed.h"
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 #ifdef NDEBUG
 #define REAL_NDEBUG_

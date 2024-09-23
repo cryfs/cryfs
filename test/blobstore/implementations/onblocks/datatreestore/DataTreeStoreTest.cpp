@@ -1,9 +1,11 @@
+#include "blockstore/utils/BlockId.h"
 #include "testutils/DataTreeTest.h"
 
 #include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
 #include "blobstore/implementations/onblocks/datatreestore/DataTreeStore.h"
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <boost/none.hpp>
+#include <gtest/gtest.h>
+#include <utility>
 
 using blockstore::BlockId;
 using boost::none;

@@ -1,11 +1,15 @@
 #include "CryConfig.h"
+#include "cpp-utils/data/Data.h"
 
-#include <boost/filesystem.hpp>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/none.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <sstream>
-#include <gitversion/VersionCompare.h>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <cpp-utils/random/Random.h>
+#include <cstdint>
+#include <sstream>
+#include <string>
+#include <utility>
 
 
 using boost::property_tree::ptree;

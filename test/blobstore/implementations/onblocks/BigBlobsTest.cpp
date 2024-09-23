@@ -1,14 +1,21 @@
-#include <gtest/gtest.h>
 #include <blockstore/implementations/compressing/CompressingBlockStore.h>
 #include <blockstore/implementations/compressing/compressors/RunLengthEncoding.h>
 #include <blockstore/implementations/inmemory/InMemoryBlockStore2.h>
 #include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
-#include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/data/Data.h>
+#include <cpp-utils/data/DataFixture.h>
+#include <cstdint>
+#include <cstring>
+#include <gtest/gtest.h>
 
-#include "blobstore/implementations/onblocks/BlobOnBlocks.h"
 #include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include "blobstore/interface/Blob.h"
+#include "blobstore/interface/BlobStore.h"
+#include "cpp-utils/pointer/unique_ref.h"
 #include <cstddef>
+#include <limits>
+#include <stdint.h>
+#include <utility>
 
 using namespace blobstore;
 using namespace blobstore::onblocks;

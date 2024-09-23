@@ -1,4 +1,8 @@
+#include "cpp-utils/tempfile/TempFile.h"
+#include "cryfs/impl/ErrorCodes.h"
 #include "testutils/CliTest.h"
+#include <boost/filesystem/operations.hpp>
+#include <gtest/gtest.h>
 
 using cpputils::TempFile;
 using cryfs::ErrorCode;

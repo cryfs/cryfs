@@ -1,9 +1,12 @@
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cpp-utils/process/subprocess.h>
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
 
-#include <cpp-utils/lock/ConditionBarrier.h>
 #include "my-gtest-main.h"
+#include <cpp-utils/lock/ConditionBarrier.h>
+#include <stdexcept>
+#include <string>
 
 using cpputils::Subprocess;
 using cpputils::SubprocessError;

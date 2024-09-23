@@ -1,4 +1,7 @@
 #include "testutils/FuseStatfsReturnTest.h"
+#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <sys/statvfs.h>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

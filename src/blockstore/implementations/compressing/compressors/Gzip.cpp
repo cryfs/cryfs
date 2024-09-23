@@ -1,4 +1,7 @@
 #include "Gzip.h"
+#include "config_int.h"
+#include "cpp-utils/data/Data.h"
+#include <cstddef>
 #include <vendor_cryptopp/gzip.h>
 
 using cpputils::Data;

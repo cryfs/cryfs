@@ -1,4 +1,7 @@
 #include "FileDoesntExistException.h"
+#include <boost/filesystem/path.hpp>
+#include <stdexcept>
+#include <string>
 
 namespace bf = boost::filesystem;
 

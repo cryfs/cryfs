@@ -1,4 +1,6 @@
 #include "DontEchoStdinToStdoutRAII.h"
+#include "cpp-utils/macros.h"
+#include "cpp-utils/pointer/unique_ref.h"
 
 #if !defined(_MSC_VER)
 

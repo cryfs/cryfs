@@ -1,4 +1,7 @@
 #include "FuseAccessTest.h"
+#include <cerrno>
+#include <gtest/gtest.h>
+#include <unistd.h>
 
 void FuseAccessTest::AccessFile(const char *filename, int mode) {
   const int error = AccessFileReturnError(filename, mode);

@@ -1,7 +1,8 @@
-#include <gtest/gtest.h>
+#include <atomic>
+#include <boost/chrono/duration.hpp>
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cryfs-cli/CallAfterTimeout.h>
-#include <atomic>
+#include <gtest/gtest.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

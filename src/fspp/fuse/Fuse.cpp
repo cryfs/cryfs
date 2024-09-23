@@ -1,23 +1,49 @@
 // NOMINMAX works around an MSVC issue, see https://github.com/microsoft/cppwinrt/issues/479
+#include "cpp-utils/assert/AssertFailed.h"
+#include "cpp-utils/logging/Logger.h"
+#include "cpp-utils/macros.h"
+#include "fspp/fs_interface/Context.h"
+#include "fspp/fs_interface/Dir.h"
+#include "fspp/fs_interface/Types.h"
+#include "fspp/fuse/stat_compatibility.h"
+#include <algorithm>
+#include <array>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
+#include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <ctime>
+#include <exception>
+#include <functional>
+#include <locale>
+#include <range/v3/iterator/operations.hpp>
+#include <range/v3/view/subrange.hpp>
+#include <stdexcept>
+#include <string>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/types.h>
+#include <utility>
+#include <vector>
 #if defined(_MSC_VER)
 #define NOMINMAX
 #endif
 
 #include "Fuse.h"
 #include <memory>
-#include <cassert>
 
 #include "../fs_interface/FuseErrnoException.h"
 #include "Filesystem.h"
-#include <iostream>
+#include "InvalidFilesystem.h"
+#include <boost/algorithm/string/replace.hpp>
+#include <codecvt>
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/thread/debugging.h>
-#include <csignal>
-#include "InvalidFilesystem.h"
-#include <codecvt>
-#include <boost/algorithm/string/replace.hpp>
 
 #include <range/v3/view/split.hpp>
 #include <range/v3/view/join.hpp>

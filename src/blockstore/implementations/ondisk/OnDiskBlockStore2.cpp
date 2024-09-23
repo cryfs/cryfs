@@ -1,6 +1,19 @@
 #include "OnDiskBlockStore2.h"
-#include <boost/filesystem.hpp>
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/logging/logging.h"
+#include <boost/filesystem/directory.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
 #include <cpp-utils/system/diskspace.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <iterator>
+#include <stdexcept>
+#include <string>
 
 using std::string;
 using boost::optional;

@@ -1,5 +1,9 @@
 #include "LoopThread.h"
-#include "../logging/logging.h"
+#include "cpp-utils/thread/ThreadSystem.h"
+#include <boost/none.hpp>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 using std::function;
 using boost::none;

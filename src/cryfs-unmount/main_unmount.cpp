@@ -1,3 +1,6 @@
+#include "cryfs/impl/ErrorCodes.h"
+#include <stdexcept>
+#include <string>
 #if defined(_MSC_VER)
 #include <Windows.h>
 #include <VersionHelpers.h>

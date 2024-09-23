@@ -1,4 +1,9 @@
-#include "testutils/FuseLstatReturnTest.h"
+#include "fspp/fuse/stat_compatibility.h"
+#include "testutils/FuseLstatTest.h"
+#include "gtest/gtest.h"
+#include <fcntl.h>
+#include <gtest/gtest.h>
+#include <sys/types.h>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

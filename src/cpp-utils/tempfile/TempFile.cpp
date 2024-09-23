@@ -1,6 +1,10 @@
 #include "TempFile.h"
 #include "../logging/logging.h"
+#include <boost/filesystem/exception.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <fstream>
+#include <stdexcept>
 
 namespace bf = boost::filesystem;
 using std::ofstream;

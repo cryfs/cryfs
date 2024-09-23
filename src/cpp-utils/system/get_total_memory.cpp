@@ -1,6 +1,5 @@
 #include "get_total_memory.h"
-#include <stdexcept>
-#include <string>
+#include <cstdint>
 
 #if defined(__APPLE__)
 

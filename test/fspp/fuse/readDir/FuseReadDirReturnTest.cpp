@@ -1,6 +1,8 @@
 #include "testutils/FuseReadDirTest.h"
-#include <cpp-utils/pointer/unique_ref.h>
-#include "fspp/fs_interface/FuseErrnoException.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <string>
 
 using ::testing::Eq;
 using ::testing::WithParamInterface;

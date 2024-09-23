@@ -1,12 +1,12 @@
+#include <bits/types/struct_timeval.h>
+#include <ctime>
 #if !defined(_MSC_VER)
 
 #include "filetime.h"
-#include <utime.h>
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <errno.h>
 #include <array>
-#include <cpp-utils/system/stat.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 
 namespace cpputils {
 

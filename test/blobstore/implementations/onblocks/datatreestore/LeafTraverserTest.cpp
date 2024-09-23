@@ -1,6 +1,12 @@
+#include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
 #include "testutils/DataTreeTest.h"
 #include <blobstore/implementations/onblocks/datatreestore/impl/LeafTraverser.h>
+#include <cstdint>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <utility>
 
 using ::testing::Invoke;
 using ::testing::Eq;

@@ -3,7 +3,6 @@
 # TODO Enable more checks (google-*, hicpp-*, llvm-*, modernize-*, mpi-*, performance-*, readability-*)
 # TODO Maybe just enable * and disable a list instead?
 # TODO Check if there's new checks in clang-tidy-9 and later and potentially enable them
-# TODO Enable misc-include-cleaner
 Checks: |
   clang-diagnostic-*,
   clang-analyzer-*,
@@ -41,7 +40,6 @@ Checks: |
   -misc-macro-parentheses,
   -misc-non-private-member-variables-in-classes,
   -misc-unused-raii
-  -misc-include-cleaner
 WarningsAsErrors: '*'
 HeaderFilterRegex: '/src/|/test/'
 CheckOptions:

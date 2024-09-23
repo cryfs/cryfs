@@ -1,12 +1,20 @@
-#include <gtest/gtest.h>
-#include "blockstore/implementations/integrity/IntegrityBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
-#include "blockstore/utils/BlockStoreUtils.h"
+#include "blockstore/implementations/integrity/IntegrityBlockStore2.h"
+#include "blockstore/utils/BlockId.h"
+#include <boost/none.hpp>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/tempfile/TempFile.h>
+#include <cstdint>
+#include <functional>
+#include <gtest/gtest.h>
 
-#include "../../testutils/gtest_printers.h"
-#include <cstddef>
+#include "config_int.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/macros.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <memory>
+#include <utility>
 
 using ::testing::Test;
 

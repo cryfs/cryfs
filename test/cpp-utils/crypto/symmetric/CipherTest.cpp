@@ -1,11 +1,15 @@
-#include <gtest/gtest.h>
 #include "cpp-utils/crypto/symmetric/Cipher.h"
+#include "config_int.h"
 #include "cpp-utils/crypto/symmetric/ciphers.h"
 #include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
+#include <array>
+#include <boost/concept/assert.hpp>
+#include <gtest/gtest.h>
 
-#include "cpp-utils/data/DataFixture.h"
 #include "cpp-utils/data/Data.h"
-#include <boost/optional/optional_io.hpp>
+#include "cpp-utils/data/DataFixture.h"
+#include "cpp-utils/data/SerializationHelper.h"
+#include <string>
 
 using namespace cpputils;
 using std::string;

@@ -1,4 +1,6 @@
 #include "Hash.h"
+#include "config_int.h"
+#include "cpp-utils/data/Data.h"
 #include <cpp-utils/random/Random.h>
 #include <vendor_cryptopp/sha.h>
 

@@ -1,4 +1,9 @@
 #include "FuseFstatTest.h"
+#include "/home/heinzi/projects/cryfs/test/fspp/testutils/OpenFileHandle.h"
+#include "gmock/gmock.h"
+#include <fcntl.h>
+#include <gtest/gtest.h>
+#include <string>
 
 using ::testing::Eq;
 using ::testing::Return;

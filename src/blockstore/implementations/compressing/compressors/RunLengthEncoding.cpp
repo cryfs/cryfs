@@ -1,6 +1,13 @@
 #include "RunLengthEncoding.h"
-#include <sstream>
+#include "cpp-utils/data/Data.h"
+#include <algorithm>
 #include <cpp-utils/assert/assert.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <sstream>
+#include <string>
 
 using cpputils::Data;
 using std::string;

@@ -1,8 +1,13 @@
 #include "Cli.h"
-#include <cpp-utils/random/Random.h>
+#include "cpp-utils/crypto/symmetric/Cipher.h"
+#include "cryfs/impl/ErrorCodes.h"
 #include <cpp-utils/io/IOStreamConsole.h>
 #include <cpp-utils/network/CurlHttpClient.h>
+#include <cpp-utils/random/Random.h>
 #include <cryfs/impl/CryfsException.h>
+#include <exception>
+#include <iostream>
+#include <ostream>
 
 #if defined(_MSC_VER)
 #include <VersionHelpers.h>

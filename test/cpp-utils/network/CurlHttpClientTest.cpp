@@ -1,17 +1,16 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include "cpp-utils/network/CurlHttpClient.h"
-#include "cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
-
-using std::string;
-
-using namespace cpputils;
-
 // Disable these by default because they depend on network
 // and - even if network is available - can fail depending
 // on the concrete network setup (e.g. if invalid domains are
 // answered with an ISP page instead of HTTP error)
 #ifdef CRYFS_ENABLE_NETWORK_TESTS
+
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include "cpp-utils/network/CurlHttpClient.h"
+#include <string>
+
+using std::string;
+using namespace cpputils;
 
 TEST(CurlHttpClientTest, InvalidProtocol) {
     EXPECT_EQ(none, CurlHttpClient().get("invalid://example.com"));

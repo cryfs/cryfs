@@ -1,9 +1,22 @@
-#include <blockstore/interface/BlockStore2.h>
 #include "IntegrityBlockStore2.h"
 #include "KnownBlockVersions.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/logging/logging.h"
+#include <blockstore/interface/BlockStore2.h>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
 #include <cpp-utils/data/SerializationHelper.h>
-#include <cpp-utils/process/SignalCatcher.h>
 #include <cpp-utils/io/ProgressBar.h>
+#include <cpp-utils/process/SignalCatcher.h>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <stdexcept>
+#include <string>
+#include <unordered_set>
+#include <utility>
 
 using cpputils::Data;
 using cpputils::unique_ref;

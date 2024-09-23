@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <cpp-utils/system/env.h>
+#include <cstdlib>
+#include <gtest/gtest.h>
 #include <string>
 
 using std::string;

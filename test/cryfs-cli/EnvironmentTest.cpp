@@ -1,8 +1,10 @@
-#include <gtest/gtest.h>
-#include <cryfs-cli/Environment.h>
-#include <boost/optional.hpp>
-#include <boost/filesystem.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/none.hpp>
 #include <cpp-utils/system/env.h>
+#include <cryfs-cli/Environment.h>
+#include <cstdlib>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace cryfs_cli;
 using std::string;

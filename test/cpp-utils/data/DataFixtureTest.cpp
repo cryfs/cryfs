@@ -1,6 +1,6 @@
+#include <cstring>
 #include <gtest/gtest.h>
 
-#include <cstddef>
 
 #include "cpp-utils/data/Data.h"
 #include "cpp-utils/data/DataFixture.h"

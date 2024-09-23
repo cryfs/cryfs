@@ -5,13 +5,24 @@
 #include "../datanodestore/DataLeafNode.h"
 #include "../utils/Math.h"
 
-#include <cpp-utils/pointer/cast.h>
-#include <cpp-utils/pointer/optional_ownership_ptr.h>
-#include <cmath>
-#include <cpp-utils/assert/assert.h>
+#include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
 #include "impl/LeafTraverser.h"
-#include <boost/thread.hpp>
+#include <algorithm>
 #include <blobstore/implementations/onblocks/utils/Math.h>
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
+#include <boost/thread/pthread/shared_mutex.hpp>
+#include <cpp-utils/assert/assert.h>
+#include <cpp-utils/pointer/optional_ownership_ptr.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <mutex>
+#include <stdexcept>
+#include <stdint.h>
+#include <utility>
 
 using blockstore::BlockId;
 using blobstore::onblocks::datanodestore::DataNodeStore;

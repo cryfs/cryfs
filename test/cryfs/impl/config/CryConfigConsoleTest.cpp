@@ -1,10 +1,12 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <cryfs/impl/config/CryConfigConsole.h>
-#include <cryfs/impl/config/CryCipher.h>
-#include <cpp-utils/crypto/symmetric/ciphers.h>
-#include <cpp-utils/io/NoninteractiveConsole.h>
 #include "../../impl/testutils/MockConsole.h"
+#include <boost/none.hpp>
+#include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cryfs/impl/config/CryCipher.h>
+#include <cryfs/impl/config/CryConfigConsole.h>
+#include <cstdint>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace cryfs;
 

@@ -1,3 +1,9 @@
+#include "cpp-utils/network/HttpClient.h"
+#include <boost/none.hpp>
+#include <boost/property_tree/json_parser/error.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <exception>
+#include <string>
 #ifdef CRYFS_UPDATE_CHECKS
 
 #include "VersionChecker.h"

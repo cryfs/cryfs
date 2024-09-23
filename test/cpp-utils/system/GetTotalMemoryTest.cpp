@@ -1,5 +1,7 @@
-#include <gtest/gtest.h>
 #include <cpp-utils/system/get_total_memory.h>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <stdint.h>
 
 using cpputils::system::get_total_memory;
 

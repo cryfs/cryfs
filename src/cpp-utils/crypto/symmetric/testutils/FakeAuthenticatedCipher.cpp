@@ -1,4 +1,5 @@
 #include "FakeAuthenticatedCipher.h"
+#include <random>
 
 namespace cpputils {
     constexpr unsigned int FakeAuthenticatedCipher::KEYSIZE;

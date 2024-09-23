@@ -1,6 +1,11 @@
 #include "testutils/FuseMkdirTest.h"
 
 #include "fspp/fs_interface/FuseErrnoException.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <asm-generic/errno.h>
+#include <cerrno>
+#include <gtest/gtest.h>
 
 using ::testing::Eq;
 using ::testing::Throw;

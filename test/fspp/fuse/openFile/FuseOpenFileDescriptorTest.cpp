@@ -1,4 +1,13 @@
+#include "/home/heinzi/projects/cryfs/test/fspp/testutils/OpenFileHandle.h"
+#include "fspp/fs_interface/Types.h"
 #include "testutils/FuseOpenTest.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <cstdint>
+#include <fcntl.h>
+#include <gtest/gtest.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 using ::testing::Eq;
 using ::testing::WithParamInterface;

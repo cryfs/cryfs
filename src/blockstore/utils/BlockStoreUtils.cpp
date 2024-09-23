@@ -1,8 +1,8 @@
-#include "../interface/BlockStore.h"
 #include "BlockStoreUtils.h"
-#include <cpp-utils/data/Data.h>
-#include <cassert>
+#include "../interface/BlockStore.h"
 #include <cpp-utils/assert/assert.h>
+#include <cpp-utils/data/Data.h>
+#include <cstring>
 
 using cpputils::Data;
 using cpputils::unique_ref;

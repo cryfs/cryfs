@@ -2,7 +2,10 @@
 
 #include "blockstore/implementations/caching/CachingBlockStore2.h"
 #include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
-#include <cstddef>
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <memory>
+#include <utility>
 
 using ::testing::Test;
 

@@ -1,5 +1,9 @@
-#include <cstddef>
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <cerrno>
+#include <gtest/gtest.h>
 
+#include "fspp/fs_interface/Types.h"
 #include "testutils/FuseReadTest.h"
 
 #include "fspp/fs_interface/FuseErrnoException.h"

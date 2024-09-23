@@ -1,10 +1,22 @@
 #include "FsBlobStore.h"
-#include "FileBlob.h"
 #include "DirBlob.h"
+#include "FileBlob.h"
 #include "SymlinkBlob.h"
-#include <cryfs/impl/config/CryConfigFile.h>
+#include "blobstore/interface/Blob.h"
+#include "blobstore/interface/BlobStore.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobView.h"
+#include "fspp/fs_interface/Dir.h"
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
 #include <cpp-utils/io/ProgressBar.h>
 #include <cpp-utils/process/SignalCatcher.h>
+#include <cstdint>
+#include <functional>
+#include <stdexcept>
+#include <utility>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

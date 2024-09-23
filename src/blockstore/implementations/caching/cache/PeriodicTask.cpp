@@ -1,5 +1,10 @@
 #include "PeriodicTask.h"
-#include <cpp-utils/logging/logging.h>
+#include <boost/thread/pthread/thread_data.hpp>
+#include <cstdint>
+#include <functional>
+#include <stdint.h>
+#include <string>
+#include <utility>
 
 using std::function;
 using namespace cpputils::logging;

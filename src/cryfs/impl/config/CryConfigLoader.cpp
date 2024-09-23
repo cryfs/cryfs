@@ -1,14 +1,23 @@
 #include "CryConfigLoader.h"
 #include "CryConfigFile.h"
-#include <boost/filesystem.hpp>
-#include <cpp-utils/random/Random.h>
-#include <cpp-utils/logging/logging.h>
-#include <boost/algorithm/string/predicate.hpp>
-#include <gitversion/gitversion.h>
-#include <gitversion/VersionCompare.h>
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/io/Console.h"
+#include "cpp-utils/random/RandomGenerator.h"
+#include "cryfs/impl/CryfsException.h"
+#include "cryfs/impl/ErrorCodes.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include "cryfs/impl/config/CryKeyProvider.h"
 #include "cryfs/impl/localstate/LocalStateDir.h"
 #include "cryfs/impl/localstate/LocalStateMetadata.h"
-#include "cryfs/impl/CryfsException.h"
+#include "gitversion/versionstring.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
+#include <cstdint>
+#include <gitversion/VersionCompare.h>
+#include <string>
+#include <utility>
 
 namespace bf = boost::filesystem;
 using cpputils::Console;

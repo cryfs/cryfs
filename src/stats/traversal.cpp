@@ -1,6 +1,15 @@
 #include "traversal.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blockstore/interface/BlockStore.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/fsblobstore/DirBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobStore.h"
+#include "fspp/fs_interface/Dir.h"
 
 #include <blobstore/implementations/onblocks/datanodestore/DataInnerNode.h>
+#include <boost/none.hpp>
+#include <cstdint>
 
 using blockstore::BlockId;
 using blockstore::BlockStore;

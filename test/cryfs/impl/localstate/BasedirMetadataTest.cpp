@@ -1,3 +1,6 @@
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <fstream>
 #include <gtest/gtest.h>
 
 #include <cryfs/impl/localstate/BasedirMetadata.h>

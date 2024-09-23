@@ -1,4 +1,3 @@
-#include "testutils/FuseCreateAndOpenTest.h"
 
 //TODO Disabled because it doesn't seem to work. Fuse doesn't seem to pass flags to create(). Why?
 /*

@@ -2,7 +2,11 @@
 
 #include "blockstore/implementations/parallelaccess/ParallelAccessBlockStore.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include <cstddef>
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <memory>
+#include <utility>
 
 using ::testing::Test;
 

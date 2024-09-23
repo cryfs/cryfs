@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
-#include <cpp-utils/data/SerializationHelper.h>
 #include <cpp-utils/data/Data.h>
+#include <cpp-utils/data/SerializationHelper.h>
+#include <cstdint>
+#include <gtest/gtest.h>
 
 using cpputils::serialize;
 using cpputils::deserialize;

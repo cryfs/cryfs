@@ -1,4 +1,8 @@
 #include "testutils/FuseMkdirTest.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <fcntl.h>
+#include <sys/types.h>
 
 using ::testing::Eq;
 using ::testing::WithParamInterface;

@@ -1,7 +1,9 @@
 #include "ProgramOptions.h"
-#include <cstring>
-#include <cpp-utils/assert/assert.h>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cpp-utils/system/path.h>
+#include <string>
+#include <utility>
 
 using namespace cryfs_unmount::program_options;
 using std::string;

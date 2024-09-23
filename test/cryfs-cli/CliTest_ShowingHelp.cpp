@@ -1,4 +1,6 @@
+#include "cryfs/impl/ErrorCodes.h"
 #include "testutils/CliTest.h"
+#include <gtest/gtest.h>
 
 using CliTest_ShowingHelp = CliTest;
 

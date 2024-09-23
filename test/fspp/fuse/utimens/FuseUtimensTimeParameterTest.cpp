@@ -1,4 +1,9 @@
 #include "testutils/FuseUtimensTest.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <array>
+#include <ctime>
+#include <stdint.h>
 
 using ::testing::Eq;
 using ::testing::Return;

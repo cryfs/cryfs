@@ -1,8 +1,4 @@
-#include <cpp-utils/data/DataFixture.h>
-#include <gtest/gtest.h>
 
-#include <cpp-utils/tempfile/TempFile.h>
-#include <cpp-utils/tempfile/TempDir.h>
 
 // TODO This should be ported to BlockStore2
 /*

@@ -1,4 +1,8 @@
 #include "FuseTruncateTest.h"
+#include "fspp/fs_interface/Types.h"
+#include <cerrno>
+#include <gtest/gtest.h>
+#include <unistd.h>
 
 void FuseTruncateTest::TruncateFile(const char *filename, fspp::num_bytes_t size) {
   const int error = TruncateFileReturnError(filename, size);

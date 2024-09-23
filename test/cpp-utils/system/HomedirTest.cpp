@@ -1,6 +1,9 @@
-#include <gtest/gtest.h>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cpp-utils/system/homedir.h>
 #include <cpp-utils/tempfile/TempDir.h>
+#include <gtest/gtest.h>
+#include <iterator>
 
 using cpputils::system::HomeDirectory;
 using cpputils::system::FakeHomeDirectoryRAII;

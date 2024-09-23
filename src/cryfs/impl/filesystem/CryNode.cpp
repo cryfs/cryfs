@@ -1,14 +1,27 @@
 #include "CryNode.h"
 
 #include "CryDevice.h"
-#include "CryDir.h"
-#include "CryFile.h"
-#include <fspp/fs_interface/FuseErrnoException.h>
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/macros.h"
+#include "cryfs/impl/filesystem/fsblobstore/DirBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/DirEntry.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FsBlobRef.h"
+#include "entry_helper.h"
+#include "fspp/fs_interface/Context.h"
+#include "fspp/fs_interface/Dir.h"
+#include "fspp/fs_interface/Types.h"
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <cerrno>
+#include <cpp-utils/logging/logging.h>
 #include <cpp-utils/pointer/cast.h>
 #include <cpp-utils/system/time.h>
-#include <cpp-utils/system/stat.h>
-#include <cpp-utils/logging/logging.h>
-#include "entry_helper.h"
+#include <ctime>
+#include <fspp/fs_interface/FuseErrnoException.h>
+#include <unistd.h>
+#include <utility>
 
 namespace bf = boost::filesystem;
 

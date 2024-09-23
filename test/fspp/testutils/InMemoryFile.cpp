@@ -1,4 +1,9 @@
 #include "InMemoryFile.h"
+#include "cpp-utils/data/Data.h"
+#include "fspp/fs_interface/Types.h"
+#include <algorithm>
+#include <cstring>
+#include <utility>
 
 using cpputils::Data;
 

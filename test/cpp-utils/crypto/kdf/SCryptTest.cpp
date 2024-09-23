@@ -1,5 +1,11 @@
-#include <gtest/gtest.h>
 #include "cpp-utils/crypto/kdf/Scrypt.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/crypto/kdf/SCryptParameters.h"
+#include "cpp-utils/crypto/symmetric/EncryptionKey.h"
+#include "cpp-utils/data/Data.h"
+#include <cstring>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace cpputils;
 using std::string;

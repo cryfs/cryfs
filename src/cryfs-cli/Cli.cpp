@@ -1,32 +1,60 @@
 #include "Cli.h"
 
 #include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
+#include <boost/chrono/duration.hpp>
+#include <boost/filesystem/directory.hpp>
+#include <boost/filesystem/exception.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <cpp-utils/assert/backtrace.h>
+#include <cstdint>
 
-#include <fspp/fuse/Fuse.h>
-#include <fspp/impl/FilesystemImpl.h>
-#include <cpp-utils/process/subprocess.h>
-#include <cpp-utils/io/DontEchoStdinToStdoutRAII.h>
-#include <cryfs/impl/filesystem/CryDevice.h>
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/crypto/kdf/Scrypt.h"
+#include "cpp-utils/io/Console.h"
+#include "cpp-utils/logging/logging.h"
+#include "cpp-utils/network/HttpClient.h"
+#include "cpp-utils/random/RandomGenerator.h"
+#include "cpp-utils/tempfile/TempFile.h"
+#include "cryfs-cli/CallAfterTimeout.h"
+#include "cryfs-cli/program_options/ProgramOptions.h"
+#include "cryfs/impl/ErrorCodes.h"
+#include "cryfs/impl/config/CryCipher.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include "cryfs/impl/config/CryConfigFile.h"
+#include "gitversion/versionstring.h"
+#include "program_options/Parser.h"
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPasswordBasedKeyProvider.h>
-#include "program_options/Parser.h"
-#include <boost/filesystem.hpp>
+#include <cryfs/impl/filesystem/CryDevice.h>
+#include <exception>
+#include <fspp/fuse/Fuse.h>
+#include <fspp/impl/FilesystemImpl.h>
 
 #include <cryfs/impl/filesystem/CryDir.h>
+#include <functional>
 #include <gitversion/gitversion.h>
 
-#include "VersionChecker.h"
-#include <gitversion/VersionCompare.h>
-#include <cpp-utils/io/NoninteractiveConsole.h>
-#include <cryfs/impl/localstate/LocalStateDir.h>
-#include <cryfs/impl/localstate/BasedirMetadata.h>
 #include "Environment.h"
-#include <cryfs/impl/CryfsException.h>
+#include "VersionChecker.h"
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include <cpp-utils/thread/debugging.h>
+#include <cryfs/impl/CryfsException.h>
+#include <cryfs/impl/localstate/BasedirMetadata.h>
+#include <cryfs/impl/localstate/LocalStateDir.h>
+#include <gitversion/VersionCompare.h>
+#include <iostream>
+#include <memory>
+#include <ostream>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 //TODO Many functions accessing the ProgramOptions object. Factor out into class that stores it as a member.
 //TODO Factor out class handling askPassword

@@ -1,5 +1,8 @@
 #include "DataFixture.h"
 #include "SerializationHelper.h"
+#include "cpp-utils/data/Data.h"
+#include <cstddef>
+#include <cstdint>
 
 namespace cpputils {
   Data DataFixture::generate(size_t size, unsigned long long int seed) {

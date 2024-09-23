@@ -1,5 +1,8 @@
+#include "fspp/fuse/stat_compatibility.h"
 #include "testutils/FuseLstatReturnTest.h"
-#include <cpp-utils/system/stat.h>
+#include "gtest/gtest.h"
+#include <ctime>
+#include <gtest/gtest.h>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

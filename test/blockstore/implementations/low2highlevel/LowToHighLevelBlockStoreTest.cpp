@@ -1,9 +1,8 @@
 #include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
-#include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "../../testutils/BlockStoreTest.h"
+#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
+#include "blockstore/interface/BlockStore.h"
 #include <gtest/gtest.h>
-#include <cpp-utils/tempfile/TempFile.h>
 
 
 using blockstore::BlockStore;

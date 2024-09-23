@@ -1,6 +1,3 @@
-#include "../../testutils/FuseTest.h"
-#include "../../testutils/OpenFileHandle.h"
-#include <condition_variable>
 
 //TODO Figure out what's wrong and enable this test
 //Disabled, because it is flaky. libfuse seems to not send the release() event sometimes.

@@ -1,8 +1,8 @@
+#include "../../testutils/BlockStoreTest.h"
 #include "blockstore/implementations/testfake/FakeBlock.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include "../../testutils/BlockStoreTest.h"
+#include "blockstore/interface/BlockStore.h"
 #include <gtest/gtest.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 using blockstore::BlockStore;
 using blockstore::testfake::FakeBlockStore;

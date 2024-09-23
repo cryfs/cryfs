@@ -1,4 +1,9 @@
 #include "FuseStatfsTest.h"
+#include "gmock/gmock.h"
+#include <cerrno>
+#include <gtest/gtest.h>
+#include <string>
+#include <sys/statvfs.h>
 
 using std::function;
 using ::testing::Invoke;

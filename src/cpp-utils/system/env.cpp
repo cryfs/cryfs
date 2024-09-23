@@ -1,12 +1,12 @@
 #include "env.h"
 
-#include <stdexcept>
-#include <string>
 #include <cerrno>
+#include <stdexcept>
+#include <stdlib.h>
+#include <string>
 
 #if !defined(_MSC_VER)
 
-#include <cstdlib>
 namespace cpputils {
 
 void setenv(const char* key, const char* value) {

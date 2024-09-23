@@ -1,4 +1,7 @@
 #include "FakeHttpClient.h"
+#include "cpp-utils/macros.h"
+#include <stdexcept>
+#include <string>
 
 using std::string;
 using boost::optional;

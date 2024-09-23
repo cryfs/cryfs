@@ -1,6 +1,13 @@
 #include "DataInnerNode.h"
 #include "DataNodeStore.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
 #include <cpp-utils/assert/assert.h>
+#include <cstdint>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 using blockstore::Block;
 using blockstore::BlockStore;

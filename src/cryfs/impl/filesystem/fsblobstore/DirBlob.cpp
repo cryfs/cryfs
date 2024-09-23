@@ -1,15 +1,26 @@
 #include "DirBlob.h"
-#include <cassert>
+#include <boost/optional/detail/optional_reference_spec.hpp>
 
 //TODO Remove and replace with exception hierarchy
-#include <fspp/fs_interface/FuseErrnoException.h>
+#include <cstddef>
+#include <cstdint>
+#include <ctime>
 
-#include <blobstore/implementations/onblocks/utils/Math.h>
+#include "blobstore/interface/Blob.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobView.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/DirEntry.h"
+#include "fspp/fs_interface/Context.h"
+#include "fspp/fs_interface/Dir.h"
+#include "fspp/fs_interface/Types.h"
 #include <cpp-utils/data/Data.h>
-#include "cryfs/impl/filesystem/CryDevice.h"
-#include "FileBlob.h"
-#include "SymlinkBlob.h"
-#include <cpp-utils/system/stat.h>
+#include <functional>
+#include <mutex>
+#include <string>
+#include <utility>
 
 using std::vector;
 using std::string;

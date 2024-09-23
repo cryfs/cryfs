@@ -1,4 +1,7 @@
 #include "FuseRenameTest.h"
+#include <cerrno>
+#include <cstdio>
+#include <gtest/gtest.h>
 
 
 void FuseRenameTest::Rename(const char *from, const char *to) {

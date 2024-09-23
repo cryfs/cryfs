@@ -1,7 +1,13 @@
 #include "FileBlob.h"
+#include "blobstore/interface/Blob.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobView.h"
+#include "fspp/fs_interface/Types.h"
 
 #include <blockstore/utils/BlockId.h>
-#include <cassert>
+#include <cstdint>
+#include <utility>
 
 using blobstore::Blob;
 using cpputils::unique_ref;

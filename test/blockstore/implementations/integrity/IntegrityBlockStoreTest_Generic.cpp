@@ -1,10 +1,12 @@
+#include "../../testutils/BlockStore2Test.h"
+#include "../../testutils/BlockStoreTest.h"
+#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
 #include "blockstore/implementations/integrity/IntegrityBlockStore2.h"
 #include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
-#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
-#include "../../testutils/BlockStoreTest.h"
-#include "../../testutils/BlockStore2Test.h"
-#include <gtest/gtest.h>
+#include "blockstore/interface/BlockStore.h"
+#include "blockstore/interface/BlockStore2.h"
 #include <cpp-utils/tempfile/TempFile.h>
+#include <gtest/gtest.h>
 
 
 using blockstore::BlockStore;

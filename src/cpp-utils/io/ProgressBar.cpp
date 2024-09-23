@@ -1,8 +1,13 @@
 #include "ProgressBar.h"
-#include <iostream>
-#include <limits>
-#include <mutex>
 #include "IOStreamConsole.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/io/Console.h"
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <string>
+#include <utility>
 
 using std::string;
 

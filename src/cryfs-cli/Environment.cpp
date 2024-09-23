@@ -1,7 +1,9 @@
 #include "Environment.h"
-#include <cstdlib>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cpp-utils/system/homedir.h>
-#include <boost/filesystem.hpp>
+#include <cstdlib>
+#include <string>
 
 using std::string;
 namespace bf = boost::filesystem;

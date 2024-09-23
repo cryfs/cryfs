@@ -1,5 +1,6 @@
 #include "FsBlobRef.h"
 #include "CachingFsBlobStore.h"
+#include <utility>
 
 namespace cryfs {
 namespace cachingfsblobstore {

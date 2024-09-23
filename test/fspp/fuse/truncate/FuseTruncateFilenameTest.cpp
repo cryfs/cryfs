@@ -1,4 +1,7 @@
+#include "fspp/fs_interface/Types.h"
 #include "testutils/FuseTruncateTest.h"
+#include "gmock/gmock.h"
+#include <gtest/gtest.h>
 
 using ::testing::Eq;
 using ::testing::Return;

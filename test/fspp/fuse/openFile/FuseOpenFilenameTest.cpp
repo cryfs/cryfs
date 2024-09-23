@@ -1,4 +1,7 @@
 #include "testutils/FuseOpenTest.h"
+#include "gmock/gmock.h"
+#include <fcntl.h>
+#include <gtest/gtest.h>
 
 using ::testing::Eq;
 using ::testing::Return;

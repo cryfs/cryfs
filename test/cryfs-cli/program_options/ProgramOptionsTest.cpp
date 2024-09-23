@@ -1,6 +1,11 @@
 #include "testutils/ProgramOptionsTestBase.h"
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
 #include <cryfs-cli/program_options/ProgramOptions.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <gtest/gtest.h>
+#include <ostream>
+#include <string>
 
 using namespace cryfs_cli::program_options;
 using boost::none;

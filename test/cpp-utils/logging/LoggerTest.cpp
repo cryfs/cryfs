@@ -1,4 +1,8 @@
+#include "cpp-utils/logging/Logger.h"
 #include "testutils/LoggingTest.h"
+#include <gtest/gtest.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <string>
 
 /*
  * Contains test cases for the Logger class

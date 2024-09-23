@@ -1,18 +1,22 @@
-#include <gtest/gtest.h>
+#include "../testutils/MockConsole.h"
+#include "../testutils/TestWithFakeHomeDirectory.h"
+#include "cpp-utils/crypto/kdf/Scrypt.h"
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/CryConfigFile.h"
+#include "cryfs/impl/localstate/LocalStateDir.h"
+#include "fspp/fs_interface/Context.h"
+#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <cpp-utils/io/NoninteractiveConsole.h>
 #include <cpp-utils/tempfile/TempDir.h>
 #include <cpp-utils/tempfile/TempFile.h>
-#include <cpp-utils/pointer/cast.h>
-#include <blockstore/implementations/ondisk/OnDiskBlockStore2.h>
-#include <cryfs/impl/filesystem/CryDevice.h>
-#include <cryfs/impl/filesystem/CryDir.h>
-#include <cryfs/impl/filesystem/CryFile.h>
-#include <cryfs/impl/filesystem/CryOpenFile.h>
-#include "../testutils/MockConsole.h"
 #include <cryfs/impl/config/CryConfigLoader.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
-#include <cpp-utils/system/homedir.h>
-#include "../testutils/TestWithFakeHomeDirectory.h"
-#include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cryfs/impl/filesystem/CryDevice.h>
+#include <cryfs/impl/filesystem/CryOpenFile.h>
+#include <gtest/gtest.h>
+#include <utility>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 

@@ -1,7 +1,18 @@
-#include <gtest/gtest.h>
-#include <cpp-utils/data/DataFixture.h>
+#include "cpp-utils/crypto/symmetric/Cipher.h"
+#include "cpp-utils/crypto/symmetric/EncryptionKey.h"
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/crypto/inner/InnerConfig.h"
+#include "cryfs/impl/config/crypto/outer/OuterConfig.h"
+#include "cryfs/impl/config/crypto/outer/OuterEncryptor.h"
+#include <boost/none.hpp>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
+#include <cpp-utils/data/DataFixture.h>
 #include <cryfs/impl/config/crypto/CryConfigEncryptor.h>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <ostream>
+#include <stdexcept>
+#include <utility>
 
 using std::ostream;
 using cpputils::unique_ref;
@@ -24,7 +35,6 @@ namespace boost {
         return stream << "CryConfigEncryptor::Decrypted()";
     }
 }
-#include <boost/optional/optional_io.hpp>
 
 class CryConfigEncryptorTest: public ::testing::Test {
 public:

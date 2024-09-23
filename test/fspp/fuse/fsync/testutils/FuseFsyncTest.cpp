@@ -1,4 +1,9 @@
 #include "FuseFsyncTest.h"
+#include "/home/heinzi/projects/cryfs/test/fspp/testutils/OpenFileHandle.h"
+#include <cerrno>
+#include <fcntl.h>
+#include <gtest/gtest.h>
+#include <unistd.h>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

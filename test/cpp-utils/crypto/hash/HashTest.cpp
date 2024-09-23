@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
+#include "cpp-utils/data/Data.h"
 #include <cpp-utils/crypto/hash/Hash.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <gtest/gtest.h>
 
 using namespace cpputils::hash;
 using cpputils::DataFixture;

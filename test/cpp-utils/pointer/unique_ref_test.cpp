@@ -1,10 +1,16 @@
-#include <gtest/gtest.h>
+#include "cpp-utils/macros.h"
 #include "cpp-utils/pointer/unique_ref.h"
-#include <vector>
-#include <set>
+#include <boost/optional/optional.hpp>
+#include <functional>
+#include <gtest/gtest.h>
 #include <map>
-#include <unordered_set>
+#include <memory>
+#include <set>
+#include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 using namespace cpputils;
 

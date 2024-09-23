@@ -1,4 +1,5 @@
 #include "testutils/QueueMapTest.h"
+#include <gtest/gtest.h>
 
 class QueueMapTest_Size: public QueueMapTest {};
 

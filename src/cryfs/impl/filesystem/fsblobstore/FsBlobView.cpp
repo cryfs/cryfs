@@ -1,4 +1,8 @@
 #include "FsBlobView.h"
+#include "blobstore/interface/Blob.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include <cstdint>
 
 
 namespace cryfs {

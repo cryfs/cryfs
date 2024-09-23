@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <gitversion/VersionCompare.h>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace gitversion;
 using std::string;

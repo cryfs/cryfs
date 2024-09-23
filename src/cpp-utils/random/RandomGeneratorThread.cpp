@@ -1,4 +1,10 @@
 #include "RandomGeneratorThread.h"
+#include "config_int.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/random/ThreadsafeRandomDataBuffer.h"
+#include <cstddef>
+#include <functional>
 
 namespace cpputils {
 

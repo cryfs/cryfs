@@ -1,4 +1,6 @@
 #include "testutils/FuseUtimensTest.h"
+#include "gmock/gmock.h"
+#include <gtest/gtest.h>
 
 using ::testing::Eq;
 using ::testing::Return;

@@ -1,12 +1,4 @@
-#include <cpp-utils/data/DataFixture.h>
-#include "blockstore/utils/FileDoesntExistException.h"
-#include <gtest/gtest.h>
 
-#include <cpp-utils/data/Data.h>
-#include <cpp-utils/tempfile/TempFile.h>
-#include <cpp-utils/tempfile/TempDir.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
-#include <fstream>
 
 // TODO This should be ported to BlockStore2
 /*

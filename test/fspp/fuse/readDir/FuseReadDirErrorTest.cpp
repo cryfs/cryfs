@@ -1,6 +1,11 @@
 #include "testutils/FuseReadDirTest.h"
 
 #include "fspp/fs_interface/FuseErrnoException.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <cerrno>
+#include <gtest/gtest.h>
+#include <string>
 
 using ::testing::Eq;
 using ::testing::Throw;

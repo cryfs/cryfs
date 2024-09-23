@@ -1,4 +1,12 @@
 #include "FuseReadDirTest.h"
+#include "fspp/fs_interface/Dir.h"
+#include <boost/filesystem/path.hpp>
+#include <cerrno>
+#include <cstddef>
+#include <dirent.h>
+#include <gtest/gtest.h>
+#include <string>
+#include <utility>
 
 using cpputils::make_unique_ref;
 using std::vector;

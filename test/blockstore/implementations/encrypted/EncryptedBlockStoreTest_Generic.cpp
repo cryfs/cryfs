@@ -1,12 +1,12 @@
-#include <cpp-utils/crypto/symmetric/ciphers.h>
-#include <cpp-utils/crypto/symmetric/Cipher.h>
-#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
-#include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"
-#include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
-#include "../../testutils/BlockStoreTest.h"
 #include "../../testutils/BlockStore2Test.h"
+#include "../../testutils/BlockStoreTest.h"
+#include "blockstore/implementations/encrypted/EncryptedBlockStore2.h"
+#include "blockstore/implementations/inmemory/InMemoryBlockStore2.h"
+#include <blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h>
+#include <cpp-utils/crypto/symmetric/ciphers.h>
 //TODO Move FakeAuthenticatedCipher out of test folder to normal folder. Dependencies should not point into tests of other modules.
+#include "blockstore/interface/BlockStore.h"
+#include "blockstore/interface/BlockStore2.h"
 #include "cpp-utils/crypto/symmetric/testutils/FakeAuthenticatedCipher.h"
 #include <gtest/gtest.h>
 

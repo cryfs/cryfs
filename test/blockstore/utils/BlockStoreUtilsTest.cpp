@@ -1,9 +1,10 @@
-#include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include <cpp-utils/data/DataFixture.h>
 #include "blockstore/utils/BlockStoreUtils.h"
+#include "blockstore/implementations/testfake/FakeBlockStore.h"
+#include "cpp-utils/data/Data.h"
+#include <cpp-utils/data/DataFixture.h>
+#include <cstring>
 #include <gtest/gtest.h>
 
-#include <memory>
 
 using ::testing::Test;
 

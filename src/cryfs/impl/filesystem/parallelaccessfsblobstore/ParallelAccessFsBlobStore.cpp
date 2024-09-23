@@ -1,6 +1,16 @@
 #include "ParallelAccessFsBlobStore.h"
-#include "ParallelAccessFsBlobStoreAdapter.h"
-#include "cryfs/impl/filesystem/fsblobstore/FsBlobStore.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/FileBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/FsBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FsBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/SymlinkBlobRef.h"
+#include <boost/filesystem/path.hpp>
+#include <utility>
 
 namespace bf = boost::filesystem;
 using cpputils::unique_ref;

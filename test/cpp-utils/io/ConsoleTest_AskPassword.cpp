@@ -1,4 +1,9 @@
 #include "ConsoleTest.h"
+#include <gtest/gtest.h>
+#include <istream>
+#include <ostream>
+#include <sstream>
+#include <string>
 
 using std::stringstream;
 using std::string;

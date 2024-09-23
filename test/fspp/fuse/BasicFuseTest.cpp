@@ -1,4 +1,5 @@
 #include "../testutils/FuseTest.h"
+#include <gtest/gtest.h>
 
 using namespace fspp::fuse;
 using namespace fspp::fuse;

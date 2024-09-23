@@ -1,11 +1,17 @@
 #include "CryOpenFile.h"
 
-#include <sys/types.h>
-#include <fcntl.h>
+#include <boost/none.hpp>
+#include <cerrno>
 
 #include "CryDevice.h"
-#include <fspp/fs_interface/FuseErrnoException.h>
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
 #include "entry_helper.h"
+#include "fspp/fs_interface/Context.h"
+#include "fspp/fs_interface/Node.h"
+#include "fspp/fs_interface/Types.h"
+#include <fspp/fs_interface/FuseErrnoException.h>
+#include <utility>
 
 
 using std::shared_ptr;

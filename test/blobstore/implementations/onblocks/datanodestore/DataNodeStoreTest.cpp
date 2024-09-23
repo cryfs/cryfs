@@ -1,13 +1,18 @@
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
 #include "blobstore/implementations/onblocks/datanodestore/DataNode.h"
-#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
-#include "blobstore/implementations/onblocks/BlobStoreOnBlocks.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include <boost/none.hpp>
+#include <cstdint>
 #include <gtest/gtest.h>
 
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
 #include <blockstore/implementations/testfake/FakeBlock.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <string>
+#include <utility>
 
 using ::testing::Test;
 using cpputils::unique_ref;

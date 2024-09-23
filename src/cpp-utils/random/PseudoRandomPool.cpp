@@ -1,4 +1,5 @@
 #include "PseudoRandomPool.h"
+#include <cstddef>
 
 namespace cpputils {
     constexpr size_t PseudoRandomPool::MIN_BUFFER_SIZE;

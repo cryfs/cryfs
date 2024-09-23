@@ -1,4 +1,6 @@
 #include "testutils/FuseUnlinkTest.h"
+#include "gmock/gmock.h"
+#include <gtest/gtest.h>
 
 using ::testing::Eq;
 

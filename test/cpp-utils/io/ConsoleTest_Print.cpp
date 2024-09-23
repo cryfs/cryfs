@@ -1,4 +1,5 @@
 #include "ConsoleTest.h"
+#include <gtest/gtest.h>
 
 TEST_F(ConsoleTest, Print) {
     print("Bla Blub");

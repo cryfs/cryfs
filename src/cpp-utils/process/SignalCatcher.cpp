@@ -1,11 +1,14 @@
 #include "SignalCatcher.h"
 #include "SignalHandler.h"
+#include "cpp-utils/macros.h"
 
 #include <algorithm>
-#include <stdexcept>
-#include <vector>
+#include <atomic>
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/thread/LeftRight.h>
+#include <csignal>
+#include <initializer_list>
+#include <vector>
 
 using std::make_unique;
 using std::vector;

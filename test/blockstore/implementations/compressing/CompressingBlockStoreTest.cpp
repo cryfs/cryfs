@@ -1,8 +1,9 @@
 #include "blockstore/implementations/compressing/CompressingBlockStore.h"
+#include "../../testutils/BlockStoreTest.h"
 #include "blockstore/implementations/compressing/compressors/Gzip.h"
 #include "blockstore/implementations/compressing/compressors/RunLengthEncoding.h"
 #include "blockstore/implementations/testfake/FakeBlockStore.h"
-#include "../../testutils/BlockStoreTest.h"
+#include "blockstore/interface/BlockStore.h"
 #include <gtest/gtest.h>
 
 

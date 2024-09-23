@@ -1,6 +1,9 @@
-#include <gtest/gtest.h>
+#include "blockstore/utils/BlockId.h"
 #include <blockstore/implementations/integrity/KnownBlockVersions.h>
 #include <cpp-utils/tempfile/TempFile.h>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <stdexcept>
 
 using blockstore::integrity::KnownBlockVersions;
 using blockstore::BlockId;

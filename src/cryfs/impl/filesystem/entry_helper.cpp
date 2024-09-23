@@ -1,5 +1,9 @@
 #include "entry_helper.h"
 #include "blobstore/implementations/onblocks/utils/Math.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/DirEntry.h"
+#include "fspp/fs_interface/Node.h"
+#include "fspp/fs_interface/Types.h"
+#include <cstdint>
 
 namespace cryfs {
 fspp::Node::stat_info dirEntryToStatInfo(const fsblobstore::DirEntry &dirEntry, fspp::num_bytes_t size) {

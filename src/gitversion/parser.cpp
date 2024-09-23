@@ -1,5 +1,10 @@
 #include "parser.h"
+#include <boost/none.hpp>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <utility>
 
 using std::string;
 using std::pair;

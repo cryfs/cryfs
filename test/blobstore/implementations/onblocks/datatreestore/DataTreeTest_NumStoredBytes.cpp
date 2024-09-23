@@ -1,5 +1,9 @@
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeView.h"
+#include "blockstore/utils/BlockId.h"
 #include "testutils/DataTreeTest.h"
-#include <gmock/gmock.h>
+#include "gtest/gtest.h"
+#include <cstdint>
+#include <gtest/gtest.h>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

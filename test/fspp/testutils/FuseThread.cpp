@@ -1,8 +1,10 @@
-#include <sys/types.h>
 #include "FuseThread.h"
-#include <csignal>
-#include <cpp-utils/assert/assert.h>
 #include "fspp/fuse/Fuse.h"
+#include <boost/chrono/duration.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/thread/detail/thread.hpp>
+#include <cpp-utils/assert/assert.h>
+#include <string>
 
 using boost::thread;
 using boost::chrono::seconds;

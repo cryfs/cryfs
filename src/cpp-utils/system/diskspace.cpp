@@ -1,4 +1,8 @@
 #include "diskspace.h"
+#include <boost/filesystem/path.hpp>
+#include <cstdint>
+#include <stdexcept>
+#include <string>
 
 namespace bf = boost::filesystem;
 

@@ -1,14 +1,23 @@
 #include "CryDir.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <cerrno>
+#include <cstddef>
+#include <string>
 
-#include <fspp/fs_interface/FuseErrnoException.h>
 #include "CryDevice.h"
-#include "CryFile.h"
 #include "CryOpenFile.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/CryNode.h"
+#include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
+#include "fspp/fs_interface/Dir.h"
+#include "fspp/fs_interface/OpenFile.h"
+#include "fspp/fs_interface/Types.h"
 #include <cpp-utils/system/time.h>
+#include <fspp/fs_interface/FuseErrnoException.h>
+#include <utility>
 
 //TODO Get rid of this in favor of exception hierarchy
 using fspp::fuse::FuseErrnoException;

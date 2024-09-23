@@ -1,8 +1,20 @@
 #include "DataTreeTest.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataInnerNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataLeafNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNode.h"
+#include "blobstore/implementations/onblocks/datanodestore/DataNodeStore.h"
+#include "blobstore/implementations/onblocks/datatreestore/DataTree.h"
+#include "blockstore/implementations/mock/MockBlockStore.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
 
-#include <blockstore/implementations/testfake/FakeBlockStore.h>
+#include <algorithm>
+#include <boost/none.hpp>
 #include <cpp-utils/pointer/cast.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <utility>
 
 using blobstore::onblocks::datanodestore::DataNodeStore;
 using blobstore::onblocks::datanodestore::DataNode;

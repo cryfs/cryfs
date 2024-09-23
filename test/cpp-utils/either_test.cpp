@@ -1,9 +1,15 @@
+#include "cpp-utils/macros.h"
+#include <algorithm>
+#include <boost/none.hpp>
 #include <cpp-utils/either.h>
-#include <gtest/gtest.h>
+#include <functional>
 #include <gmock/gmock.h>
-#include <vector>
+#include <gtest/gtest.h>
+#include <ostream>
 #include <sstream>
-#include <boost/optional/optional_io.hpp>
+#include <string>
+#include <utility>
+#include <vector>
 
 using std::string;
 using std::vector;

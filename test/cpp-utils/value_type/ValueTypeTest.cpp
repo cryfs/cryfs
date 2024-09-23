@@ -1,8 +1,10 @@
 #include <cpp-utils/value_type/ValueType.h>
+#include <cstdint>
+#include <functional>
 #include <gtest/gtest.h>
-#include <utility>
-#include <unordered_set>
 #include <set>
+#include <unordered_set>
+#include <utility>
 
 // TODO Test with MovableOnly underlying type
 // TODO Test that move constructing/assigning actually moves the underlying

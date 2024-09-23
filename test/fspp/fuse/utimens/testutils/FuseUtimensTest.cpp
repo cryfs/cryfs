@@ -1,5 +1,7 @@
 #include "FuseUtimensTest.h"
 #include <cpp-utils/system/filetime.h>
+#include <ctime>
+#include <gtest/gtest.h>
 
 void FuseUtimensTest::Utimens(const char *filename, timespec lastAccessTime, timespec lastModificationTime) {
   const int error = UtimensReturnError(filename, lastAccessTime, lastModificationTime);

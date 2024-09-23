@@ -1,4 +1,13 @@
 #include "CryPasswordBasedKeyProvider.h"
+#include "cpp-utils/crypto/kdf/PasswordBasedKDF.h"
+#include "cpp-utils/crypto/symmetric/EncryptionKey.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/io/Console.h"
+#include "cryfs/impl/config/CryKeyProvider.h"
+#include <cstddef>
+#include <functional>
+#include <string>
+#include <utility>
 
 using std::shared_ptr;
 using cpputils::Console;

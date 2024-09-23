@@ -1,7 +1,14 @@
-#include <gtest/gtest.h>
-#include <cryfs/impl/config/crypto/inner/ConcreteInnerEncryptor.h>
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/crypto/inner/InnerConfig.h"
+#include "cryfs/impl/config/crypto/inner/InnerEncryptor.h"
+#include <boost/none.hpp>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
+#include <cryfs/impl/config/crypto/inner/ConcreteInnerEncryptor.h>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <ostream>
+#include <stdexcept>
 
 using std::ostream;
 using boost::none;
@@ -22,7 +29,6 @@ namespace boost {
         return stream << "cpputils::Data()";
     }
 }
-#include <boost/optional/optional_io.hpp>
 
 class ConcreteInnerEncryptorTest : public ::testing::Test {
 public:

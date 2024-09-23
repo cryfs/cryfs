@@ -1,7 +1,9 @@
+#include "../../testutils/BlockStore2Test.h"
+#include "../../testutils/BlockStoreTest.h"
 #include "blockstore/implementations/low2highlevel/LowToHighLevelBlockStore.h"
 #include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
-#include "../../testutils/BlockStoreTest.h"
-#include "../../testutils/BlockStore2Test.h"
+#include "blockstore/interface/BlockStore.h"
+#include "blockstore/interface/BlockStore2.h"
 #include <gtest/gtest.h>
 
 #include <cpp-utils/tempfile/TempDir.h>

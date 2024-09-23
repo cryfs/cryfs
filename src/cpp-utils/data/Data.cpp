@@ -1,5 +1,18 @@
 #include "Data.h"
+#include "config_int.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include "filters.h"
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <cstddef>
+#include <fstream>
+#include <ios>
+#include <iosfwd>
+#include <istream>
 #include <stdexcept>
+#include <string>
+#include <utility>
 #include <vendor_cryptopp/hex.h>
 
 using std::istream;

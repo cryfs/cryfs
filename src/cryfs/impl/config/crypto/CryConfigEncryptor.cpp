@@ -1,5 +1,16 @@
 #include "CryConfigEncryptor.h"
-#include <cpp-utils/crypto/RandomPadding.h>
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/crypto/symmetric/EncryptionKey.h"
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/CryCipher.h"
+#include "cryfs/impl/config/crypto/inner/InnerConfig.h"
+#include "cryfs/impl/config/crypto/inner/InnerEncryptor.h"
+#include "cryfs/impl/config/crypto/outer/OuterConfig.h"
+#include "cryfs/impl/config/crypto/outer/OuterEncryptor.h"
+#include <boost/none.hpp>
+#include <cstddef>
+#include <string>
+#include <utility>
 
 using std::string;
 using cpputils::unique_ref;

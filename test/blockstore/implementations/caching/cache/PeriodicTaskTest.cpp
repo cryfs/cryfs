@@ -1,3 +1,5 @@
+#include <boost/chrono/duration.hpp>
+#include <boost/thread/pthread/thread_data.hpp>
 #include <gtest/gtest.h>
 
 #include "blockstore/implementations/caching/cache/PeriodicTask.h"

@@ -1,7 +1,16 @@
 #include "blockstore/interface/BlockStore2.h"
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include <boost/optional/optional.hpp>
 #include <cpp-utils/data/DataFixture.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <ostream>
+#include <string>
 
 using ::testing::Test;
 using ::testing::Return;

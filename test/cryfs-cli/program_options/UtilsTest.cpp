@@ -1,5 +1,7 @@
 #include "testutils/ProgramOptionsTestBase.h"
 #include <cryfs-cli/program_options/utils.h>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace cryfs_cli::program_options;
 using std::pair;

@@ -1,4 +1,8 @@
 #include "DataUtils.h"
+#include "cpp-utils/data/Data.h"
+#include <algorithm>
+#include <cstddef>
+#include <cstring>
 
 namespace cpputils {
     namespace DataUtils {

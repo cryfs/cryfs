@@ -1,12 +1,10 @@
-#include "parallelaccessdatatreestore/DataTreeRef.h"
 #include "BlobOnBlocks.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include "parallelaccessdatatreestore/DataTreeRef.h"
 
-#include "datanodestore/DataLeafNode.h"
-#include "datanodestore/DataNodeStore.h"
-#include "utils/Math.h"
-#include <cmath>
-#include <cpp-utils/assert/assert.h>
-#include "datatreestore/LeafHandle.h"
+#include <cstdint>
+#include <utility>
 
 using cpputils::unique_ref;
 using cpputils::Data;

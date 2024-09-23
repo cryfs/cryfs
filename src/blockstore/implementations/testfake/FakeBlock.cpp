@@ -1,8 +1,17 @@
 #include "FakeBlock.h"
 #include "FakeBlockStore.h"
-#include <cstring>
+#include "blockstore/interface/Block.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/data/DataUtils.h>
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <ios>
+#include <istream>
+#include <ostream>
+#include <string>
 
 using std::shared_ptr;
 using std::istream;

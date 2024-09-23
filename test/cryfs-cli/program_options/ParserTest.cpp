@@ -1,10 +1,17 @@
+#include "cryfs-cli/program_options/ProgramOptions.h"
+#include "cryfs/impl/ErrorCodes.h"
 #include "testutils/ProgramOptionsTestBase.h"
-#include <cryfs-cli/program_options/Parser.h>
-#include <cryfs/impl/config/CryCipher.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
-#include <gitversion/gitversion.h>
-#include <cryfs/impl/CryfsException.h>
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/none.hpp>
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
+#include <cryfs-cli/program_options/Parser.h>
+#include <cryfs/impl/CryfsException.h>
+#include <cryfs/impl/config/CryCipher.h>
+#include <gtest/gtest.h>
+#include <initializer_list>
+#include <string>
 
 using namespace cryfs;
 using namespace cryfs_cli::program_options;

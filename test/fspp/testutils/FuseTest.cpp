@@ -1,4 +1,19 @@
 #include "FuseTest.h"
+#include "fspp/fs_interface/Context.h"
+#include "fspp/fs_interface/FuseErrnoException.h"
+#include "fspp/fs_interface/Types.h"
+#include "fspp/fuse/Fuse.h"
+#include "fspp/fuse/stat_compatibility.h"
+#include "gmock/gmock.h"
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <cerrno>
+#include <fcntl.h>
+#include <string>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <utility>
+#include <vector>
 
 using ::testing::Eq;
 using ::testing::Return;

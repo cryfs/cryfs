@@ -1,6 +1,10 @@
 #include "DataTreeStore.h"
-#include "../datanodestore/DataLeafNode.h"
 #include "DataTree.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
+#include <boost/none.hpp>
+#include <utility>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

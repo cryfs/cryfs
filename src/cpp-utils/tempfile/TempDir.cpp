@@ -1,5 +1,8 @@
 #include "TempDir.h"
 #include "../logging/logging.h"
+#include <boost/filesystem/exception.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;

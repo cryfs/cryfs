@@ -1,3 +1,6 @@
+#include <boost/stacktrace/stacktrace.hpp>
+#include <cstdlib>
+#include <string>
 #if !defined(_MSC_VER)
 
 #include <csignal>
@@ -6,7 +9,6 @@
 #include "../logging/logging.h"
 #include <cpp-utils/process/SignalHandler.h>
 
-#include <boost/stacktrace.hpp>
 
 using std::string;
 using std::ostringstream;

@@ -1,9 +1,19 @@
 #include "CryConfigCreator.h"
 #include "CryCipher.h"
-#include <gitversion/gitversion.h>
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/io/Console.h"
+#include "cpp-utils/random/RandomGenerator.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include "gitversion/versionstring.h"
+#include <algorithm>
+#include <boost/none.hpp>
 #include <cpp-utils/random/Random.h>
 #include <cryfs/impl/localstate/LocalStateDir.h>
 #include <cryfs/impl/localstate/LocalStateMetadata.h>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 using cpputils::Console;
 using cpputils::RandomGenerator;

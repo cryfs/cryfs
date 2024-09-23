@@ -1,10 +1,19 @@
 #include "BasedirMetadata.h"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <vendor_cryptopp/sha.h>
-#include <boost/filesystem/operations.hpp>
 #include "LocalStateDir.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/none.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <cpp-utils/logging/logging.h>
+#include <fstream>
+#include <ios>
+#include <istream>
+#include <ostream>
+#include <string>
+#include <utility>
 
 namespace bf = boost::filesystem;
 using boost::property_tree::ptree;

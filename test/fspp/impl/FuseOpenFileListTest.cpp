@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include "fspp/fs_interface/FuseErrnoException.h"
+#include "fspp/fs_interface/OpenFile.h"
+#include "fspp/fs_interface/Types.h"
 #include "fspp/impl/FuseOpenFileList.h"
 
 #include <stdexcept>

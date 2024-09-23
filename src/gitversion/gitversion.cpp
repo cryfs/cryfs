@@ -1,5 +1,7 @@
 #include "gitversion.h"
+#include "gitversion/versionstring.h"
 #include "parser.h"
+#include <string>
 
 using std::string;
 

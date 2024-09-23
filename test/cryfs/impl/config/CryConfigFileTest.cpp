@@ -1,8 +1,16 @@
-#include <gtest/gtest.h>
-#include <cryfs/impl/config/CryConfigFile.h>
-#include <cpp-utils/tempfile/TempFile.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 #include "../../impl/testutils/FakeCryKeyProvider.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/macros.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include "cryfs/impl/config/crypto/CryConfigEncryptorFactory.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/none.hpp>
+#include <cpp-utils/tempfile/TempFile.h>
+#include <cryfs/impl/config/CryConfigFile.h>
+#include <gtest/gtest.h>
+#include <ostream>
+#include <string>
+#include <utility>
 
 using namespace cryfs;
 using cpputils::TempFile;
@@ -21,7 +29,6 @@ namespace boost {
         return out;
     }
 }
-#include <boost/optional/optional_io.hpp>
 
 class CryConfigFileTest: public ::testing::Test {
 public:

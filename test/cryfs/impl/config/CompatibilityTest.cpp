@@ -1,13 +1,15 @@
-#include <gtest/gtest.h>
-#include <vector>
-#include <boost/filesystem.hpp>
-#include <cpp-utils/data/Data.h>
-#include <vendor_cryptopp/hex.h>
+#include "config_int.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/crypto/kdf/Scrypt.h"
+#include "cpp-utils/crypto/symmetric/Cipher.h"
+#include "filters.h"
 #include <cpp-utils/crypto/symmetric/ciphers.h>
+#include <cpp-utils/data/Data.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/impl/config/CryConfigFile.h>
 #include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
-#include "../../impl/testutils/MockConsole.h"
+#include <gtest/gtest.h>
+#include <vendor_cryptopp/hex.h>
 
 using cpputils::Data;
 using cpputils::AES256_GCM;

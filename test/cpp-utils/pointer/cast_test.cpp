@@ -1,8 +1,9 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include "cpp-utils/macros.h"
 #include "cpp-utils/pointer/cast.h"
 #include "cpp-utils/pointer/unique_ref.h"
-#include "cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h"
+#include <boost/none.hpp>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 //TODO There is a lot of duplication here, because each test case is there twice - once for unique_ptr, once for unique_ref. Remove redundancy by using generic test cases.
 //TODO Then also move the unique_ref related test cases there - cast_test.cpp should only contain the unique_ptr related ones.

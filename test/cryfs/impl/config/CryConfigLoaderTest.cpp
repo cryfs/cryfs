@@ -1,18 +1,38 @@
+#include "gmock/gmock.h"
+#include <boost/none.hpp>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <gtest/gtest.h>
 
-#include <cryfs/impl/config/CryConfigLoader.h>
-#include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
 #include "../../impl/testutils/MockConsole.h"
 #include "../../impl/testutils/TestWithFakeHomeDirectory.h"
-#include <cpp-utils/tempfile/TempFile.h>
-#include <cpp-utils/random/Random.h>
+#include "cpp-utils/crypto/kdf/Scrypt.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/io/Console.h"
+#include "cpp-utils/random/RandomGenerator.h"
+#include "cpp-utils/tempfile/TempDir.h"
+#include "cryfs/impl/config/CryConfig.h"
+#include "cryfs/impl/config/CryConfigFile.h"
+#include "cryfs/impl/config/CryKeyProvider.h"
+#include "cryfs/impl/localstate/LocalStateDir.h"
+#include "gitversion/versionstring.h"
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <cpp-utils/random/Random.h>
+#include <cpp-utils/tempfile/TempFile.h>
+#include <cryfs/impl/config/CryConfigLoader.h>
+#include <cryfs/impl/config/CryPresetPasswordBasedKeyProvider.h>
+#include <gitversion/VersionCompare.h>
 #include <gitversion/gitversion.h>
 #include <gitversion/parser.h>
-#include <gitversion/VersionCompare.h>
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <memory>
+#include <ostream>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 using cpputils::TempFile;
 using cpputils::SCrypt;
@@ -47,7 +67,6 @@ namespace cryfs {
     return stream << "ConfigLoadResult()";
   }
 }
-#include <boost/optional/optional_io.hpp>
 
 class FakeRandomGenerator final : public cpputils::RandomGenerator {
 public:

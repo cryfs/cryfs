@@ -1,9 +1,26 @@
 #include "DirEntryList.h"
-#include <limits>
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/filesystem/fsblobstore/utils/DirEntry.h"
+#include "fspp/fs_interface/Context.h"
+#include "fspp/fs_interface/Dir.h"
+#include "fspp/fs_interface/Types.h"
+#include <algorithm>
+#include <boost/none.hpp>
+#include <boost/optional/detail/optional_reference_spec.hpp>
+#include <cerrno>
 #include <cpp-utils/system/time.h>
+#include <cstddef>
+#include <cstdint>
+#include <ctime>
+#include <functional>
+#include <limits>
 
 //TODO Get rid of that in favor of better error handling
 #include <fspp/fs_interface/FuseErrnoException.h>
+#include <stdexcept>
+#include <string>
 
 using cpputils::Data;
 using std::string;

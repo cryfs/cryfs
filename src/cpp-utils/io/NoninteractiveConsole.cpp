@@ -1,4 +1,8 @@
 #include "NoninteractiveConsole.h"
+#include "cpp-utils/io/Console.h"
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 using std::string;
 using std::vector;

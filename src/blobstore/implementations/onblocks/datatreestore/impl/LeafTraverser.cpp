@@ -1,9 +1,17 @@
 #include "LeafTraverser.h"
-#include <cpp-utils/assert/assert.h>
-#include "../../datanodestore/DataLeafNode.h"
 #include "../../datanodestore/DataInnerNode.h"
+#include "../../datanodestore/DataLeafNode.h"
 #include "../../datanodestore/DataNodeStore.h"
 #include "../../utils/Math.h"
+#include "blobstore/implementations/onblocks/datatreestore/LeafHandle.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include <algorithm>
+#include <boost/none.hpp>
+#include <cpp-utils/assert/assert.h>
+#include <cstdint>
+#include <stdexcept>
+#include <utility>
 
 using std::function;
 using std::vector;

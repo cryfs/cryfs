@@ -1,4 +1,7 @@
 #include "testutils/FuseAccessTest.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <unistd.h>
 
 using ::testing::Eq;
 using ::testing::Return;

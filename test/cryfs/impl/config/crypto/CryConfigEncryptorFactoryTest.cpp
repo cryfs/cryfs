@@ -1,8 +1,12 @@
-#include <gtest/gtest.h>
-#include <cryfs/impl/config/crypto/CryConfigEncryptorFactory.h>
+#include "../../../impl/testutils/FakeCryKeyProvider.h"
+#include "cpp-utils/data/Data.h"
+#include "cryfs/impl/config/crypto/CryConfigEncryptor.h"
+#include <boost/none.hpp>
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/data/DataFixture.h>
-#include "../../../impl/testutils/FakeCryKeyProvider.h"
+#include <cryfs/impl/config/crypto/CryConfigEncryptorFactory.h>
+#include <gtest/gtest.h>
+#include <ostream>
 
 using cpputils::AES256_GCM;
 using cpputils::Data;
@@ -17,7 +21,6 @@ namespace boost {
         return stream << "CryConfigEncryptor::Decrypted()";
     }
 }
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
 
 class CryConfigEncryptorFactoryTest: public ::testing::Test {
 public:

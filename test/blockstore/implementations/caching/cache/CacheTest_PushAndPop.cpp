@@ -1,9 +1,10 @@
 #include "testutils/CacheTest.h"
 
 #include "blockstore/implementations/caching/cache/Cache.h"
-#include "testutils/MinimalKeyType.h"
-#include "testutils/MinimalValueType.h"
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include <boost/chrono/duration.hpp>
+#include <boost/none.hpp>
+#include <boost/thread/pthread/thread_data.hpp>
+#include <gtest/gtest.h>
 
 
 using namespace blockstore::caching;

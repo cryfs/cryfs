@@ -1,5 +1,17 @@
 #include "CachingFsBlobStore.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/DirBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/FileBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/FsBlobRef.h"
+#include "cryfs/impl/filesystem/cachingfsblobstore/SymlinkBlobRef.h"
+#include "cryfs/impl/filesystem/fsblobstore/DirBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FileBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlob.h"
 #include "cryfs/impl/filesystem/fsblobstore/FsBlobStore.h"
+#include "cryfs/impl/filesystem/fsblobstore/SymlinkBlob.h"
+#include <boost/none.hpp>
+#include <utility>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;

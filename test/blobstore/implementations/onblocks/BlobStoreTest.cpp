@@ -1,5 +1,8 @@
 #include "testutils/BlobStoreTest.h"
-#include <cpp-utils/pointer/unique_ref_boost_optional_gtest_workaround.h>
+#include "blockstore/utils/BlockId.h"
+#include <boost/none.hpp>
+#include <gtest/gtest.h>
+#include <utility>
 
 using blockstore::BlockId;
 using boost::none;

@@ -1,6 +1,8 @@
 #include <cpp-utils/assert/backtrace.h>
 #include <csignal>
+#include <cstdlib>
 #include <stdexcept>
+#include <string>
 
 #if defined(_MSC_VER)
 #include <Windows.h>

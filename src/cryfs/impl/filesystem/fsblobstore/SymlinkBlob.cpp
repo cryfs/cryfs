@@ -1,7 +1,16 @@
 #include "SymlinkBlob.h"
+#include "blobstore/interface/Blob.h"
+#include "cpp-utils/assert/assert.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlob.h"
+#include "cryfs/impl/filesystem/fsblobstore/FsBlobView.h"
+#include "fspp/fs_interface/Types.h"
 
 #include <blockstore/utils/BlockId.h>
-#include <cassert>
+#include <boost/filesystem/path.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <utility>
 
 using std::string;
 using blobstore::Blob;

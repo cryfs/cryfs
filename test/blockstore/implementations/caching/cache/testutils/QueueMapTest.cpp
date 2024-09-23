@@ -1,4 +1,13 @@
 #include "QueueMapTest.h"
+#include "MinimalKeyType.h"
+#include "MinimalValueType.h"
+#include "blockstore/implementations/caching/cache/QueueMap.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <utility>
 
 QueueMapTest::QueueMapTest(): _map(cpputils::make_unique_ref<blockstore::caching::QueueMap<MinimalKeyType, MinimalValueType>>()) {
   MinimalKeyType::instances = 0;

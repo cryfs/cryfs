@@ -1,6 +1,16 @@
 #include "ThreadSystem.h"
 #include "../logging/logging.h"
 #include "debugging.h"
+#include <boost/thread/detail/thread.hpp>
+#include <boost/thread/exceptions.hpp>
+#include <boost/thread/interruption.hpp>
+#include <boost/thread/lock_types.hpp>
+#include <boost/thread/pthread/mutex.hpp>
+#include <exception>
+#include <iterator>
+#include <pthread.h>
+#include <string>
+#include <utility>
 
 using std::function;
 using std::string;

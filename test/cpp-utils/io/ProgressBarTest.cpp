@@ -1,5 +1,8 @@
+#include "cpp-utils/io/Console.h"
 #include <cpp-utils/io/ProgressBar.h>
-#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <string>
+#include <vector>
 
 using cpputils::ProgressBar;
 using std::make_shared;

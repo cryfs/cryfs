@@ -1,3 +1,7 @@
+#include <array>
+#include <bits/pthreadtypes.h>
+#include <cstddef>
+#include <string>
 #if !defined(_MSC_VER)
 
 #include "debugging.h"

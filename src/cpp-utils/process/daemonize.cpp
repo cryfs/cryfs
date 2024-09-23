@@ -1,5 +1,6 @@
 #include "daemonize.h"
 #include "../logging/logging.h"
+#include <time.h>
 
 using namespace cpputils::logging;
 
@@ -7,16 +8,9 @@ using namespace cpputils::logging;
 
 #if !defined(_MSC_VER)
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <errno.h>
+#include <sys/stat.h>
 #include <unistd.h>
-#include <syslog.h>
-#include <string.h>
-#include <iostream>
 
 namespace cpputils {
 

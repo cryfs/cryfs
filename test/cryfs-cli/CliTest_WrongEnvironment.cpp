@@ -1,6 +1,15 @@
+#include "cpp-utils/crypto/symmetric/Cipher.h"
+#include "cpp-utils/tempfile/TempFile.h"
+#include "cryfs/impl/ErrorCodes.h"
 #include "testutils/CliTest.h"
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <boost/filesystem/file_status.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <cpp-utils/system/env.h>
+#include <gtest/gtest.h>
 
 namespace bf = boost::filesystem;
 using ::testing::Values;

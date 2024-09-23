@@ -1,6 +1,9 @@
+#include "fspp/fs_interface/Types.h"
 #include "testutils/FuseReadTest.h"
 
-#include "fspp/fs_interface/FuseErrnoException.h"
+#include "gmock/gmock.h"
+#include <array>
+#include <gtest/gtest.h>
 
 using namespace fspp::fuse;
 

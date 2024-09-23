@@ -1,4 +1,8 @@
 #include "FuseRmdirTest.h"
+#include <boost/filesystem/path.hpp>
+#include <cerrno>
+#include <gtest/gtest.h>
+#include <unistd.h>
 
 using ::testing::Action;
 using ::testing::Invoke;

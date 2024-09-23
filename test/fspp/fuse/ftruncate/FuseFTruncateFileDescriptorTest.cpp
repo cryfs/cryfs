@@ -1,6 +1,8 @@
+#include "fspp/fs_interface/Types.h"
 #include "testutils/FuseFTruncateTest.h"
 
-#include "fspp/fs_interface/FuseErrnoException.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

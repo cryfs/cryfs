@@ -1,7 +1,9 @@
-#include <gtest/gtest.h>
 #include "blobstore/implementations/onblocks/utils/Math.h"
+#include <cstdint>
+#include <gtest/gtest.h>
 
 #include <limits>
+#include <stdint.h>
 
 using namespace blobstore::onblocks::utils;
 using ::testing::Test;

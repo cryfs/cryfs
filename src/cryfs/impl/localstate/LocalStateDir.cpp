@@ -1,5 +1,8 @@
 #include "LocalStateDir.h"
-#include <boost/filesystem.hpp>
+#include "cryfs/impl/config/CryConfig.h"
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <utility>
 
 namespace bf = boost::filesystem;
 

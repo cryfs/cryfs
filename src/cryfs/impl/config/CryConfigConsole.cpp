@@ -1,5 +1,11 @@
 #include "CryConfigConsole.h"
 #include "CryCipher.h"
+#include "cpp-utils/assert/assert.h"
+#include "cpp-utils/io/Console.h"
+#include <boost/none.hpp>
+#include <cstdint>
+#include <string>
+#include <utility>
 
 using cpputils::Console;
 using boost::none;

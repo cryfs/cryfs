@@ -1,7 +1,10 @@
-#include "cpp-utils/data/DataFixture.h"
 #include "cpp-utils/data/FixedSizeData.h"
 #include "cpp-utils/data/Data.h"
+#include "cpp-utils/data/DataFixture.h"
+#include <cstddef>
+#include <cstring>
 #include <gtest/gtest.h>
+#include <string>
 
 
 using ::testing::Test;

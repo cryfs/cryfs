@@ -1,3 +1,5 @@
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <gtest/gtest.h>
 
 #include "cpp-utils/tempfile/TempFile.h"

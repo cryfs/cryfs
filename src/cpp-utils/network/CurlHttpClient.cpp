@@ -1,9 +1,16 @@
 // Base version taken from https://techoverflow.net/blog/2013/03/15/c-simple-http-download-using-libcurl-easy-api/
+#include <boost/none.hpp>
+#include <cstddef>
+#include <cstdint>
+#include <curl/curl.h>
+#include <curl/easy.h>
+#include <mutex>
+#include <stdexcept>
+#include <string>
 #ifdef CRYFS_UPDATE_CHECKS
 
 #include "CurlHttpClient.h"
 #include <sstream>
-#include <iostream>
 
 using boost::none;
 using boost::optional;

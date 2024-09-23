@@ -1,7 +1,15 @@
 #include "CachingBlockStore2.h"
-#include <memory>
-#include <cpp-utils/assert/assert.h>
-#include <cpp-utils/system/get_total_memory.h>
+#include "blockstore/interface/BlockStore2.h"
+#include "blockstore/utils/BlockId.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/pointer/unique_ref.h"
+#include <boost/none.hpp>
+#include <cstdint>
+#include <functional>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
 using std::string;
 using std::mutex;

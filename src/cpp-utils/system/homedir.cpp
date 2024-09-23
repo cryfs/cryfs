@@ -1,5 +1,9 @@
 #include "homedir.h"
-#include <sys/types.h>
+#include <boost/filesystem/path.hpp>
+#include <cstdlib>
+#include <stdexcept>
+#include <string>
+#include <unistd.h>
 
 namespace bf = boost::filesystem;
 using std::string;

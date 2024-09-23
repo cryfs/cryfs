@@ -1,5 +1,12 @@
 #include "testutils/LoggingTest.h"
+#include "cpp-utils/logging/Logger.h"
+#include "cpp-utils/logging/logging.h"
+#include "gtest/gtest.h"
+#include <cstdlib>
+#include <gtest/gtest.h>
 #include <regex>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <string>
 
 /*
  * Contains test cases for the following logging interface:

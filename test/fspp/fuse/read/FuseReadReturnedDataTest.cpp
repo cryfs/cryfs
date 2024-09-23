@@ -1,13 +1,15 @@
-#include <cpp-utils/data/DataFixture.h>
-#include <cpp-utils/data/Data.h>
 #include "../../testutils/InMemoryFile.h"
+#include "fspp/fs_interface/Types.h"
 #include "testutils/FuseReadTest.h"
-#include <cpp-utils/pointer/unique_ref.h>
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <cpp-utils/data/Data.h>
+#include <cpp-utils/data/DataFixture.h>
 
-#include "fspp/fs_interface/FuseErrnoException.h"
 
+#include <gtest/gtest.h>
+#include <memory>
 #include <tuple>
-#include <cstdlib>
 
 using ::testing::WithParamInterface;
 using ::testing::Values;

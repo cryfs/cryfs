@@ -1,7 +1,8 @@
-#include <cpp-utils/thread/debugging.h>
-#include <cpp-utils/assert/assert.h>
 #include <cpp-utils/lock/ConditionBarrier.h>
+#include <cpp-utils/thread/debugging.h>
 #include <gtest/gtest.h>
+#include <string>
+#include <thread>
 
 using namespace cpputils;
 using std::string;

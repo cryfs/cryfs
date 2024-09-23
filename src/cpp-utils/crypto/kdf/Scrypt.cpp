@@ -1,4 +1,12 @@
 #include "Scrypt.h"
+#include "cpp-utils/crypto/kdf/SCryptParameters.h"
+#include "cpp-utils/crypto/symmetric/EncryptionKey.h"
+#include "cpp-utils/data/Data.h"
+#include "cpp-utils/random/Random.h"
+#include <cstddef>
+#include <cstdint>
+#include <stdexcept>
+#include <string>
 #include <vendor_cryptopp/scrypt.h>
 
 using std::string;

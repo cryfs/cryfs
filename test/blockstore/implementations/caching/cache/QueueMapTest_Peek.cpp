@@ -1,5 +1,6 @@
 #include "testutils/QueueMapTest.h"
-#include <boost/optional/optional_io.hpp>
+#include <boost/none.hpp>
+#include <gtest/gtest.h>
 
 class QueueMapPeekTest: public QueueMapTest {};
 
