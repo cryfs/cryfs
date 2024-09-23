@@ -272,9 +272,12 @@ jobs:
           # Clang 12 on macos-14 fails the cmake step saying "The C compiler is not able to compile a simple test program. ld: library 'System' not found"
           - os: macos-14
             compiler: {compiler: clang, version: 12, libcxx: libc++, cc: clang-12, cxx: clang++-12, macos_cc: llvm@12/bin/clang, macos_cxx: llvm@12/bin/clang++, apt_package: "clang-12 libc++-12-dev libc++abi-12-dev libomp5-12 libomp-12-dev", homebrew_package: llvm@12}
-          # Clang 14 on macos-14 builds fine but tests fail with "line 9: 55242 Trace/BPT trap: 5       ./cpp-utils/cpp-utils-test"
+          # Clang 14, 16 on macos-14 builds fine but tests fail with "line 9: 55242 Trace/BPT trap: 5       ./cpp-utils/cpp-utils-test"
+          # TODO Can we fix this? Not sure what's causing it
           - os: macos-14
             compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libomp5-14 libomp-14-dev", homebrew_package: llvm@14}
+          - os: macos-14
+            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libomp5-16 libomp-16-dev", homebrew_package: llvm@16}
           # Ubuntu 20.04 doesn't have GCC 11, 12, 13, 14 yet
           - os: ubuntu-20.04
             compiler: {compiler: gcc, version: 11, libcxx: libstdc++11, cc: gcc-11, cxx: g++-11, homebrew_package: gcc@11, apt_package: g++-11}
