@@ -9,8 +9,8 @@ runs:
         set -v
         set -e
         choco install -y ninja wget ccache
-        wget https://github.com/dokan-dev/dokany/releases/download/v2.0.6.1000/Dokan_x64.msi
-        if [ $(sha512sum Dokan_x64.msi | awk '{print $1;}') == "761b4c9f354f9e540645947e135e84e9f30cbf527ca72a49bfb74cf9be022fae185ce9bbd5214bbfde929e12d8f5be0e57e13b09a4b18e706761fc5b2b856a61" ]; then
+        wget https://github.com/dokan-dev/dokany/releases/download/v2.2.0.1000/Dokan_x64.msi
+        if [ $(sha512sum Dokan_x64.msi | awk '{print $1;}') == "018617c4af939e03e0f4e6e0cbe0ef4797f53a285b48d945d194464e510d46f7d6fbace4fc19de71edac36e6d1c76f771282329330292741e6ac83f78c3afe0b" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum

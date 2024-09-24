@@ -12,7 +12,7 @@ Version 0.12.0 (unreleased)
   * Remove apt.cryfs.org from the `.deb` package generation process since that repository isn't being used anymore
 * Updated dependencies to
   * Fuse 2.9
-  * DokanY 2.0.6.1000
+  * DokanY 2.2.0.1000
   * range-v3 0.12.0
   * boost 1.84
   * spdlog 1.14.1

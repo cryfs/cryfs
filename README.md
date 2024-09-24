@@ -170,10 +170,10 @@ Then run the tests:
 Building on Windows (experimental)
 ----------------------------------
 1. Install conan 2. If you want to use "pip install conan", you may have to install Python first.
-2. Install DokanY 2.0.6.1000. Other versions may not work.
+2. Install DokanY 2.2.0.1000. Other versions may not work.
 3. Build the project
 
-        $ conan build . --build=missing -o "&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.0.6"
+        $ conan build . --build=missing -o "&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.2.0"
 
 Using local dependencies
 -------------------------------
