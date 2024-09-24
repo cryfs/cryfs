@@ -129,7 +129,6 @@ class CryFSConan(ConanFile):
         check_min_cppstd(self, "20")
      
     def requirements(self):
-        self.requires("range-v3/0.12.0")
         self.requires("spdlog/1.14.1")
         self.requires("boost/1.84.0")
         if self.options.update_checks:

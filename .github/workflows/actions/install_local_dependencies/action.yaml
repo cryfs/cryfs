@@ -16,29 +16,6 @@ runs:
         echo Install libcurl
         sudo apt-get install libcurl4-openssl-dev
 
-        echo Download range-v3
-        cd ~
-        wget https://github.com/ericniebler/range-v3/archive/0.12.0.tar.gz -O range-v3-0.12.0.tar.gz
-        if [ $(sha512sum range-v3-0.12.0.tar.gz | awk '{print $1;}') == "b8b632b8e0f2a3234ef61813212c237f648cd741e816ca57bd86f82f6459f7d755e2b70361d2aa43847874fb546a31a792ab1c3ba90292818ae7313438dc62d0" ]; then
-          echo Correct sha512sum
-        else
-          echo Wrong sha512sum
-          sha512sum range-v3-0.12.0.tar.gz
-          exit 1
-        fi
-        tar -xvf range-v3-0.12.0.tar.gz
-        cd range-v3-0.12.0/
-
-        echo Install range-v3
-        mkdir build
-        cd build
-        cmake .. -DRANGES_HAS_WERROR=off -DRANGE_V3_EXAMPLES=off -DRANGE_V3_TESTS=off
-        make -j$NUMCORES
-        sudo make install
-        cd ~
-        rm -rf range-v3-0.12.0
-        rm range-v3-0.12.0.tar.gz
-
         echo Download spdlog
         cd ~
         wget https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz -O spdlog.tar.gz

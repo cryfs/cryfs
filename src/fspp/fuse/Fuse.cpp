@@ -19,10 +19,7 @@
 #include <codecvt>
 #include <boost/algorithm/string/replace.hpp>
 
-#include <range/v3/view/split.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/range/conversion.hpp>
+#include <ranges>
 
 #if defined(_MSC_VER)
 #include <dokan/dokan.h>
@@ -36,6 +33,7 @@ using namespace cpputils::logging;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
+namespace ranges = std::ranges;
 using namespace fspp::fuse;
 using cpputils::set_thread_name;
 

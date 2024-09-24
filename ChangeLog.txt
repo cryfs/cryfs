@@ -8,6 +8,7 @@ Version 0.12.0 (unreleased)
     * remove '-f' flag and always run CryFS in foreground mode. Background mode didn't work anyways but attempting to use it would swallow logs and errors. Now they show up correctly.
     * show better error message when attempting to mount to a non-drive mount path
 * Build changes
+  * Migrated to C++20
   * Requires CMake 3.25
   * Upgraded min gcc version to gcc 8
   * Remove Windows 32bit build, only 64bit remains supported
@@ -18,11 +19,11 @@ Version 0.12.0 (unreleased)
 * Updated dependencies to
   * Fuse 2.9
   * DokanY 2.2.0.1000
-  * range-v3 0.12.0
   * boost 1.84
   * spdlog 1.14.1
   * gtest 1.15.0
-  * Use libcurl dependency from conan instead of requiring it to be preinstalled. Cut away most of it to minimize dependencies, only keep the minimum needed for querying Cryfs release information.
+  * Removed range-v3 dependency, using C++20 ranges instead
+  * Use libcurl dependency from conan instead of requiring it to be preinstalled
   * Use gtest dependency from conan instead of having it in the vendor/ directory of the repository
   * We now only link to libcurl if CRYFS_UPDATE_CHECKS is enabled. If the compile time flag is disabled,
     that already disabled update checks in previous versions, but needlessly still linked to libcurl.

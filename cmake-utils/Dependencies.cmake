@@ -1,8 +1,3 @@
-# Setup range-v3 dependency
-find_package(range-v3 REQUIRED)
-add_library(CryfsDependencies_range-v3 INTERFACE)
-target_link_libraries(CryfsDependencies_range-v3 INTERFACE range-v3::range-v3)
-
 # Setup boost dependency
 set(Boost_USE_STATIC_LIBS OFF)
 find_package(Boost 1.84.0
