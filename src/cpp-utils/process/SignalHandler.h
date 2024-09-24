@@ -83,7 +83,7 @@ public:
     }
 
     ~SignalHandlerRunningRAII() {
-        SignalHandlerFunction* old_handler = ::signal(_signal, &details::wrap_signal_handler<handler>);
+        SignalHandlerFunction* old_handler = ::signal(_signal, (&details::wrap_signal_handler<handler>));
         if (old_handler == SIG_ERR) {
             throw std::logic_error("Error resetting signal() after calling handler. Errno: " + std::to_string(errno));
         }
