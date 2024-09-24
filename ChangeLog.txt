@@ -9,6 +9,7 @@ Version 0.12.0 (unreleased)
     * show better error message when attempting to mount to a non-drive mount path
 * Build changes
   * Requires CMake 3.25
+  * Upgraded min gcc version to gcc 8
   * Remove Windows 32bit build, only 64bit remains supported
   * Remove MacOS gcc build, only clang remains supported
   * Migrate build from Conan 1.x to Conan 2.x

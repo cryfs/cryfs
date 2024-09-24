@@ -9,7 +9,7 @@ project(cryfs)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake-utils)
 include(utils)
 
-require_gcc_version(7.0)
+require_gcc_version(8.0)
 require_clang_version(7.0)
 
 # Default value is not to build test cases

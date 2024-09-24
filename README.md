@@ -88,7 +88,7 @@ Building from source
 Requirements
 ------------
   - Git (for getting the source code)
-  - GCC version >= 7 or Clang >= 7
+  - GCC version >= 8 or Clang >= 7
   - CMake version >= 3.25
   - pkg-config (on Unix)
   - Conan package manager (version 2.x)
