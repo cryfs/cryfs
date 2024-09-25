@@ -380,6 +380,14 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
   }
 #endif
 
+#if defined(_MSC_VER)
+  if (!mountdir.has_root_name() || mountdir.has_root_directory() || mountdir.has_relative_path()) {
+     // TODO Can we fix this and make mounting to non-drives work?
+     std::cerr << "Unsupported mount directory " << mountdir << ". CryFS on Windows currently only supports mounting to drives, e.g. 'G:'" << std::endl;
+     return;
+  }
+#endif
+
   _mountdir = mountdir;
 
   ASSERT(_argv.size() == 0, "Filesystem already started");
