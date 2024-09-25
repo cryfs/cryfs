@@ -21,11 +21,12 @@ Version 0.12.0 (unreleased)
   * boost 1.84
   * spdlog 1.14.1
   * gtest 1.15.0
-  * Use libcurl dependency from conan instead of requiring it to be preinstalled
+  * Use libcurl dependency from conan instead of requiring it to be preinstalled. Cut away most of it to minimize dependencies, only keep the minimum needed for querying Cryfs release information.
   * Use gtest dependency from conan instead of having it in the vendor/ directory of the repository
   * We now only link to libcurl if CRYFS_UPDATE_CHECKS is enabled. If the compile time flag is disabled,
     that already disabled update checks in previous versions, but needlessly still linked to libcurl.
     Now the flag will fully remove the libcurl dependency.
+  * On Windows, libcurl now uses SChannel for SSL instead of OpenSSL. OpenSSL used to have problems finding certificate authorities, but with SChannel, things work fine.
 
 
 Version 0.11.5 (unreleased)
