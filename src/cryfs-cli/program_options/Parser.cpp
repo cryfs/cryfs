@@ -20,6 +20,11 @@ using boost::optional;
 using boost::none;
 using namespace cpputils::logging;
 
+#if defined(_MSC_VER)
+// Haven't figured out how to make it run in background on Windows yet, so let's just force it to run in foreground.
+#   define FORCE_RUN_IN_FOREGROUND
+#endif
+
 Parser::Parser(int argc, const char **argv)
         :_options(_argsToVector(argc, argv)) {
 }
@@ -55,7 +60,11 @@ ProgramOptions Parser::parse(const vector<string> &supportedCiphers) const {
     if (vm.count("config")) {
         configfile = bf::absolute(vm["config"].as<string>());
     }
+#ifndef FORCE_RUN_IN_FOREGROUND
     const bool foreground = vm.count("foreground");
+#else
+    const bool foreground = true;
+#endif
     const bool allowFilesystemUpgrade = vm.count("allow-filesystem-upgrade");
     const bool allowReplacedFilesystem = vm.count("allow-replaced-filesystem");
     const bool createMissingBasedir = vm.count("create-missing-basedir");
@@ -159,7 +168,9 @@ void Parser::_addAllowedOptions(po::options_description *desc) {
     options.add_options()
             ("help,h", "show help message")
             ("config,c", po::value<string>(), "Configuration file")
+#ifndef FORCE_RUN_IN_FOREGROUND
             ("foreground,f", "Run CryFS in foreground.")
+#endif
             ("fuse-option,o", po::value<vector<string>>(), "Add a fuse mount option. Example: atime or noatime.")
             ("cipher", po::value<string>(), cipher_description.c_str())
             ("blocksize", po::value<uint32_t>(), blocksize_description.c_str())
