@@ -368,6 +368,18 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
   #endif
 #endif
 
+#if defined(_MSC_VER)
+  auto dokan_driver_version = DokanDriverVersion();
+  if (dokan_driver_version == 0) {
+    std::cerr << "Error: Did not find DokanY driver. Please install the newest version of DokanY from https://github.com/dokan-dev/dokany/releases" << std::endl;
+    return;
+  }
+  if (dokan_driver_version != 400) {
+    std::cerr << "Error: Unknown version of DokanY driver: " << dokan_driver_version << std::endl;
+    return;
+  }
+#endif
+
   _mountdir = mountdir;
 
   ASSERT(_argv.size() == 0, "Filesystem already started");

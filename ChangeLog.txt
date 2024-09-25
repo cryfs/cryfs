@@ -3,6 +3,7 @@ Version 0.12.0 (unreleased)
 * Fixes/Improvements
   * Added a man page for `cryfs-unmount`
   * Fixed small inaccuracy in calculation of free space in statvfs
+  * On Windows, when running and the wrong DokanY version is installed, show an error instead of letting it look like mounting succeeded.
 * Build changes
   * Requires CMake 3.25
   * Remove Windows 32bit build, only 64bit remains supported
