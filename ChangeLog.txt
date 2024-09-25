@@ -5,7 +5,7 @@ Version 0.12.0 (unreleased)
   * Fixed small inaccuracy in calculation of free space in statvfs
   * On Windows
     * when the wrong DokanY version is installed, or DokanY is not installed, show an error instead of letting it look like mounting succeeded.
-    * always run CryFS in foreground mode. Background mode didn't work anyways but attempting to use it would swallow logs and errors. Now they show up correctly.
+    * remove '-f' flag and always run CryFS in foreground mode. Background mode didn't work anyways but attempting to use it would swallow logs and errors. Now they show up correctly.
     * show better error message when attempting to mount to a non-drive mount path
 * Build changes
   * Requires CMake 3.25
