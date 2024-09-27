@@ -3,6 +3,7 @@
 #define MESSMER_CPPUTILS_POINTER_CAST_H_
 
 #include <memory>
+#include <tuple>
 
 namespace cpputils {
 

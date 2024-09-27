@@ -83,5 +83,5 @@ target_activate_cpp14(${PROJECT_NAME})
 
 if(MSVC)
     # Required by range-v3, see its README.md
-    target_compile_options(${PROJECT_NAME} PUBLIC /Zc:preprocessor /permissive- /Zc:twoPhase-)
+    target_compile_options(${PROJECT_NAME} PUBLIC /Zc:preprocessor /permissive-)
 endif()
