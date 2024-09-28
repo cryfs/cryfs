@@ -100,12 +100,12 @@
 #endif
 
 // 32-bit SunCC does not enable SSE2 by default.
-#if !defined(CRYPTOPP_DISABLE_SSE2) && (defined(_MSC_VER) || CRYPTOPP_GCC_VERSION >= 30300 || defined(__SSE2__) || (__SUNPRO_CC >= 0x5100))
+#if !defined(CRYPTOPP_DISABLE_SSE2) && (defined(CRYPTOPP_MSC_VERSION) || CRYPTOPP_GCC_VERSION >= 30300 || defined(__SSE2__) || (__SUNPRO_CC >= 0x5100))
 	#define CRYPTOPP_SSE2_INTRIN_AVAILABLE 1
 #endif
 
 #if !defined(CRYPTOPP_DISABLE_SSSE3)
-# if defined(__SSSE3__) || (_MSC_VER >= 1500) || \
+# if defined(__SSSE3__) || (CRYPTOPP_MSC_VERSION >= 1500) || \
 	(CRYPTOPP_GCC_VERSION >= 40300) || (__INTEL_COMPILER >= 1000) || (__SUNPRO_CC >= 0x5110) || \
 	(CRYPTOPP_LLVM_CLANG_VERSION >= 20300) || (CRYPTOPP_APPLE_CLANG_VERSION >= 40000)
 	#define CRYPTOPP_SSSE3_AVAILABLE 1
@@ -130,7 +130,7 @@
 #endif
 
 // Couple to CRYPTOPP_DISABLE_AESNI, but use CRYPTOPP_CLMUL_AVAILABLE so we can selectively
-//  disable for misbehaving platofrms and compilers, like Solaris or some Clang.
+//  disable for misbehaving platforms and compilers, like Solaris or some Clang.
 #if defined(CRYPTOPP_DISABLE_AESNI)
 	#define CRYPTOPP_DISABLE_CLMUL 1
 #endif
@@ -311,6 +311,12 @@
 # endif  // Platforms
 #endif
 
+// Buggy Microsoft compiler, https://github.com/weidai11/cryptopp/issues/1096
+#if defined(CRYPTOPP_MSC_VERSION)
+# undef CRYPTOPP_ARM_SHA1_AVAILABLE
+# undef CRYPTOPP_ARM_SHA2_AVAILABLE
+#endif
+
 // ARMv8 and SHA-512, SHA-3. -march=armv8.2-a+crypto or above must be present
 // Requires GCC 8.0, Clang 11.0, Apple Clang 12.0 or Visual Studio 20??
 #if !defined(CRYPTOPP_ARM_SHA3_AVAILABLE) && !defined(CRYPTOPP_DISABLE_ARM_SHA)
@@ -365,14 +371,20 @@
 // than C/C++. Define this to use the Cryptogams AES and SHA implementations
 // on GNU Linux systems. When defined, Crypto++ will use aes_armv4.S,
 // sha1_armv4.S and sha256_armv4.S. https://www.cryptopp.com/wiki/Cryptogams.
-#if defined(__arm__) && defined(__linux__)
-# if defined(__GNUC__) || defined(__clang__)
-#  define CRYPTOGAMS_ARM_AES      1
-#  define CRYPTOGAMS_ARM_SHA1     1
-#  define CRYPTOGAMS_ARM_SHA256   1
-#  define CRYPTOGAMS_ARM_SHA512   1
+#if !defined(CRYPTOPP_DISABLE_ARM_NEON)
+# if defined(__arm__) && defined(__linux__)
+#  if defined(__GNUC__) || defined(__clang__)
+#   define CRYPTOGAMS_ARM_AES      1
+#   define CRYPTOGAMS_ARM_SHA1     1
+#   define CRYPTOGAMS_ARM_SHA256   1
+#   define CRYPTOGAMS_ARM_SHA512   1
+#  endif
 # endif
 #endif
+
+// We are still having trouble with integrating Cryptogams AES. Ugh...
+// https://github.com/weidai11/cryptopp/issues/1236
+#undef CRYPTOGAMS_ARM_AES
 
 // Clang intrinsic casts, http://bugs.llvm.org/show_bug.cgi?id=20670
 #define UINT64_CAST(x) ((uint64_t *)(void *)(x))

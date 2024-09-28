@@ -19,7 +19,7 @@
 NAMESPACE_BEGIN(CryptoPP)
 
 // The purpose of this function Mash() is to take an arbitrary length input
-// string and *deterministicly* produce an arbitrary length output string such
+// string and *deterministically* produce an arbitrary length output string such
 // that (1) it looks random, (2) no information about the input is
 // deducible from it, and (3) it contains as much entropy as it can hold, or
 // the amount of entropy in the input string, whichever is smaller.
@@ -28,7 +28,7 @@ template <class H>
 static void Mash(const byte *in, size_t inLen, byte *out, size_t outLen, int iterations)
 {
 	if (BytePrecision(outLen) > 2)
-		throw InvalidArgument("Mash: output legnth too large");
+		throw InvalidArgument("Mash: output length too large");
 
 	size_t bufSize = RoundUpToMultipleOf(outLen, (size_t)H::DIGESTSIZE);
 	byte b[2];
@@ -48,7 +48,7 @@ static void Mash(const byte *in, size_t inLen, byte *out, size_t outLen, int ite
 
 	while (iterations-- > 1)
 	{
-		memcpy(buf, outBuf, bufSize);
+		std::memcpy(buf, outBuf, bufSize);
 		for (i=0; i<bufSize; i+=H::DIGESTSIZE)
 		{
 			b[0] = (byte) (i >> 8);
@@ -59,7 +59,7 @@ static void Mash(const byte *in, size_t inLen, byte *out, size_t outLen, int ite
 		}
 	}
 
-	memcpy(out, outBuf, outLen);
+	std::memcpy(out, outBuf, outLen);
 }
 
 template <class BC, class H, class Info>
@@ -68,15 +68,15 @@ static void GenerateKeyIV(const byte *passphrase, size_t passphraseLength, const
 	// UBsan. User supplied params, may be NULL
 	SecByteBlock temp(passphraseLength+saltLength);
 	if (passphrase != NULLPTR)
-		memcpy(temp, passphrase, passphraseLength);
+		std::memcpy(temp, passphrase, passphraseLength);
 	if (salt != NULLPTR)
-		memcpy(temp+passphraseLength, salt, saltLength);
+		std::memcpy(temp+passphraseLength, salt, saltLength);
 
 	// OK. Derived params, cannot be NULL
 	SecByteBlock keyIV(EnumToInt(Info::KEYLENGTH)+EnumToInt(+Info::BLOCKSIZE));
 	Mash<H>(temp, passphraseLength + saltLength, keyIV, EnumToInt(Info::KEYLENGTH)+EnumToInt(+Info::BLOCKSIZE), iterations);
-	memcpy(key, keyIV, Info::KEYLENGTH);
-	memcpy(IV, keyIV+Info::KEYLENGTH, Info::BLOCKSIZE);
+	std::memcpy(key, keyIV, Info::KEYLENGTH);
+	std::memcpy(IV, keyIV+Info::KEYLENGTH, Info::BLOCKSIZE);
 }
 
 // ********************************************************

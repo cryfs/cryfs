@@ -1,10 +1,10 @@
 #include <stdint.h>
-#ifdef CRYPTOPP_ARM_NEON_HEADER
+#if (CRYPTOPP_ARM_NEON_HEADER)
 # include <arm_neon.h>
 #endif
 
 // Keep sync'd with arm_simd.h
-#include "../arm_simd.h"
+#include "arm_simd.h"
 
 int main(int argc, char* argv[])
 {

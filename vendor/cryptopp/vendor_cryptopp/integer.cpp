@@ -20,7 +20,7 @@
 //  them. Initialization priorities are init_priority() on Linux and init_seg()
 //  on Windows. OS X and several other platforms lack them. Initialization
 //  priorities are platform specific but they are also the most trouble free
-//  with determisitic destruction.
+//  with deterministic destruction.
 // Second, if C++11 dynamic initialization is available, then we use it. After
 //  the std::call_once fiasco we moved to dynamic initialization to avoid
 //  unknown troubles platforms that are tested less frequently. In addition
@@ -39,7 +39,7 @@
 //  resource acquisition in reverse. For resources provided through the
 //  Singletons, there is no way to express the dependency order to safely
 //  destroy resources. (That's one of the problems C++11 dynamic
-//  intitialization with concurrent execution is supposed to solve).
+//  initialization with concurrent execution is supposed to solve).
 // The final problem with Singletons is resource/memory exhaustion in languages
 //  like Java and .Net. Java and .Net load and unload a native DLL hundreds or
 //  thousands of times during the life of a program. Each load produces a
@@ -75,7 +75,7 @@
 
 #include <iostream>
 
-#if (_MSC_VER >= 1400) && !defined(_M_ARM)
+#if (CRYPTOPP_MSC_VERSION >= 1400) && !defined(_M_ARM)
 	#include <intrin.h>
 #endif
 
@@ -207,7 +207,7 @@ static word AtomicInverseModPower2(word A)
 	#define Add2WordsBy1(a, b, c)		a##0 = b##0 + c; a##1 = b##1 + (a##0 < c);
 	#define LowWord(a)					a##0
 	#define HighWord(a)					a##1
-	#ifdef _MSC_VER
+	#ifdef CRYPTOPP_MSC_VERSION
 		#define MultiplyWordsLoHi(p0, p1, a, b)		p0 = _umul128(a, b, &p1);
 		#ifndef __INTEL_COMPILER
 			#define Double3Words(c, d)		d##1 = __shiftleft128(d##0, d##1, 1); d##0 = __shiftleft128(c, d##0, 1); c *= 2;
@@ -249,7 +249,7 @@ static word AtomicInverseModPower2(word A)
 	#define GetBorrow(u)				u##1
 #else
 	#define Declare2Words(x)			dword x;
-	#if _MSC_VER >= 1400 && !defined(__INTEL_COMPILER) && (defined(_M_IX86) || defined(_M_X64) || defined(_M_IA64))
+	#if CRYPTOPP_MSC_VERSION >= 1400 && !defined(__INTEL_COMPILER) && (defined(_M_IX86) || defined(_M_X64) || defined(_M_IA64))
 		#define MultiplyWords(p, a, b)		p = __emulu(a, b);
 	#else
 		#define MultiplyWords(p, a, b)		p = (dword)a*b;
@@ -303,10 +303,10 @@ public:
 #if defined(CRYPTOPP_NATIVE_DWORD_AVAILABLE)
 #  if (CRYPTOPP_LITTLE_ENDIAN)
 		const word t[2] = {low,high};
-		memcpy(&m_whole, t, sizeof(m_whole));
+		std::memcpy(&m_whole, t, sizeof(m_whole));
 #  else
 		const word t[2] = {high,low};
-		memcpy(&m_whole, t, sizeof(m_whole));
+		std::memcpy(&m_whole, t, sizeof(m_whole));
 #  endif
 #else
 		m_halfs.low = low;
@@ -2562,7 +2562,7 @@ void MontgomeryReduce(word *R, word *T, word *X, const word *M, const word *U, s
 			while (!Subtract(X+N, X+N, M, N)) {}
 	}
 
-	memcpy(R, X+N, N*WORD_SIZE);
+	std::memcpy(R, X+N, N*WORD_SIZE);
 #else
 	__m64 u = _mm_cvtsi32_si64(0-U[0]), p;
 	for (size_t i=0; i<N; i++)
@@ -2588,7 +2588,7 @@ void MontgomeryReduce(word *R, word *T, word *X, const word *M, const word *U, s
 			while (!Subtract(X+N, X+N, M, N)) {}
 	}
 
-	memcpy(R, X+N, N*WORD_SIZE);
+	std::memcpy(R, X+N, N*WORD_SIZE);
 	_mm_empty();
 #endif
 }
@@ -2721,7 +2721,7 @@ static inline void AtomicDivide(word *Q, const word *A, const word *B)
 		word P[4];
 		LowLevel::Multiply2(P, Q, B);
 		Add(P, P, T, 4);
-		CRYPTOPP_ASSERT(memcmp(P, A, 4*WORD_SIZE)==0);
+		CRYPTOPP_ASSERT(std::memcmp(P, A, 4*WORD_SIZE)==0);
 #endif
 	}
 }
@@ -2742,7 +2742,7 @@ static inline void AtomicDivide(word *Q, const word *A, const word *B)
 		word P[4];
 		s_pMul[0](P, Q, B);
 		Add(P, P, T, 4);
-		CRYPTOPP_ASSERT(memcmp(P, A, 4*WORD_SIZE)==0);
+		CRYPTOPP_ASSERT(std::memcmp(P, A, 4*WORD_SIZE)==0);
 	}
 #endif
 }
@@ -3056,7 +3056,7 @@ Integer::Integer(const byte *encodedInteger, size_t byteCount, Signedness s, Byt
 	else
 	{
 		SecByteBlock block(byteCount);
-#if (_MSC_VER >= 1500)
+#if (CRYPTOPP_MSC_VERSION >= 1500)
 		std::reverse_copy(encodedInteger, encodedInteger+byteCount,
 			stdext::make_checked_array_iterator(block.begin(), block.size()));
 #else
@@ -3522,8 +3522,12 @@ void Integer::Randomize(RandomNumberGenerator &rng, size_t nbits)
 	const size_t nbytes = nbits/8 + 1;
 	SecByteBlock buf(nbytes);
 	rng.GenerateBlock(buf, nbytes);
-	if (nbytes)
-		buf[0] = (byte)Crop(buf[0], nbits % 8);
+
+	// https://github.com/weidai11/cryptopp/issues/1206
+	// if (nbytes)
+	//     buf[0] = (byte)Crop(buf[0], nbits % 8);
+
+	buf[0] = (byte)Crop(buf[0], nbits % 8);
 	Decode(buf, nbytes, UNSIGNED);
 }
 
@@ -3556,7 +3560,7 @@ public:
 	KDF2_RNG(const byte *seed, size_t seedSize)
 		: m_counter(0), m_counterAndSeed(ClampSize(seedSize) + 4)
 	{
-		memcpy(m_counterAndSeed + 4, seed, ClampSize(seedSize));
+		std::memcpy(m_counterAndSeed + 4, seed, ClampSize(seedSize));
 	}
 
 	void GenerateBlock(byte *output, size_t size)
@@ -3799,24 +3803,36 @@ Integer& Integer::operator--()
 //  worry about negative zero. Also see http://stackoverflow.com/q/11644362.
 Integer Integer::And(const Integer& t) const
 {
+	// Grow due to https://github.com/weidai11/cryptopp/issues/1072
+	// The temporary Integer 'result' may have fewer blocks than
+	// 'this' or 't', if leading 0-blocks are trimmed in copy ctor.
+
 	if (this == &t)
 	{
 		return AbsoluteValue();
 	}
 	else if (reg.size() >= t.reg.size())
 	{
-		Integer result(t);
-		AndWords(result.reg, reg, t.reg.size());
+		IntegerSecBlock temp(t.reg.size());
+		// AndWords(temp, reg, t.reg, t.reg.size());
+		for (size_t i=0; i<t.reg.size(); ++i)
+			temp[i] = reg[i] & t.reg[i];
 
-		result.sign = POSITIVE;
+		Integer result;
+		std::swap(result.reg, temp);
+
 		return result;
 	}
 	else // reg.size() < t.reg.size()
 	{
-		Integer result(*this);
-		AndWords(result.reg, t.reg, reg.size());
+		IntegerSecBlock temp(reg.size());
+		// AndWords(temp, reg, t.reg, reg.size());
+		for (size_t i=0; i<reg.size(); ++i)
+			temp[i] = reg[i] & t.reg[i];
 
-		result.sign = POSITIVE;
+		Integer result;
+		std::swap(result.reg, temp);
+
 		return result;
 	}
 }
@@ -3825,24 +3841,36 @@ Integer Integer::And(const Integer& t) const
 //  worry about negative zero. Also see http://stackoverflow.com/q/11644362.
 Integer Integer::Or(const Integer& t) const
 {
+	// Grow due to https://github.com/weidai11/cryptopp/issues/1072
+	// The temporary Integer 'result' may have fewer blocks than
+	// 'this' or 't', if leading 0-blocks are trimmed in copy ctor.
+
 	if (this == &t)
 	{
 		return AbsoluteValue();
 	}
 	else if (reg.size() >= t.reg.size())
 	{
-		Integer result(*this);
-		OrWords(result.reg, t.reg, t.reg.size());
+		IntegerSecBlock temp(reg, reg.size());
+		// OrWords(temp, t.reg, t.reg.size());
+		for (size_t i=0; i<t.reg.size(); ++i)
+			temp[i] |= t.reg[i];
 
-		result.sign = POSITIVE;
+		Integer result;
+		std::swap(result.reg, temp);
+
 		return result;
 	}
 	else // reg.size() < t.reg.size()
 	{
-		Integer result(t);
-		OrWords(result.reg, reg, reg.size());
+		IntegerSecBlock temp(t.reg, t.reg.size());
+		// OrWords(temp, reg, reg.size());
+		for (size_t i=0; i<reg.size(); ++i)
+			temp[i] |= reg[i];
 
-		result.sign = POSITIVE;
+		Integer result;
+		std::swap(result.reg, temp);
+
 		return result;
 	}
 }
@@ -3851,24 +3879,36 @@ Integer Integer::Or(const Integer& t) const
 //  worry about negative zero. Also see http://stackoverflow.com/q/11644362.
 Integer Integer::Xor(const Integer& t) const
 {
+	// Grow due to https://github.com/weidai11/cryptopp/issues/1072
+	// The temporary Integer 'result' may have fewer blocks than
+	// 'this' or 't', if leading 0-blocks are trimmed in copy ctor.
+
 	if (this == &t)
 	{
 		return Integer::Zero();
 	}
 	else if (reg.size() >= t.reg.size())
 	{
-		Integer result(*this);
-		XorWords(result.reg, t.reg, t.reg.size());
+		IntegerSecBlock temp(reg, reg.size());
+		// OrWords(temp, t.reg, t.reg.size());
+		for (size_t i=0; i<t.reg.size(); ++i)
+			temp[i] ^= t.reg[i];
 
-		result.sign = POSITIVE;
+		Integer result;
+		std::swap(result.reg, temp);
+
 		return result;
 	}
 	else // reg.size() < t.reg.size()
 	{
-		Integer result(t);
-		XorWords(result.reg, reg, reg.size());
+		IntegerSecBlock temp(t.reg, t.reg.size());
+		// OrWords(temp, reg, reg.size());
+		for (size_t i=0; i<reg.size(); ++i)
+			temp[i] ^= reg[i];
 
-		result.sign = POSITIVE;
+		Integer result;
+		std::swap(result.reg, temp);
+
 		return result;
 	}
 }
@@ -4726,7 +4766,7 @@ const Integer& MontgomeryRepresentation::MultiplicativeInverse(const Integer &a)
 }
 
 // Specialization declared in misc.h to allow us to print integers
-//  with additional control options, like arbirary bases and uppercase.
+//  with additional control options, like arbitrary bases and uppercase.
 template <> CRYPTOPP_DLL
 std::string IntToString<Integer>(Integer value, unsigned int base)
 {

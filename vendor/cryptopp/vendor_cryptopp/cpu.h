@@ -46,7 +46,7 @@
 	#define INTEL_NOPREFIX ".intel_syntax;"
 	#define ATT_PREFIX ".att_syntax;"
 	#define ATT_NOPREFIX ".att_syntax;"
-#elif defined(__GNUC__)
+#elif defined(CRYPTOPP_GCC_VERSION)
 	#define NEW_LINE
 	#define INTEL_PREFIX ".intel_syntax prefix;"
 	#define INTEL_NOPREFIX ".intel_syntax noprefix;"
@@ -59,6 +59,10 @@
 	#define ATT_PREFIX
 	#define ATT_NOPREFIX
 #endif
+
+// Thanks to v1ne at https://github.com/weidai11/cryptopp/pull/1133
+#define PERCENT_PASTE(x) "%" #x
+#define PERCENT_REG(x) PERCENT_PASTE(x)
 
 #ifdef CRYPTOPP_GENERATE_X64_MASM
 
@@ -671,7 +675,7 @@ inline bool HasSM4()
 
 // Hide from Doxygen
 #ifndef CRYPTOPP_DOXYGEN_PROCESSING
-extern bool g_PowerpcDetectionDone;
+extern bool g_PowerPcDetectionDone;
 extern bool g_hasAltivec;
 extern bool g_hasPower7;
 extern bool g_hasPower8;
@@ -682,7 +686,7 @@ extern bool g_hasSHA256;
 extern bool g_hasSHA512;
 extern bool g_hasDARN;
 extern word32 g_cacheLineSize;
-void CRYPTOPP_API DetectPowerpcFeatures();
+void CRYPTOPP_API DetectPowerPcFeatures();
 #endif  // CRYPTOPP_DOXYGEN_PROCESSING
 
 /// \name POWERPC CPU FEATURES
@@ -698,8 +702,8 @@ void CRYPTOPP_API DetectPowerpcFeatures();
 inline bool HasAltivec()
 {
 #if CRYPTOPP_ALTIVEC_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasAltivec;
 #else
 	return false;
@@ -715,8 +719,8 @@ inline bool HasAltivec()
 inline bool HasPower7()
 {
 #if CRYPTOPP_POWER7_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasPower7;
 #else
 	return false;
@@ -732,8 +736,8 @@ inline bool HasPower7()
 inline bool HasPower8()
 {
 #if CRYPTOPP_POWER8_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasPower8;
 #else
 	return false;
@@ -749,8 +753,8 @@ inline bool HasPower8()
 inline bool HasPower9()
 {
 #if CRYPTOPP_POWER9_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasPower9;
 #else
 	return false;
@@ -767,8 +771,8 @@ inline bool HasPower9()
 inline bool HasAES()
 {
 #if CRYPTOPP_POWER8_AES_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasAES;
 #else
 	return false;
@@ -785,8 +789,8 @@ inline bool HasAES()
 inline bool HasPMULL()
 {
 #if CRYPTOPP_POWER8_VMULL_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasPMULL;
 #else
 	return false;
@@ -803,8 +807,8 @@ inline bool HasPMULL()
 inline bool HasSHA256()
 {
 #if CRYPTOPP_POWER8_SHA_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasSHA256;
 #else
 	return false;
@@ -821,8 +825,8 @@ inline bool HasSHA256()
 inline bool HasSHA512()
 {
 #if CRYPTOPP_POWER8_SHA_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_hasSHA512;
 #else
 	return false;
@@ -838,8 +842,8 @@ inline bool HasSHA512()
 inline bool HasDARN()
 {
 #if CRYPTOPP_POWER9_AVAILABLE
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	// see comments in cpu.cpp
 #  if defined(__ibmxl__) && defined(__linux__)
 	return false;
@@ -861,8 +865,8 @@ inline bool HasDARN()
 ///  ARM processor equivalent is a privileged instruction, so a compile time value is returned.
 inline int GetCacheLineSize()
 {
-	if (!g_PowerpcDetectionDone)
-		DetectPowerpcFeatures();
+	if (!g_PowerPcDetectionDone)
+		DetectPowerPcFeatures();
 	return g_cacheLineSize;
 }
 
@@ -905,7 +909,7 @@ inline int GetCacheLineSize()
 	#define ASJ(x, y, z) x label##y*newline*
 	#define ASC(x, y) x label##y*newline*
 	#define AS_HEX(y) 0##y##h
-#elif defined(_MSC_VER) || defined(__BORLANDC__)
+#elif defined(CRYPTOPP_MSC_VERSION) || defined(__BORLANDC__)
 	#define AS1(x) __asm {x}
 	#define AS2(x, y) __asm {x, y}
 	#define AS3(x, y, z) __asm {x, y, z}

@@ -11,7 +11,7 @@
 #include "misc.h"
 #include "stdcpp.h"
 
-#if CRYPTOPP_MSC_VERSION
+#if defined(CRYPTOPP_MSC_VERSION)
 # pragma warning(push)
 # pragma warning(disable: 4231 4275 4700)
 # if (CRYPTOPP_MSC_VERSION >= 1400)
@@ -56,7 +56,7 @@ public:
 	/// \since Crypto++ 6.0
 #if defined(CRYPTOPP_DOXYGEN_PROCESSING)
 	static const size_type ELEMS_MAX = ...;
-#elif defined(_MSC_VER) && (_MSC_VER <= 1400)
+#elif defined(CRYPTOPP_MSC_VERSION) && (CRYPTOPP_MSC_VERSION <= 1400)
 	static const size_type ELEMS_MAX = (~(size_type)0)/sizeof(T);
 #elif defined(CRYPTOPP_CXX11_STRONG_ENUM)
 	enum : size_type {ELEMS_MAX = SIZE_MAX/sizeof(T)};
@@ -270,7 +270,7 @@ public:
 	/// \details VS.NET STL enforces the policy of "All STL-compliant allocators
 	///  have to provide a template class member called rebind".
     template <class V> struct rebind { typedef AllocatorWithCleanup<V, T_Align16> other; };
-#if _MSC_VER >= 1500
+#if (CRYPTOPP_MSC_VERSION >= 1500)
 	AllocatorWithCleanup() {}
 	template <class V, bool A> AllocatorWithCleanup(const AllocatorWithCleanup<V, A> &) {}
 #endif
@@ -749,7 +749,7 @@ public:
 	/// \since Crypto++ 6.0
 #if defined(CRYPTOPP_DOXYGEN_PROCESSING)
 	static const size_type ELEMS_MAX = ...;
-#elif defined(_MSC_VER) && (_MSC_VER <= 1400)
+#elif defined(CRYPTOPP_MSC_VERSION) && (CRYPTOPP_MSC_VERSION <= 1400)
 	static const size_type ELEMS_MAX = (~(size_type)0)/sizeof(T);
 #elif defined(CRYPTOPP_CXX11_STRONG_ENUM)
 	enum : size_type {ELEMS_MAX = A::ELEMS_MAX};
@@ -792,7 +792,7 @@ public:
 			if (m_ptr && ptr)
 				memcpy_s(m_ptr, m_size*sizeof(T), ptr, len*sizeof(T));
 			else if (m_ptr && m_size)
-				memset(m_ptr, 0, m_size*sizeof(T));
+				std::memset(m_ptr, 0, m_size*sizeof(T));
 		}
 
 	~SecBlock()
@@ -888,7 +888,7 @@ public:
 	/// \param ptr a pointer to an array of T
 	/// \param len the number of elements in the memory block
 	/// \details The array pointed to by <tt>ptr</tt> must be distinct
-	///  from this SecBlock because Assign() calls New() and then memcpy().
+	///  from this SecBlock because Assign() calls New() and then std::memcpy().
 	///  The call to New() will invalidate all pointers and iterators, like
 	///  the pointer returned from data().
 	/// \details If the memory block is reduced in size, then the reclaimed
@@ -941,7 +941,7 @@ public:
 	/// \param len the number of elements in the memory block
 	/// \throw InvalidArgument if resulting size would overflow
 	/// \details The array pointed to by <tt>ptr</tt> must be distinct
-	///  from this SecBlock because Append() calls Grow() and then memcpy().
+	///  from this SecBlock because Append() calls Grow() and then std::memcpy().
 	///  The call to Grow() will invalidate all pointers and iterators, like
 	///  the pointer returned from data().
 	/// \details Append() may be less efficient than a ByteQueue because
@@ -1303,7 +1303,7 @@ __stl_alloc_rebind(CryptoPP::AllocatorWithCleanup<_Tp1>& __a, const _Tp2*)
 
 NAMESPACE_END
 
-#if CRYPTOPP_MSC_VERSION
+#if defined(CRYPTOPP_MSC_VERSION)
 # pragma warning(pop)
 #endif
 

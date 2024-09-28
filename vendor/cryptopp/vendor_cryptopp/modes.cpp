@@ -5,6 +5,7 @@
 #ifndef CRYPTOPP_IMPORTS
 
 #include "modes.h"
+#include "strciphr.h"
 #include "misc.h"
 
 #if defined(CRYPTOPP_DEBUG)
@@ -44,16 +45,16 @@ void CFB_ModePolicy::Iterate(byte *output, const byte *input, CipherDir dir, siz
 		m_cipher->ProcessAndXorBlock(m_register, input, output);
 		if (iterationCount > 1)
 			m_cipher->AdvancedProcessBlocks(output, PtrAdd(input,s), PtrAdd(output,s), (iterationCount-1)*s, 0);
-		memcpy(m_register, PtrAdd(output,(iterationCount-1)*s), s);
+		std::memcpy(m_register, PtrAdd(output,(iterationCount-1)*s), s);
 	}
 	else
 	{
 		// make copy first in case of in-place decryption
-		memcpy(m_temp, PtrAdd(input,(iterationCount-1)*s), s);
+		std::memcpy(m_temp, PtrAdd(input,(iterationCount-1)*s), s);
 		if (iterationCount > 1)
 			m_cipher->AdvancedProcessBlocks(input, PtrAdd(input,s), PtrAdd(output,s), (iterationCount-1)*s, BlockTransformation::BT_ReverseDirection);
 		m_cipher->ProcessAndXorBlock(m_register, input, output);
-		memcpy(m_register, m_temp, s);
+		std::memcpy(m_register, m_temp, s);
 	}
 }
 
@@ -80,6 +81,7 @@ void CFB_ModePolicy::CipherResynchronize(const byte *iv, size_t length)
 
 void CFB_ModePolicy::SetFeedbackSize(unsigned int feedbackSize)
 {
+	CRYPTOPP_ASSERT(feedbackSize <= BlockSize());
 	if (feedbackSize > BlockSize())
 		throw InvalidArgument("CFB_Mode: invalid feedback size");
 	m_feedbackSize = feedbackSize ? feedbackSize : BlockSize();
@@ -108,7 +110,7 @@ void OFB_ModePolicy::WriteKeystream(byte *keystreamBuffer, size_t iterationCount
 	m_cipher->ProcessBlock(m_register, keystreamBuffer);
 	if (iterationCount > 1)
 		m_cipher->AdvancedProcessBlocks(keystreamBuffer, NULLPTR, PtrAdd(keystreamBuffer, s), s*(iterationCount-1), 0);
-	memcpy(m_register, PtrAdd(keystreamBuffer, (iterationCount-1)*s), s);
+	std::memcpy(m_register, PtrAdd(keystreamBuffer, (iterationCount-1)*s), s);
 }
 
 void OFB_ModePolicy::CipherResynchronize(byte *keystreamBuffer, const byte *iv, size_t length)
@@ -137,25 +139,29 @@ void CTR_ModePolicy::IncrementCounterBy256()
 	IncrementCounterByOne(m_counterArray, BlockSize()-1);
 }
 
-void CTR_ModePolicy::OperateKeystream(KeystreamOperation /*operation*/, byte *output, const byte *input, size_t iterationCount)
+void CTR_ModePolicy::OperateKeystream(KeystreamOperation operation, byte *output, const byte *input, size_t iterationCount)
 {
+	CRYPTOPP_ASSERT(output);
+	// CRYPTOPP_ASSERT(input);  // input is sometimes NULL
 	CRYPTOPP_ASSERT(m_cipher->IsForwardTransformation());
 	CRYPTOPP_ASSERT(m_counterArray.size() == BlockSize());
+	CRYPTOPP_UNUSED(operation);
 
-	const unsigned int s = BlockSize();
-	const unsigned int inputIncrement = input ? s : 0;
+	const size_t s = BlockSize();
 
 	while (iterationCount)
 	{
 		const byte lsb = m_counterArray[s-1];
-		const size_t blocks = UnsignedMin(iterationCount, 256U-lsb);
+		const size_t blocks = UnsignedMin(iterationCount, 256u-lsb);
+		const size_t outIncrement = output ? blocks*s : 0;
+		const size_t inIncrement = input ? blocks*s : 0;
 
 		m_cipher->AdvancedProcessBlocks(m_counterArray, input, output, blocks*s, BlockTransformation::BT_InBlockIsCounter|BlockTransformation::BT_AllowParallel);
-		if ((m_counterArray[s-1] = byte(lsb + blocks)) == 0)
+		if ((m_counterArray[s-1] = static_cast<byte>(lsb + blocks)) == 0)
 			IncrementCounterBy256();
 
-		output = PtrAdd(output, blocks*s);
-		input = PtrAdd(input, blocks*inputIncrement);
+		output = PtrAdd(output, outIncrement);
+		input = PtrAdd(input, inIncrement);
 		iterationCount -= blocks;
 	}
 }
@@ -204,7 +210,7 @@ void CBC_Encryption::ProcessData(byte *outString, const byte *inString, size_t l
 	m_cipher->AdvancedProcessBlocks(inString, m_register, outString, blockSize, BlockTransformation::BT_XorInput);
 	if (length > blockSize)
 		m_cipher->AdvancedProcessBlocks(PtrAdd(inString,blockSize), outString, PtrAdd(outString,blockSize), length-blockSize, BlockTransformation::BT_XorInput);
-	memcpy(m_register, PtrAdd(outString, length - blockSize), blockSize);
+	std::memcpy(m_register, PtrAdd(outString, length - blockSize), blockSize);
 }
 
 size_t CBC_CTS_Encryption::ProcessLastBlock(byte *outString, size_t outLength, const byte *inString, size_t inLength)
@@ -219,7 +225,7 @@ size_t CBC_CTS_Encryption::ProcessLastBlock(byte *outString, size_t outLength, c
 			throw InvalidArgument("CBC_Encryption: message is too short for ciphertext stealing");
 
 		// steal from IV
-		memcpy(outString, m_register, inLength);
+		std::memcpy(outString, m_register, inLength);
 		outString = m_stolenIV;
 	}
 	else
@@ -229,13 +235,13 @@ size_t CBC_CTS_Encryption::ProcessLastBlock(byte *outString, size_t outLength, c
 		m_cipher->ProcessBlock(m_register);
 		inString = PtrAdd(inString, blockSize);
 		inLength -= blockSize;
-		memcpy(PtrAdd(outString, blockSize), m_register, inLength);
+		std::memcpy(PtrAdd(outString, blockSize), m_register, inLength);
 	}
 
 	// output last full ciphertext block
 	xorbuf(m_register, inString, inLength);
 	m_cipher->ProcessBlock(m_register);
-	memcpy(outString, m_register, blockSize);
+	std::memcpy(outString, m_register, blockSize);
 
 	return used;
 }
@@ -253,7 +259,7 @@ void CBC_Decryption::ProcessData(byte *outString, const byte *inString, size_t l
 
 	// save copy now in case of in-place decryption
 	const unsigned int blockSize = BlockSize();
-	memcpy(m_temp, PtrAdd(inString, length-blockSize), blockSize);
+	std::memcpy(m_temp, PtrAdd(inString, length-blockSize), blockSize);
 	if (length > blockSize)
 		m_cipher->AdvancedProcessBlocks(PtrAdd(inString,blockSize), inString, PtrAdd(outString,blockSize), length-blockSize, BlockTransformation::BT_ReverseDirection|BlockTransformation::BT_AllowParallel);
 	m_cipher->ProcessAndXorBlock(inString, m_register, outString);
@@ -281,19 +287,19 @@ size_t CBC_CTS_Decryption::ProcessLastBlock(byte *outString, size_t outLength, c
 	}
 
 	// decrypt last partial plaintext block
-	memcpy(m_temp, pn2, blockSize);
+	std::memcpy(m_temp, pn2, blockSize);
 	m_cipher->ProcessBlock(m_temp);
 	xorbuf(m_temp, pn1, inLength);
 
 	if (stealIV)
 	{
-		memcpy(outString, m_temp, inLength);
+		std::memcpy(outString, m_temp, inLength);
 	}
 	else
 	{
-		memcpy(PtrAdd(outString, blockSize), m_temp, inLength);
+		std::memcpy(PtrAdd(outString, blockSize), m_temp, inLength);
 		// decrypt next to last plaintext block
-		memcpy(m_temp, pn1, inLength);
+		std::memcpy(m_temp, pn1, inLength);
 		m_cipher->ProcessBlock(m_temp);
 		xorbuf(outString, m_temp, m_register, blockSize);
 	}

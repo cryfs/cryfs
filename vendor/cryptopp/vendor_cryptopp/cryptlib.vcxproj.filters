@@ -35,9 +35,6 @@
     <ClCompile Include="aria.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="aria_simd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ariatab.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -345,6 +342,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="polynomi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="primetab.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pssr.cpp">

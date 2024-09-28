@@ -88,10 +88,9 @@ being unloaded from L1 cache, until that round is finished.
 #include "misc.h"
 #include "cpu.h"
 
-// VS2017 and global optimization bug. TODO, figure out when
-// we can re-enable full optimizations for VS2017. Also see
+// VS2017 and global optimization bug. Also see
 // https://github.com/weidai11/cryptopp/issues/649
-#if (_MSC_VER >= 1910)
+#if (CRYPTOPP_MSC_VERSION >= 1910) && (CRYPTOPP_MSC_VERSION <= 1916)
 # ifndef CRYPTOPP_DEBUG
 #  pragma optimize("", off)
 #  pragma optimize("ts", on)
@@ -136,7 +135,7 @@ ANONYMOUS_NAMESPACE_BEGIN
 //   with the same 4k block offsets as the Te table. Logically,
 //   the code is trying to create the condition:
 //
-// Two sepearate memory pages:
+// Two separate memory pages:
 //
 //  +-----+   +-----+
 //  |XXXXX|   |YYYYY|
@@ -423,7 +422,7 @@ void Rijndael::Base::UncheckedSetKey(const byte *userKey, unsigned int keyLen, c
 	m_key.New(4*(m_rounds+1));
 	word32 *rk = m_key;
 
-#if (CRYPTOPP_AESNI_AVAILABLE && CRYPTOPP_SSE41_AVAILABLE && (!defined(_MSC_VER) || _MSC_VER >= 1600 || CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32))
+#if (CRYPTOPP_AESNI_AVAILABLE && CRYPTOPP_SSE41_AVAILABLE && (!defined(CRYPTOPP_MSC_VERSION) || CRYPTOPP_MSC_VERSION >= 1600 || CRYPTOPP_BOOL_X86 || CRYPTOPP_BOOL_X32))
 	// MSVC 2008 SP1 generates bad code for _mm_extract_epi32() when compiling for X64
 	if (HasAESNI() && HasSSE41())
 	{
@@ -1205,7 +1204,7 @@ CRYPTOPP_NAKED void CRYPTOPP_FASTCALL Rijndael_Enc_AdvancedProcessBlocks_SSE2(vo
 #endif
 	AS_POP_IF86(bp)
 	AS_POP_IF86(bx)
-#if defined(_MSC_VER) && CRYPTOPP_BOOL_X86
+#if defined(CRYPTOPP_MSC_VERSION) && CRYPTOPP_BOOL_X86
 	AS_POP_IF86(di)
 	AS_POP_IF86(si)
 	AS1(ret)

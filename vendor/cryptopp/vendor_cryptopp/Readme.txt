@@ -1,5 +1,5 @@
 Crypto++: free C++ Class Library of Cryptographic Schemes
-Version 8.6 - TBD
+Version 8.9 - October 1, 2023
 
 Crypto++ Library is a free C++ class library of cryptographic schemes.
 Currently the library contains the following algorithms:
@@ -91,13 +91,13 @@ for any purpose without paying anyone, but see License.txt for the fine print.
 The following compilers are supported for this release. Please visit
 http://www.cryptopp.com the most up to date build instructions and porting notes.
 
-  * Visual Studio 2003 - 2019
-  * GCC 3.3 - 10.1
+  * Visual Studio 2003 - 2022
+  * GCC 3.3 - 13.1
   * Apple Clang 4.3 - 12.0
-  * LLVM Clang 2.9 - 11.0
+  * LLVM Clang 2.9 - 14.0
   * C++ Builder 2015
   * Intel C++ Compiler 9 - 16.0
-  * Sun Studio 12u1 - 12.6
+  * Sun Studio 12u1 - 12.7
   * IBM XL C/C++ 10.0 - 14.0
 
 *** Important Usage Notes ***
@@ -205,7 +205,7 @@ library in your programs to help avoid unwanted redirections.
 *** Side Channel Attacks ***
 
 Crypto++ attempts to resist side channel attacks using various remediations.
-The remdiations are applied as a best effort but are probably incomplete. They
+The remediations are applied as a best effort but are probably incomplete. They
 are incomplete due to cpu speculation bugs like Spectre, Meltdown, Foreshadow.
 The attacks target both cpu caches and internal buffers. Intel generally refers
 to internal buffer attacks as "Microarchitectural Data Sampling" (MDS).
@@ -234,7 +234,7 @@ processed through Doxygen to produce an HTML reference manual. You can find
 a link to the manual from http://www.cryptopp.com. Also at that site is
 the Crypto++ FAQ, which you should browse through before attempting to
 use this library, because it will likely answer many of questions that
-may come up. Finally, the site provide the wiki which has many topics
+may come up. Finally, the site provides the wiki which has many topics
 and code examples.
 
 If you run into any problems, please try the Crypto++ mailing list.
@@ -268,7 +268,7 @@ who can help resolve the issue. If you want to contribute a bug fix to the libra
 then make a Pull Request or make a Diff available somewhere. Also see Bug Reports on
 the wiki.
 
-Features and enhancements are welcomend additions to the library. This category tends
+Features and enhancements are welcomed additions to the library. This category tends
 to be time consuming because algorithms and their test cases need to be reviewed and
 merged. Please be mindful of the test cases, and attempt to procure them from an
 independent source.
@@ -293,6 +293,47 @@ documentation is one of the highest returns on investment.
 
 The items in this section comprise the most recent history. Please see History.txt
 for the record back to Crypto++ 1.0.
+
+8.9.0 - October 1, 2023
+      - minor release, recompile of programs required
+      - expanded community input and support
+        * 88 unique contributors as of this release
+      - fix SIMON128 Asan finding on POWER8
+      - fix AES/CFB and AES/CTR modes self test failures when using Cryptogams AES on ARMv7
+      - fix ARIA/CTR mode self test failures when inString==outString
+      - fix HIGHT/CTR mode self test failures when inString==outString
+      - fix Rabbit/CTR mode self test failures when inString==outString
+      - fix Prime Table and dangling reference to a temporary>
+      - fix Singleton::Ref when using C++11 memory fences
+      - remove unneeded call to Crop() in Randomize()
+
+8.8.0 - June 25, 2023
+      - minor release, recompile of programs required
+      - expanded community input and support
+        * 88 unique contributors as of this release
+      - fix crash in cryptest.exe when invoked with no options
+      - fix crash in library due to GCC removing live code
+      - fix RSA with key size 16 may provide an invalid key
+      - fix failure to build on 32-bit x86
+      - fix failure to build on iPhone Simulator for arm64
+      - fix failure to build on Windows arm64
+      - test for SSSE3 before using the ISA
+      - fix include of <x86intrin.h> when using MSVC
+      - improve performance of CRC32C_Update_SSE42 for x86-64
+      - update documentation
+
+8.7.0 - August 7, 2022
+      - minor release, recompile of programs required
+      - expanded community input and support
+        * 81 unique contributors as of this release
+      - fix RSA key generation for small moduli
+      - fix AES-GCM with AESNI but without CLMUL
+      - fix Clang warning with C++17
+      - fix MinGW builds due to use of O_NOFOLLOW
+      - rework CFB_CipherTemplate::ProcessData and AdditiveCipherTemplate::ProcessData
+        * restored performance and avoided performance penalty of a temp buffer
+      - fix undersized SecBlock buffer in Integer bit operations
+      - work around several GCC 11 & 12 problems
 
 8.6.0 - September 21, 2021
       - minor release, recompile of programs required

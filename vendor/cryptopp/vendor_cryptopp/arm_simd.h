@@ -29,7 +29,7 @@
 /// \since Crypto++ 8.6
 inline uint32_t CRC32B (uint32_t crc, uint8_t val)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 	return __crc32b(crc, val);
 #else
     __asm__ ("crc32b   %w0, %w0, %w1   \n\t"
@@ -45,7 +45,7 @@ inline uint32_t CRC32B (uint32_t crc, uint8_t val)
 /// \since Crypto++ 8.6
 inline uint32_t CRC32W (uint32_t crc, uint32_t val)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 	return __crc32w(crc, val);
 #else
     __asm__ ("crc32w   %w0, %w0, %w1   \n\t"
@@ -61,7 +61,7 @@ inline uint32_t CRC32W (uint32_t crc, uint32_t val)
 /// \since Crypto++ 8.6
 inline uint32_t CRC32Wx4 (uint32_t crc, const uint32_t vals[4])
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 	return __crc32w(__crc32w(__crc32w(__crc32w(
              crc, vals[0]), vals[1]), vals[2]), vals[3]);
 #else
@@ -85,7 +85,7 @@ inline uint32_t CRC32Wx4 (uint32_t crc, const uint32_t vals[4])
 /// \since Crypto++ 8.6
 inline uint32_t CRC32CB (uint32_t crc, uint8_t val)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 	return __crc32cb(crc, val);
 #else
     __asm__ ("crc32cb   %w0, %w0, %w1   \n\t"
@@ -101,7 +101,7 @@ inline uint32_t CRC32CB (uint32_t crc, uint8_t val)
 /// \since Crypto++ 8.6
 inline uint32_t CRC32CW (uint32_t crc, uint32_t val)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 	return __crc32cw(crc, val);
 #else
     __asm__ ("crc32cw   %w0, %w0, %w1   \n\t"
@@ -117,7 +117,7 @@ inline uint32_t CRC32CW (uint32_t crc, uint32_t val)
 /// \since Crypto++ 8.6
 inline uint32_t CRC32CWx4 (uint32_t crc, const uint32_t vals[4])
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 	return __crc32cw(__crc32cw(__crc32cw(__crc32cw(
              crc, vals[0]), vals[1]), vals[2]), vals[3]);
 #else
@@ -151,7 +151,7 @@ inline uint32_t CRC32CWx4 (uint32_t crc, const uint32_t vals[4])
 /// \since Crypto++ 8.0
 inline uint64x2_t PMULL_00(const uint64x2_t a, const uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     const __n64 x = { vgetq_lane_u64(a, 0) };
     const __n64 y = { vgetq_lane_u64(b, 0) };
     return vmull_p64(x, y);
@@ -181,7 +181,7 @@ inline uint64x2_t PMULL_00(const uint64x2_t a, const uint64x2_t b)
 /// \since Crypto++ 8.0
 inline uint64x2_t PMULL_01(const uint64x2_t a, const uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     const __n64 x = { vgetq_lane_u64(a, 0) };
     const __n64 y = { vgetq_lane_u64(b, 1) };
     return vmull_p64(x, y);
@@ -211,7 +211,7 @@ inline uint64x2_t PMULL_01(const uint64x2_t a, const uint64x2_t b)
 /// \since Crypto++ 8.0
 inline uint64x2_t PMULL_10(const uint64x2_t a, const uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     const __n64 x = { vgetq_lane_u64(a, 1) };
     const __n64 y = { vgetq_lane_u64(b, 0) };
     return vmull_p64(x, y);
@@ -241,7 +241,7 @@ inline uint64x2_t PMULL_10(const uint64x2_t a, const uint64x2_t b)
 /// \since Crypto++ 8.0
 inline uint64x2_t PMULL_11(const uint64x2_t a, const uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     const __n64 x = { vgetq_lane_u64(a, 1) };
     const __n64 y = { vgetq_lane_u64(b, 1) };
     return vmull_p64(x, y);
@@ -266,7 +266,7 @@ inline uint64x2_t PMULL_11(const uint64x2_t a, const uint64x2_t b)
 /// \since Crypto++ 8.0
 inline uint64x2_t PMULL(const uint64x2_t a, const uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     const __n64 x = { vgetq_lane_u64(a, 0) };
     const __n64 y = { vgetq_lane_u64(b, 0) };
     return vmull_p64(x, y);
@@ -291,7 +291,7 @@ inline uint64x2_t PMULL(const uint64x2_t a, const uint64x2_t b)
 /// \since Crypto++ 8.0
 inline uint64x2_t PMULL_HIGH(const uint64x2_t a, const uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     const __n64 x = { vgetq_lane_u64(a, 1) };
     const __n64 y = { vgetq_lane_u64(b, 1) };
     return vmull_p64(x, y);
@@ -308,28 +308,6 @@ inline uint64x2_t PMULL_HIGH(const uint64x2_t a, const uint64x2_t b)
 }
 
 /// \brief Vector extraction
-/// \param a the first value
-/// \param b the second value
-/// \param c the byte count
-/// \return vector
-/// \details VEXT_U8() extracts the first <tt>c</tt> bytes of vector
-///  <tt>a</tt> and the remaining bytes in <tt>b</tt>. VEXT_U8 is provided
-///  as GCC inline assembly due to Clang and lack of support for the intrinsic.
-/// \since Crypto++ 8.0
-inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b, unsigned int c)
-{
-#if defined(_MSC_VER)
-    return vreinterpretq_u64_u8(vextq_u8(
-        vreinterpretq_u8_u64(a), vreinterpretq_u8_u64(b), c));
-#else
-    uint64x2_t r;
-    __asm__ ("ext   %0.16b, %1.16b, %2.16b, %3   \n\t"
-            :"=w" (r) : "w" (a), "w" (b), "I" (c) );
-    return r;
-#endif
-}
-
-/// \brief Vector extraction
 /// \tparam C the byte count
 /// \param a the first value
 /// \param b the second value
@@ -342,7 +320,7 @@ template <unsigned int C>
 inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b)
 {
     // https://github.com/weidai11/cryptopp/issues/366
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     return vreinterpretq_u64_u8(vextq_u8(
         vreinterpretq_u8_u64(a), vreinterpretq_u8_u64(b), C));
 #else
@@ -351,9 +329,9 @@ inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b)
             :"=w" (r) : "w" (a), "w" (b), "I" (C) );
     return r;
 #endif
-//@}
 }
 
+//@}
 #endif // CRYPTOPP_ARM_PMULL_AVAILABLE
 
 #if CRYPTOPP_ARM_SHA3_AVAILABLE  || defined(CRYPTOPP_DOXYGEN_PROCESSING)
@@ -371,7 +349,7 @@ inline uint64x2_t VEXT_U8(uint64x2_t a, uint64x2_t b)
 /// \since Crypto++ 8.6
 inline uint64x2_t VEOR3(uint64x2_t a, uint64x2_t b, uint64x2_t c)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     return veor3q_u64(a, b, c);
 #else
     uint64x2_t r;
@@ -385,19 +363,19 @@ inline uint64x2_t VEOR3(uint64x2_t a, uint64x2_t b, uint64x2_t c)
 /// \param a the first value
 /// \param b the second value
 /// \param c the third value
-/// \return two-way exclusive OR of the values, then rotated by imm6
+/// \return two-way exclusive OR of the values, then rotated by c
 /// \details VXARQ() performs vxarq_u64(). VXARQ is provided as GCC inline assembly due
 ///  to Clang and lack of support for the intrinsic.
 /// \details VXARQ requires ARMv8.2.
 /// \since Crypto++ 8.6
-inline uint64x2_t VXAR(uint64x2_t a, uint64x2_t b, const int imm6)
+inline uint64x2_t VXAR(uint64x2_t a, uint64x2_t b, const int c)
 {
-#if defined(_MSC_VER)
-    return vxarq_u64(a, b, imm6);
+#if defined(CRYPTOPP_MSC_VERSION)
+    return vxarq_u64(a, b, c);
 #else
     uint64x2_t r;
     __asm__ ("xar   %0.2d, %1.2d, %2.2d, %3   \n\t"
-            :"=w" (r) : "w" (a), "w" (b), "I" (imm6));
+            :"=w" (r) : "w" (a), "w" (b), "I" (c));
     return r;
 #endif
 }
@@ -414,7 +392,7 @@ inline uint64x2_t VXAR(uint64x2_t a, uint64x2_t b, const int imm6)
 template <unsigned int C>
 inline uint64x2_t VXAR(uint64x2_t a, uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     return vxarq_u64(a, b, C);
 #else
     uint64x2_t r;
@@ -434,7 +412,7 @@ inline uint64x2_t VXAR(uint64x2_t a, uint64x2_t b)
 /// \since Crypto++ 8.6
 inline uint64x2_t VRAX1(uint64x2_t a, uint64x2_t b)
 {
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
     return vrax1q_u64(a, b);
 #else
     uint64x2_t r;

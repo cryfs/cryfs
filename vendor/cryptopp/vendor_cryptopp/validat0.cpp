@@ -1556,7 +1556,7 @@ bool TestASN1Functions()
 
         len = DEREncodeOctetString(encoded, ConstBytePtr(message), BytePtrSize(message));
         DERReencode(encoded, reencoded);
-        rlen = reencoded.MaxRetrievable();
+        rlen = (size_t)reencoded.MaxRetrievable();
         (void)BERDecodeOctetString(reencoded, decoded);
 
         std::string recovered;
@@ -1575,7 +1575,10 @@ bool TestASN1Functions()
 
     {
         const std::string message = "Now is the time for all good men to come to the aide of their country";
-        const int asnStringTypes[] = {UTF8_STRING, PRINTABLE_STRING, T61_STRING, VIDEOTEXT_STRING, IA5_STRING, VISIBLE_STRING};
+        const byte asnStringTypes[] = {
+            UTF8_STRING, PRINTABLE_STRING, T61_STRING, VIDEOTEXT_STRING,IA5_STRING, VISIBLE_STRING
+        };
+
         unsigned int failed = 0;
         size_t len = 0, rlen = 0, i = 0;
 
@@ -1586,7 +1589,7 @@ bool TestASN1Functions()
 
             len = DEREncodeTextString(encoded, ConstBytePtr(message), BytePtrSize(message), asnStringTypes[i]);
             DERReencode(encoded, reencoded);
-            rlen = reencoded.MaxRetrievable();
+            rlen = (size_t)reencoded.MaxRetrievable();
             (void)BERDecodeTextString(reencoded, recovered, asnStringTypes[i]);
 
             fail = (len != rlen || message != recovered);
@@ -1606,7 +1609,7 @@ bool TestASN1Functions()
     {
         const byte date[] = "Sun, 21 Mar 2021 01:00:00 +0000";
         SecByteBlock message; message.Assign(date, sizeof(date)-1);
-        const int asnDateTypes[] = {UTC_TIME, GENERALIZED_TIME};
+        const byte asnDateTypes[] = {UTC_TIME, GENERALIZED_TIME};
         unsigned int failed = 0;
         size_t i = 0;
 

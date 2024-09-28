@@ -23,11 +23,11 @@
 #endif
 
 #if defined(__XOP__)
-# include <ammintrin.h>
-# if defined(__GNUC__)
+# if defined(CRYPTOPP_GCC_COMPATIBLE)
 #  include <x86intrin.h>
 # endif
-#endif
+# include <ammintrin.h>
+#endif  // XOP
 
 #if (CRYPTOPP_ARM_NEON_HEADER)
 # include "adv_simd.h"
@@ -62,7 +62,7 @@ using CryptoPP::word64;
 #if (CRYPTOPP_ARM_NEON_AVAILABLE)
 
 // Missing from Microsoft's ARM A-32 implementation
-#if defined(_MSC_VER) && !defined(_M_ARM64)
+#if defined(CRYPTOPP_MSC_VERSION) && !defined(_M_ARM64)
 inline uint64x2_t vld1q_dup_u64(const uint64_t* ptr)
 {
     return vmovq_n_u64(*ptr);

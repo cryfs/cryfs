@@ -35,8 +35,8 @@
 #  include <immintrin.h>
 # endif
 
-# if defined(__aarch64__) || defined(__aarch32__) || defined(_M_ARM64)
-#  if defined(CRYPTOPP_ARM_NEON_HEADER)
+# if defined(__aarch32__) || defined(__aarch64__) || defined(_M_ARM64)
+#  if (CRYPTOPP_ARM_NEON_HEADER) || (CRYPTOPP_ARM_ASIMD_AVAILABLE)
 #   include <arm_neon.h>
 #  endif
 # endif
@@ -112,11 +112,11 @@ void xorbuf(byte *buf, const byte *mask, size_t count)
 	while (count >= 16)
 	{
 		word64 r[2], b[2], m[2];
-		memcpy(&b, buf, 16); memcpy(&m, mask, 16);
+		std::memcpy(&b, buf, 16); std::memcpy(&m, mask, 16);
 
 		r[0] = b[0] ^ m[0];
 		r[1] = b[1] ^ m[1];
-		memcpy(buf, &r, 16);
+		std::memcpy(buf, &r, 16);
 
 		buf += 16; mask += 16; count -= 16;
 	}
@@ -128,10 +128,10 @@ void xorbuf(byte *buf, const byte *mask, size_t count)
 	while (count >= 4)
 	{
 		word32 r, b, m;
-		memcpy(&b, buf, 4); memcpy(&m, mask, 4);
+		std::memcpy(&b, buf, 4); std::memcpy(&m, mask, 4);
 
 		r = b ^ m;
-		memcpy(buf, &r, 4);
+		std::memcpy(buf, &r, 4);
 
 		buf += 4; mask += 4; count -= 4;
 	}
@@ -186,11 +186,11 @@ void xorbuf(byte *output, const byte *input, const byte *mask, size_t count)
 	while (count >= 16)
 	{
 		word64 b[2], m[2], r[2];
-		memcpy(&b, input, 16); memcpy(&m, mask, 16);
+		std::memcpy(&b, input, 16); std::memcpy(&m, mask, 16);
 
 		r[0] = b[0] ^ m[0];
 		r[1] = b[1] ^ m[1];
-		memcpy(output, &r, 16);
+		std::memcpy(output, &r, 16);
 
 		output += 16; input += 16; mask += 16; count -= 16;
 	}
@@ -202,10 +202,10 @@ void xorbuf(byte *output, const byte *input, const byte *mask, size_t count)
 	while (count >= 4)
 	{
 		word32 b, m, r;
-		memcpy(&b, input, 4); memcpy(&m, mask, 4);
+		std::memcpy(&b, input, 4); std::memcpy(&m, mask, 4);
 
 		r = b ^ m;
-		memcpy(output, &r, 4);
+		std::memcpy(output, &r, 4);
 
 		output += 4; input += 4; mask += 4; count -= 4;
 	}
@@ -226,7 +226,7 @@ bool VerifyBufsEqual(const byte *buf, const byte *mask, size_t count)
 	while (count >= 8)
 	{
 		word64 b, m;
-		memcpy(&b, buf, 8); memcpy(&m, mask, 8);
+		std::memcpy(&b, buf, 8); std::memcpy(&m, mask, 8);
 		acc64 |= b ^ m;
 
 		buf += 8; mask += 8; count -= 8;
@@ -240,7 +240,7 @@ bool VerifyBufsEqual(const byte *buf, const byte *mask, size_t count)
 	while (count >= 4)
 	{
 		word32 b, m;
-		memcpy(&b, buf, 4); memcpy(&m, mask, 4);
+		std::memcpy(&b, buf, 4); std::memcpy(&m, mask, 4);
 		acc32 |= b ^ m;
 
 		buf += 4; mask += 4; count -= 4;
@@ -254,7 +254,7 @@ bool VerifyBufsEqual(const byte *buf, const byte *mask, size_t count)
 	for (size_t i=0; i<count; i++)
 		acc8 |= buf[i] ^ mask[i];
 
-	// word32 resuts in this tail code on x86:
+	// word32 results in this tail code on x86:
 	//   33a:  85 c0     test  %eax, %eax
 	//   33c:  0f 94 c0  sete  %al
 	//   33f:  c3        ret

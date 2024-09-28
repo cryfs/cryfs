@@ -47,7 +47,7 @@ endif
 IS_LINUX := $(shell echo $(MACHINEX) | $(GREP) -i -c "Linux")
 
 # Can be used by Android and Embedded cross-compiles. Disable by default because
-#   Android and embedded users typically don't run this configuration.
+# Android and embedded users typically don't run this configuration.
 HAS_SOLIB_VERSION ?= 0
 
 # Formerly adhoc.cpp was created from adhoc.cpp.proto when needed.
@@ -59,6 +59,19 @@ endif
 ###########################################################
 #####                General Variables                #####
 ###########################################################
+
+# Needed when the assembler is invoked
+ifeq ($(findstring -Wa,--noexecstack,$(ASFLAGS)$(CXXFLAGS)),)
+  ASFLAGS += -Wa,--noexecstack
+endif
+
+# On ARM we may compile aes_armv4.S, sha1_armv4.S, sha256_armv4.S, and
+# sha512_armv4.S through the CC compiler
+ifeq ($(GCC_COMPILER),1)
+  CC ?= gcc
+else ifeq ($(CLANG_COMPILER),1)
+  CC ?= clang
+endif
 
 # http://www.gnu.org/prep/standards/html_node/Directory-Variables.html
 ifeq ($(PREFIX),)
@@ -87,7 +100,7 @@ endif
 ###########################################################
 
 # MacOS cross-compile configuration.
-#   See http://www.cryptopp.com/wiki/MacOS_(Command_Line).
+# See http://www.cryptopp.com/wiki/MacOS_(Command_Line).
 ifeq ($(IS_MACOS),1)
   # setenv-macos.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
   IS_APPLE_LIBTOOL=$(shell libtool -V 2>&1 | $(GREP) -i -c 'Apple')
@@ -104,7 +117,7 @@ endif
 ###########################################################
 
 # iOS cross-compile configuration.
-#   See http://www.cryptopp.com/wiki/iOS_(Command_Line).
+# See http://www.cryptopp.com/wiki/iOS_(Command_Line).
 ifeq ($(IS_IOS),1)
   # setenv-ios.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
   AR = libtool
@@ -116,7 +129,7 @@ endif
 ###########################################################
 
 # Android cross-compile configuration.
-#   See http://www.cryptopp.com/wiki/Android_(Command_Line).
+# See http://www.cryptopp.com/wiki/Android_(Command_Line).
 ifeq ($(IS_ANDROID),1)
   # setenv-android.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
 
@@ -130,8 +143,8 @@ endif
 ###########################################################
 
 # ARM embedded cross-compile configuration.
-#   See http://www.cryptopp.com/wiki/ARM_Embedded_(Command_Line)
-#   and http://www.cryptopp.com/wiki/ARM_Embedded_(Bare Metal).
+# See http://www.cryptopp.com/wiki/ARM_Embedded_(Command_Line)
+# and http://www.cryptopp.com/wiki/ARM_Embedded_(Bare Metal).
 ifeq ($(IS_ARM_EMBEDDED),1)
   # setenv-android.sh sets CPPFLAGS, CXXFLAGS and LDFLAGS
 endif
@@ -171,7 +184,6 @@ ifeq ($(IS_ARMV8),1)
   IS_ARM32 = 0
 endif
 
-IS_X32 := 0
 IS_PPC32 := 0
 IS_PPC64 := 0
 
@@ -184,15 +196,15 @@ IS_PPC64 := 0
 
 # Hack to skip CPU feature tests for some recipes
 DETECT_FEATURES ?= 1
-ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),-DCRYPTOPP_DISABLE_ASM)
+ifneq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CPPFLAGS)$(CXXFLAGS)h),)
   DETECT_FEATURES := 0
-else ifeq ($(findstring clean,$(MAKECMDGOALS)),clean)
+else ifneq ($(findstring clean,$(MAKECMDGOALS)),)
   DETECT_FEATURES := 0
-else ifeq ($(findstring distclean,$(MAKECMDGOALS)),distclean)
+else ifneq ($(findstring distclean,$(MAKECMDGOALS)),)
   DETECT_FEATURES := 0
-else ifeq ($(findstring trim,$(MAKECMDGOALS)),trim)
+else ifneq ($(findstring trim,$(MAKECMDGOALS)),)
   DETECT_FEATURES := 0
-else ifeq ($(findstring zip,$(MAKECMDGOALS)),zip)
+else ifneq ($(findstring zip,$(MAKECMDGOALS)),)
   DETECT_FEATURES := 0
 endif
 
@@ -206,7 +218,7 @@ endif
 
 # TCOMMAND is used for just about all tests. Make will lazy-evaluate
 # the variables when executed by $(shell $(TCOMMAND) ...).
-TCOMMAND = $(CXX) $(TCXXFLAGS) $(TEXTRA) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT)
+TCOMMAND = $(CXX) -I. $(TCXXFLAGS) $(TEXTRA) $(ZOPT) $(TOPT) $(TPROG) -o $(TOUT)
 
 ###########################################################
 #####               X86/X32/X64 Options               #####
@@ -240,11 +252,19 @@ ifeq ($(DETECT_FEATURES),1)
   endif
 
   ifeq ($(SSE2_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+    CPPFLAGS += -DCRYPTOPP_DISABLE_ASM
   endif
 
   # Need SSE2 or higher for these tests
   ifneq ($(SSE2_FLAG),)
+
+    TPROG = TestPrograms/test_x86_sse3.cpp
+    TOPT = $(SSE3_FLAG)
+    HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
+    ifneq ($(strip $(HAVE_OPT)),0)
+      SSE3_FLAG =
+    endif
+
     TPROG = TestPrograms/test_x86_ssse3.cpp
     TOPT = $(SSSE3_FLAG)
     HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
@@ -336,33 +356,33 @@ ifeq ($(DETECT_FEATURES),1)
     endif
 
     ifeq ($(SSE3_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_SSE3
+      CPPFLAGS += -DCRYPTOPP_DISABLE_SSE3
     else ifeq ($(SSSE3_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_SSSE3
+      CPPFLAGS += -DCRYPTOPP_DISABLE_SSSE3
     else ifeq ($(SSE41_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
+      CPPFLAGS += -DCRYPTOPP_DISABLE_SSE4
     else ifeq ($(SSE42_FLAG),)
-      CXXFLAGS += -DCRYPTOPP_DISABLE_SSE4
+      CPPFLAGS += -DCRYPTOPP_DISABLE_SSE4
     endif
 
     ifneq ($(SSE42_FLAG),)
       # Unusual GCC/Clang on Macports. It assembles AES, but not CLMUL.
       # test_x86_clmul.s:15: no such instruction: 'pclmulqdq $0, %xmm1,%xmm0'
       ifeq ($(CLMUL_FLAG),)
-        CXXFLAGS += -DCRYPTOPP_DISABLE_CLMUL
+        CPPFLAGS += -DCRYPTOPP_DISABLE_CLMUL
       endif
       ifeq ($(AESNI_FLAG),)
-        CXXFLAGS += -DCRYPTOPP_DISABLE_AESNI
+        CPPFLAGS += -DCRYPTOPP_DISABLE_AESNI
       endif
 
       ifeq ($(AVX_FLAG),)
-        CXXFLAGS += -DCRYPTOPP_DISABLE_AVX
+        CPPFLAGS += -DCRYPTOPP_DISABLE_AVX
       else ifeq ($(AVX2_FLAG),)
-        CXXFLAGS += -DCRYPTOPP_DISABLE_AVX2
+        CPPFLAGS += -DCRYPTOPP_DISABLE_AVX2
       endif
       # SHANI independent of AVX per GH #1045
       ifeq ($(SHANI_FLAG),)
-        CRYPTOPP_CXXFLAGS += -DCRYPTOPP_DISABLE_SHANI
+        CPPFLAGS += -DCRYPTOPP_DISABLE_SHANI
       endif
     endif
 
@@ -381,7 +401,7 @@ ifeq ($(DETECT_FEATURES),1)
     #TOPT =
     #HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     #ifneq ($(strip $(HAVE_OPT)),0)
-    #  CXXFLAGS += -DCRYPTOPP_DISABLE_MIXED_ASM
+    #  CPPFLAGS += -DCRYPTOPP_DISABLE_MIXED_ASM
     #endif
 
   # SSE2_FLAGS
@@ -390,7 +410,7 @@ ifeq ($(DETECT_FEATURES),1)
 # DETECT_FEATURES
 endif
 
-# IS_X86, IS_X32 and IS_X64
+# IS_X86 and IS_X64
 endif
 
 ###########################################################
@@ -398,6 +418,12 @@ endif
 ###########################################################
 
 ifneq ($(IS_ARM32),0)
+
+# No need for feature detection on this platform if NEON is disabled
+ifneq ($(findstring -DCRYPTOPP_DISABLE_ARM_NEON,$(CPPFLAGS)$(CXXFLAGS)),)
+  DETECT_FEATURES := 0
+endif
+
 ifeq ($(DETECT_FEATURES),1)
 
   # Android needs -c compile flag for NEON. Otherwise there's an odd linker message.
@@ -435,13 +461,13 @@ ifeq ($(DETECT_FEATURES),1)
   else
     # Make does not have useful debugging facilities. Show the user
     # what happened by compiling again without the pipe.
-    $(info Running make again to see what failed)
-    $(info $(shell $(TCOMMAND)))
+    #$(info Running make again to see what failed)
+    #$(info $(shell $(TCOMMAND)))
     NEON_FLAG =
   endif
 
   ifeq ($(NEON_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+    CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_NEON
   endif
 
 # DETECT_FEATURES
@@ -508,7 +534,7 @@ ifeq ($(DETECT_FEATURES),1)
   endif
 
   ifeq ($(ASIMD_FLAG),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
+    CPPFLAGS += -DCRYPTOPP_DISABLE_ASM
   endif
 
   ifneq ($(ASIMD_FLAG),)
@@ -518,7 +544,7 @@ ifeq ($(DETECT_FEATURES),1)
     HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       CRC_FLAG =
-      CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_CRC32
+      CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_CRC32
     endif
 
     TPROG = TestPrograms/test_arm_aes.cpp
@@ -526,7 +552,7 @@ ifeq ($(DETECT_FEATURES),1)
     HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       AES_FLAG =
-      CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_AES
+      CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_AES
     endif
 
     TPROG = TestPrograms/test_arm_pmull.cpp
@@ -535,7 +561,7 @@ ifeq ($(DETECT_FEATURES),1)
     ifneq ($(strip $(HAVE_OPT)),0)
       GCM_FLAG =
       GF2N_FLAG =
-      CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_PMULL
+      CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_PMULL
     endif
 
     TPROG = TestPrograms/test_arm_sha1.cpp
@@ -543,7 +569,7 @@ ifeq ($(DETECT_FEATURES),1)
     HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       SHA_FLAG =
-      CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA1
+      CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA1
     endif
 
     TPROG = TestPrograms/test_arm_sha256.cpp
@@ -551,7 +577,7 @@ ifeq ($(DETECT_FEATURES),1)
     HAVE_OPT = $(shell $(TCOMMAND) 2>&1 | wc -w)
     ifneq ($(strip $(HAVE_OPT)),0)
       SHA_FLAG =
-      CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA2
+      CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA2
     endif
 
     TPROG = TestPrograms/test_arm_sm3.cpp
@@ -561,8 +587,8 @@ ifeq ($(DETECT_FEATURES),1)
       SM3_FLAG = -march=armv8.4-a+sm3
       SM4_FLAG = -march=armv8.4-a+sm3
     else
-      #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SM3
-      #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SM4
+      #CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_SM3
+      #CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_SM4
     endif
 
     TPROG = TestPrograms/test_arm_sha3.cpp
@@ -571,7 +597,7 @@ ifeq ($(DETECT_FEATURES),1)
     ifeq ($(strip $(HAVE_OPT)),0)
       SHA3_FLAG = -march=armv8.4-a+sha3
     else
-      #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA3
+      #CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA3
     endif
 
     TPROG = TestPrograms/test_arm_sha512.cpp
@@ -580,7 +606,7 @@ ifeq ($(DETECT_FEATURES),1)
     ifeq ($(strip $(HAVE_OPT)),0)
       SHA512_FLAG = -march=armv8.4-a+sha512
     else
-      #CXXFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA512
+      #CPPFLAGS += -DCRYPTOPP_DISABLE_ARM_SHA512
     endif
 
   # ASIMD_FLAG
@@ -595,21 +621,14 @@ endif
 #####                      Common                     #####
 ###########################################################
 
-# No ASM for Travis testing
-ifeq ($(findstring no-asm,$(MAKECMDGOALS)),no-asm)
-  ifeq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CXXFLAGS)),)
-    CXXFLAGS += -DCRYPTOPP_DISABLE_ASM
-  endif # CXXFLAGS
-endif # No ASM
-
 # Undefined Behavior Sanitizer (UBsan) testing. Issue 'make ubsan'.
 ifeq ($(findstring ubsan,$(MAKECMDGOALS)),ubsan)
   ifeq ($(findstring -fsanitize=undefined,$(CXXFLAGS)),)
     CXXFLAGS += -fsanitize=undefined
   endif # CXXFLAGS
-  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
-    CXXFLAGS += -DCRYPTOPP_COVERAGE
-  endif # CXXFLAGS
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CPPFLAGS)$(CXXFLAGS)),)
+    CPPFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CPPFLAGS
 endif # UBsan
 
 # Address Sanitizer (Asan) testing. Issue 'make asan'.
@@ -617,9 +636,9 @@ ifeq ($(findstring asan,$(MAKECMDGOALS)),asan)
   ifeq ($(findstring -fsanitize=address,$(CXXFLAGS)),)
     CXXFLAGS += -fsanitize=address
   endif # CXXFLAGS
-  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
-    CXXFLAGS += -DCRYPTOPP_COVERAGE
-  endif # CXXFLAGS
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CPPFLAGS)$(CXXFLAGS)),)
+    CPPFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CPPFLAGS
   ifeq ($(findstring -fno-omit-frame-pointer,$(CXXFLAGS)),)
     CXXFLAGS += -fno-omit-frame-pointer
   endif # CXXFLAGS
@@ -641,20 +660,20 @@ ifneq ($(filter valgrind,$(MAKECMDGOALS)),)
   CXXFLAGS := $(CXXFLAGS:-g%=-g3)
   CXXFLAGS := $(CXXFLAGS:-O%=-O1)
   CXXFLAGS := $(CXXFLAGS:-xO%=-xO1)
-  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CXXFLAGS)),)
-    CXXFLAGS += -DCRYPTOPP_COVERAGE
-  endif # -DCRYPTOPP_COVERAGE
+  ifeq ($(findstring -DCRYPTOPP_COVERAGE,$(CPPFLAGS)$(CXXFLAGS)),)
+    CPPFLAGS += -DCRYPTOPP_COVERAGE
+  endif # CPPFLAGS
 endif # Valgrind
 
 # Debug testing on GNU systems. Triggered by -DDEBUG.
-#   Newlib test due to http://sourceware.org/bugzilla/show_bug.cgi?id=20268
-ifneq ($(filter -DDEBUG -DDEBUG=1,$(CXXFLAGS)),)
-  USING_GLIBCXX := $(shell $(CXX) $(CXXFLAGS) -E pch.cpp 2>&1 | $(GREP) -i -c "__GLIBCXX__")
+# Newlib test due to http://sourceware.org/bugzilla/show_bug.cgi?id=20268
+ifneq ($(filter -DDEBUG -DDEBUG=1,$(CPPFLAGS) $(CXXFLAGS)),)
+  USING_GLIBCXX := $(shell $(CXX) $(CPPFLAGS) $(CXXFLAGS) -E pch.cpp 2>&1 | $(GREP) -i -c "__GLIBCXX__")
   ifneq ($(USING_GLIBCXX),0)
     ifeq ($(HAS_NEWLIB),0)
-      ifeq ($(findstring -D_GLIBCXX_DEBUG,$(CXXFLAGS)),)
-        CXXFLAGS += -D_GLIBCXX_DEBUG
-      endif # CXXFLAGS
+      ifeq ($(findstring -D_GLIBCXX_DEBUG,$(CPPFLAGS)$(CXXFLAGS)),)
+        CPPFLAGS += -D_GLIBCXX_DEBUG
+      endif # CPPFLAGS
     endif # HAS_NEWLIB
   endif # USING_GLIBCXX
 endif # GNU Debug build
@@ -687,30 +706,54 @@ SRCS := cryptlib.cpp cpu.cpp integer.cpp $(filter-out cryptlib.cpp cpu.cpp integ
 # For Makefile.am; resource.h is Windows
 INCL := $(filter-out resource.h,$(sort $(wildcard *.h)))
 
-# Cryptogams source files. We couple to ARMv7.
+# Cryptogams source files. We couple to ARMv7 and NEON.
 # Limit to Linux. The source files target the GNU assembler.
 # Also see https://www.cryptopp.com/wiki/Cryptogams.
 ifeq ($(IS_ARM32)$(IS_LINUX),11)
-  ifeq ($(CLANG_COMPILER),1)
-    CRYPTOGAMS_ARMV4_FLAG = -march=armv7-a -Wa,--noexecstack
-    CRYPTOGAMS_ARMV4_THUMB_FLAG = -march=armv7-a -mthumb -Wa,--noexecstack
-  else
-    CRYPTOGAMS_ARMV4_FLAG = -march=armv7-a -Wa,--noexecstack
-    CRYPTOGAMS_ARMV4_THUMB_FLAG = -march=armv7-a -Wa,--noexecstack
+  ifeq ($(filter -DCRYPTOPP_DISABLE_ASM -DCRYPTOPP_DISABLE_ARM_NEON,$(CPPFLAGS)$(CXXFLAGS)),)
+    # Do not use -march=armv7 if the compiler is already targeting the ISA.
+    # Also see https://github.com/weidai11/cryptopp/issues/1094
+    ifeq ($(shell $(CXX) -dM -E TestPrograms/test_cxx.cpp 2>/dev/null | grep -E '__ARM_ARCH 7|__ARM_ARCH_7A__'),)
+      CRYPTOGAMS_ARMV7_FLAG = -march=armv7-a
+    endif
+    ifeq ($(CLANG_COMPILER),1)
+      CRYPTOGAMS_ARM_FLAG = $(CRYPTOGAMS_ARMV7_FLAG)
+      CRYPTOGAMS_ARM_THUMB_FLAG = $(CRYPTOGAMS_ARMV7_FLAG) -mthumb
+    else
+      # -mfpu=auto due to https://github.com/weidai11/cryptopp/issues/1094
+      CRYPTOGAMS_ARM_FLAG = $(CRYPTOGAMS_ARMV7_FLAG)
+      CRYPTOGAMS_ARM_THUMB_FLAG = $(CRYPTOGAMS_ARMV7_FLAG)
+    endif
+    SRCS += aes_armv4.S sha1_armv4.S sha256_armv4.S sha512_armv4.S
   endif
-  SRCS += aes_armv4.S sha1_armv4.S sha256_armv4.S sha512_armv4.S
 endif
 
 # Remove unneeded arch specific files to speed build time.
 ifeq ($(IS_PPC32)$(IS_PPC64),00)
-  SRCS := $(filter-out ppc_%,$(SRCS))
+  SRCS := $(filter-out %_ppc.cpp,$(SRCS))
 endif
 ifeq ($(IS_ARM32)$(IS_ARMV8),00)
   SRCS := $(filter-out arm_%,$(SRCS))
   SRCS := $(filter-out neon_%,$(SRCS))
+  SRCS := $(filter-out %_armv4.S,$(SRCS))
 endif
-ifeq ($(IS_X86)$(IS_X32)$(IS_X64),000)
+ifeq ($(IS_X86)$(IS_X64),00)
   SRCS := $(filter-out sse_%,$(SRCS))
+  SRCS := $(filter-out %_sse.cpp,$(SRCS))
+  SRCS := $(filter-out %_avx.cpp,$(SRCS))
+endif
+
+# If ASM is disabled we can remove the SIMD files, too.
+ifneq ($(findstring -DCRYPTOPP_DISABLE_ASM,$(CRYPTOPP_CPPFLAGS)$(CPPFLAGS)$(CXXFLAGS)),)
+  SRCS := $(filter-out arm_%,$(SRCS))
+  SRCS := $(filter-out ppc_%,$(SRCS))
+  SRCS := $(filter-out neon_%,$(SRCS))
+  SRCS := $(filter-out sse_%,$(SRCS))
+  SRCS := $(filter-out %_sse.cpp,$(SRCS))
+  SRCS := $(filter-out %_avx.cpp,$(SRCS))
+  SRCS := $(filter-out %_ppc.cpp,$(SRCS))
+  SRCS := $(filter-out %_simd.cpp,$(SRCS))
+  SRCS := $(filter-out %_armv4.S,$(SRCS))
 endif
 
 # List cryptlib.cpp first, then cpu.cpp, then integer.cpp to tame C++ static initialization problems.
@@ -791,16 +834,11 @@ clean:
 
 .PHONY: autotools-clean
 autotools-clean:
-	@-$(RM) -f configure.ac configure configure.in Makefile.am Makefile.in Makefile
+	@-$(RM) -f bootstrap.sh configure.ac configure configure.in Makefile.am Makefile.in Makefile
 	@-$(RM) -f config.guess config.status config.sub config.h.in compile depcomp
 	@-$(RM) -f install-sh stamp-h1 ar-lib *.lo *.la *.m4 local.* lt*.sh missing
 	@-$(RM) -f cryptest cryptestcwd libtool* libcryptopp.la libcryptopp.pc*
 	@-$(RM) -rf build-aux/ m4/ auto*.cache/ .deps/ .libs/
-
-.PHONY: cmake-clean
-cmake-clean:
-	@-$(RM) -f cryptopp-config.cmake CMakeLists.txt
-	@-$(RM) -rf cmake_build/
 
 .PHONY: android-clean
 android-clean:
@@ -808,7 +846,7 @@ android-clean:
 	@-$(RM) -rf obj/
 
 .PHONY: distclean
-distclean: clean autotools-clean cmake-clean android-clean
+distclean: clean autotools-clean android-clean
 	-$(RM) adhoc.cpp adhoc.cpp.copied GNUmakefile.deps benchmarks.html cryptest.txt
 	-$(RM) cryptest_all.info cryptest_debug.info cryptest_noasm.info cryptest_base.info cryptest.info cryptest_release.info
 	@-$(RM) cryptest-*.txt cryptopp.tgz libcryptopp.pc *.o *.bc *.ii *~
@@ -856,6 +894,7 @@ ifneq ($(wildcard libcryptopp.so$(SOLIB_VERSION_SUFFIX)),)
 	$(CHMOD) u=rwx,go=rx $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_VERSION_SUFFIX)
 ifeq ($(HAS_SOLIB_VERSION),1)
 	-$(LN) libcryptopp.so$(SOLIB_VERSION_SUFFIX) $(DESTDIR)$(LIBDIR)/libcryptopp.so
+	-$(LN) libcryptopp.so$(SOLIB_VERSION_SUFFIX) $(DESTDIR)$(LIBDIR)/libcryptopp.so$(SOLIB_COMPAT_SUFFIX)
 	$(LDCONF) $(DESTDIR)$(LIBDIR)
 endif
 endif
@@ -929,16 +968,12 @@ NOSTD_CXXFLAGS=$(filter-out -stdlib=%,$(filter-out -std=%,$(CXXFLAGS)))
 
 # Cryptogams ARM asm implementation. AES needs -mthumb for Clang
 aes_armv4.o : aes_armv4.S
-	$(CXX) $(strip $(CPPFLAGS) $(NOSTD_CXXFLAGS) $(CRYPTOGAMS_ARMV4_THUMB_FLAG) -c) $<
+	$(CXX) $(strip $(CPPFLAGS) $(ASFLAGS) $(NOSTD_CXXFLAGS) $(CRYPTOGAMS_ARM_THUMB_FLAG) -c) $<
 
 # Use C++ compiler on C source after patching.
 # https://github.com/weidai11/cryptopp/issues/926
 cpu-features.o: cpu-features.h cpu-features.c
 	$(CXX) -x c $(strip $(CPPFLAGS) $(NOSTD_CXXFLAGS) -c) cpu-features.c
-
-# SSSE3 or NEON available
-aria_simd.o : aria_simd.cpp
-	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(ARIA_FLAG) -c) $<
 
 # SSE, NEON or POWER7 available
 blake2s_simd.o : blake2s_simd.cpp
@@ -959,10 +994,6 @@ chacha_avx.o : chacha_avx.cpp
 # SSSE3 available
 cham_simd.o : cham_simd.cpp
 	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(CHAM_FLAG) -c) $<
-
-# Power9 available
-darn.o : darn.cpp
-	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(DARN_FLAG) -c) $<
 
 # SSE2 on i686
 donna_sse.o : donna_sse.cpp
@@ -1020,17 +1051,9 @@ rijndael_simd.o : rijndael_simd.cpp
 sha_simd.o : sha_simd.cpp
 	$(CXX) $(strip $(CPPFLAGS) $(CXXFLAGS) $(SHA_FLAG) -c) $<
 
-# Cryptogams SHA1 asm implementation.
-sha1_armv4.o : sha1_armv4.S
-	$(CXX) $(strip $(CPPFLAGS) $(NOSTD_CXXFLAGS) $(CRYPTOGAMS_ARMV4_FLAG) -c) $<
-
-# Cryptogams SHA256 asm implementation.
-sha256_armv4.o : sha256_armv4.S
-	$(CXX) $(strip $(CPPFLAGS) $(NOSTD_CXXFLAGS) $(CRYPTOGAMS_ARMV4_FLAG) -c) $<
-
-# Cryptogams SHA512 asm implementation.
-sha512_armv4.o : sha512_armv4.S
-	$(CXX) $(strip $(CPPFLAGS) $(NOSTD_CXXFLAGS) $(CRYPTOGAMS_ARMV4_FLAG) -c) $<
+# Cryptogams SHA1/SHA256/SHA512 asm implementation.
+sha%_armv4.o : sha%_armv4.S
+	$(CXX) $(strip $(CPPFLAGS) $(ASFLAGS) $(NOSTD_CXXFLAGS) $(CRYPTOGAMS_ARM_FLAG) -c) $<
 
 # SSE4.2/SHA-NI or ARMv8a available
 shacal2_simd.o : shacal2_simd.cpp

@@ -1,0 +1,15 @@
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+.idea/
+
+# Build directories
+build/
+_build/
+cmake-build*/
+out
+
+# Mac garbage
+.DS_Store
+
+#vagrant
+.vagrant

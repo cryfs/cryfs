@@ -13,7 +13,7 @@
 #ifndef CRYPTOPP_GENERATE_X64_MASM
 
 // Visual Studio .Net 2003 compiler crash
-#if defined(_MSC_VER) && (_MSC_VER < 1400)
+#if defined(CRYPTOPP_MSC_VERSION) && (CRYPTOPP_MSC_VERSION < 1400)
 # pragma optimize("", off)
 #endif
 
@@ -35,7 +35,7 @@ NAMESPACE_BEGIN(CryptoPP)
 #if defined(CRYPTOPP_DISABLE_MIXED_ASM)
 // 'movd eax, xmm0' only. REG_WORD() macro not used. Clang path.
 # define USE_MOVD_REG32 1
-#elif defined(__GNUC__) || defined(_MSC_VER)
+#elif defined(__GNUC__) || defined(CRYPTOPP_MSC_VERSION)
 // 'movd eax, xmm0' or 'movd rax, xmm0'. REG_WORD() macro supplies REG32 or REG64.
 # define USE_MOVD_REG32_OR_REG64 1
 #else
@@ -146,7 +146,7 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
         else
             tableSize = (GetTablesOption() == GCM_64K_Tables) ? 64*1024 : 2*1024;
 
-        //#if defined(_MSC_VER) && (_MSC_VER < 1400)
+        //#if defined(CRYPTOPP_MSC_VERSION) && (CRYPTOPP_MSC_VERSION < 1400)
         // VC 2003 workaround: compiler generates bad code for 64K tables
         //tableSize = 2*1024;
         //#endif
@@ -155,7 +155,7 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
     m_buffer.resize(3*blockSize + tableSize);
     byte *mulTable = MulTable();
     byte *hashKey = HashKey();
-    memset(hashKey, 0, REQUIRED_BLOCKSIZE);
+    std::memset(hashKey, 0, REQUIRED_BLOCKSIZE);
     blockCipher.ProcessBlock(hashKey);
 
 #if CRYPTOPP_CLMUL_AVAILABLE
@@ -196,7 +196,7 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
 
         for (i=0; i<16; i++)
         {
-            memset(mulTable+i*256*16, 0, 16);
+            std::memset(mulTable+i*256*16, 0, 16);
 #if CRYPTOPP_SSE2_INTRIN_AVAILABLE || CRYPTOPP_SSE2_ASM_AVAILABLE
             if (HasSSE2())
                 for (j=2; j<=0x80; j*=2)
@@ -253,8 +253,8 @@ void GCM_Base::SetKeyWithoutResync(const byte *userKey, size_t keylength, const 
 
         for (i=0; i<4; i++)
         {
-            memset(mulTable+i*256, 0, 16);
-            memset(mulTable+1024+i*256, 0, 16);
+            std::memset(mulTable+i*256, 0, 16);
+            std::memset(mulTable+1024+i*256, 0, 16);
 #if CRYPTOPP_SSE2_INTRIN_AVAILABLE || CRYPTOPP_SSE2_ASM_AVAILABLE
             if (HasSSE2())
                 for (j=2; j<=8; j*=2)
@@ -320,14 +320,14 @@ void GCM_Base::Resync(const byte *iv, size_t len)
 
     if (len == 12)
     {
-        memcpy(hashBuffer, iv, len);
-        memset(hashBuffer+len, 0, 3);
+        std::memcpy(hashBuffer, iv, len);
+        std::memset(hashBuffer+len, 0, 3);
         hashBuffer[len+3] = 1;
     }
     else
     {
         size_t origLen = len;
-        memset(hashBuffer, 0, HASH_BLOCKSIZE);
+        std::memset(hashBuffer, 0, HASH_BLOCKSIZE);
 
         if (len >= HASH_BLOCKSIZE)
         {
@@ -337,8 +337,8 @@ void GCM_Base::Resync(const byte *iv, size_t len)
 
         if (len > 0)
         {
-            memcpy(m_buffer, iv, len);
-            memset(m_buffer+len, 0, HASH_BLOCKSIZE-len);
+            std::memcpy(m_buffer, iv, len);
+            std::memset(m_buffer+len, 0, HASH_BLOCKSIZE-len);
             GCM_Base::AuthenticateBlocks(m_buffer, HASH_BLOCKSIZE);
         }
 
@@ -355,7 +355,7 @@ void GCM_Base::Resync(const byte *iv, size_t len)
 
     m_ctr.Seek(HASH_BLOCKSIZE);
 
-    memset(hashBuffer, 0, HASH_BLOCKSIZE);
+    std::memset(hashBuffer, 0, HASH_BLOCKSIZE);
 }
 
 unsigned int GCM_Base::OptimalDataAlignment() const
@@ -559,6 +559,7 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
 #endif
 
 #if CRYPTOPP_SSE2_ASM_AVAILABLE
+
     case 1:        // SSE2 and 2K tables
         {
         #ifdef __GNUC__
@@ -725,10 +726,10 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
                 ATT_PREFIX
                     :
                     : "c" (data), "d" (len/16), "S" (hashBuffer), "D" (s_reductionTable)
-                    : "memory", "cc", "%eax"
-            #if CRYPTOPP_BOOL_X64
-                    , "%ebx", "%r11"
-            #endif
+                    : "memory", "cc", "%eax", "%ebx"
+#if (CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
+                    , PERCENT_REG(AS_REG_7), "%xmm0", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5"
+#endif
                 );
         #elif defined(CRYPTOPP_GENERATE_X64_MASM)
             pop rbx
@@ -805,6 +806,9 @@ size_t GCM_Base::AuthenticateBlocks(const byte *data, size_t len)
                     :
                     : "c" (data), "d" (len/16), "S" (hashBuffer)
                     : "memory", "cc", "%edi", "%eax"
+#if (CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
+                    , "%xmm0", "%xmm1"
+#endif
                 );
         #elif defined(CRYPTOPP_GENERATE_X64_MASM)
             pop rdi
@@ -826,7 +830,7 @@ void GCM_Base::AuthenticateLastHeaderBlock()
 {
     if (m_bufferedDataLength > 0)
     {
-        memset(m_buffer+m_bufferedDataLength, 0, HASH_BLOCKSIZE-m_bufferedDataLength);
+        std::memset(m_buffer+m_bufferedDataLength, 0, HASH_BLOCKSIZE-m_bufferedDataLength);
         m_bufferedDataLength = 0;
         GCM_Base::AuthenticateBlocks(m_buffer, HASH_BLOCKSIZE);
     }

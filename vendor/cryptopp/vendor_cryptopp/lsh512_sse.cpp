@@ -15,6 +15,9 @@
 #include "lsh.h"
 #include "misc.h"
 
+// Squash MS LNK4221 and libtool warnings
+extern const char LSH512_SSE_FNAME[] = __FILE__;
+
 #if defined(CRYPTOPP_SSSE3_AVAILABLE) && defined(CRYPTOPP_ENABLE_64BIT_SSE)
 
 #if defined(CRYPTOPP_SSSE3_AVAILABLE)
@@ -26,8 +29,7 @@
 # include <ammintrin.h>
 #endif
 
-// GCC at 4.5. Clang is unknown. Also see https://stackoverflow.com/a/42493893.
-#if (CRYPTOPP_GCC_VERSION >= 40500)
+#if defined(CRYPTOPP_GCC_COMPATIBLE)
 # include <x86intrin.h>
 #endif
 
@@ -557,7 +559,7 @@ inline void word_perm(lsh_u64 cv_l[8], lsh_u64 cv_r[8])
 
 	_mm_storeu_si128(M128_CAST(cv_r+0), temp[0]);
 	_mm_storeu_si128(M128_CAST(cv_r+2), temp[1]);
-};
+}
 
 /* -------------------------------------------------------- *
 * step function
@@ -743,7 +745,7 @@ inline void get_hash(LSH512_SSSE3_Context* ctx, lsh_u8* pbHashVal)
 	lsh_uint hash_val_bit_len = LSH_GET_SMALL_HASHBIT(alg_type);
 
 	// Multiplying by sizeof(lsh_u8) looks odd...
-	memcpy(pbHashVal, ctx->cv_l, hash_val_byte_len);
+	std::memcpy(pbHashVal, ctx->cv_l, hash_val_byte_len);
 	if (hash_val_bit_len){
 		pbHashVal[hash_val_byte_len-1] &= (((lsh_u8)0xff) << hash_val_bit_len);
 	}
@@ -827,7 +829,7 @@ lsh_err lsh512_update_ssse3(LSH512_SSSE3_Context* ctx, const lsh_u8* data, size_
 	}
 
 	if (databytelen + remain_msg_byte < LSH512_MSG_BLK_BYTE_LEN){
-		memcpy(ctx->last_block + remain_msg_byte, data, databytelen);
+		std::memcpy(ctx->last_block + remain_msg_byte, data, databytelen);
 		ctx->remain_databitlen += (lsh_uint)databitlen;
 		remain_msg_byte += (lsh_uint)databytelen;
 		if (pos2){
@@ -838,7 +840,7 @@ lsh_err lsh512_update_ssse3(LSH512_SSSE3_Context* ctx, const lsh_u8* data, size_
 
 	if (remain_msg_byte > 0){
 		size_t more_byte = LSH512_MSG_BLK_BYTE_LEN - remain_msg_byte;
-		memcpy(ctx->last_block + remain_msg_byte, data, more_byte);
+		std::memcpy(ctx->last_block + remain_msg_byte, data, more_byte);
 		compress(ctx, ctx->last_block);
 		data += more_byte;
 		databytelen -= more_byte;
@@ -857,7 +859,7 @@ lsh_err lsh512_update_ssse3(LSH512_SSSE3_Context* ctx, const lsh_u8* data, size_
 	}
 
 	if (databytelen > 0){
-		memcpy(ctx->last_block, data, databytelen);
+		std::memcpy(ctx->last_block, data, databytelen);
 		ctx->remain_databitlen = (lsh_uint)(databytelen << 3);
 	}
 
@@ -888,7 +890,7 @@ lsh_err lsh512_final_ssse3(LSH512_SSSE3_Context* ctx, lsh_u8* hashval)
 	else{
 		ctx->last_block[remain_msg_byte] = 0x80;
 	}
-	memset(ctx->last_block + remain_msg_byte + 1, 0, LSH512_MSG_BLK_BYTE_LEN - remain_msg_byte - 1);
+	std::memset(ctx->last_block + remain_msg_byte + 1, 0, LSH512_MSG_BLK_BYTE_LEN - remain_msg_byte - 1);
 
 	compress(ctx, ctx->last_block);
 

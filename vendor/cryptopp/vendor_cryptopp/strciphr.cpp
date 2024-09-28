@@ -1,14 +1,4 @@
-// strciphr.cpp - originally written and placed in the public domain by Wei Dai
-
-// TODO: Figure out what is happening in ProcessData. The issue surfaced for
-//       CFB_CipherTemplate<BASE>::ProcessData when we cut-in Cryptogams
-//       AES ARMv7 asm. Then again in AdditiveCipherTemplate<S>::ProcessData
-//       for CTR mode with HIGHT, which is a 64-bit block cipher. In both cases,
-//       inString == outString leads to incorrect results. We think it relates to
-//       aliasing violations because inString == outString.
-//
-//       Also see https://github.com/weidai11/cryptopp/issues/683 and
-//       https://github.com/weidai11/cryptopp/issues/1010.
+// strciphr.cpp - originally written and placed in the public domain by Wei Dai.
 
 #include "pch.h"
 
@@ -54,7 +44,7 @@ void AdditiveCipherTemplate<S>::GenerateBlock(byte *outString, size_t length)
 	}
 
 	PolicyInterface &policy = this->AccessPolicy();
-	unsigned int bytesPerIteration = policy.GetBytesPerIteration();
+	size_t bytesPerIteration = policy.GetBytesPerIteration();
 
 	if (length >= bytesPerIteration)
 	{
@@ -82,29 +72,7 @@ void AdditiveCipherTemplate<S>::ProcessData(byte *outString, const byte *inStrin
 	CRYPTOPP_ASSERT(length % this->MandatoryBlockSize() == 0);
 
 	PolicyInterface &policy = this->AccessPolicy();
-	unsigned int bytesPerIteration = policy.GetBytesPerIteration();
-
-	// GCC and Clang do not like this for CTR mode and 64-bit ciphers like HIGHT.
-	// The incorrect result is a partial string of 0's instead of plaintext or
-	// ciphertext. Recovered plaintext is partially garbage.
-	//
-	// It almost feels as if the compiler does not see the string is transformed
-	// in-place so it short-circuits the transform. In this case, if we use a
-	// stand-alone reproducer with the same data then the issue is present.
-
-	byte* savedOutString = outString;
-	size_t savedLength = length;
-	bool copyOut = false;
-
-	if (inString == outString)
-	{
-		// No need to copy inString to outString.
-		// Just allocate the space.
-		m_tempOutString.New(length);
-		m_tempOutString.SetMark(0);
-		outString = m_tempOutString.BytePtr();
-		copyOut = true;
-	}
+	size_t bytesPerIteration = policy.GetBytesPerIteration();
 
 	if (m_leftOver > 0)
 	{
@@ -116,13 +84,9 @@ void AdditiveCipherTemplate<S>::ProcessData(byte *outString, const byte *inStrin
 		length -= len; m_leftOver -= len;
 	}
 
-	if (!length) {
-		if (copyOut)
-			std::memcpy(savedOutString, m_tempOutString.BytePtr(), savedLength);
-		return;
-	}
+	if (!length) { return; }
 
-	const unsigned int alignment = policy.GetAlignment();
+	const word32 alignment = policy.GetAlignment();
 	const bool inAligned = IsAlignedOn(inString, alignment);
 	const bool outAligned = IsAlignedOn(outString, alignment);
 	CRYPTOPP_UNUSED(inAligned); CRYPTOPP_UNUSED(outAligned);
@@ -163,9 +127,6 @@ void AdditiveCipherTemplate<S>::ProcessData(byte *outString, const byte *inStrin
 
 		m_leftOver = bufferByteSize - length;
 	}
-
-	if (copyOut)
-		std::memcpy(savedOutString, m_tempOutString.BytePtr(), savedLength);
 }
 
 template <class S>
@@ -229,29 +190,6 @@ void CFB_CipherTemplate<BASE>::ProcessData(byte *outString, const byte *inString
 	unsigned int bytesPerIteration = policy.GetBytesPerIteration();
 	byte *reg = policy.GetRegisterBegin();
 
-	// GCC and Clang do not like this on ARM when inString == outString. The incorrect
-	// result is a string of 0's instead of plaintext or ciphertext. The 0's trace back
-	// to the allocation for the std::string in datatest.cpp. Elements in the string
-	// are initialized to their default value, which is 0.
-	//
-	// It almost feels as if the compiler does not see the string is transformed
-	// in-place so it short-circuits the transform. However, if we use a stand-alone
-	// reproducer with the same data then the issue is _not_ present.
-
-	byte* savedOutString = outString;
-	size_t savedLength = length;
-	bool copyOut = false;
-
-	if (inString == outString)
-	{
-		// No need to copy inString to outString.
-		// Just allocate the space.
-		m_tempOutString.New(length);
-		m_tempOutString.SetMark(0);
-		outString = m_tempOutString.BytePtr();
-		copyOut = true;
-	}
-
 	if (m_leftOver)
 	{
 		const size_t len = STDMIN(m_leftOver, length);
@@ -262,13 +200,9 @@ void CFB_CipherTemplate<BASE>::ProcessData(byte *outString, const byte *inString
 		m_leftOver -= len; length -= len;
 	}
 
-	if (!length) {
-		if (copyOut)
-			std::memcpy(savedOutString, m_tempOutString.BytePtr(), savedLength);
-		return;
-	}
+	if (!length) { return; }
 
-	const unsigned int alignment = policy.GetAlignment();
+	const word32 alignment = policy.GetAlignment();
 	const bool inAligned = IsAlignedOn(inString, alignment);
 	const bool outAligned = IsAlignedOn(outString, alignment);
 	CRYPTOPP_UNUSED(inAligned); CRYPTOPP_UNUSED(outAligned);
@@ -300,9 +234,6 @@ void CFB_CipherTemplate<BASE>::ProcessData(byte *outString, const byte *inString
 		CombineMessageAndShiftRegister(outString, reg, inString, length);
 		m_leftOver = bytesPerIteration - length;
 	}
-
-	if (copyOut)
-		std::memcpy(savedOutString, m_tempOutString.BytePtr(), savedLength);
 }
 
 template <class BASE>

@@ -18,6 +18,7 @@ Version 0.12.0 (unreleased)
 * Updated dependencies to
   * Fuse 2.9
   * DokanY 2.2.0.1000
+  * Crypto++ 8.9
   * range-v3 0.12.0
   * boost 1.84
   * spdlog 1.14.1

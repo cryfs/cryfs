@@ -130,7 +130,7 @@
 #endif
 
 // how to disable inlining
-#if defined(_MSC_VER)
+#if defined(CRYPTOPP_MSC_VERSION)
 #	define CRYPTOPP_NOINLINE_DOTDOTDOT
 #	define CRYPTOPP_NOINLINE __declspec(noinline)
 #elif defined(__xlc__) || defined(__xlC__) || defined(__ibmxl__)
@@ -145,11 +145,16 @@
 #endif
 
 // http://stackoverflow.com/a/13867690/608639
+// CRYPTOPP_CONST_OR_CONSTEXPR due to https://github.com/weidai11/cryptopp/issues/1185
 #if defined(CRYPTOPP_CXX11_CONSTEXPR)
 #  define CRYPTOPP_STATIC_CONSTEXPR static constexpr
+#  define CRYPTOPP_STATIC_CONST_OR_CONSTEXPR static constexpr
+#  define CRYPTOPP_CONST_OR_CONSTEXPR constexpr
 #  define CRYPTOPP_CONSTEXPR constexpr
 #else
 #  define CRYPTOPP_STATIC_CONSTEXPR static
+#  define CRYPTOPP_STATIC_CONST_OR_CONSTEXPR static const
+#  define CRYPTOPP_CONST_OR_CONSTEXPR const
 #  define CRYPTOPP_CONSTEXPR
 #endif // CRYPTOPP_CXX11_CONSTEXPR
 
@@ -164,14 +169,14 @@
 #endif
 
 // Warnings
-#ifdef _MSC_VER
+#ifdef CRYPTOPP_MSC_VERSION
 	// 4127: conditional expression is constant
 	// 4512: assignment operator not generated
 	// 4661: no suitable definition provided for explicit template instantiation request
 	// 4910: '__declspec(dllexport)' and 'extern' are incompatible on an explicit instantiation
 #	pragma warning(disable: 4127 4512 4661 4910)
-	// _MSC_VER 1920 is VS2019
-#	if _MSC_VER >= 1920
+	// CRYPTOPP_MSC_VERSION 1920 is VS2019
+#	if CRYPTOPP_MSC_VERSION >= 1920
 		// 5054: operator '|': deprecated between enumerations of different types
 #		pragma warning(disable: 5054)
 #	endif

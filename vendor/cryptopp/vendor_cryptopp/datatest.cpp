@@ -32,7 +32,7 @@
 # pragma warning(disable: 4505 4355)
 #endif
 
-#ifdef _MSC_VER
+#ifdef CRYPTOPP_MSC_VERSION
 # define STRTOUL64 _strtoui64
 #else
 # define STRTOUL64 strtoull
@@ -48,7 +48,7 @@ typedef std::map<std::string, std::string> TestData;
 const TestData *s_currentTestData = NULLPTR;
 const std::string testDataFilename = "cryptest.dat";
 
-// Handles CR, LF, and CRLF properly
+// Handles CR, LF, and CRLF properly. Early RFC's used '\r\0' on occasion.
 // For istream.fail() see https://stackoverflow.com/q/34395801/608639.
 bool Readline(std::istream& stream, std::string& line)
 {
@@ -66,6 +66,8 @@ bool Readline(std::istream& stream, std::string& line)
 			int next = stream.peek();
 			if (next == '\n')
 				(void)stream.get();
+			else if (next == '\0')
+				(void)stream.get();
 
 			break;
 		}
@@ -74,8 +76,6 @@ bool Readline(std::istream& stream, std::string& line)
 			break;
 		}
 
-		// Let string class manage its own capacity.
-		// The string will grow as needed.
 		temp.push_back(static_cast<char>(ch));
 	}
 
@@ -766,6 +766,90 @@ void TestSymmetricCipher(TestData &v, const NameValuePairs &overrideParameters, 
 	}
 }
 
+// Subset of TestSymmetricCipher. The test suite lacked tests for in-place encryption,
+// where inString == outString. Also see https://github.com/weidai11/cryptopp/issues/1231.
+void TestSymmetricCipherWithInplaceEncryption(TestData &v, const NameValuePairs &overrideParameters, unsigned int &totalTests)
+{
+	std::string name = GetRequiredDatum(v, "Name");
+	std::string test = GetRequiredDatum(v, "Test");
+
+	std::string key = GetDecodedDatum(v, "Key");
+	std::string plaintext = GetDecodedDatum(v, "Plaintext");
+
+	TestDataNameValuePairs testDataPairs(v);
+	CombinedNameValuePairs pairs(overrideParameters, testDataPairs);
+
+	if (test != "Encrypt" ) { return; }
+
+	static member_ptr<SymmetricCipher> encryptor, decryptor;
+	static std::string lastName;
+
+	if (name != lastName)
+	{
+		encryptor.reset(ObjectFactoryRegistry<SymmetricCipher, ENCRYPTION>::Registry().CreateObject(name.c_str()));
+		decryptor.reset(ObjectFactoryRegistry<SymmetricCipher, DECRYPTION>::Registry().CreateObject(name.c_str()));
+		lastName = name;
+	}
+
+	// Only test stream ciphers at the moment
+	if (encryptor->MandatoryBlockSize() != 1) { return; }
+
+	totalTests++;
+
+	ConstByteArrayParameter iv;
+	if (pairs.GetValue(Name::IV(), iv) && iv.size() != encryptor->IVSize())
+		SignalTestFailure();
+
+	encryptor->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
+	decryptor->SetKey(ConstBytePtr(key), BytePtrSize(key), pairs);
+
+	word64 seek64 = pairs.GetWord64ValueWithDefault("Seek64", 0);
+	if (seek64)
+	{
+		encryptor->Seek(seek64);
+		decryptor->Seek(seek64);
+	}
+	else
+	{
+		int seek = pairs.GetIntValueWithDefault("Seek", 0);
+		if (seek)
+		{
+			encryptor->Seek(seek);
+			decryptor->Seek(seek);
+		}
+	}
+
+	const std::string plainText = GetDecodedDatum(v, "Plaintext");
+	const std::string cipherText = GetDecodedDatum(v, "Ciphertext");
+
+	// Use buffer for in-place encryption and decryption
+	std::string buffer(plainText);
+
+	// Test in-place encryption
+	encryptor->ProcessString(BytePtr(buffer), BytePtrSize(buffer));
+
+	if (buffer != cipherText)
+	{
+		std::cout << "\nincorrectly encrypted: ";
+		StringSource ss(buffer, false, new HexEncoder(new FileSink(std::cout)));
+		ss.Pump(256); ss.Flush(false);
+		std::cout << "\n";
+		SignalTestFailure();
+	}
+
+	// Test in-place decryption
+	decryptor->ProcessString(BytePtr(buffer), BytePtrSize(buffer));
+
+	if (buffer != plainText)
+	{
+		std::cout << "\nincorrectly decrypted: ";
+		StringSource ss(buffer, false, new HexEncoder(new FileSink(std::cout)));
+		ss.Pump(256); ss.Flush(false);
+		std::cout << "\n";
+		SignalTestFailure();
+	}
+}
+
 // Subset of TestSymmetricCipher. We picked the tests that have data that is easy to write to a file.
 // Also see https://github.com/weidai11/cryptopp/issues/1010, where HIGHT broke when using FileSource.
 void TestSymmetricCipherWithFileSource(TestData &v, const NameValuePairs &overrideParameters, unsigned int &totalTests)
@@ -1264,6 +1348,7 @@ void TestDataFile(std::string filename, const NameValuePairs &overrideParameters
 				else if (algType == "SymmetricCipher")
 				{
 					TestSymmetricCipher(v, overrideParameters, totalTests);
+					TestSymmetricCipherWithInplaceEncryption(v, overrideParameters, totalTests);
 					TestSymmetricCipherWithFileSource(v, overrideParameters, totalTests);
 				}
 				else if (algType == "AuthenticatedSymmetricCipher")

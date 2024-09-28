@@ -86,9 +86,9 @@ enum KeystreamOperationFlags {
 /// \sa AdditiveCipherAbstractPolicy::GetBytesPerIteration(), AdditiveCipherAbstractPolicy::GetOptimalBlockSize()
 ///  and AdditiveCipherAbstractPolicy::GetAlignment()
 enum KeystreamOperation {
-	/// \brief Wirte the keystream to the output buffer, input is NULL
+	/// \brief Write the keystream to the output buffer, input is NULL
 	WRITE_KEYSTREAM				= INPUT_NULL,
-	/// \brief Wirte the keystream to the aligned output buffer, input is NULL
+	/// \brief Write the keystream to the aligned output buffer, input is NULL
 	WRITE_KEYSTREAM_ALIGNED		= INPUT_NULL | OUTPUT_ALIGNED,
 	/// \brief XOR the input buffer and keystream, write to the output buffer
 	XOR_KEYSTREAM				= 0,
@@ -320,7 +320,13 @@ public:
 	///     ChaCha20 chacha(key, keySize);
 	///     chacha.ProcessData(cipher, plain, size);
 	/// </pre>
-    void ProcessData(byte *outString, const byte *inString, size_t length);
+	/// \details You should use distinct buffers for inString and outString. If the buffers
+	///  are the same, then the data will be copied to an internal buffer to avoid GCC alias
+	///  violations. The internal copy will impact performance.
+	/// \sa <A HREF="https://github.com/weidai11/cryptopp/issues/1088">Issue 1088, 36% loss
+	///  of performance with AES</A>, <A HREF="https://github.com/weidai11/cryptopp/issues/1010">Issue
+	///  1010, HIGHT cipher troubles with FileSource</A>
+	void ProcessData(byte *outString, const byte *inString, size_t length);
 
 	/// \brief Resynchronize the cipher
 	/// \param iv a byte array used to resynchronize the cipher
@@ -388,12 +394,11 @@ protected:
 	inline byte * KeystreamBufferBegin() {return this->m_buffer.data();}
 	inline byte * KeystreamBufferEnd() {return (PtrAdd(this->m_buffer.data(), this->m_buffer.size()));}
 
-	// m_tempOutString added due to GH #1010
-	AlignedSecByteBlock m_buffer, m_tempOutString;
+	AlignedSecByteBlock m_buffer;
 	size_t m_leftOver;
 };
 
-/// \brief Policy object for feeback based stream ciphers
+/// \brief Policy object for feedback based stream ciphers
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE CFB_CipherAbstractPolicy
 {
 public:
@@ -578,6 +583,12 @@ public:
 	///     ChaCha20 chacha(key, keySize);
 	///     chacha.ProcessData(cipher, plain, size);
 	/// </pre>
+	/// \details You should use distinct buffers for inString and outString. If the buffers
+	///  are the same, then the data will be copied to an internal buffer to avoid GCC alias
+	///  violations. The internal copy will impact performance.
+	/// \sa <A HREF="https://github.com/weidai11/cryptopp/issues/1088">Issue 1088, 36% loss
+	///  of performance with AES</A>, <A HREF="https://github.com/weidai11/cryptopp/issues/1010">Issue
+	///  1010, HIGHT cipher troubles with FileSource</A>
 	void ProcessData(byte *outString, const byte *inString, size_t length);
 
 	/// \brief Resynchronize the cipher
@@ -634,8 +645,6 @@ protected:
 
 	void UncheckedSetKey(const byte *key, unsigned int length, const NameValuePairs &params);
 
-	// m_tempOutString added due to GH #1010
-	AlignedSecByteBlock m_tempOutString;
 	size_t m_leftOver;
 };
 

@@ -41,7 +41,7 @@
 #include "config.h"
 
 #if CRYPTOPP_MSC_VERSION
-# pragma warning(disable: 4100 4731)
+# pragma warning(disable: 4731)
 #endif
 
 #ifndef CRYPTOPP_IMPORTS
@@ -258,8 +258,11 @@ std::string SHA1::AlgorithmProvider() const
         return "SSE2";
 #endif
 #if CRYPTOGAMS_ARM_SHA1
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
         return "NEON";
+    else
+# endif
     if (HasARMv7())
         return "ARMv7";
 #endif
@@ -291,18 +294,22 @@ void SHA1::Transform(word32 *state, const word32 *data)
         return;
     }
 #endif
+// Disabled at the moment due to MDC and SEAL failures
 #if CRYPTOGAMS_ARM_SHA1 && 0
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
     {
-# if defined(CRYPTOPP_LITTLE_ENDIAN)
+#  if defined(CRYPTOPP_LITTLE_ENDIAN)
         word32 dataBuf[16];
         ByteReverse(dataBuf, data, SHA1::BLOCKSIZE);
+        cryptogams_sha1_block_data_order_neon(state, dataBuf, 1);
+#  else
         cryptogams_sha1_block_data_order_neon(state, data, 1);
-# else
-        cryptogams_sha1_block_data_order_neon(state, data, 1);
-# endif
+#  endif
         return;
     }
+    else
+# endif
     if (HasARMv7())
     {
 # if defined(CRYPTOPP_LITTLE_ENDIAN)
@@ -339,11 +346,14 @@ size_t SHA1::HashMultipleBlocks(const word32 *input, size_t length)
     }
 #endif
 #if CRYPTOGAMS_ARM_SHA1
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
     {
         cryptogams_sha1_block_data_order_neon(m_state, input, length / SHA1::BLOCKSIZE);
         return length & (SHA1::BLOCKSIZE - 1);
     }
+    else
+# endif
     if (HasARMv7())
     {
         cryptogams_sha1_block_data_order(m_state, input, length / SHA1::BLOCKSIZE);
@@ -411,7 +421,7 @@ void SHA256_HashBlock_CXX(word32 *state, const word32 *data)
 {
     word32 W[16]={0}, T[8];
     /* Copy context->state[] to working vars */
-    memcpy(T, state, sizeof(T));
+    std::memcpy(T, state, sizeof(T));
     /* 64 operations, partially loop unrolled */
     for (unsigned int j=0; j<64; j+=16)
     {
@@ -464,8 +474,11 @@ std::string SHA256_AlgorithmProvider()
         return "SSE2";
 #endif
 #if CRYPTOGAMS_ARM_SHA256
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
         return "NEON";
+    else
+# endif
     if (HasARMv7())
         return "ARMv7";
 #endif
@@ -490,7 +503,7 @@ void SHA224::InitState(HashWordType *state)
     static const word32 s[8] = {
         0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
         0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4};
-    memcpy(state, s, sizeof(s));
+    std::memcpy(state, s, sizeof(s));
 }
 
 void SHA256::InitState(HashWordType *state)
@@ -498,7 +511,7 @@ void SHA256::InitState(HashWordType *state)
     static const word32 s[8] = {
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
-    memcpy(state, s, sizeof(s));
+    std::memcpy(state, s, sizeof(s));
 }
 #endif // Not CRYPTOPP_GENERATE_X64_MASM
 
@@ -508,6 +521,11 @@ ANONYMOUS_NAMESPACE_BEGIN
 
 void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word32 *data, size_t len)
 {
+    // Due to the inline asm
+    CRYPTOPP_UNUSED(state);
+    CRYPTOPP_UNUSED(data);
+    CRYPTOPP_UNUSED(len);
+
     #define LOCALS_SIZE  8*4 + 16*4 + 4*WORD_SZ
     #define H(i)         [BASE+ASM_MOD(1024+7-(i),8)*4]
     #define G(i)         H(i+1)
@@ -642,7 +660,7 @@ void CRYPTOPP_FASTCALL SHA256_HashMultipleBlocks_SSE2(word32 *state, const word3
         AS2(    mov        edi, [len])
         AS2(    lea        WORD_REG(si), [SHA256_K+48*4])
     #endif
-    #if !defined(_MSC_VER) || (_MSC_VER < 1400)
+    #if !defined(CRYPTOPP_MSC_VERSION) || (CRYPTOPP_MSC_VERSION < 1400)
         AS_PUSH_IF86(bx)
     #endif
 
@@ -794,7 +812,7 @@ INTEL_NOPREFIX
 
     AS_POP_IF86(sp)
     AS_POP_IF86(bp)
-    #if !defined(_MSC_VER) || (_MSC_VER < 1400)
+    #if !defined(CRYPTOPP_MSC_VERSION) || (CRYPTOPP_MSC_VERSION < 1400)
         AS_POP_IF86(bx)
     #endif
 
@@ -812,12 +830,14 @@ INTEL_NOPREFIX
     ATT_PREFIX
     :
     : "c" (state), "d" (data), "S" (SHA256_K+48), "D" (len)
-    #if CRYPTOPP_BOOL_X64
+    #if (CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
         , "m" (workspace[0])
     #endif
     : "memory", "cc", "%eax"
-    #if CRYPTOPP_BOOL_X64
-        , "%rbx", "%r8", "%r10"
+    #if (CRYPTOPP_BOOL_X32 || CRYPTOPP_BOOL_X64)
+        , PERCENT_REG(AS_REG_7), "%rbx", "%r8", "%r10", "%xmm0", "%xmm1"
+    #else
+        , "%ebx"
     #endif
     );
 #endif
@@ -852,18 +872,22 @@ void SHA256::Transform(word32 *state, const word32 *data)
         return;
     }
 #endif
+// Disabled at the moment due to MDC and SEAL failures
 #if CRYPTOGAMS_ARM_SHA256 && 0
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
     {
-# if defined(CRYPTOPP_LITTLE_ENDIAN)
+#  if defined(CRYPTOPP_LITTLE_ENDIAN)
         word32 dataBuf[16];
         ByteReverse(dataBuf, data, SHA256::BLOCKSIZE);
+        cryptogams_sha256_block_data_order_neon(state, dataBuf, 1);
+#  else
         cryptogams_sha256_block_data_order_neon(state, data, 1);
-# else
-        cryptogams_sha256_block_data_order_neon(state, data, 1);
-# endif
+#  endif
         return;
     }
+    else
+# endif
     if (HasARMv7())
     {
 # if defined(CRYPTOPP_LITTLE_ENDIAN)
@@ -915,11 +939,14 @@ size_t SHA256::HashMultipleBlocks(const word32 *input, size_t length)
     }
 #endif
 #if CRYPTOGAMS_ARM_SHA256
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
     {
         cryptogams_sha256_block_data_order_neon(m_state, input, length / SHA256::BLOCKSIZE);
         return length & (SHA256::BLOCKSIZE - 1);
     }
+    else
+# endif
     if (HasARMv7())
     {
         cryptogams_sha256_block_data_order(m_state, input, length / SHA256::BLOCKSIZE);
@@ -983,11 +1010,14 @@ size_t SHA224::HashMultipleBlocks(const word32 *input, size_t length)
     }
 #endif
 #if CRYPTOGAMS_ARM_SHA256
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
     {
         cryptogams_sha256_block_data_order_neon(m_state, input, length / SHA256::BLOCKSIZE);
         return length & (SHA256::BLOCKSIZE - 1);
     }
+    else
+# endif
     if (HasARMv7())
     {
         cryptogams_sha256_block_data_order(m_state, input, length / SHA256::BLOCKSIZE);
@@ -1039,8 +1069,11 @@ std::string SHA512_AlgorithmProvider()
         return "SSE2";
 #endif
 #if CRYPTOGAMS_ARM_SHA512
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
         return "NEON";
+    else
+# endif
     if (HasARMv7())
         return "ARMv7";
 #endif
@@ -1068,7 +1101,7 @@ void SHA384::InitState(HashWordType *state)
         W64LIT(0x9159015a3070dd17), W64LIT(0x152fecd8f70e5939),
         W64LIT(0x67332667ffc00b31), W64LIT(0x8eb44a8768581511),
         W64LIT(0xdb0c2e0d64f98fa7), W64LIT(0x47b5481dbefa4fa4)};
-    memcpy(state, s, sizeof(s));
+    std::memcpy(state, s, sizeof(s));
 }
 
 void SHA512::InitState(HashWordType *state)
@@ -1078,7 +1111,7 @@ void SHA512::InitState(HashWordType *state)
         W64LIT(0x3c6ef372fe94f82b), W64LIT(0xa54ff53a5f1d36f1),
         W64LIT(0x510e527fade682d1), W64LIT(0x9b05688c2b3e6c1f),
         W64LIT(0x1f83d9abfb41bd6b), W64LIT(0x5be0cd19137e2179)};
-    memcpy(state, s, sizeof(s));
+    std::memcpy(state, s, sizeof(s));
 }
 
 #if CRYPTOPP_SSE2_ASM_AVAILABLE && (CRYPTOPP_BOOL_X86)
@@ -1094,6 +1127,10 @@ ANONYMOUS_NAMESPACE_BEGIN
 CRYPTOPP_NOINLINE CRYPTOPP_NAKED
 void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const word64 *data)
 {
+    // Due to the inline asm
+    CRYPTOPP_UNUSED(state);
+    CRYPTOPP_UNUSED(data);
+
 #ifdef __GNUC__
     __asm__ __volatile__
     (
@@ -1268,7 +1305,11 @@ void CRYPTOPP_FASTCALL SHA512_HashBlock_SSE2(word64 *state, const word64 *data)
     ATT_PREFIX
         :
         : "a" (SHA512_K), "c" (state), "d" (data)
-        : "%esi", "%edi", "memory", "cc"
+        : "%ebx", "%esi", "%edi", "memory", "cc"
+#if (CRYPTOPP_BOOL_X64)
+        , "%mm0", "%mm1", "%mm2", "%mm3", "%mm4", "%mm5",
+          "%xmm0", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5", "%xmm6", "%xmm7"
+#endif
     );
 #else
     AS1(    pop        edi)
@@ -1351,17 +1392,20 @@ void SHA512::Transform(word64 *state, const word64 *data)
     }
 #endif
 #if CRYPTOGAMS_ARM_SHA512
+# if CRYPTOPP_ARM_NEON_AVAILABLE
     if (HasNEON())
     {
-# if (CRYPTOPP_LITTLE_ENDIAN)
+#  if (CRYPTOPP_LITTLE_ENDIAN)
         word64 dataBuf[16];
         ByteReverse(dataBuf, data, SHA512::BLOCKSIZE);
         cryptogams_sha512_block_data_order_neon(state, dataBuf, 1);
-# else
+#  else
         cryptogams_sha512_block_data_order_neon(state, data, 1);
-# endif
+#  endif
         return;
     }
+    else
+# endif
     if (HasARMv7())
     {
 # if (CRYPTOPP_LITTLE_ENDIAN)

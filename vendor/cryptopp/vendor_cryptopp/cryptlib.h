@@ -3,7 +3,7 @@
 /// \file cryptlib.h
 /// \brief Abstract base classes that provide a uniform interface to this library.
 
-/*!	\mainpage Crypto++ Library 8.6 API Reference
+/*!	\mainpage Crypto++ Library 8.9 API Reference
 <dl>
 <dt>Abstract Base Classes<dd>
 	cryptlib.h
@@ -21,7 +21,7 @@
 	Rabbit, Salsa20, \ref SEAL "SEAL-LE", \ref SEAL "SEAL-BE", WAKE, XSalsa20
 <dt>Hash Functions<dd>
 	BLAKE2s, BLAKE2b, \ref Keccak "Keccak (F1600)", SHA1, SHA224, SHA256, SHA384, SHA512,
-	\ref SHA3 "SHA-3", SM3, Tiger, RIPEMD160, RIPEMD320, RIPEMD128, RIPEMD256, SipHash, Whirlpool,
+	\ref SHA3 "SHA-3", SM3, LSH (256/512), Tiger, RIPEMD160, RIPEMD256, SipHash, Whirlpool,
 	Weak::MD2, Weak::MD4, Weak::MD5
 <dt>Non-Cryptographic Checksums<dd>
 	CRC32, CRC32C, Adler32
@@ -106,9 +106,14 @@ and getting us started on the manual.
 #include "stdcpp.h"
 #include "trap.h"
 
+// C5264 new for VS2022/v17.4, MSC v17.3.4
+// https://github.com/weidai11/cryptopp/issues/1185
 #if CRYPTOPP_MSC_VERSION
 # pragma warning(push)
 # pragma warning(disable: 4127 4189 4505 4702)
+# if (CRYPTOPP_MSC_VERSION >= 1933)
+#  pragma warning(disable: 5264)
+# endif
 #endif
 
 NAMESPACE_BEGIN(CryptoPP)
@@ -127,7 +132,7 @@ enum CipherDir {
 	DECRYPTION};
 
 /// \brief Represents infinite time
-const unsigned long INFINITE_TIME = ULONG_MAX;
+CRYPTOPP_CONST_OR_CONSTEXPR unsigned long INFINITE_TIME = ULONG_MAX;
 
 // VC60 workaround: using enums as template parameters causes problems
 /// \brief Converts an enumeration to a type suitable for use as a template parameter
@@ -1021,7 +1026,7 @@ public:
 	virtual unsigned int MinLastBlockSize() const {return 0;}
 
 	/// \brief Determines if the last block receives special processing
-	/// \return true if the last block reveives special processing, false otherwise.
+	/// \return true if the last block receives special processing, false otherwise.
 	/// \details Some authenticated encryption modes are not expressed well with
 	///  MandatoryBlockSize() and MinLastBlockSize(). For example, AES/OCB uses
 	///  16-byte blocks (MandatoryBlockSize = 16) and the last block requires special processing
@@ -2100,7 +2105,7 @@ public:
 		void CopyAllTo(BufferedTransformation &target, const std::string &channel=DEFAULT_CHANNEL) const;
 
 		/// \brief Retrieve the next message in a series
-		/// \return true if a message was retreved, false otherwise
+		/// \return true if a message was retrieved, false otherwise
 		/// \details Internally, the base class implementation returns false.
 		virtual bool GetNextMessageSeries() {return false;}
 		/// \brief Provides the number of messages in a series
@@ -2432,7 +2437,7 @@ public:
 	/// \throw NotImplemented
 	/// \details Save() writes the material to a BufferedTransformation.
 	/// \details If the material is a key, then the key is written with ASN.1 DER encoding. The key
-	///  includes an object identifier with an algorthm id, like a subjectPublicKeyInfo.
+	///  includes an object identifier with an algorithm id, like a subjectPublicKeyInfo.
 	/// \details A "raw" key without the "key info" can be saved using a key's DEREncode() method.
 	/// \details If a derived class does not override Save(), then the base class throws
 	///  NotImplemented().
@@ -2449,7 +2454,7 @@ public:
 	///   <li>the key should be ASN.1 BER encoded
 	///   <li>the key should be a "key info"
 	///   </ul>
-	/// \details "key info" means the key should have an object identifier with an algorthm id,
+	/// \details "key info" means the key should have an object identifier with an algorithm id,
 	///  like a subjectPublicKeyInfo.
 	/// \details To read a "raw" key without the "key info", then call the key's BERDecode() method.
 	/// \note Load() generally does not check that the key is valid. Call Validate(), if needed.
@@ -2541,7 +2546,7 @@ class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE PrivateKey : public GeneratableCryptoMater
 {
 };
 
-/// \brief Interface for crypto prameters
+/// \brief Interface for crypto parameters
 class CRYPTOPP_DLL CRYPTOPP_NO_VTABLE CryptoParameters : public GeneratableCryptoMaterial
 {
 };
@@ -2815,7 +2820,7 @@ public:
 	/// \details MaxSignatureLength() returns the maximum signature length produced given the length of the
 	///  recoverable message part.
 	virtual size_t MaxSignatureLength(size_t recoverablePartLength = 0) const
-	{CRYPTOPP_UNUSED(recoverablePartLength); return SignatureLength();}
+		{CRYPTOPP_UNUSED(recoverablePartLength); return SignatureLength();}
 
 	/// \brief Provides the length of longest message that can be recovered
 	/// \return the length of longest message that can be recovered, in bytes
@@ -2881,7 +2886,7 @@ public:
 	/// \brief Create a new HashTransformation to accumulate the message to be signed
 	/// \param rng a RandomNumberGenerator derived class
 	/// \return a pointer to a PK_MessageAccumulator
-	/// \details NewSignatureAccumulator() can be used with all signing methods. Sign() will autimatically delete the
+	/// \details NewSignatureAccumulator() can be used with all signing methods. Sign() will automatically delete the
 	///  accumulator pointer. The caller is responsible for deletion if a method is called that takes a reference.
 	virtual PK_MessageAccumulator * NewSignatureAccumulator(RandomNumberGenerator &rng) const =0;
 
@@ -2944,7 +2949,7 @@ public:
 
 	/// \brief Create a new HashTransformation to accumulate the message to be verified
 	/// \return a pointer to a PK_MessageAccumulator
-	/// \details NewVerificationAccumulator() can be used with all verification methods. Verify() will autimatically delete
+	/// \details NewVerificationAccumulator() can be used with all verification methods. Verify() will automatically delete
 	///  the accumulator pointer. The caller is responsible for deletion if a method is called that takes a reference.
 	virtual PK_MessageAccumulator * NewVerificationAccumulator() const =0;
 

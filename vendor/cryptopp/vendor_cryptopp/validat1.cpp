@@ -846,7 +846,7 @@ bool TestSecBlock()
     {
         static const unsigned int SIZE = 8;
         SecBlockWithHint<byte, SIZE> block(SIZE);
-        memset(block, 0xaa, block.SizeInBytes());
+        std::memset(block, 0xaa, block.SizeInBytes());
 
         temp = true;
         block.CleanGrow(SIZE*2);
@@ -883,7 +883,7 @@ bool TestSecBlock()
     {
         static const unsigned int SIZE = 8;
         SecBlockWithHint<word32, SIZE> block(SIZE);
-        memset(block, 0xaa, block.SizeInBytes());
+        std::memset(block, 0xaa, block.SizeInBytes());
 
         temp = true;
         block.CleanGrow(SIZE*2);
@@ -921,7 +921,7 @@ bool TestSecBlock()
     {
         static const unsigned int SIZE = 8;
         SecBlockWithHint<word64, SIZE> block(SIZE);
-        memset(block, 0xaa, block.SizeInBytes());
+        std::memset(block, 0xaa, block.SizeInBytes());
 
         temp = true;
         block.CleanGrow(SIZE*2);
@@ -960,7 +960,7 @@ bool TestSecBlock()
     {
         static const unsigned int SIZE = 8;
         SecBlock<word128, AllocatorWithCleanup<word128, true> > block(SIZE);
-        memset(block, 0xaa, block.SizeInBytes());
+        std::memset(block, 0xaa, block.SizeInBytes());
 
         temp = true;
         block.CleanGrow(SIZE*2);
@@ -1074,7 +1074,7 @@ bool TestAltivecOps()
         return true;
     }
 
-    // These tests may seem superflous, but we really want to test the
+    // These tests may seem superfluous, but we really want to test the
     // Altivec/POWER4 implementation. That does not happen when POWER7
     // or POWER8 is available because we use POWER7's unaligned loads
     // and stores with POWER8's AES, SHA, etc. These tests enage

@@ -9,7 +9,7 @@
 #include "argnames.h"
 #include "secblock.h"
 
-#if defined(_MSC_VER) && !CRYPTOPP_BOOL_SLOW_WORD64
+#if defined(CRYPTOPP_MSC_VERSION) && !CRYPTOPP_BOOL_SLOW_WORD64
 #include <intrin.h>
 #endif
 
@@ -133,8 +133,8 @@ void VMAC_Base::Resynchronize(const byte *nonce, int len)
 
 	if (m_is128)
 	{
-		memset(storedNonce, 0, s-length);
-		memcpy(storedNonce+s-length, nonce, length);
+		std::memset(storedNonce, 0, s-length);
+		std::memcpy(storedNonce+s-length, nonce, length);
 		AccessCipher().ProcessBlock(storedNonce, m_pad());
 	}
 	else
@@ -147,8 +147,8 @@ void VMAC_Base::Resynchronize(const byte *nonce, int len)
 		}
 		if (!m_padCached)
 		{
-			memset(storedNonce, 0, s-length);
-			memcpy(storedNonce+s-length, nonce, length-1);
+			std::memset(storedNonce, 0, s-length);
+			std::memcpy(storedNonce+s-length, nonce, length-1);
 			storedNonce[s-1] = nonce[length-1] & 0xfe;
 			AccessCipher().ProcessBlock(storedNonce, m_pad());
 			m_padCached = true;
@@ -455,7 +455,7 @@ void VMAC_Base::VHASH_Update_SSE2(const word64 *data, size_t blocksRemainingInWo
 	#define AccumulateNH(a, b, c) a += word128(b)*(c)
 	#define Multiply128(r, i1, i2) r = word128(word64(i1)) * word64(i2)
 #else
-	#if _MSC_VER >= 1400 && !defined(__INTEL_COMPILER) && (defined(_M_IX86) || defined(_M_X64) || defined(_M_IA64))
+	#if CRYPTOPP_MSC_VERSION >= 1400 && !defined(__INTEL_COMPILER) && (defined(_M_IX86) || defined(_M_X64) || defined(_M_IA64))
 		#define MUL32(a, b) __emulu(word32(a), word32(b))
 	#else
 		#define MUL32(a, b) ((word64)((word32)(a)) * (word32)(b))
@@ -465,7 +465,7 @@ void VMAC_Base::VHASH_Update_SSE2(const word64 *data, size_t blocksRemainingInWo
 		#define MUL64(rh,rl,i1,i2)		asm ("mulq %3" : "=a"(rl), "=d"(rh) : "a"(i1), "g"(i2) : "cc");
 		#define AccumulateNH(a, b, c)	asm ("mulq %3; addq %%rax, %0; adcq %%rdx, %1" : "+r"(a##0), "+r"(a##1) : "a"(b), "g"(c) : "%rdx", "cc");
 		#define ADD128(rh,rl,ih,il)     asm ("addq %3, %1; adcq %2, %0" : "+r"(rh),"+r"(rl) : "r"(ih),"r"(il) : "cc");
-	#elif defined(_MSC_VER) && !CRYPTOPP_BOOL_SLOW_WORD64
+	#elif defined(CRYPTOPP_MSC_VERSION) && !CRYPTOPP_BOOL_SLOW_WORD64
 		#define DeclareNH(a) word64 a##0=0, a##1=0
 		#define MUL64(rh,rl,i1,i2)   (rl) = _umul128(i1,i2,&(rh));
 		#define AccumulateNH(a, b, c)	{\
@@ -844,7 +844,7 @@ void VMAC_Base::TruncatedFinal(byte *mac, size_t size)
 
 	if (len)
 	{
-		memset(m_data()+len, 0, (0-len)%16);
+		std::memset(m_data()+len, 0, (0-len)%16);
 		VHASH_Update(DataBuf(), ((len+15)/16)*2);
 		len *= 8;	// convert to bits
 	}
@@ -874,7 +874,7 @@ void VMAC_Base::TruncatedFinal(byte *mac, size_t size)
 		{
 			t[0] = ConditionalByteReverse(BIG_ENDIAN_ORDER, t[0]);
 			t[1] = ConditionalByteReverse(BIG_ENDIAN_ORDER, t[1]);
-			memcpy(mac, t, size);
+			std::memcpy(mac, t, size);
 		}
 	}
 	else
@@ -886,7 +886,7 @@ void VMAC_Base::TruncatedFinal(byte *mac, size_t size)
 		else
 		{
 			t = ConditionalByteReverse(BIG_ENDIAN_ORDER, t);
-			memcpy(mac, &t, size);
+			std::memcpy(mac, &t, size);
 		}
 	}
 }

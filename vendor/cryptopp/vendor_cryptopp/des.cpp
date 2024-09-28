@@ -283,7 +283,7 @@ namespace {
 /* Set key (initialize key schedule array) */
 void RawDES::RawSetKey(CipherDir dir, const byte *key)
 {
-#if (_MSC_VER >= 1600) || (__cplusplus >= 201103L)
+#if (CRYPTOPP_MSC_VERSION >= 1600) || (__cplusplus >= 201103L)
 # define REGISTER /* Define to nothing for C++11 and above */
 #else
 # define REGISTER register
@@ -304,7 +304,7 @@ void RawDES::RawSetKey(CipherDir dir, const byte *key)
 			? 1 : 0;        /* and store 1-bit result */
 	}
 	for (i=0; i<16; i++) {          /* key chunk for each iteration */
-		memset(ks,0,8);         /* Clear key schedule */
+		std::memset(ks,0,8);         /* Clear key schedule */
 		for (j=0; j<56; j++)    /* rotate pc1 the right amount */
 			pcr[j] = pc1m[(l=j+totrot[i])<(j<28? 28 : 56) ? l: l-28];
 		/* rotate left and right halves independently */
@@ -450,9 +450,9 @@ void DES_XEX3::Base::UncheckedSetKey(const byte *key, unsigned int length, const
 	if (!m_des.get())
 		m_des.reset(new DES::Encryption);
 
-	memcpy(m_x1, key + (IsForwardTransformation() ? 0 : 16), BLOCKSIZE);
+	std::memcpy(m_x1, key + (IsForwardTransformation() ? 0 : 16), BLOCKSIZE);
 	m_des->RawSetKey(GetCipherDirection(), key + 8);
-	memcpy(m_x3, key + (IsForwardTransformation() ? 16 : 0), BLOCKSIZE);
+	std::memcpy(m_x3, key + (IsForwardTransformation() ? 16 : 0), BLOCKSIZE);
 }
 
 void DES_XEX3::Base::ProcessAndXorBlock(const byte *inBlock, const byte *xorBlock, byte *outBlock) const
