@@ -1,45 +1,30 @@
-# This file is taken from https://github.com/axr/solar-cmake/blob/73cfea0db0284c5e2010aca23989046e5bda95c9/TargetArch.cmake
-# License:
-# Copyright (c) 2012 Petroules Corporation. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-#
-# Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-# Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-
+# This file is taken from https://github.com/abdes/cryptopp-cmake/blob/6bb64630c563937e4263b721755c724c0e1ba6e1/cmake/TargetArch.cmake
 
 # Based on the Qt 5 processor detection code, so should be very accurate
 # https://qt.gitorious.org/qt/qtbase/blobs/master/src/corelib/global/qprocessordetection.h
 # Currently handles arm (v5, v6, v7), x86 (32/64), ia64, and ppc (32/64)
 
-# Regarding POWER/PowerPC, just as is noted in the Qt source,
-# "There are many more known variants/revisions that we do not handle/detect."
+# Regarding POWER/PowerPC, just as is noted in the Qt source, "There are many
+# more known variants/revisions that we do not handle/detect."
 
-set(archdetect_c_code "
-#if defined(__arm__) || defined(__TARGET_ARCH_ARM)
-    #if defined(__ARM_ARCH_7__) \\
-        || defined(__ARM_ARCH_7A__) \\
-        || defined(__ARM_ARCH_7R__) \\
-        || defined(__ARM_ARCH_7M__) \\
-        || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM-0 >= 7)
-        #error cmake_ARCH armv7
-    #elif defined(__ARM_ARCH_6__) \\
-        || defined(__ARM_ARCH_6J__) \\
-        || defined(__ARM_ARCH_6T2__) \\
-        || defined(__ARM_ARCH_6Z__) \\
-        || defined(__ARM_ARCH_6K__) \\
-        || defined(__ARM_ARCH_6ZK__) \\
-        || defined(__ARM_ARCH_6M__) \\
-        || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM-0 >= 6)
-        #error cmake_ARCH armv6
-    #elif defined(__ARM_ARCH_5TEJ__) \\
-        || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM-0 >= 5)
-        #error cmake_ARCH armv5
-    #else
-        #error cmake_ARCH arm
-    #endif
+set(archdetect_c_code
+    "
+/*
+    ARM family, known revisions: V5, V6, V7, V8
+*/
+#if defined(__arm__) || defined(__TARGET_ARCH_ARM) || defined(_M_ARM) || defined(_M_ARM64) || defined(__aarch64__) || defined(__ARM64__)
+#  if defined(__aarch64__) || defined(__ARM64__) || defined(_M_ARM64)
+#    error cmake_ARCH arm64
+#  else
+#    error cmake_ARCH arm
+#  endif
+
+#elif defined(__CYGWIN__)
+    #error cmake_ARCH cygwin
+#elif defined(__MINGW64__)
+    #error cmake_ARCH mingw64
+#elif defined(__MINGW32__)
+    #error cmake_ARCH mingw32
 #elif defined(__i386) || defined(__i386__) || defined(_M_IX86)
     #error cmake_ARCH i386
 #elif defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(_M_X64)
@@ -56,24 +41,25 @@ set(archdetect_c_code "
     #endif
 #endif
 #error cmake_ARCH unknown
-")
+"
+)
 
-# Set ppc_support to TRUE before including this file or ppc and ppc64
-# will be treated as invalid architectures since they are no longer supported by Apple
+# Set ppc_support to TRUE before including this file or ppc and ppc64 will be
+# treated as invalid architectures since they are no longer supported by Apple
 
-function(target_architecture output_var)
+function(cryfs_target_architecture output_var)
     if(APPLE AND CMAKE_OSX_ARCHITECTURES)
-        # On OS X we use CMAKE_OSX_ARCHITECTURES *if* it was set
-        # First let's normalize the order of the values
+        # On OS X we use CMAKE_OSX_ARCHITECTURES *if* it was set First let's
+        # normalize the order of the values
 
-        # Note that it's not possible to compile PowerPC applications if you are using
-        # the OS X SDK version 10.6 or later - you'll need 10.4/10.5 for that, so we
-        # disable it by default
-        # See this page for more information:
+        # Note that it's not possible to compile PowerPC applications if you are
+        # using the OS X SDK version 10.6 or later - you'll need 10.4/10.5 for that,
+        # so we disable it by default See this page for more information:
         # http://stackoverflow.com/questions/5333490/how-can-we-restore-ppc-ppc64-as-well-as-full-10-4-10-5-sdk-support-to-xcode-4
 
-        # Architecture defaults to i386 or ppc on OS X 10.5 and earlier, depending on the CPU type detected at runtime.
-        # On OS X 10.6+ the default is x86_64 if the CPU supports it, i386 otherwise.
+        # Architecture defaults to i386 or ppc on OS X 10.5 and earlier, depending
+        # on the CPU type detected at runtime. On OS X 10.6+ the default is x86_64
+        # if the CPU supports it, i386 otherwise.
 
         foreach(osx_arch ${CMAKE_OSX_ARCHITECTURES})
             if("${osx_arch}" STREQUAL "ppc" AND ppc_support)
@@ -84,6 +70,11 @@ function(target_architecture output_var)
                 set(osx_arch_x86_64 TRUE)
             elseif("${osx_arch}" STREQUAL "ppc64" AND ppc_support)
                 set(osx_arch_ppc64 TRUE)
+            elseif("${osx_arch}" STREQUAL "arm64")
+                set(osx_arch_arm64 TRUE)
+            elseif("${osx_arch}" STREQUAL "$(ARCHS_STANDARD)")
+                set(osx_arch_arm64 TRUE)
+                set(osx_arch_x86_64 TRUE)
             else()
                 message(FATAL_ERROR "Invalid OS X arch name: ${osx_arch}")
             endif()
@@ -105,19 +96,24 @@ function(target_architecture output_var)
         if(osx_arch_ppc64)
             list(APPEND ARCH ppc64)
         endif()
+
+        if(osx_arch_arm64)
+            list(APPEND ARCH arm64)
+        endif()
     else()
         file(WRITE "${CMAKE_BINARY_DIR}/arch.c" "${archdetect_c_code}")
 
         enable_language(C)
 
-        # Detect the architecture in a rather creative way...
-        # This compiles a small C program which is a series of ifdefs that selects a
-        # particular #error preprocessor directive whose message string contains the
-        # target architecture. The program will always fail to compile (both because
-        # file is not a valid C program, and obviously because of the presence of the
-        # #error preprocessor directives... but by exploiting the preprocessor in this
-        # way, we can detect the correct target architecture even when cross-compiling,
-        # since the program itself never needs to be run (only the compiler/preprocessor)
+        # Detect the architecture in a rather creative way... This compiles a small
+        # C program which is a series of ifdefs that selects a particular #error
+        # preprocessor directive whose message string contains the target
+        # architecture. The program will always fail to compile (both because file
+        # is not a valid C program, and obviously because of the presence of the
+        # #error preprocessor directives... but by exploiting the preprocessor in
+        # this way, we can detect the correct target architecture even when
+        # cross-compiling, since the program itself never needs to be run (only the
+        # compiler/preprocessor)
         try_run(
             run_result_unused
             compile_result_unused
@@ -134,9 +130,9 @@ function(target_architecture output_var)
         string(REPLACE "cmake_ARCH " "" ARCH "${ARCH}")
 
         # If we are compiling with an unknown architecture this variable should
-        # already be set to "unknown" but in the case that it's empty (i.e. due
-        # to a typo in the code), then set it to unknown
-        if (NOT ARCH)
+        # already be set to "unknown" but in the case that it's empty (i.e. due to a
+        # typo in the code), then set it to unknown
+        if(NOT ARCH)
             set(ARCH unknown)
         endif()
     endif()
