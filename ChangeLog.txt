@@ -1,36 +1,43 @@
 Version 1.0.0 (unreleased)
 ---------------
-* Fixes/Improvements
-  * Added a man page for `cryfs-unmount`
-  * Fixed small inaccuracy in calculation of free space in statvfs
-  * Fix an issue when using `-o` atime mount options
-  * On Windows
-    * fix some Visual Studio 2022 build issues (Visual Studio 2019 worked fine but 2022 introduced some breaking changes)
-    * when the wrong DokanY version is installed, or DokanY is not installed, show an error instead of letting it look like mounting succeeded.
-    * remove '-f' flag and always run CryFS in foreground mode. Background mode didn't work anyways but attempting to use it would swallow logs and errors. Now they show up correctly.
-    * show better error message when attempting to mount to a non-drive mount path
-  * Fix some MacOS build issues
-* Build changes
-  * Requires CMake 3.25
-  * Remove Windows 32bit build, only 64bit remains supported
-  * Remove MacOS gcc build, only clang remains supported
-  * Migrate build from Conan 1.x to Conan 2.x
-  * Easier way to opt-out of conan. CMake now works directly and without conan if the necessary dependencies are already installed.
-  * Remove apt.cryfs.org from the `.deb` package generation process since that repository isn't being used anymore
-* Updated dependencies to
-  * Fuse 2.9
-  * DokanY 2.2.0.1000
-  * Crypto++ 8.9
-  * range-v3 0.12.0
-  * boost 1.84
-  * spdlog 1.14.1
-  * gtest 1.15.0
-  * Use libcurl dependency from conan instead of requiring it to be preinstalled. Cut away most of it to minimize dependencies, only keep the minimum needed for querying Cryfs release information.
-  * Use gtest dependency from conan instead of having it in the vendor/ directory of the repository
-  * We now only link to libcurl if CRYFS_UPDATE_CHECKS is enabled. If the compile time flag is disabled,
-    that already disabled update checks in previous versions, but needlessly still linked to libcurl.
-    Now the flag will fully remove the libcurl dependency.
-  * On Windows, libcurl now uses SChannel for SSL instead of OpenSSL. OpenSSL used to have problems finding certificate authorities, but with SChannel, things work fine.
+Backwards Compatibility:
+* Filesystems created with CryFS 0.11.x and CryFS 1.0.0 are fully compatible with each other. The storage format hasn't changed.
+* This means filesystems created with 0.10.x or 0.11.x can be mounted without requiring a migration.
+* Filesystems created with 1.0.0 or 0.11.x can be mounted by CryFS 0.10.x, but only if you configure it to use a cipher supported by CryFS 0.10.x, e.g. AES-256-GCM. The new default, XChaCha20-Poly1305, is not supported by CryFS 0.10.x.
+
+Fixes/Improvements
+* Added a man page for `cryfs-unmount`
+* Fixed small inaccuracy in calculation of free space in statvfs
+* Fix an issue when using `-o` atime mount options
+* On Windows
+  * when the wrong DokanY version is installed, or DokanY is not installed, show an error instead of letting it look like mounting succeeded.
+  * remove '-f' flag and always run CryFS in foreground mode. Background mode didn't work anyways but attempting to use it would swallow logs and errors. Now they show up correctly.
+  * show better error message when attempting to mount to a non-drive mount path
+  * libcurl now uses SChannel for SSL instead of OpenSSL. OpenSSL used to have problems finding certificate authorities, but with SChannel, things work fine.
+* Fix some Windows build issues when using Visual Studio 2022. Visual Studio 2019 worked fine but 2022 introduced some breaking changes.
+* Fix some MacOS build issues
+
+Build changes
+* Requires CMake 3.25
+* Remove Windows 32bit build, only 64bit remains supported
+* Remove MacOS gcc build, only clang remains supported
+* Migrate build from Conan 1.x to Conan 2.x
+* There is now an easier way to opt-out of conan. CMake now works directly and without conan if the necessary dependencies are already installed.
+* Remove apt.cryfs.org from the `.deb` package generation process since that repository isn't being used anymore
+* We now only link to libcurl if CRYFS_UPDATE_CHECKS is enabled. If the compile time flag is disabled,
+  that already disabled update checks in previous versions, but needlessly still linked to libcurl.
+  Now the flag will fully remove the libcurl dependency from the build.
+
+Dependency Updates
+* Fuse 2.9
+* DokanY 2.2.0.1000
+* Crypto++ 8.9
+* range-v3 0.12.0
+* boost 1.84
+* spdlog 1.14.1
+* gtest 1.15.0
+* Use libcurl dependency from conan instead of requiring it to be preinstalled. Cut away most of it to minimize dependencies, only keep the minimum needed for querying Cryfs release information.
+* Use gtest dependency from conan instead of having it in the vendor/ directory of the repository
 
 
 Version 0.11.4
