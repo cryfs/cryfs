@@ -1410,7 +1410,65 @@ if(CRYPTOPP_USE_OPENMP)
     list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/opt/libomp/)
     list(APPEND CMAKE_PREFIX_PATH /opt/local/lib/libomp/)
     list(APPEND CMAKE_INCLUDE_PATH /opt/local/include/libomp/)
-    find_package(OpenMP REQUIRED)
+    find_package(OpenMP)
+
+    if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+        message(STATUS "OpenMP: Found libomp without any special flags")
+    endif()
+
+    # If OpenMP wasn't found, try if we can find it in the default Macports location
+    if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND) AND EXISTS "/opt/local/lib/libomp/libomp.dylib") # older cmake uses OPENMP_FOUND, newer cmake also sets OPENMP_CXX_FOUND, homebrew installations seem only to get the latter set.
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/local/include/libomp/")
+        set(OpenMP_CXX_LIB_NAMES omp)
+        set(OpenMP_omp_LIBRARY /opt/local/lib/libomp/libomp.dylib)
+
+        find_package(OpenMP)
+        if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+            message(STATUS "OpenMP: Found libomp in macports default location.")
+        else()
+            message(FATAL_ERROR "OpenMP: Didn't find libomp. Tried macports default location but also didn't find it.")
+        endif()
+    endif()
+
+    # If OpenMP wasn't found, try if we can find it in the default Homebrew location (Intel Macs)
+    if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND) AND EXISTS "/usr/local/opt/libomp/lib/libomp.dylib")
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include")
+        set(OpenMP_CXX_LIB_NAMES omp)
+        set(OpenMP_omp_LIBRARY /usr/local/opt/libomp/lib/libomp.dylib)
+
+        find_package(OpenMP)
+        if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+            message(STATUS "OpenMP: Found libomp in homebrew default location for Intel Macs.")
+        else()
+            message(FATAL_ERROR "OpenMP: Didn't find libomp. Tried homebrew default location for Intel Macs but also didn't find it.")
+        endif()
+    endif()
+
+    # If OpenMP wasn't found, try if we can find it in the default Homebrew location (Apple Silicon Macs)
+    if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND) AND EXISTS "/opt/homebrew/opt/libomp/lib/libomp.dylib")
+        set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include")
+        set(OpenMP_CXX_LIB_NAMES omp)
+        set(OpenMP_omp_LIBRARY /opt/homebrew/opt/libomp/lib/libomp.dylib)
+
+        find_package(OpenMP)
+        if (OPENMP_FOUND OR OPENMP_CXX_FOUND)
+            message(STATUS "OpenMP: Found libomp in homebrew default location for Apple Silicon Macs.")
+        else()
+            message(FATAL_ERROR "OpenMP: Didn't find libomp. Tried homebrew default location for Apple Silicon Macs but also didn't find it.")
+        endif()
+    endif()
+
+    if((NOT OPENMP_FOUND) AND (NOT OPENMP_CXX_FOUND))
+        execute_process(
+            COMMAND bash -c "find / -name libomp.dylib"
+            OUTPUT_VARIABLE outVar
+        )
+        message(FATAL_ERROR "OpenMP: Didn't find libomp.\nFind output:\n${outVar}")
+    endif()
+    # /usr/local/Cellar/llvm@12/12.0.1_1/lib/libomp.dylib
+    # /usr/local/Cellar/llvm@13/13.0.1_2/lib/libomp.dylib
+    # works in llvm 14, 16
+    # not found in 15, 17
 endif()
 
 target_link_libraries(

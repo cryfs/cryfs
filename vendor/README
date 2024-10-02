@@ -2,3 +2,4 @@ This directory contains external projects, taken from the following locations:
 cryptopp:
  - vendor_cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_9_0
  - vendor_cryptopp_cmake: https://github.com/abdes/cryptopp-cmake/tree/CRYPTOPP_8_9_0
+   - Added workaround to find OpenMP on MacOS: https://github.com/abdes/cryptopp-cmake/pull/126
