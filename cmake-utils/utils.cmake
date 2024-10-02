@@ -121,7 +121,7 @@ function(require_clang_version VERSION)
     endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endfunction(require_clang_version)
 
-include(cmake-utils/TargetArch.cmake)
+include(cmake-utils/CryfsTargetArch.cmake)
 function(get_target_architecture output_var)
 	cryfs_target_architecture(local_output_var)
 	set(${output_var} ${local_output_var} PARENT_SCOPE)
