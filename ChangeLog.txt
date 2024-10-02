@@ -1,13 +1,15 @@
-Version 0.12.0 (unreleased)
+Version 1.0.0 (unreleased)
 ---------------
 * Fixes/Improvements
   * Added a man page for `cryfs-unmount`
   * Fixed small inaccuracy in calculation of free space in statvfs
+  * Fix an issue when using `-o` atime mount options
   * On Windows
     * fix some Visual Studio 2022 build issues (Visual Studio 2019 worked fine but 2022 introduced some breaking changes)
     * when the wrong DokanY version is installed, or DokanY is not installed, show an error instead of letting it look like mounting succeeded.
     * remove '-f' flag and always run CryFS in foreground mode. Background mode didn't work anyways but attempting to use it would swallow logs and errors. Now they show up correctly.
     * show better error message when attempting to mount to a non-drive mount path
+  * Fix some MacOS build issues
 * Build changes
   * Requires CMake 3.25
   * Remove Windows 32bit build, only 64bit remains supported
@@ -30,11 +32,6 @@ Version 0.12.0 (unreleased)
     Now the flag will fully remove the libcurl dependency.
   * On Windows, libcurl now uses SChannel for SSL instead of OpenSSL. OpenSSL used to have problems finding certificate authorities, but with SChannel, things work fine.
 
-
-Version 0.11.5 (unreleased)
----------------
-* Fix an issue when using `-o` atime mount options
-* Fix some MacOS build issues
 
 Version 0.11.4
 ---------------

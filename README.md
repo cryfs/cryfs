@@ -52,7 +52,7 @@ CryFS has experimental Windows support since the 0.10 release series. To install
 
 1. Install [DokanY](https://github.com/dokan-dev/dokany/releases)
    It's recommended to install the matching version DokanY a given CryFS version was built with. Other versions may work but we have seen issues.
-   * CryFS 0.12: DokanY 2.2.0.1000
+   * CryFS 1.0: DokanY 2.2.0.1000
    * CryFS 0.11: DokanY 1.2.2.1001
 2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
 3. Install [CryFS](https://www.cryfs.org/#download)
@@ -65,20 +65,19 @@ There are some GUI applications with CryFS support. You usually have to install 
 
 Stability / Production readiness
 ====================
-CryFS 0.10 or later is stable for most use cases, but has a couple of known issues that can corrupt your file system.
+For non-concurrent use, CryFS 0.10 or later is stable, but has a couple of known issues that can corrupt your file system.
 They don't happen in normal day to day use, but can happen if you don't pay attention or aren't aware of them.
-This is why the version number hasn't reached 1.0 yet.
 
 - If you kill the CryFS process while it was in the middle of writing data (either intentionally or unintentionally by losing power to your PC), your file system could get corrupted.
   CryFS does not do journaling. Note that in 0.10.x, read accesses into a CryFS file system can cause writes because file timestamps get updated. So if you're unlucky, your file system
-  could get corrupted if you lose power while you were reading files as well. Read accesses aren't an issue in CryFS 0.11.x anymore, because it mounts the filesystem with `noatime` by default.
+  could get corrupted if you lose power while you were reading files as well. Read accesses aren't an issue in CryFS 0.11.x or later anymore, because it mounts the filesystem with `noatime` by default.
 - The same corruption mentioned above can happen when CryFS is trying to write data but your disk ran out of space, causing the write to fail.
 - CryFS does not currently support concurrent access, i.e. accessing a file system from multiple devices at the same time.
   CryFS works very well for storing data in a cloud and using it from multiple devices, but you need to make sure that only one CryFS process is active at any point in time, and you also need
   to make sure that the cloud synchronization client (e.g. Dropbox) finishes its synchronization before you switch devices. There are some ideas on how concurrent access could be supported in
   future versions, but it's a hard problem to solve. If you do happen to access the file system from multiple devices at the same time, it will likely go well most of the time, but it can corrupt your file system.
-- In addition to the scenarios above that can corrupt your file system, note that there is currently no fsck-like tool for CryFS that could recover your data. Although such a tool is in theory, possible,
-  it hasn't been implemented yet and a corrupted file system will most likely cause a loss of your data.
+- In addition to the scenarios above that can corrupt your file system, note that there is currently no fsck-like tool for CryFS that could recover your data. Such a tool is in development together with the Rust rewrite of CryFS.
+  Until that is ready, a corrupted file system will most likely cause a loss of all of your data.
 
 If the scenarios mentioned above don't apply to you, then you can consider CryFS 0.10.x and later as stable. The 0.9.x versions are not recommended anymore.
 
