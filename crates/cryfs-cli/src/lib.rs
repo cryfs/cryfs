@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
 
 mod args;

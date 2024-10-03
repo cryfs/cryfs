@@ -14,8 +14,7 @@ pub trait Application: Sized {
 
     fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self>;
 
-    #[allow(async_fn_in_trait)]
-    async fn main(self) -> Result<()>;
+    fn main(self) -> Result<()>;
 }
 
 pub fn run<App: Application>() -> Result<()> {
@@ -25,15 +24,8 @@ pub fn run<App: Application>() -> Result<()> {
     let env = Environment::new();
 
     if let Some(args) = parse_args::<App::ConcreteArgs>(&env, App::NAME, App::VERSION)? {
-        // TODO Runtime settings
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .thread_name(App::NAME)
-            .enable_all()
-            .build()
-            .unwrap();
-
         let app = App::new(args, env)?;
-        runtime.block_on(app.main())?;
+        app.main()?;
     }
 
     Ok(())

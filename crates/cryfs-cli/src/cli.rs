@@ -1,9 +1,9 @@
 use anyhow::Result;
-use std::path::Path;
+use daemonize::Daemonize;
 
 use super::console::InteractiveConsole;
 use super::runner::FilesystemRunner;
-use crate::args::CryfsArgs;
+use crate::args::{CryfsArgs, MountArgs};
 use cryfs_blockstore::{
     AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
 };
@@ -49,7 +49,7 @@ impl Application for Cli {
         })
     }
 
-    async fn main(self) -> Result<()> {
+    fn main(self) -> Result<()> {
         if self.args.show_ciphers {
             for cipher in cryfs_cryfs::config::ALL_CIPHERS {
                 println!("{}", cipher);
@@ -57,7 +57,7 @@ impl Application for Cli {
             return Ok(());
         }
 
-        self.run_filesystem(ConsoleProgressBarManager).await?;
+        self.run_filesystem(ConsoleProgressBarManager)?;
 
         println!(
             "Basedir: {:?}\nMountdir: {:?}",
@@ -69,22 +69,31 @@ impl Application for Cli {
 }
 
 impl Cli {
-    async fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<()> {
+    fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<()> {
+        let mount_args = self.mount_args();
         // TODO C++ code has lots more logic here, migrate that.
-        let basedir = self.basedir().to_owned();
-        if !basedir.exists() {
-            std::fs::create_dir(&basedir)?;
+        if !mount_args.basedir.exists() {
+            std::fs::create_dir(&mount_args.basedir)?;
         }
-        let mountdir = self.mountdir();
-        if !mountdir.exists() {
-            std::fs::create_dir(mountdir)?;
+        if !mount_args.mountdir.exists() {
+            std::fs::create_dir(&mount_args.mountdir)?;
         }
 
         let config = self.load_or_create_config(progress_bars)?;
         print_config(&config);
 
-        setup_blockstore_stack(
-            OnDiskBlockStore::new(basedir),
+        // We need to daemonize **before** initializing tokio because tokio doesn't support fork, see https://github.com/tokio-rs/tokio/issues/4301
+        // TODO Can we delay daemonization until after we know the filesystem was mounted successfully?
+        self.maybe_daemonize(&mount_args)?;
+
+        // TODO Runtime settings
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .thread_name(Self::NAME)
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(setup_blockstore_stack(
+            OnDiskBlockStore::new(mount_args.basedir.to_owned()),
             &config,
             &self.local_state_dir,
             // TODO Setup IntegrityConfig correctly
@@ -97,12 +106,23 @@ impl Cli {
                 }),
             },
             FilesystemRunner {
-                mountdir,
+                mountdir: &mount_args.mountdir,
                 config: &config,
             },
-        )
-        .await??;
+        ))??;
 
+        Ok(())
+    }
+
+    fn maybe_daemonize(&self, mount_args: &MountArgs) -> Result<()> {
+        if mount_args.foreground {
+            println!("Mounting in foreground mode. CryFS will not exit until the filesystem is unmounted.");
+        } else {
+            println!("Mounting in background mode. CryFS will continue to run in the background.");
+            let umask = unsafe { libc::umask(0) }; // get current umask value because `daemonize` force overwrites it but we don't really want it to change, so we give it the old value
+            Daemonize::new().umask(umask).start()?;
+            println!("We're in background now");
+        }
         Ok(())
     }
 
@@ -112,7 +132,7 @@ impl Cli {
         progress_bars: impl ProgressBarManager,
     ) -> Result<ConfigLoadResult, ConfigLoadError> {
         // TODO Allow changing config file using args as C++ did
-        let config_file_location = self.basedir().join("cryfs.config");
+        let config_file_location = self.mount_args().basedir.join("cryfs.config");
         cryfs_cryfs::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
@@ -127,12 +147,8 @@ impl Cli {
         )
     }
 
-    fn basedir(&self) -> &Path {
-        &self.args.mount.as_ref().expect("Basedir not set").basedir
-    }
-
-    fn mountdir(&self) -> &Path {
-        &self.args.mount.as_ref().expect("Basedir not set").mountdir
+    fn mount_args(&self) -> &MountArgs {
+        self.args.mount.as_ref().expect("Mount args not set")
     }
 
     fn password_provider(&self) -> &'static dyn PasswordProvider {

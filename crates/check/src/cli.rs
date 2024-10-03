@@ -44,7 +44,19 @@ impl Application for RecoverCli {
         })
     }
 
-    async fn main(self) -> Result<()> {
+    fn main(self) -> Result<()> {
+        // TODO Runtime settings
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .thread_name(Self::NAME)
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(self.async_main())
+    }
+}
+
+impl RecoverCli {
+    async fn async_main(self) -> Result<()> {
         println!(
             "Checking filesystem at {}",
             self.args

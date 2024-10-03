@@ -15,15 +15,17 @@ name = "cryfs"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-clap = {workspace = true, features = ["derive"]}
-cryfs-blobstore = {path = "../blobstore"}
-cryfs-blockstore = {path = "../blockstore"}
-cryfs-cli-utils = {path = "../cli-utils"}
-cryfs-cryfs = {path = "../cryfs"}
-cryfs-rustfs = {path = "../rustfs", features = ["fuser"]}
-cryfs-utils = {path = "../utils"}
-cryfs-version = {path = "../cryfs-version"}
+clap = { workspace = true, features = ["derive"] }
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-cli-utils = { path = "../cli-utils" }
+cryfs-cryfs = { path = "../cryfs" }
+cryfs-rustfs = { path = "../rustfs", features = ["fuser"] }
+cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
+daemonize.workspace = true
 dialoguer.workspace = true
+libc.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]

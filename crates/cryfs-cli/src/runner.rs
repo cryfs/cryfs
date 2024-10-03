@@ -44,7 +44,6 @@ impl<'m, 'c> BlockstoreCallback for FilesystemRunner<'m, 'c> {
 
         let fs = |_uid, _gid| device;
         fuser::mount(fs, self.mountdir, tokio::runtime::Handle::current())?;
-
         Ok(())
     }
 }

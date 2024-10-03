@@ -1,6 +1,7 @@
 use assert_cmd::Command;
 use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;
+use predicates::str::ContainsPredicate;
 use std::path::PathBuf;
 
 // TODO Use indoc! for multiline strings
@@ -36,6 +37,18 @@ fn cryfs_cmd_debug() -> Command {
 
 fn cryfs_cmd_release() -> Command {
     Command::new(&*CRYFS_CMD_PATH_RELEASE)
+}
+
+mod no_args {
+    use super::*;
+
+    #[test]
+    fn no_args() {
+        cryfs_cmd()
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains("Usage:"));
+    }
 }
 
 mod help {
@@ -172,8 +185,80 @@ mod show_ciphers {
     }
 }
 
+mod foreground {
+    use super::*;
+
+    mod missing_basedir_and_mountdir {
+        use super::*;
+
+        #[test]
+        fn short() {
+            cryfs_cmd()
+                .arg("-f")
+                .assert()
+                .failure()
+                .stderr(predicates::str::contains("Usage:"));
+        }
+
+        #[test]
+        fn long() {
+            cryfs_cmd()
+                .arg("--foreground")
+                .assert()
+                .failure()
+                .stderr(predicates::str::contains("Usage:"));
+        }
+    }
+
+    mod missing_mountdir {
+        use super::*;
+
+        #[test]
+        fn short_after_basedir() {
+            cryfs_cmd()
+                .args(["basedir", "-f"])
+                .assert()
+                .failure()
+                .stderr(predicates::str::contains("Usage:"));
+        }
+
+        #[test]
+        fn short_before_basedir() {
+            cryfs_cmd()
+                .args(["-f", "basedir"])
+                .assert()
+                .failure()
+                .stderr(predicates::str::contains("Usage:"));
+        }
+
+        #[test]
+        fn long_after_basedir() {
+            cryfs_cmd()
+                .args(["basedir", "--foreground"])
+                .assert()
+                .failure()
+                .stderr(predicates::str::contains("Usage:"));
+        }
+
+        #[test]
+        fn long_before_basedir() {
+            cryfs_cmd()
+                .args(["--foreground", "basedir"])
+                .assert()
+                .failure()
+                .stderr(predicates::str::contains("Usage:"));
+        }
+    }
+
+    // TODO Test -f flag with both basedir and mountdir present, i.e. successfully mounts. In different orderings.
+}
+
 mod debug_build_warning {
     use super::*;
+
+    fn debug_build_warning() -> ContainsPredicate {
+        predicates::str::contains("WARNING! This is a debug build.")
+    }
 
     #[test]
     fn debug_build() {
@@ -182,7 +267,7 @@ mod debug_build_warning {
             .arg("--version")
             .assert()
             .success()
-            .stderr(predicates::str::contains("WARNING! This is a debug build."));
+            .stderr(debug_build_warning());
     }
 
     #[test]
@@ -192,7 +277,7 @@ mod debug_build_warning {
             .arg("--version")
             .assert()
             .success()
-            .stderr(predicates::str::contains("WARNING! This is a debug build.").not());
+            .stderr(debug_build_warning().not());
     }
 }
 
@@ -209,3 +294,4 @@ mod debug_build_warning {
 //  - WARNING! This is a development version based on git commit {}. Please don't use in production.
 //  - WARNING! There were uncommitted changes in the repository when building this version.
 //  - WARNING! This is a prerelease version. Please backup your data frequently!
+// TODO Test absolute and relative paths work
