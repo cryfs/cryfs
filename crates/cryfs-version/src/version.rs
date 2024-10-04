@@ -1,6 +1,7 @@
+use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 use std::cmp::{Ord, Ordering, PartialOrd};
-use std::fmt::{self, Debug, Display, Formatter};
+use std::fmt::{self, Debug, Formatter};
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Version<'a> {
@@ -53,7 +54,7 @@ impl PartialOrd for Version<'_> {
 }
 
 impl<'a> Version<'a> {
-    pub fn parse(version: &'a str) -> Result<Self, std::num::ParseIntError> {
+    pub fn parse(version: &'a str) -> Result<Self, ParseVersionError<'a>> {
         let (major_minor_patch, prerelease) = match version.split_once('-') {
             Some((major_minor_patch, prerelease)) => (major_minor_patch, Some(prerelease)),
             None => (version, None),
@@ -74,7 +75,9 @@ impl<'a> Version<'a> {
                 patch,
                 prerelease,
             }),
-            (Err(err), _, _) | (_, Err(err), _) | (_, _, Err(err)) => Err(err),
+            (Err(error), _, _) | (_, Err(error), _) | (_, _, Err(error)) => {
+                Err(ParseVersionError { version, error })
+            }
         }
     }
 
@@ -118,6 +121,15 @@ impl<'a> Version<'a> {
     }
 }
 
+#[derive(Error, Display, Debug)]
+#[display("Failed to parse version {version}: {error}")]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+pub struct ParseVersionError<'a> {
+    version: &'a str,
+    #[error(source)]
+    error: std::num::ParseIntError,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,7 +139,7 @@ mod tests {
 
         #[test]
         fn major_minor_patch_prerelease() {
-            let version = Version::parse_const("1.2.3-alpha");
+            let version = Version::parse("1.2.3-alpha");
             assert_eq!(
                 Ok(Version {
                     major: 1,
@@ -141,7 +153,7 @@ mod tests {
 
         #[test]
         fn major_minor_patch() {
-            let version = Version::parse_const("1.2.3");
+            let version = Version::parse("1.2.3");
             assert_eq!(
                 Ok(Version {
                     major: 1,
@@ -155,7 +167,7 @@ mod tests {
 
         #[test]
         fn major_minor() {
-            let version = Version::parse_const("1.2");
+            let version = Version::parse("1.2");
             assert_eq!(
                 Ok(Version {
                     major: 1,
@@ -169,7 +181,7 @@ mod tests {
 
         #[test]
         fn major() {
-            let version = Version::parse_const("1");
+            let version = Version::parse("1");
             assert_eq!(
                 Ok(Version {
                     major: 1,
@@ -179,6 +191,14 @@ mod tests {
                 }),
                 version,
             );
+        }
+
+        #[test]
+        fn invalid() {
+            let version = Version::parse("invalid number");
+            let error = version.unwrap_err();
+            assert_eq!("invalid number", error.version);
+            assert_eq!(std::num::IntErrorKind::InvalidDigit, *error.error.kind());
         }
     }
 
@@ -243,6 +263,12 @@ mod tests {
                 }),
                 VERSION,
             );
+        }
+
+        #[test]
+        fn invalid() {
+            let version = Version::parse_const("invalid number");
+            let _error = version.unwrap_err();
         }
     }
 
