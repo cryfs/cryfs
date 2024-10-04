@@ -21,7 +21,7 @@ pub fn run<App: Application>() -> Result<()> {
     // TODO Is env_logger the right logging library?
     env_logger::init();
 
-    let env = Environment::new();
+    let env = Environment::read_env()?;
 
     if let Some(args) = parse_args::<App::ConcreteArgs>(&env, App::NAME, App::VERSION)? {
         let app = App::new(args, env)?;

@@ -33,9 +33,9 @@ pub fn show_version(env: &Environment, name: &str, version_info: VersionInfo) {
 // TODO Tests
 #[cfg(feature = "check_for_updates")]
 fn _check_for_updates(env: &Environment) {
-    if env.no_update_check() {
+    if env.no_update_check {
         eprintln!("Automatic checking for security vulnerabilities and updates is disabled.");
-    } else if env.is_noninteractive() {
+    } else if env.is_noninteractive {
         eprintln!("Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode.");
     } else {
         // TODO

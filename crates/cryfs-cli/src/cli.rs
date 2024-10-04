@@ -37,10 +37,10 @@ impl Application for Cli {
 
     // Returns None if the program should exit immediately with a success error code
     fn new(args: CryfsArgs, env: Environment) -> Result<Self> {
-        let is_noninteractive = env.is_noninteractive();
+        let is_noninteractive = env.is_noninteractive;
 
         // TODO Make sure we have tests for the local_state_dir location
-        let local_state_dir = cryfs_cryfs::localstate::LocalStateDir::new(env.local_state_dir()?);
+        let local_state_dir = cryfs_cryfs::localstate::LocalStateDir::new(env.local_state_dir);
 
         Ok(Self {
             is_noninteractive,

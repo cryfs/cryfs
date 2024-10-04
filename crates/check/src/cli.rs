@@ -37,7 +37,7 @@ impl Application for RecoverCli {
 
     fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self> {
         // TODO Make sure we have tests for the local_state_dir location
-        let local_state_dir = LocalStateDir::new(env.local_state_dir()?);
+        let local_state_dir = LocalStateDir::new(env.local_state_dir);
         Ok(Self {
             args,
             local_state_dir,
