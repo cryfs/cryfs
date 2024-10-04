@@ -127,7 +127,7 @@ lazy_static! {
                 struct MyArgs {}
             ),
             main: stringify!(
-                async fn main(self) -> Result<()> {
+                fn main(self) -> Result<()> {
                     println!("my-testbin:main");
                     Ok(())
                 }
@@ -149,7 +149,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(self) -> Result<()> {
+                fn main(self) -> Result<()> {
                     println!("my-testbin:main:{:?}", self.args.flag);
                     Ok(())
                 }
@@ -169,7 +169,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(self) -> Result<()> {
+                fn main(self) -> Result<()> {
                     println!("my-testbin:main:{}", self.args.mandatory_positional);
                     Ok(())
                 }
@@ -189,7 +189,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(self) -> Result<()> {
+                fn main(self) -> Result<()> {
                     println!("my-testbin:main:{:?}", self.args.optional_positional);
                     Ok(())
                 }
@@ -211,7 +211,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(self) -> Result<()> {
+                fn main(self) -> Result<()> {
                     println!("my-testbin:main:{}", self.args.mandatory_argument);
                     Ok(())
                 }
@@ -233,7 +233,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                async fn main(self) -> Result<()> {
+                fn main(self) -> Result<()> {
                     println!("my-testbin:main:{:?}", self.args.optional_argument);
                     Ok(())
                 }
