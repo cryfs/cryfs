@@ -65,7 +65,10 @@ mod tests {
             let client = FakeHttpClient::new();
             assert_eq!(
                 "URL not found: https://example.com",
-                client.get("https://example.com", Duration::from_secs(1)).unwrap_err().to_string()
+                client
+                    .get("https://example.com", Duration::from_secs(1))
+                    .unwrap_err()
+                    .to_string()
             );
         }
 
@@ -89,7 +92,12 @@ mod tests {
                 "https://example.com".to_string(),
                 "Hello, world!".to_string(),
             );
-            assert_eq!(client.get("https://example.com", Duration::from_secs(1)).unwrap(), "Hello, world!");
+            assert_eq!(
+                client
+                    .get("https://example.com", Duration::from_secs(1))
+                    .unwrap(),
+                "Hello, world!"
+            );
         }
 
         #[test]
@@ -100,8 +108,18 @@ mod tests {
                 "https://second.com".to_string(),
                 "Second website".to_string(),
             );
-            assert_eq!(client.get("https://first.com", Duration::from_secs(1)).unwrap(), "First website");
-            assert_eq!(client.get("https://second.com", Duration::from_secs(1)).unwrap(), "Second website");
+            assert_eq!(
+                client
+                    .get("https://first.com", Duration::from_secs(1))
+                    .unwrap(),
+                "First website"
+            );
+            assert_eq!(
+                client
+                    .get("https://second.com", Duration::from_secs(1))
+                    .unwrap(),
+                "Second website"
+            );
             assert_eq!(
                 "URL not found: https://notexisting.com",
                 client
@@ -116,7 +134,12 @@ mod tests {
             let mut client = FakeHttpClient::new();
             client.add_website("http://existing.com".to_string(), "content".to_string());
             client.add_website("http://existing.com".to_string(), "new_content".to_string());
-            assert_eq!(client.get("http://existing.com", Duration::from_secs(1)).unwrap(), "new_content");
+            assert_eq!(
+                client
+                    .get("http://existing.com", Duration::from_secs(1))
+                    .unwrap(),
+                "new_content"
+            );
         }
     }
 
@@ -126,34 +149,45 @@ mod tests {
         #[test]
         fn test_get_invalid_protocol() {
             let client = ReqwestHttpClient;
-            assert!(client.get("invalid://example.com", Duration::from_secs(1)).is_err());
+            assert!(client
+                .get("invalid://example.com", Duration::from_secs(1))
+                .is_err());
         }
 
         #[test]
         fn test_get_invalid_tld() {
             let client = ReqwestHttpClient;
-            assert!(client.get("http://example.invalidtld", Duration::from_secs(1)).is_err());
+            assert!(client
+                .get("http://example.invalidtld", Duration::from_secs(1))
+                .is_err());
         }
 
         #[test]
         fn test_get_invalid_domain() {
             let client = ReqwestHttpClient;
             assert!(client
-                .get("http://this_is_a_not_existing_domain.com", Duration::from_secs(1))
+                .get(
+                    "http://this_is_a_not_existing_domain.com",
+                    Duration::from_secs(1)
+                )
                 .is_err());
         }
 
         #[test]
         fn test_get_valid_http() {
             let client = ReqwestHttpClient;
-            let response = client.get("http://example.com", Duration::from_secs(1)).unwrap();
+            let response = client
+                .get("http://example.com", Duration::from_secs(1))
+                .unwrap();
             assert!(response.contains("Example Domain"));
         }
 
         #[test]
         fn test_get_valid_https() {
             let client = ReqwestHttpClient;
-            let response = client.get("https://example.com", Duration::from_secs(1)).unwrap();
+            let response = client
+                .get("https://example.com", Duration::from_secs(1))
+                .unwrap();
             assert!(response.contains("Example Domain"));
         }
     }
