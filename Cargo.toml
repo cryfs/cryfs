@@ -32,7 +32,7 @@ console = "^0.15.8"
 criterion = "^0.5.1"
 daemonize = "^0.5.0"
 derivative = "^2.2.0"
-derive_more = {version = "^1.0.0", features = ["full"]}
+derive_more = { version = "^1.0.0", features = ["full"] }
 dialoguer = "^0.11.0"
 dirs = "^5.0.1"
 divrem = "^1.0.0"
@@ -41,7 +41,7 @@ envtestkit = "^1.1.2"
 errno = "^0.3.9"
 escargot = "^0.5.12"
 fuse_mt = "^0.6.1"
-fuse_mt_fuser = {package = "fuser", version = "^0.13.0"}
+fuse_mt_fuser = { package = "fuser", version = "^0.13.0" }
 fuser = "^0.14.0"
 futures = "^0.3.30"
 generic-array = "^1.1.0"
@@ -69,13 +69,14 @@ predicates = "^3.1.2"
 rand = "^0.8.5"
 rayon = "^1.10.0"
 region = "^3.0.2"
+reqwest = "^0.12.8"
 rpassword = "^7.3.1"
 rstest = "^0.22.0"
 rstest_reuse = "^0.7.0"
-scrypt = {version = "^0.11.0", default-features = false}
+scrypt = { version = "^0.11.0", default-features = false }
 serde = "^1.0.210"
 serde_json = "^1.0.128"
-serde_with = {version = "^3.9.0", features=["hex"]}
+serde_with = { version = "^3.9.0", features = ["hex"] }
 signal-hook = "^0.3.17"
 sodiumoxide = "^0.2.7"
 static_assertions = "^1.1.0"

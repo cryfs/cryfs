@@ -12,17 +12,20 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-clap = {workspace = true, features = ["derive"]}
-cryfs-cryfs = {path = "../cryfs"}
-cryfs-blobstore = {path = "../blobstore"}
-cryfs-blockstore = {path = "../blockstore"}
-cryfs-version = {path = "../cryfs-version"}
-cryfs-utils = {path = "../utils"}
+clap = { workspace = true, features = ["derive"] }
+cryfs-cryfs = { path = "../cryfs" }
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-version = { path = "../cryfs-version" }
+cryfs-utils = { path = "../utils" }
 dirs.workspace = true
 env_logger.workspace = true
 path-absolutize.workspace = true
 rpassword.workspace = true
-tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+reqwest = { workspace = true, optional = true, features = ["blocking", "json"] }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_cmd.workspace = true
@@ -33,8 +36,8 @@ pathdiff.workspace = true
 predicates.workspace = true
 rstest.workspace = true
 tempdir.workspace = true
-tempproject = {path = "../tempproject"}
+tempproject = { path = "../tempproject" }
 
 [features]
 default = ["check_for_updates"]
-check_for_updates = []
+check_for_updates = ["dep:reqwest", "dep:serde", "dep:serde_json"]
