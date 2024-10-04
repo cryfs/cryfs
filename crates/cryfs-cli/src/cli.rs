@@ -70,6 +70,12 @@ impl Application for Cli {
 
 impl Cli {
     fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<()> {
+        // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
+        //      However, we cannot use tokio before we daemonize (https://github.com/tokio-rs/tokio/issues/4301) and we would like to daemonize
+        //      as late as possible so we can show error messages to the user if something goes wrong. But fork+exec is fine, just fork by itself breaks tokio.
+        //      Maybe we need to split out a cryfs-mount executable and call that from cryfs-cli? But then how do the executables find each other?
+        //      Or use the same binary with different arguments? Maybe `cryfs` just calls `cryfs -f`?
+
         let mount_args = self.mount_args();
         // TODO C++ code has lots more logic here, migrate that.
         if !mount_args.basedir.exists() {
