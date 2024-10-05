@@ -1,10 +1,13 @@
 use anyhow::Result;
+use std::path::Path;
 
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 
 /// Interface for cryfs to interact with the user, e.g. ask questions and get answers on the terminal
 pub trait Console {
+    // TODO Only some of these should be in crate/cryfs. Most questions are specific to crates/cryfs-cli. Can we split this trait?
+
     /// We're in the process of opening a filesystem from an earlier version of CryFS.
     /// Ask the user whether they want to migrate the filesystem to the current version.
     /// TODO The C++ message here was "This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). You're running a CryFS version using storage format " + CryConfig::FilesystemFormatVersion + ". It is recommended to create a new filesystem with CryFS 0.10 and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you won't be getting some of the performance advantages of the 0.10 release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data. Do you want to attempt a migration now?"
@@ -40,4 +43,10 @@ pub trait Console {
 
     /// We're in the process of creating a new file system and need to ask the user for the block size to use
     fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<u64>;
+
+    /// We've tried to load a file system but the basedir doesn't exist. Ask whether we should create it.
+    fn ask_create_basedir(&self, path: &Path) -> Result<bool>;
+
+    /// We've tried to mount a file system but the mountdir doesn't exist. Ask whether we should create it.
+    fn ask_create_mountdir(&self, path: &Path) -> Result<bool>;
 }

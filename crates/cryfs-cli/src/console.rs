@@ -1,5 +1,6 @@
 use anyhow::Result;
 use dialoguer::{Confirm, Select};
+use std::path::Path;
 
 use cryfs_cryfs::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
@@ -95,6 +96,23 @@ impl Console for InteractiveConsole {
             .into_iter(),
             4,
         )
+    }
+
+    fn ask_create_basedir(&self, path: &Path) -> Result<bool> {
+        // TODO Formatting. e.g. can we somehow highlight the path? By color or font? Also check other questions here for what we can do. The console or dialoguer crates could be useful.
+        let prompt = format!(
+            "Could not find the vault at '{}'. Do you want to create a new vault?",
+            path.display()
+        );
+        ask_yes_no(&prompt, false)
+    }
+
+    fn ask_create_mountdir(&self, path: &Path) -> Result<bool> {
+        let prompt = format!(
+            "Could not find the mount directory at '{}'. Do you want to create a new directory?",
+            path.display()
+        );
+        ask_yes_no(&prompt, false)
     }
 }
 

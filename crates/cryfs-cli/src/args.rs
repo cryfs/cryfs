@@ -44,6 +44,14 @@ pub struct MountArgs {
     /// Run CryFS in foreground mode, i.e. don't return to the shell until the filesystem is unmounted.
     #[arg(short, long)]
     pub foreground: bool,
+
+    /// Creates the vault directory if it doesn't exist yet, skipping the normal confirmation message asking whether it should be created.
+    #[arg(long)]
+    pub create_missing_basedir: bool,
+
+    /// Creates the mount directory if it doesn't exist yet, skipping the normal confirmation message asking whether it should be created.
+    #[arg(long)]
+    pub create_missing_mountpoint: bool,
 }
 
 // TODO Tests

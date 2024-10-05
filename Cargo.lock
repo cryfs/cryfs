@@ -705,6 +705,7 @@ dependencies = [
  "escargot",
  "lazy_static",
  "libc",
+ "log",
  "predicates",
  "tokio",
 ]

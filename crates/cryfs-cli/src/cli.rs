@@ -51,12 +51,11 @@ impl Application for Cli {
 
     fn main(self) -> Result<()> {
         if self.args.show_ciphers {
-            for cipher in cryfs_cryfs::config::ALL_CIPHERS {
-                println!("{}", cipher);
-            }
+            self.show_ciphers();
             return Ok(());
         }
 
+        self.sanity_checks()?;
         self.run_filesystem(ConsoleProgressBarManager)?;
 
         Ok(())
@@ -64,6 +63,25 @@ impl Application for Cli {
 }
 
 impl Cli {
+    fn sanity_checks(&self) -> Result<()> {
+        let mount_args = self.mount_args();
+        super::sanity_checks::check_mountdir_doesnt_contain_basedir(mount_args)?;
+        super::sanity_checks::check_dir_accessible(
+            &mount_args.basedir,
+            "vault",
+            mount_args.create_missing_basedir, /* TODO ErrorCode */
+            |path| self.console().ask_create_basedir(path),
+        )?;
+        // TODO C++ had special handling of Windows drive letters here. We should probably re-add that
+        super::sanity_checks::check_dir_accessible(
+            &mount_args.mountdir,
+            "mountpoint",
+            mount_args.create_missing_mountpoint, /* TODO ErrorCode */
+            |path| self.console().ask_create_mountdir(path),
+        )?;
+        Ok(())
+    }
+
     fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<()> {
         // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
         //      However, we cannot use tokio before we daemonize (https://github.com/tokio-rs/tokio/issues/4301) and we would like to daemonize
@@ -73,12 +91,6 @@ impl Cli {
 
         let mount_args = self.mount_args();
         // TODO C++ code has lots more logic here, migrate that.
-        if !mount_args.basedir.exists() {
-            std::fs::create_dir(&mount_args.basedir)?;
-        }
-        if !mount_args.mountdir.exists() {
-            std::fs::create_dir(&mount_args.mountdir)?;
-        }
 
         let config = self.load_or_create_config(progress_bars)?;
         print_config(&config);
@@ -113,6 +125,12 @@ impl Cli {
         ))??;
 
         Ok(())
+    }
+
+    fn show_ciphers(&self) {
+        for cipher in cryfs_cryfs::config::ALL_CIPHERS {
+            println!("{}", cipher);
+        }
     }
 
     fn maybe_daemonize(&self, mount_args: &MountArgs) -> Result<()> {

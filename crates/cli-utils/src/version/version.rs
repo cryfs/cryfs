@@ -30,6 +30,7 @@ fn _show_version(
     stderr: &mut (impl Write + ?Sized),
 ) {
     // TODO If this happens due to the user specifying --version, we should print to stdout instead of stderr.
+    // TODO Colorize the output
     write!(stderr, "{name} {version_info}\n").unwrap();
     if let Some(gitinfo) = version_info.gitinfo() {
         if let Some(tag_info) = gitinfo.tag_info {
