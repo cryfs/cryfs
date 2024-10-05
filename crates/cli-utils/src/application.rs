@@ -3,6 +3,9 @@ use clap::Args;
 
 use cryfs_version::VersionInfo;
 
+use super::version::show_version;
+#[cfg(feature = "check_for_updates")]
+use super::version::ReqwestHttpClient;
 use crate::args::parse_args;
 use crate::env::Environment;
 
@@ -24,6 +27,14 @@ pub fn run<App: Application>() -> Result<()> {
     show_backtrace_on_panic::<App>();
 
     let env = Environment::read_env()?;
+
+    show_version(
+        &env,
+        App::NAME,
+        #[cfg(feature = "check_for_updates")]
+        ReqwestHttpClient,
+        App::VERSION,
+    );
 
     if let Some(args) = parse_args::<App::ConcreteArgs>(&env, App::NAME, App::VERSION)? {
         let app = App::new(args, env)?;
