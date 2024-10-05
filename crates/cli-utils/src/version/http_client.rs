@@ -22,17 +22,25 @@ mod fake_http_client {
     use super::*;
     use anyhow::anyhow;
     use std::collections::HashMap;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::Arc;
 
     /// A fake implementation of the `HttpClient` trait that can be used for testing
     pub struct FakeHttpClient {
         pub websites: HashMap<String, String>,
+        pub request_count: Arc<AtomicUsize>,
     }
 
     impl FakeHttpClient {
         pub fn new() -> Self {
             Self {
                 websites: HashMap::new(),
+                request_count: Arc::new(AtomicUsize::new(0)),
             }
+        }
+
+        pub fn request_counter(&self) -> Arc<AtomicUsize> {
+            Arc::clone(&self.request_count)
         }
 
         /// Add a website to the fake client. Any future requests to this URL will return the given content
@@ -43,6 +51,8 @@ mod fake_http_client {
 
     impl HttpClient for FakeHttpClient {
         fn get(&self, url: &str, _timeout: Duration) -> Result<String> {
+            self.request_count
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             self.websites
                 .get(url)
                 .cloned()
@@ -140,6 +150,21 @@ mod tests {
                     .unwrap(),
                 "new_content"
             );
+        }
+
+        #[test]
+        fn request_counter() {
+            let client = FakeHttpClient::new();
+            let request_counter = client.request_counter();
+            assert_eq!(0, request_counter.load(std::sync::atomic::Ordering::SeqCst));
+            client
+                .get("http://example.com", Duration::from_secs(1))
+                .unwrap_err();
+            assert_eq!(1, request_counter.load(std::sync::atomic::Ordering::SeqCst));
+            client
+                .get("http://example.com", Duration::from_secs(1))
+                .unwrap_err();
+            assert_eq!(2, request_counter.load(std::sync::atomic::Ordering::SeqCst));
         }
     }
 

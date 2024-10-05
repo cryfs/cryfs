@@ -121,9 +121,8 @@ impl<'a> Version<'a> {
     }
 }
 
-#[derive(Error, Display, Debug)]
-#[display("Failed to parse version {version}: {error}")]
-#[cfg_attr(test, derive(PartialEq, Eq))]
+#[derive(Error, Display, Debug, PartialEq, Eq)]
+#[display("Failed to parse version `{version}`: {error}")]
 pub struct ParseVersionError<'a> {
     version: &'a str,
     #[error(source)]

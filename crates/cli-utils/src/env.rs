@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 const FRONTEND_KEY: &str = "CRYFS_FRONTEND";
 const FRONTEND_NONINTERACTIVE: &str = "noninteractive";
+#[cfg(feature = "check_for_updates")]
 const NOUPDATECHECK_KEY: &str = "CRYFS_NO_UPDATE_CHECK";
 const LOCALSTATEDIR_KEY: &str = "CRYFS_LOCAL_STATE_DIR";
 

@@ -79,46 +79,6 @@ namespace cryfs_cli {
         }
     }
 
-    void Cli::_showVersion(unique_ref<HttpClient> httpClient) {
-        cout << "CryFS Version " << gitversion::VersionString() << endl;
-        if (gitversion::IsDevVersion()) {
-            cout << "WARNING! This is a development version based on git commit " << gitversion::GitCommitId() <<
-            ". Please do not use in production!" << endl;
-        } else if (!gitversion::IsStableVersion()) {
-            cout << "WARNING! This is an experimental version. Please backup your data frequently!" << endl;
-        }
-#ifndef NDEBUG
-        cout << "WARNING! This is a debug build. Performance might be slow." << endl;
-#endif
-#ifndef CRYFS_NO_UPDATE_CHECKS
-        if (Environment::noUpdateCheck()) {
-            cout << "Automatic checking for security vulnerabilities and updates is disabled." << endl;
-        } else if (Environment::isNoninteractive()) {
-            cout << "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode." << endl;
-        } else {
-            _checkForUpdates(std::move(httpClient));
-        }
-#else
-# warning Update checks are disabled. The resulting executable will not go online to check for newer versions or known security vulnerabilities.
-        UNUSED(httpClient);
-#endif
-        cout << endl;
-    }
-
-    void Cli::_checkForUpdates(unique_ref<HttpClient> httpClient) {
-        VersionChecker versionChecker(httpClient.get());
-        optional<string> newestVersion = versionChecker.newestVersion();
-        if (newestVersion == none) {
-            cout << "Could not check for updates." << endl;
-        } else if (VersionCompare::isOlderThan(gitversion::VersionString(), *newestVersion)) {
-            cout << "CryFS " << *newestVersion << " is released. Please update." << endl;
-        }
-        optional<string> securityWarning = versionChecker.securityWarningFor(gitversion::VersionString());
-        if (securityWarning != none) {
-            cout << *securityWarning << endl;
-        }
-    }
-
     bool Cli::_checkPassword(const string &password) {
         if (password == "") {
             std::cerr << "Empty password not allowed. Please try again." << std::endl;

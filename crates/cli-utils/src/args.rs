@@ -2,6 +2,9 @@ use anyhow::Result;
 use clap::{error::ErrorKind, Args, Parser};
 
 use super::env::Environment;
+use super::version::show_version;
+#[cfg(feature = "check_for_updates")]
+use super::version::ReqwestHttpClient;
 use cryfs_version::VersionInfo;
 
 // TODO Flag for log verbosity, https://crates.io/crates/clap-verbosity-flag
@@ -26,7 +29,13 @@ pub fn parse_args<ConcreteArgs: Args>(
     name: &str,
     version_info: VersionInfo,
 ) -> Result<Option<ConcreteArgs>> {
-    super::version::show_version(env, name, version_info);
+    show_version(
+        env,
+        name,
+        #[cfg(feature = "check_for_updates")]
+        ReqwestHttpClient,
+        version_info,
+    );
 
     // First try to parse ImmediateExitFlags by themselves. This is necessary because if we start by parsing `CombinedArgs`,
     // it would fail if `ConcreteArgs` aren't present.

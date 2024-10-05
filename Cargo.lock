@@ -726,6 +726,7 @@ dependencies = [
  "env_logger",
  "envtestkit",
  "indoc",
+ "konst",
  "lazy_static",
  "path-absolutize",
  "pathdiff",

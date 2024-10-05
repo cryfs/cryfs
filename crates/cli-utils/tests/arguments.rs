@@ -990,5 +990,37 @@ mod optional_argument {
     }
 }
 
+mod debug_build_warning {
+    use predicates::str::ContainsPredicate;
+
+    use super::*;
+
+    fn debug_build_warning() -> ContainsPredicate {
+        predicates::str::contains("WARNING! This is a debug build.")
+    }
+
+    #[test]
+    fn debug_build() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run_debug()
+            .unwrap()
+            .assert()
+            .success()
+            .stderr(debug_build_warning());
+    }
+
+    #[test]
+    fn release_build() {
+        PROJECT_OPTIONAL_ARGUMENT
+            .project
+            .run_release()
+            .unwrap()
+            .assert()
+            .success()
+            .stderr(debug_build_warning().not());
+    }
+}
+
 // TODO Add integration tests for:
 //  - subcommand
