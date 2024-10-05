@@ -11,29 +11,30 @@ version.workspace = true
 
 [dependencies]
 aead.workspace = true
-aes-gcm = {workspace = true, features = ["std"]}
+aes-gcm = { workspace = true, features = ["std"] }
 anyhow.workspace = true
 async-trait.workspace = true
 binrw.workspace = true
 chacha20poly1305.workspace = true
-cryfs-version = {path = "../cryfs-version"}
-divrem = {workspace = true, optional = true}
+cryfs-version = { path = "../cryfs-version" }
+divrem = { workspace = true, optional = true }
 futures.workspace = true
 generic-array.workspace = true
 hex.workspace = true
+human-panic.workspace = true
 indicatif.workspace = true
 itertools.workspace = true
 lockable.workspace = true
 log.workspace = true
-openssl = {workspace = true, features = ["vendored"]}
+openssl = { workspace = true, features = ["vendored"] }
 rand.workspace = true
-rayon = {workspace = true, optional = true}
+rayon = { workspace = true, optional = true }
 region.workspace = true
-scrypt = {workspace = true, default-features = false}
+scrypt = { workspace = true, default-features = false }
 signal-hook.workspace = true
 sodiumoxide.workspace = true
 static_assertions.workspace = true
-tokio = {workspace = true, features = ["rt-multi-thread", "macros", "time"]}
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 tokio-util.workspace = true
 
 [dev-dependencies]
@@ -41,7 +42,7 @@ common_macros.workspace = true
 criterion.workspace = true
 divrem.workspace = true
 generic-tests.workspace = true
-rand = {workspace = true, features = ["small_rng"]}
+rand = { workspace = true, features = ["small_rng"] }
 rayon.workspace = true
 rstest.workspace = true
 tempdir.workspace = true

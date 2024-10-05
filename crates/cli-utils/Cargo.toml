@@ -20,6 +20,7 @@ cryfs-version = { path = "../cryfs-version" }
 cryfs-utils = { path = "../utils" }
 dirs.workspace = true
 env_logger.workspace = true
+human-panic.workspace = true
 path-absolutize.workspace = true
 rpassword.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

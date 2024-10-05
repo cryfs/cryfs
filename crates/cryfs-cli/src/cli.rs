@@ -59,11 +59,6 @@ impl Application for Cli {
 
         self.run_filesystem(ConsoleProgressBarManager)?;
 
-        println!(
-            "Basedir: {:?}\nMountdir: {:?}",
-            self.args.mount.as_ref().unwrap().basedir,
-            self.args.mount.as_ref().unwrap().mountdir,
-        );
         Ok(())
     }
 }
@@ -74,7 +69,7 @@ impl Cli {
         //      However, we cannot use tokio before we daemonize (https://github.com/tokio-rs/tokio/issues/4301) and we would like to daemonize
         //      as late as possible so we can show error messages to the user if something goes wrong. But fork+exec is fine, just fork by itself breaks tokio.
         //      Maybe we need to split out a cryfs-mount executable and call that from cryfs-cli? But then how do the executables find each other?
-        //      Or use the same binary with different arguments? Maybe `cryfs` just calls `cryfs -f`?
+        //      Or use the same binary with different arguments? Maybe `cryfs` just calls `cryfs -f`? Or maybe use a different async executor before daemonizing?
 
         let mount_args = self.mount_args();
         // TODO C++ code has lots more logic here, migrate that.

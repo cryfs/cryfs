@@ -29,6 +29,7 @@ pub fn parse_args<ConcreteArgs: Args>(
     name: &str,
     version_info: VersionInfo,
 ) -> Result<Option<ConcreteArgs>> {
+    // TODO Is this the right place to call `show_version` from or should it be at a higher level?
     show_version(
         env,
         name,
