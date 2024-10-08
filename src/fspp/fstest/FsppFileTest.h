@@ -26,24 +26,24 @@ public:
   }
 
   void Test_Truncate_DontChange1(fspp::File *file, fspp::Node *node) {
-	file->truncate(fspp::num_bytes_t(0));
-	this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
+    file->truncate(fspp::num_bytes_t(0));
+    this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
   }
 
   void Test_Truncate_GrowTo1(fspp::File *file, fspp::Node *node) {
-	file->truncate(fspp::num_bytes_t(1));
-	this->EXPECT_SIZE(fspp::num_bytes_t(1), file, node);
+    file->truncate(fspp::num_bytes_t(1));
+    this->EXPECT_SIZE(fspp::num_bytes_t(1), file, node);
   }
 
   void Test_Truncate_Grow(fspp::File *file, fspp::Node *node) {
-	file->truncate(fspp::num_bytes_t(10*1024*1024));
-	this->EXPECT_SIZE(fspp::num_bytes_t(10*1024*1024), file, node);
+    file->truncate(fspp::num_bytes_t(10*1024*1024));
+    this->EXPECT_SIZE(fspp::num_bytes_t(10*1024*1024), file, node);
   }
 
   void Test_Truncate_DontChange2(fspp::File *file, fspp::Node *node) {
-	file->truncate(fspp::num_bytes_t(10*1024*1024));
-	file->truncate(fspp::num_bytes_t(10*1024*1024));
-	this->EXPECT_SIZE(fspp::num_bytes_t(10*1024*1024), file, node);
+    file->truncate(fspp::num_bytes_t(10*1024*1024));
+    file->truncate(fspp::num_bytes_t(10*1024*1024));
+    this->EXPECT_SIZE(fspp::num_bytes_t(10*1024*1024), file, node);
   }
 
   void Test_Truncate_Shrink(fspp::File *file, fspp::Node *node) {
@@ -53,9 +53,9 @@ public:
   }
 
   void Test_Truncate_ShrinkTo0(fspp::File *file, fspp::Node *node) {
-	file->truncate(fspp::num_bytes_t(10*1024*1024));
-	file->truncate(fspp::num_bytes_t(0));
-	this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
+    file->truncate(fspp::num_bytes_t(10*1024*1024));
+    file->truncate(fspp::num_bytes_t(0));
+    this->EXPECT_SIZE(fspp::num_bytes_t(0), file, node);
   }
 
   void Test_Chown_Uid(fspp::File *file, fspp::Node *node) {
@@ -166,54 +166,54 @@ TYPED_TEST_P(FsppFileTest, Truncate_ShrinkTo0_Nested) {
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Uid) {
-    this->Test_Chown_Uid(this->file_root.get(), this->file_root_node.get());
+  this->Test_Chown_Uid(this->file_root.get(), this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Uid_Nested) {
-    this->Test_Chown_Uid(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Chown_Uid(this->file_nested.get(), this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Gid) {
-    this->Test_Chown_Gid(this->file_root.get(), this->file_root_node.get());
+  this->Test_Chown_Gid(this->file_root.get(), this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chown_Gid_Nested) {
-    this->Test_Chown_Gid(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Chown_Gid(this->file_nested.get(), this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chmod) {
-    this->Test_Chmod(this->file_root.get(), this->file_root_node.get());
+  this->Test_Chmod(this->file_root.get(), this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Chmod_Nested) {
-    this->Test_Chmod(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Chmod(this->file_nested.get(), this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Utimens) {
-    this->Test_Utimens(this->file_root.get(), this->file_root_node.get());
+  this->Test_Utimens(this->file_root.get(), this->file_root_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Utimens_Nested) {
-    this->Test_Utimens(this->file_nested.get(), this->file_nested_node.get());
+  this->Test_Utimens(this->file_nested.get(), this->file_nested_node.get());
 }
 
 TYPED_TEST_P(FsppFileTest, Remove) {
-    this->CreateFile("/mytestfile");
-    EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
-    EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
-    this->Load("/mytestfile")->remove();
-    EXPECT_EQ(boost::none, this->device->Load("/mytestfile"));
-    EXPECT_EQ(boost::none, this->device->LoadFile("/mytestfile"));
+  this->CreateFile("/mytestfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestfile"));
+  this->Load("/mytestfile")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestfile"));
+  EXPECT_EQ(boost::none, this->device->LoadFile("/mytestfile"));
 }
 
 TYPED_TEST_P(FsppFileTest, Remove_Nested) {
-    this->CreateDir("/mytestdir");
-    this->CreateFile("/mytestdir/myfile");
-    EXPECT_NE(boost::none, this->device->Load("/mytestdir/myfile"));
-    EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myfile"));
-    this->Load("/mytestdir/myfile")->remove();
-    EXPECT_EQ(boost::none, this->device->Load("/mytestdir/myfile"));
-    EXPECT_EQ(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+  this->CreateDir("/mytestdir");
+  this->CreateFile("/mytestdir/myfile");
+  EXPECT_NE(boost::none, this->device->Load("/mytestdir/myfile"));
+  EXPECT_NE(boost::none, this->device->LoadFile("/mytestdir/myfile"));
+  this->Load("/mytestdir/myfile")->remove();
+  EXPECT_EQ(boost::none, this->device->Load("/mytestdir/myfile"));
+  EXPECT_EQ(boost::none, this->device->LoadFile("/mytestdir/myfile"));
 }
 
 REGISTER_TYPED_TEST_SUITE_P(FsppFileTest,
