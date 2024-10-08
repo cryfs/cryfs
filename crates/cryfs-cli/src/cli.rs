@@ -10,10 +10,16 @@ use cryfs_blockstore::{
 use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
 };
-use cryfs_cli_utils::{print_config, setup_blockstore_stack, Application, Environment};
+use cryfs_cli_utils::{
+    print_config, setup_blockstore_stack, Application, CliError, CliErrorKind, CliResultExt,
+    CliResultExtFn, Environment,
+};
 use cryfs_cryfs::CRYFS_VERSION;
 use cryfs_cryfs::{
-    config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, Console, PasswordProvider},
+    config::{
+        CommandLineFlags, ConfigCreateError, ConfigLoadError, ConfigLoadResult, Console,
+        CreateConfigFileError, LoadConfigFileError, PasswordProvider, SaveConfigFileError,
+    },
     localstate::LocalStateDir,
 };
 use cryfs_utils::progress::{ConsoleProgressBarManager, ProgressBarManager};
@@ -36,7 +42,7 @@ impl Application for Cli {
     const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
 
     // Returns None if the program should exit immediately with a success error code
-    fn new(args: CryfsArgs, env: Environment) -> Result<Self> {
+    fn new(args: CryfsArgs, env: Environment) -> Result<Self, CliError> {
         let is_noninteractive = env.is_noninteractive;
 
         // TODO Make sure we have tests for the local_state_dir location
@@ -49,7 +55,7 @@ impl Application for Cli {
         })
     }
 
-    fn main(self) -> Result<()> {
+    fn main(self) -> Result<(), CliError> {
         if self.args.show_ciphers {
             self.show_ciphers();
             return Ok(());
@@ -63,26 +69,29 @@ impl Application for Cli {
 }
 
 impl Cli {
-    fn sanity_checks(&self) -> Result<()> {
+    fn sanity_checks(&self) -> Result<(), CliError> {
         let mount_args = self.mount_args();
-        super::sanity_checks::check_mountdir_doesnt_contain_basedir(mount_args)?;
+        super::sanity_checks::check_mountdir_doesnt_contain_basedir(mount_args)
+            .map_cli_error(CliErrorKind::BaseDirInsideMountDir)?;
         super::sanity_checks::check_dir_accessible(
             &mount_args.basedir,
             "vault",
-            mount_args.create_missing_basedir, /* TODO ErrorCode */
+            mount_args.create_missing_basedir,
             |path| self.console().ask_create_basedir(path),
-        )?;
+        )
+        .map_cli_error(CliErrorKind::InaccessibleBaseDir)?;
         // TODO C++ had special handling of Windows drive letters here. We should probably re-add that
         super::sanity_checks::check_dir_accessible(
             &mount_args.mountdir,
             "mountpoint",
-            mount_args.create_missing_mountpoint, /* TODO ErrorCode */
+            mount_args.create_missing_mountpoint,
             |path| self.console().ask_create_mountdir(path),
-        )?;
+        )
+        .map_cli_error(CliErrorKind::InaccessibleMountDir)?;
         Ok(())
     }
 
-    fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<()> {
+    fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<(), CliError> {
         // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
         //      However, we cannot use tokio before we daemonize (https://github.com/tokio-rs/tokio/issues/4301) and we would like to daemonize
         //      as late as possible so we can show error messages to the user if something goes wrong. But fork+exec is fine, just fork by itself breaks tokio.
@@ -97,7 +106,8 @@ impl Cli {
 
         // We need to daemonize **before** initializing tokio because tokio doesn't support fork, see https://github.com/tokio-rs/tokio/issues/4301
         // TODO Can we delay daemonization until after we know the filesystem was mounted successfully?
-        self.maybe_daemonize(&mount_args)?;
+        self.maybe_daemonize(&mount_args)
+            .map_cli_error(CliErrorKind::UnspecifiedError)?;
 
         // TODO Runtime settings
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -105,24 +115,28 @@ impl Cli {
             .enable_all()
             .build()
             .unwrap();
-        runtime.block_on(setup_blockstore_stack(
-            OnDiskBlockStore::new(mount_args.basedir.to_owned()),
-            &config,
-            &self.local_state_dir,
-            // TODO Setup IntegrityConfig correctly
-            IntegrityConfig {
-                allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
-                missing_block_is_integrity_violation:
-                    MissingBlockIsIntegrityViolation::IsNotAViolation,
-                on_integrity_violation: Box::new(|err| {
-                    // TODO
-                }),
-            },
-            FilesystemRunner {
-                mountdir: &mount_args.mountdir,
-                config: &config,
-            },
-        ))??;
+        runtime
+            .block_on(setup_blockstore_stack(
+                OnDiskBlockStore::new(mount_args.basedir.to_owned()),
+                &config,
+                &self.local_state_dir,
+                // TODO Setup IntegrityConfig correctly
+                IntegrityConfig {
+                    allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                    missing_block_is_integrity_violation:
+                        MissingBlockIsIntegrityViolation::IsNotAViolation,
+                    on_integrity_violation: Box::new(|err| {
+                        // TODO
+                    }),
+                },
+                FilesystemRunner {
+                    mountdir: &mount_args.mountdir,
+                    config: &config,
+                },
+            ))
+            // TODO Can we be more specific than just using UnspecifiedError? For example, IntegrityViolation should be reported with a distinct exit code.
+            .map_cli_error(CliErrorKind::UnspecifiedError)?
+            .map_cli_error(CliErrorKind::UnspecifiedError)?;
 
         Ok(())
     }
@@ -149,7 +163,7 @@ impl Cli {
     fn load_or_create_config(
         &self,
         progress_bars: impl ProgressBarManager,
-    ) -> Result<ConfigLoadResult, ConfigLoadError> {
+    ) -> Result<ConfigLoadResult, CliError> {
         // TODO Allow changing config file using args as C++ did
         let config_file_location = self.mount_args().basedir.join("cryfs.config");
         cryfs_cryfs::config::load_or_create(
@@ -164,6 +178,60 @@ impl Cli {
             &self.local_state_dir,
             progress_bars,
         )
+        .map_cli_error(|error| match error {
+            ConfigLoadError::TooOldFilesystemFormat { .. }
+            | ConfigLoadError::TooOldFilesystemFormatDeclinedMigration { .. } => {
+                CliErrorKind::TooOldFilesystemFormat
+            }
+
+            ConfigLoadError::TooNewFilesystemFormat { .. } => CliErrorKind::TooNewFilesystemFormat,
+
+            ConfigLoadError::InvalidConfig(_)
+            | ConfigLoadError::LoadFileError(LoadConfigFileError::ConfigFileNotFound { .. })
+            | ConfigLoadError::LoadFileError(LoadConfigFileError::PermissionDenied { .. })
+            | ConfigLoadError::LoadFileError(LoadConfigFileError::IoError(_)) => {
+                CliErrorKind::InvalidFilesystem
+            }
+
+            ConfigLoadError::LoadFileError(LoadConfigFileError::DeserializationError(_)) => {
+                CliErrorKind::WrongPasswordOrCorruptedConfigFile
+            }
+
+            ConfigLoadError::WrongCipher { .. } => CliErrorKind::WrongCipher,
+
+            ConfigLoadError::FilesystemDoesNotTreatMissingBlocksAsIntegrityViolations
+            | ConfigLoadError::FilesystemTreatsMissingBlocksAsIntegrityViolations => {
+                CliErrorKind::FilesystemHasDifferentIntegritySetup
+            }
+
+            ConfigLoadError::FilesystemInSingleClientMode => CliErrorKind::SingleClientFileSystem,
+
+            ConfigLoadError::LocalStateError(_) => CliErrorKind::InaccessibleLocalStateDir,
+
+            ConfigLoadError::SaveFileError(
+                SaveConfigFileError::DirectoryComponentDoesntExist { .. },
+            )
+            | ConfigLoadError::SaveFileError(SaveConfigFileError::PermissionDenied { .. })
+            | ConfigLoadError::SaveFileError(SaveConfigFileError::IoError(_))
+            | ConfigLoadError::SaveFileError(SaveConfigFileError::SerializationError(_))
+            | ConfigLoadError::SaveFileError(SaveConfigFileError::ScryptError(_))
+            | ConfigLoadError::ConfigCreateError(ConfigCreateError::CipherNotSupported {
+                ..
+            })
+            | ConfigLoadError::ConfigCreateError(ConfigCreateError::LocalStateError(_))
+            | ConfigLoadError::ConfigCreateError(ConfigCreateError::InteractionError(_))
+            | ConfigLoadError::CreateFileError(CreateConfigFileError::AlreadyExists { .. })
+            | ConfigLoadError::CreateFileError(
+                CreateConfigFileError::DirectoryComponentDoesntExist { .. },
+            )
+            | ConfigLoadError::CreateFileError(CreateConfigFileError::PermissionDenied {
+                ..
+            })
+            | ConfigLoadError::CreateFileError(CreateConfigFileError::IoError(_))
+            | ConfigLoadError::CreateFileError(CreateConfigFileError::SerializationError(_))
+            | ConfigLoadError::CreateFileError(CreateConfigFileError::ScryptError(_))
+            | ConfigLoadError::InteractionError(_) => CliErrorKind::UnspecifiedError,
+        })
     }
 
     fn mount_args(&self) -> &MountArgs {

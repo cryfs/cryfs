@@ -7,7 +7,6 @@ mod cli;
 pub use cli::Cli;
 
 mod console;
-
 mod runner;
 mod sanity_checks;
 

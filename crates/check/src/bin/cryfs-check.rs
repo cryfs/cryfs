@@ -1,7 +1,8 @@
-use anyhow::Result;
+use std::process::ExitCode;
+
 use cryfs_check::RecoverCli;
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
     cryfs_cli_utils::run::<RecoverCli>()
 }
 

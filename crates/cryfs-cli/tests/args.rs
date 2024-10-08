@@ -98,7 +98,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with other arguments"#,
+                r#"Error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -109,7 +109,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with other arguments"#,
+                r#"Error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -120,7 +120,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with other arguments"#,
+                r#"Error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -131,7 +131,7 @@ mod version {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with other arguments"#,
+                r#"Error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 }
@@ -169,7 +169,7 @@ mod show_ciphers {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with other arguments"#,
+                r#"Error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 
@@ -180,7 +180,7 @@ mod show_ciphers {
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                r#"error: the argument '--version' cannot be used with other arguments"#,
+                r#"Error: the argument '--version' cannot be used with other arguments"#,
             ));
     }
 }

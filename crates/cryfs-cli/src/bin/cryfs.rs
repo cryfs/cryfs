@@ -1,11 +1,11 @@
-use anyhow::Result;
+use std::process::ExitCode;
+
 use cryfs_cli::Cli;
 
-fn main() -> Result<()> {
+fn main() -> ExitCode {
     cryfs_cli_utils::run::<Cli>()
 
     // TODO Better error messages for common errors instead of just printing the error stack trace
-    // TODO The C++ version had well-defined exit codes for common error cases. Add that here as well.
 }
 
 // TODO Tests (e.g. integration tests)

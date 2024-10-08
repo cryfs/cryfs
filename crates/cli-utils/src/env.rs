@@ -2,6 +2,8 @@ use anyhow::{anyhow, bail, Context, Result};
 use std::env::VarError;
 use std::path::PathBuf;
 
+use crate::error::{CliError, CliErrorKind, CliResultExt};
+
 const FRONTEND_KEY: &str = "CRYFS_FRONTEND";
 const FRONTEND_NONINTERACTIVE: &str = "noninteractive";
 #[cfg(feature = "check_for_updates")]
@@ -17,12 +19,13 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub(crate) fn read_env() -> Result<Self> {
+    pub(crate) fn read_env() -> Result<Self, CliError> {
         Ok(Self {
             is_noninteractive: Self::is_noninteractive(),
             #[cfg(feature = "check_for_updates")]
             no_update_check: Self::no_update_check(),
-            local_state_dir: Self::local_state_dir()?,
+            local_state_dir: Self::local_state_dir()
+                .map_cli_error(CliErrorKind::InaccessibleLocalStateDir)?,
         })
     }
 

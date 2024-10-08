@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::path::Path;
 
 use cryfs_cryfs::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
@@ -38,5 +39,13 @@ impl Console for FixtureCreationConsole {
 
     fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<u64> {
         Ok(104)
+    }
+
+    fn ask_create_basedir(&self, path: &Path) -> Result<bool> {
+        panic!("unused")
+    }
+
+    fn ask_create_mountdir(&self, path: &Path) -> Result<bool> {
+        panic!("unused")
     }
 }

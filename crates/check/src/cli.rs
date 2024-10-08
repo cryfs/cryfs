@@ -7,7 +7,7 @@ use cryfs_blockstore::{
 };
 use cryfs_cli_utils::{
     password_provider::InteractivePasswordProvider, print_config, setup_blockstore_stack,
-    Application, Environment,
+    Application, CliError, CliErrorKind, CliResultExt, Environment,
 };
 use cryfs_cryfs::{
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, PasswordProvider},
@@ -35,7 +35,7 @@ impl Application for RecoverCli {
     const NAME: &'static str = "cryfs-check";
     const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
 
-    fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self> {
+    fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self, CliError> {
         // TODO Make sure we have tests for the local_state_dir location
         let local_state_dir = LocalStateDir::new(env.local_state_dir);
         Ok(Self {
@@ -44,7 +44,7 @@ impl Application for RecoverCli {
         })
     }
 
-    fn main(self) -> Result<()> {
+    fn main(self) -> Result<(), CliError> {
         // TODO Runtime settings
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name(Self::NAME)
@@ -56,7 +56,7 @@ impl Application for RecoverCli {
 }
 
 impl RecoverCli {
-    async fn async_main(self) -> Result<()> {
+    async fn async_main(self) -> Result<(), CliError> {
         println!(
             "Checking filesystem at {}",
             self.args
@@ -78,7 +78,9 @@ impl RecoverCli {
             &password_provider,
             ConsoleProgressBarManager,
         )
-        .await?;
+        .await
+        // TODO Should we add specific exit codes for the check tool?
+        .map_cli_error(CliErrorKind::UnspecifiedError)?;
 
         for error in &errors {
             println!("{error}\n");

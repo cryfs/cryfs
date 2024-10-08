@@ -18,6 +18,7 @@ cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-version = { path = "../cryfs-version" }
 cryfs-utils = { path = "../utils" }
+derive_more.workspace = true
 dirs.workspace = true
 env_logger.workspace = true
 human-panic.workspace = true

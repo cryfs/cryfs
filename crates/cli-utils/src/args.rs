@@ -1,8 +1,7 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{error::ErrorKind, Args, Parser};
 
-use super::env::Environment;
-use cryfs_version::VersionInfo;
+use crate::error::{CliError, CliErrorKind};
 
 // TODO Flag for log verbosity, https://crates.io/crates/clap-verbosity-flag
 
@@ -21,11 +20,7 @@ pub struct CombinedArgs<ConcreteArgs: Args> {
     pub concrete_args: ConcreteArgs,
 }
 
-pub fn parse_args<ConcreteArgs: Args>(
-    env: &Environment,
-    name: &str,
-    version_info: VersionInfo,
-) -> Result<Option<ConcreteArgs>> {
+pub fn parse_args<ConcreteArgs: Args>() -> Result<Option<ConcreteArgs>, CliError> {
     // First try to parse ImmediateExitFlags by themselves. This is necessary because if we start by parsing `CombinedArgs`,
     // it would fail if `ConcreteArgs` aren't present.
     let args = match ImmediateExitFlags::try_parse() {
@@ -50,10 +45,12 @@ pub fn parse_args<ConcreteArgs: Args>(
                     // So let's parse our flags and make sure that `--version` isn't present.
                     let args = CombinedArgs::<ConcreteArgs>::parse();
                     if args.immediate_exit_flags.version {
-                        eprintln!(
-                            "error: the argument '--version' cannot be used with other arguments"
-                        );
-                        std::process::exit(1);
+                        return Err(CliError {
+                            kind: CliErrorKind::InvalidArguments,
+                            error: anyhow!(
+                                "the argument '--version' cannot be used with other arguments"
+                            ),
+                        });
                     }
                     args
                 }

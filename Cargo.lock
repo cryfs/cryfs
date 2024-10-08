@@ -723,6 +723,7 @@ dependencies = [
  "cryfs-cryfs",
  "cryfs-utils",
  "cryfs-version",
+ "derive_more 1.0.0",
  "dirs",
  "env_logger",
  "envtestkit",

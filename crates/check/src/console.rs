@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::path::Path;
 
 use cryfs_cryfs::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
@@ -11,9 +12,9 @@ pub struct RecoverConsole;
 impl Console for RecoverConsole {
     fn ask_migrate_filesystem(
         &self,
-        current_filesystem_format_version: &Version,
-        new_filesystem_format_version: &Version,
-        cryfs_version: &VersionInfo,
+        _current_filesystem_format_version: &Version,
+        _new_filesystem_format_version: &Version,
+        _cryfs_version: &VersionInfo,
     ) -> Result<bool> {
         todo!()
     }
@@ -40,6 +41,14 @@ impl Console for RecoverConsole {
     }
 
     fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<u64> {
+        todo!()
+    }
+
+    fn ask_create_basedir(&self, _path: &Path) -> Result<bool> {
+        todo!()
+    }
+
+    fn ask_create_mountdir(&self, _path: &Path) -> Result<bool> {
         todo!()
     }
 }

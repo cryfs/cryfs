@@ -38,8 +38,9 @@ impl TestConfig {
                     clap::{self, Args},
                     cryfs_version::{Version, VersionInfo},
                 },
-                run, Application, Environment,
+                run, Application, Environment, CliError,
             };
+            use std::process::ExitCode;
         );
         let main_cli = stringify!(
             struct Cli {
@@ -59,12 +60,12 @@ impl TestConfig {
                 None,
             );
 
-            fn new(args: MyArgs, _env: Environment) -> Result<Self> {
+            fn new(args: MyArgs, _env: Environment) -> Result<Self, CliError> {
                 Ok(Self { args })
             }
         );
         let main_main = stringify!(
-            fn main() -> Result<()> {
+            fn main() -> ExitCode {
                 run::<Cli>()
             }
         );
@@ -127,7 +128,7 @@ lazy_static! {
                 struct MyArgs {}
             ),
             main: stringify!(
-                fn main(self) -> Result<()> {
+                fn main(self) -> Result<(), CliError> {
                     println!("my-testbin:main");
                     Ok(())
                 }
@@ -149,7 +150,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<()> {
+                fn main(self) -> Result<(), CliError> {
                     println!("my-testbin:main:{:?}", self.args.flag);
                     Ok(())
                 }
@@ -169,7 +170,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<()> {
+                fn main(self) -> Result<(), CliError> {
                     println!("my-testbin:main:{}", self.args.mandatory_positional);
                     Ok(())
                 }
@@ -189,7 +190,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<()> {
+                fn main(self) -> Result<(), CliError> {
                     println!("my-testbin:main:{:?}", self.args.optional_positional);
                     Ok(())
                 }
@@ -211,7 +212,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<()> {
+                fn main(self) -> Result<(), CliError> {
                     println!("my-testbin:main:{}", self.args.mandatory_argument);
                     Ok(())
                 }
@@ -233,7 +234,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<()> {
+                fn main(self) -> Result<(), CliError> {
                     println!("my-testbin:main:{:?}", self.args.optional_argument);
                     Ok(())
                 }
@@ -502,7 +503,7 @@ mod flag {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -522,7 +523,7 @@ mod flag {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -602,7 +603,7 @@ mod mandatory_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -619,7 +620,7 @@ mod mandatory_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -697,7 +698,7 @@ mod optional_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -714,7 +715,7 @@ mod optional_positional {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -829,7 +830,7 @@ mod mandatory_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -850,7 +851,7 @@ mod mandatory_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }
@@ -964,7 +965,7 @@ mod optional_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 
@@ -985,7 +986,7 @@ mod optional_argument {
             .failure()
             .stderr(predicates::str::contains(VERSION_MESSAGE))
             .stderr(predicates::str::contains(
-                "error: the argument '--version' cannot be used with other arguments",
+                "Error: the argument '--version' cannot be used with other arguments",
             ));
     }
 }

@@ -1,3 +1,5 @@
+use std::process::ExitCode;
+
 use anyhow::Result;
 use clap::Args;
 
@@ -8,6 +10,7 @@ use super::version::show_version;
 use super::version::ReqwestHttpClient;
 use crate::args::parse_args;
 use crate::env::Environment;
+use crate::error::{CliError, CliErrorKind};
 
 pub trait Application: Sized {
     type ConcreteArgs: Args;
@@ -15,12 +18,24 @@ pub trait Application: Sized {
     const NAME: &'static str;
     const VERSION: VersionInfo<'static, 'static, 'static>;
 
-    fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self>;
+    fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self, CliError>;
 
-    fn main(self) -> Result<()>;
+    fn main(self) -> Result<(), CliError>;
 }
 
-pub fn run<App: Application>() -> Result<()> {
+pub fn run<App: Application>() -> ExitCode {
+    // TODO Print an error message, probably should be specific to the error. Maybe main should return a Result<(), Self::Error>?
+    match _run::<App>() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            // TODO Coloring the output would be nice
+            eprintln!("Error: {}", err);
+            err.kind.exit_code()
+        }
+    }
+}
+
+pub fn _run<App: Application>() -> Result<(), CliError> {
     // TODO Is env_logger the right logging library?
     env_logger::init();
 
@@ -36,7 +51,7 @@ pub fn run<App: Application>() -> Result<()> {
         App::VERSION,
     );
 
-    if let Some(args) = parse_args::<App::ConcreteArgs>(&env, App::NAME, App::VERSION)? {
+    if let Some(args) = parse_args::<App::ConcreteArgs>()? {
         let app = App::new(args, env)?;
         app.main()?;
     }
