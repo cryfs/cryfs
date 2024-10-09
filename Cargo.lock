@@ -618,6 +618,7 @@ dependencies = [
  "divrem",
  "futures",
  "iter-chunks",
+ "log",
  "rand 0.8.5",
  "rstest",
  "rstest_reuse",

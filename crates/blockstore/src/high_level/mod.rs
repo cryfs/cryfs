@@ -9,7 +9,7 @@ use std::fmt::{self, Debug};
 use std::sync::Arc;
 
 use crate::{
-    low_level::BlockStore,
+    low_level::{BlockStore, InvalidBlockSizeError},
     utils::{RemoveResult, TryCreateResult},
     BlockId,
 };
@@ -222,7 +222,10 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         base_store.estimate_num_free_bytes()
     }
 
-    pub fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    pub fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
         base_store.block_size_from_physical_block_size(block_size)
     }

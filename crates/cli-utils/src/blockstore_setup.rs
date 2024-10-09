@@ -1,18 +1,20 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 use cryfs_blockstore::{
-    BlockStore, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore, IntegrityConfig,
-    LockingBlockStore, OptimizedBlockStoreWriter,
+    BlockStore, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
+    IntegrityBlockStoreInitError, IntegrityConfig, LockingBlockStore, OptimizedBlockStoreWriter,
 };
 use cryfs_cryfs::config::{
-    ciphers::{lookup_cipher_async, AsyncCipherCallback},
+    ciphers::{lookup_cipher_async, AsyncCipherCallback, UnknownCipherError},
     ConfigLoadResult,
 };
 use cryfs_cryfs::localstate::LocalStateDir;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::{CipherDef, EncryptionKey, InvalidKeySizeError},
+    crypto::symmetric::{CipherDef, EncryptionKey},
 };
+
+use crate::{CliError, CliErrorKind, CliResultExt, CliResultExtFn};
 
 pub trait BlockstoreCallback {
     type Result;
@@ -32,8 +34,8 @@ pub async fn setup_blockstore_stack<CB: BlockstoreCallback + Send + Sync>(
     local_state_dir: &LocalStateDir,
     integrity_config: IntegrityConfig,
     callback: CB,
-) -> Result<CB::Result> {
-    lookup_cipher_async(
+) -> Result<CB::Result, CliError> {
+    let result = lookup_cipher_async(
         &config.config.config().cipher,
         CipherCallbackForBlockstoreSetup {
             base_blockstore,
@@ -43,7 +45,14 @@ pub async fn setup_blockstore_stack<CB: BlockstoreCallback + Send + Sync>(
             callback,
         },
     )
-    .await?
+    .await;
+
+    match result {
+        Ok(v) => v,
+        Err(err @ UnknownCipherError { .. }) => {
+            Err(err).map_cli_error(|_| CliErrorKind::UnspecifiedError)
+        }
+    }
 }
 
 struct CipherCallbackForBlockstoreSetup<
@@ -62,24 +71,28 @@ struct CipherCallbackForBlockstoreSetup<
 impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCallback + Send>
     AsyncCipherCallback for CipherCallbackForBlockstoreSetup<'_, '_, B, CB>
 {
-    type Result = Result<CB::Result>;
+    type Result = Result<CB::Result, CliError>;
 
     async fn callback<C: CipherDef + Send + Sync + 'static>(mut self) -> Self::Result {
         let key = match EncryptionKey::from_hex(&self.config.config.config().enc_key) {
             Ok(key) => key,
             Err(err) => {
-                self.base_blockstore.async_drop().await?;
-                return Err(err);
+                self.base_blockstore
+                    .async_drop()
+                    .await
+                    .map_cli_error(CliErrorKind::UnspecifiedError)?;
+                return Err(err).map_cli_error(CliErrorKind::InvalidFilesystem);
             }
         };
 
         let cipher = match C::new(key) {
             Ok(cipher) => cipher,
-            Err(InvalidKeySizeError{expected, got}) => {
-                self.base_blockstore.async_drop().await?;
-                bail!(
-                    "Invalid key length in config file. Expected {expected} bytes, got {got} bytes.",
-                );
+            Err(err) => {
+                self.base_blockstore
+                    .async_drop()
+                    .await
+                    .map_cli_error(CliErrorKind::UnspecifiedError)?;
+                return Err(err).map_cli_error(|_| CliErrorKind::InvalidFilesystem);
             }
         };
         let mut encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);
@@ -90,8 +103,11 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
         let integrity_file_path = match integrity_file_path {
             Ok(integrity_file_path) => integrity_file_path.join("integritydata"),
             Err(err) => {
-                encrypted_blockstore.async_drop().await?;
-                return Err(err);
+                encrypted_blockstore
+                    .async_drop()
+                    .await
+                    .map_cli_error(CliErrorKind::UnspecifiedError)?;
+                return Err(err).map_cli_error(CliErrorKind::InaccessibleLocalStateDir);
             }
         };
         let integrity_blockstore = IntegrityBlockStore::new(
@@ -100,7 +116,15 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
             self.config.my_client_id,
             self.integrity_config,
         )
-        .await?;
+        .await
+        .map_cli_error(|error| match error {
+            IntegrityBlockStoreInitError::IntegrityViolationInPreviousRun { .. } => {
+                CliErrorKind::IntegrityViolationOnPreviousRun
+            }
+            IntegrityBlockStoreInitError::InvalidLocalIntegrityState { .. } => {
+                CliErrorKind::InvalidLocalState
+            }
+        })?;
         let blockstore = LockingBlockStore::new(integrity_blockstore);
 
         Ok(self.callback.callback(blockstore).await)
@@ -112,7 +136,7 @@ pub async fn setup_blockstore_stack_dyn(
     config: &ConfigLoadResult,
     local_state_dir: &LocalStateDir,
     integrity_config: IntegrityConfig,
-) -> Result<AsyncDropGuard<LockingBlockStore<DynBlockStore>>> {
+) -> Result<AsyncDropGuard<LockingBlockStore<DynBlockStore>>, CliError> {
     setup_blockstore_stack(
         base_blockstore,
         config,
@@ -121,6 +145,7 @@ pub async fn setup_blockstore_stack_dyn(
         DynCallback,
     )
     .await?
+    .map_cli_error(CliErrorKind::UnspecifiedError)
 }
 
 struct DynCallback;

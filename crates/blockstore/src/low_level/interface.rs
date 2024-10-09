@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use derive_more::{Display, Error};
 use futures::stream::BoxStream;
 use std::any::Any;
 use std::fmt::Debug;
@@ -10,6 +11,17 @@ use crate::{
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data};
 
+#[derive(Error, Display, Debug)]
+#[display("Invalid block size: {message}")]
+pub struct InvalidBlockSizeError {
+    message: String,
+}
+impl InvalidBlockSizeError {
+    pub fn new(message: String) -> Self {
+        Self { message: message }
+    }
+}
+
 #[async_trait]
 pub trait BlockStoreReader {
     // TODO Add test cases for exists(), they're not among the C++ test cases since we added it later
@@ -17,7 +29,10 @@ pub trait BlockStoreReader {
     async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
     async fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<u64>;
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError>;
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>>;
 }

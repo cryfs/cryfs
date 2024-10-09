@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use binary_layout::Field;
 #[cfg(test)]
@@ -6,7 +6,9 @@ use futures::stream::BoxStream;
 
 pub use crate::RemoveResult;
 use cryfs_blockstore::TryCreateResult;
-use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore, BLOCKID_LEN};
+use cryfs_blockstore::{
+    BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore, BLOCKID_LEN,
+};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
@@ -36,13 +38,15 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     pub async fn new(
         mut block_store: AsyncDropGuard<LockingBlockStore<B>>,
         physical_block_size_bytes: u32,
-    ) -> Result<AsyncDropGuard<Self>> {
+    ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         let block_size_bytes =
             match Self::_block_size_bytes(&block_store, physical_block_size_bytes) {
                 Ok(ok) => ok,
                 Err(err) => {
                     // TODO Can something like AsyncDropGuard::try_map make this nicer without a manual drop in the middle?
-                    block_store.async_drop().await?;
+                    if let Err(async_drop_err) = block_store.async_drop().await {
+                        log::error!("Error while dropping block store: {:?}", async_drop_err);
+                    }
                     return Err(err);
                 }
             };
@@ -57,21 +61,20 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
     fn _block_size_bytes(
         block_store: &LockingBlockStore<B>,
         physical_block_size_bytes: u32,
-    ) -> Result<u32> {
+    ) -> Result<u32, InvalidBlockSizeError> {
         let block_size_bytes = block_store
             .block_size_from_physical_block_size(u64::from(physical_block_size_bytes))?;
         let block_size_bytes = u32::try_from(block_size_bytes).unwrap();
 
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = u32::try_from(node::data::OFFSET + 2 * BLOCKID_LEN).unwrap();
-        ensure!(
-            block_size_bytes >= min_block_size,
-            "Tried to create a DataNodeStore with block size {} (physical: {}) but must be at least {}",
-            block_size_bytes,
-            physical_block_size_bytes,
-            min_block_size,
-        );
-        Ok(block_size_bytes)
+        if block_size_bytes < min_block_size {
+            Err(InvalidBlockSizeError::new(
+              format!("Tried to create a DataNodeStore with block size {block_size_bytes} (physical: {physical_block_size_bytes}) but must be at least {min_block_size}",)  
+            ))
+        } else {
+            Ok(block_size_bytes)
+        }
     }
 
     pub fn layout(&self) -> &NodeLayout {
@@ -252,7 +255,7 @@ mod tests {
         #[tokio::test]
         async fn invalid_block_size() {
             assert_eq!(
-                "Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
+                "Invalid block size: Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
                 DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 10)
                     .await
                     .unwrap_err()
@@ -275,9 +278,9 @@ mod tests {
             blockstore
                 .expect_block_size_from_physical_block_size()
                 .times(1)
-                .returning(move |_| Err(anyhow!("some error")));
+                .returning(move |_| Err(InvalidBlockSizeError::new(format!("some error"))));
             assert_eq!(
-                "some error",
+                "Invalid block size: some error",
                 DataNodeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
                     .await
                     .unwrap_err()
@@ -314,7 +317,10 @@ mod tests {
             blockstore
                 .expect_block_size_from_physical_block_size()
                 .times(1)
-                .returning(move |v| v.checked_sub(10).ok_or_else(|| anyhow!("overflow")));
+                .returning(move |v| {
+                    v.checked_sub(10)
+                        .ok_or_else(|| InvalidBlockSizeError::new(format!("overflow")))
+                });
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(0));

@@ -6,7 +6,7 @@ use std::fmt::{self, Debug};
 use crate::{
     low_level::{
         interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
-        BlockStoreWriter, OptimizedBlockStoreWriter,
+        BlockStoreWriter, InvalidBlockSizeError, OptimizedBlockStoreWriter,
     },
     utils::{RemoveResult, TryCreateResult},
     BlockId,
@@ -64,7 +64,10 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         self.underlying_block_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         //We probably have more since we're compressing, but we don't know exactly how much.
         //The best we can do is ignore the compression step here.
         self.underlying_block_store

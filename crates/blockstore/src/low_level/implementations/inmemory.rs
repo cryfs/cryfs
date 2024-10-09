@@ -6,6 +6,7 @@ use std::fmt::{self, Debug};
 use std::sync::RwLock;
 use sysinfo::System;
 
+use crate::low_level::InvalidBlockSizeError;
 use crate::{
     low_level::{
         interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -63,7 +64,10 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(sys.available_memory())
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         Ok(block_size)
     }
 

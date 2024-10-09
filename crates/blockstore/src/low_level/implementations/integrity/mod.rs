@@ -1,6 +1,7 @@
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use async_trait::async_trait;
 use binary_layout::prelude::*;
+use derive_more::{Display, Error};
 use futures::{
     future, join,
     stream::{BoxStream, FuturesUnordered, StreamExt, TryStreamExt},
@@ -13,8 +14,8 @@ use std::path::PathBuf;
 
 use crate::{
     low_level::{
-        interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
-        OptimizedBlockStoreWriter,
+        interface::{block_data::IBlockData, InvalidBlockSizeError},
+        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
     },
     utils::{RemoveResult, TryCreateResult},
     BlockId, BLOCKID_LEN,
@@ -69,20 +70,36 @@ pub struct IntegrityBlockStore<B: Send + Debug + AsyncDrop<Error = anyhow::Error
     integrity_data: AsyncDropGuard<IntegrityData>,
 }
 
+#[derive(Error, Display, Debug)]
+pub enum IntegrityBlockStoreInitError {
+    #[display(
+        "There was an integrity violation detected. Preventing any further access to the file system. This can either happen if an attacker changed your files or rolled back the file system to a previous state, but it can also happen if you rolled back the file system yourself, for example restored a backup. If you want to reset the integrity data (i.e. accept changes made by a potential attacker), please delete the following file before re-mounting it: {}",
+        integrity_file_path.display(),
+    )]
+    IntegrityViolationInPreviousRun { integrity_file_path: PathBuf },
+
+    #[display("Failed to load IntegrityData: {source}")]
+    InvalidLocalIntegrityState { source: anyhow::Error },
+}
+
 impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> {
     pub async fn new(
         mut underlying_block_store: AsyncDropGuard<B>,
         integrity_file_path: PathBuf,
         my_client_id: ClientId,
         config: IntegrityConfig,
-    ) -> Result<AsyncDropGuard<Self>> {
+    ) -> Result<AsyncDropGuard<Self>, IntegrityBlockStoreInitError> {
         let integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
             .context("Tried to create IntegrityData");
         let mut integrity_data = match integrity_data {
             Ok(integrity_data) => integrity_data,
             Err(err) => {
-                underlying_block_store.async_drop().await?;
-                return Err(err);
+                if let Err(async_drop_err) = underlying_block_store.async_drop().await {
+                    log::error!("Async drop error: {async_drop_err}");
+                }
+                return Err(IntegrityBlockStoreInitError::InvalidLocalIntegrityState {
+                    source: err,
+                });
             }
         };
         if integrity_data.integrity_violation_in_previous_run() {
@@ -95,10 +112,12 @@ impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockSt
                         async { integrity_data.async_drop().await.unwrap() },
                         async { underlying_block_store.async_drop().await.unwrap() },
                     );
-                    return Err(IntegrityViolationError::IntegrityViolationInPreviousRun {
-                        integrity_file_path: integrity_file_path.clone(),
-                    }
-                    .into());
+                    return Err(
+                        IntegrityBlockStoreInitError::IntegrityViolationInPreviousRun {
+                            integrity_file_path: integrity_file_path.clone(),
+                        }
+                        .into(),
+                    );
                 }
             }
         }
@@ -168,12 +187,15 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     }
 
     // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store.
-    fn block_size_from_physical_block_size(&self, physical_block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        physical_block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         let block_size = self
             .underlying_block_store
             .block_size_from_physical_block_size(physical_block_size)?;
         block_size.checked_sub(HEADER_SIZE as u64)
-            .with_context(|| anyhow!("Block size of {} (physical: {}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, physical_block_size, HEADER_SIZE))
+            .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {HEADER_SIZE}.")))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

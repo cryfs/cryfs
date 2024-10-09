@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use futures::stream::BoxStream;
 
 use crate::{
-    low_level::interface::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+    low_level::{
+        interface::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+        InvalidBlockSizeError,
+    },
     BlockId, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::async_drop::AsyncDrop;
@@ -33,7 +36,10 @@ impl BlockStoreReader for DynBlockStore {
         (*self.0).estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         (*self.0).block_size_from_physical_block_size(block_size)
     }
 

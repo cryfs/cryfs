@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
 
+use crate::low_level::InvalidBlockSizeError;
 use crate::{
     low_level::{
         interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -95,9 +96,12 @@ impl BlockStoreReader for OnDiskBlockStore {
         sysinfo::get_available_disk_space(&self.basedir)
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
-            .with_context(|| anyhow!("Physical block size of {} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, FORMAT_VERSION_HEADER.len()))
+            .ok_or_else(|| InvalidBlockSizeError::new(format!("Physical block size of {block_size} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

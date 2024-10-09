@@ -39,10 +39,11 @@ impl InnerConfig {
     /// Take a [CryConfig] and encrypt it into an [InnerConfig] instance
     pub fn encrypt(
         config: CryConfig,
-        inner_key: impl FnOnce(usize) -> Result<EncryptionKey>,
+        inner_key: impl FnOnce(usize) -> EncryptionKey,
     ) -> Result<InnerConfig> {
         let cipher_name = config.cipher.clone();
         let cipher = lookup_cipher_dyn(&cipher_name, inner_key)
+            .with_context(|| format!("Trying to look up cipher {}", config.cipher))?
             .with_context(|| format!("Trying to look up cipher {}", config.cipher))?;
 
         let padding_overhead_suffix = CONFIG_SIZE - PADDING_OVERHEAD_PREFIX;
@@ -73,11 +74,9 @@ impl InnerConfig {
     }
 
     /// Decrypt an [InnerConfig] instance to get the contained [CryConfig] object
-    pub fn decrypt(
-        self,
-        inner_key: impl FnOnce(usize) -> Result<EncryptionKey>,
-    ) -> Result<CryConfig> {
+    pub fn decrypt(self, inner_key: impl FnOnce(usize) -> EncryptionKey) -> Result<CryConfig> {
         let cipher = lookup_cipher_dyn(&self.cipher_name, inner_key)
+            .with_context(|| format!("Trying to look up cipher {}", self.cipher_name))?
             .with_context(|| format!("Trying to look up cipher {}", self.cipher_name))?;
 
         let plaintext = cipher

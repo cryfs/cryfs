@@ -4,7 +4,9 @@ use mockall::mock;
 use std::fmt::{self, Debug};
 
 use crate::{
-    low_level::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+    low_level::{
+        BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+    },
     utils::{RemoveResult, TryCreateResult},
     BlockId,
 };
@@ -18,7 +20,7 @@ mock! {
         fn load<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<Option<Data>>> where 'a: 'r, 'b: 'r;
         fn num_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<u64>> where 'a: 'r;
         fn estimate_num_free_bytes(&self) -> Result<u64>;
-        fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64>;
+        fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64, InvalidBlockSizeError>;
 
         fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<BoxStream<'static, Result<BlockId>>>> where 'a: 'r;
     }

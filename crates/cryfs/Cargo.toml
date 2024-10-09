@@ -14,11 +14,11 @@ anyhow.workspace = true
 async-trait.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
-cryfs-blobstore = {path = "../blobstore"}
-cryfs-blockstore = {path = "../blockstore"}
-cryfs-rustfs = {path = "../rustfs"}
-cryfs-utils = {path = "../utils"}
-cryfs-version = {path = "../cryfs-version"}
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-rustfs = { path = "../rustfs" }
+cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 futures.workspace = true
 hex.workspace = true
@@ -29,14 +29,15 @@ lockable.workspace = true
 log.workspace = true
 maybe-owned.workspace = true
 rand.workspace = true
-serde = {workspace = true, features=["derive"]}
+serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-serde_with = {workspace = true, features=["hex"]}
+serde_with = { workspace = true, features = ["hex"] }
 thiserror.workspace = true
-tokio = {workspace = true, features = ["sync"]}
+tokio = { workspace = true, features = ["sync"] }
 
 [dev-dependencies]
-tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
 
 [features]
 testutils = ["cryfs-blobstore/testutils"]

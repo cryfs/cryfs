@@ -115,28 +115,24 @@ impl Cli {
             .enable_all()
             .build()
             .unwrap();
-        runtime
-            .block_on(setup_blockstore_stack(
-                OnDiskBlockStore::new(mount_args.basedir.to_owned()),
-                &config,
-                &self.local_state_dir,
-                // TODO Setup IntegrityConfig correctly
-                IntegrityConfig {
-                    allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
-                    missing_block_is_integrity_violation:
-                        MissingBlockIsIntegrityViolation::IsNotAViolation,
-                    on_integrity_violation: Box::new(|err| {
-                        // TODO
-                    }),
-                },
-                FilesystemRunner {
-                    mountdir: &mount_args.mountdir,
-                    config: &config,
-                },
-            ))
-            // TODO Can we be more specific than just using UnspecifiedError? For example, IntegrityViolation should be reported with a distinct exit code.
-            .map_cli_error(CliErrorKind::UnspecifiedError)?
-            .map_cli_error(CliErrorKind::UnspecifiedError)?;
+        runtime.block_on(setup_blockstore_stack(
+            OnDiskBlockStore::new(mount_args.basedir.to_owned()),
+            &config,
+            &self.local_state_dir,
+            // TODO Setup IntegrityConfig correctly
+            IntegrityConfig {
+                allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                missing_block_is_integrity_violation:
+                    MissingBlockIsIntegrityViolation::IsNotAViolation,
+                on_integrity_violation: Box::new(|err| {
+                    // TODO
+                }),
+            },
+            FilesystemRunner {
+                mountdir: &mount_args.mountdir,
+                config: &config,
+            },
+        ))??;
 
         Ok(())
     }

@@ -1,5 +1,4 @@
 use std::collections::hash_set::HashSet;
-use std::path::PathBuf;
 use thiserror::Error;
 
 use super::{BlockVersion, ClientId, MaybeClientId};
@@ -30,7 +29,4 @@ pub enum IntegrityViolationError {
 
     #[error("Integrity Violation: {blocks:?} should exist but we didn't find them. Did an attacker delete them?")]
     MissingBlocks { blocks: HashSet<BlockId> },
-
-    #[error("There was an integrity violation detected. Preventing any further access to the file system. This can either happen if an attacker changed your files or rolled back the file system to a previous state, but it can also happen if you rolled back the file system yourself, for example restored a backup. If you want to reset the integrity data (i.e. accept changes made by a potential attacker), please delete the following file before re-mounting it: {integrity_file_path}")]
-    IntegrityViolationInPreviousRun { integrity_file_path: PathBuf },
 }

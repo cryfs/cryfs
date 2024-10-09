@@ -10,7 +10,7 @@ use crate::{
     on_blocks::data_node_store::{DataNode, DataNodeStore},
     RemoveResult,
 };
-use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
@@ -30,7 +30,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     pub async fn new(
         block_store: AsyncDropGuard<LockingBlockStore<B>>,
         block_size_bytes: u32,
-    ) -> Result<AsyncDropGuard<Self>> {
+    ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
             node_store: DataNodeStore::new(block_store, block_size_bytes).await?,
         }))
@@ -159,12 +159,14 @@ mod tests {
     }
 
     mod new {
+        use cryfs_blockstore::InvalidBlockSizeError;
+
         use super::*;
 
         #[tokio::test]
         async fn invalid_block_size() {
             assert_eq!(
-                "Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
+                "Invalid block size: Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
                 DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 10)
                     .await
                     .unwrap_err()
@@ -187,9 +189,9 @@ mod tests {
             blockstore
                 .expect_block_size_from_physical_block_size()
                 .times(1)
-                .returning(move |_| Err(anyhow!("some error")));
+                .returning(move |_| Err(InvalidBlockSizeError::new(format!("some error"))));
             assert_eq!(
-                "some error",
+                "Invalid block size: some error",
                 DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
                     .await
                     .unwrap_err()

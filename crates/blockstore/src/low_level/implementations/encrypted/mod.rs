@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::borrow::Borrow;
@@ -6,6 +6,7 @@ use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::ops::Deref;
 
+use crate::low_level::interface::InvalidBlockSizeError;
 use crate::{
     low_level::{
         interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
@@ -96,17 +97,24 @@ impl<
             .estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, physical_block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        physical_block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         let block_size = self
             .underlying_block_store
             .deref()
             .borrow()
             .block_size_from_physical_block_size(physical_block_size)?;
         let ciphertext_size = block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
-            .with_context(|| anyhow!("Block size of {} (physical: {}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", block_size, physical_block_size, FORMAT_VERSION_HEADER.len()))?;
+            .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))?;
         ciphertext_size
             .checked_sub((C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64)
-            .with_context(|| anyhow!("Physical block size of {} is too small.", block_size))
+            .ok_or_else(|| {
+                InvalidBlockSizeError::new(format!(
+                    "Block size of {block_size} (physical: {physical_block_size}) is too small."
+                ))
+            })
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

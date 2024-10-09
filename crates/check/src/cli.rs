@@ -130,7 +130,8 @@ pub async fn check_filesystem(
             progress_bar_manager,
         },
     )
-    .await?
+    .await
+    .map_err(|err: CliError| err.error)?
 }
 
 fn load_config(

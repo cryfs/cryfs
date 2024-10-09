@@ -15,35 +15,34 @@ async-trait.workspace = true
 base64.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
-cryfs-utils = {path = "../utils"}
-cryfs-version = {path = "../cryfs-version"}
-derive_more = {workspace = true, optional = true}
+cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
+derive_more.workspace = true
 errno.workspace = true
 futures.workspace = true
 hex.workspace = true
 lockable.workspace = true
 log.workspace = true
 lzzzz.workspace = true
-mockall = {workspace = true, optional = true}
+mockall = { workspace = true, optional = true }
 rand.workspace = true
 sysinfo.workspace = true
 thiserror.workspace = true
-tokio = {workspace = true, features = ["fs"]}
-tokio-stream = {workspace = true, features = ["fs"]}
+tokio = { workspace = true, features = ["fs"] }
+tokio-stream = { workspace = true, features = ["fs"] }
 
 [target.'cfg(not(any(target_os = "unknown", target_arch = "wasm32")))'.dependencies]
 libc.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-winapi = {workspace = true, features = ["fileapi"]}
+winapi = { workspace = true, features = ["fileapi"] }
 
 [dev-dependencies]
 common_macros.workspace = true
-cryfs-utils = {path = "../utils", features = ["testutils"]}
-derive_more.workspace = true
+cryfs-utils = { path = "../utils", features = ["testutils"] }
 generic-array.workspace = true
 mockall.workspace = true
 tempdir.workspace = true
 
 [features]
-testutils = ["mockall", "derive_more", "cryfs-utils/testutils"]
+testutils = ["mockall", "cryfs-utils/testutils"]

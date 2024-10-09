@@ -5,7 +5,9 @@ use std::fmt::{self, Debug};
 
 use crate::{
     high_level::LockingBlockStore,
-    low_level::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+    low_level::{
+        BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+    },
     tests::Fixture,
     BlockId,
 };
@@ -51,7 +53,10 @@ impl<B: BlockStore + Send + Sync + Debug + 'static> BlockStoreReader for BlockSt
         self.0.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         self.0.block_size_from_physical_block_size(block_size)
     }
 

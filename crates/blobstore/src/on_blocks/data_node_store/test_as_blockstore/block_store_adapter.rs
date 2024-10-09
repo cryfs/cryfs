@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use binary_layout::Field;
 use futures::stream::BoxStream;
@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use super::super::{layout::node, DataLeafNode, DataNode, DataNodeStore};
 use cryfs_blockstore::{
     tests::Fixture, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-    InMemoryBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
+    InMemoryBlockStore, InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -67,10 +67,13 @@ impl BlockStoreReader for BlockStoreAdapter {
             * self.0.layout().max_bytes_per_leaf() as u64)
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         block_size
             .checked_sub(node::data::OFFSET as u64)
-            .ok_or_else(|| anyhow!("Out of bounds"))
+            .ok_or_else(|| InvalidBlockSizeError::new(format!("Out of bounds")))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

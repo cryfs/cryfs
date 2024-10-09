@@ -5,7 +5,10 @@ use std::fmt::Debug;
 use std::ops::Deref;
 
 use crate::{
-    low_level::{BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter},
+    low_level::{
+        BlockStore, BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError,
+        OptimizedBlockStoreWriter,
+    },
     BlockId, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
@@ -58,7 +61,10 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         self.underlying_store
             .block_size_from_physical_block_size(block_size)
     }

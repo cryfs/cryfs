@@ -1,7 +1,8 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
+use derive_more::{Display, Error};
 
 use cryfs_utils::crypto::symmetric::{
-    Aes128Gcm, Aes256Gcm, Cipher, CipherDef, EncryptionKey, XChaCha20Poly1305,
+    Aes128Gcm, Aes256Gcm, Cipher, CipherDef, EncryptionKey, InvalidKeySizeError, XChaCha20Poly1305,
 };
 
 // TODO combine AsyncCipherCallback and SyncCipherCallback into one implementation.
@@ -12,6 +13,12 @@ use cryfs_utils::crypto::symmetric::{
 // TODO Should we support the other ciphers that were supported by the C++ version?
 
 pub const ALL_CIPHERS: &[&str] = &["xchacha20-poly1305", "aes-256-gcm", "aes-128-gcm"];
+
+#[derive(Error, Display, Debug)]
+#[display("Unknown cipher: {}", cipher_name)]
+pub struct UnknownCipherError {
+    pub cipher_name: String,
+}
 
 // offer a way to lookup ciphers at runtime while statically binding its type
 pub trait AsyncCipherCallback {
@@ -25,7 +32,10 @@ pub trait SyncCipherCallback {
 
     fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result;
 }
-pub fn lookup_cipher_sync<CB>(cipher_name: &str, callback: CB) -> Result<CB::Result>
+pub fn lookup_cipher_sync<CB>(
+    cipher_name: &str,
+    callback: CB,
+) -> Result<CB::Result, UnknownCipherError>
 where
     CB: SyncCipherCallback,
 {
@@ -34,10 +44,15 @@ where
         "aes-256-gcm" => Ok(callback.callback::<Aes256Gcm>()),
         "aes-128-gcm" => Ok(callback.callback::<Aes128Gcm>()),
         // TODO Add more ciphers
-        _ => bail!("Unknown cipher: {}", cipher_name),
+        _ => Err(UnknownCipherError {
+            cipher_name: cipher_name.to_string(),
+        }),
     }
 }
-pub async fn lookup_cipher_async<CB>(cipher_name: &str, callback: CB) -> Result<CB::Result>
+pub async fn lookup_cipher_async<CB>(
+    cipher_name: &str,
+    callback: CB,
+) -> Result<CB::Result, UnknownCipherError>
 where
     CB: AsyncCipherCallback,
 {
@@ -46,24 +61,26 @@ where
         "aes-256-gcm" => Ok(callback.callback::<Aes256Gcm>().await),
         "aes-128-gcm" => Ok(callback.callback::<Aes128Gcm>().await),
         // TODO Add more ciphers
-        _ => bail!("Unknown cipher: {}", cipher_name),
+        _ => Err(UnknownCipherError {
+            cipher_name: cipher_name.to_string(),
+        }),
     }
 }
 pub fn lookup_cipher_dyn(
     cipher_name: &str,
-    encryption_key: impl FnOnce(usize) -> Result<EncryptionKey>,
-) -> Result<Box<dyn Cipher>> {
-    struct DynCallback<K: FnOnce(usize) -> Result<EncryptionKey>> {
+    encryption_key: impl FnOnce(usize) -> EncryptionKey,
+) -> Result<Result<Box<dyn Cipher>, InvalidKeySizeError>, UnknownCipherError> {
+    struct DynCallback<K: FnOnce(usize) -> EncryptionKey> {
         encryption_key: K,
     }
-    impl<K: FnOnce(usize) -> Result<EncryptionKey>> SyncCipherCallback for DynCallback<K> {
-        type Result = Result<Box<dyn Cipher>>;
+    impl<K: FnOnce(usize) -> EncryptionKey> SyncCipherCallback for DynCallback<K> {
+        type Result = Result<Box<dyn Cipher>, InvalidKeySizeError>;
         fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
-            let encryption_key = (self.encryption_key)(C::KEY_SIZE)?;
+            let encryption_key = (self.encryption_key)(C::KEY_SIZE);
             Ok(Box::new(C::new(encryption_key)?))
         }
     }
-    lookup_cipher_sync(cipher_name, DynCallback { encryption_key })?
+    lookup_cipher_sync(cipher_name, DynCallback { encryption_key })
 }
 
 pub fn cipher_is_supported(cipher_name: &str) -> bool {
@@ -72,7 +89,10 @@ pub fn cipher_is_supported(cipher_name: &str) -> bool {
         type Result = ();
         fn callback<C: CipherDef + Send + Sync + 'static>(self) {}
     }
-    lookup_cipher_sync(cipher_name, DummyCallback).is_ok()
+    match lookup_cipher_sync(cipher_name, DummyCallback) {
+        Ok(_) => true,
+        Err(UnknownCipherError { .. }) => false,
+    }
 }
 
 #[cfg(test)]

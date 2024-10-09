@@ -81,6 +81,9 @@ pub enum CliErrorKind {
     /// Local state directory doesn't exist or is inaccessible (i.e. not read or writable or not a directory)
     InaccessibleLocalStateDir,
 
+    /// The local state directory is in an invalid state.
+    InvalidLocalState,
+
     /// Base directory can't be a subdirectory of the mount directory
     BaseDirInsideMountDir,
 
@@ -129,6 +132,7 @@ impl CliErrorKind {
             Self::IntegrityViolationOnPreviousRun => 24,
             Self::IntegrityViolation => 25,
             Self::InaccessibleLocalStateDir => 26,
+            Self::InvalidLocalState => 27,
         })
     }
 }

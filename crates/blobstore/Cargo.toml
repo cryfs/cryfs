@@ -15,21 +15,22 @@ async-trait.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
 conv.workspace = true
-cryfs-blockstore = {path = "../blockstore"}
-cryfs-utils = {path = "../utils"}
-cryfs-version = {path = "../cryfs-version"}
+log.workspace = true
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
 divrem.workspace = true
 futures.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-cryfs-blockstore = {path = "../blockstore", features = ["testutils"]}
-cryfs-utils = {path = "../utils", features = ["testutils"]}
+cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
+cryfs-utils = { path = "../utils", features = ["testutils"] }
 iter-chunks.workspace = true
-rand = {workspace = true, features = ["small_rng"]}
+rand = { workspace = true, features = ["small_rng"] }
 rstest.workspace = true
 rstest_reuse.workspace = true
-tokio = {workspace = true, features = ["macros"]}
+tokio = { workspace = true, features = ["macros"] }
 
 [features]
 # Enable tests that are very slow to build or run

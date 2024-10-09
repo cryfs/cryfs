@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
@@ -7,7 +7,7 @@ use super::super::BlobStoreOnBlocks;
 use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
     tests::Fixture, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-    InMemoryBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
+    InMemoryBlockStore, InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -63,11 +63,14 @@ impl BlockStoreReader for BlockStoreAdapter {
             * self.underlying_store.virtual_block_size_bytes() as u64)
     }
 
-    fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64> {
+    fn block_size_from_physical_block_size(
+        &self,
+        block_size: u64,
+    ) -> Result<u64, InvalidBlockSizeError> {
         let overhead = self.underlying_store.virtual_block_size_bytes() - self.block_size_bytes;
         block_size
             .checked_sub(overhead as u64)
-            .ok_or_else(|| anyhow!("block size out of range"))
+            .ok_or_else(|| InvalidBlockSizeError::new(format!("block size out of range")))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

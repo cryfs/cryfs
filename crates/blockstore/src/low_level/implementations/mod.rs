@@ -9,8 +9,8 @@ pub use inmemory::InMemoryBlockStore;
 
 mod integrity;
 pub use integrity::{
-    AllowIntegrityViolations, ClientId, IntegrityBlockStore, IntegrityConfig,
-    MissingBlockIsIntegrityViolation,
+    AllowIntegrityViolations, ClientId, IntegrityBlockStore, IntegrityBlockStoreInitError,
+    IntegrityConfig, MissingBlockIsIntegrityViolation,
 };
 
 mod ondisk;
