@@ -10,7 +10,7 @@ use std::sync::Once;
 
 use super::super::{Cipher, CipherDef, EncryptionKey};
 
-use crate::data::Data;
+use crate::{crypto::symmetric::InvalidKeySizeError, data::Data};
 
 static INIT_LIBSODIUM: Once = Once::new();
 
@@ -39,13 +39,13 @@ impl CipherDef for Aes256Gcm {
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = sodium_aes256gcm::NONCEBYTES;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = sodium_aes256gcm::TAGBYTES;
 
-    fn new(encryption_key: EncryptionKey) -> Result<Self> {
-        ensure!(
-            encryption_key.as_bytes().len() == Self::KEY_SIZE,
-            "Expected key size of {} bytes, but got {} bytes",
-            Self::KEY_SIZE,
-            encryption_key.as_bytes().len()
-        );
+    fn new(encryption_key: EncryptionKey) -> Result<Self, InvalidKeySizeError> {
+        if encryption_key.as_bytes().len() != Self::KEY_SIZE {
+            return Err(InvalidKeySizeError {
+                expected: Self::KEY_SIZE,
+                got: encryption_key.as_bytes().len(),
+            });
+        }
 
         init_libsodium();
 
@@ -113,13 +113,13 @@ impl CipherDef for XChaCha20Poly1305 {
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = sodium_xchachapoly1305::NONCEBYTES;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = sodium_xchachapoly1305::TAGBYTES;
 
-    fn new(encryption_key: EncryptionKey) -> Result<Self> {
-        ensure!(
-            encryption_key.as_bytes().len() == Self::KEY_SIZE,
-            "Expected key size of {} bytes, but got {} bytes",
-            Self::KEY_SIZE,
-            encryption_key.as_bytes().len()
-        );
+    fn new(encryption_key: EncryptionKey) -> Result<Self, InvalidKeySizeError> {
+        if encryption_key.as_bytes().len() != Self::KEY_SIZE {
+            return Err(InvalidKeySizeError {
+                expected: Self::KEY_SIZE,
+                got: encryption_key.as_bytes().len(),
+            });
+        }
 
         init_libsodium();
 

@@ -1,6 +1,7 @@
 use crate::data::Data;
 use anyhow::Result;
 use static_assertions::const_assert;
+use derive_more::{Display, Error};
 
 pub trait Cipher {
     // TODO Can we make this API safer? It requires the data block passed in to have at least CIPHERTEXT_OVERHEAD prefix bytes available.
@@ -12,8 +13,15 @@ pub trait Cipher {
     fn ciphertext_overhead_suffix(&self) -> usize;
 }
 
+#[derive(Error, Display, Debug)]
+#[display("Expected key size of {expected} bytes, but got {got} bytes")]
+pub struct InvalidKeySizeError {
+    pub expected: usize,
+    pub got: usize,
+}
+
 pub trait CipherDef: Cipher + Sized {
-    fn new(key: EncryptionKey) -> Result<Self>;
+    fn new(key: EncryptionKey) -> Result<Self, InvalidKeySizeError>;
 
     const KEY_SIZE: usize;
 

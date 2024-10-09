@@ -6,7 +6,7 @@ use anyhow::{ensure, Context, Result};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
-use super::super::{Cipher, CipherDef, EncryptionKey};
+use super::super::{Cipher, CipherDef, InvalidKeySizeError, EncryptionKey};
 use crate::data::Data;
 
 // TODO The aes-gcm crate currently needs
@@ -28,13 +28,13 @@ impl<C: KeyInit + AeadInPlace> CipherDef for AeadCipher<C> {
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NonceSize::USIZE;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = C::TagSize::USIZE;
 
-    fn new(encryption_key: EncryptionKey) -> Result<Self> {
-        ensure!(
-            encryption_key.as_bytes().len() == C::KeySize::USIZE,
-            "Expected key size of {} bytes, but got {} bytes",
-            C::KeySize::USIZE,
-            encryption_key.as_bytes().len()
-        );
+    fn new(encryption_key: EncryptionKey) -> Result<Self, InvalidKeySizeError> {
+        if encryption_key.as_bytes().len() != C::KeySize::USIZE {
+            return Err(InvalidKeySizeError {
+                expected: C::KeySize::USIZE,
+                got: encryption_key.as_bytes().len(),
+            });
+        }
         Ok(Self {
             encryption_key,
             _phantom: PhantomData {},

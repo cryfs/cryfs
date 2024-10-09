@@ -11,7 +11,7 @@ use cryfs_cryfs::config::{
 use cryfs_cryfs::localstate::LocalStateDir;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::{CipherDef, EncryptionKey},
+    crypto::symmetric::{CipherDef, EncryptionKey, InvalidKeySizeError},
 };
 
 pub trait BlockstoreCallback {
@@ -73,20 +73,13 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
             }
         };
 
-        if key.num_bytes() != C::KEY_SIZE {
-            self.base_blockstore.async_drop().await?;
-            bail!(
-                "Invalid key length in config file. Expected {} bytes, got {} bytes.",
-                C::KEY_SIZE,
-                key.num_bytes(),
-            );
-        }
-
         let cipher = match C::new(key) {
             Ok(cipher) => cipher,
-            Err(err) => {
+            Err(InvalidKeySizeError{expected, got}) => {
                 self.base_blockstore.async_drop().await?;
-                return Err(err);
+                bail!(
+                    "Invalid key length in config file. Expected {expected} bytes, got {got} bytes.",
+                );
             }
         };
         let mut encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);

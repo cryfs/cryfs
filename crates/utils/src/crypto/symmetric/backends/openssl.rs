@@ -7,7 +7,7 @@ use openssl::symm::{decrypt_aead, encrypt_aead, Cipher as OpenSSLCipher};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
-use super::super::{Cipher, CipherDef, EncryptionKey};
+use super::super::{Cipher, CipherDef, InvalidKeySizeError, EncryptionKey};
 use crate::data::Data;
 
 #[allow(non_camel_case_types)]
@@ -54,13 +54,13 @@ impl<C: CipherType> CipherDef for AeadCipher<C> {
     const CIPHERTEXT_OVERHEAD_PREFIX: usize = C::NONCE_SIZE::USIZE;
     const CIPHERTEXT_OVERHEAD_SUFFIX: usize = C::AUTH_TAG_SIZE::USIZE;
 
-    fn new(encryption_key: EncryptionKey) -> Result<Self> {
-        ensure!(
-            encryption_key.as_bytes().len() == Self::KEY_SIZE,
-            "Expected key size of {} bytes, but got {} bytes",
-            Self::KEY_SIZE,
-            encryption_key.as_bytes().len()
-        );
+    fn new(encryption_key: EncryptionKey) -> Result<Self, InvalidKeySizeError> {
+        if encryption_key.as_bytes().len() != Self::KEY_SIZE {
+            return Err(InvalidKeySizeError {
+                expected: Self::KEY_SIZE,
+                got: encryption_key.as_bytes().len(),
+            });
+        }
 
         let cipher = C::instantiate();
 
