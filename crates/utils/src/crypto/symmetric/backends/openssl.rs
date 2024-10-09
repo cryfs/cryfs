@@ -7,7 +7,7 @@ use openssl::symm::{decrypt_aead, encrypt_aead, Cipher as OpenSSLCipher};
 use rand::{thread_rng, RngCore};
 use std::marker::PhantomData;
 
-use super::super::{Cipher, CipherDef, InvalidKeySizeError, EncryptionKey};
+use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
 use crate::data::Data;
 
 #[allow(non_camel_case_types)]
