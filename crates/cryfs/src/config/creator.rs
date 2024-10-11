@@ -35,9 +35,15 @@ pub fn create(
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
 ) -> Result<ConfigCreateResult, ConfigCreateError> {
-    let cipher_name = console
-        .ask_cipher_for_new_filesystem()
-        .map_err(ConfigCreateError::InteractionError)?;
+    let cipher_name = command_line_flags
+        .expected_cipher
+        .clone()
+        .map(Ok)
+        .unwrap_or_else(|| {
+            console
+                .ask_cipher_for_new_filesystem()
+                .map_err(ConfigCreateError::InteractionError)
+        })?;
     let enc_key = _generate_encryption_key(&cipher_name)?;
     let filesystem_id = FilesystemId::new_random();
     let local_state =

@@ -95,10 +95,10 @@ pub struct ConfigLoadResult {
     pub first_time_access: bool,
 }
 
-#[derive(Clone, Copy)]
-pub struct CommandLineFlags<'a> {
+#[derive(Clone)]
+pub struct CommandLineFlags {
     pub missing_block_is_integrity_violation: Option<bool>,
-    pub expected_cipher: Option<&'a str>,
+    pub expected_cipher: Option<String>,
 }
 
 pub fn create(
@@ -217,7 +217,13 @@ fn _load(
     let old_config = configfile.config().clone();
     _check_version(configfile.config(), console)?;
     _update_version_in_config(&mut configfile);
-    _check_cipher(configfile.config(), command_line_flags.expected_cipher)?;
+    _check_cipher(
+        configfile.config(),
+        command_line_flags
+            .expected_cipher
+            .as_ref()
+            .map(|v| v.as_str()),
+    )?;
     let local_state = FilesystemMetadata::load_or_generate(
         local_state_dir,
         &configfile.config().filesystem_id,

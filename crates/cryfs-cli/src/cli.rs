@@ -161,15 +161,16 @@ impl Cli {
         progress_bars: impl ProgressBarManager,
     ) -> Result<ConfigLoadResult, CliError> {
         // TODO Allow changing config file using args as C++ did
-        let config_file_location = self.mount_args().basedir.join("cryfs.config");
+        let mount_args = self.mount_args();
+        let config_file_location = mount_args.basedir.join("cryfs.config");
         cryfs_cryfs::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
             self.console(),
-            // TODO Set CommandLineFlags correctly
             &CommandLineFlags {
-                missing_block_is_integrity_violation: None,
-                expected_cipher: None,
+                missing_block_is_integrity_violation: mount_args
+                    .missing_block_is_integrity_violation,
+                expected_cipher: mount_args.cipher.clone(),
             },
             &self.local_state_dir,
             progress_bars,

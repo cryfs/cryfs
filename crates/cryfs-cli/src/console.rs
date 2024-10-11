@@ -74,7 +74,7 @@ impl Console for InteractiveConsole {
             cryfs_cryfs::ALL_CIPHERS
                 .iter()
                 .map(|cipher| (cipher.to_string(), cipher.to_string())),
-            0,
+            0, // TODO Define default cipher somewhere in a constant not by index but by cipher name or enum, and show it correctly in the `--help` as well.
         )
     }
 

@@ -52,6 +52,16 @@ pub struct MountArgs {
     /// Creates the mount directory if it doesn't exist yet, skipping the normal confirmation message asking whether it should be created.
     #[arg(long)]
     pub create_missing_mountpoint: bool,
+
+    /// Whether to treat a missing block as an integrity violation. This makes sure you notice if an attacker deleted some of your files,
+    /// but only works in single-client mode. You will not be able to use the file system on other devices.
+    #[arg(long)]
+    pub missing_block_is_integrity_violation: Option<bool>,
+
+    // TODO Make display of default cipher dynamic to show the actual default cipher
+    /// Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers. Default: xchacha20-poly1305
+    #[arg(long)]
+    pub cipher: Option<String>,
 }
 
 // TODO Tests
