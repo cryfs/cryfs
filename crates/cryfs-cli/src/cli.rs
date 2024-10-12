@@ -121,13 +121,17 @@ impl Cli {
             } else {
                 MissingBlockIsIntegrityViolation::IsNotAViolation
             };
+        let allow_integrity_violations = if mount_args.allow_integrity_violations {
+            AllowIntegrityViolations::AllowViolations
+        } else {
+            AllowIntegrityViolations::DontAllowViolations
+        };
         runtime.block_on(setup_blockstore_stack(
             OnDiskBlockStore::new(mount_args.basedir.to_owned()),
             &config,
             &self.local_state_dir,
-            // TODO Setup IntegrityConfig correctly
             IntegrityConfig {
-                allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
+                allow_integrity_violations,
                 missing_block_is_integrity_violation,
                 on_integrity_violation: Box::new(|err| {
                     // TODO

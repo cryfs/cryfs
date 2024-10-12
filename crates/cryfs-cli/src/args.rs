@@ -58,6 +58,11 @@ pub struct MountArgs {
     #[arg(long)]
     pub missing_block_is_integrity_violation: Option<bool>,
 
+    /// Disable integrity checks. Integrity checks ensure that your file system was not manipulated or rolled back to an earlier version.
+    /// Disabling them is needed if you want to load an old snapshot of your file system.
+    #[arg(long)]
+    pub allow_integrity_violations: bool,
+
     // TODO Make display of default cipher dynamic to show the actual default cipher
     /// Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers. Default: xchacha20-poly1305
     #[arg(long)]
