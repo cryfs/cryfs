@@ -115,6 +115,12 @@ impl Cli {
             .enable_all()
             .build()
             .unwrap();
+        let missing_block_is_integrity_violation =
+            if config.config.config().missingBlockIsIntegrityViolation() {
+                MissingBlockIsIntegrityViolation::IsAViolation
+            } else {
+                MissingBlockIsIntegrityViolation::IsNotAViolation
+            };
         runtime.block_on(setup_blockstore_stack(
             OnDiskBlockStore::new(mount_args.basedir.to_owned()),
             &config,
@@ -122,8 +128,7 @@ impl Cli {
             // TODO Setup IntegrityConfig correctly
             IntegrityConfig {
                 allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
-                missing_block_is_integrity_violation:
-                    MissingBlockIsIntegrityViolation::IsNotAViolation,
+                missing_block_is_integrity_violation,
                 on_integrity_violation: Box::new(|err| {
                     // TODO
                 }),
