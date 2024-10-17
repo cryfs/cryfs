@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::Path;
 
-use cryfs_cryfs::config::Console;
+use cryfs_filesystem::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 

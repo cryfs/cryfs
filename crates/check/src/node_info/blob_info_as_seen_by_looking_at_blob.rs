@@ -1,5 +1,5 @@
 use cryfs_blobstore::BlobId;
-use cryfs_cryfs::filesystem::fsblobstore::BlobType;
+use cryfs_filesystem::filesystem::fsblobstore::BlobType;
 
 #[derive(PartialEq, Eq, Debug, PartialOrd, Ord, Hash, Clone, Copy)]
 pub enum BlobInfoAsSeenByLookingAtBlob {

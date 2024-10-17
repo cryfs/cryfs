@@ -14,8 +14,8 @@ use cryfs_cli_utils::{
     print_config, setup_blockstore_stack, Application, CliError, CliErrorKind, CliResultExt,
     CliResultExtFn, Environment,
 };
-use cryfs_cryfs::CRYFS_VERSION;
-use cryfs_cryfs::{
+use cryfs_filesystem::CRYFS_VERSION;
+use cryfs_filesystem::{
     config::{
         CommandLineFlags, ConfigCreateError, ConfigLoadError, ConfigLoadResult, Console,
         CreateConfigFileError, LoadConfigFileError, PasswordProvider, SaveConfigFileError,
@@ -46,7 +46,7 @@ impl Application for Cli {
         let is_noninteractive = env.is_noninteractive;
 
         // TODO Make sure we have tests for the local_state_dir location
-        let local_state_dir = cryfs_cryfs::localstate::LocalStateDir::new(env.local_state_dir);
+        let local_state_dir = cryfs_filesystem::localstate::LocalStateDir::new(env.local_state_dir);
 
         Ok(Self {
             is_noninteractive,
@@ -147,7 +147,7 @@ impl Cli {
     }
 
     fn show_ciphers(&self) {
-        for cipher in cryfs_cryfs::config::ALL_CIPHERS {
+        for cipher in cryfs_filesystem::config::ALL_CIPHERS {
             println!("{}", cipher);
         }
     }
@@ -172,7 +172,7 @@ impl Cli {
         // TODO Allow changing config file using args as C++ did
         let mount_args = self.mount_args();
         let config_file_location = mount_args.basedir.join("cryfs.config");
-        cryfs_cryfs::config::load_or_create(
+        cryfs_filesystem::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
             self.console(),

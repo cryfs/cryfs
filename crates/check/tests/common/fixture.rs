@@ -10,7 +10,7 @@ use cryfs_check::{
     NodeReference,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
-use cryfs_cryfs::{
+use cryfs_filesystem::{
     config::{CommandLineFlags, ConfigLoadResult, FixedPasswordProvider},
     filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
     localstate::LocalStateDir,
@@ -1121,7 +1121,7 @@ impl FixtureTempDir {
     }
 
     pub fn create_config(&self) -> ConfigLoadResult {
-        cryfs_cryfs::config::create(
+        cryfs_filesystem::config::create(
             self.config_file_path().to_owned(),
             &FixedPasswordProvider::new(PASSWORD.to_owned()),
             &FixtureCreationConsole,

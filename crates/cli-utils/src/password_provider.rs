@@ -1,6 +1,6 @@
 use anyhow::{ensure, Result};
 
-use cryfs_cryfs::config::PasswordProvider;
+use cryfs_filesystem::config::PasswordProvider;
 
 // TODO Protect password similar to how we protect EncryptionKey (mprotect, zero on drop, ...). The rpassword crate actually has an internal class `SafeString` but then they extract it from that before returning :(
 

@@ -75,7 +75,7 @@ mod version {
             .success()
             .stderr(predicates::str::contains(format!(
                 "cryfs {}",
-                cryfs_cryfs::CRYFS_VERSION,
+                cryfs_filesystem::CRYFS_VERSION,
             )));
     }
 
@@ -87,7 +87,7 @@ mod version {
             .success()
             .stderr(predicates::str::contains(format!(
                 "cryfs {}",
-                cryfs_cryfs::CRYFS_VERSION,
+                cryfs_filesystem::CRYFS_VERSION,
             )));
     }
 
@@ -145,7 +145,7 @@ mod show_ciphers {
             .arg("--show-ciphers")
             .assert()
             .success()
-            .stdout(cryfs_cryfs::config::ALL_CIPHERS.join("\n") + "\n");
+            .stdout(cryfs_filesystem::config::ALL_CIPHERS.join("\n") + "\n");
     }
 
     #[test]

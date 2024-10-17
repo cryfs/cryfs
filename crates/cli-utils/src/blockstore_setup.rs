@@ -4,11 +4,11 @@ use cryfs_blockstore::{
     BlockStore, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
     IntegrityBlockStoreInitError, IntegrityConfig, LockingBlockStore, OptimizedBlockStoreWriter,
 };
-use cryfs_cryfs::config::{
+use cryfs_filesystem::config::{
     ciphers::{lookup_cipher_async, AsyncCipherCallback, UnknownCipherError},
     ConfigLoadResult,
 };
-use cryfs_cryfs::localstate::LocalStateDir;
+use cryfs_filesystem::localstate::LocalStateDir;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     crypto::symmetric::{CipherDef, EncryptionKey},

@@ -1,5 +1,5 @@
 [package]
-name = "cryfs-cryfs"
+name = "cryfs-filesystem"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true

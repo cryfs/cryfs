@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use cryfs_cryfs::config::ConfigLoadResult;
+use cryfs_filesystem::config::ConfigLoadResult;
 
 // TODO Integration test the outputs of print_config
 pub fn print_config(config: &ConfigLoadResult) {

@@ -20,7 +20,7 @@ clap = {workspace = true, features = ["derive"]}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-cli-utils = {path = "../cli-utils"}
-cryfs-cryfs = {path = "../cryfs"}
+cryfs-filesystem = {path = "../cryfs-filesystem"}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 cryfs-rustfs = {path = "../rustfs"}
@@ -36,7 +36,7 @@ itertools.workspace = true
 
 [dev-dependencies]
 tempdir.workspace = true
-cryfs-cryfs = {path = "../cryfs", features=["testutils"]}
+cryfs-filesystem = {path = "../cryfs-filesystem", features=["testutils"]}
 cryfs-blockstore = {path = "../blockstore", features=["testutils"]}
 itertools.workspace = true
 rand.workspace = true

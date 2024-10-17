@@ -3,7 +3,7 @@ use std::num::NonZeroU8;
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_cryfs::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
+use cryfs_filesystem::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_rustfs::AbsolutePath;
 
 use super::check_result::CheckResult;

@@ -12,7 +12,7 @@ use cryfs_check::{
     MaybeBlobInfoAsSeenByLookingAtBlob, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
     NodeReferencedMultipleTimesError, WrongParentPointerError,
 };
-use cryfs_cryfs::filesystem::fsblobstore::{BlobType, FsBlob};
+use cryfs_filesystem::filesystem::fsblobstore::{BlobType, FsBlob};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;

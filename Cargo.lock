@@ -668,7 +668,7 @@ dependencies = [
  "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-cli-utils",
- "cryfs-cryfs",
+ "cryfs-filesystem",
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
@@ -697,7 +697,7 @@ dependencies = [
  "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-cli-utils",
- "cryfs-cryfs",
+ "cryfs-filesystem",
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
@@ -721,7 +721,7 @@ dependencies = [
  "clap",
  "cryfs-blobstore",
  "cryfs-blockstore",
- "cryfs-cryfs",
+ "cryfs-filesystem",
  "cryfs-utils",
  "cryfs-version",
  "derive_more 1.0.0",
@@ -746,7 +746,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cryfs-cryfs"
+name = "cryfs-filesystem"
 version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",

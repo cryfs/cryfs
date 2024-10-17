@@ -18,8 +18,8 @@ use cryfs_check::{
     BlobReference, BlobReferenceWithId, CorruptedError, NodeInfoAsSeenByLookingAtNode,
     NodeUnreferencedError,
 };
-use cryfs_cryfs::filesystem::fsblobstore::BlobType;
-use cryfs_cryfs::{
+use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_filesystem::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
 };

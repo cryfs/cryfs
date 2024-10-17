@@ -58,7 +58,7 @@ impl Display for BlobReferencedMultipleTimesError {
 #[cfg(test)]
 mod tests {
     use console::strip_ansi_codes;
-    use cryfs_cryfs::filesystem::fsblobstore::BlobType;
+    use cryfs_filesystem::filesystem::fsblobstore::BlobType;
     use cryfs_rustfs::AbsolutePathBuf;
 
     use super::*;

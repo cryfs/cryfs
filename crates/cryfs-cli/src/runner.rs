@@ -4,7 +4,7 @@ use std::path::Path;
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{BlockStore, InvalidBlockSizeError, LockingBlockStore};
 use cryfs_cli_utils::{BlockstoreCallback, CliError, CliErrorKind, CliResultExt, CliResultExtFn};
-use cryfs_cryfs::{config::ConfigLoadResult, filesystem::CryDevice};
+use cryfs_filesystem::{config::ConfigLoadResult, filesystem::CryDevice};
 use cryfs_rustfs::backend::fuser;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 

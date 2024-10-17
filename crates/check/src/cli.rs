@@ -9,7 +9,7 @@ use cryfs_cli_utils::{
     password_provider::InteractivePasswordProvider, print_config, setup_blockstore_stack,
     Application, CliError, CliErrorKind, CliResultExt, Environment,
 };
-use cryfs_cryfs::{
+use cryfs_filesystem::{
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, PasswordProvider},
     localstate::LocalStateDir,
     CRYFS_VERSION,
@@ -141,7 +141,7 @@ fn load_config(
     progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     // TODO Allow changing config file using args as C++ did
-    cryfs_cryfs::config::load_readonly(
+    cryfs_filesystem::config::load_readonly(
         config_file_path.to_owned(),
         password_provider,
         &RecoverConsole,

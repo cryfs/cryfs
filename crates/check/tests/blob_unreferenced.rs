@@ -8,7 +8,7 @@ use std::time::SystemTime;
 
 use cryfs_blobstore::BlobId;
 use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeUnreferencedError};
-use cryfs_cryfs::{
+use cryfs_filesystem::{
     filesystem::fsblobstore::DirBlob,
     utils::fs_types::{Gid, Uid},
 };

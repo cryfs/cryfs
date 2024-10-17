@@ -2,7 +2,7 @@ use anyhow::Result;
 use dialoguer::{Confirm, Select};
 use std::path::Path;
 
-use cryfs_cryfs::config::Console;
+use cryfs_filesystem::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 
@@ -71,7 +71,7 @@ impl Console for InteractiveConsole {
     fn ask_cipher_for_new_filesystem(&self) -> Result<String> {
         ask_multiple_choice(
             "Which block cipher do you want to use?",
-            cryfs_cryfs::ALL_CIPHERS
+            cryfs_filesystem::ALL_CIPHERS
                 .iter()
                 .map(|cipher| (cipher.to_string(), cipher.to_string())),
             0, // TODO Define default cipher somewhere in a constant not by index but by cipher name or enum, and show it correctly in the `--help` as well.

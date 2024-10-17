@@ -3,7 +3,7 @@
 use rstest::rstest;
 
 use cryfs_check::{BlobReference, BlobReferenceWithId, BlobUnreadableError, NodeUnreadableError};
-use cryfs_cryfs::filesystem::fsblobstore::BlobType;
+use cryfs_filesystem::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;

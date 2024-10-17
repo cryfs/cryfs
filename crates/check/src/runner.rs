@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cryfs_cryfs::filesystem::fsblobstore::EntryType;
+use cryfs_filesystem::filesystem::fsblobstore::EntryType;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::Future;
 use std::collections::{HashMap, HashSet};
@@ -26,7 +26,7 @@ use cryfs_blobstore::{
 };
 use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
-use cryfs_cryfs::{
+use cryfs_filesystem::{
     config::ConfigLoadResult,
     filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
 };
