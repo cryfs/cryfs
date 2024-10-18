@@ -113,7 +113,8 @@ pub async fn check_filesystem(
 
     setup_blockstore_stack(
         blockstore,
-        &config,
+        &config.config.config(),
+        config.my_client_id,
         local_state_dir,
         // TODO Setup IntegrityConfig correctly
         IntegrityConfig {

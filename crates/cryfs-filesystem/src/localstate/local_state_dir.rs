@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::config::FilesystemId;
 
 /// This struct helps find the right locations in the local file system to store local state
+#[derive(Clone, Debug)]
 pub struct LocalStateDir {
     app_dir: PathBuf,
 }

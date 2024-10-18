@@ -16,11 +16,11 @@ name = "cryfs"
 anyhow.workspace = true
 async-trait.workspace = true
 clap = { workspace = true, features = ["derive"] }
-cryfs-blobstore = { path = "../blobstore" }
+# TODO Now that we have the cryfs-runner crate, can we remove other cryfs dependencies? Can we remove tokio? Maybe go through all of our crates and check that.
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
-cryfs-rustfs = { path = "../rustfs", features = ["fuser"] }
+cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 daemonize.workspace = true

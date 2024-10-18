@@ -694,11 +694,10 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "clap",
- "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-cli-utils",
  "cryfs-filesystem",
- "cryfs-rustfs",
+ "cryfs-runner",
  "cryfs-utils",
  "cryfs-version",
  "daemonize",
@@ -772,6 +771,22 @@ dependencies = [
  "serde_json",
  "serde_with",
  "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "cryfs-runner"
+version = "2.0.0-alpha1"
+dependencies = [
+ "anyhow",
+ "cryfs-blobstore",
+ "cryfs-blockstore",
+ "cryfs-cli-utils",
+ "cryfs-filesystem",
+ "cryfs-rustfs",
+ "cryfs-utils",
+ "cryfs-version",
+ "log",
  "tokio",
 ]
 

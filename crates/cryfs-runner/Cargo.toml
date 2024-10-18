@@ -1,0 +1,22 @@
+[package]
+name = "cryfs-runner"
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+readme.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+cryfs-cli-utils = { path = "../cli-utils" }
+cryfs-filesystem = { path = "../cryfs-filesystem" }
+cryfs-rustfs = { path = "../rustfs", features = ["fuser"] }
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
+tokio.workspace = true
+log.workspace = true

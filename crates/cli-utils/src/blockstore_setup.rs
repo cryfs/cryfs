@@ -1,12 +1,12 @@
 use anyhow::Result;
 
 use cryfs_blockstore::{
-    BlockStore, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
+    BlockStore, ClientId, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
     IntegrityBlockStoreInitError, IntegrityConfig, LockingBlockStore, OptimizedBlockStoreWriter,
 };
 use cryfs_filesystem::config::{
     ciphers::{lookup_cipher_async, AsyncCipherCallback, UnknownCipherError},
-    ConfigLoadResult,
+    CryConfig,
 };
 use cryfs_filesystem::localstate::LocalStateDir;
 use cryfs_utils::{
@@ -30,16 +30,18 @@ pub trait BlockstoreCallback {
 /// Give it the base blockstore (i.e. OnDiskBlockStore) and it will set up the blockstore stack as needed for a cryfs device.
 pub async fn setup_blockstore_stack<CB: BlockstoreCallback + Send + Sync>(
     base_blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync>,
-    config: &ConfigLoadResult,
+    config: &CryConfig,
+    my_client_id: ClientId,
     local_state_dir: &LocalStateDir,
     integrity_config: IntegrityConfig,
     callback: CB,
 ) -> Result<CB::Result, CliError> {
     let result = lookup_cipher_async(
-        &config.config.config().cipher,
+        &config.cipher,
         CipherCallbackForBlockstoreSetup {
             base_blockstore,
             config,
+            my_client_id,
             local_state_dir,
             integrity_config,
             callback,
@@ -62,7 +64,8 @@ struct CipherCallbackForBlockstoreSetup<
     CB: BlockstoreCallback,
 > {
     base_blockstore: AsyncDropGuard<B>,
-    config: &'c ConfigLoadResult,
+    config: &'c CryConfig,
+    my_client_id: ClientId,
     local_state_dir: &'l LocalStateDir,
     integrity_config: IntegrityConfig,
     callback: CB,
@@ -74,7 +77,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
     type Result = Result<CB::Result, CliError>;
 
     async fn callback<C: CipherDef + Send + Sync + 'static>(mut self) -> Self::Result {
-        let key = match EncryptionKey::from_hex(&self.config.config.config().enc_key) {
+        let key = match EncryptionKey::from_hex(&self.config.enc_key) {
             Ok(key) => key,
             Err(err) => {
                 self.base_blockstore
@@ -99,7 +102,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
 
         let integrity_file_path = self
             .local_state_dir
-            .for_filesystem_id(&self.config.config.config().filesystem_id);
+            .for_filesystem_id(&self.config.filesystem_id);
         let integrity_file_path = match integrity_file_path {
             Ok(integrity_file_path) => integrity_file_path.join("integritydata"),
             Err(err) => {
@@ -113,7 +116,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
         let integrity_blockstore = IntegrityBlockStore::new(
             encrypted_blockstore,
             integrity_file_path,
-            self.config.my_client_id,
+            self.my_client_id,
             self.integrity_config,
         )
         .await
@@ -133,13 +136,15 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
 
 pub async fn setup_blockstore_stack_dyn(
     base_blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync>,
-    config: &ConfigLoadResult,
+    config: &CryConfig,
+    my_client_id: ClientId,
     local_state_dir: &LocalStateDir,
     integrity_config: IntegrityConfig,
 ) -> Result<AsyncDropGuard<LockingBlockStore<DynBlockStore>>, CliError> {
     setup_blockstore_stack(
         base_blockstore,
         config,
+        my_client_id,
         local_state_dir,
         integrity_config,
         DynCallback,

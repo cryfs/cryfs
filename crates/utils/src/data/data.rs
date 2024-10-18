@@ -141,7 +141,9 @@ impl Data {
 
     // TODO Use enum instead of bool for ALLOW_REALLOCATE
     // TODO Test append_writer
-    pub fn append_writer<const ALLOW_REALLOCATE: bool>(&mut self) -> impl Write + use<'_, ALLOW_REALLOCATE> {
+    pub fn append_writer<const ALLOW_REALLOCATE: bool>(
+        &mut self,
+    ) -> impl Write + use<'_, ALLOW_REALLOCATE> {
         DataAppendWriter::<'_, ALLOW_REALLOCATE> { data: self }
     }
 

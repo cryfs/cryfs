@@ -1,18 +1,15 @@
 use anyhow::Result;
+use cryfs_runner::CreateOrLoad;
 use daemonize::Daemonize;
 
 use super::console::InteractiveConsole;
-use super::runner::FilesystemRunner;
 use crate::args::{CryfsArgs, MountArgs};
-use cryfs_blockstore::{
-    AllowIntegrityViolations, IntegrityConfig, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
-};
+use cryfs_blockstore::AllowIntegrityViolations;
 use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
 };
 use cryfs_cli_utils::{
-    print_config, setup_blockstore_stack, Application, CliError, CliErrorKind, CliResultExt,
-    CliResultExtFn, Environment,
+    print_config, Application, CliError, CliErrorKind, CliResultExt, CliResultExtFn, Environment,
 };
 use cryfs_filesystem::CRYFS_VERSION;
 use cryfs_filesystem::{
@@ -109,39 +106,25 @@ impl Cli {
         self.maybe_daemonize(&mount_args)
             .map_cli_error(CliErrorKind::UnspecifiedError)?;
 
-        // TODO Runtime settings
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .thread_name(Self::NAME)
-            .enable_all()
-            .build()
-            .unwrap();
-        let missing_block_is_integrity_violation =
-            if config.config.config().missingBlockIsIntegrityViolation() {
-                MissingBlockIsIntegrityViolation::IsAViolation
-            } else {
-                MissingBlockIsIntegrityViolation::IsNotAViolation
-            };
-        let allow_integrity_violations = if mount_args.allow_integrity_violations {
-            AllowIntegrityViolations::AllowViolations
-        } else {
-            AllowIntegrityViolations::DontAllowViolations
-        };
-        runtime.block_on(setup_blockstore_stack(
-            OnDiskBlockStore::new(mount_args.basedir.to_owned()),
-            &config,
-            &self.local_state_dir,
-            IntegrityConfig {
-                allow_integrity_violations,
-                missing_block_is_integrity_violation,
-                on_integrity_violation: Box::new(|err| {
-                    // TODO
-                }),
+        cryfs_runner::mount_filesystem(
+            config.config.into_config(),
+            config.my_client_id,
+            self.local_state_dir.clone(),
+            cryfs_runner::MountArgs {
+                basedir: mount_args.basedir.clone(),
+                mountdir: mount_args.mountdir.clone(),
+                allow_integrity_violations: if mount_args.allow_integrity_violations {
+                    AllowIntegrityViolations::AllowViolations
+                } else {
+                    AllowIntegrityViolations::DontAllowViolations
+                },
+                create_or_load: if config.first_time_access {
+                    CreateOrLoad::CreateNewFilesystem
+                } else {
+                    CreateOrLoad::LoadExistingFilesystem
+                },
             },
-            FilesystemRunner {
-                mountdir: &mount_args.mountdir,
-                config: &config,
-            },
-        ))??;
+        )?;
 
         Ok(())
     }

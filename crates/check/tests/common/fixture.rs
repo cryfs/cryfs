@@ -79,7 +79,8 @@ impl FilesystemFixture {
     async fn make_locking_blockstore(&self) -> AsyncDropGuard<LockingBlockStore<DynBlockStore>> {
         setup_blockstore_stack_dyn(
             SharedBlockStore::clone(&self.blockstore),
-            &self.config,
+            &self.config.config.config(),
+            self.config.my_client_id,
             &self.tempdir.local_state_dir(),
             IntegrityConfig {
                 allow_integrity_violations: AllowIntegrityViolations::DontAllowViolations,
