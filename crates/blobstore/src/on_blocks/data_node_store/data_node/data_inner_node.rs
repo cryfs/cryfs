@@ -88,7 +88,12 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             .expect("DataInnerNode class invariant violated: Has only zero children")
     }
 
-    pub fn children(&self) -> impl Iterator<Item = BlockId> + ExactSizeIterator + '_ {
+    pub fn children(&self) -> impl Iterator<Item = BlockId>
+        + ExactSizeIterator
+        + use<'_,
+        // TODO Because of a shortcoming in rust 1.82, we have to list all generic types here. Remove this later.
+        B>
+    {
         let view = node::View::new(self.block.data().as_ref());
         let num_children = usize::try_from(view.size().read()).unwrap();
         let children_data = view.into_data().into_slice();
