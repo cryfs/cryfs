@@ -74,14 +74,14 @@ impl Application for Cli {
 impl Cli {
     async fn async_main(self, mounter: Mounter) -> Result<(), CliError> {
         // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
-        self.sanity_checks()?;
+        self.sanity_checks().await?;
         self.run_filesystem(mounter, ConsoleProgressBarManager)
             .await?;
 
         Ok(())
     }
 
-    fn sanity_checks(&self) -> Result<(), CliError> {
+    async fn sanity_checks(&self) -> Result<(), CliError> {
         let mount_args = self.mount_args();
         super::sanity_checks::check_mountdir_doesnt_contain_basedir(mount_args)
             .map_cli_error(CliErrorKind::BaseDirInsideMountDir)?;
@@ -91,6 +91,7 @@ impl Cli {
             mount_args.create_missing_basedir,
             |path| self.console().ask_create_basedir(path),
         )
+        .await
         .map_cli_error(CliErrorKind::InaccessibleBaseDir)?;
         // TODO C++ had special handling of Windows drive letters here. We should probably re-add that
         super::sanity_checks::check_dir_accessible(
@@ -99,6 +100,7 @@ impl Cli {
             mount_args.create_missing_mountpoint,
             |path| self.console().ask_create_mountdir(path),
         )
+        .await
         .map_cli_error(CliErrorKind::InaccessibleMountDir)?;
         Ok(())
     }

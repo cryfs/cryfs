@@ -12,6 +12,11 @@ impl TempFile {
         Ok(Self { path })
     }
 
+    pub async fn create_async(path: PathBuf) -> Result<Self> {
+        tokio::fs::File::create(&path).await?;
+        Ok(Self { path })
+    }
+
     pub fn path(&self) -> &Path {
         &self.path
     }
