@@ -34,23 +34,17 @@ pub struct MountArgs {
 
 /// On error: will return the error
 /// On success: will call on_successfully_mounted and then block until the filesystem is unmounted, then return Ok.
-pub fn mount_filesystem(
+pub async fn mount_filesystem(
     mount_args: MountArgs,
     on_successfully_mounted: impl FnOnce() + Send + Sync,
 ) -> Result<(), CliError> {
-    // TODO Runtime settings
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .thread_name("cryfs")
-        .enable_all()
-        .build()
-        .unwrap();
     let missing_block_is_integrity_violation =
         if mount_args.config.missingBlockIsIntegrityViolation() {
             MissingBlockIsIntegrityViolation::IsAViolation
         } else {
             MissingBlockIsIntegrityViolation::IsNotAViolation
         };
-    runtime.block_on(setup_blockstore_stack(
+    setup_blockstore_stack(
         OnDiskBlockStore::new(mount_args.basedir.to_owned()),
         &mount_args.config,
         mount_args.my_client_id,
@@ -68,7 +62,8 @@ pub fn mount_filesystem(
             create_or_load: mount_args.create_or_load,
             on_successfully_mounted,
         },
-    ))??;
+    )
+    .await??;
 
     Ok(())
 }

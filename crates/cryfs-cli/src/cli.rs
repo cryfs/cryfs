@@ -63,14 +63,24 @@ impl Application for Cli {
             Mounter::run_in_background().map_cli_error(CliErrorKind::UnspecifiedError)?
         };
 
-        self.sanity_checks()?;
-        self.run_filesystem(mounter, ConsoleProgressBarManager)?;
-
-        Ok(())
+        // Initialize the tokio runtime in the parent process.
+        // If we're mounting in background, then the child process creates its own separate runtime.
+        // If we're mounting in foreground, the runtime created here will be used to mount the file system.
+        let runtime = cryfs_runner::init_tokio();
+        runtime.block_on(self.async_main(mounter))
     }
 }
 
 impl Cli {
+    async fn async_main(self, mounter: Mounter) -> Result<(), CliError> {
+        // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
+        self.sanity_checks()?;
+        self.run_filesystem(mounter, ConsoleProgressBarManager)
+            .await?;
+
+        Ok(())
+    }
+
     fn sanity_checks(&self) -> Result<(), CliError> {
         let mount_args = self.mount_args();
         super::sanity_checks::check_mountdir_doesnt_contain_basedir(mount_args)
@@ -93,17 +103,11 @@ impl Cli {
         Ok(())
     }
 
-    fn run_filesystem(
+    async fn run_filesystem(
         &self,
         mut mounter: Mounter,
         progress_bars: impl ProgressBarManager,
     ) -> Result<(), CliError> {
-        // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
-        //      However, we cannot use tokio before we daemonize (https://github.com/tokio-rs/tokio/issues/4301) and we would like to daemonize
-        //      as late as possible so we can show error messages to the user if something goes wrong. But fork+exec is fine, just fork by itself breaks tokio.
-        //      Maybe we need to split out a cryfs-mount executable and call that from cryfs-cli? But then how do the executables find each other?
-        //      Or use the same binary with different arguments? Maybe `cryfs` just calls `cryfs -f`? Or maybe use a different async executor before daemonizing?
-
         let mount_args = self.mount_args();
         // TODO C++ code has lots more logic here, migrate that.
 
@@ -130,26 +134,28 @@ impl Cli {
             println!("To see more information, run `cryfs --help`.");
         };
 
-        mounter.mount_filesystem(
-            cryfs_runner::MountArgs {
-                basedir: mount_args.basedir.clone(),
-                mountdir: mount_args.mountdir.clone(),
-                allow_integrity_violations: if mount_args.allow_integrity_violations {
-                    AllowIntegrityViolations::AllowViolations
-                } else {
-                    AllowIntegrityViolations::DontAllowViolations
+        mounter
+            .mount_filesystem(
+                cryfs_runner::MountArgs {
+                    basedir: mount_args.basedir.clone(),
+                    mountdir: mount_args.mountdir.clone(),
+                    allow_integrity_violations: if mount_args.allow_integrity_violations {
+                        AllowIntegrityViolations::AllowViolations
+                    } else {
+                        AllowIntegrityViolations::DontAllowViolations
+                    },
+                    create_or_load: if config.first_time_access {
+                        CreateOrLoad::CreateNewFilesystem
+                    } else {
+                        CreateOrLoad::LoadExistingFilesystem
+                    },
+                    config: config.config.into_config(),
+                    my_client_id: config.my_client_id,
+                    local_state_dir: self.local_state_dir.clone(),
                 },
-                create_or_load: if config.first_time_access {
-                    CreateOrLoad::CreateNewFilesystem
-                } else {
-                    CreateOrLoad::LoadExistingFilesystem
-                },
-                config: config.config.into_config(),
-                my_client_id: config.my_client_id,
-                local_state_dir: self.local_state_dir.clone(),
-            },
-            on_successfully_mounted,
-        )?;
+                on_successfully_mounted,
+            )
+            .await?;
 
         if mount_args.foreground {
             // In foreground mode, we only return after unmount

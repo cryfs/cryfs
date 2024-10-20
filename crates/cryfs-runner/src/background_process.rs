@@ -69,7 +69,13 @@ pub enum Response {
     MountResponse(Result<(), MountError>),
 }
 
-pub fn background_main(mut rpc_server: RpcServer<Request, Response>) -> ! {
+pub fn background_main(rpc_server: RpcServer<Request, Response>) -> ! {
+    // Now we're post-daemonization, so we can initialize tokio.
+    let runtime = crate::init_tokio();
+    runtime.block_on(background_async_main(rpc_server))
+}
+
+async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> ! {
     while let Ok(request) = rpc_server.next_request() {
         match request {
             Request::StatusCheckRequest => {
@@ -85,7 +91,7 @@ pub fn background_main(mut rpc_server: RpcServer<Request, Response>) -> ! {
                     close_stdout_stderr();
                 };
                 let mount_result =
-                    super::runner::mount_filesystem(mount_args, on_successfully_mounted);
+                    super::runner::mount_filesystem(mount_args, on_successfully_mounted).await;
                 match mount_result {
                     Ok(()) => {
                         // `mount_filesystem` only returns with `Ok` if the filesystem was correctly mounted **and then later unmounted**.
