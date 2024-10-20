@@ -7,6 +7,7 @@ use futures::{
     stream::{BoxStream, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use log::warn;
+use serde::{Deserialize, Serialize};
 use std::collections::hash_set::HashSet;
 use std::fmt::{self, Debug};
 use std::num::NonZeroU32;
@@ -46,7 +47,7 @@ binary_layout::binary_layout!(block_layout, LittleEndian, {
 
 const HEADER_SIZE: usize = block_layout::data::OFFSET;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AllowIntegrityViolations {
     AllowViolations,
     DontAllowViolations,

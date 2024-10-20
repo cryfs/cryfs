@@ -1,25 +1,88 @@
 use anyhow::{Context, Result};
-use std::path::Path;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
-use cryfs_blockstore::{BlockStore, InvalidBlockSizeError, LockingBlockStore};
-use cryfs_cli_utils::{BlockstoreCallback, CliError, CliErrorKind, CliResultExt, CliResultExtFn};
-use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice};
+use cryfs_blockstore::{
+    AllowIntegrityViolations, BlockStore, ClientId, IntegrityConfig, InvalidBlockSizeError,
+    LockingBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
+};
+use cryfs_cli_utils::{
+    setup_blockstore_stack, BlockstoreCallback, CliError, CliErrorKind, CliResultExt,
+    CliResultExtFn,
+};
+use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::backend::fuser;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CreateOrLoad {
     CreateNewFilesystem,
     LoadExistingFilesystem,
 }
-pub struct FilesystemRunner<'m, 'c> {
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MountArgs {
+    pub basedir: PathBuf,
+    pub mountdir: PathBuf,
+    pub config: CryConfig,
+    pub allow_integrity_violations: AllowIntegrityViolations,
+    pub create_or_load: CreateOrLoad,
+    pub my_client_id: ClientId,
+    pub local_state_dir: LocalStateDir,
+}
+
+/// On error: will return the error
+/// On success: will call on_successfully_mounted and then block until the filesystem is unmounted, then return Ok.
+pub fn mount_filesystem(
+    mount_args: MountArgs,
+    on_successfully_mounted: impl FnOnce() + Send + Sync,
+) -> Result<(), CliError> {
+    // TODO Runtime settings
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .thread_name("cryfs")
+        .enable_all()
+        .build()
+        .unwrap();
+    let missing_block_is_integrity_violation =
+        if mount_args.config.missingBlockIsIntegrityViolation() {
+            MissingBlockIsIntegrityViolation::IsAViolation
+        } else {
+            MissingBlockIsIntegrityViolation::IsNotAViolation
+        };
+    runtime.block_on(setup_blockstore_stack(
+        OnDiskBlockStore::new(mount_args.basedir.to_owned()),
+        &mount_args.config,
+        mount_args.my_client_id,
+        &mount_args.local_state_dir,
+        IntegrityConfig {
+            allow_integrity_violations: mount_args.allow_integrity_violations,
+            missing_block_is_integrity_violation,
+            on_integrity_violation: Box::new(|err| {
+                // TODO
+            }),
+        },
+        FilesystemRunner {
+            mountdir: &mount_args.mountdir,
+            config: &mount_args.config,
+            create_or_load: mount_args.create_or_load,
+            on_successfully_mounted,
+        },
+    ))??;
+
+    Ok(())
+}
+
+struct FilesystemRunner<'m, 'c, OnSuccessfullyMounted: FnOnce()> {
     pub mountdir: &'m Path,
     pub config: &'c CryConfig,
     pub create_or_load: CreateOrLoad,
+    pub on_successfully_mounted: OnSuccessfullyMounted,
 }
 
-impl<'m, 'c> BlockstoreCallback for FilesystemRunner<'m, 'c> {
+impl<'m, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
+    for FilesystemRunner<'m, 'c, OnSuccessfullyMounted>
+{
     type Result = Result<(), CliError>;
 
     async fn callback<B: BlockStore + Send + Sync + AsyncDrop + 'static>(
@@ -59,8 +122,13 @@ impl<'m, 'c> BlockstoreCallback for FilesystemRunner<'m, 'c> {
         };
 
         let fs = |_uid, _gid| device;
-        fuser::mount(fs, self.mountdir, tokio::runtime::Handle::current())
-            .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;
+        fuser::mount(
+            fs,
+            self.mountdir,
+            tokio::runtime::Handle::current(),
+            self.on_successfully_mounted,
+        )
+        .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;
         Ok(())
     }
 }

@@ -1,10 +1,11 @@
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::config::FilesystemId;
 
 /// This struct helps find the right locations in the local file system to store local state
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LocalStateDir {
     app_dir: PathBuf,
 }

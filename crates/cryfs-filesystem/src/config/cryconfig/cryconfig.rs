@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
 use cryfs_version::Version;
@@ -8,7 +9,7 @@ pub const FILESYSTEM_FORMAT_VERSION: Version = konst::unwrap_ctx!(Version::parse
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
 /// // TODO Do we need this to be clone?
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CryConfig {
     /// Blob ID of the root directory
     /// // TODO Store this as a BlobId struct instead of String

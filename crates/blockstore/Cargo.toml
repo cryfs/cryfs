@@ -28,6 +28,7 @@ mockall = { workspace = true, optional = true }
 rand.workspace = true
 sysinfo.workspace = true
 thiserror.workspace = true
+serde.workspace = true
 tokio = { workspace = true, features = ["fs"] }
 tokio-stream = { workspace = true, features = ["fs"] }
 

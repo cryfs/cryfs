@@ -658,6 +658,7 @@ dependencies = [
  "lzzzz",
  "mockall",
  "rand 0.8.5",
+ "serde",
  "sysinfo",
  "tempdir",
  "thiserror",

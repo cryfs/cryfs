@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FilesystemId([u8; 16]);
 
 impl FilesystemId {

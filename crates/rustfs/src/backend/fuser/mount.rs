@@ -11,11 +11,13 @@ pub fn mount<Fs>(
     fs: impl IntoFsLL<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
+    on_successfully_mounted: impl FnOnce(),
 ) -> std::io::Result<()>
 where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     let fs = spawn_mount(fs, mountpoint, runtime)?;
+    on_successfully_mounted();
     fs.block_until_unmounted();
     Ok(())
 }

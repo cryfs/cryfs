@@ -25,5 +25,5 @@ fn main() {
         .thread_name("rustfs")
         .build()
         .unwrap();
-    cryfs_rustfs::backend::fuser::mount(fs, mountdir, runtime.handle().clone()).unwrap();
+    cryfs_rustfs::backend::fuser::mount(fs, mountdir, runtime.handle().clone(), || {}).unwrap();
 }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cryfs_runner::{CreateOrLoad, MountProcess};
+use cryfs_runner::{CreateOrLoad, Mounter};
 
 use super::console::InteractiveConsole;
 use crate::args::{CryfsArgs, MountArgs};
@@ -40,7 +40,6 @@ impl Application for Cli {
     // Returns None if the program should exit immediately with a success error code
     fn new(args: CryfsArgs, env: Environment) -> Result<Self, CliError> {
         let is_noninteractive = env.is_noninteractive;
-
         // TODO Make sure we have tests for the local_state_dir location
         let local_state_dir = cryfs_filesystem::localstate::LocalStateDir::new(env.local_state_dir);
 
@@ -57,8 +56,15 @@ impl Application for Cli {
             return Ok(());
         }
 
+        let mounter = if self.mount_args().foreground {
+            Mounter::run_in_foreground().map_cli_error(CliErrorKind::UnspecifiedError)?
+        } else {
+            // We need to daemonize **before** initializing tokio because tokio doesn't support fork, see https://github.com/tokio-rs/tokio/issues/4301
+            Mounter::run_in_background().map_cli_error(CliErrorKind::UnspecifiedError)?
+        };
+
         self.sanity_checks()?;
-        self.run_filesystem(ConsoleProgressBarManager)?;
+        self.run_filesystem(mounter, ConsoleProgressBarManager)?;
 
         Ok(())
     }
@@ -87,7 +93,11 @@ impl Cli {
         Ok(())
     }
 
-    fn run_filesystem(&self, progress_bars: impl ProgressBarManager) -> Result<(), CliError> {
+    fn run_filesystem(
+        &self,
+        mut mounter: Mounter,
+        progress_bars: impl ProgressBarManager,
+    ) -> Result<(), CliError> {
         // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
         //      However, we cannot use tokio before we daemonize (https://github.com/tokio-rs/tokio/issues/4301) and we would like to daemonize
         //      as late as possible so we can show error messages to the user if something goes wrong. But fork+exec is fine, just fork by itself breaks tokio.
@@ -100,14 +110,27 @@ impl Cli {
         let config = self.load_or_create_config(progress_bars)?;
         print_config(&config);
 
-        // We need to daemonize **before** initializing tokio because tokio doesn't support fork, see https://github.com/tokio-rs/tokio/issues/4301
-        // TODO Can we delay daemonization until after we know the filesystem was mounted successfully?
-        let process = MountProcess::daemonize().map_cli_error(CliErrorKind::UnspecifiedError)?;
+        let on_successfully_mounted = || {
+            println!(
+                "CryFS has been successfully mounted to {}",
+                mount_args.mountdir.display()
+            );
+            if mount_args.foreground {
+                println!(
+                    // TODO Add necessary escape sequences to the mountdir path, e.g. " -> \"
+                    "You can unmount it by pressing Ctrl+C or by running `cryfs-unmount \"{}\"`.",
+                    mount_args.mountdir.display(),
+                );
+            } else {
+                println!(
+                    "You can unmount it by running `cryfs-unmount \"{}\"`.",
+                    mount_args.mountdir.display(),
+                );
+            }
+            println!("To see more information, run `cryfs --help`.");
+        };
 
-        cryfs_runner::mount_filesystem(
-            config.config.into_config(),
-            config.my_client_id,
-            self.local_state_dir.clone(),
+        mounter.mount_filesystem(
             cryfs_runner::MountArgs {
                 basedir: mount_args.basedir.clone(),
                 mountdir: mount_args.mountdir.clone(),
@@ -121,8 +144,17 @@ impl Cli {
                 } else {
                     CreateOrLoad::LoadExistingFilesystem
                 },
+                config: config.config.into_config(),
+                my_client_id: config.my_client_id,
+                local_state_dir: self.local_state_dir.clone(),
             },
+            on_successfully_mounted,
         )?;
+
+        if mount_args.foreground {
+            // In foreground mode, we only return after unmount
+            println!("CryFS has been unmounted.");
+        }
 
         Ok(())
     }

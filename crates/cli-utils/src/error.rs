@@ -1,4 +1,5 @@
 use derive_more::Display;
+use serde::{Deserialize, Serialize};
 use std::{error::Error, process::ExitCode};
 
 // Don't derive `Error` for `CliError` because we don't want a thrown CliError to be converted back to `anyhow::Error`, that might swallow the exit code.
@@ -46,7 +47,7 @@ where
 
 // TODO Ensure that all of these errors, where C++ throws them, we throw them too and return them correctly to the shell. Grep our C++ code for when they're thrown.
 // TODO Test error scenarios actually return the correct exit code to the shell
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum CliErrorKind {
     /// No error happened, everything is ok
     Success,

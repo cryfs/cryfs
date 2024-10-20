@@ -21,12 +21,11 @@ where
 
     let rpc_pipes = RpcConnection::new_pipe()?;
 
-    // TODO What to do with stdout/stderr of child?
-
     // get current umask value because `daemonize` force overwrites it but we don't really want it to change, so we give it the old value
     let umask = unsafe { libc::umask(0) };
     match Daemonize::new()
         .umask(umask)
+        // We're keeping stdout and stderr bound to the parent at first, but will close them in the child after mounting was successful
         .stdout(Stdio::keep())
         .stderr(Stdio::keep())
         .execute()

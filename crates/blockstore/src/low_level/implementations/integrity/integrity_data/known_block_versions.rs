@@ -2,6 +2,7 @@ use anyhow::{bail, ensure, Context, Result};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
 use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::{Entry, HashMap};
 use std::convert::Infallible;
 use std::hash::Hash;
@@ -20,7 +21,7 @@ use cryfs_utils::{
 use super::integrity_violation_error::IntegrityViolationError;
 use super::serialization::KnownBlockVersionsSerialized;
 
-#[derive(PartialEq, Eq, Hash, BinRead, BinWrite, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, BinRead, BinWrite, Clone, Copy, Serialize, Deserialize)]
 #[brw(little)]
 pub struct ClientId {
     // TODO Tuple struct would be better but https://github.com/jam1garner/binwrite/issues/3
