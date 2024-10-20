@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+//#![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
 
 use std::path::PathBuf;
@@ -14,6 +14,11 @@ mod runner;
 pub use runner::CreateOrLoad;
 use runner::FilesystemRunner;
 
+mod mount_process;
+pub use mount_process::MountProcess;
+
+mod ipc;
+
 cryfs_version::assert_cargo_version_equals_git_version!();
 
 #[derive(Debug)]
@@ -24,6 +29,7 @@ pub struct MountArgs {
     pub create_or_load: CreateOrLoad,
 }
 
+// TODO This should not be public, instead call sites should use MountProcess
 pub fn mount_filesystem(
     config: CryConfig,
     my_client_id: ClientId,

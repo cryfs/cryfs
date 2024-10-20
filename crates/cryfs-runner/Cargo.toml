@@ -18,5 +18,10 @@ cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
+daemonize.workspace = true
+interprocess.workspace = true
+bincode.workspace = true
 tokio.workspace = true
+libc.workspace = true
 log.workspace = true
+serde.workspace = true

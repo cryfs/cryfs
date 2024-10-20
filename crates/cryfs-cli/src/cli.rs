@@ -1,6 +1,5 @@
 use anyhow::Result;
-use cryfs_runner::CreateOrLoad;
-use daemonize::Daemonize;
+use cryfs_runner::{CreateOrLoad, MountProcess};
 
 use super::console::InteractiveConsole;
 use crate::args::{CryfsArgs, MountArgs};
@@ -103,8 +102,7 @@ impl Cli {
 
         // We need to daemonize **before** initializing tokio because tokio doesn't support fork, see https://github.com/tokio-rs/tokio/issues/4301
         // TODO Can we delay daemonization until after we know the filesystem was mounted successfully?
-        self.maybe_daemonize(&mount_args)
-            .map_cli_error(CliErrorKind::UnspecifiedError)?;
+        let process = MountProcess::daemonize().map_cli_error(CliErrorKind::UnspecifiedError)?;
 
         cryfs_runner::mount_filesystem(
             config.config.into_config(),
@@ -133,18 +131,6 @@ impl Cli {
         for cipher in cryfs_filesystem::config::ALL_CIPHERS {
             println!("{}", cipher);
         }
-    }
-
-    fn maybe_daemonize(&self, mount_args: &MountArgs) -> Result<()> {
-        if mount_args.foreground {
-            println!("Mounting in foreground mode. CryFS will not exit until the filesystem is unmounted.");
-        } else {
-            println!("Mounting in background mode. CryFS will continue to run in the background.");
-            let umask = unsafe { libc::umask(0) }; // get current umask value because `daemonize` force overwrites it but we don't really want it to change, so we give it the old value
-            Daemonize::new().umask(umask).start()?;
-            println!("We're in background now");
-        }
-        Ok(())
     }
 
     // TODO Test the console flows for opening an existing/creating a new file system
