@@ -129,6 +129,7 @@ impl Cli {
                 );
             } else {
                 println!(
+                    // TODO Add necessary escape sequences to the mountdir path, e.g. " -> \"
                     "You can unmount it by running `cryfs-unmount \"{}\"`.",
                     mount_args.mountdir.display(),
                 );
