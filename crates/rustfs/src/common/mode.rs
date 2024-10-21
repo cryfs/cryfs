@@ -35,7 +35,6 @@ const fn S_ISLNK(mode: Mode) -> bool {
 }
 
 #[derive(
-    Debug,
     Default,
     Clone,
     Copy,
@@ -130,6 +129,12 @@ impl Mode {
             // TODO What to do here? Maybe we should instead check this invariant when Mode objects get created or modified.
             panic!("invalid mode")
         }
+    }
+}
+
+impl std::fmt::Debug for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Mode({:o})", self.0)
     }
 }
 
