@@ -87,10 +87,7 @@ mod tests {
         let response = rpc
             .recv_response(std::time::Duration::from_secs(2))
             .unwrap_err();
-        assert_eq!(
-            "io error: failed to fill whole buffer",
-            response.to_string()
-        );
+        assert_eq!("Sender closed the pipe", response.to_string());
     }
 
     #[test]
@@ -103,9 +100,6 @@ mod tests {
         let response = rpc
             .recv_response(std::time::Duration::from_secs(2))
             .unwrap_err();
-        assert_eq!(
-            "io error: failed to fill whole buffer",
-            response.to_string()
-        );
+        assert_eq!("Sender closed the pipe", response.to_string());
     }
 }

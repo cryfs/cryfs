@@ -84,7 +84,12 @@ where
                         }
                         thread::sleep(Duration::from_millis(1));
                     }
-                    _ => bail!(error),
+                    bincode::ErrorKind::Io(err)
+                        if err.kind() == std::io::ErrorKind::UnexpectedEof =>
+                    {
+                        bail!("Sender closed the pipe");
+                    }
+                    _ => bail!(anyhow::anyhow!("{error:?}")),
                 },
             }
         }
@@ -217,9 +222,7 @@ mod tests {
             drop(sender);
             let error = recver.recv_timeout(Duration::from_secs(1)).unwrap_err();
             assert!(
-                error
-                    .to_string()
-                    .contains("io error: failed to fill whole buffer"),
+                error.to_string().contains("Sender closed the pipe"),
                 "Unexpected error: {:?}",
                 error,
             );
