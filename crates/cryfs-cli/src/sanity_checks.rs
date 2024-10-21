@@ -26,7 +26,7 @@ pub async fn check_dir_accessible(
             bail!("{name} '{}' does not exist", path.display())
         }
     }
-    if tokio::fs::metadata(path).await?.is_dir() {
+    if !tokio::fs::metadata(path).await?.is_dir() {
         // TODO Return error with error code
         bail!("{name} '{}' is not a directory", path.display())
     }
