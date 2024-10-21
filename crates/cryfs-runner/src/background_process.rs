@@ -43,7 +43,6 @@ impl BackgroundProcess {
             Response::MountResponse(Ok(())) => Ok(()),
             Response::MountResponse(Err(err)) => Err(CliError {
                 kind: err.cli_error_kind,
-                // TODO Should we report more error info than just the message to the parent process?
                 error: anyhow!("{}", err.message),
             }),
             response => panic!("Unexpected response: {response:?}"),
@@ -100,8 +99,7 @@ async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> 
                     Err(err) => {
                         let mount_error = MountError {
                             cli_error_kind: err.kind,
-                            // TODO Should we report more error info than just the message to the parent process?
-                            message: err.to_string(),
+                            message: format!("{:?}", err.error),
                         };
                         rpc_server
                             .send_response(&Response::MountResponse(Err(mount_error)))
