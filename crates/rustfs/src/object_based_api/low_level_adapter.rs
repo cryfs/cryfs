@@ -77,6 +77,15 @@ where
         })
     }
 
+    // TODO Test this is triggered by each operation
+    async fn trigger_on_operation(&self) -> FsResult<()> {
+        // TODO Many operations need to lock fs too, locking here means we lock it twice. Optimize perf.
+        let fs = self.fs.read().await;
+        let fs = fs.get();
+        fs.on_operation().await?;
+        Ok(())
+    }
+
     // TODO &self instead of `fs`, `inodes`
     /// This function allows file system operations to abstract over whether a requested inode number is the root node or whether it is looked up from the inode table `inodes`.
     async fn get_inode(
@@ -89,7 +98,7 @@ where
         if ino == FUSE_ROOT_ID {
             let fs = self.fs.read().await;
             let fs = fs.get();
-            let node = fs.rootdir().await?;
+            let node: <Fs as Device>::Dir<'_> = fs.rootdir().await?;
             Ok(AsyncDropArc::new(node.as_node()))
         } else {
             let inodes = self.inodes.read().await;
@@ -140,6 +149,8 @@ where
         parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<ReplyEntry> {
+        self.trigger_on_operation().await?;
+
         // TODO Will lookup() be called multiple times with the same parent+name and is it ok to give the second call a different inode while the first call is still ongoing?
         let parent_node = self.get_inode(parent_ino).await?;
         let mut child = with_async_drop_2!(parent_node, {
@@ -169,6 +180,8 @@ where
     }
 
     async fn forget(&self, _req: &RequestInfo, ino: InodeNumber, nlookup: u64) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // From the fuser documentation:
         // ```
         // The nlookup parameter indicates the number of lookups previously performed on
@@ -190,6 +203,8 @@ where
     }
 
     async fn getattr(&self, _req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr> {
+        self.trigger_on_operation().await?;
+
         let mut node = self.get_inode(ino).await?;
         let attr = node.getattr().await;
         node.async_drop().await?;
@@ -218,6 +233,8 @@ where
         bkuptime: Option<SystemTime>,
         flags: Option<u32>,
     ) -> FsResult<ReplyAttr> {
+        self.trigger_on_operation().await?;
+
         // TODO What to do with crtime, chgtime, bkuptime, flags?
         // TODO setattr based on fh?
         let mut node = self.get_inode(ino).await?;
@@ -238,6 +255,13 @@ where
         R: 'static,
         C: Send + 'static + for<'a> Callback<FsResult<&'a str>, R>,
     {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                return callback.call(Err(err));
+            }
+        }
+
         let mut inode = match self.get_inode(ino).await {
             Ok(inode) => inode,
             Err(err) => return callback.call(Err(err)),
@@ -272,6 +296,8 @@ where
         umask: u32,
         rdev: u32,
     ) -> FsResult<ReplyEntry> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -284,6 +310,8 @@ where
         mode: Mode,
         _umask: u32,
     ) -> FsResult<ReplyEntry> {
+        self.trigger_on_operation().await?;
+
         // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
         // TODO see https://github.com/cberner/fuser/issues/256
         let parent = self.get_inode(parent_ino).await?;
@@ -309,6 +337,8 @@ where
         parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
@@ -323,6 +353,8 @@ where
         parent_ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
@@ -338,6 +370,8 @@ where
         name: &PathComponent,
         link: &str,
     ) -> FsResult<ReplyEntry> {
+        self.trigger_on_operation().await?;
+
         let parent = self.get_inode(parent_ino).await?;
         let (attrs, child) = with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
@@ -364,6 +398,8 @@ where
         newname: &PathComponent,
         _flags: u32,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Honor flags
         // TODO Check that oldparent+oldname/newparent+newname aren't ancestors of each other, or at least write a test that fuse already blocks that
         if oldparent_ino == newparent_ino {
@@ -399,6 +435,8 @@ where
         newparent_ino: InodeNumber,
         newname: &PathComponent,
     ) -> FsResult<ReplyEntry> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -409,6 +447,8 @@ where
         ino: InodeNumber,
         flags: OpenFlags,
     ) -> FsResult<ReplyOpen> {
+        self.trigger_on_operation().await?;
+
         let inode = self.get_inode(ino).await?;
         with_async_drop_2!(inode, {
             let file = inode.as_file().await?;
@@ -438,6 +478,13 @@ where
         R: 'static,
         C: Send + 'static + for<'a> Callback<FsResult<&'a [u8]>, R>,
     {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                return callback.call(Err(err));
+            }
+        }
+
         let open_files = self.open_files.read().await;
         let Some(open_file) = open_files.get(fh) else {
             log::error!("read: no open file with handle {}", u64::from(fh));
@@ -463,6 +510,8 @@ where
         _flags: i32,
         _lock_owner: Option<u64>,
     ) -> FsResult<ReplyWrite> {
+        self.trigger_on_operation().await?;
+
         // TODO What to do with WriteFlags, flags, lock_owner?
         let open_files = self.open_files.read().await;
         let Some(open_file) = open_files.get(fh) else {
@@ -484,6 +533,8 @@ where
         fh: FileHandle,
         _lock_owner: u64,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO What to do about lock_owner?
         let open_files = self.open_files.read().await;
         let Some(open_file) = open_files.get(fh) else {
@@ -504,6 +555,8 @@ where
         _lock_owner: Option<u64>,
         flush: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Would it make sense to have `fh` always be equal to `ino`? Might simplify some things. Also, we could add an `assert_eq!(ino, fh)` here.
 
         // TODO What to do with flags, lock_owner?
@@ -524,6 +577,8 @@ where
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO What to do about lock_owner?
         let open_files = self.open_files.read().await;
         let Some(open_file) = open_files.get(fh) else {
@@ -541,6 +596,8 @@ where
         ino: InodeNumber,
         flags: i32,
     ) -> FsResult<ReplyOpen> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Ok(ReplyOpen {
             fh: FileHandle::from(0),
@@ -556,6 +613,14 @@ where
         offset: NumBytes,
         reply: ReplyDirectory,
     ) {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                reply.error(err.system_error_code());
+                return;
+            }
+        }
+
         // TODO Allow readdir on fh instead of ino?
         let node = match self.get_inode(ino).await {
             Ok(node) => node,
@@ -625,6 +690,14 @@ where
         offset: NumBytes,
         reply: ReplyDirectoryPlus,
     ) {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                reply.error(err.system_error_code());
+                return;
+            }
+        }
+
         // TODO
         reply.error(libc::ENOSYS)
     }
@@ -636,6 +709,8 @@ where
         fh: FileHandle,
         flags: i32,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Ok(())
     }
@@ -647,11 +722,15 @@ where
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
 
     async fn statfs(&self, _req: &RequestInfo, _ino: InodeNumber) -> FsResult<Statfs> {
+        self.trigger_on_operation().await?;
+
         self.fs.read().await.get().statfs().await
     }
 
@@ -664,6 +743,8 @@ where
         flags: i32,
         position: NumBytes,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -676,6 +757,14 @@ where
         size: NumBytes,
         reply: ReplyXattr,
     ) {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                reply.error(err.system_error_code());
+                return;
+            }
+        }
+
         // TODO
         reply.error(libc::ENOSYS)
     }
@@ -687,6 +776,14 @@ where
         size: NumBytes,
         reply: ReplyXattr,
     ) {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                reply.error(err.system_error_code());
+                return;
+            }
+        }
+
         // TODO
         reply.error(libc::ENOSYS)
     }
@@ -697,11 +794,15 @@ where
         ino: InodeNumber,
         name: &PathComponent,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
 
     async fn access(&self, req: &RequestInfo, ino: InodeNumber, mask: i32) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement access?
         Ok(())
     }
@@ -715,6 +816,8 @@ where
         _umask: u32,
         flags: i32,
     ) -> FsResult<ReplyCreate> {
+        self.trigger_on_operation().await?;
+
         // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
         // TODO see https://github.com/cberner/fuser/issues/256
         let parent = self.get_inode(parent_ino).await?;
@@ -751,6 +854,8 @@ where
         typ: i32,
         pid: u32,
     ) -> FsResult<ReplyLock> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -767,6 +872,8 @@ where
         pid: u32,
         sleep: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -778,6 +885,8 @@ where
         blocksize: NumBytes,
         idx: u64,
     ) -> FsResult<ReplyBmap> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -794,6 +903,14 @@ where
         out_size: u32,
         reply: ReplyIoctl,
     ) {
+        match self.trigger_on_operation().await {
+            Ok(()) => (),
+            Err(err) => {
+                reply.error(err.system_error_code());
+                return;
+            }
+        }
+
         // TODO
         reply.error(libc::ENOSYS)
     }
@@ -807,6 +924,8 @@ where
         length: NumBytes,
         mode: Mode,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -819,6 +938,8 @@ where
         offset: NumBytes,
         whence: i32,
     ) -> FsResult<ReplyLseek> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -835,12 +956,16 @@ where
         len: NumBytes,
         flags: u32,
     ) -> FsResult<ReplyWrite> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
 
     #[cfg(target_os = "macos")]
     async fn setvolname(&self, req: &RequestInfo, name: &str) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
@@ -855,12 +980,16 @@ where
         newname: &PathComponent,
         options: u64,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }
 
     #[cfg(target_os = "macos")]
     async fn getxtimes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyXTimes> {
+        self.trigger_on_operation().await?;
+
         // TODO
         Err(FsError::NotImplemented)
     }

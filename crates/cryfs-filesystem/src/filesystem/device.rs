@@ -1,10 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
 use futures::join;
 use maybe_owned::MaybeOwned;
-use std::fmt::Debug;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::{fmt::Debug, time::Instant};
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
@@ -28,6 +30,9 @@ where
 {
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     root_blob_id: BlobId,
+
+    /// Time of the latest operation that was executed on the filesystem
+    last_access_time: Arc<AtomicInstant>,
 }
 
 impl<B> CryDevice<B>
@@ -39,6 +44,7 @@ where
         Self {
             blobstore: AsyncDropArc::new(FsBlobStore::new(blobstore)),
             root_blob_id,
+            last_access_time: Arc::new(AtomicInstant::now()),
         }
     }
 
@@ -51,6 +57,7 @@ where
             Ok(()) => Ok(Self {
                 blobstore: AsyncDropArc::new(fsblobstore),
                 root_blob_id,
+                last_access_time: Arc::new(AtomicInstant::now()),
             }),
             Err(err) => {
                 fsblobstore.async_drop().await?;
@@ -58,13 +65,7 @@ where
             }
         }
     }
-}
 
-impl<B> CryDevice<B>
-where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
-{
     async fn load_blob(
         &self,
         path: impl IntoIterator<Item = &PathComponent>,
@@ -244,6 +245,11 @@ where
             }
         }
     }
+
+    /// Returns the last time the filesystem was accessed. This is updated on every operation.
+    pub fn last_access_time(&self) -> Arc<AtomicInstant> {
+        Arc::clone(&self.last_access_time)
+    }
 }
 
 #[async_trait]
@@ -257,6 +263,12 @@ where
     type Symlink<'a> = CrySymlink<'a, B>;
     type File<'a> = CryFile<'a, B>;
     type OpenFile = CryOpenFile<B>;
+
+    async fn on_operation(&self) -> FsResult<()> {
+        self.last_access_time
+            .store(Instant::now(), Ordering::Relaxed);
+        Ok(())
+    }
 
     async fn rootdir(&self) -> FsResult<Self::Dir<'_>> {
         let node_info = NodeInfo::new_rootdir(self.root_blob_id);

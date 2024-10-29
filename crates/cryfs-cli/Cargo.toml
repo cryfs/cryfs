@@ -24,6 +24,7 @@ cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 dialoguer.workspace = true
+humantime.workspace = true
 tokio.workspace = true
 log.workspace = true
 

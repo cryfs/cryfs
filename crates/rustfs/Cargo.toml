@@ -12,27 +12,28 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-cryfs-utils = {path = "../utils"}
+cryfs-utils = { path = "../utils" }
 derive_more.workspace = true
-fuse_mt = {workspace = true, optional = true}
-fuse_mt_fuser = {workspace = true, optional = true}
-fuser = {workspace = true, optional = true}
+fuse_mt = { workspace = true, optional = true }
+fuse_mt_fuser = { workspace = true, optional = true }
+fuser = { workspace = true, optional = true }
 futures.workspace = true
 libc.workspace = true
 log.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true
 rstest_reuse.workspace = true
-tokio = {workspace = true, features=["fs"]}
+tokio = { workspace = true, features = ["fs"] }
 # TODO env_logger and nix are only needed for the passthrough example
 env_logger.workspace = true
-nix = {workspace = true, features=["fs", "user", "uio"]}
+nix = { workspace = true, features = ["fs", "user", "uio"] }
 mockall.workspace = true
 tempdir.workspace = true
-cryfs-utils = {path = "../utils", features=["testutils"]}
+cryfs-utils = { path = "../utils", features = ["testutils"] }
 users.workspace = true
 
 [features]

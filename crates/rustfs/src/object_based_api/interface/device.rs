@@ -22,6 +22,18 @@ pub trait Device {
         Self: 'a;
     type OpenFile: super::OpenFile + AsyncDrop<Error = FsError>;
 
+    /// Called for every file system operation.
+    /// This does not have to be implemented, but if it is,
+    /// it can be used for example to check when the file system was last accessed,
+    /// or automatically unmount it when it is idle for too long.
+    async fn on_operation(&self) -> FsResult<()>
+    where
+        Self: 'static,
+    {
+        // By default just do nothing
+        Ok(())
+    }
+
     async fn rootdir(&self) -> FsResult<Self::Dir<'_>>;
 
     // TODO We can probably remove `rename`. It's only called from the fuse-mt backend and fuser uses CryDir::{rename_child,move_child_to} instead. We can probably make fuse-mt use those too.

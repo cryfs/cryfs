@@ -155,6 +155,7 @@ impl Cli {
                     config: config.config.into_config(),
                     my_client_id: config.my_client_id,
                     local_state_dir: self.local_state_dir.clone(),
+                    unmount_idle: mount_args.unmount_idle.map(Into::into),
                 },
                 on_successfully_mounted,
             )

@@ -15,17 +15,10 @@ pub struct CryfsArgs {
     pub show_ciphers: bool,
     // TODO
     // boost::optional<boost::filesystem::path> _configFile;
-    // bool _foreground;
     // bool _allowFilesystemUpgrade;
     // bool _allowReplacedFilesystem;
-    // bool _createMissingBasedir;
-    // bool _createMissingMountpoint;
-    // boost::optional<double> _unmountAfterIdleMinutes;
     // boost::optional<boost::filesystem::path> _logFile;
-    // boost::optional<std::string> _cipher;
     // boost::optional<uint32_t> _blocksizeBytes;
-    // bool _allowIntegrityViolations;
-    // boost::optional<bool> _missingBlockIsIntegrityViolation;
     // std::vector<std::string> _fuseOptions;
     // bool _mountDirIsDriveLetter;
 }
@@ -67,6 +60,34 @@ pub struct MountArgs {
     /// Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers. Default: xchacha20-poly1305
     #[arg(long)]
     pub cipher: Option<String>,
+
+    /// Automatically unmount if the file system hasn't been used for the specified duration.
+    /// Values are human readable durations, e.g. 30sec, 5min, 1h30m, etc.
+    #[arg(long)]
+    pub unmount_idle: Option<humantime::Duration>,
+}
+
+#[cfg(test)]
+mod tests {
+    mod humantime_parsing {
+        //! Test that durations in unmount_idle are parsed correctly
+
+        #[test]
+        fn test_human_time_parsing() {
+            fn test_parsing(input: &str, expected_as_sec: u64) {
+                let duration: humantime::Duration = input.parse().unwrap();
+                assert_eq!(duration.as_secs(), expected_as_sec);
+            }
+            test_parsing("30s", 30);
+            test_parsing("30sec", 30);
+            test_parsing("5m", 300);
+            test_parsing("5min", 300);
+            test_parsing("1h30m", 5400);
+            test_parsing("1h30min", 5400);
+            test_parsing("1hour30min", 5400);
+            test_parsing("2hours30min5sec", 9005);
+        }
+    }
 }
 
 // TODO Tests

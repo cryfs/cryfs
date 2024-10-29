@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use tokio_util::sync::CancellationToken;
 
 use super::{backend_adapter::BackendAdapter, RunningFilesystem};
 use crate::common::FsError;
@@ -11,6 +12,7 @@ pub fn mount<Fs>(
     fs: impl IntoFsLL<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
+    unmount_trigger: Option<CancellationToken>,
     on_successfully_mounted: impl FnOnce(),
 ) -> std::io::Result<()>
 where
@@ -18,6 +20,11 @@ where
 {
     let fs = spawn_mount(fs, mountpoint, runtime)?;
     on_successfully_mounted();
+
+    if let Some(unmount_trigger) = unmount_trigger {
+        fs.unmount_on_trigger(unmount_trigger);
+    }
+
     fs.block_until_unmounted();
     Ok(())
 }

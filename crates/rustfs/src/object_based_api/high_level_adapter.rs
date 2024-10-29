@@ -28,6 +28,7 @@ const TTL_CREATE: Duration = Duration::from_secs(0);
 pub struct ObjectBasedFsAdapter<Fs: Device>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs: Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
@@ -40,6 +41,7 @@ where
 impl<Fs: Device> ObjectBasedFsAdapter<Fs>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
+    Fs: Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
@@ -51,10 +53,20 @@ where
             open_files,
         })
     }
+
+    // TODO Test this is triggered by each operation
+    async fn trigger_on_operation(&self) -> FsResult<()> {
+        // TODO Many operations need to lock fs too, locking here means we lock it twice. Optimize perf.
+        let fs = self.fs.read().unwrap();
+        let fs = fs.get();
+        fs.on_operation().await?;
+        Ok(())
+    }
 }
 
 impl<Fs: Device> Debug for ObjectBasedFsAdapter<Fs>
 where
+    Fs: Device + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -90,6 +102,8 @@ where
         path: &AbsolutePath,
         fh: Option<FileHandle>,
     ) -> FsResult<AttrResponse> {
+        self.trigger_on_operation().await?;
+
         let attrs = if let Some(fh) = fh {
             // TODO No unwrap
             let open_file_list = self.open_files.read().await;
@@ -116,6 +130,8 @@ where
         fh: Option<FileHandle>,
         mode: Mode,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Make sure file/symlink/dir flags are correctly set by this
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
@@ -145,6 +161,8 @@ where
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh).ok_or_else(|| {
@@ -172,6 +190,8 @@ where
         fh: Option<FileHandle>,
         size: NumBytes,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh).ok_or_else(|| {
@@ -200,6 +220,8 @@ where
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         if let Some(fh) = fh {
             let open_file_list = self.open_files.read().await;
             let open_file = open_file_list.get(fh).ok_or_else(|| {
@@ -230,11 +252,15 @@ where
         _bkuptime: Option<SystemTime>,
         _flags: Option<u32>,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Implement this
         Err(FsError::NotImplemented)
     }
 
     async fn readlink(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<String> {
+        self.trigger_on_operation().await?;
+
         let fs = self.fs.read().unwrap();
         let link = fs.get().lookup(path).await?;
         with_async_drop_2!(link, {
@@ -250,6 +276,8 @@ where
         _mode: Mode,
         _rdev: u32,
     ) -> FsResult<AttrResponse> {
+        self.trigger_on_operation().await?;
+
         // TODO Do we want to implement this?
         Err(FsError::NotImplemented)
     }
@@ -260,6 +288,8 @@ where
         path: &AbsolutePath,
         mode: Mode,
     ) -> FsResult<AttrResponse> {
+        self.trigger_on_operation().await?;
+
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             // TODO Here and throughout, use a consistent logging and decide how to log (1) things that are wrong in the file system vs (2) operations that are successful if returning errors, e.g. getattr on a non-existing path
@@ -281,6 +311,8 @@ where
     }
 
     async fn unlink(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             log::error!("unlink: called with root path");
@@ -296,6 +328,8 @@ where
     }
 
     async fn rmdir(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             log::error!("rmdir: called with root path");
@@ -317,6 +351,8 @@ where
         // TODO Custom type for target that can be an absolute-or-relative path
         target: &str,
     ) -> FsResult<AttrResponse> {
+        self.trigger_on_operation().await?;
+
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             log::error!("symlink: called with root path");
@@ -342,6 +378,8 @@ where
         oldpath: &AbsolutePath,
         newpath: &AbsolutePath,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         if oldpath.is_root() {
             log::error!("rename: tried to rename the root directory into '{newpath}'");
             return Err(FsError::InvalidOperation);
@@ -362,6 +400,8 @@ where
         _oldpath: &AbsolutePath,
         _newpath: &AbsolutePath,
     ) -> FsResult<AttrResponse> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -372,6 +412,8 @@ where
         path: &AbsolutePath,
         flags: OpenFlags,
     ) -> FsResult<OpenResponse> {
+        self.trigger_on_operation().await?;
+
         let fs = self.fs.read().unwrap();
         let file = fs.get().lookup(path).await?;
         with_async_drop_2!(file, {
@@ -403,6 +445,13 @@ where
     where
         C: for<'a> Callback<FsResult<&'a [u8]>, R>,
     {
+        match self.trigger_on_operation().await {
+            Ok(()) => {}
+            Err(err) => {
+                return callback.call(Err(err));
+            }
+        }
+
         let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("read: no open file with handle {}", u64::from(fh));
@@ -433,6 +482,8 @@ where
         // TODO What is the `flags` parameter for?
         _flags: u32,
     ) -> FsResult<NumBytes> {
+        self.trigger_on_operation().await?;
+
         let data_len = data.len();
         let data = data.into();
         let open_file_list = self.open_files.read().await;
@@ -452,6 +503,8 @@ where
         fh: FileHandle,
         _lock_owner: u64,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("flush: no open file with handle {}", u64::from(fh));
@@ -470,6 +523,8 @@ where
         _lock_owner: u64,
         _flush: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO No unwrap
         let mut removed = self.open_files.write().await.remove(fh);
         removed.async_drop().await?;
@@ -483,6 +538,8 @@ where
         fh: FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         let open_file_list = self.open_files.read().await;
         let open_file = open_file_list.get(fh).ok_or_else(|| {
             log::error!("fsync: no open file with handle {}", u64::from(fh));
@@ -498,6 +555,8 @@ where
         _path: &AbsolutePath,
         flags: u32,
     ) -> FsResult<OpendirResponse> {
+        self.trigger_on_operation().await?;
+
         // TODO Do we need opendir? The path seems to be passed to readdir, but the fuse_mt comment
         // to opendir seems to suggest that readdir may have to recognize dirs with just the fh and no path?
         Ok(OpendirResponse {
@@ -525,6 +584,8 @@ where
         path: &AbsolutePath,
         _fh: FileHandle,
     ) -> FsResult<Vec<DirEntry>> {
+        self.trigger_on_operation().await?;
+
         let fs = self.fs.read().unwrap();
         let dir = fs.get().lookup(path).await?;
         with_async_drop_2!(dir, {
@@ -541,6 +602,8 @@ where
         _fh: FileHandle,
         _flags: u32,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO If we need opendir, then we also need releasedir, see TODO comment in opendir
         Ok(())
     }
@@ -552,10 +615,14 @@ where
         _fh: FileHandle,
         _datasync: bool,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         Err(FsError::NotImplemented)
     }
 
     async fn statfs(&self, _req: RequestInfo, _path: &AbsolutePath) -> FsResult<Statfs> {
+        self.trigger_on_operation().await?;
+
         self.fs.read().unwrap().get().statfs().await
     }
 
@@ -568,6 +635,8 @@ where
         _flags: u32,
         _position: NumBytes,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -578,6 +647,8 @@ where
         _path: &AbsolutePath,
         _name: &str,
     ) -> FsResult<NumBytes> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -589,6 +660,8 @@ where
         _name: &str,
         _size: NumBytes,
     ) -> FsResult<Vec<u8>> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -598,6 +671,8 @@ where
         _req: RequestInfo,
         _path: &AbsolutePath,
     ) -> FsResult<NumBytes> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -608,6 +683,8 @@ where
         _path: &AbsolutePath,
         _size: NumBytes,
     ) -> FsResult<Vec<u8>> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement this?
         Err(FsError::NotImplemented)
     }
@@ -618,10 +695,14 @@ where
         _path: &AbsolutePath,
         _name: &str,
     ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         Err(FsError::NotImplemented)
     }
 
     async fn access(&self, _req: RequestInfo, _path: &AbsolutePath, _mask: u32) -> FsResult<()> {
+        self.trigger_on_operation().await?;
+
         // TODO Should we implement access?
         Ok(())
     }
@@ -633,6 +714,8 @@ where
         mode: Mode,
         flags: i32,
     ) -> FsResult<CreateResponse> {
+        self.trigger_on_operation().await?;
+
         let (parent, name) = path.split_last().ok_or_else(|| {
             assert!(path.is_root());
             // TODO Here and throughout, use a consistent logging and decide how to log (1) things that are wrong in the file system vs (2) operations that are successful if returning errors, e.g. getattr on a non-existing path
@@ -674,7 +757,7 @@ where
 #[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapter<Fs>
 where
-    Fs: Device + Send + Sync,
+    Fs: Device + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     type Error = FsError;

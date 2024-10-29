@@ -12,6 +12,7 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+atomic-time.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
 cryfs-blobstore = { path = "../blobstore" }
