@@ -215,16 +215,6 @@ namespace cryfs_cli {
             auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
                 ASSERT(_device != none, "File system not ready to be initialized. Was it already initialized before?");
 
-                //TODO Test auto unmounting after idle timeout
-                const boost::optional<double> idle_minutes = options.unmountAfterIdleMinutes();
-                _idleUnmounter = _createIdleCallback(idle_minutes, [fs, idle_minutes] {
-                    LOG(INFO, "Unmounting because file system was idle for {} minutes", *idle_minutes);
-                    fs->stop();
-                });
-                if (_idleUnmounter != none) {
-                    (*_device)->onFsAction(std::bind(&CallAfterTimeout::resetTimer, _idleUnmounter->get()));
-                }
-
                 return make_shared<fspp::FilesystemImpl>(std::move(*_device));
             };
 
@@ -264,14 +254,6 @@ namespace cryfs_cli {
             throw CryfsException("Base directory blob doesn't contain a directory", ErrorCode::InvalidFilesystem);
         }
         (*rootDir)->children(); // Load children
-    }
-
-    optional<unique_ref<CallAfterTimeout>> Cli::_createIdleCallback(optional<double> minutes, function<void()> callback) {
-        if (minutes == none) {
-            return none;
-        }
-        uint64_t millis = std::llround(60000 * (*minutes));
-        return make_unique_ref<CallAfterTimeout>(milliseconds(millis), callback, "idlecallback");
     }
 
     void Cli::_initLogfile(const ProgramOptions &options) {
