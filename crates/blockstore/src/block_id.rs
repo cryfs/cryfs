@@ -5,6 +5,8 @@ use std::io::{Read, Seek, Write};
 
 pub const BLOCKID_LEN: usize = 16;
 
+// TODO We could optimize the Hash implementation since BlockId is always random. Just take the first x bytes as the hash.
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BlockId {
     id: [u8; BLOCKID_LEN],
