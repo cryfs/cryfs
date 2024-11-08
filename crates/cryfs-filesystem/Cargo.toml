@@ -39,6 +39,8 @@ tokio = { workspace = true, features = ["sync"] }
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
+# TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
+lockable = {workspace = true, features = ["slow_assertions"]}
 
 [features]
 testutils = ["cryfs-blobstore/testutils"]

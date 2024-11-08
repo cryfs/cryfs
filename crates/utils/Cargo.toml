@@ -52,6 +52,8 @@ rand = { workspace = true, features = ["small_rng"] }
 rayon.workspace = true
 rstest.workspace = true
 tempdir.workspace = true
+# TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
+lockable = {workspace = true, features = ["slow_assertions"]}
 
 [features]
 testutils = ["divrem", "rand/small_rng", "rayon"]

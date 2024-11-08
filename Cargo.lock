@@ -505,12 +505,6 @@ dependencies = [
 
 [[package]]
 name = "convert_case"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
-
-[[package]]
-name = "convert_case"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
@@ -645,7 +639,7 @@ dependencies = [
  "common_macros",
  "cryfs-utils",
  "cryfs-version",
- "derive_more 1.0.0",
+ "derive_more",
  "errno",
  "futures",
  "generic-array 1.1.0",
@@ -730,7 +724,7 @@ dependencies = [
  "cryfs-filesystem",
  "cryfs-utils",
  "cryfs-version",
- "derive_more 1.0.0",
+ "derive_more",
  "dirs",
  "env_logger",
  "envtestkit",
@@ -765,7 +759,7 @@ dependencies = [
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
- "derive_more 1.0.0",
+ "derive_more",
  "futures",
  "hex",
  "indicatif",
@@ -811,7 +805,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cryfs-utils",
- "derive_more 1.0.0",
+ "derive_more",
  "env_logger",
  "fuse_mt",
  "fuser 0.13.0",
@@ -843,7 +837,7 @@ dependencies = [
  "common_macros",
  "criterion",
  "cryfs-version",
- "derive_more 1.0.0",
+ "derive_more",
  "divrem",
  "futures",
  "generic-array 1.1.0",
@@ -872,7 +866,7 @@ dependencies = [
 name = "cryfs-version"
 version = "2.0.0-alpha1"
 dependencies = [
- "derive_more 1.0.0",
+ "derive_more",
  "git2version",
  "konst",
  "predicates",
@@ -975,19 +969,6 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f33878137e4dafd7fa914ad4e259e18a4e8e532b9617a2d0150262bf53abfce"
-dependencies = [
- "convert_case 0.4.0",
- "proc-macro2",
- "quote",
- "rustc_version",
- "syn 2.0.82",
-]
-
-[[package]]
-name = "derive_more"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
@@ -1001,7 +982,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
 dependencies = [
- "convert_case 0.6.0",
+ "convert_case",
  "proc-macro2",
  "quote",
  "syn 2.0.82",
@@ -1836,15 +1817,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
@@ -1995,15 +1967,14 @@ dependencies = [
 
 [[package]]
 name = "lockable"
-version = "0.0.8"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66bfb2c9f8bb470750cdf9ecbe667e336b6682eb7ff6ec8fadc7b50d88339eff"
+checksum = "2e251a4db7189cc05077d5585541ec5a8c4fb47e561edff84c46c1e35671027b"
 dependencies = [
- "derive_more 0.99.18",
+ "derive_more",
  "futures",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "lru",
- "thiserror",
  "tokio",
 ]
 
