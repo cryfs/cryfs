@@ -1,4 +1,4 @@
-Version 1.0.0 (unreleased)
+Version 1.0.0
 ---------------
 Backwards Compatibility:
 * Filesystems created with CryFS 0.11.x and CryFS 1.0.0 are fully compatible with each other. The storage format hasn't changed.
