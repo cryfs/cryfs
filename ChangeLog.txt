@@ -1,3 +1,8 @@
+Version 1.0.1 (unreleased)
+---------------
+Dependency Updates
+* range-v3 cci.20240905
+
 Version 1.0.0
 ---------------
 Backwards Compatibility:
