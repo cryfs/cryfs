@@ -18,16 +18,16 @@ runs:
 
         echo Download range-v3
         cd ~
-        wget https://github.com/ericniebler/range-v3/archive/0.12.0.tar.gz -O range-v3-0.12.0.tar.gz
-        if [ $(sha512sum range-v3-0.12.0.tar.gz | awk '{print $1;}') == "b8b632b8e0f2a3234ef61813212c237f648cd741e816ca57bd86f82f6459f7d755e2b70361d2aa43847874fb546a31a792ab1c3ba90292818ae7313438dc62d0" ]; then
+        wget https://github.com/ericniebler/range-v3/archive/a33616bfdb642744acaa937a3f258fba384b7fd4.tar.gz -O range-v3.tar.gz
+        if [ $(sha512sum range-v3.tar.gz | awk '{print $1;}') == "dd882a6cf905cb81c51f68240c1c120f2ae0954754daaeb3979b532a434f2f0bd6629dec55ea2ada380af3c5bbbe4519435055f756805d6f00ffa6bce446a19f" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
-          sha512sum range-v3-0.12.0.tar.gz
+          sha512sum range-v3.tar.gz
           exit 1
         fi
-        tar -xvf range-v3-0.12.0.tar.gz
-        cd range-v3-0.12.0/
+        tar -xvf range-v3.tar.gz
+        cd range-v3-a33616bfdb642744acaa937a3f258fba384b7fd4/
 
         echo Install range-v3
         mkdir build
@@ -36,8 +36,8 @@ runs:
         make -j$NUMCORES
         sudo make install
         cd ~
-        rm -rf range-v3-0.12.0
-        rm range-v3-0.12.0.tar.gz
+        rm -rf range-v3-a33616bfdb642744acaa937a3f258fba384b7fd4
+        rm range-v3.tar.gz
 
         echo Download spdlog
         cd ~
