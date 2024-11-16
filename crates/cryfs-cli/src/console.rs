@@ -94,7 +94,7 @@ impl Console for InteractiveConsole {
                 ("4MB", mb(4)),
             ]
             .into_iter(),
-            4,
+            2,
         )
     }
 
