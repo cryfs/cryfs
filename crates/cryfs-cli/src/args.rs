@@ -3,7 +3,7 @@ use cryfs_cli_utils::parse_path;
 use std::path::PathBuf;
 
 // TODO Evaluate `clap_mangen` as a potential automatic manpage generator
-// TODO Evaluate `clap_complete` as a potenail shell completion generator
+// TODO Evaluate `clap_complete` as a potenatial shell completion generator
 
 #[derive(Parser, Debug)]
 pub struct CryfsArgs {
