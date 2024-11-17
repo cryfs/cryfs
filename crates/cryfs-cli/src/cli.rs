@@ -26,6 +26,8 @@ use cryfs_version::VersionInfo;
 //   - basedir/mountdir don't exist
 //   - ...
 
+// TODO Cryfs currently panics in fuse when mountdir is not empty. We should either check that beforehand, or even better, display fuse errors without a panic.
+
 pub struct Cli {
     args: CryfsArgs,
     is_noninteractive: bool,
