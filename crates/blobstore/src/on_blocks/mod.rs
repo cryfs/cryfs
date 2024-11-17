@@ -17,12 +17,13 @@ mod tests {
     use super::*;
     use crate::tests::Fixture;
     use async_trait::async_trait;
+    use byte_unit::Byte;
     use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
     use cryfs_utils::async_drop::AsyncDropGuard;
 
-    struct TestFixture<const BLOCK_SIZE_BYTES: u32>;
+    struct TestFixture<const BLOCK_SIZE_BYTES: u64>;
     #[async_trait]
-    impl<const BLOCK_SIZE_BYTES: u32> Fixture for TestFixture<BLOCK_SIZE_BYTES> {
+    impl<const BLOCK_SIZE_BYTES: u64> Fixture for TestFixture<BLOCK_SIZE_BYTES> {
         type ConcreteBlobStore = BlobStoreOnBlocks<InMemoryBlockStore>;
         fn new() -> Self {
             Self {}
@@ -30,7 +31,7 @@ mod tests {
         async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlobStore> {
             BlobStoreOnBlocks::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
-                BLOCK_SIZE_BYTES,
+                Byte::from_u64(BLOCK_SIZE_BYTES),
             )
             .await
             .unwrap()

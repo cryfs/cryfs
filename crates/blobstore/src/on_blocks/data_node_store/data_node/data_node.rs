@@ -20,9 +20,9 @@ pub enum DataNode<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> DataNode<B> {
     pub fn parse(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
         ensure!(
-            usize::try_from(layout.block_size_bytes).unwrap() == block.data().len(),
+            usize::try_from(layout.block_size).unwrap() == block.data().len(),
             "Expected to load block of size {} but loaded block {:?} had size {}",
-            layout.block_size_bytes,
+            layout.block_size,
             block.block_id(),
             block.data().len(),
         );
@@ -108,18 +108,18 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         let dest_data = block.data_mut();
         let source_data = source.raw_blockdata();
         assert_eq!(
-            usize::try_from(layout.block_size_bytes).unwrap(),
+            usize::try_from(layout.block_size).unwrap(),
             source_data.len(),
             "Source block has {} bytes but the layout expects {}",
             source_data.len(),
-            layout.block_size_bytes
+            layout.block_size
         );
         assert_eq!(
-            usize::try_from(layout.block_size_bytes).unwrap(),
+            usize::try_from(layout.block_size).unwrap(),
             dest_data.len(),
             "Destination block has {} bytes but the layout expects {}",
             dest_data.len(),
-            layout.block_size_bytes
+            layout.block_size
         );
         dest_data.copy_from_slice(source_data);
         // TODO DataNode::parse() is checking invariants again but we don't need to do that - violating invariants wouldn't have been able to create the source object.
@@ -146,6 +146,7 @@ mod tests {
     use super::super::super::{testutils::*, DataNodeStore};
     use super::*;
     use binary_layout::Field;
+    use byte_unit::Byte;
     use cryfs_blockstore::{InMemoryBlockStore, BLOCKID_LEN};
 
     #[allow(non_snake_case)]
@@ -384,7 +385,8 @@ mod tests {
 
         #[tokio::test]
         async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoadingInnerNode_thenSucceeds() {
-            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
             with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
                 Box::pin(async move {
                     let node = new_full_inner_node(nodestore).await;
@@ -403,7 +405,8 @@ mod tests {
 
         #[tokio::test]
         async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoadingLeafNode_thenSucceeds() {
-            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
             with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
                 Box::pin(async move {
                     let node = new_full_leaf_node(nodestore).await;
@@ -426,24 +429,32 @@ mod tests {
         #[tokio::test]
         #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
         async fn givenLayoutWithTooSmallBlockSize_whenLoadingInnerNode_thenFailss() {
-            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
-            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
-                Box::pin(async move {
-                    new_full_inner_node(nodestore).await;
-                })
-            })
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
+            with_nodestore_with_blocksize(
+                JUST_LARGE_ENOUGH_SIZE.subtract(Byte::from_u64(1)).unwrap(),
+                |nodestore| {
+                    Box::pin(async move {
+                        new_full_inner_node(nodestore).await;
+                    })
+                },
+            )
             .await;
         }
 
         #[tokio::test]
         #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
         async fn givenLayoutWithTooSmallBlockSize_whenLoadingLeafNode_thenFailss() {
-            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
-            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
-                Box::pin(async move {
-                    new_full_leaf_node(nodestore).await;
-                })
-            })
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
+            with_nodestore_with_blocksize(
+                JUST_LARGE_ENOUGH_SIZE.subtract(Byte::from_u64(1)).unwrap(),
+                |nodestore| {
+                    Box::pin(async move {
+                        new_full_leaf_node(nodestore).await;
+                    })
+                },
+            )
             .await;
         }
 
@@ -614,7 +625,7 @@ mod tests {
                     // Assert the unused region gets zeroed out
                     let used_space = node::data::OFFSET + BLOCKID_LEN;
                     assert_eq!(
-                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &vec![0; PHYSICAL_BLOCK_SIZE.as_u64() as usize - used_space],
                         &inner_node.raw_blockdata()[used_space..]
                     );
                 })
@@ -643,7 +654,7 @@ mod tests {
                     // Assert the unused region gets zeroed out
                     let used_space = node::data::OFFSET + BLOCKID_LEN;
                     assert_eq!(
-                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &vec![0; PHYSICAL_BLOCK_SIZE.as_u64() as usize - used_space],
                         &inner_node.raw_blockdata()[used_space..]
                     );
                 })
@@ -668,7 +679,7 @@ mod tests {
                     // Assert the unused region gets zeroed out
                     let used_space = node::data::OFFSET + BLOCKID_LEN;
                     assert_eq!(
-                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &vec![0; PHYSICAL_BLOCK_SIZE.as_u64() as usize - used_space],
                         &inner_node.raw_blockdata()[used_space..]
                     );
                 })
@@ -693,7 +704,7 @@ mod tests {
                     // Assert the unused region gets zeroed out
                     let used_space = node::data::OFFSET + BLOCKID_LEN;
                     assert_eq!(
-                        &vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize - used_space],
+                        &vec![0; PHYSICAL_BLOCK_SIZE.as_u64() as usize - used_space],
                         &inner_node.raw_blockdata()[used_space..]
                     );
                 })
@@ -1158,8 +1169,8 @@ mod tests {
         #[tokio::test]
         #[should_panic = "Source block has 200 bytes but the layout expects 100"]
         async fn overwrite_with_wrong_source_layout() {
-            const BLOCKSIZE_1: u32 = 100;
-            const BLOCKSIZE_2: u32 = 200;
+            const BLOCKSIZE_1: Byte = Byte::from_u64(100);
+            const BLOCKSIZE_2: Byte = Byte::from_u64(200);
             let mut nodestore1 = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 BLOCKSIZE_1,
@@ -1186,8 +1197,8 @@ mod tests {
         #[tokio::test]
         #[should_panic = "Destination block has 100 bytes but the layout expects 200"]
         async fn overwrite_with_wrong_target_layout() {
-            const BLOCKSIZE_1: u32 = 100;
-            const BLOCKSIZE_2: u32 = 200;
+            const BLOCKSIZE_1: Byte = Byte::from_u64(100);
+            const BLOCKSIZE_2: Byte = Byte::from_u64(200);
             let mut nodestore1 = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 BLOCKSIZE_1,

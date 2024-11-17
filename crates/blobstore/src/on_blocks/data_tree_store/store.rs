@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use futures::stream::BoxStream;
 #[cfg(test)]
 use futures::stream::TryStreamExt;
@@ -29,10 +30,10 @@ pub struct DataTreeStore<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     pub async fn new(
         block_store: AsyncDropGuard<LockingBlockStore<B>>,
-        block_size_bytes: u32,
+        block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
-            node_store: DataNodeStore::new(block_store, block_size_bytes).await?,
+            node_store: DataNodeStore::new(block_store, block_size).await?,
         }))
     }
 }
@@ -80,7 +81,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
         self.node_store.estimate_space_for_num_blocks_left()
     }
 
-    pub fn virtual_block_size_bytes(&self) -> u32 {
+    pub fn virtual_block_size_bytes(&self) -> Byte {
         self.node_store.virtual_block_size_bytes()
     }
 
@@ -167,7 +168,7 @@ mod tests {
         async fn invalid_block_size() {
             assert_eq!(
                 "Invalid block size: Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
-                DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 10)
+                DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), Byte::from_u64(10))
                     .await
                     .unwrap_err()
                     .to_string(),
@@ -176,10 +177,12 @@ mod tests {
 
         #[tokio::test]
         async fn valid_block_size() {
-            let mut store =
-                DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), 40)
-                    .await
-                    .unwrap();
+            let mut store = DataTreeStore::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                Byte::from_u64(40),
+            )
+            .await
+            .unwrap();
             store.async_drop().await.unwrap();
         }
 
@@ -192,10 +195,13 @@ mod tests {
                 .returning(move |_| Err(InvalidBlockSizeError::new(format!("some error"))));
             assert_eq!(
                 "Invalid block size: some error",
-                DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
-                    .await
-                    .unwrap_err()
-                    .to_string()
+                DataTreeStore::new(
+                    LockingBlockStore::new(blockstore),
+                    Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap()
+                )
+                .await
+                .unwrap_err()
+                .to_string()
             );
         }
     }
@@ -235,7 +241,7 @@ mod tests {
                 Box::pin(async move {
                     let root_id = {
                         let mut tree = store.create_tree().await.unwrap();
-                        tree.resize_num_bytes(10 * PHYSICAL_BLOCK_SIZE_BYTES as u64)
+                        tree.resize_num_bytes(10 * PHYSICAL_BLOCK_SIZE.as_u64())
                             .await
                             .unwrap();
                         *tree.root_node_id()
@@ -440,7 +446,7 @@ mod tests {
                     let _other_tree = TreeFixture::create_tree_with_data_and_id(
                         &store,
                         BlockId::from_hex("41e331a31c3c1c1ebd4949087674b8dc").unwrap(),
-                        10 * store.virtual_block_size_bytes() as usize,
+                        10 * store.virtual_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -466,7 +472,7 @@ mod tests {
                 Box::pin(async move {
                     let _other_tree = TreeFixture::create_tree_with_data(
                         &store,
-                        10 * store.virtual_block_size_bytes() as usize,
+                        10 * store.virtual_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -492,7 +498,7 @@ mod tests {
 
                     let _other_tree = TreeFixture::create_tree_with_data(
                         &store,
-                        NUM_LEAVES as usize * store.virtual_block_size_bytes() as usize,
+                        NUM_LEAVES as usize * store.virtual_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -521,7 +527,8 @@ mod tests {
 
                     let _other_tree = TreeFixture::create_tree_with_data(
                         &treestore,
-                        NUM_LEAVES as usize * treestore.virtual_block_size_bytes() as usize,
+                        NUM_LEAVES as usize
+                            * treestore.virtual_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -552,7 +559,8 @@ mod tests {
 
                     let other_tree = TreeFixture::create_tree_with_data(
                         &treestore,
-                        NUM_LEAVES as usize * treestore.virtual_block_size_bytes() as usize,
+                        NUM_LEAVES as usize
+                            * treestore.virtual_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -645,10 +653,11 @@ mod tests {
                 .returning(move |v| Ok(v));
             blockstore
                 .expect_estimate_num_free_bytes()
-                .returning(|| Ok(0));
-            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 100)
-                .await
-                .unwrap();
+                .returning(|| Ok(Byte::from_u64(0)));
+            let mut treestore =
+                DataTreeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
+                    .await
+                    .unwrap();
 
             assert_eq!(0, treestore.estimate_space_for_num_blocks_left().unwrap());
 
@@ -664,10 +673,11 @@ mod tests {
                 .returning(move |v| Ok(v));
             blockstore
                 .expect_estimate_num_free_bytes()
-                .returning(|| Ok(99));
-            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 100)
-                .await
-                .unwrap();
+                .returning(|| Ok(Byte::from_u64(99)));
+            let mut treestore =
+                DataTreeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
+                    .await
+                    .unwrap();
 
             assert_eq!(0, treestore.estimate_space_for_num_blocks_left().unwrap());
 
@@ -683,10 +693,11 @@ mod tests {
                 .returning(move |v| Ok(v));
             blockstore
                 .expect_estimate_num_free_bytes()
-                .returning(|| Ok(100));
-            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 100)
-                .await
-                .unwrap();
+                .returning(|| Ok(Byte::from_u64(100)));
+            let mut treestore =
+                DataTreeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
+                    .await
+                    .unwrap();
 
             assert_eq!(1, treestore.estimate_space_for_num_blocks_left().unwrap());
 
@@ -702,10 +713,13 @@ mod tests {
                 .returning(move |v| Ok(v));
             blockstore
                 .expect_estimate_num_free_bytes()
-                .returning(|| Ok(32 * 1024 * 10240 + 123));
-            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
-                .await
-                .unwrap();
+                .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
+            let mut treestore = DataTreeStore::new(
+                LockingBlockStore::new(blockstore),
+                Byte::from_u64(32 * 1024),
+            )
+            .await
+            .unwrap();
 
             assert_eq!(
                 10240,
@@ -721,13 +735,16 @@ mod tests {
             blockstore
                 .expect_block_size_from_physical_block_size()
                 .times(1)
-                .returning(move |v| Ok(v / 10));
+                .returning(move |v| Ok(v.divide(10).unwrap()));
             blockstore
                 .expect_estimate_num_free_bytes()
-                .returning(|| Ok(32 * 1024 * 10240 + 123));
-            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
-                .await
-                .unwrap();
+                .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
+            let mut treestore = DataTreeStore::new(
+                LockingBlockStore::new(blockstore),
+                Byte::from_u64(32 * 1024),
+            )
+            .await
+            .unwrap();
 
             assert_eq!(
                 10240,
@@ -747,9 +764,12 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Err(anyhow!("some error")));
-            let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024)
-                .await
-                .unwrap();
+            let mut treestore = DataTreeStore::new(
+                LockingBlockStore::new(blockstore),
+                Byte::from_u64(32 * 1024),
+            )
+            .await
+            .unwrap();
 
             assert_eq!(
                 "some error",
@@ -772,18 +792,20 @@ mod tests {
             blockstore
                 .expect_block_size_from_physical_block_size()
                 .times(1)
-                .returning(move |v| Ok(v / 10));
-            let mut treestore =
-                DataTreeStore::new(LockingBlockStore::new(blockstore), 32 * 1024 * 10)
-                    .await
-                    .unwrap();
+                .returning(move |v| Ok(v.divide(10).unwrap()));
+            let mut treestore = DataTreeStore::new(
+                LockingBlockStore::new(blockstore),
+                Byte::from_u64(32 * 1024 * 10),
+            )
+            .await
+            .unwrap();
 
             assert_eq!(
                 super::super::super::super::data_node_store::NodeLayout {
-                    block_size_bytes: 32 * 1024
+                    block_size: Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
                 }
-                .max_bytes_per_leaf() as u32,
-                treestore.virtual_block_size_bytes()
+                .max_bytes_per_leaf() as u64,
+                treestore.virtual_block_size_bytes().as_u64()
             );
 
             treestore.async_drop().await.unwrap();

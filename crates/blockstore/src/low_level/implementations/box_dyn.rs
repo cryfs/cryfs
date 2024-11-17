@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use futures::stream::BoxStream;
 
 use crate::{
@@ -32,14 +33,14 @@ impl BlockStoreReader for DynBlockStore {
         r.await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
         (*self.0).estimate_num_free_bytes()
     }
 
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         (*self.0).block_size_from_physical_block_size(block_size)
     }
 

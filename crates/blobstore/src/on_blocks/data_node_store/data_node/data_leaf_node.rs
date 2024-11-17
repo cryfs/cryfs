@@ -1,5 +1,6 @@
 use anyhow::{ensure, Result};
 use binary_layout::Field;
+use byte_unit::Byte;
 use std::fmt::Debug;
 
 use super::super::{
@@ -15,7 +16,7 @@ pub struct DataLeafNode<B: BlockStore + Send + Sync> {
 
 impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
-        assert!(layout.block_size_bytes as usize > node::data::OFFSET, "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new");
+        assert!(layout.block_size.as_u64() > u64::try_from(node::data::OFFSET).unwrap(), "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new");
 
         let view = node::View::new(block.data());
         ensure!(
@@ -30,10 +31,10 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
             view.depth().read(),
         );
         ensure!(
-            block.data().len() == layout.block_size_bytes as usize,
+            Byte::from_u64(u64::try_from(block.data().len()).unwrap()) == layout.block_size,
             "Loaded block of size {} but expected {}",
             block.data().len(),
-            layout.block_size_bytes
+            layout.block_size,
         );
         let max_bytes_per_leaf = layout.max_bytes_per_leaf();
         let size = view.size().read();
@@ -69,7 +70,7 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
 
     pub fn max_bytes_per_leaf(&self) -> u32 {
         NodeLayout {
-            block_size_bytes: u32::try_from(self.block.data().len()).unwrap(),
+            block_size: Byte::from_u64(u64::try_from(self.block.data().len()).unwrap()),
         }
         .max_bytes_per_leaf()
     }
@@ -277,7 +278,8 @@ mod tests {
 
         #[tokio::test]
         async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoading_thenSucceeds() {
-            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
             with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
                 Box::pin(async move {
                     let node = new_full_leaf_node(nodestore).await;
@@ -297,12 +299,18 @@ mod tests {
         #[tokio::test]
         #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
         async fn givenLayoutWithTooSmallBlockSize_whenLoading_thenFails() {
-            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
-            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
-                Box::pin(async move {
-                    new_full_leaf_node(nodestore).await;
-                })
-            })
+            let JUST_LARGE_ENOUGH_SIZE: Byte = Byte::from_u64(
+                u64::try_from(node::data::OFFSET).unwrap()
+                    + 2 * u64::try_from(BLOCKID_LEN).unwrap(),
+            );
+            with_nodestore_with_blocksize(
+                JUST_LARGE_ENOUGH_SIZE.subtract(Byte::from_u64(1)).unwrap(),
+                |nodestore| {
+                    Box::pin(async move {
+                        new_full_leaf_node(nodestore).await;
+                    })
+                },
+            )
             .await;
         }
 
@@ -342,12 +350,13 @@ mod tests {
         #[test]
         fn test_serialize_leaf_node_optimized() {
             let layout = NodeLayout {
-                block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+                block_size: PHYSICAL_BLOCK_SIZE,
             };
             const SIZE: usize = 10;
-            let mut data: Data = vec![0; PHYSICAL_BLOCK_SIZE_BYTES as usize].into();
+            let mut data: Data = vec![0; PHYSICAL_BLOCK_SIZE.as_u64() as usize].into();
             data.shrink_to_subregion(
-                ((PHYSICAL_BLOCK_SIZE_BYTES - layout.max_bytes_per_leaf()) as usize)..,
+                (usize::try_from(PHYSICAL_BLOCK_SIZE.as_u64()).unwrap()
+                    - usize::try_from(layout.max_bytes_per_leaf()).unwrap())..,
             );
             SmallRng::seed_from_u64(0).fill(&mut data[..SIZE]);
             let serialized = serialize_leaf_node_optimized(data.clone(), SIZE as u32, &layout);
@@ -391,7 +400,7 @@ mod tests {
                 32,
                 512,
                 NodeLayout {
-                    block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+                    block_size: PHYSICAL_BLOCK_SIZE,
                 }
                 .max_bytes_per_leaf(),
             ]
@@ -583,8 +592,10 @@ mod tests {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     assert_ne!(
-                        PHYSICAL_BLOCK_SIZE_BYTES,
-                        nodestore.layout().max_bytes_per_leaf()
+                        PHYSICAL_BLOCK_SIZE,
+                        Byte::from_u64(
+                            u64::try_from(nodestore.layout().max_bytes_per_leaf()).unwrap()
+                        )
                     );
                     let node = new_full_leaf_node(nodestore).await;
                     assert_eq!(
@@ -592,7 +603,10 @@ mod tests {
                         node.data().len()
                     );
                     let block = node.into_block();
-                    assert_eq!(PHYSICAL_BLOCK_SIZE_BYTES as usize, block.data().len());
+                    assert_eq!(
+                        PHYSICAL_BLOCK_SIZE,
+                        Byte::from_u64(u64::try_from(block.data().len()).unwrap())
+                    );
                 })
             })
             .await;
@@ -604,13 +618,13 @@ mod tests {
 
         #[tokio::test]
         async fn max_bytes_per_leaf_is_correct() {
-            const BLOCK_SIZE: u32 = 1000;
+            const BLOCK_SIZE: Byte = Byte::from_u64(1000);
             with_nodestore_with_blocksize(BLOCK_SIZE, |nodestore| {
                 Box::pin(async move {
                     let leaf = new_empty_leaf_node(nodestore).await;
                     assert_eq!(
                         NodeLayout {
-                            block_size_bytes: BLOCK_SIZE,
+                            block_size: BLOCK_SIZE,
                         }
                         .max_bytes_per_leaf(),
                         leaf.max_bytes_per_leaf(),

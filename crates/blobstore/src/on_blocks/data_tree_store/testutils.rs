@@ -1,3 +1,4 @@
+use byte_unit::Byte;
 #[cfg(feature = "slow-tests-any")]
 use divrem::DivCeil;
 use futures::future::BoxFuture;
@@ -14,7 +15,7 @@ use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 use super::super::data_node_store::{DataNodeStore, NodeLayout};
 use super::{store::DataTreeStore, tree::DataTree};
 
-pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 128;
+pub const PHYSICAL_BLOCK_SIZE: Byte = Byte::from_u64(128);
 
 pub struct TreeFixture {
     root_id: BlockId,
@@ -85,7 +86,7 @@ pub async fn create_multi_leaf_tree<B: BlockStore + Send + Sync>(
     num_leaves: u64,
 ) -> DataTree<B> {
     let mut tree = store.create_tree().await.unwrap();
-    tree.resize_num_bytes(num_leaves * store.virtual_block_size_bytes() as u64)
+    tree.resize_num_bytes(num_leaves * store.virtual_block_size_bytes().as_u64())
         .await
         .unwrap();
     tree
@@ -161,11 +162,11 @@ pub async fn manually_create_tree<B: BlockStore + Send + Sync>(
 pub async fn with_treestore(
     f: impl FnOnce(&DataTreeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
 ) {
-    with_treestore_with_blocksize(PHYSICAL_BLOCK_SIZE_BYTES, f).await
+    with_treestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
 }
 
 pub async fn with_treestore_with_blocksize(
-    blocksize_bytes: u32,
+    blocksize_bytes: Byte,
     f: impl FnOnce(&DataTreeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
 ) {
     let mut treestore = DataTreeStore::new(
@@ -184,11 +185,11 @@ pub async fn with_treestore_and_nodestore(
         &'a DataNodeStore<SharedBlockStore<InMemoryBlockStore>>,
     ) -> BoxFuture<'a, ()>,
 ) {
-    with_treestore_and_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE_BYTES, f).await
+    with_treestore_and_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
 }
 
 pub async fn with_treestore_and_nodestore_with_blocksize(
-    blocksize_bytes: u32,
+    blocksize: Byte,
     f: impl for<'a> FnOnce(
         &'a DataTreeStore<SharedBlockStore<InMemoryBlockStore>>,
         &'a DataNodeStore<SharedBlockStore<InMemoryBlockStore>>,
@@ -197,11 +198,11 @@ pub async fn with_treestore_and_nodestore_with_blocksize(
     let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
     let mut nodestore = DataNodeStore::new(
         LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
-        blocksize_bytes,
+        blocksize,
     )
     .await
     .unwrap();
-    let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), blocksize_bytes)
+    let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), blocksize)
         .await
         .unwrap();
     f(&treestore, &nodestore).await;

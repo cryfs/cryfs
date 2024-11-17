@@ -1,5 +1,6 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
@@ -18,19 +19,19 @@ use cryfs_utils::{
 /// Each block is stored as a blob.
 pub struct BlockStoreAdapter {
     underlying_store: AsyncDropGuard<BlobStoreOnBlocks<InMemoryBlockStore>>,
-    block_size_bytes: u32,
+    block_size: Byte,
 }
 
 impl BlockStoreAdapter {
-    pub async fn new(block_size_bytes: u32) -> AsyncDropGuard<Self> {
+    pub async fn new(block_size: Byte) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_store: BlobStoreOnBlocks::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
-                block_size_bytes,
+                block_size,
             )
             .await
             .unwrap(),
-            block_size_bytes,
+            block_size,
         })
     }
 }
@@ -58,18 +59,25 @@ impl BlockStoreReader for BlockStoreAdapter {
         Ok(blob_ids.len() as u64)
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
-        Ok(self.underlying_store.estimate_space_for_num_blocks_left()?
-            * self.underlying_store.virtual_block_size_bytes() as u64)
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
+        self.underlying_store
+            .virtual_block_size_bytes()
+            .multiply(
+                usize::try_from(self.underlying_store.estimate_space_for_num_blocks_left()?)
+                    .unwrap(),
+            )
+            .ok_or_else(|| anyhow!("overflow"))
     }
 
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
-        let overhead = self.underlying_store.virtual_block_size_bytes() - self.block_size_bytes;
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
+        let overhead = Byte::from_u64(u64::from(self.underlying_store.virtual_block_size_bytes()))
+            .subtract(self.block_size)
+            .unwrap();
         block_size
-            .checked_sub(overhead as u64)
+            .subtract(overhead)
             .ok_or_else(|| InvalidBlockSizeError::new(format!("block size out of range")))
     }
 
@@ -145,9 +153,9 @@ impl BlockStore for BlockStoreAdapter {}
 /// TestFixtureAdapter takes a [Fixture] for a [BlockStore] and makes it into
 /// a [Fixture] that creates a [DataNodeStore] based on that [BlockStore].
 /// This allows using our block store test suite on [DataNodeStore].
-pub struct TestFixtureAdapter<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u32> {}
+pub struct TestFixtureAdapter<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> {}
 #[async_trait]
-impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u32> Fixture
+impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> Fixture
     for TestFixtureAdapter<FLUSH_CACHE_ON_YIELD, BLOCK_SIZE_BYTES>
 {
     type ConcreteBlockStore = BlockStoreAdapter;
@@ -155,7 +163,7 @@ impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u32> Fixture
         Self {}
     }
     async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
-        BlockStoreAdapter::new(BLOCK_SIZE_BYTES).await
+        BlockStoreAdapter::new(Byte::from_u64(BLOCK_SIZE_BYTES)).await
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
         if FLUSH_CACHE_ON_YIELD {

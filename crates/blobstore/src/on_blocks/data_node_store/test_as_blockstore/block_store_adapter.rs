@@ -1,6 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use binary_layout::Field;
+use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
@@ -14,7 +15,7 @@ use cryfs_utils::{
     data::Data,
 };
 
-const MAX_BLOCK_SIZE: u32 = 1024 * 1024;
+const MAX_BLOCK_SIZE: Byte = Byte::from_u64(1024 * 1024);
 
 /// Wrap a [DataNodeStore] into a [BlockStore] so that we can run the regular block store tests on it.
 /// Each block is stored as a DataLeafNode with the block data.
@@ -62,17 +63,19 @@ impl BlockStoreReader for BlockStoreAdapter {
         self.0.num_nodes().await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
-        Ok(self.0.estimate_space_for_num_blocks_left()?
-            * self.0.layout().max_bytes_per_leaf() as u64)
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
+        Ok(Byte::from_u64(
+            self.0.estimate_space_for_num_blocks_left()?
+                * self.0.layout().max_bytes_per_leaf() as u64,
+        ))
     }
 
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         block_size
-            .checked_sub(node::data::OFFSET as u64)
+            .subtract(Byte::from_u64(node::data::OFFSET as u64))
             .ok_or_else(|| InvalidBlockSizeError::new(format!("Out of bounds")))
     }
 

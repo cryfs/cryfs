@@ -485,7 +485,7 @@ where
 
         Ok(Statfs {
             max_filename_length,
-            blocksize,
+            blocksize: u32::try_from(blocksize.as_u64()).unwrap(),
             num_total_blocks,
             num_free_blocks,
             num_available_blocks: num_free_blocks,

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
@@ -46,14 +47,14 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.num_blocks().await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
         self.underlying_store.estimate_num_free_bytes()
     }
 
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         self.underlying_store
             .block_size_from_physical_block_size(block_size)
     }

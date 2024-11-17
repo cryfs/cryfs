@@ -1,6 +1,7 @@
 //! This module contains tests that ensure that tree operations only access the minimal required number of nodes.
 
 use anyhow::Result;
+use byte_unit::Byte;
 use divrem::DivCeil;
 use futures::future::BoxFuture;
 
@@ -16,7 +17,7 @@ use crate::on_blocks::{
 };
 
 const LAYOUT: NodeLayout = NodeLayout {
-    block_size_bytes: 40,
+    block_size: Byte::from_u64(40),
 };
 const NUM_LEAVES: u64 = 100;
 const DEPTH: u8 = expected_depth_for_num_leaves(NUM_LEAVES, LAYOUT);
@@ -36,7 +37,7 @@ mod testutils {
             SharedBlockStore::new(TrackingBlockStore::new(InMemoryBlockStore::new()));
         let mut treestore = DataTreeStore::new(
             LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
-            LAYOUT.block_size_bytes,
+            LAYOUT.block_size,
         )
         .await
         .unwrap();

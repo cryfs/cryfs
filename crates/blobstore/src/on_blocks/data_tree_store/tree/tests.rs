@@ -442,12 +442,12 @@ mod num_bytes_and_num_nodes {
             with_treestore(|store| {
                 Box::pin(async move {
                     let layout = NodeLayout {
-                        block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+                        block_size: PHYSICAL_BLOCK_SIZE,
                     };
                     // Just make sure our calculation of LAYOUT is correct
                     assert_eq!(
-                        layout.max_bytes_per_leaf(),
-                        store.virtual_block_size_bytes(),
+                        layout.max_bytes_per_leaf() as u64,
+                        store.virtual_block_size_bytes().as_u64(),
                     );
                 })
             })
@@ -588,7 +588,7 @@ mod root_node_id {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
                     let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
-                    tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
+                    tree.resize_num_bytes(store.virtual_block_size_bytes().as_u64() * 100)
                         .await
                         .unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
@@ -605,7 +605,7 @@ mod root_node_id {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
                     let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
-                    tree.resize_num_bytes(store.virtual_block_size_bytes() as u64 * 100)
+                    tree.resize_num_bytes(store.virtual_block_size_bytes().as_u64() * 100)
                         .await
                         .unwrap();
                     std::mem::drop(tree);

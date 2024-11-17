@@ -15,6 +15,7 @@ async-trait.workspace = true
 atomic-time.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
+byte-unit.workspace = true
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-rustfs = { path = "../rustfs" }

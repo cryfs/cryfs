@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use derive_more::{Add, AddAssign, Sum};
 use futures::stream::BoxStream;
 use std::collections::HashMap;
@@ -76,14 +77,14 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.num_blocks().await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
         self.underlying_store.estimate_num_free_bytes()
     }
 
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         self.underlying_store
             .block_size_from_physical_block_size(block_size)
     }
@@ -639,18 +640,20 @@ mod tests {
     async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
-        let expected_overhead: u64 = 0u64;
+        let expected_overhead = Byte::from_u64(0);
 
         assert_eq!(
-            0u64,
+            Byte::from_u64(0),
             store
                 .block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
-            20u64,
+            Byte::from_u64(20),
             store
-                .block_size_from_physical_block_size(expected_overhead + 20u64)
+                .block_size_from_physical_block_size(
+                    expected_overhead.add(Byte::from_u64(20)).unwrap()
+                )
                 .unwrap()
         );
 

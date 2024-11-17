@@ -1,3 +1,4 @@
+use byte_unit::Byte;
 use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore, RemoveResult};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockId, BlockStoreReader, BlockStoreWriter, DynBlockStore,
@@ -100,8 +101,7 @@ impl FilesystemFixture {
 
         DataNodeStore::new(
             blockstore,
-            // TODO Change type in config instead of doing u32::try_from
-            u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
+            Byte::from_u64(self.config.config.config().blocksize_bytes),
         )
         .await
         .expect("Failed to create DataNodeStore")
@@ -112,8 +112,7 @@ impl FilesystemFixture {
 
         BlobStoreOnBlocks::new(
             blockstore,
-            // TODO Change type in config instead of doing u32::try_from
-            u32::try_from(self.config.config.config().blocksize_bytes).unwrap(),
+            Byte::from_u64(self.config.config.config().blocksize_bytes),
         )
         .await
         .expect("Failed to create blobstore")

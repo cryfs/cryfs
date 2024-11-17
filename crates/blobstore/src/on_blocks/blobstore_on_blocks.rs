@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use std::fmt;
 
 use super::blob_on_blocks::BlobOnBlocks;
@@ -15,10 +16,10 @@ pub struct BlobStoreOnBlocks<B: BlockStore + Send + Sync> {
 impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
     pub async fn new(
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
-        block_size_bytes: u32,
+        block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
-            tree_store: DataTreeStore::new(blockstore, block_size_bytes).await?,
+            tree_store: DataTreeStore::new(blockstore, block_size).await?,
         }))
     }
 
@@ -78,7 +79,7 @@ impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
         self.tree_store.estimate_space_for_num_blocks_left()
     }
 
-    fn virtual_block_size_bytes(&self) -> u32 {
+    fn virtual_block_size_bytes(&self) -> Byte {
         self.tree_store.virtual_block_size_bytes()
     }
 

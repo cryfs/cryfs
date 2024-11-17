@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use binary_layout::{binary_layout, Field};
+use byte_unit::Byte;
 use std::num::NonZeroU64;
 
 use cryfs_blockstore::BLOCKID_LEN;
@@ -24,7 +25,7 @@ binary_layout!(node, LittleEndian, {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NodeLayout {
-    pub block_size_bytes: u32,
+    pub block_size: Byte,
 }
 
 impl NodeLayout {
@@ -33,10 +34,10 @@ impl NodeLayout {
         node::data::OFFSET
     }
 
+    // TODO Return Byte type?
     pub const fn max_bytes_per_leaf(&self) -> u32 {
-        // TODO This should be
-        // self.block_size_bytes - u32::try_from(node::data::OFFSET).unwrap()
-        self.block_size_bytes - node::data::OFFSET as u32
+        // TODO try_from instead of as
+        (self.block_size.as_u64() - node::data::OFFSET as u64) as u32
     }
 
     pub const fn max_children_per_inner_node(&self) -> u32 {
@@ -73,7 +74,7 @@ mod tests {
     #[test]
     fn test_max_bytes_per_leaf() {
         let layout = NodeLayout {
-            block_size_bytes: 1234,
+            block_size: Byte::from_u64(1234),
         };
         assert_eq!(
             layout.max_bytes_per_leaf(),
@@ -84,7 +85,7 @@ mod tests {
     #[test]
     fn test_max_children_per_inner_node() {
         let layout = NodeLayout {
-            block_size_bytes: 1234,
+            block_size: Byte::from_u64(1234),
         };
         assert_eq!(
             layout.max_children_per_inner_node(),
@@ -95,7 +96,7 @@ mod tests {
     #[test]
     fn test_num_leaves_per_full_subtree_depth() {
         let layout = NodeLayout {
-            block_size_bytes: 1234,
+            block_size: Byte::from_u64(1234),
         };
         assert_eq!(
             layout.num_leaves_per_full_subtree(1).unwrap().get(),

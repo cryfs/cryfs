@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use derive_more::{Display, Error};
 use futures::stream::BoxStream;
 use std::any::Any;
@@ -28,11 +29,11 @@ pub trait BlockStoreReader {
     async fn exists(&self, id: &BlockId) -> Result<bool>;
     async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
     async fn num_blocks(&self) -> Result<u64>;
-    fn estimate_num_free_bytes(&self) -> Result<u64>;
+    fn estimate_num_free_bytes(&self) -> Result<Byte>;
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError>;
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError>;
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>>;
 }

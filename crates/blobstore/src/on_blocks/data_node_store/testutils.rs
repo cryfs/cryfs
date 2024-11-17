@@ -1,3 +1,4 @@
+use byte_unit::Byte;
 use futures::future;
 use futures::{future::BoxFuture, join};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
@@ -6,7 +7,7 @@ use super::{DataInnerNode, DataLeafNode, DataNode, DataNodeStore, NodeLayout};
 use cryfs_blockstore::{BlockId, InMemoryBlockStore, LockingBlockStore};
 use cryfs_utils::data::Data;
 
-pub const PHYSICAL_BLOCK_SIZE_BYTES: u32 = 1024;
+pub const PHYSICAL_BLOCK_SIZE: Byte = Byte::from_u64(1024);
 
 pub async fn new_full_leaf_node(
     nodestore: &DataNodeStore<InMemoryBlockStore>,
@@ -89,19 +90,17 @@ pub async fn load_leaf_node(
 pub async fn with_nodestore(
     f: impl FnOnce(&DataNodeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
 ) {
-    with_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE_BYTES, f).await
+    with_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
 }
 
 pub async fn with_nodestore_with_blocksize(
-    blocksize_bytes: u32,
+    blocksize: Byte,
     f: impl FnOnce(&DataNodeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
 ) {
-    let mut nodestore = DataNodeStore::new(
-        LockingBlockStore::new(InMemoryBlockStore::new()),
-        blocksize_bytes,
-    )
-    .await
-    .unwrap();
+    let mut nodestore =
+        DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), blocksize)
+            .await
+            .unwrap();
     f(&nodestore).await;
     nodestore.async_drop().await.unwrap();
 }
@@ -118,7 +117,7 @@ pub async fn with_nodestore_with_blocksize(
 //     let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
 //     let mut nodestore = DataNodeStore::new(
 //         LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
-//         PHYSICAL_BLOCK_SIZE_BYTES,
+//         PHYSICAL_BLOCK_SIZE,
 //     )
 //     .unwrap();
 //     let _ = f(&blockstore, &nodestore).await;
@@ -128,7 +127,7 @@ pub async fn with_nodestore_with_blocksize(
 
 pub fn half_full_leaf_data(seed: u64) -> Data {
     let len = NodeLayout {
-        block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+        block_size: PHYSICAL_BLOCK_SIZE,
     }
     .max_bytes_per_leaf() as usize
         / 2;
@@ -137,7 +136,7 @@ pub fn half_full_leaf_data(seed: u64) -> Data {
 
 pub fn full_leaf_data(seed: u64) -> Data {
     let len = NodeLayout {
-        block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+        block_size: PHYSICAL_BLOCK_SIZE,
     }
     .max_bytes_per_leaf() as usize;
     data_fixture(len, seed)

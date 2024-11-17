@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use async_trait::async_trait;
 use base64::engine::{general_purpose::STANDARD as base64_STANDARD, Engine as _};
+use byte_unit::Byte;
 use futures::stream::{BoxStream, Stream, StreamExt, TryStreamExt};
 use std::fmt::{self, Debug};
 use std::io::ErrorKind;
@@ -92,15 +93,15 @@ impl BlockStoreReader for OnDiskBlockStore {
             .await?)
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
-        sysinfo::get_available_disk_space(&self.basedir)
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
+        sysinfo::get_available_disk_space(&self.basedir).map(Byte::from_u64)
     }
 
     fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
-        block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
+        block_size.subtract(Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64))
             .ok_or_else(|| InvalidBlockSizeError::new(format!("Physical block size of {block_size} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))
     }
 
@@ -409,27 +410,31 @@ mod tests {
     async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
-        let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64;
+        let expected_overhead = Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64);
 
         assert_eq!(
-            0u64,
+            Byte::from_u64(0),
             store
                 .block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
-            20u64,
+            Byte::from_u64(20),
             store
-                .block_size_from_physical_block_size(expected_overhead + 20u64)
+                .block_size_from_physical_block_size(
+                    expected_overhead.add(Byte::from_u64(20)).unwrap()
+                )
                 .unwrap()
         );
-        assert!(store.block_size_from_physical_block_size(0).is_err());
+        assert!(store
+            .block_size_from_physical_block_size(Byte::from_u64(0))
+            .is_err());
 
         store.async_drop().await.unwrap();
     }
 
-    fn _get_block_file_size(basedir: &Path, block_id: &BlockId) -> u64 {
-        _block_path(basedir, block_id).metadata().unwrap().len()
+    fn _get_block_file_size(basedir: &Path, block_id: &BlockId) -> Byte {
+        Byte::from_u64(_block_path(basedir, block_id).metadata().unwrap().len())
     }
 
     fn _block_file_exists(basedir: &Path, block_id: &BlockId) -> bool {
@@ -448,7 +453,7 @@ mod tests {
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert_eq!(
-            0,
+            Byte::from_u64(0),
             store
                 .block_size_from_physical_block_size(_get_block_file_size(
                     fixture.basedir.path(),
@@ -459,7 +464,7 @@ mod tests {
 
         store.store(&blockid(1), &data(500, 0)).await.unwrap();
         assert_eq!(
-            500,
+            Byte::from_u64(500),
             store
                 .block_size_from_physical_block_size(_get_block_file_size(
                     fixture.basedir.path(),

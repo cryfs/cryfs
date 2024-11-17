@@ -1,4 +1,5 @@
 use anyhow::Result;
+use byte_unit::Byte;
 use futures::{future::BoxFuture, stream::BoxStream};
 use mockall::mock;
 use std::fmt::{self, Debug};
@@ -19,8 +20,8 @@ mock! {
         fn exists<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<bool>> where 'a: 'r, 'b: 'r;
         fn load<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<Option<Data>>> where 'a: 'r, 'b: 'r;
         fn num_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<u64>> where 'a: 'r;
-        fn estimate_num_free_bytes(&self) -> Result<u64>;
-        fn block_size_from_physical_block_size(&self, block_size: u64) -> Result<u64, InvalidBlockSizeError>;
+        fn estimate_num_free_bytes(&self) -> Result<Byte>;
+        fn block_size_from_physical_block_size(&self, block_size: Byte) -> Result<Byte, InvalidBlockSizeError>;
 
         fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<BoxStream<'static, Result<BlockId>>>> where 'a: 'r;
     }

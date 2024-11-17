@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use byte_unit::Byte;
 use std::fmt::Debug;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
@@ -81,7 +82,7 @@ where
     }
 
     // virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
-    pub fn virtual_block_size_bytes(&self) -> u32 {
+    pub fn virtual_block_size_bytes(&self) -> Byte {
         self.blobstore.virtual_block_size_bytes()
     }
 

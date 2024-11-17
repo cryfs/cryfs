@@ -1,4 +1,5 @@
 use anyhow::Result;
+use byte_unit::Byte;
 use cryfs_filesystem::filesystem::fsblobstore::EntryType;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::Future;
@@ -81,10 +82,10 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
 
         let checks = AllChecks::new(root_blob_id);
 
-        // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
-        let blocksize_bytes = u32::try_from(self.config.config.config().blocksize_bytes).unwrap();
-        let mut blobstore =
-            FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize_bytes).await?);
+        let blocksize_bytes = self.config.config.config().blocksize_bytes;
+        let mut blobstore = FsBlobStore::new(
+            BlobStoreOnBlocks::new(blockstore, Byte::from_u64(blocksize_bytes)).await?,
+        );
 
         let pb = self
             .progress_bar_manager

@@ -7,9 +7,9 @@ mod blockstore_tests {
     mod block_size_minimal {
         use super::*;
 
-        const MINIMAL_SIZE: u32 = crate::on_blocks::data_node_store::NodeLayout::header_len()
-            as u32
-            + 2 * crate::BLOBID_LEN as u32;
+        const MINIMAL_SIZE: u64 = crate::on_blocks::data_node_store::NodeLayout::header_len()
+            as u64
+            + 2 * crate::BLOBID_LEN as u64;
 
         mod with_flushing {
             use super::*;

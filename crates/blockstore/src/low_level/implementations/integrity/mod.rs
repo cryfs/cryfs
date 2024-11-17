@@ -1,6 +1,7 @@
 use anyhow::{bail, ensure, Context, Result};
 use async_trait::async_trait;
 use binary_layout::prelude::*;
+use byte_unit::Byte;
 use derive_more::{Display, Error};
 use futures::{
     future, join,
@@ -45,7 +46,7 @@ binary_layout::binary_layout!(block_layout, LittleEndian, {
     data: [u8],
 });
 
-const HEADER_SIZE: usize = block_layout::data::OFFSET;
+const HEADER_SIZE_BYTES: usize = block_layout::data::OFFSET;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AllowIntegrityViolations {
@@ -183,20 +184,20 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         self.underlying_block_store.num_blocks().await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
         self.underlying_block_store.estimate_num_free_bytes()
     }
 
     // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store.
     fn block_size_from_physical_block_size(
         &self,
-        physical_block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        physical_block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         let block_size = self
             .underlying_block_store
             .block_size_from_physical_block_size(physical_block_size)?;
-        block_size.checked_sub(HEADER_SIZE as u64)
-            .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {HEADER_SIZE}.")))
+        block_size.subtract(Byte::from_u64(u64::try_from(HEADER_SIZE_BYTES).unwrap()))
+            .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {HEADER_SIZE_BYTES}.")))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -300,8 +301,8 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyh
     type BlockData = BlockData;
 
     fn allocate(size: usize) -> BlockData {
-        let mut data = B::allocate(HEADER_SIZE + size).extract();
-        data.shrink_to_subregion(HEADER_SIZE..);
+        let mut data = B::allocate(HEADER_SIZE_BYTES + size).extract();
+        data.shrink_to_subregion(HEADER_SIZE_BYTES..);
         BlockData::new(data)
     }
 
@@ -390,7 +391,7 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
     ) -> (BlockVersionTransaction<'a>, Data) {
         let version_transaction = block_info.start_increment_version_transaction(my_client_id);
 
-        data.grow_region_fail_if_reallocation_necessary(HEADER_SIZE, 0).expect("Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header");
+        data.grow_region_fail_if_reallocation_necessary(HEADER_SIZE_BYTES, 0).expect("Tried to grow the data to contain the header in IntegrityBlockStore::_prepend_header");
         let mut view = block_layout::View::new(data);
         view.format_version_header_mut()
             .write(FORMAT_VERSION_HEADER);
@@ -590,7 +591,7 @@ mod generic_tests {
     async fn test_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::<false, false>::new();
         let mut store = fixture.store().await;
-        let expected_overhead: u64 = HEADER_SIZE as u64;
+        let expected_overhead = Byte::from_u64(HEADER_SIZE_BYTES as u64);
 
         assert_eq!(
             0u64,
@@ -601,10 +602,14 @@ mod generic_tests {
         assert_eq!(
             20u64,
             store
-                .block_size_from_physical_block_size(expected_overhead + 20u64)
+                .block_size_from_physical_block_size(
+                    expected_overhead.add(Byte::from_u64(20)).unwrap()
+                )
                 .unwrap()
         );
-        assert!(store.block_size_from_physical_block_size(0).is_err());
+        assert!(store
+            .block_size_from_physical_block_size(Byte::from_u64(0))
+            .is_err());
 
         store.async_drop().await.unwrap();
     }

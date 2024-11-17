@@ -18,7 +18,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = node::data::OFFSET + 2 * BLOCKID_LEN;
-        assert!(layout.block_size_bytes as usize >= min_block_size, "Block doesn't have enough space for header and two children. This should have been checked before calling DataInnerNode::new");
+        assert!(usize::try_from(layout.block_size.as_u64()).unwrap() >= min_block_size, "Block doesn't have enough space for header and two children. This should have been checked before calling DataInnerNode::new");
 
         let view = node::View::new(block.data());
         ensure!(
@@ -33,10 +33,10 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
             "Loaded an inner node with depth 0. This doesn't make sense, it should have been loaded as a leaf node",
         );
         ensure!(
-            block.data().len() == layout.block_size_bytes as usize,
+            block.data().len() == usize::try_from(layout.block_size.as_u64()).unwrap(),
             "Loaded block of size {} but expected {}",
             block.data().len(),
-            layout.block_size_bytes
+            layout.block_size,
         );
         ensure!(
             depth <= MAX_DEPTH,
@@ -169,7 +169,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
 }
 
 pub fn serialize_inner_node(depth: u8, children: &[BlockId], layout: &NodeLayout) -> Data {
-    let data = ZeroedData::new(layout.block_size_bytes.try_into().unwrap());
+    let data = ZeroedData::new(usize::try_from(layout.block_size.as_u64()).unwrap());
     initialize_inner_node(depth, children, layout, data)
 }
 
@@ -236,6 +236,7 @@ impl<B: BlockStore + Send + Sync> Debug for DataInnerNode<B> {
 mod tests {
     use super::super::super::testutils::*;
     use super::*;
+    use byte_unit::Byte;
     use cryfs_blockstore::InMemoryBlockStore;
 
     #[allow(non_snake_case)]
@@ -369,7 +370,8 @@ mod tests {
 
         #[tokio::test]
         async fn givenLayoutWithJustLargeEnoughBlockSize_whenLoading_thenSucceeds() {
-            const JUST_LARGE_ENOUGH_SIZE: u32 = node::data::OFFSET as u32 + 2 * BLOCKID_LEN as u32;
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
             with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE, |nodestore| {
                 Box::pin(async move {
                     let node = new_full_inner_node(nodestore).await;
@@ -386,12 +388,16 @@ mod tests {
         #[tokio::test]
         #[should_panic = "Tried to create a DataNodeStore with block size 39 (physical: 39) but must be at least 40"]
         async fn givenLayoutWithTooSmallBlockSize_whenLoading_thenFailss() {
-            const JUST_LARGE_ENOUGH_SIZE: usize = node::data::OFFSET + 2 * BLOCKID_LEN;
-            with_nodestore_with_blocksize(JUST_LARGE_ENOUGH_SIZE as u32 - 1, |nodestore| {
-                Box::pin(async move {
-                    new_full_inner_node(nodestore).await;
-                })
-            })
+            const JUST_LARGE_ENOUGH_SIZE: Byte =
+                Byte::from_u64(node::data::OFFSET as u64 + 2 * BLOCKID_LEN as u64);
+            with_nodestore_with_blocksize(
+                JUST_LARGE_ENOUGH_SIZE.subtract(Byte::from_u64(1)).unwrap(),
+                |nodestore| {
+                    Box::pin(async move {
+                        new_full_inner_node(nodestore).await;
+                    })
+                },
+            )
             .await;
         }
 
@@ -485,7 +491,7 @@ mod tests {
         #[test]
         fn test_serialize_inner_node() {
             let layout = NodeLayout {
-                block_size_bytes: PHYSICAL_BLOCK_SIZE_BYTES,
+                block_size: PHYSICAL_BLOCK_SIZE,
             };
             let blockid1 = BlockId::new_random();
             let blockid2 = BlockId::new_random();
@@ -1083,12 +1089,15 @@ mod tests {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     assert_ne!(
-                        PHYSICAL_BLOCK_SIZE_BYTES,
+                        u32::try_from(PHYSICAL_BLOCK_SIZE.as_u64()).unwrap(),
                         nodestore.layout().max_bytes_per_leaf()
                     );
                     let node = new_inner_node(nodestore).await;
                     let block = node.into_block();
-                    assert_eq!(PHYSICAL_BLOCK_SIZE_BYTES as usize, block.data().len());
+                    assert_eq!(
+                        usize::try_from(PHYSICAL_BLOCK_SIZE.as_u64()).unwrap(),
+                        block.data().len()
+                    );
                 })
             })
             .await;

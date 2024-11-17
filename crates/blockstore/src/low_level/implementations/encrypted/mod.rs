@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
+use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug};
@@ -90,7 +91,7 @@ impl<
             .await
     }
 
-    fn estimate_num_free_bytes(&self) -> Result<u64> {
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
         self.underlying_block_store
             .deref()
             .borrow()
@@ -99,17 +100,19 @@ impl<
 
     fn block_size_from_physical_block_size(
         &self,
-        physical_block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        physical_block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         let block_size = self
             .underlying_block_store
             .deref()
             .borrow()
             .block_size_from_physical_block_size(physical_block_size)?;
-        let ciphertext_size = block_size.checked_sub(FORMAT_VERSION_HEADER.len() as u64)
+        let ciphertext_size = block_size.subtract(Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64))
             .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))?;
         ciphertext_size
-            .checked_sub((C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64)
+            .subtract(Byte::from_u64(
+                (C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64,
+            ))
             .ok_or_else(|| {
                 InvalidBlockSizeError::new(format!(
                     "Block size of {block_size} (physical: {physical_block_size}) is too small."
@@ -334,9 +337,11 @@ mod tests {
         async fn _test_block_size_from_physical_block_size<C: 'static + CipherDef + Send + Sync>() {
             let mut fixture = TestFixture::<C>::new();
             let mut store = fixture.store().await;
-            let expected_overhead: u64 = FORMAT_VERSION_HEADER.len() as u64
-                + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
-                + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64;
+            let expected_overhead = Byte::from_u64(
+                FORMAT_VERSION_HEADER.len() as u64
+                    + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
+                    + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64,
+            );
 
             assert_eq!(
                 0u64,
@@ -347,10 +352,14 @@ mod tests {
             assert_eq!(
                 20u64,
                 store
-                    .block_size_from_physical_block_size(expected_overhead + 20u64)
+                    .block_size_from_physical_block_size(
+                        expected_overhead.add(Byte::from_u64(20)).unwrap()
+                    )
                     .unwrap()
             );
-            assert!(store.block_size_from_physical_block_size(0).is_err());
+            assert!(store
+                .block_size_from_physical_block_size(Byte::from_u64(0))
+                .is_err());
 
             store.async_drop().await.unwrap();
         }

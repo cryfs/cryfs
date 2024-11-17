@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use byte_unit::Byte;
 use futures::{
     future,
     stream::{self, BoxStream, StreamExt, TryStreamExt},
@@ -217,15 +218,15 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         Ok(base_store.num_blocks().await? + self.cache.num_blocks_in_cache_but_not_in_base_store())
     }
 
-    pub fn estimate_num_free_bytes(&self) -> Result<u64> {
+    pub fn estimate_num_free_bytes(&self) -> Result<Byte> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
         base_store.estimate_num_free_bytes()
     }
 
     pub fn block_size_from_physical_block_size(
         &self,
-        block_size: u64,
-    ) -> Result<u64, InvalidBlockSizeError> {
+        block_size: Byte,
+    ) -> Result<Byte, InvalidBlockSizeError> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
         base_store.block_size_from_physical_block_size(block_size)
     }
@@ -506,24 +507,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {
-        let expected_overhead: u64 = 234354;
+        let expected_overhead = Byte::from_u64(234354);
 
         let mut underlying_store = make_mock_block_store();
         underlying_store
             .expect_block_size_from_physical_block_size()
-            .returning(move |x| Ok(x - expected_overhead));
+            .returning(move |x| Ok(x.subtract(expected_overhead).unwrap()));
         let mut store = LockingBlockStore::new(underlying_store);
 
         assert_eq!(
-            0,
+            Byte::from_u64(0),
             store
                 .block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
-            500,
+            Byte::from_u64(500),
             store
-                .block_size_from_physical_block_size(500 + expected_overhead)
+                .block_size_from_physical_block_size(
+                    Byte::from_u64(500).add(expected_overhead).unwrap()
+                )
                 .unwrap()
         );
 

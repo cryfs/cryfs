@@ -16,14 +16,15 @@ name = "cryfs-check"
 # TODO cryfs-check indirectly depends on cryfs-rustfs. This shouldn't be necessary.
 anyhow.workspace = true
 async-trait.workspace = true
-clap = {workspace = true, features = ["derive"]}
-cryfs-blockstore = {path = "../blockstore"}
-cryfs-blobstore = {path = "../blobstore"}
-cryfs-cli-utils = {path = "../cli-utils"}
-cryfs-filesystem = {path = "../cryfs-filesystem"}
-cryfs-utils = {path = "../utils"}
-cryfs-version = {path = "../cryfs-version"}
-cryfs-rustfs = {path = "../rustfs"}
+byte-unit.workspace = true
+clap = { workspace = true, features = ["derive"] }
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-cli-utils = { path = "../cli-utils" }
+cryfs-filesystem = { path = "../cryfs-filesystem" }
+cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
+cryfs-rustfs = { path = "../rustfs" }
 derivative.workspace = true
 log.workspace = true
 futures.workspace = true
@@ -36,8 +37,8 @@ itertools.workspace = true
 
 [dev-dependencies]
 tempdir.workspace = true
-cryfs-filesystem = {path = "../cryfs-filesystem", features=["testutils"]}
-cryfs-blockstore = {path = "../blockstore", features=["testutils"]}
+cryfs-filesystem = { path = "../cryfs-filesystem", features = ["testutils"] }
+cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
 itertools.workspace = true
 rand.workspace = true
 rstest.workspace = true

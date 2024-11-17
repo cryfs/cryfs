@@ -15,6 +15,7 @@ async-trait.workspace = true
 base64.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
+byte-unit.workspace = true
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
@@ -45,7 +46,7 @@ generic-array.workspace = true
 mockall.workspace = true
 tempdir.workspace = true
 # TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
-lockable = {workspace = true, features = ["slow_assertions"]}
+lockable = { workspace = true, features = ["slow_assertions"] }
 
 
 [features]
