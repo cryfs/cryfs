@@ -65,7 +65,7 @@ pub struct MountArgs {
     #[arg(long)]
     pub cipher: Option<String>, // TODO This should probably be an enum
 
-    // TODO Make display of default blocksize dynamic to show the actual default cipher
+    // TODO Make display of default blocksize dynamic to show the actual default blocksize
     /// The block size used when storing ciphertext blocks. Default: 16KiB
     /// If creating a new file system, this will determine the block size for the new file system.
     /// If opening an existing file system, this will verify that the file system actually uses that block size.
