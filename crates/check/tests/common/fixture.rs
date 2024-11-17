@@ -99,23 +99,17 @@ impl FilesystemFixture {
     async fn make_nodestore(&self) -> AsyncDropGuard<DataNodeStore<DynBlockStore>> {
         let blockstore = self.make_locking_blockstore().await;
 
-        DataNodeStore::new(
-            blockstore,
-            Byte::from_u64(self.config.config.config().blocksize_bytes),
-        )
-        .await
-        .expect("Failed to create DataNodeStore")
+        DataNodeStore::new(blockstore, self.config.config.config().blocksize)
+            .await
+            .expect("Failed to create DataNodeStore")
     }
 
     async fn make_blobstore(&self) -> AsyncDropGuard<BlobStoreOnBlocks<DynBlockStore>> {
         let blockstore = self.make_locking_blockstore().await;
 
-        BlobStoreOnBlocks::new(
-            blockstore,
-            Byte::from_u64(self.config.config.config().blocksize_bytes),
-        )
-        .await
-        .expect("Failed to create blobstore")
+        BlobStoreOnBlocks::new(blockstore, self.config.config.config().blocksize)
+            .await
+            .expect("Failed to create blobstore")
     }
 
     async fn make_fsblobstore(

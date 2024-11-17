@@ -1,3 +1,4 @@
+use byte_unit::Byte;
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
@@ -37,7 +38,7 @@ pub struct CryConfig {
     pub last_opened_with_version: String,
 
     /// Size of the on-disk (i.e. post-encryption) blocks in bytes
-    pub blocksize_bytes: u64,
+    pub blocksize: Byte,
 
     /// Unique ID of the file system
     pub filesystem_id: FilesystemId,

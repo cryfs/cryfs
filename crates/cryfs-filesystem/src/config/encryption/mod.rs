@@ -122,6 +122,7 @@ mod tests {
     use super::*;
     use crate::config::CryConfig;
     use crate::config::FilesystemId;
+    use byte_unit::Byte;
     use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
     use cryfs_utils::progress::SilentProgressBarManager;
     use std::io::Cursor;
@@ -146,7 +147,7 @@ mod tests {
                 format_version: "0.10".to_string(),
                 created_with_version: "0.11.2".to_string(),
                 last_opened_with_version: "0.11.3".to_string(),
-                blocksize_bytes: 16384,
+                blocksize: Byte::from_u64_with_unit(16, byte_unit::Unit::KiB).unwrap(),
                 filesystem_id: FilesystemId::from_hex("ABDCB364DB327ED401F22E99EB37E78F").unwrap(),
                 exclusive_client_id: None,
             }
@@ -163,7 +164,7 @@ mod tests {
             format_version: "0.10".to_string(),
             created_with_version: "0.10.2".to_string(),
             last_opened_with_version: "0.11.1".to_string(),
-            blocksize_bytes: 16384,
+            blocksize: Byte::from_u64_with_unit(16, byte_unit::Unit::KiB).unwrap(),
             filesystem_id: FilesystemId::from_hex("B364DB327ED401F22E99EB37E78FABDC").unwrap(),
             exclusive_client_id: None,
         };

@@ -15,7 +15,7 @@ async-trait.workspace = true
 atomic-time.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
-byte-unit.workspace = true
+byte-unit = { workspace = true, features = ["serde"] }
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-rustfs = { path = "../rustfs" }
@@ -41,7 +41,7 @@ tokio = { workspace = true, features = ["sync"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
 # TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
-lockable = {workspace = true, features = ["slow_assertions"]}
+lockable = { workspace = true, features = ["slow_assertions"] }
 
 [features]
 testutils = ["cryfs-blobstore/testutils"]

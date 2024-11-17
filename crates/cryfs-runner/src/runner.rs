@@ -95,10 +95,9 @@ impl<'m, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
         // TODO No unwrap. Should we instead change blocksize_bytes in the config file struct?
-        let mut blobstore =
-            BlobStoreOnBlocks::new(blockstore, Byte::from_u64(self.config.blocksize_bytes))
-                .await
-                .map_cli_error(|_: &InvalidBlockSizeError| CliErrorKind::UnspecifiedError)?;
+        let mut blobstore = BlobStoreOnBlocks::new(blockstore, self.config.blocksize)
+            .await
+            .map_cli_error(|_: &InvalidBlockSizeError| CliErrorKind::UnspecifiedError)?;
 
         let root_blob_id = BlobId::from_hex(&self.config.root_blob);
         let root_blob_id = match root_blob_id {

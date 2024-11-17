@@ -1,5 +1,4 @@
 use anyhow::Result;
-use byte_unit::Byte;
 use cryfs_filesystem::filesystem::fsblobstore::EntryType;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::Future;
@@ -82,10 +81,8 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
 
         let checks = AllChecks::new(root_blob_id);
 
-        let blocksize_bytes = self.config.config.config().blocksize_bytes;
-        let mut blobstore = FsBlobStore::new(
-            BlobStoreOnBlocks::new(blockstore, Byte::from_u64(blocksize_bytes)).await?,
-        );
+        let blocksize = self.config.config.config().blocksize;
+        let mut blobstore = FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize).await?);
 
         let pb = self
             .progress_bar_manager

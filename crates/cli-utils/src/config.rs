@@ -1,3 +1,4 @@
+use byte_unit::{Byte, UnitType};
 use std::fmt::Display;
 
 use cryfs_filesystem::config::ConfigLoadResult;
@@ -10,6 +11,14 @@ pub fn print_config(config: &ConfigLoadResult) {
         } else {
             print!("{} -> {}", old_value, new_value);
         }
+    }
+
+    fn format_bytes(bytes: Byte) -> String {
+        format!(
+            "{} ({} bytes)",
+            bytes.get_appropriate_unit(UnitType::Binary),
+            bytes.as_u64(),
+        )
     }
 
     println!("----------------------------------------------------");
@@ -34,10 +43,9 @@ pub fn print_config(config: &ConfigLoadResult) {
     print_value(&config.old_config.cipher, &config.config.config().cipher);
     print!("\n- Blocksize: ");
     print_value(
-        config.old_config.blocksize_bytes,
-        config.config.config().blocksize_bytes,
+        format_bytes(config.old_config.blocksize),
+        format_bytes(config.config.config().blocksize),
     );
-    print!(" bytes");
     print!("\n- Filesystem Id: ");
     print_value(
         config.old_config.filesystem_id.to_hex(),

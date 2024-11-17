@@ -1,3 +1,4 @@
+use byte_unit::Byte;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::cmp::Ordering;
@@ -41,7 +42,7 @@ pub fn serialize(config: CryConfig, writer: impl Write) -> Result<(), serde_json
                 format_version: Some(config.format_version),
                 created_with_version: Some(config.created_with_version),
                 last_opened_with_version: Some(config.last_opened_with_version),
-                blocksize_bytes: Some(config.blocksize_bytes),
+                blocksize_bytes: Some(config.blocksize.as_u64()),
                 filesystem_id: config.filesystem_id.to_hex(),
                 exclusive_client_id: config.exclusive_client_id,
 
@@ -103,12 +104,12 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
         )}
     })?;
 
-    let blocksize_bytes = config.cryfs.blocksize_bytes.ok_or_else(|| {
+    let blocksize = Byte::from_u64(config.cryfs.blocksize_bytes.ok_or_else(|| {
         // CryFS <= 0.9.2 didn't have this field
         DeserializationError::InvalidConfig{message:format!(
             "File system version is {format_version} but blocksizeBytes is not set. This should be impossible.",
         )}
-    })?;
+    })?);
 
     let filesystem_id = FilesystemId::from_hex(&config.cryfs.filesystem_id).map_err(|err| {
         DeserializationError::InvalidConfig {
@@ -126,7 +127,7 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
         format_version: format_version.to_string(),
         created_with_version,
         last_opened_with_version,
-        blocksize_bytes,
+        blocksize,
         filesystem_id,
         exclusive_client_id: config.cryfs.exclusive_client_id,
     })

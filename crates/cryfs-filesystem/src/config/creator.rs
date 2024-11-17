@@ -53,7 +53,7 @@ pub fn create(
     let exclusive_client_id =
         _generate_exclusive_client_id(my_client_id, command_line_flags, console)?
             .map(|id| id.id.get());
-    let blocksize_bytes = console
+    let blocksize = console
         .ask_blocksize_bytes_for_new_filesystem()
         .map_err(ConfigCreateError::InteractionError)?;
     let config = CryConfig {
@@ -64,7 +64,7 @@ pub fn create(
         created_with_version: CRYFS_VERSION.to_string(),
         last_opened_with_version: CRYFS_VERSION.to_string(),
         // TODO Check block size is valid (i.e. large enough)
-        blocksize_bytes,
+        blocksize,
         filesystem_id,
         exclusive_client_id,
     };

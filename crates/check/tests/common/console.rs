@@ -1,4 +1,5 @@
 use anyhow::Result;
+use byte_unit::Byte;
 use std::path::Path;
 
 use cryfs_filesystem::config::Console;
@@ -37,8 +38,8 @@ impl Console for FixtureCreationConsole {
         Ok("aes-256-gcm".to_owned())
     }
 
-    fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<u64> {
-        Ok(104)
+    fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<Byte> {
+        Ok(Byte::from_u64(104))
     }
 
     fn ask_create_basedir(&self, path: &Path) -> Result<bool> {

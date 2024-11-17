@@ -1,4 +1,5 @@
 use anyhow::Result;
+use byte_unit::Byte;
 use std::path::Path;
 
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
@@ -42,7 +43,7 @@ pub trait Console {
     fn ask_cipher_for_new_filesystem(&self) -> Result<String>;
 
     /// We're in the process of creating a new file system and need to ask the user for the block size to use
-    fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<u64>;
+    fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<Byte>;
 
     /// We've tried to load a file system but the basedir doesn't exist. Ask whether we should create it.
     fn ask_create_basedir(&self, path: &Path) -> Result<bool>;

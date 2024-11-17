@@ -1,4 +1,5 @@
 use anyhow::Result;
+use byte_unit::Byte;
 use dialoguer::{Confirm, Select};
 use std::path::Path;
 
@@ -78,22 +79,21 @@ impl Console for InteractiveConsole {
         )
     }
 
-    fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<u64> {
-        // TODO Allow custom parameters
+    fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<Byte> {
+        // TODO Allow custom block sizes
+        const OPTIONS: &[Byte] = &[kb(4), kb(8), kb(16), kb(32), kb(64), kb(512), mb(1), mb(4)];
 
         ask_multiple_choice(
             "Which block size do you want to use?",
-            [
-                ("4KB", kb(4)),
-                ("8KB", kb(8)),
-                ("16KB", kb(16)),
-                ("32KB", kb(32)),
-                ("64KB", kb(64)),
-                ("512KB", kb(512)),
-                ("1MB", mb(1)),
-                ("4MB", mb(4)),
-            ]
-            .into_iter(),
+            OPTIONS.iter().map(|option| {
+                (
+                    format!(
+                        "{}",
+                        option.get_appropriate_unit(byte_unit::UnitType::Binary)
+                    ),
+                    *option,
+                )
+            }),
             2,
         )
     }
@@ -158,10 +158,10 @@ where
         .expect("Out of bounds"))
 }
 
-const fn kb(kb: u64) -> u64 {
-    kb * 1024
+const fn kb(kb: u64) -> Byte {
+    Byte::from_u64(kb * 1024)
 }
 
-const fn mb(mb: u64) -> u64 {
-    mb * 1024 * 1024
+const fn mb(mb: u64) -> Byte {
+    Byte::from_u64(mb * 1024 * 1024)
 }
