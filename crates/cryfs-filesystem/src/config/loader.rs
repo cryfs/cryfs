@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use byte_unit::Byte;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use thiserror::Error;
@@ -67,6 +68,12 @@ pub enum ConfigLoadError {
         actual_cipher: String,
     },
 
+    #[error("Wrong blocksize: Expected {expected_blocksize} but found {actual_blocksize}")]
+    WrongBlocksize {
+        expected_blocksize: Byte,
+        actual_blocksize: Byte,
+    },
+
     #[error("Error checking the local state of the file system: {0:?}")]
     LocalStateError(anyhow::Error),
 
@@ -99,6 +106,7 @@ pub struct ConfigLoadResult {
 pub struct CommandLineFlags {
     pub missing_block_is_integrity_violation: Option<bool>,
     pub expected_cipher: Option<String>,
+    pub blocksize: Option<Byte>,
 }
 
 pub fn create(
@@ -224,6 +232,7 @@ fn _load(
             .as_ref()
             .map(|v| v.as_str()),
     )?;
+    _check_blocksize(configfile.config(), command_line_flags.blocksize)?;
     let local_state = FilesystemMetadata::load_or_generate(
         local_state_dir,
         &configfile.config().filesystem_id,
@@ -313,6 +322,21 @@ fn _check_cipher(config: &CryConfig, expected_cipher: Option<&str>) -> Result<()
             return Err(ConfigLoadError::WrongCipher {
                 actual_cipher: config.cipher.clone(),
                 expected_cipher: expected_cipher.to_string(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn _check_blocksize(
+    config: &CryConfig,
+    expected_blocksize: Option<Byte>,
+) -> Result<(), ConfigLoadError> {
+    if let Some(expected_blocksize) = expected_blocksize {
+        if config.blocksize != expected_blocksize {
+            return Err(ConfigLoadError::WrongBlocksize {
+                actual_blocksize: config.blocksize,
+                expected_blocksize: expected_blocksize,
             });
         }
     }

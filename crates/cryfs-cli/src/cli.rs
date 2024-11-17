@@ -193,6 +193,7 @@ impl Cli {
                 missing_block_is_integrity_violation: mount_args
                     .missing_block_is_integrity_violation,
                 expected_cipher: mount_args.cipher.clone(),
+                blocksize: mount_args.blocksize,
             },
             &self.local_state_dir,
             progress_bars,
@@ -217,6 +218,8 @@ impl Cli {
             }
 
             ConfigLoadError::WrongCipher { .. } => CliErrorKind::WrongCipher,
+
+            ConfigLoadError::WrongBlocksize { .. } => CliErrorKind::WrongBlocksize,
 
             ConfigLoadError::FilesystemDoesNotTreatMissingBlocksAsIntegrityViolations
             | ConfigLoadError::FilesystemTreatsMissingBlocksAsIntegrityViolations => {

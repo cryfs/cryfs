@@ -53,9 +53,11 @@ pub fn create(
     let exclusive_client_id =
         _generate_exclusive_client_id(my_client_id, command_line_flags, console)?
             .map(|id| id.id.get());
-    let blocksize = console
-        .ask_blocksize_bytes_for_new_filesystem()
-        .map_err(ConfigCreateError::InteractionError)?;
+    let blocksize = command_line_flags.blocksize.map(Ok).unwrap_or_else(|| {
+        console
+            .ask_blocksize_bytes_for_new_filesystem()
+            .map_err(ConfigCreateError::InteractionError)
+    })?;
     let config = CryConfig {
         root_blob: _generate_root_blob_id().to_hex(),
         enc_key: enc_key.to_hex(),

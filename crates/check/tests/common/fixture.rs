@@ -1122,6 +1122,7 @@ impl FixtureTempDir {
             &CommandLineFlags {
                 missing_block_is_integrity_violation: Some(false),
                 expected_cipher: None,
+                blocksize: None,
             },
             &self.local_state_dir(),
         )

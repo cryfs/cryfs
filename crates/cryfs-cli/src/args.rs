@@ -1,3 +1,5 @@
+use anyhow::Result;
+use byte_unit::Byte;
 use clap::{Args, Parser};
 use cryfs_cli_utils::parse_path;
 use std::path::PathBuf;
@@ -18,7 +20,6 @@ pub struct CryfsArgs {
     // bool _allowFilesystemUpgrade;
     // bool _allowReplacedFilesystem;
     // boost::optional<boost::filesystem::path> _logFile;
-    // boost::optional<uint32_t> _blocksizeBytes;
     // std::vector<std::string> _fuseOptions;
     // bool _mountDirIsDriveLetter;
 }
@@ -57,9 +58,19 @@ pub struct MountArgs {
     pub allow_integrity_violations: bool,
 
     // TODO Make display of default cipher dynamic to show the actual default cipher
-    /// Cipher to use for encryption. See possible values by calling cryfs with --show-ciphers. Default: xchacha20-poly1305
+    /// Cipher to use for encryption.
+    /// If creating a new file system, this will determine the cipher for the new file system.
+    /// If opening an existing file system, this will verify that the file system actually uses that cipher.
+    /// See possible values by calling cryfs with --show-ciphers. Default: xchacha20-poly1305
     #[arg(long)]
-    pub cipher: Option<String>,
+    pub cipher: Option<String>, // TODO This should probably be an enum
+
+    // TODO Make display of default blocksize dynamic to show the actual default cipher
+    /// The block size used when storing ciphertext blocks. Default: 16KiB
+    /// If creating a new file system, this will determine the block size for the new file system.
+    /// If opening an existing file system, this will verify that the file system actually uses that block size.
+    #[arg(long, value_parser(parse_byte_amount))]
+    pub blocksize: Option<Byte>,
 
     /// Automatically unmount if the file system hasn't been used for the specified duration.
     /// Values are human readable durations, e.g. 30sec, 5min, 1h30m, etc.
@@ -67,8 +78,14 @@ pub struct MountArgs {
     pub unmount_idle: Option<humantime::Duration>,
 }
 
+fn parse_byte_amount(input: &str) -> Result<Byte> {
+    Ok(Byte::parse_str(input, true)?)
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     mod humantime_parsing {
         //! Test that durations in unmount_idle are parsed correctly
 
@@ -86,6 +103,31 @@ mod tests {
             test_parsing("1h30min", 5400);
             test_parsing("1hour30min", 5400);
             test_parsing("2hours30min5sec", 9005);
+        }
+    }
+
+    mod byte_parsing {
+        //! Test that byte amounts in blocksize are parsed correctly
+
+        use super::*;
+
+        use byte_unit::Byte;
+
+        #[test]
+        fn test_byte_parsing() {
+            fn test_parsing(input: &str, expected_as_bytes: u64) {
+                let byte: Byte = parse_byte_amount(input).unwrap();
+                assert_eq!(byte.as_u64(), expected_as_bytes);
+            }
+
+            test_parsing("16384", 16384);
+            test_parsing("16384b", 16384);
+            test_parsing("16384B", 16384);
+            test_parsing("16KiB", 16384);
+            test_parsing("16kib", 16384);
+            test_parsing("16Kb", 16000);
+            test_parsing("16kb", 16000);
+            test_parsing("4MiB", 4 * 1024 * 1024)
         }
     }
 }

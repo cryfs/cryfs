@@ -149,6 +149,7 @@ fn load_config(
         &CommandLineFlags {
             missing_block_is_integrity_violation: Some(false),
             expected_cipher: None,
+            blocksize: None,
         },
         local_state_dir,
         progress_bars,

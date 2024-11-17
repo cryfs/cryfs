@@ -73,6 +73,9 @@ pub enum CliErrorKind {
     /// The file system uses a different cipher than the one specified on the command line using the --cipher argument.
     WrongCipher,
 
+    /// The file system uses a different blocksize than the one specified on the command line using the --blocksize argument.
+    WrongBlocksize,
+
     /// Base directory doesn't exist or is inaccessible (i.e. not read or writable or not a directory)
     InaccessibleBaseDir,
 
@@ -134,6 +137,7 @@ impl CliErrorKind {
             Self::IntegrityViolation => 25,
             Self::InaccessibleLocalStateDir => 26,
             Self::InvalidLocalState => 27,
+            Self::WrongBlocksize => 28,
         })
     }
 }

@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use byte_unit::Byte;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::time::Duration;

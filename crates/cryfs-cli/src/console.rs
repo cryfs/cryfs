@@ -80,7 +80,7 @@ impl Console for InteractiveConsole {
     }
 
     fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<Byte> {
-        // TODO Allow custom block sizes
+        // TODO Allow custom block sizes. Careful to use Byte::parse_str(ignore_case=true) or it will interpret smaller case letters as bits.
         const OPTIONS: &[Byte] = &[kb(4), kb(8), kb(16), kb(32), kb(64), kb(512), mb(1), mb(4)];
 
         ask_multiple_choice(
