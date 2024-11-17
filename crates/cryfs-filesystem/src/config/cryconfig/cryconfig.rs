@@ -9,6 +9,7 @@ use super::filesystem_id::FilesystemId;
 pub const FILESYSTEM_FORMAT_VERSION: Version = konst::unwrap_ctx!(Version::parse_const("0.10"));
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
+/// Note that the `Serialize`, `Deserialize` implementations here are **not** used to (de)serialize the config file. That happens in [super::serialization]
 /// // TODO Do we need this to be clone?
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CryConfig {
@@ -37,7 +38,7 @@ pub struct CryConfig {
     /// Version of the last CryFS instance that opened this file system
     pub last_opened_with_version: String,
 
-    /// Size of the on-disk (i.e. post-encryption) blocks in bytes
+    /// Size of the on-disk (i.e. post-encryption) blocks
     pub blocksize: Byte,
 
     /// Unique ID of the file system
