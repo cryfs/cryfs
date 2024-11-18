@@ -738,6 +738,7 @@ dependencies = [
  "mockall",
  "rand 0.8.5",
  "serde",
+ "static_assertions",
  "sysinfo",
  "tempdir",
  "thiserror",

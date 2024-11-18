@@ -25,3 +25,11 @@ pub use low_level::{ActionCounts, MockBlockStore, SharedBlockStore, TrackingBloc
 pub mod tests;
 
 cryfs_version::assert_cargo_version_equals_git_version!();
+
+// We're using [byte_unit] in a few places where performance might matter.
+// But unfortunately, the crate will either use u64 or u128 depending on features.
+// Let's make sure it uses u64 and none of our crates accidentally enabled the u128 feature.
+static_assertions::const_assert_eq!(
+    std::mem::size_of::<u64>(),
+    std::mem::size_of::<byte_unit::Byte>()
+);
