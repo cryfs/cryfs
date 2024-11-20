@@ -54,8 +54,8 @@ CryFS has experimental Windows support since the 0.10 release series. To install
    It's recommended to install the matching version DokanY a given CryFS version was built with. Other versions may work but we have seen issues.
    * CryFS 1.0: DokanY 2.2.0.1000
    * CryFS 0.11: DokanY 1.2.2.1001
-2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
-3. Install [CryFS](https://www.cryfs.org/#download)
+2. Install [Microsoft Visual C++ Redistributable for Visual Studio 2022](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+4. Install [CryFS](https://www.cryfs.org/#download)
 
 GUI
 ===
@@ -171,7 +171,7 @@ Then run the tests:
 
 Building on Windows (experimental)
 ----------------------------------
-1. Install conan 2. If you want to use "pip install conan", you may have to install Python first.
+1. Install conan2. If you want to use "pip install conan", you may have to install Python first.
 2. Install DokanY 2.2.0.1000. Other versions may not work.
 3. Build the project
 
