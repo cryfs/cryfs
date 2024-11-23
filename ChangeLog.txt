@@ -1,9 +1,11 @@
-Version 1.0.1 (unreleased)
+Version 1.0.1
 ---------------
 Fixes
 * On Windows, don't error but just show a warning when the `-f` flag is provided. This re-establishes backwards compatibility with cryfs 0.11.
+
 Dependency Updates
 * range-v3 cci.20240905
+
 
 Version 1.0.0
 ---------------
