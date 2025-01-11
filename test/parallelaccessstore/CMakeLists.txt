@@ -6,7 +6,7 @@ set(SOURCES
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} my-gtest-main parallelaccessstore)
+target_link_libraries(${PROJECT_NAME} my-gtest-main ${GOOGLETEST_LIBS} parallelaccessstore)
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
 
 target_enable_style_warnings(${PROJECT_NAME})

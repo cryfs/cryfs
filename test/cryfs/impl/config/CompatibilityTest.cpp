@@ -2,7 +2,11 @@
 #include <vector>
 #include <boost/filesystem.hpp>
 #include <cpp-utils/data/Data.h>
-#include <vendor_cryptopp/hex.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/hex.h>
+#else
+    #include <vendor_cryptopp/hex.h>
+#endif
 #include <cpp-utils/crypto/symmetric/ciphers.h>
 #include <cpp-utils/tempfile/TempFile.h>
 #include <cryfs/impl/config/CryConfigFile.h>

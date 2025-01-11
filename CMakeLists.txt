@@ -16,6 +16,7 @@ require_clang_version(7.0)
 option(BUILD_TESTING "build test cases" OFF)
 option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
 option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
+option(USE_SYSTEM_LIBS "build with system libs instead of bundled libs." OFF)
 
 # The following options are helpful for development and/or CI
 option(USE_WERROR "build with -Werror flag")
@@ -30,7 +31,7 @@ endif()
 # Default value is to build in release mode but with debug symbols
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE INTERNAL "CMAKE_BUILD_TYPE")
-endif(NOT CMAKE_BUILD_TYPE)
+endif()
 
 # We don't use LTO because crypto++ has problems with it, see https://github.com/weidai11/cryptopp/issues/1031 and https://www.cryptopp.com/wiki/Link_Time_Optimization
 
@@ -39,9 +40,23 @@ if(MSVC)
   add_definitions(/bigobj)
 endif()
 
+cmake_policy(SET CMP0167 NEW)
 include(cmake-utils/Dependencies.cmake)
 
-add_subdirectory(vendor EXCLUDE_FROM_ALL)
+if(USE_SYSTEM_LIBS)
+    include(FindPkgConfig)
+    set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /usr/lib /usr/lib64)
+    pkg_check_modules(CRYPTOPP REQUIRED libcryptopp>=8.2)
+    if(BUILD_TESTING)
+        find_package(GTest CONFIG REQUIRED)
+        set(GOOGLETEST_LIBS GTest::gtest GTest::gmock)
+    endif()
+    add_definitions(-DUSE_SYSTEM_LIBS)
+else()
+    add_subdirectory(vendor EXCLUDE_FROM_ALL)
+    set(GOOGLETEST_LIBS googletest)
+endif()
+
 add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(test)

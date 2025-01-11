@@ -1,5 +1,9 @@
 #include "Scrypt.h"
-#include <vendor_cryptopp/scrypt.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/scrypt.h>
+#else
+    #include <vendor_cryptopp/scrypt.h>
+#endif
 
 using std::string;
 

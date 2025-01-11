@@ -1,6 +1,10 @@
 #include "Data.h"
 #include <stdexcept>
-#include <vendor_cryptopp/hex.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/hex.h>
+#else
+    #include <vendor_cryptopp/hex.h>
+#endif
 
 using std::istream;
 using std::ofstream;

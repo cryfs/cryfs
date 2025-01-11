@@ -1,5 +1,9 @@
 #include "Gzip.h"
-#include <vendor_cryptopp/gzip.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/gzip.h>
+#else
+    #include <vendor_cryptopp/gzip.h>
+#endif
 
 using cpputils::Data;
 

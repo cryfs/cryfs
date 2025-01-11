@@ -1,7 +1,11 @@
 #include "BasedirMetadata.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <vendor_cryptopp/sha.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/sha.h>
+#else
+    #include <vendor_cryptopp/sha.h>
+#endif
 #include <boost/filesystem/operations.hpp>
 #include "LocalStateDir.h"
 #include <cpp-utils/logging/logging.h>

@@ -71,7 +71,13 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
-target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_spdlog cryfs_vendor_cryptopp CryfsDependencies_range-v3)
+if(USE_SYSTEM_LIBS)
+    # Use system provided cryptopp
+    target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_spdlog cryptopp CryfsDependencies_range-v3)
+else()
+    # Use vendored version of cryptopp
+    target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_spdlog cryfs_vendor_cryptopp CryfsDependencies_range-v3)
+endif()
 if(CRYFS_UPDATE_CHECKS)
     target_compile_definitions(${PROJECT_NAME} PUBLIC -DCRYFS_UPDATE_CHECKS)
     target_link_libraries(${PROJECT_NAME} PUBLIC CryfsDependencies_libcurl)
