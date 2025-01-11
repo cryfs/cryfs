@@ -44,7 +44,7 @@ include(cmake-utils/Dependencies.cmake)
 
 if(USE_SYSTEM_LIBS)
     include(FindPkgConfig)
-    pkg_check_modules(CRYPTOPP REQUIRED libcryptopp>=8.2)
+    pkg_check_modules(CRYPTOPP REQUIRED libcryptopp>=8.6)
     if(BUILD_TESTING)
         find_package(GTest CONFIG REQUIRED)
         set(GOOGLETEST_LIBS GTest::gtest GTest::gmock)
