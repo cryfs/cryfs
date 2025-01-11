@@ -1,6 +1,10 @@
 #include "Hash.h"
 #include <cpp-utils/random/Random.h>
-#include <vendor_cryptopp/sha.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/sha.h>
+#else
+    #include <vendor_cryptopp/sha.h>
+#endif
 
 using CryptoPP::SHA512;
 

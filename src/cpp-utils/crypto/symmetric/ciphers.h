@@ -2,12 +2,21 @@
 #ifndef MESSMER_CPPUTILS_CRYPTO_SYMMETRIC_CIPHERS_H_
 #define MESSMER_CPPUTILS_CRYPTO_SYMMETRIC_CIPHERS_H_
 
-#include <vendor_cryptopp/aes.h>
-#include <vendor_cryptopp/twofish.h>
-#include <vendor_cryptopp/serpent.h>
-#include <vendor_cryptopp/cast.h>
-#include <vendor_cryptopp/mars.h>
-#include <vendor_cryptopp/chachapoly.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/aes.h>
+    #include <cryptopp/twofish.h>
+    #include <cryptopp/serpent.h>
+    #include <cryptopp/cast.h>
+    #include <cryptopp/mars.h>
+    #include <cryptopp/chachapoly.h>
+#else
+    #include <vendor_cryptopp/aes.h>
+    #include <vendor_cryptopp/twofish.h>
+    #include <vendor_cryptopp/serpent.h>
+    #include <vendor_cryptopp/cast.h>
+    #include <vendor_cryptopp/mars.h>
+    #include <vendor_cryptopp/chachapoly.h>
+#endif
 #include "GCM_Cipher.h"
 #include "CFB_Cipher.h"
 

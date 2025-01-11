@@ -6,7 +6,11 @@
 #include "../../data/Data.h"
 #include "../../random/Random.h"
 #include <boost/optional.hpp>
-#include <vendor_cryptopp/modes.h>
+#if defined(USE_SYSTEM_LIBS)
+    #include <cryptopp/modes.h>
+#else
+    #include <vendor_cryptopp/modes.h>
+#endif
 #include "Cipher.h"
 #include "EncryptionKey.h"
 
