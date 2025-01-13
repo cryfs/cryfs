@@ -17,6 +17,7 @@ option(BUILD_TESTING "build test cases" OFF)
 option(CRYFS_UPDATE_CHECKS "let cryfs check for updates and security vulnerabilities" ON)
 option(DISABLE_OPENMP "allow building without OpenMP libraries. This will cause performance degradations." OFF)
 option(USE_SYSTEM_LIBS "build with system libs instead of bundled libs." OFF)
+option(ENABLE_NATIVE_ARCH "enable native architecture optimizations" OFF)
 
 # The following options are helpful for development and/or CI
 option(USE_WERROR "build with -Werror flag")
@@ -59,5 +60,8 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(doc)
-add_subdirectory(test)
+# Add test directory only if BUILD_TESTING is set
+if(BUILD_TESTING)
+    add_subdirectory(test)
+endif()
 add_subdirectory(cpack)
