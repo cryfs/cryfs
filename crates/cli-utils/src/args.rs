@@ -75,10 +75,10 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<Option<ConcreteArgs>, CliError
     Ok(Some(args.concrete_args))
 }
 
-fn clap_style() -> Styles {
+const fn clap_style() -> Styles {
     Styles::styled()
         .header(AnsiColor::Yellow.on_default())
-        .usage(AnsiColor::Green.on_default())
-        .literal(AnsiColor::Green.on_default())
-        .placeholder(AnsiColor::Green.on_default())
+        .usage(AnsiColor::Cyan.on_default())
+        .literal(AnsiColor::Cyan.on_default())
+        .placeholder(AnsiColor::BrightCyan.on_default())
 }
