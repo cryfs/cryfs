@@ -1,2 +1,14 @@
 [profile.dev.package.scrypt]
 opt-level = 3
+
+[profile.dev.package.aead]
+opt-level = 3
+
+[profile.dev.package.aes-gcm]
+opt-level = 3
+
+[profile.dev.package.chacha20poly1305]
+opt-level = 3
+
+[profile.dev.package.openssl]
+opt-level = 3
