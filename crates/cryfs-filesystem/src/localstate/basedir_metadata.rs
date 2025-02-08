@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
@@ -32,14 +33,7 @@ impl BasedirMetadata {
         Ok(result)
     }
 
-    pub fn save(&self, local_state_dir: &LocalStateDir) -> Result<()> {
-        let basedirs_file = local_state_dir.for_basedir_metadata()?;
-        let file = std::fs::File::create(&basedirs_file)?;
-        serde_json::to_writer_pretty(BufWriter::new(file), self)?;
-        Ok(())
-    }
-
-    pub fn check_filesystem_id(
+    pub fn filesystem_id_for_basedir_is_correct(
         &self,
         basedir: &Path,
         expected_filesystem_id: &FilesystemId,
@@ -63,11 +57,36 @@ impl BasedirMetadata {
         }
     }
 
-    pub fn update_filesystem_id(&mut self, basedir: &Path, filesystem_id: FilesystemId) {
-        self.basedirs.insert(
-            basedir.to_path_buf(),
-            BasedirMetadataEntry { filesystem_id },
-        );
+    pub fn update_filesystem_id_for_basedir(
+        &mut self,
+        basedir: &Path,
+        filesystem_id: FilesystemId,
+        local_state_dir: &LocalStateDir,
+    ) -> Result<()> {
+        let new_entry = BasedirMetadataEntry { filesystem_id };
+        match self.basedirs.entry(basedir.to_path_buf()) {
+            Entry::Occupied(mut entry) => {
+                if *entry.get() == new_entry {
+                    // Filesystem id is already correct, nothing to do
+                    Ok(())
+                } else {
+                    // Filesystem id is incorrect, update it
+                    entry.insert(new_entry);
+                    self.save(local_state_dir)
+                }
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(new_entry);
+                self.save(local_state_dir)
+            }
+        }
+    }
+
+    fn save(&self, local_state_dir: &LocalStateDir) -> Result<()> {
+        let basedirs_file = local_state_dir.for_basedir_metadata()?;
+        let file = std::fs::File::create(&basedirs_file)?;
+        serde_json::to_writer_pretty(BufWriter::new(file), self)?;
+        Ok(())
     }
 }
 
@@ -89,7 +108,7 @@ pub enum CheckFilesystemIdError {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BasedirMetadataEntry {
     #[serde(rename = "filesystemId", with = "serialize_filesystem_id")]
     filesystem_id: FilesystemId,

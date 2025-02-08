@@ -30,7 +30,8 @@ impl LocalStateDir {
     pub fn for_basedir_metadata(&self) -> Result<PathBuf> {
         std::fs::create_dir_all(&self.app_dir)
             .context("Tried to create directories for the local cryfs state")?;
-        let basedirs_file = self.app_dir.join("basedirs");
+        // We're not able to load CryFS 1.x basedir metadata, so let's call our file _v2
+        let basedirs_file = self.app_dir.join("basedirs_v2.json");
 
         Ok(basedirs_file)
     }

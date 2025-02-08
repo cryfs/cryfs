@@ -17,7 +17,6 @@ pub struct CryfsArgs {
     #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
     pub show_ciphers: bool,
     // TODO
-    // bool _allowReplacedFilesystem;
     // boost::optional<boost::filesystem::path> _logFile;
     // std::vector<std::string> _fuseOptions;
     // bool _mountDirIsDriveLetter;
@@ -64,6 +63,13 @@ pub struct MountArgs {
     /// After the upgrade, older CryFS versions might not be able to use the file system anymore.
     #[arg(long)]
     pub allow_filesystem_upgrade: bool,
+
+    // TODO When adding tests for allow_replaced_filesystem, we need to test two scenarios - a changed file system id and a changed encryption key. Both checks have different console prompts, but this same flag disables them.
+    /// By default, CryFS remembers file systems it has seen at a given vault directory path and checks that it didn't get replaced by an
+    /// attacker with an entirely different file system since the last time it was loaded. However, if you do want to replace the file system
+    /// with an entirely new one, you can use this flag to disable the check and allow that.
+    #[arg(long)]
+    pub allow_replaced_filesystem: bool,
 
     // TODO Make display of default cipher dynamic to show the actual default cipher
     /// Cipher to use for encryption.

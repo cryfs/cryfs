@@ -28,6 +28,11 @@ impl Console for InteractiveConsole {
     }
 
     fn ask_allow_replaced_filesystem(&self) -> Result<bool> {
+        let prompt = "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?";
+        ask_yes_no(prompt, false)
+    }
+
+    fn ask_allow_changed_encryption_key(&self) -> Result<bool> {
         let prompt = "The encryption key differs from the last time we loaded this filesystem. An attacker may have replaced the file system with a different file system.\nDo you want to continue loading?";
         ask_yes_no(prompt, false)
     }

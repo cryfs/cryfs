@@ -21,6 +21,11 @@ pub trait Console {
     ) -> Result<bool>;
 
     /// We're in the process of opening a filesystem but the encryption key is different than the last time
+    /// we opened this file system. Maybe an attacker replaced the whole file system.
+    /// Ask the user whether they want to continue.
+    fn ask_allow_changed_encryption_key(&self) -> Result<bool>;
+
+    /// We're in the process of opening a filesystem but the filesystem id is different than the last time
     /// we opened a file system from this basedir. Maybe an attacker replaced the whole file system.
     /// Ask the user whether they want to continue.
     fn ask_allow_replaced_filesystem(&self) -> Result<bool>;

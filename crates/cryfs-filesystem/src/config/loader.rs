@@ -115,6 +115,7 @@ pub fn create(
     console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
+    allow_replaced_filesystem: bool,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     let password = password
         .password_for_new_filesystem()
@@ -125,6 +126,7 @@ pub fn create(
         console,
         command_line_flags,
         local_state_dir,
+        allow_replaced_filesystem,
     )
 }
 
@@ -135,6 +137,7 @@ pub fn load_or_create(
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
     allow_filesystem_upgrade: bool,
+    allow_replaced_filesystem: bool,
     progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     if filename.exists() {
@@ -151,6 +154,7 @@ pub fn load_or_create(
             Access::ReadWrite,
             progress_bars,
             allow_filesystem_upgrade,
+            allow_replaced_filesystem,
         )
     } else {
         // TODO Protect password similar to how we protect EncryptionKey
@@ -163,6 +167,7 @@ pub fn load_or_create(
             console,
             command_line_flags,
             local_state_dir,
+            allow_replaced_filesystem,
         )
     }
 }
@@ -187,6 +192,7 @@ pub fn load_readonly(
         Access::ReadOnly,
         progress_bars,
         false,
+        false,
     )
 }
 
@@ -196,8 +202,14 @@ fn _create(
     console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
+    allow_replaced_filesystem: bool,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
-    let config = super::creator::create(console, command_line_flags, local_state_dir)?;
+    let config = super::creator::create(
+        console,
+        command_line_flags,
+        local_state_dir,
+        allow_replaced_filesystem,
+    )?;
     let file = CryConfigFile::create_new(
         filename,
         config.config.clone(),
@@ -223,6 +235,7 @@ fn _load(
     access: Access,
     progress_bars: impl ProgressBarManager,
     allow_filesystem_upgrade: bool,
+    allow_replaced_filesystem: bool,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     let mut configfile: CryConfigFile =
         CryConfigFile::load(filename, password, access, progress_bars)?;
@@ -244,6 +257,7 @@ fn _load(
             .context("Tried to read encryption key from config")
             .map_err(ConfigLoadError::InvalidConfig)?,
         console,
+        allow_replaced_filesystem,
     )
     .map_err(ConfigLoadError::LocalStateError)?;
     let my_client_id = *local_state.my_client_id();

@@ -41,6 +41,7 @@ impl FilesystemMetadata {
         filesystem_id: &FilesystemId,
         encryption_key: &EncryptionKey,
         console: &(impl Console + ?Sized),
+        mut allow_replaced_file_system: bool,
         // TODO Return FilesystemMetadataError instead of anyhow::Error
     ) -> Result<Self> {
         let metadata_file_path = local_state_dir
@@ -52,7 +53,9 @@ impl FilesystemMetadata {
                 if hash(encryption_key.as_bytes(), metadata.encryption_key.salt)
                     != metadata.encryption_key
                 {
-                    let allow_replaced_file_system = console.ask_allow_replaced_filesystem()?;
+                    if !allow_replaced_file_system {
+                        allow_replaced_file_system = console.ask_allow_changed_encryption_key()?;
+                    }
                     if !allow_replaced_file_system {
                         return Err(FilesystemMetadataError::EncryptionKeyChanged.into());
                     }

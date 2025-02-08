@@ -34,6 +34,7 @@ pub fn create(
     console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
+    allow_replaced_file_system: bool,
 ) -> Result<ConfigCreateResult, ConfigCreateError> {
     let cipher_name = command_line_flags
         .expected_cipher
@@ -46,9 +47,14 @@ pub fn create(
         })?;
     let enc_key = _generate_encryption_key(&cipher_name)?;
     let filesystem_id = FilesystemId::new_random();
-    let local_state =
-        FilesystemMetadata::load_or_generate(&local_state_dir, &filesystem_id, &enc_key, console)
-            .map_err(ConfigCreateError::LocalStateError)?;
+    let local_state = FilesystemMetadata::load_or_generate(
+        &local_state_dir,
+        &filesystem_id,
+        &enc_key,
+        console,
+        allow_replaced_file_system,
+    )
+    .map_err(ConfigCreateError::LocalStateError)?;
     let my_client_id = *local_state.my_client_id();
     let exclusive_client_id =
         _generate_exclusive_client_id(my_client_id, command_line_flags, console)?

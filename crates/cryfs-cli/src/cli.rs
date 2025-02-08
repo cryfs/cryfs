@@ -1,4 +1,6 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
+use cryfs_filesystem::config::CryConfigFile;
+use cryfs_filesystem::localstate::{BasedirMetadata, CheckFilesystemIdError};
 use cryfs_runner::{CreateOrLoad, Mounter};
 
 use super::console::InteractiveConsole;
@@ -115,7 +117,8 @@ impl Cli {
         let mount_args = self.mount_args();
         // TODO C++ code has lots more logic here, migrate that.
 
-        let config = self.load_or_create_config(progress_bars)?;
+        let config =
+            self.load_or_create_config(mount_args.allow_replaced_filesystem, progress_bars)?;
         print_config(&config);
 
         let on_successfully_mounted = || {
@@ -180,6 +183,7 @@ impl Cli {
     // TODO Test the console flows for opening an existing/creating a new file system
     fn load_or_create_config(
         &self,
+        allow_replaced_filesystem: bool,
         progress_bars: impl ProgressBarManager,
     ) -> Result<ConfigLoadResult, CliError> {
         let mount_args = self.mount_args();
@@ -187,7 +191,7 @@ impl Cli {
             .config
             .clone()
             .unwrap_or_else(|| mount_args.basedir.join("cryfs.config"));
-        cryfs_filesystem::config::load_or_create(
+        let config = cryfs_filesystem::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
             self.console(),
@@ -199,6 +203,7 @@ impl Cli {
             },
             &self.local_state_dir,
             mount_args.allow_filesystem_upgrade,
+            mount_args.allow_replaced_filesystem,
             progress_bars,
         )
         .map_cli_error(|error| match error {
@@ -256,7 +261,56 @@ impl Cli {
             | ConfigLoadError::CreateFileError(CreateConfigFileError::SerializationError(_))
             | ConfigLoadError::CreateFileError(CreateConfigFileError::ScryptError(_))
             | ConfigLoadError::InteractionError(_) => CliErrorKind::UnspecifiedError,
-        })
+        })?;
+        self.check_config_integrity(&config.config, allow_replaced_filesystem)?;
+        Ok(config)
+    }
+
+    fn check_config_integrity(
+        &self,
+        config: &CryConfigFile,
+        allow_replaced_filesystem: bool,
+    ) -> Result<(), CliError> {
+        let mount_args = self.mount_args();
+        let mut basedir_metadata = BasedirMetadata::load(&self.local_state_dir)
+            .context("Failed to load local state")
+            .map_cli_error(CliErrorKind::UnspecifiedError)?;
+        let check_result = basedir_metadata.filesystem_id_for_basedir_is_correct(
+            &mount_args.basedir,
+            &config.config().filesystem_id,
+        );
+        if let Err(check_result) = check_result {
+            let CheckFilesystemIdError::FilesystemIdIncorrect {
+                basedir,
+                expected_id,
+                actual_id,
+            } = &check_result;
+            log::warn!(
+                "Filesystem id for basedir {} has changed: expected {:?}, got {:?}",
+                basedir.display(),
+                expected_id,
+                actual_id,
+            );
+            if !allow_replaced_filesystem {
+                if !self
+                    .console()
+                    .ask_allow_replaced_filesystem()
+                    .map_cli_error(CliErrorKind::UnspecifiedError)?
+                {
+                    return Err(check_result).map_cli_error(|_| CliErrorKind::FilesystemIdChanged);
+                }
+            }
+        }
+        // Update local state (or create it if it didn't exist yet)
+        basedir_metadata
+            .update_filesystem_id_for_basedir(
+                &mount_args.basedir,
+                config.config().filesystem_id,
+                &self.local_state_dir,
+            )
+            .map_cli_error(CliErrorKind::UnspecifiedError)?;
+
+        Ok(())
     }
 
     fn mount_args(&self) -> &MountArgs {

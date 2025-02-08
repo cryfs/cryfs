@@ -1125,6 +1125,7 @@ impl FixtureTempDir {
                 blocksize: None,
             },
             &self.local_state_dir(),
+            true,
         )
         .expect("Failed to create config")
     }
