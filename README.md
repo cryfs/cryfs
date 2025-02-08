@@ -8,4 +8,5 @@ Known differences between 1.0 and 2.0-alpha:
 - 2.0-alpha is currently slower than 1.0 (due to lack of optimizations)
 - Breaking change in `--unmount-idle` argument. It doesn't take number of minutes anymore but allows specifying a human readable duration (e.g. 5m, 1h30m)
 - Breaking change in `--blocksize` argument. It now requires specifying a unit (e.g. '16KiB') instead of just a number of bytes.
+- Local state is only partially compatible. Known block versions are fully forward and backward compatible, but the list of filesystem ids per basedir (i.e. the check that an attacker didn't replace the whole filesystem with a different filesystem) will not sync between 1.0 and 2.0. Both versions do have the check, but use their own version of the local state.
 - Windows and Mac don't work yet, only Linux for now
