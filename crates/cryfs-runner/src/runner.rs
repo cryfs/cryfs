@@ -123,7 +123,11 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
                 CryDevice::load_filesystem(blobstore, root_blob_id)
             }
         };
-        match device.sanity_check().await.map_cli_error(CliErrorKind::InvalidFilesystem) {
+        match device
+            .sanity_check()
+            .await
+            .map_cli_error(CliErrorKind::InvalidFilesystem)
+        {
             Ok(()) => {}
             Err(e) => {
                 device.destroy().await;
