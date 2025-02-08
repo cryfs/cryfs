@@ -198,6 +198,7 @@ impl Cli {
                 blocksize: mount_args.blocksize,
             },
             &self.local_state_dir,
+            mount_args.allow_filesystem_upgrade,
             progress_bars,
         )
         .map_cli_error(|error| match error {

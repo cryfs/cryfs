@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 // TODO Evaluate `clap_mangen` as a potential automatic manpage generator
 // TODO Evaluate `clap_complete` as a potenatial shell completion generator
+// TODO Tests for each cli argument
 
 #[derive(Parser, Debug)]
 pub struct CryfsArgs {
@@ -16,7 +17,6 @@ pub struct CryfsArgs {
     #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
     pub show_ciphers: bool,
     // TODO
-    // bool _allowFilesystemUpgrade;
     // bool _allowReplacedFilesystem;
     // boost::optional<boost::filesystem::path> _logFile;
     // std::vector<std::string> _fuseOptions;
@@ -59,6 +59,11 @@ pub struct MountArgs {
     /// Disabling them is needed if you want to load an old snapshot of your file system.
     #[arg(long)]
     pub allow_integrity_violations: bool,
+
+    /// Allow upgrading the file system if it was created with an old CryFS version.
+    /// After the upgrade, older CryFS versions might not be able to use the file system anymore.
+    #[arg(long)]
+    pub allow_filesystem_upgrade: bool,
 
     // TODO Make display of default cipher dynamic to show the actual default cipher
     /// Cipher to use for encryption.

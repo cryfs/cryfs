@@ -134,6 +134,7 @@ pub fn load_or_create(
     console: &(impl Console + ?Sized),
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
+    allow_filesystem_upgrade: bool,
     progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     if filename.exists() {
@@ -149,6 +150,7 @@ pub fn load_or_create(
             local_state_dir,
             Access::ReadWrite,
             progress_bars,
+            allow_filesystem_upgrade,
         )
     } else {
         // TODO Protect password similar to how we protect EncryptionKey
@@ -184,6 +186,7 @@ pub fn load_readonly(
         local_state_dir,
         Access::ReadOnly,
         progress_bars,
+        false,
     )
 }
 
@@ -219,11 +222,12 @@ fn _load(
     local_state_dir: &LocalStateDir,
     access: Access,
     progress_bars: impl ProgressBarManager,
+    allow_filesystem_upgrade: bool,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     let mut configfile: CryConfigFile =
         CryConfigFile::load(filename, password, access, progress_bars)?;
     let old_config = configfile.config().clone();
-    _check_version(configfile.config(), console)?;
+    _check_version(configfile.config(), console, allow_filesystem_upgrade)?;
     _update_version_in_config(&mut configfile);
     _check_cipher(
         configfile.config(),
@@ -261,6 +265,7 @@ fn _load(
 fn _check_version(
     config: &CryConfig,
     console: &(impl Console + ?Sized),
+    allow_filesystem_upgrade: bool,
 ) -> Result<(), ConfigLoadError> {
     let actual_format_version = Version::parse(&config.format_version).map_err(|_| {
         ConfigLoadError::InvalidConfig(anyhow::anyhow!(
@@ -287,7 +292,7 @@ fn _check_version(
             cryfs_version: CRYFS_VERSION,
         });
     }
-    if actual_format_version < MAX_SUPPORTED_FORMAT_VERSION {
+    if !allow_filesystem_upgrade && actual_format_version < MAX_SUPPORTED_FORMAT_VERSION {
         let allow_migration = console
             .ask_migrate_filesystem(
                 &actual_format_version,
