@@ -55,9 +55,9 @@ impl Console for InteractiveConsole {
             (
                 format!(
                     "{name} (log(N)={log_n}, r={r}, p={p})",
-                    log_n = ScryptSettings::DEFAULT.log_n,
-                    r = ScryptSettings::DEFAULT.r,
-                    p = ScryptSettings::DEFAULT.p,
+                    log_n = opt.log_n,
+                    r = opt.r,
+                    p = opt.p,
                 ),
                 opt,
             )
