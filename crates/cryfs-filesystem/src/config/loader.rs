@@ -221,7 +221,7 @@ fn _create(
         &console
             .ask_scrypt_settings_for_new_filesystem()
             .map_err(ConfigLoadError::InteractionError)?,
-            progress_bars,
+        progress_bars,
     )?;
     Ok(ConfigLoadResult {
         old_config: config.config,
