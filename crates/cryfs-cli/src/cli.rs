@@ -182,9 +182,11 @@ impl Cli {
         &self,
         progress_bars: impl ProgressBarManager,
     ) -> Result<ConfigLoadResult, CliError> {
-        // TODO Allow changing config file using args as C++ did
         let mount_args = self.mount_args();
-        let config_file_location = mount_args.basedir.join("cryfs.config");
+        let config_file_location = mount_args
+            .config
+            .clone()
+            .unwrap_or_else(|| mount_args.basedir.join("cryfs.config"));
         cryfs_filesystem::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),

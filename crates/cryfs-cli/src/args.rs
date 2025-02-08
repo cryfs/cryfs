@@ -16,7 +16,6 @@ pub struct CryfsArgs {
     #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
     pub show_ciphers: bool,
     // TODO
-    // boost::optional<boost::filesystem::path> _configFile;
     // bool _allowFilesystemUpgrade;
     // bool _allowReplacedFilesystem;
     // boost::optional<boost::filesystem::path> _logFile;
@@ -34,6 +33,10 @@ pub struct MountArgs {
     /// The directory to mount the plaintext filesystem to.
     #[arg(value_parser=parse_path)]
     pub mountdir: PathBuf,
+
+    /// Configuration file. By default, this is a `cryfs.config` file in the vault directory but you can use this option to specify a file outside of the vault directory.
+    #[arg(short, long, value_parser=parse_path)]
+    pub config: Option<PathBuf>,
 
     /// Run CryFS in foreground mode, i.e. don't return to the shell until the filesystem is unmounted.
     #[arg(short, long)]
