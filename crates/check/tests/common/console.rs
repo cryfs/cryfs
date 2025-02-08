@@ -22,6 +22,10 @@ impl Console for FixtureCreationConsole {
         panic!("unused")
     }
 
+    fn ask_allow_changed_encryption_key(&self) -> Result<bool> {
+        panic!("unused")
+    }
+
     fn ask_disable_single_client_mode(&self) -> Result<bool> {
         panic!("unused")
     }

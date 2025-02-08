@@ -10,7 +10,7 @@ use super::version::show_version;
 use super::version::ReqwestHttpClient;
 use crate::args::parse_args;
 use crate::env::Environment;
-use crate::error::{CliError, CliErrorKind};
+use crate::error::CliError;
 
 pub trait Application: Sized {
     type ConcreteArgs: Args;

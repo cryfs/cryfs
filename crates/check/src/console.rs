@@ -20,6 +20,10 @@ impl Console for RecoverConsole {
         todo!()
     }
 
+    fn ask_allow_changed_encryption_key(&self) -> Result<bool> {
+        todo!()
+    }
+
     fn ask_allow_replaced_filesystem(&self) -> Result<bool> {
         todo!()
     }

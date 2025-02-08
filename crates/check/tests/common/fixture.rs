@@ -1,4 +1,3 @@
-use byte_unit::Byte;
 use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore, RemoveResult};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockId, BlockStoreReader, BlockStoreWriter, DynBlockStore,
@@ -1126,6 +1125,7 @@ impl FixtureTempDir {
             },
             &self.local_state_dir(),
             true,
+            SilentProgressBarManager,
         )
         .expect("Failed to create config")
     }
