@@ -108,6 +108,7 @@ impl CryConfigFile {
         config: CryConfig,
         password: &str,
         kdf_settings: &ScryptSettings,
+        progress_bars: impl ProgressBarManager,
     ) -> Result<CryConfigFile, CreateConfigFileError> {
         let file = OpenOptions::new()
             .write(true)
@@ -131,7 +132,7 @@ impl CryConfigFile {
             .context("Trying to generate scrypt parameters")
             .map_err(CreateConfigFileError::ScryptError)?;
         let config_encryption_key =
-            ConfigEncryptionKey::derive::<Scrypt>(&kdf_parameters, password);
+            ConfigEncryptionKey::derive::<Scrypt>(&kdf_parameters, password, progress_bars);
 
         let result = Self {
             path,

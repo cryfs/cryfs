@@ -55,14 +55,10 @@ pub fn decrypt<KDF: PasswordBasedKDF>(
     let outer_config =
         OuterConfig::deserialize(source).context("Trying to deserialize outer config")?;
 
-    let pb = progress_bars.new_spinner_autotick("Deriving key from password");
-
     let kdf_parameters = KDF::Parameters::deserialize(outer_config.kdf_parameters())
         .context("Trying to deserialize KDF parameters")?;
 
-    let config_encryption_key = ConfigEncryptionKey::derive::<KDF>(&kdf_parameters, password);
-
-    pb.finish();
+    let config_encryption_key = ConfigEncryptionKey::derive::<KDF>(&kdf_parameters, password, progress_bars);
 
     let pb = progress_bars.new_spinner_autotick("Decrypting config file");
 
@@ -91,8 +87,11 @@ impl ConfigEncryptionKey {
     pub fn derive<KDF: PasswordBasedKDF>(
         kdf_parameters: &KDF::Parameters,
         password: &str,
+        progress_bars: impl ProgressBarManager,
     ) -> ConfigEncryptionKey {
+        let pb = progress_bars.new_spinner_autotick("Deriving key from password");
         let combined_key = KDF::derive_key(Self::COMBINED_KEY_SIZE, password, kdf_parameters);
+        pb.finish();
 
         ConfigEncryptionKey { combined_key }
     }
@@ -171,7 +170,7 @@ mod tests {
         let mut encrypted = vec![];
         let kdf_parameters = ScryptParams::generate(&ScryptSettings::TEST).unwrap();
         let config_encryption_key =
-            &ConfigEncryptionKey::derive::<Scrypt>(&kdf_parameters, "some_password");
+            &ConfigEncryptionKey::derive::<Scrypt>(&kdf_parameters, "some_password", SilentProgressBarManager);
         super::encrypt::<Scrypt>(
             config.clone(),
             kdf_parameters.clone(),

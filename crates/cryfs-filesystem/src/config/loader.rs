@@ -116,6 +116,7 @@ pub fn create(
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
     allow_replaced_filesystem: bool,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     let password = password
         .password_for_new_filesystem()
@@ -127,6 +128,7 @@ pub fn create(
         command_line_flags,
         local_state_dir,
         allow_replaced_filesystem,
+        progress_bars,
     )
 }
 
@@ -168,6 +170,7 @@ pub fn load_or_create(
             command_line_flags,
             local_state_dir,
             allow_replaced_filesystem,
+            progress_bars,
         )
     }
 }
@@ -203,6 +206,7 @@ fn _create(
     command_line_flags: &CommandLineFlags,
     local_state_dir: &LocalStateDir,
     allow_replaced_filesystem: bool,
+    progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     let config = super::creator::create(
         console,
@@ -210,7 +214,6 @@ fn _create(
         local_state_dir,
         allow_replaced_filesystem,
     )?;
-    // TODO loading a file system shows a nice progress bar for scrypt, but creating one doesn't yet. Add that.
     let file = CryConfigFile::create_new(
         filename,
         config.config.clone(),
@@ -218,6 +221,7 @@ fn _create(
         &console
             .ask_scrypt_settings_for_new_filesystem()
             .map_err(ConfigLoadError::InteractionError)?,
+            progress_bars,
     )?;
     Ok(ConfigLoadResult {
         old_config: config.config,
