@@ -210,6 +210,7 @@ fn _create(
         local_state_dir,
         allow_replaced_filesystem,
     )?;
+    // TODO loading a file system shows a nice progress bar for scrypt, but creating one doesn't yet. Add that.
     let file = CryConfigFile::create_new(
         filename,
         config.config.clone(),

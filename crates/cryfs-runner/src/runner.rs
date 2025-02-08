@@ -19,6 +19,7 @@ use cryfs_cli_utils::{
 };
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::backend::fuser::{self, MountOption};
+use cryfs_rustfs::object_based_api::Device;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -122,6 +123,13 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
                 CryDevice::load_filesystem(blobstore, root_blob_id)
             }
         };
+        match device.sanity_check().await.map_cli_error(CliErrorKind::InvalidFilesystem) {
+            Ok(()) => {}
+            Err(e) => {
+                device.destroy().await;
+                return Err(e);
+            }
+        }
 
         // TODO Test unmounting after idle works correctly
         let unmount_trigger = self.unmount_idle.map(|unmount_idle| {

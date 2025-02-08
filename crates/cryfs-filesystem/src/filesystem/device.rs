@@ -1,7 +1,8 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use async_trait::async_trait;
 use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
+use cryfs_rustfs::object_based_api::Dir as _;
 use futures::join;
 use maybe_owned::MaybeOwned;
 use std::sync::atomic::Ordering;
@@ -64,6 +65,13 @@ where
                 Err(err)
             }
         }
+    }
+
+    pub async fn sanity_check(&self) -> Result<()> {
+        // Make sure we can load the root dir and load its children
+        let rootdir = self.rootdir().await.context("Didn't find root blob")?;
+        rootdir.entries().await.context("Couldn't load root blob")?;
+        Ok(())
     }
 
     async fn load_blob(

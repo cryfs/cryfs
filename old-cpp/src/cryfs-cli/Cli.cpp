@@ -182,6 +182,7 @@ namespace cryfs_cli {
             unique_ptr<fspp::fuse::Fuse> fuse = nullptr;
             bool stoppedBecauseOfIntegrityViolation = false;
 
+            // TODO
             auto onIntegrityViolation = [&fuse, &stoppedBecauseOfIntegrityViolation] () {
               if (fuse.get() != nullptr) {
                 LOG(ERR, "Integrity violation detected after mounting. Unmounting.");
@@ -195,8 +196,10 @@ namespace cryfs_cli {
                 LOG(ERR, "Integrity violation detected before mounting. Not mounting.");
               }
             };
+
             const bool missingBlockIsIntegrityViolation = config.configFile->config()->missingBlockIsIntegrityViolation();
             _device = optional<unique_ref<CryDevice>>(make_unique_ref<CryDevice>(std::move(config.configFile), options.baseDir(), std::move(localStateDir), config.myClientId, options.allowIntegrityViolations(), missingBlockIsIntegrityViolation, std::move(onIntegrityViolation)));
+
             _sanityCheckFilesystem(_device->get());
 
             auto initFilesystem = [&] (fspp::fuse::Fuse *fs){
@@ -230,19 +233,6 @@ namespace cryfs_cli {
         }
     }
 
-    void Cli::_sanityCheckFilesystem(CryDevice *device) {
-        //Try to list contents of base directory
-        auto _rootDir = device->Load("/"); // this might throw an exception if the root blob doesn't exist
-        if (_rootDir == none) {
-            throw CryfsException("Couldn't find root blob", ErrorCode::InvalidFilesystem);
-        }
-        auto rootDir = dynamic_pointer_move<CryDir>(*_rootDir);
-        if (rootDir == none) {
-            throw CryfsException("Base directory blob doesn't contain a directory", ErrorCode::InvalidFilesystem);
-        }
-        (*rootDir)->children(); // Load children
-    }
-
     void Cli::_initLogfile(const ProgramOptions &options) {
         spdlog::drop("cryfs");
         //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
@@ -254,26 +244,5 @@ namespace cryfs_cli {
         } else {
             cpputils::logging::setLogger(cpputils::logging::system_logger("cryfs"));
         }
-    }
-
-    int Cli::main(int argc, const char **argv, unique_ref<HttpClient> httpClient, std::function<void()> onMounted) {
-        cpputils::showBacktraceOnCrash();
-        cpputils::set_thread_name("cryfs");
-
-        try {
-            _showVersion(std::move(httpClient));
-            ProgramOptions options = program_options::Parser(argc, argv).parse(CryCiphers::supportedCipherNames());
-            _sanityChecks(options);
-            _runFilesystem(options, std::move(onMounted));
-        } catch (const CryfsException &e) {
-            if (e.what() != string()) {
-              std::cerr << "Error " << static_cast<int>(e.errorCode()) << ": " << e.what() << std::endl;
-            }
-            return exitCode(e.errorCode());
-        } catch (const std::runtime_error &e) {
-            std::cerr << "Error: " << e.what() << std::endl;
-            return exitCode(ErrorCode::UnspecifiedError);
-        }
-        return exitCode(ErrorCode::Success);
     }
 }
