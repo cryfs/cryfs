@@ -161,7 +161,7 @@ mod tests {
             let mut data = vec![0; 1024 * 1024];
             fixture.generate(0, &mut data);
             let num_zeroes = data.iter().filter(|&&x| x == 0).count();
-            assert_eq!(4059, num_zeroes);
+            assert_eq!(4108, num_zeroes);
         }
 
         #[derive(Clone, Copy)]

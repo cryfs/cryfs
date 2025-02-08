@@ -4,7 +4,7 @@ use generic_array::{
     ArrayLength, GenericArray,
 };
 use openssl::symm::{decrypt_aead, encrypt_aead, Cipher as OpenSSLCipher};
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
@@ -86,7 +86,7 @@ impl<C: CipherType> Cipher for AeadCipher<C> {
         let ciphertext_size =
             plaintext.len() + Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX;
         let mut nonce = GenericArray::<u8, C::NONCE_SIZE>::default();
-        thread_rng().fill_bytes(&mut nonce); // TODO Which rng?
+        rng().fill_bytes(&mut nonce); // TODO Which rng?
         let mut auth_tag = GenericArray::<u8, C::AUTH_TAG_SIZE>::default();
 
         // TODO Does openssl allow a way to do in-place encryption?

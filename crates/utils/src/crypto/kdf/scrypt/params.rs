@@ -1,6 +1,6 @@
 use anyhow::{ensure, Result};
 use binrw::{binrw, helpers::until_eof, BinRead, BinWrite};
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use std::fmt::Debug;
 use std::io::Cursor;
 
@@ -31,7 +31,7 @@ impl ScryptParams {
             settings.log_n,
         );
         let mut salt = vec![0; settings.salt_len];
-        thread_rng().fill_bytes(&mut salt);
+        rng().fill_bytes(&mut salt);
         Ok(Self {
             log_n: settings.log_n,
             r: settings.r,

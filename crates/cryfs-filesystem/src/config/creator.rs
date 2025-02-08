@@ -1,4 +1,4 @@
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use thiserror::Error;
 // TODO Separate InfallibleUnwrap from lockable crate and remove lockable crate from our dependencies
 use lockable::InfallibleUnwrap;
@@ -84,7 +84,7 @@ fn _generate_encryption_key(cipher_name: &str) -> Result<EncryptionKey, ConfigCr
         fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
             EncryptionKey::new(C::KEY_SIZE, |data| {
                 // TODO Which rng should we use?
-                thread_rng().fill_bytes(data);
+                rng().fill_bytes(data);
                 Ok(())
             })
             .infallible_unwrap()

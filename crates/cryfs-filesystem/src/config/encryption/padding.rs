@@ -1,6 +1,6 @@
 use anyhow::Result;
 use binary_layout::Field;
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use thiserror::Error;
 
 use cryfs_utils::data::Data;
@@ -60,7 +60,7 @@ pub fn add_padding(mut data: Data, target_size: usize) -> Result<Data, AddPaddin
     data.num_bytes_mut().write(data_len_u32);
     let padding_region = &mut data.data_and_padding_mut()[data_len..];
     assert_eq!(padding_len, padding_region.len());
-    thread_rng().fill_bytes(padding_region);
+    rng().fill_bytes(padding_region);
 
     Ok(data.into_storage())
 }

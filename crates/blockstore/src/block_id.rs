@@ -1,6 +1,6 @@
 use anyhow::Result;
 use binrw::{BinRead, BinResult, BinWrite, Endian};
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use std::io::{Read, Seek, Write};
 
 pub const BLOCKID_LEN: usize = 16;
@@ -17,7 +17,7 @@ impl BlockId {
         let mut result = Self {
             id: [0; BLOCKID_LEN],
         };
-        let mut rng = thread_rng();
+        let mut rng = rng();
         rng.fill(&mut result.id);
         result
     }

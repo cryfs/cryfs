@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use std::fmt::Debug;
 
 const DIGEST_LEN: usize = 64;
@@ -48,7 +48,7 @@ impl Salt {
     }
 
     pub fn generate_random() -> Self {
-        Self(thread_rng().gen())
+        Self(rng().random())
     }
 }
 

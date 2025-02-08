@@ -1,7 +1,7 @@
 use anyhow::{bail, ensure, Context, Result};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::{Entry, HashMap};
 use std::convert::Infallible;
@@ -35,7 +35,7 @@ impl ClientId {
     pub fn generate_random() -> Self {
         ClientId {
             // TODO Is this ok or could this generate a zero?
-            id: thread_rng().gen(),
+            id: rng().random(),
         }
     }
 }

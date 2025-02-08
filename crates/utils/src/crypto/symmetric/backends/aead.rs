@@ -3,7 +3,7 @@
 use aead::generic_array::typenum::Unsigned;
 use aead::{AeadCore, AeadInPlace, KeyInit, Nonce};
 use anyhow::{ensure, Context, Result};
-use rand::{thread_rng, RngCore};
+use rand::{rng, RngCore};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
@@ -109,7 +109,7 @@ impl<C: KeyInit + AeadInPlace> Cipher for AeadCipher<C> {
 
 fn random_nonce<A: AeadCore>() -> Nonce<A> {
     let mut nonce = Nonce::<A>::default();
-    let mut rng = thread_rng();
+    let mut rng = rng();
     rng.fill_bytes(&mut nonce);
     nonce
 }
