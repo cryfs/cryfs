@@ -1,5 +1,9 @@
 use anyhow::{anyhow, Result};
-use clap::{error::ErrorKind, Args, Parser};
+use clap::{
+    builder::{styling::AnsiColor, Styles},
+    error::ErrorKind,
+    Args, Parser,
+};
 
 use crate::error::{CliError, CliErrorKind};
 
@@ -12,6 +16,7 @@ pub struct ImmediateExitFlags {
 }
 
 #[derive(Parser, Debug)]
+#[command(styles=clap_style())]
 pub struct CombinedArgs<ConcreteArgs: Args> {
     #[command(flatten)]
     pub immediate_exit_flags: ImmediateExitFlags,
@@ -68,4 +73,12 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<Option<ConcreteArgs>, CliError
     };
 
     Ok(Some(args.concrete_args))
+}
+
+fn clap_style() -> Styles {
+    Styles::styled()
+        .header(AnsiColor::Yellow.on_default())
+        .usage(AnsiColor::Green.on_default())
+        .literal(AnsiColor::Green.on_default())
+        .placeholder(AnsiColor::Green.on_default())
 }
