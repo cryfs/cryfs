@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::{Context as _, Result};
 use cryfs_filesystem::config::CryConfigFile;
 use cryfs_filesystem::localstate::{BasedirMetadata, CheckFilesystemIdError};
@@ -187,10 +189,7 @@ impl Cli {
         progress_bars: impl ProgressBarManager,
     ) -> Result<ConfigLoadResult, CliError> {
         let mount_args = self.mount_args();
-        let config_file_location = mount_args
-            .config
-            .clone()
-            .unwrap_or_else(|| mount_args.basedir.join("cryfs.config"));
+        let config_file_location = self.config_file_location();
         let config = cryfs_filesystem::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
@@ -264,6 +263,14 @@ impl Cli {
         })?;
         self.check_config_integrity(&config.config, allow_replaced_filesystem)?;
         Ok(config)
+    }
+
+    fn config_file_location(&self) -> PathBuf {
+        let mount_args = self.mount_args();
+        mount_args
+            .config
+            .clone()
+            .unwrap_or_else(|| mount_args.basedir.join("cryfs.config"))
     }
 
     fn check_config_integrity(
