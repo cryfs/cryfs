@@ -7,3 +7,4 @@ mod backend_adapter;
 
 mod mount;
 pub use mount::{mount, spawn_mount};
+pub use fuser::MountOption;

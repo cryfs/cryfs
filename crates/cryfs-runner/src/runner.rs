@@ -18,7 +18,7 @@ use cryfs_cli_utils::{
     CliResultExtFn,
 };
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
-use cryfs_rustfs::backend::fuser;
+use cryfs_rustfs::backend::fuser::{self, MountOption};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -64,6 +64,7 @@ pub async fn mount_filesystem(
             }),
         },
         FilesystemRunner {
+            basedir: &mount_args.basedir,
             mountdir: &mount_args.mountdir,
             config: &mount_args.config,
             create_or_load: mount_args.create_or_load,
@@ -76,7 +77,8 @@ pub async fn mount_filesystem(
     Ok(())
 }
 
-struct FilesystemRunner<'m, 'c, OnSuccessfullyMounted: FnOnce()> {
+struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
+    pub basedir: &'b Path,
     pub mountdir: &'m Path,
     pub config: &'c CryConfig,
     pub create_or_load: CreateOrLoad,
@@ -84,8 +86,8 @@ struct FilesystemRunner<'m, 'c, OnSuccessfullyMounted: FnOnce()> {
     pub unmount_idle: Option<Duration>,
 }
 
-impl<'m, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
-    for FilesystemRunner<'m, 'c, OnSuccessfullyMounted>
+impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
+    for FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted>
 {
     type Result = Result<(), CliError>;
 
@@ -131,11 +133,17 @@ impl<'m, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         });
 
         let fs = |_uid, _gid| device;
+        // TODO Fuse options passed in from command line
+        let mount_options = [
+            MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
+            MountOption::Subtype("cryfs".to_string()),
+        ];
         fuser::mount(
             fs,
             self.mountdir,
             tokio::runtime::Handle::current(),
             unmount_trigger,
+            &mount_options,
             self.on_successfully_mounted,
         )
         .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;

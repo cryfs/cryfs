@@ -36,6 +36,7 @@ impl Runner {
             AsyncDropArc::clone(implementation.inner()),
             mountpoint.path(),
             runtime,
+            &[],
         )
         .expect("Failed to spawn filesystem");
         Self {
