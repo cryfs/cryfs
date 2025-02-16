@@ -34,6 +34,12 @@ use cryfs_version::VersionInfo;
 
 // TODO Cryfs currently panics in fuse when mountdir is not empty or already mounted. We should either check that beforehand, or even better, display fuse errors without a panic.
 
+// TODO Leftover TODOs from C++ code. Do they apply to our rust implementation?
+//    - Delete a large file in parallel possible? Takes a long time right now...
+//    - Improve parallelity.
+//    - Replace panics with other error handling when it is not a programming error but an environment influence (e.g. a block is missing)
+//    - Can we improve performance by setting compiler parameter -maes for scrypt?
+
 pub struct Cli {
     args: CryfsArgs,
     is_noninteractive: bool,
