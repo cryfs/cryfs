@@ -101,9 +101,9 @@ async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> 
                             cli_error_kind: err.kind,
                             message: format!("{:?}", err.error),
                         };
-                        rpc_server
-                            .send_response(&Response::MountResponse(Err(mount_error)))
-                            .expect("Failed to send response. Maybe the parent process exited.");
+                        // Ignore errors because the parent process likely has exited if the file system was already mounted for some time
+                        let _ =
+                            rpc_server.send_response(&Response::MountResponse(Err(mount_error)));
                     }
                 }
             }
