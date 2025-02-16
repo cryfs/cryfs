@@ -17,7 +17,6 @@ pub struct CryfsArgs {
     #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
     pub show_ciphers: bool,
     // TODO
-    // boost::optional<boost::filesystem::path> _logFile;
     // std::vector<std::string> _fuseOptions;
     // bool _mountDirIsDriveLetter;
 }

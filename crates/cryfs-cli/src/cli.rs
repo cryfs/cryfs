@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
 use anyhow::{Context as _, Result};
+use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_filesystem::config::CryConfigFile;
 use cryfs_filesystem::localstate::{BasedirMetadata, CheckFilesystemIdError};
 use cryfs_runner::{CreateOrLoad, Mounter};
+use log::LevelFilter;
 
 use super::console::InteractiveConsole;
 use crate::args::{CryfsArgs, MountArgs};
@@ -54,6 +56,31 @@ impl Application for Cli {
             args,
             local_state_dir,
         })
+    }
+
+    fn default_log_config(&self) -> LoggingConfig {
+        let in_foreground = self
+            .args
+            .mount
+            .as_ref()
+            .map(|args| args.foreground)
+            .unwrap_or(
+                // No mount args, so we're running a short running command that stays in foreground
+                true,
+            );
+        if in_foreground {
+            // Mounting in foreground, let's log to stderr
+            LoggingConfig::new(vec![LogDestinationConfig {
+                destination: LogDestination::Stderr,
+                level: Some(LevelFilter::Warn),
+            }])
+        } else {
+            // Mounting in background, let's log to syslog
+            LoggingConfig::new(vec![LogDestinationConfig {
+                destination: LogDestination::Syslog,
+                level: Some(LevelFilter::Warn),
+            }])
+        }
     }
 
     fn main(self) -> Result<(), CliError> {

@@ -137,17 +137,4 @@ namespace cryfs_cli {
             LOG(ERR, "Crashed");
         }
     }
-
-    void Cli::_initLogfile(const ProgramOptions &options) {
-        spdlog::drop("cryfs");
-        //TODO Test that --logfile parameter works. Should be: file if specified, otherwise stderr if foreground, else syslog.
-        if (options.logFile() != none) {
-            cpputils::logging::setLogger(
-                spdlog::create<spdlog::sinks::basic_file_sink_mt>("cryfs", options.logFile()->string()));
-        } else if (options.foreground()) {
-            cpputils::logging::setLogger(spdlog::stderr_logger_mt("cryfs"));
-        } else {
-            cpputils::logging::setLogger(cpputils::logging::system_logger("cryfs"));
-        }
-    }
 }

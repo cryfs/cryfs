@@ -4,6 +4,7 @@ use clap::{
     error::ErrorKind,
     Args, Parser,
 };
+use clap_logflag::LogArgs;
 
 use crate::error::{CliError, CliErrorKind};
 
@@ -22,17 +23,24 @@ pub struct CombinedArgs<ConcreteArgs: Args> {
     pub immediate_exit_flags: ImmediateExitFlags,
 
     #[command(flatten)]
+    pub log: LogArgs,
+
+    #[command(flatten)]
     pub concrete_args: ConcreteArgs,
 }
 
-pub fn parse_args<ConcreteArgs: Args>() -> Result<Option<ConcreteArgs>, CliError> {
+pub enum ParseArgsResult<ConcreteArgs: Args> {
+    ShowVersion,
+    Normal { log: LogArgs, args: ConcreteArgs },
+}
+
+pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>, CliError> {
     // First try to parse ImmediateExitFlags by themselves. This is necessary because if we start by parsing `CombinedArgs`,
     // it would fail if `ConcreteArgs` aren't present.
     let args = match ImmediateExitFlags::try_parse() {
         Ok(immediate_exit_flags) => {
             if immediate_exit_flags.version {
-                // We've already printed the version number above, no need to print it again
-                return Ok(None);
+                return Ok(ParseArgsResult::ShowVersion);
             } else {
                 CombinedArgs::<ConcreteArgs>::parse()
             }
@@ -72,7 +80,10 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<Option<ConcreteArgs>, CliError
         }
     };
 
-    Ok(Some(args.concrete_args))
+    Ok(ParseArgsResult::Normal {
+        log: args.log,
+        args: args.concrete_args,
+    })
 }
 
 const fn clap_style() -> Styles {

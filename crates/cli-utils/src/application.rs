@@ -4,13 +4,16 @@ use anyhow::Result;
 use clap::Args;
 
 use cryfs_version::VersionInfo;
+use log::LevelFilter;
 
 use super::version::show_version;
 #[cfg(feature = "check_for_updates")]
 use super::version::ReqwestHttpClient;
-use crate::args::parse_args;
+use crate::args::{parse_args, ParseArgsResult};
 use crate::env::Environment;
 use crate::error::CliError;
+
+const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 pub trait Application: Sized {
     type ConcreteArgs: Args;
@@ -19,6 +22,9 @@ pub trait Application: Sized {
     const VERSION: VersionInfo<'static, 'static, 'static>;
 
     fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self, CliError>;
+
+    /// The logging configuration to use if the user didn't supply any `--log` flags.
+    fn default_log_config(&self) -> clap_logflag::LoggingConfig;
 
     fn main(self) -> Result<(), CliError>;
 }
@@ -36,24 +42,35 @@ pub fn run<App: Application>() -> ExitCode {
 }
 
 pub fn _run<App: Application>() -> Result<(), CliError> {
-    // TODO Is env_logger the right logging library?
-    env_logger::init();
-
     show_backtrace_on_panic::<App>();
 
     let env = Environment::read_env()?;
 
-    show_version(
-        &env,
-        App::NAME,
-        #[cfg(feature = "check_for_updates")]
-        ReqwestHttpClient,
-        App::VERSION,
-    );
+    let show_version = |env| {
+        show_version(
+            &env,
+            App::NAME,
+            #[cfg(feature = "check_for_updates")]
+            ReqwestHttpClient,
+            App::VERSION,
+        )
+    };
 
-    if let Some(args) = parse_args::<App::ConcreteArgs>()? {
-        let app = App::new(args, env)?;
-        app.main()?;
+    match parse_args::<App::ConcreteArgs>()? {
+        ParseArgsResult::ShowVersion => {
+            // TODO We probably should initialize logging here before showing the version,
+            // so that any http requests we do for checking for updates have a working logging backend.
+            show_version(env);
+        }
+        ParseArgsResult::Normal { log, args } => {
+            let app = App::new(args, env.clone())?;
+            clap_logflag::init_logging!(
+                log.or_default(app.default_log_config()),
+                DEFAULT_LOG_LEVEL
+            );
+            show_version(env);
+            app.main()?;
+        }
     }
 
     Ok(())

@@ -10,7 +10,7 @@ const FRONTEND_NONINTERACTIVE: &str = "noninteractive";
 const NOUPDATECHECK_KEY: &str = "CRYFS_NO_UPDATE_CHECK";
 const LOCALSTATEDIR_KEY: &str = "CRYFS_LOCAL_STATE_DIR";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
     pub is_noninteractive: bool,
     #[cfg(feature = "check_for_updates")]

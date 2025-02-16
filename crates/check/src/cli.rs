@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::path::Path;
 
+use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,
@@ -42,6 +43,13 @@ impl Application for RecoverCli {
             args,
             local_state_dir,
         })
+    }
+
+    fn default_log_config(&self) -> LoggingConfig {
+        LoggingConfig::new(vec![LogDestinationConfig {
+            destination: LogDestination::Stderr,
+            level: None,
+        }])
     }
 
     fn main(self) -> Result<(), CliError> {

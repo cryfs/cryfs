@@ -17,6 +17,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 byte-unit.workspace = true
 clap = { workspace = true, features = ["derive"] }
+clap-logflag.workspace = true
 # TODO Now that we have the cryfs-runner crate, can we remove other cryfs dependencies? Can we remove tokio? Maybe go through all of our crates and check that.
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
