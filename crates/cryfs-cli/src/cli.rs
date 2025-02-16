@@ -144,7 +144,6 @@ impl Cli {
         progress_bars: impl ProgressBarManager,
     ) -> Result<(), CliError> {
         let mount_args = self.mount_args();
-        // TODO C++ code has lots more logic here, migrate that.
 
         let config =
             self.load_or_create_config(mount_args.allow_replaced_filesystem, progress_bars)?;

@@ -136,13 +136,9 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         }
 
         // TODO Test unmounting after idle works correctly
-        let unmount_trigger = self.unmount_idle.map(|unmount_idle| {
-            make_unmount_trigger(
-                &device,
-                // TODO Pass in config of how long to wait before unmounting and only set this up if requested on the CLI
-                unmount_idle,
-            )
-        });
+        let unmount_trigger = self
+            .unmount_idle
+            .map(|unmount_idle| make_unmount_trigger(&device, unmount_idle));
 
         let fs = |_uid, _gid| device;
         // TODO Fuse options passed in from command line
