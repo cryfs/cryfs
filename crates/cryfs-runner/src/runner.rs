@@ -1,14 +1,5 @@
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-use std::time::Duration;
-use std::{
-    path::{Path, PathBuf},
-    sync::atomic::Ordering,
-};
-use tokio_util::sync::CancellationToken;
-
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockStore, ClientId, IntegrityConfig, InvalidBlockSizeError,
     LockingBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
@@ -21,6 +12,13 @@ use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::Loc
 use cryfs_rustfs::backend::fuser::{self, MountOption};
 use cryfs_rustfs::object_based_api::Device;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
+use crate::unmount_trigger::{TriggerReason, UnmountTrigger};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CreateOrLoad {
@@ -52,6 +50,9 @@ pub async fn mount_filesystem(
         } else {
             MissingBlockIsIntegrityViolation::IsNotAViolation
         };
+    let unmount_trigger = UnmountTrigger::new();
+    let unmount_trigger_clone = unmount_trigger.clone();
+    let trigger_reason = Arc::clone(unmount_trigger.trigger_reason());
     setup_blockstore_stack(
         OnDiskBlockStore::new(mount_args.basedir.to_owned()),
         &mount_args.config,
@@ -60,8 +61,8 @@ pub async fn mount_filesystem(
         IntegrityConfig {
             allow_integrity_violations: mount_args.allow_integrity_violations,
             missing_block_is_integrity_violation,
-            on_integrity_violation: Box::new(|err| {
-                // TODO
+            on_integrity_violation: Box::new(move |err| {
+                unmount_trigger_clone.trigger_now(TriggerReason::IntegrityViolation(err.clone()));
             }),
         },
         FilesystemRunner {
@@ -70,12 +71,24 @@ pub async fn mount_filesystem(
             config: &mount_args.config,
             create_or_load: mount_args.create_or_load,
             on_successfully_mounted,
+            unmount_trigger,
             unmount_idle: mount_args.unmount_idle,
         },
     )
     .await??;
 
-    Ok(())
+    let trigger_reason = trigger_reason.lock().unwrap().clone();
+    match trigger_reason {
+        None => {
+            // Regular unmount, not triggered by unmount idle or an integrity violation
+            Ok(())
+        }
+        Some(TriggerReason::UnmountIdle) => Ok(()),
+        Some(TriggerReason::IntegrityViolation(err)) => Err(CliError {
+            error: err.into(),
+            kind: CliErrorKind::IntegrityViolation,
+        }),
+    }
 }
 
 struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
@@ -84,6 +97,7 @@ struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
     pub config: &'c CryConfig,
     pub create_or_load: CreateOrLoad,
     pub on_successfully_mounted: OnSuccessfullyMounted,
+    pub unmount_trigger: UnmountTrigger,
     pub unmount_idle: Option<Duration>,
 }
 
@@ -136,9 +150,10 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         }
 
         // TODO Test unmounting after idle works correctly
-        let unmount_trigger = self
-            .unmount_idle
-            .map(|unmount_idle| make_unmount_trigger(&device, unmount_idle));
+        if let Some(unmount_idle) = self.unmount_idle {
+            self.unmount_trigger
+                .trigger_after_idle_timeout(device.last_access_time(), unmount_idle);
+        }
 
         let fs = |_uid, _gid| device;
         // TODO Fuse options passed in from command line
@@ -150,42 +165,13 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             fs,
             self.mountdir,
             tokio::runtime::Handle::current(),
-            unmount_trigger,
+            Some(self.unmount_trigger.waiter()),
             &mount_options,
             self.on_successfully_mounted,
         )
         .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;
         Ok(())
     }
-}
-
-/// Make a trigger that will cancel after the filesystem is inactive for a certain amount of time.
-fn make_unmount_trigger<B>(
-    device: &CryDevice<B>,
-    unmount_after_idle_for: Duration,
-) -> CancellationToken
-where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
-{
-    let last_filesystem_access_time = device.last_access_time();
-
-    let unmount_trigger = CancellationToken::new();
-    let unmount_trigger_clone = unmount_trigger.clone();
-    tokio::task::spawn(async move {
-        loop {
-            if last_filesystem_access_time
-                .load(Ordering::Relaxed)
-                .elapsed()
-                > unmount_after_idle_for
-            {
-                unmount_trigger_clone.cancel();
-                break;
-            }
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        }
-    });
-    unmount_trigger
 }
 
 // TODO Tests

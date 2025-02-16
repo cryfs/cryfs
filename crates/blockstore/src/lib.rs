@@ -13,9 +13,9 @@ mod low_level;
 pub use low_level::{
     AllowIntegrityViolations, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
     ClientId, CompressingBlockStore, DynBlockStore, EncryptedBlockStore, InMemoryBlockStore,
-    IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig, InvalidBlockSizeError,
-    MissingBlockIsIntegrityViolation, OnDiskBlockStore, OptimizedBlockStoreWriter,
-    ReadOnlyBlockStore,
+    IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig, IntegrityViolationError,
+    InvalidBlockSizeError, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
+    OptimizedBlockStoreWriter, ReadOnlyBlockStore,
 };
 
 #[cfg(any(test, feature = "testutils"))]

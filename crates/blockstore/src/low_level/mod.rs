@@ -11,5 +11,6 @@ pub use implementations::{ActionCounts, MockBlockStore, SharedBlockStore, Tracki
 pub use implementations::{
     AllowIntegrityViolations, ClientId, CompressingBlockStore, DynBlockStore, EncryptedBlockStore,
     InMemoryBlockStore, IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig,
-    MissingBlockIsIntegrityViolation, OnDiskBlockStore, ReadOnlyBlockStore,
+    IntegrityViolationError, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
+    ReadOnlyBlockStore,
 };

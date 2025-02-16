@@ -909,6 +909,7 @@ name = "cryfs-runner"
 version = "2.0.0-alpha1"
 dependencies = [
  "anyhow",
+ "atomic-time",
  "bincode",
  "byte-unit",
  "cryfs-blobstore",

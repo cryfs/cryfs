@@ -5,6 +5,7 @@ mod background_process;
 mod ipc;
 mod mounter;
 mod runner;
+mod unmount_trigger;
 
 pub use mounter::Mounter;
 pub use runner::{CreateOrLoad, MountArgs};

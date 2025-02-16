@@ -29,11 +29,10 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
 };
-pub use integrity_data::ClientId;
 use integrity_data::{
-    BlockInfo, BlockVersion, BlockVersionTransaction, IntegrityData, IntegrityViolationError,
-    MaybeClientId,
+    BlockInfo, BlockVersion, BlockVersionTransaction, IntegrityData, MaybeClientId,
 };
+pub use integrity_data::{ClientId, IntegrityViolationError};
 
 const FORMAT_VERSION_HEADER: u16 = 1;
 
@@ -148,6 +147,9 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     async fn load(&self, block_id: &BlockId) -> Result<Option<Data>> {
         let mut block_info_guard = self.integrity_data.lock_block_info(*block_id).await;
         let loaded = self.underlying_block_store.load(block_id).await.context(
+            // Even if this fails due to corrupted data (i.e. decryption fails), we don't trigger an integrity violation because
+            // the error message tells the user to fix integrity violations by removing the local KnownBlockVersions file,
+            // but with a corrupted filesystem that wouldn't help.
             "IntegrityBlockStore failed to load the block from the underlying block store",
         )?;
         match loaded {
