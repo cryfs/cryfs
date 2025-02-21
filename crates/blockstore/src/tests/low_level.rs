@@ -5,11 +5,11 @@
 use futures::stream::TryStreamExt;
 use std::ops::Deref;
 
-use super::{blockid, data, Fixture};
+use super::{Fixture, blockid, data};
 use crate::{
+    BlockId,
     low_level::{BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
     utils::{RemoveResult, TryCreateResult},
-    BlockId,
 };
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 

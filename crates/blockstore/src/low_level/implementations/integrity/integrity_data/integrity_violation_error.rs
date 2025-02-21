@@ -18,15 +18,21 @@ pub enum IntegrityViolationError {
         actual_version: BlockVersion,
     },
 
-    #[error("Integrity Violation: {id_from_header:?} is stored as {id_from_filename:?}. Did an attacker try to rename some blocks?")]
+    #[error(
+        "Integrity Violation: {id_from_header:?} is stored as {id_from_filename:?}. Did an attacker try to rename some blocks?"
+    )]
     WrongBlockId {
         id_from_filename: BlockId,
         id_from_header: BlockId,
     },
 
-    #[error("Integrity Violation: {block:?} should exist but we didn't find it. Did an attacker delete it?")]
+    #[error(
+        "Integrity Violation: {block:?} should exist but we didn't find it. Did an attacker delete it?"
+    )]
     MissingBlock { block: BlockId },
 
-    #[error("Integrity Violation: {blocks:?} should exist but we didn't find them. Did an attacker delete them?")]
+    #[error(
+        "Integrity Violation: {blocks:?} should exist but we didn't find them. Did an attacker delete them?"
+    )]
     MissingBlocks { blocks: HashSet<BlockId> },
 }

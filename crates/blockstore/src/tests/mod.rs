@@ -3,7 +3,7 @@
 
 use async_trait::async_trait;
 
-use crate::{low_level::BlockStore, BlockId};
+use crate::{BlockId, low_level::BlockStore};
 use cryfs_utils::{async_drop::AsyncDropGuard, data::Data, testutils::data_fixture::DataFixture};
 
 /// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests!](crate::instantiate_blockstore_tests!) macro,

@@ -7,8 +7,8 @@ use std::any::Any;
 use std::fmt::Debug;
 
 use crate::{
-    utils::{RemoveResult, TryCreateResult},
     BlockId,
+    utils::{RemoveResult, TryCreateResult},
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data};
 

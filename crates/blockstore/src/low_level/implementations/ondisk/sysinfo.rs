@@ -1,6 +1,6 @@
 // TODO If https://github.com/GuillaumeGomez/sysinfo/issues/446 succeeds, we should use that instead of our manual copy&paste here
 
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use std::path::Path;
 
 /// Returns the available disk space of the file system that contains the given path

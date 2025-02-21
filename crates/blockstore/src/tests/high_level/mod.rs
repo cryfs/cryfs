@@ -13,7 +13,7 @@ use std::time::Duration;
 use crate::{
     high_level::{Block, LockingBlockStore},
     low_level::BlockStore,
-    tests::{data, Fixture},
+    tests::{Fixture, data},
     utils::RemoveResult,
 };
 use cryfs_utils::{async_drop::AsyncDropGuard, testutils::asserts::assert_data_range_eq};

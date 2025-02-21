@@ -8,11 +8,11 @@ use std::fmt::Debug;
 use std::sync::Mutex;
 
 use crate::{
+    BlockId, RemoveResult, TryCreateResult,
     low_level::{
         BlockStore, BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError,
         OptimizedBlockStoreWriter,
     },
-    BlockId, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},

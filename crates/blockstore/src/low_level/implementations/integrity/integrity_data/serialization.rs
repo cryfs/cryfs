@@ -175,7 +175,10 @@ mod tests {
                     "Expected to fail when reading the header at pos {} but failed at pos {}",
                     EXPECTED_POS, pos
                 );
-                assert_eq!("Wrong format version header: 'cryfs.integritydata.knownblockversions;20'. Expected 'cryfs.integritydata.knownblockversions;1'", message);
+                assert_eq!(
+                    "Wrong format version header: 'cryfs.integritydata.knownblockversions;20'. Expected 'cryfs.integritydata.knownblockversions;1'",
+                    message
+                );
             }
             _ => {
                 panic!(
@@ -198,7 +201,10 @@ mod tests {
                     "Expected to fail when reading the header at pos {} but failed at pos {}",
                     EXPECTED_POS, pos
                 );
-                assert_eq!("Wrong format version header: \'{non-utf8 0x637279667380}\'. Expected 'cryfs.integritydata.knownblockversions;1'", message);
+                assert_eq!(
+                    "Wrong format version header: \'{non-utf8 0x637279667380}\'. Expected 'cryfs.integritydata.knownblockversions;1'",
+                    message
+                );
             }
             _ => {
                 panic!(
@@ -263,7 +269,11 @@ mod tests {
 
         if let binrw::Error::AssertFail { pos, message } = actual_error {
             const EXPECTED_POS: u64 = 41;
-            assert_eq!(EXPECTED_POS, *pos, "Expected to fail when reading integrity_violation_in_previous_run at pos {} but failed at pos {}", EXPECTED_POS, pos);
+            assert_eq!(
+                EXPECTED_POS, *pos,
+                "Expected to fail when reading integrity_violation_in_previous_run at pos {} but failed at pos {}",
+                EXPECTED_POS, pos
+            );
             assert_eq!(
                 "Tried to read '2' as a boolean value. Must be 0 or 1.",
                 message

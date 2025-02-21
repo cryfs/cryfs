@@ -3,8 +3,8 @@ use lockable::{AsyncLimit, Lockable, LockableLruCache};
 use std::fmt::Debug;
 use std::future::Future;
 use std::num::NonZeroUsize;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::time::Duration;
 
 #[cfg(any(test, feature = "testutils"))]

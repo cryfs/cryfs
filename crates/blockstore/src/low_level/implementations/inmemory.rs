@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::{BoxStream, StreamExt};
@@ -9,11 +9,11 @@ use sysinfo::System;
 
 use crate::low_level::InvalidBlockSizeError;
 use crate::{
-    low_level::{
-        interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
-        OptimizedBlockStoreWriter,
-    },
     BlockId, RemoveResult, TryCreateResult,
+    low_level::{
+        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        interface::block_data::IBlockData,
+    },
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},

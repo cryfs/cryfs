@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
@@ -9,12 +9,12 @@ use std::ops::Deref;
 
 use crate::low_level::interface::InvalidBlockSizeError;
 use crate::{
+    BlockId,
     low_level::{
-        interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
-        OptimizedBlockStoreWriter,
+        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
-    BlockId,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -37,11 +37,11 @@ pub struct EncryptedBlockStore<
 }
 
 impl<
-        // TODO Are all those bounds on C, _B, B still needed ?
-        C: 'static + CipherDef + Send + Sync,
-        _B: Debug + Send + Sync,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > EncryptedBlockStore<C, _B, B>
+    // TODO Are all those bounds on C, _B, B still needed ?
+    C: 'static + CipherDef + Send + Sync,
+    _B: Debug + Send + Sync,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> EncryptedBlockStore<C, _B, B>
 {
     pub fn new(underlying_block_store: AsyncDropGuard<B>, cipher: C) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
@@ -54,10 +54,10 @@ impl<
 
 #[async_trait]
 impl<
-        C: 'static + CipherDef + Send + Sync,
-        _B: BlockStoreReader + Send + Sync + Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > BlockStoreReader for EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef + Send + Sync,
+    _B: BlockStoreReader + Send + Sync + Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> BlockStoreReader for EncryptedBlockStore<C, _B, B>
 {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         self.underlying_block_store
@@ -131,10 +131,10 @@ impl<
 
 #[async_trait]
 impl<
-        C: 'static + CipherDef + Send + Sync,
-        _B: BlockStoreDeleter + Send + Sync + Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > BlockStoreDeleter for EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef + Send + Sync,
+    _B: BlockStoreDeleter + Send + Sync + Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> BlockStoreDeleter for EncryptedBlockStore<C, _B, B>
 {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         self.underlying_block_store
@@ -149,10 +149,10 @@ create_block_data_wrapper!(BlockData);
 
 #[async_trait]
 impl<
-        C: 'static + CipherDef + Send + Sync,
-        _B: OptimizedBlockStoreWriter + Send + Sync + Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > OptimizedBlockStoreWriter for EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef + Send + Sync,
+    _B: OptimizedBlockStoreWriter + Send + Sync + Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> OptimizedBlockStoreWriter for EncryptedBlockStore<C, _B, B>
 {
     type BlockData = BlockData;
 
@@ -195,10 +195,10 @@ impl<
 }
 
 impl<
-        C: 'static + CipherDef + Send + Sync,
-        _B: Send + Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > Debug for EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef + Send + Sync,
+    _B: Send + Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> Debug for EncryptedBlockStore<C, _B, B>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "EncryptedBlockStore")
@@ -207,10 +207,10 @@ impl<
 
 #[async_trait]
 impl<
-        C: 'static + CipherDef + Send + Sync,
-        _B: Sync + Send + Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > AsyncDrop for EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef + Send + Sync,
+    _B: Sync + Send + Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> AsyncDrop for EncryptedBlockStore<C, _B, B>
 {
     type Error = anyhow::Error;
     async fn async_drop_impl(&mut self) -> Result<()> {
@@ -219,18 +219,18 @@ impl<
 }
 
 impl<
-        C: 'static + CipherDef + Send + Sync,
-        _B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > BlockStore for EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef + Send + Sync,
+    _B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> BlockStore for EncryptedBlockStore<C, _B, B>
 {
 }
 
 impl<
-        C: 'static + CipherDef,
-        _B: Debug,
-        B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-    > EncryptedBlockStore<C, _B, B>
+    C: 'static + CipherDef,
+    _B: Debug,
+    B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
+> EncryptedBlockStore<C, _B, B>
 {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
         // TODO Is it better to move encryption/decryption to a dedicated threadpool instead of block_in_place?
@@ -270,12 +270,12 @@ fn _prepend_header(mut data: Data) -> Data {
 mod tests {
     use super::*;
 
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use rand::{RngCore, SeedableRng, rngs::StdRng};
     use std::marker::PhantomData;
 
     use crate::instantiate_blockstore_tests;
     use crate::low_level::{BlockStoreReader, BlockStoreWriter, InMemoryBlockStore};
-    use crate::tests::{blockid, data, Fixture};
+    use crate::tests::{Fixture, blockid, data};
     use cryfs_utils::{
         async_drop::AsyncDropArc,
         crypto::symmetric::{
@@ -357,9 +357,11 @@ mod tests {
                     )
                     .unwrap()
             );
-            assert!(store
-                .block_size_from_physical_block_size(Byte::from_u64(0))
-                .is_err());
+            assert!(
+                store
+                    .block_size_from_physical_block_size(Byte::from_u64(0))
+                    .is_err()
+            );
 
             store.async_drop().await.unwrap();
         }

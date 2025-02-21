@@ -5,12 +5,12 @@ use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
 use crate::{
+    BlockId,
     high_level::LockingBlockStore,
     low_level::{
         BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
     },
     tests::Fixture,
-    BlockId,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},

@@ -1,7 +1,7 @@
 // TODO #![deny(missing_docs)]
 
 mod block_id;
-pub use block_id::{BlockId, BLOCKID_LEN};
+pub use block_id::{BLOCKID_LEN, BlockId};
 
 mod utils;
 pub use utils::{RemoveResult, TryCreateResult};

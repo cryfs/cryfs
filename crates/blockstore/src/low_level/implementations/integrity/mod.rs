@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{Context, Result, bail, ensure};
 use async_trait::async_trait;
 use binary_layout::prelude::*;
 use byte_unit::Byte;
@@ -15,12 +15,12 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 use crate::{
+    BLOCKID_LEN, BlockId,
     low_level::{
-        interface::{block_data::IBlockData, InvalidBlockSizeError},
         BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        interface::{InvalidBlockSizeError, block_data::IBlockData},
     },
     utils::{RemoveResult, TryCreateResult},
-    BlockId, BLOCKID_LEN,
 };
 
 mod integrity_data;
@@ -445,7 +445,11 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
     fn _check_format_version_header(view: &block_layout::View<Data>) -> Result<()> {
         let format_version_header = view.format_version_header().read();
         if format_version_header != FORMAT_VERSION_HEADER {
-            bail!("Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?", format_version_header, FORMAT_VERSION_HEADER);
+            bail!(
+                "Wrong FORMAT_VERSION_HEADER of {:?}. Expected {:?}. Maybe it was created with a different major version of CryFS?",
+                format_version_header,
+                FORMAT_VERSION_HEADER
+            );
         }
         Ok(())
     }
@@ -527,11 +531,8 @@ mod generic_tests {
         integrity_file_dir: TempDir,
     }
     #[async_trait]
-    impl<
-            const ALLOW_INTEGRITY_VIOLATIONS: bool,
-            const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool,
-        > Fixture
-        for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
+    impl<const ALLOW_INTEGRITY_VIOLATIONS: bool, const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool>
+        Fixture for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
     {
         type ConcreteBlockStore = IntegrityBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
@@ -609,9 +610,11 @@ mod generic_tests {
                 )
                 .unwrap()
         );
-        assert!(store
-            .block_size_from_physical_block_size(Byte::from_u64(0))
-            .is_err());
+        assert!(
+            store
+                .block_size_from_physical_block_size(Byte::from_u64(0))
+                .is_err()
+        );
 
         store.async_drop().await.unwrap();
     }
@@ -979,8 +982,8 @@ mod specialized_tests {
     }
 
     #[tokio::test]
-    async fn decreasing_version_number_but_switching_to_different_client_for_which_the_version_is_increasing(
-    ) {
+    async fn decreasing_version_number_but_switching_to_different_client_for_which_the_version_is_increasing()
+     {
         run_test(
             |fixture, store| {
                 Box::pin(async move {

@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::{
@@ -10,9 +10,9 @@ use std::fmt::{self, Debug};
 use std::sync::Arc;
 
 use crate::{
+    BlockId,
     low_level::{BlockStore, InvalidBlockSizeError},
     utils::{RemoveResult, TryCreateResult},
-    BlockId,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -335,8 +335,8 @@ mod tests {
     use anyhow::anyhow;
     use mockall::predicate::{always, function};
     use std::sync::{
-        atomic::{AtomicUsize, Ordering},
         Mutex,
+        atomic::{AtomicUsize, Ordering},
     };
 
     fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
@@ -398,8 +398,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCreatedAndDoesntRemove(
-    ) {
+    async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCreatedAndDoesntRemove()
+     {
         // TODO This is potentially flaky. Let's make sure cache doesn't get pruned, maybe set flush time to infinity?
         let mut underlying_store = make_mock_block_store();
         underlying_store

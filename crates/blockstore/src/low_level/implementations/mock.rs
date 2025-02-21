@@ -5,11 +5,11 @@ use mockall::mock;
 use std::fmt::{self, Debug};
 
 use crate::{
+    BlockId,
     low_level::{
         BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
     },
     utils::{RemoveResult, TryCreateResult},
-    BlockId,
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data};
 

@@ -1,7 +1,7 @@
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{Context, Result, bail, ensure};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use lockable::{AsyncLimit, InfallibleUnwrap, Lockable, LockableHashMap};
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::{Entry, HashMap};
 use std::convert::Infallible;
@@ -9,12 +9,12 @@ use std::hash::Hash;
 use std::io::{Read, Seek, Write};
 use std::num::NonZeroU32;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::BlockId;
 use cryfs_utils::{
-    binary::{read_nonzerou32, write_nonzerou32, BinaryReadExt, BinaryWriteExt},
+    binary::{BinaryReadExt, BinaryWriteExt, read_nonzerou32, write_nonzerou32},
     safe_panic,
 };
 
@@ -333,7 +333,9 @@ impl<'a> BlockVersionTransaction<'a> {
 impl<'a> Drop for BlockVersionTransaction<'a> {
     fn drop(&mut self) {
         if self.0.is_some() {
-            safe_panic!("Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it.");
+            safe_panic!(
+                "Active BlockVersionTransaction left scope. Please make sure you call commit() or cancel() on it."
+            );
         }
     }
 }
@@ -405,7 +407,7 @@ mod tests {
     #![allow(non_snake_case)]
     use super::*;
     use crate::tests::blockid;
-    use base64::engine::{general_purpose::STANDARD as base64_STANDARD, Engine as _};
+    use base64::engine::{Engine as _, general_purpose::STANDARD as base64_STANDARD};
     use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
     use common_macros::hash_map;
@@ -510,8 +512,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenIncrementingVersionTwiceForSameClient_butCancellingTransaction_thenDoesntChange(
-        ) {
+        fn test_givenNewObject_whenIncrementingVersionTwiceForSameClient_butCancellingTransaction_thenDoesntChange()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             let transaction = obj.start_increment_version_transaction(clientid(1));
@@ -536,8 +538,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenIncrementingVersionTwiceForDifferentClient_butCancellingTransaction_thenDoesntChange(
-        ) {
+        fn test_givenNewObject_whenIncrementingVersionTwiceForDifferentClient_butCancellingTransaction_thenDoesntChange()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             let transaction = obj.start_increment_version_transaction(clientid(1));
@@ -803,8 +805,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForSameClient_withVersionIsEqual_thenSucceeds(
-        ) {
+        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForSameClient_withVersionIsEqual_thenSucceeds()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             obj.check_and_update_version(clientid(1), blockid(1), version(5))
@@ -826,8 +828,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForSameClient_withVersionIsIncreasing_thenSucceeds(
-        ) {
+        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForSameClient_withVersionIsIncreasing_thenSucceeds()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             obj.check_and_update_version(clientid(1), blockid(1), version(5))
@@ -849,8 +851,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForSameClient_withVersionIsDecreasing_thenFails(
-        ) {
+        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForSameClient_withVersionIsDecreasing_thenFails()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             obj.check_and_update_version(clientid(1), blockid(1), version(5))
@@ -872,8 +874,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForDifferentClient_withVersionIsEqual_thenSucceeds(
-        ) {
+        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForDifferentClient_withVersionIsEqual_thenSucceeds()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             obj.check_and_update_version(clientid(2), blockid(1), version(5))
@@ -896,8 +898,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForDifferentClient_withVersionIsIncreasing_thenSucceeds(
-        ) {
+        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForDifferentClient_withVersionIsIncreasing_thenSucceeds()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             obj.check_and_update_version(clientid(2), blockid(1), version(5))
@@ -920,8 +922,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForDifferentClient_withVersionIsDecreasing_thenSucceeds(
-        ) {
+        fn test_givenNewObject_whenCheckingAndUpdatingVersionTwiceForDifferentClient_withVersionIsDecreasing_thenSucceeds()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
 
             obj.check_and_update_version(clientid(2), blockid(1), version(5))
@@ -944,8 +946,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsDecreasing_thenFails(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsDecreasing_thenFails()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(3)),
                 hash_map! {
@@ -976,8 +978,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsDecreasing_thenFails(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsDecreasing_thenFails()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1008,8 +1010,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsEqual_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsEqual_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(3)),
                 hash_map! {
@@ -1040,8 +1042,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsEqual_thenFails(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsEqual_thenFails()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1072,8 +1074,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsIncreasingByOne_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsIncreasingByOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(3)),
                 hash_map! {
@@ -1104,8 +1106,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsIncreasingByOne_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsIncreasingByOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1136,8 +1138,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForLastUpdateClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(3)),
                 hash_map! {
@@ -1168,8 +1170,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNonLastUpdateClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1200,8 +1202,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsOne_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1233,8 +1235,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsHigherThanOne_thenSucceeds(
-        ) {
+        fn test_givenExistingObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsHigherThanOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1266,8 +1268,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsDecreasing_thenFails(
-        ) {
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsDecreasing_thenFails()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1295,8 +1297,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsEqual_thenFails(
-        ) {
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsEqual_thenFails()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1324,8 +1326,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsIncreasingByOne_thenSucceeds(
-        ) {
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsIncreasingByOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1356,8 +1358,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds(
-        ) {
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForExistingClient_withVersionIsIncreasingByMoreThanOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1388,8 +1390,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsOne_thenSucceeds(
-        ) {
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1421,8 +1423,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsMoreThanOne_thenSucceeds(
-        ) {
+        fn test_givenDeletedObject_whenCheckingAndUpdatingVersionForNewClient_withVersionIsMoreThanOne_thenSucceeds()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1464,8 +1466,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenEmptyObject_afterIncrementingVersionAndCommitting_whenQueryingCurrentVersion_thenReturnsSome(
-        ) {
+        fn test_givenEmptyObject_afterIncrementingVersionAndCommitting_whenQueryingCurrentVersion_thenReturnsSome()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
             obj.start_increment_version_transaction(clientid(5))
                 .commit();
@@ -1473,8 +1475,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenEmptyObject_afterIncrementingVersionAndCancelling_whenQueryingCurrentVersion_thenReturnsNone(
-        ) {
+        fn test_givenEmptyObject_afterIncrementingVersionAndCancelling_whenQueryingCurrentVersion_thenReturnsNone()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
             obj.start_increment_version_transaction(clientid(5))
                 .cancel();
@@ -1482,8 +1484,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenEmptyObject_afterCheckingAndUpdatingVersion_whenQueryingCurrentVersion_thenReturnsSome(
-        ) {
+        fn test_givenEmptyObject_afterCheckingAndUpdatingVersion_whenQueryingCurrentVersion_thenReturnsSome()
+         {
             let mut obj = BlockInfo::new_unknown(MaybeClientId::ClientId(clientid(1)));
             obj.check_and_update_version(clientid(5), blockid(1), version(5))
                 .unwrap();
@@ -1542,8 +1544,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_forExistingBlock_thenReturnsYes(
-        ) {
+        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_forExistingBlock_thenReturnsYes()
+         {
             let obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {
@@ -1555,8 +1557,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_forDeletedBlock_thenReturnsNo(
-        ) {
+        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_forDeletedBlock_thenReturnsNo()
+         {
             let obj = BlockInfo::new(
                 MaybeClientId::BlockWasDeleted,
                 hash_map! {
@@ -1568,8 +1570,8 @@ mod tests {
         }
 
         #[test]
-        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_afterDeletingBlock_thenReturnsNo(
-        ) {
+        fn test_givenNonEmptyObject_whenQueryingBlockIsExpectedToExist_afterDeletingBlock_thenReturnsNo()
+         {
             let mut obj = BlockInfo::new(
                 MaybeClientId::ClientId(clientid(1)),
                 hash_map! {

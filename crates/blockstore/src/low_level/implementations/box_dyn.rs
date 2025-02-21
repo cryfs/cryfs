@@ -4,11 +4,11 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 
 use crate::{
-    low_level::{
-        interface::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
-        InvalidBlockSizeError,
-    },
     BlockId, RemoveResult, TryCreateResult,
+    low_level::{
+        InvalidBlockSizeError,
+        interface::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+    },
 };
 use cryfs_utils::async_drop::AsyncDrop;
 use cryfs_utils::data::Data;

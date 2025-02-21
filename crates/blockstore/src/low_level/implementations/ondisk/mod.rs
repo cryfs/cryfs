@@ -1,6 +1,6 @@
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::{Context, Error, Result, anyhow, bail};
 use async_trait::async_trait;
-use base64::engine::{general_purpose::STANDARD as base64_STANDARD, Engine as _};
+use base64::engine::{Engine as _, general_purpose::STANDARD as base64_STANDARD};
 use byte_unit::Byte;
 use futures::stream::{BoxStream, Stream, StreamExt, TryStreamExt};
 use std::fmt::{self, Debug};
@@ -11,12 +11,12 @@ use tokio_stream::wrappers::ReadDirStream;
 
 use crate::low_level::InvalidBlockSizeError;
 use crate::{
+    BLOCKID_LEN, BlockId,
     low_level::{
-        interface::block_data::IBlockData, BlockStore, BlockStoreDeleter, BlockStoreReader,
-        OptimizedBlockStoreWriter,
+        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
-    BlockId, BLOCKID_LEN,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -296,7 +296,10 @@ fn _blockid_from_filepath(path: &Path) -> BlockId {
 fn _check_and_remove_header(mut data: Data) -> Result<Data> {
     if !data.starts_with(FORMAT_VERSION_HEADER) {
         if data.starts_with(FORMAT_VERSION_HEADER_PREFIX) {
-            bail!("This block is not supported yet. Maybe it was created with a newer version of CryFS? Block: {}", base64_STANDARD.encode(data));
+            bail!(
+                "This block is not supported yet. Maybe it was created with a newer version of CryFS? Block: {}",
+                base64_STANDARD.encode(data)
+            );
         } else {
             bail!(
                 "This is not a valid block: {}",
@@ -367,7 +370,7 @@ mod tests {
     use super::*;
     use crate::instantiate_blockstore_tests;
     use crate::low_level::BlockStoreWriter;
-    use crate::tests::{blockid, data, Fixture};
+    use crate::tests::{Fixture, blockid, data};
     use tempdir::TempDir;
 
     struct TestFixture {
@@ -426,9 +429,11 @@ mod tests {
                 )
                 .unwrap()
         );
-        assert!(store
-            .block_size_from_physical_block_size(Byte::from_u64(0))
-            .is_err());
+        assert!(
+            store
+                .block_size_from_physical_block_size(Byte::from_u64(0))
+                .is_err()
+        );
 
         store.async_drop().await.unwrap();
     }
