@@ -20,7 +20,7 @@ where
 
     UnboundedReceiverStream::new(receiver)
         .buffer_unordered(max_concurrency)
-        .try_collect()
+        .try_collect::<Vec<()>>()
         .await?;
     Ok(())
 }

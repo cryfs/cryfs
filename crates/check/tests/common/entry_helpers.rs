@@ -923,7 +923,7 @@ where
 pub async fn expect_blobs_to_have_unreferenced_root_nodes<I>(
     fs_fixture: &FilesystemFixture,
     blobs: I,
-) -> impl Iterator<Item = CorruptedError>
+) -> impl Iterator<Item = CorruptedError> + use<I>
 where
     I: IntoIterator<Item = BlobId>,
     I::IntoIter: Send + 'static,
@@ -938,7 +938,7 @@ where
 pub async fn expect_nodes_to_be_unreferenced<I>(
     fs_fixture: &FilesystemFixture,
     nodes: I,
-) -> impl Iterator<Item = CorruptedError>
+) -> impl Iterator<Item = CorruptedError> + use<I>
 where
     I: IntoIterator<Item = BlockId>,
     I::IntoIter: Send + 'static,

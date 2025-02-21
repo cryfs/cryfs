@@ -1016,10 +1016,10 @@ impl FilesystemFixture {
         .await;
     }
 
-    pub async fn load_node_infos(
+    pub async fn load_node_infos<I: Iterator<Item = BlockId> + Send + 'static>(
         &self,
-        node_ids: impl Iterator<Item = BlockId> + Send + 'static,
-    ) -> impl Iterator<Item = (BlockId, NodeInfoAsSeenByLookingAtNode)> {
+        node_ids: I,
+    ) -> impl Iterator<Item = (BlockId, NodeInfoAsSeenByLookingAtNode)> + use<I> {
         self.update_nodestore(move |nodestore| {
             Box::pin(async move {
                 futures::future::join_all(node_ids.map(|child| async move {
