@@ -23,7 +23,9 @@ impl Console for InteractiveConsole {
         new_filesystem_format_version: &Version,
         cryfs_version: &VersionInfo,
     ) -> Result<bool> {
-        let prompt = format!("This filesystem uses file system format {current_filesystem_format_version}. You're running a CryFS version using format {new_filesystem_format_version}. It is recommended to create a new filesystem with CryFS {cryfs_version} and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you might not get some of the performance advantages of the new release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data.\nDo you want to attempt a migration now?");
+        let prompt = format!(
+            "This filesystem uses file system format {current_filesystem_format_version}. You're running a CryFS version using format {new_filesystem_format_version}. It is recommended to create a new filesystem with CryFS {cryfs_version} and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you might not get some of the performance advantages of the new release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data.\nDo you want to attempt a migration now?"
+        );
         ask_yes_no(&prompt, false)
     }
 

@@ -14,7 +14,7 @@ use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
 };
 use cryfs_cli_utils::{
-    print_config, Application, CliError, CliErrorKind, CliResultExt, CliResultExtFn, Environment,
+    Application, CliError, CliErrorKind, CliResultExt, CliResultExtFn, Environment, print_config,
 };
 use cryfs_filesystem::CRYFS_VERSION;
 use cryfs_filesystem::{
