@@ -241,7 +241,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
             BlockId,
             BlockCacheEntry<B>,
         >>::OwnedGuard,
-    > {
+    > + use<B> {
         self._cache()
             .lock_entries_unlocked_for_at_least_owned(duration)
     }
@@ -254,7 +254,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
             BlockId,
             BlockCacheEntry<B>,
         >>::OwnedGuard,
-    > {
+    > + use<B> {
         self._cache().lock_all_entries_owned().await
     }
 

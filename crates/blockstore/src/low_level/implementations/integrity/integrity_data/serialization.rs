@@ -167,19 +167,22 @@ mod tests {
             b"cryfs.integritydata.knownblockversions;20\0",
         ]))
         .unwrap_err();
-        if let binrw::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
-            const EXPECTED_POS: u64 = 0;
-            assert_eq!(
-                0, EXPECTED_POS,
-                "Expected to fail when reading the header at pos {} but failed at pos {}",
-                EXPECTED_POS, pos
-            );
-            assert_eq!("Wrong format version header: 'cryfs.integritydata.knownblockversions;20'. Expected 'cryfs.integritydata.knownblockversions;1'", message);
-        } else {
-            panic!(
-                "Expected to fail with AssertFail, but failed with {:?}",
-                error
-            );
+        match error.downcast_ref().unwrap() {
+            binrw::Error::AssertFail { pos, message } => {
+                const EXPECTED_POS: u64 = 0;
+                assert_eq!(
+                    0, EXPECTED_POS,
+                    "Expected to fail when reading the header at pos {} but failed at pos {}",
+                    EXPECTED_POS, pos
+                );
+                assert_eq!("Wrong format version header: 'cryfs.integritydata.knownblockversions;20'. Expected 'cryfs.integritydata.knownblockversions;1'", message);
+            }
+            _ => {
+                panic!(
+                    "Expected to fail with AssertFail, but failed with {:?}",
+                    error
+                );
+            }
         }
     }
 
@@ -187,19 +190,22 @@ mod tests {
     fn given_wrong_header_nonutf8() {
         let error =
             deserialize::<KnownBlockVersionsSerialized>(&binary(&[b"cryfs\x80\0"])).unwrap_err();
-        if let binrw::Error::AssertFail { pos, message } = error.downcast_ref().unwrap() {
-            const EXPECTED_POS: u64 = 0;
-            assert_eq!(
-                EXPECTED_POS, *pos,
-                "Expected to fail when reading the header at pos {} but failed at pos {}",
-                EXPECTED_POS, pos
-            );
-            assert_eq!("Wrong format version header: \'{non-utf8 0x637279667380}\'. Expected 'cryfs.integritydata.knownblockversions;1'", message);
-        } else {
-            panic!(
-                "Expected to fail with AssertFail, but failed with {:?}",
-                error
-            );
+        match error.downcast_ref().unwrap() {
+            binrw::Error::AssertFail { pos, message } => {
+                const EXPECTED_POS: u64 = 0;
+                assert_eq!(
+                    EXPECTED_POS, *pos,
+                    "Expected to fail when reading the header at pos {} but failed at pos {}",
+                    EXPECTED_POS, pos
+                );
+                assert_eq!("Wrong format version header: \'{non-utf8 0x637279667380}\'. Expected 'cryfs.integritydata.knownblockversions;1'", message);
+            }
+            _ => {
+                panic!(
+                    "Expected to fail with AssertFail, but failed with {:?}",
+                    error
+                );
+            }
         }
     }
 

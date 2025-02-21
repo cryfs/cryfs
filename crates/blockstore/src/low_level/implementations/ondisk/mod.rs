@@ -186,7 +186,7 @@ impl OnDiskBlockStore {
         _block_path(self.basedir.as_path(), block_id)
     }
 
-    async fn _all_block_files(&self) -> Result<impl Stream<Item = Result<DirEntry>>> {
+    async fn _all_block_files(&self) -> Result<impl Stream<Item = Result<DirEntry>> + use<>> {
         Ok(
             ReadDirStream::new(tokio::fs::read_dir(&self.basedir).await?)
                 .map_err(Error::from)
