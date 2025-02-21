@@ -1,11 +1,11 @@
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{Result, anyhow, ensure};
 use binary_layout::Field;
 use std::fmt::Debug;
-use std::num::{NonZeroU32, NonZeroU8};
+use std::num::{NonZeroU8, NonZeroU32};
 
-use super::super::layout::{node, NodeLayout, FORMAT_VERSION_HEADER};
+use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::DataNode;
-use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore, BLOCKID_LEN};
+use cryfs_blockstore::{BLOCKID_LEN, Block, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;
@@ -18,7 +18,10 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = node::data::OFFSET + 2 * BLOCKID_LEN;
-        assert!(usize::try_from(layout.block_size.as_u64()).unwrap() >= min_block_size, "Block doesn't have enough space for header and two children. This should have been checked before calling DataInnerNode::new");
+        assert!(
+            usize::try_from(layout.block_size.as_u64()).unwrap() >= min_block_size,
+            "Block doesn't have enough space for header and two children. This should have been checked before calling DataInnerNode::new"
+        );
 
         let view = node::View::new(block.data());
         ensure!(
@@ -91,8 +94,8 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
     pub fn children(
         &self,
     ) -> impl Iterator<Item = BlockId>
-           + ExactSizeIterator
-           + use<
+    + ExactSizeIterator
+    + use<
         '_,
         // TODO Because of a shortcoming in rust 1.82, we have to list all generic types here. Remove this later.
         B,
@@ -215,7 +218,13 @@ where
 }
 
 fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
-    assert!(dest.len() >= children.len() * BLOCKID_LEN, "Serializing {} children requires {} bytes but tried to serialize into a buffer with {} bytes.", children.len(), children.len() * BLOCKID_LEN, dest.len());
+    assert!(
+        dest.len() >= children.len() * BLOCKID_LEN,
+        "Serializing {} children requires {} bytes but tried to serialize into a buffer with {} bytes.",
+        children.len(),
+        children.len() * BLOCKID_LEN,
+        dest.len()
+    );
     for (index, child) in children.iter().enumerate() {
         // TODO Some way to avoid this copy by not using &[BlockId] or Vec<BlockId> but our own collection type that already has it aligned correctly?
         dest[(BLOCKID_LEN * index)..(BLOCKID_LEN * (index + 1))].copy_from_slice(child.data());
@@ -834,8 +843,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toLargerNumber_thenFails(
-        ) {
+        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toLargerNumber_thenFails()
+         {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     let child1 = new_full_leaf_node(nodestore).await;
@@ -864,8 +873,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toSameNumber_thenSucceeds(
-        ) {
+        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toSameNumber_thenSucceeds()
+         {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     let child1 = new_full_leaf_node(nodestore).await;
@@ -889,8 +898,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toLowerNumber_thenSucceeds(
-        ) {
+        async fn givenInnerNodeWithTwoChildren_whenCallingShrinkNumChildren_toLowerNumber_thenSucceeds()
+         {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     let child1 = new_full_leaf_node(nodestore).await;
@@ -914,8 +923,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toSameSize_thenSucceeds(
-        ) {
+        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toSameSize_thenSucceeds()
+         {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     let children = new_full_leaves(
@@ -942,8 +951,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toHalfSize_thenSucceeds(
-        ) {
+        async fn givenInnerNodeWithMaxChildren_whenCallingShrinkNumChildren_toHalfSize_thenSucceeds()
+         {
             with_nodestore(|nodestore| {
                 Box::pin(async move {
                     let children = new_full_leaves(

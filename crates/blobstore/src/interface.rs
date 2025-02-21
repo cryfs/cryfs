@@ -4,7 +4,7 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
-use cryfs_blockstore::{BlockId, BLOCKID_LEN};
+use cryfs_blockstore::{BLOCKID_LEN, BlockId};
 use cryfs_utils::data::Data;
 
 use crate::{BlobId, RemoveResult};

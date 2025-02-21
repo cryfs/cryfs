@@ -1,7 +1,7 @@
 use anyhow::Result;
 use binrw::{BinRead, BinWrite};
 
-use cryfs_blockstore::{BlockId, BLOCKID_LEN};
+use cryfs_blockstore::{BLOCKID_LEN, BlockId};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, BinRead, BinWrite)]
 pub struct BlobId {

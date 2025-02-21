@@ -5,10 +5,10 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
-use super::super::{layout::node, DataLeafNode, DataNode, DataNodeStore};
+use super::super::{DataLeafNode, DataNode, DataNodeStore, layout::node};
 use cryfs_blockstore::{
-    tests::Fixture, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-    InMemoryBlockStore, InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult,
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
+    InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult, tests::Fixture,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},

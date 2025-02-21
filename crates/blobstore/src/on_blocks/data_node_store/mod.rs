@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use async_trait::async_trait;
 use binary_layout::Field;
 use byte_unit::Byte;
@@ -8,7 +8,7 @@ use futures::stream::BoxStream;
 pub use crate::RemoveResult;
 use cryfs_blockstore::TryCreateResult;
 use cryfs_blockstore::{
-    BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore, BLOCKID_LEN,
+    BLOCKID_LEN, BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -16,8 +16,8 @@ use cryfs_utils::{
 };
 
 mod layout;
-use layout::node;
 pub use layout::NodeLayout;
+use layout::node;
 
 mod data_node;
 pub use data_node::{DataInnerNode, DataLeafNode, DataNode};
@@ -68,9 +68,9 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
         let min_block_size =
             Byte::from_u64(u64::try_from(node::data::OFFSET + 2 * BLOCKID_LEN).unwrap());
         if block_size < min_block_size {
-            Err(InvalidBlockSizeError::new(
-              format!("Tried to create a DataNodeStore with block size {block_size} (physical: {physical_block_size}) but must be at least {min_block_size}",)  
-            ))
+            Err(InvalidBlockSizeError::new(format!(
+                "Tried to create a DataNodeStore with block size {block_size} (physical: {physical_block_size}) but must be at least {min_block_size}",
+            )))
         } else {
             Ok(block_size)
         }
@@ -164,7 +164,13 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
 
     pub async fn create_new_node_as_copy_from(&self, source: &DataNode<B>) -> Result<DataNode<B>> {
         let source_data = source.raw_blockdata();
-        assert_eq!(usize::try_from(self.layout.block_size.as_u64()).unwrap(), source_data.len(), "Source node has wrong layout and has {} bytes. We expected {} bytes. Is it from the same DataNodeStore?", source_data.len(), self.layout.block_size);
+        assert_eq!(
+            usize::try_from(self.layout.block_size.as_u64()).unwrap(),
+            source_data.len(),
+            "Source node has wrong layout and has {} bytes. We expected {} bytes. Is it from the same DataNodeStore?",
+            source_data.len(),
+            self.layout.block_size
+        );
         // TODO Use create_optimized instead of create?
         let blockid = self.block_store.create(source_data).await?;
         // TODO Avoid extra load here. Do our callers actually need this object? If no, just return the block id. If yes, maybe change block store API to return the block?
@@ -240,7 +246,7 @@ mod tests {
     use cryfs_blockstore::{
         BlockStoreReader, InMemoryBlockStore, MockBlockStore, SharedBlockStore,
     };
-    use futures::{stream, StreamExt, TryStreamExt};
+    use futures::{StreamExt, TryStreamExt, stream};
     use testutils::*;
 
     fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
@@ -259,10 +265,13 @@ mod tests {
         async fn invalid_block_size() {
             assert_eq!(
                 "Invalid block size: Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
-                DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), Byte::from_u64(10))
-                    .await
-                    .unwrap_err()
-                    .to_string(),
+                DataNodeStore::new(
+                    LockingBlockStore::new(InMemoryBlockStore::new()),
+                    Byte::from_u64(10)
+                )
+                .await
+                .unwrap_err()
+                .to_string(),
             );
         }
 
@@ -357,11 +366,13 @@ mod tests {
         async fn not_existing() {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
-                    assert!(nodestore
-                        .load(BlockId::from_hex("4fbf746746da1a28137df88c5815572c").unwrap())
-                        .await
-                        .unwrap()
-                        .is_none());
+                    assert!(
+                        nodestore
+                            .load(BlockId::from_hex("4fbf746746da1a28137df88c5815572c").unwrap())
+                            .await
+                            .unwrap()
+                            .is_none()
+                    );
                 })
             })
             .await
@@ -536,11 +547,13 @@ mod tests {
                         .block_id();
 
                     let data = data_fixture(10, 2);
-                    assert!(nodestore
-                        .try_create_new_leaf_node(existing_block_id, &data)
-                        .await
-                        .unwrap()
-                        .is_none());
+                    assert!(
+                        nodestore
+                            .try_create_new_leaf_node(existing_block_id, &data)
+                            .await
+                            .unwrap()
+                            .is_none()
+                    );
 
                     // Existing block wasn't modified
                     let node = load_leaf_node(nodestore, existing_block_id).await;
@@ -951,8 +964,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let leaf_id = *new_full_leaf_node(nodestore).await.block_id();
@@ -978,8 +991,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     new_full_inner_node(nodestore).await;
@@ -998,8 +1011,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_thenDoesntDeleteOtherNodes(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_thenDoesntDeleteOtherNodes()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();
@@ -1019,8 +1032,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     new_full_inner_node(nodestore).await;
@@ -1048,8 +1061,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_thenDoesntDeleteOtherEntries(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_thenDoesntDeleteOtherEntries()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();
@@ -1098,8 +1111,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingNonExistingEntry_thenDoesntDeleteOtherEntries(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingNonExistingEntry_thenDoesntDeleteOtherEntries()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();

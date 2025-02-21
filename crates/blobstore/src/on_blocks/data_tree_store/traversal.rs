@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{Result, anyhow, bail, ensure};
 use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
@@ -162,7 +162,9 @@ async fn _traverse_and_return_new_root<
     let should_increase_tree_depth = end_index > max_leaves_for_depth.get();
     ensure!(
         ALLOW_WRITES || !should_increase_tree_depth,
-        "Tried to grow a tree on a read only traversal. Accessing end_index {} is out of bounds for tree with {} bytes", end_index, max_leaves_for_depth,
+        "Tried to grow a tree on a read only traversal. Accessing end_index {} is out of bounds for tree with {} bytes",
+        end_index,
+        max_leaves_for_depth,
     );
 
     match &mut root {
@@ -239,7 +241,12 @@ async fn _traverse_existing_subtree<
     callbacks: &C,
 ) -> Result<()> {
     if depth == 0 {
-        assert!(begin_index <= 1 && end_index <= 1, "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1 but was begin_index={}, end_index={}", begin_index, end_index);
+        assert!(
+            begin_index <= 1 && end_index <= 1,
+            "If root node is a leaf, the (sub)tree has only one leaf - access indices must be 0 or 1 but was begin_index={}, end_index={}",
+            begin_index,
+            end_index
+        );
         let mut leaf_handle = LeafHandle::new_not_loaded_yet(node_store, block_id);
         if grow_last_leaf {
             let leaf_node = leaf_handle.node().await?;
@@ -264,7 +271,12 @@ async fn _traverse_existing_subtree<
         match node {
             DataNode::Leaf(_) => bail!("Loaded a node at depth {} but it wasn't a leaf", depth),
             DataNode::Inner(mut node) => {
-                ensure!(node.depth().get() == depth, "Expected to load an inner node with depth {} but node claims to be at depth {}", depth, node.depth());
+                ensure!(
+                    node.depth().get() == depth,
+                    "Expected to load an inner node with depth {} but node claims to be at depth {}",
+                    depth,
+                    node.depth()
+                );
                 _traverse_existing_subtree_of_inner_node::<B, C, ALLOW_WRITES>(
                     node_store,
                     &mut node,
@@ -310,7 +322,10 @@ async fn _traverse_existing_subtree_of_inner_node<
     let begin_child = usize::try_from(begin_index / leaves_per_child).unwrap();
     let end_child = usize::try_from(DivCeil::div_ceil(end_index, leaves_per_child)).unwrap();
 
-    assert!(end_child <= usize::try_from(node_store.layout().max_children_per_inner_node()).unwrap(), "Traversal region would need increasing the tree depth. This should have happened before calling this function.");
+    assert!(
+        end_child <= usize::try_from(node_store.layout().max_children_per_inner_node()).unwrap(),
+        "Traversal region would need increasing the tree depth. This should have happened before calling this function."
+    );
     let children = root.children();
     let num_children = children.len();
     assert!(
@@ -400,7 +415,10 @@ async fn _traverse_existing_subtree_of_inner_node<
         let is_first_child: bool = child_index == begin_child;
         let is_last_existing_child: bool = child_index == num_children - 1;
         let is_last_child = is_last_existing_child && num_children == end_child;
-        assert!(local_end_index <= leaves_per_child, "We don't want the child to add a tree level because it doesn't have enough space for the traversal.");
+        assert!(
+            local_end_index <= leaves_per_child,
+            "We don't want the child to add a tree level because it doesn't have enough space for the traversal."
+        );
         Box::pin(_traverse_existing_subtree::<B, C, ALLOW_WRITES>(
             node_store,
             child_block_id,
@@ -536,7 +554,10 @@ async fn _create_new_subtree<
     assert!(begin_index <= end_index, "Invalid parameters");
 
     if 0 == depth {
-        assert!(begin_index <= 1 && end_index == 1, "With depth 0, we can only traverse one or zero leaves (i.e. traverse one leaf or traverse a gap leaf).");
+        assert!(
+            begin_index <= 1 && end_index == 1,
+            "With depth 0, we can only traverse one or zero leaves (i.e. traverse one leaf or traverse a gap leaf)."
+        );
         let leaf_data = if begin_index == 0 {
             callbacks.on_create_leaf(leaf_offset)
         } else {
@@ -553,7 +574,14 @@ async fn _create_new_subtree<
             .ceil())
         .approx_as_by::<u8, RoundToNearest>()
         .unwrap();
-        assert!(depth >= min_needed_depth, "Given tree depth is {} but we need at least a depth of {} for end_index={} with max_children_per_inner_node={}", depth, min_needed_depth, end_index, max_children_per_inner_node);
+        assert!(
+            depth >= min_needed_depth,
+            "Given tree depth is {} but we need at least a depth of {} for end_index={} with max_children_per_inner_node={}",
+            depth,
+            min_needed_depth,
+            end_index,
+            max_children_per_inner_node
+        );
         let leaves_per_child = node_store
             .layout()
             .num_leaves_per_full_subtree(depth - 1)?

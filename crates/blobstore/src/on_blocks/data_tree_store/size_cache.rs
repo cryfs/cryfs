@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use std::num::NonZeroU64;
 
 use crate::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout};

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
@@ -7,8 +7,8 @@ use std::fmt::{self, Debug};
 use super::super::BlobStoreOnBlocks;
 use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
-    tests::Fixture, BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-    InMemoryBlockStore, InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult,
+    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
+    InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult, tests::Fixture,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},

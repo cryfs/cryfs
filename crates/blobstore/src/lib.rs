@@ -7,7 +7,7 @@ mod blob_id;
 pub use blob_id::BlobId;
 
 mod interface;
-pub use interface::{Blob, BlobStore, BLOBID_LEN};
+pub use interface::{BLOBID_LEN, Blob, BlobStore};
 
 mod on_blocks;
 pub use on_blocks::{

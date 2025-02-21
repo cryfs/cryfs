@@ -1,11 +1,11 @@
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use binary_layout::Field;
 use byte_unit::Byte;
 use std::fmt::Debug;
 
 use super::super::{
-    layout::{node, NodeLayout, FORMAT_VERSION_HEADER},
     DataNode,
+    layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
 };
 use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::Data;
@@ -16,7 +16,10 @@ pub struct DataLeafNode<B: BlockStore + Send + Sync> {
 
 impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
     pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
-        assert!(layout.block_size.as_u64() > u64::try_from(node::data::OFFSET).unwrap(), "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new");
+        assert!(
+            layout.block_size.as_u64() > u64::try_from(node::data::OFFSET).unwrap(),
+            "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new"
+        );
 
         let view = node::View::new(block.data());
         ensure!(
@@ -26,7 +29,8 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
             FORMAT_VERSION_HEADER,
         );
         assert_eq!(
-            0, view.depth().read(),
+            0,
+            view.depth().read(),
             "Loaded a leaf with depth {}. This doesn't make sense, it should have been loaded as an inner node",
             view.depth().read(),
         );
@@ -124,7 +128,12 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
         layout.max_bytes_per_leaf()
     );
     // TODO assert that data[num_bytes..] is zeroed out
-    assert!(data.available_prefix_bytes() >= node::data::OFFSET, "Data objects passed to serialize_leaf_node must have at least {} prefix bytes available, but only had {}", node::data::OFFSET, data.available_prefix_bytes());
+    assert!(
+        data.available_prefix_bytes() >= node::data::OFFSET,
+        "Data objects passed to serialize_leaf_node must have at least {} prefix bytes available, but only had {}",
+        node::data::OFFSET,
+        data.available_prefix_bytes()
+    );
     data.grow_region_fail_if_reallocation_necessary(node::data::OFFSET, 0)
         .expect("Not enough prefix bytes available for data object passed to serialize_leaf_node");
     let mut view = node::View::new(&mut data);
@@ -151,7 +160,7 @@ mod tests {
     use super::super::super::testutils::*;
     use super::*;
     use cryfs_blockstore::BLOCKID_LEN;
-    use rand::{rngs::SmallRng, Rng, SeedableRng};
+    use rand::{Rng, SeedableRng, rngs::SmallRng};
 
     #[allow(non_snake_case)]
     mod new {

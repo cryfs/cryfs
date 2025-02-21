@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Result};
-use binary_layout::{binary_layout, Field};
+use anyhow::{Result, anyhow};
+use binary_layout::{Field, binary_layout};
 use byte_unit::Byte;
 use std::num::NonZeroU64;
 

@@ -1,8 +1,8 @@
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 
 use super::super::{
-    layout::{node, NodeLayout, FORMAT_VERSION_HEADER},
     DataNodeStore,
+    layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
 };
 use super::{
     data_inner_node::{self, DataInnerNode},
@@ -143,11 +143,11 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::{testutils::*, DataNodeStore};
+    use super::super::super::{DataNodeStore, testutils::*};
     use super::*;
     use binary_layout::Field;
     use byte_unit::Byte;
-    use cryfs_blockstore::{InMemoryBlockStore, BLOCKID_LEN};
+    use cryfs_blockstore::{BLOCKID_LEN, InMemoryBlockStore};
 
     #[allow(non_snake_case)]
     mod parse {
@@ -718,8 +718,8 @@ mod tests {
         use super::*;
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_withRemovingAfterCreating_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let leaf = new_full_leaf_node(nodestore).await.upcast();
@@ -733,8 +733,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingLeaf_withRemovingAfterLoading_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let node_id = *new_full_leaf_node(nodestore).await.block_id();
@@ -748,8 +748,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let leaf = new_full_leaf_node(nodestore).await.upcast();
@@ -770,8 +770,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyNodeStore_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let leaf = new_full_leaf_node(nodestore).await.upcast();
@@ -792,8 +792,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     new_full_inner_node(nodestore).await;
@@ -810,8 +810,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     new_full_inner_node(nodestore).await;
@@ -828,8 +828,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterCreating_thenDoesntDeleteOtherNodes(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterCreating_thenDoesntDeleteOtherNodes()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();
@@ -845,8 +845,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterLoading_thenDoesntDeleteOtherNodes(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingLeafNode_withRemovingAfterLoading_thenDoesntDeleteOtherNodes()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();
@@ -863,8 +863,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     new_full_inner_node(nodestore).await;
@@ -887,8 +887,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenCannotBeLoadedAnymore()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     new_full_inner_node(nodestore).await;
@@ -911,8 +911,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenDoesntDeleteOtherEntries(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterCreating_thenDoesntDeleteOtherEntries()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();
@@ -934,8 +934,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenDoesntDeleteOtherEntries(
-        ) {
+        async fn givenNodeStoreWithOtherEntries_whenRemovingExistingInnerNode_withRemovingAfterLoading_thenDoesntDeleteOtherEntries()
+         {
             with_nodestore(move |nodestore| {
                 Box::pin(async move {
                     let full_inner = *new_full_inner_node(nodestore).await.block_id();

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{Result, anyhow, bail, ensure};
 use async_trait::async_trait;
 use divrem::DivCeil;
 use futures::{
@@ -8,14 +8,14 @@ use futures::{
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::num::{NonZeroU32, NonZeroU64};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
 use crate::{
-    on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout},
     RemoveResult,
+    on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout},
 };
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::{data::Data, stream::for_each_unordered};
@@ -90,7 +90,13 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
                 target.len()
             )
         })?;
-        ensure!(read_end <= num_bytes, "DataTree::read_bytes() tried to read range {}..{} but only has {} bytes stored. Use try_read_bytes() if this should be allowed.", offset, read_end, num_bytes);
+        ensure!(
+            read_end <= num_bytes,
+            "DataTree::read_bytes() tried to read range {}..{} but only has {} bytes stored. Use try_read_bytes() if this should be allowed.",
+            offset,
+            read_end,
+            num_bytes
+        );
         self._do_read_bytes(offset, target).await?;
         Ok(())
     }
@@ -131,7 +137,12 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
                             + u64::from(leaf_data_size)
                             - self.offset
                             <= u64::try_from(target.len()).unwrap(),
-                    "Writing to target out of bounds: index_of_first_leaf_byte={}, offset={}, leaf_data_offset={}, leaf_data_size={}, target.len={}", index_of_first_leaf_byte, self.offset, leaf_data_offset, leaf_data_size, target.len(),
+                    "Writing to target out of bounds: index_of_first_leaf_byte={}, offset={}, leaf_data_offset={}, leaf_data_size={}, target.len={}",
+                    index_of_first_leaf_byte,
+                    self.offset,
+                    leaf_data_offset,
+                    leaf_data_size,
+                    target.len(),
                 );
                 // TODO Simplify formula, make it easier to understand
                 let target_begin =
@@ -415,11 +426,11 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         }
         #[async_trait]
         impl<
-                'a,
-                B: BlockStore + Send + Sync,
-                C: TraversalByByteIndicesCallbacks<B> + Sync,
-                const ALLOW_WRITES: bool,
-            > traversal::TraversalCallbacks<B> for WrappedCallbacks<'a, B, C, ALLOW_WRITES>
+            'a,
+            B: BlockStore + Send + Sync,
+            C: TraversalByByteIndicesCallbacks<B> + Sync,
+            const ALLOW_WRITES: bool,
+        > traversal::TraversalCallbacks<B> for WrappedCallbacks<'a, B, C, ALLOW_WRITES>
         {
             async fn on_existing_leaf(
                 &self,

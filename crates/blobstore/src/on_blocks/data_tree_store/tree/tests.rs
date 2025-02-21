@@ -840,12 +840,17 @@ mod read_bytes {
         num_bytes: usize,
     ) {
         assert_eq!(
-                tree.read_bytes(offset, &mut vec![0; num_bytes])
-                    .await
-                    .unwrap_err()
-                    .to_string(),
-                format!("DataTree::read_bytes() tried to read range {}..{} but only has {} bytes stored. Use try_read_bytes() if this should be allowed.", offset, offset + num_bytes as u64, params.expected_num_bytes(layout)),
-            );
+            tree.read_bytes(offset, &mut vec![0; num_bytes])
+                .await
+                .unwrap_err()
+                .to_string(),
+            format!(
+                "DataTree::read_bytes() tried to read range {}..{} but only has {} bytes stored. Use try_read_bytes() if this should be allowed.",
+                offset,
+                offset + num_bytes as u64,
+                params.expected_num_bytes(layout)
+            ),
+        );
     }
 
     async fn test_read_bytes(

@@ -8,8 +8,8 @@ use futures::stream::TryStreamExt;
 use std::collections::HashSet;
 
 use crate::{
-    on_blocks::data_node_store::{DataNode, DataNodeStore},
     RemoveResult,
+    on_blocks::data_node_store::{DataNode, DataNodeStore},
 };
 use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore};
 use cryfs_utils::{
@@ -168,10 +168,13 @@ mod tests {
         async fn invalid_block_size() {
             assert_eq!(
                 "Invalid block size: Tried to create a DataNodeStore with block size 10 (physical: 10) but must be at least 40",
-                DataTreeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), Byte::from_u64(10))
-                    .await
-                    .unwrap_err()
-                    .to_string(),
+                DataTreeStore::new(
+                    LockingBlockStore::new(InMemoryBlockStore::new()),
+                    Byte::from_u64(10)
+                )
+                .await
+                .unwrap_err()
+                .to_string(),
             );
         }
 
@@ -378,8 +381,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingOneNodeTree_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingOneNodeTree_thenCannotBeLoadedAnymore()
+         {
             with_treestore(move |store| {
                 Box::pin(async move {
                     let root_id = *create_one_leaf_tree(&store).await.root_node_id();
@@ -396,8 +399,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingMultiNodeTree_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingMultiNodeTree_thenCannotBeLoadedAnymore()
+         {
             with_treestore(move |store| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
@@ -417,8 +420,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingMultiNodeTree_thenDeletesAllNodesOfThisTree(
-        ) {
+        async fn givenOtherwiseEmptyTreeStore_whenRemovingExistingMultiNodeTree_thenDeletesAllNodesOfThisTree()
+         {
             with_treestore_and_nodestore(move |treestore, nodestore| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
@@ -466,8 +469,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingOneNodeTree_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingOneNodeTree_thenCannotBeLoadedAnymore()
+         {
             with_treestore(move |store| {
                 Box::pin(async move {
                     let _other_tree = TreeFixture::create_tree_with_data(
@@ -490,8 +493,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenCannotBeLoadedAnymore(
-        ) {
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenCannotBeLoadedAnymore()
+         {
             with_treestore(move |store| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
@@ -519,8 +522,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenDeletesAllNodesOfThisTree(
-        ) {
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenDeletesAllNodesOfThisTree()
+         {
             with_treestore_and_nodestore(move |treestore, nodestore| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
@@ -551,8 +554,8 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenDoesntDeleteOtherTrees(
-        ) {
+        async fn givenTreeStoreWithOtherTrees_whenRemovingExistingMultiNodeTree_thenDoesntDeleteOtherTrees()
+         {
             with_treestore_and_nodestore(move |treestore, nodestore| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
