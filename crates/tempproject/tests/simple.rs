@@ -87,12 +87,14 @@ fn expect_run_release_success(project: &TempProject) {
         .assert()
         .success()
         .stdout(predicates::str::contains("Hello, world!\n"));
-    assert!(project
-        .run_release()
-        .unwrap()
-        .assert()
-        .try_failure()
-        .is_err());
+    assert!(
+        project
+            .run_release()
+            .unwrap()
+            .assert()
+            .try_failure()
+            .is_err()
+    );
 }
 
 fn expect_build_debug_fails(project: &TempProject) {
@@ -105,20 +107,22 @@ fn expect_build_release_fails(project: &TempProject) {
 
 fn expect_run_debug_fails_at_build_time(project: &TempProject) {
     let err = project.run_debug().unwrap_err();
-    assert!(err
-        .stderr
-        .as_ref()
-        .unwrap()
-        .contains("cannot find function `nonexisting_func` in this scope"));
+    assert!(
+        err.stderr
+            .as_ref()
+            .unwrap()
+            .contains("cannot find function `nonexisting_func` in this scope")
+    );
 }
 
 fn expect_run_release_fails_at_build_time(project: &TempProject) {
     let err = project.run_release().unwrap_err();
-    assert!(err
-        .stderr
-        .as_ref()
-        .unwrap()
-        .contains("cannot find function `nonexisting_func` in this scope"));
+    assert!(
+        err.stderr
+            .as_ref()
+            .unwrap()
+            .contains("cannot find function `nonexisting_func` in this scope")
+    );
 }
 
 fn expect_run_debug_fails_at_run_time(project: &TempProject) {
@@ -138,12 +142,14 @@ fn expect_run_release_fails_at_run_time(project: &TempProject) {
         .assert()
         .failure()
         .stdout(predicates::str::contains("Hello, world!\n"));
-    assert!(project
-        .run_release()
-        .unwrap()
-        .assert()
-        .try_success()
-        .is_err());
+    assert!(
+        project
+            .run_release()
+            .unwrap()
+            .assert()
+            .try_success()
+            .is_err()
+    );
 }
 
 mod build_debug {
