@@ -38,7 +38,7 @@ impl TestConfig {
                     clap::{self, Args},
                     cryfs_version::{Version, VersionInfo},
                 },
-                run, Application, Environment, CliError,
+                run, Application, Environment, CliError, clap_logflag,
             };
             use std::process::ExitCode;
         );
@@ -62,6 +62,10 @@ impl TestConfig {
 
             fn new(args: MyArgs, _env: Environment) -> Result<Self, CliError> {
                 Ok(Self { args })
+            }
+
+            fn default_log_config(&self) -> clap_logflag::LoggingConfig {
+                clap_logflag::LoggingConfig::disabled()
             }
         );
         let main_main = stringify!(

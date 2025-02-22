@@ -28,6 +28,8 @@ pub use blockstore_setup::{
     setup_blockstore_stack, setup_blockstore_stack_dyn, BlockstoreCallback,
 };
 
+pub use clap_logflag;
+
 cryfs_version::assert_cargo_version_equals_git_version!();
 
 pub mod reexports_for_tests {
