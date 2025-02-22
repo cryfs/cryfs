@@ -6,7 +6,7 @@ use std::time::SystemTime;
 
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{
-    object_based_api::OpenFile, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::OpenFile,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},

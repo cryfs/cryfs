@@ -1,6 +1,6 @@
 use anyhow::Result;
 use binary_layout::Field;
-use rand::{rng, RngCore};
+use rand::{RngCore, rng};
 use thiserror::Error;
 
 use cryfs_utils::data::Data;
@@ -17,7 +17,9 @@ pub const PADDING_OVERHEAD_PREFIX: usize = padded_data::data_and_padding::OFFSET
 
 #[derive(Error, Debug)]
 pub enum AddPaddingError {
-    #[error("Data too large. It has a length of {data_len} with a target_size of {target_size}. We should increase padding target size.")]
+    #[error(
+        "Data too large. It has a length of {data_len} with a target_size of {target_size}. We should increase padding target size."
+    )]
     DataTooLargeForTargetSize { data_len: usize, target_size: usize },
 
     #[error(
@@ -25,7 +27,9 @@ pub enum AddPaddingError {
     )]
     DataTooLargeForU32 { data_len: usize },
 
-    #[error("Not enough space in Data instance to add padding. Data instance has {data_len} bytes and {available_prefix_bytes} prefix bytes and {available_suffix_bytes} suffix bytes available but was asked to grow by {requested_prefix_bytes} prefix bytes and {requested_suffix_bytes} suffix bytes.")]
+    #[error(
+        "Not enough space in Data instance to add padding. Data instance has {data_len} bytes and {available_prefix_bytes} prefix bytes and {available_suffix_bytes} suffix bytes available but was asked to grow by {requested_prefix_bytes} prefix bytes and {requested_suffix_bytes} suffix bytes."
+    )]
     NotEnoughSpace {
         data_len: usize,
         available_prefix_bytes: usize,
@@ -67,7 +71,9 @@ pub fn add_padding(mut data: Data, target_size: usize) -> Result<Data, AddPaddin
 
 #[derive(Error, Debug)]
 pub enum RemovePaddingError {
-    #[error("Padded data claims to store {data_len} bytes but the whole padded blob is only {total_len} bytes.")]
+    #[error(
+        "Padded data claims to store {data_len} bytes but the whole padded blob is only {total_len} bytes."
+    )]
     DataTooLarge { data_len: usize, total_len: usize },
 
     #[error("Padded data claims to store {data_len} bytes, which is larger than usize::MAX.")]

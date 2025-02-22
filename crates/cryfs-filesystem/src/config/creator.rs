@@ -1,13 +1,13 @@
-use rand::{rng, RngCore};
+use rand::{RngCore, rng};
 use thiserror::Error;
 // TODO Separate InfallibleUnwrap from lockable crate and remove lockable crate from our dependencies
 use lockable::InfallibleUnwrap;
 
-use super::ciphers::{lookup_cipher_sync, SyncCipherCallback};
-use super::console::Console;
-use super::loader::{CommandLineFlags, CRYFS_VERSION};
 use super::CryConfig;
-use crate::config::{FilesystemId, FILESYSTEM_FORMAT_VERSION};
+use super::ciphers::{SyncCipherCallback, lookup_cipher_sync};
+use super::console::Console;
+use super::loader::{CRYFS_VERSION, CommandLineFlags};
+use crate::config::{FILESYSTEM_FORMAT_VERSION, FilesystemId};
 use crate::localstate::{FilesystemMetadata, LocalStateDir};
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::ClientId;

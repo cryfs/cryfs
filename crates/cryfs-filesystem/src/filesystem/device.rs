@@ -5,16 +5,16 @@ use cryfs_blockstore::RemoveResult;
 use cryfs_rustfs::object_based_api::Dir as _;
 use futures::join;
 use maybe_owned::MaybeOwned;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::{fmt::Debug, time::Instant};
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
-    object_based_api::Device, AbsolutePath, FsError, FsResult, PathComponent, Statfs,
+    AbsolutePath, FsError, FsResult, PathComponent, Statfs, object_based_api::Device,
 };
 use cryfs_utils::{
-    async_drop::{flatten_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     safe_panic,
 };
 
@@ -110,9 +110,14 @@ where
         anchor: AsyncDropGuard<FsBlob<'a, B>>,
         relative_path: impl Iterator<Item = &PathComponent>,
     ) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>> {
-        match self.load_blob_from_relative_path(MaybeOwned::Owned(anchor), relative_path).await? {
+        match self
+            .load_blob_from_relative_path(MaybeOwned::Owned(anchor), relative_path)
+            .await?
+        {
             MaybeOwned::Owned(blob) => Ok(blob),
-            MaybeOwned::Borrowed(blob) => panic!("Since we called `load_blob_from_relative_path` with an owned anchor, it should never return a borrowed blob"),
+            MaybeOwned::Borrowed(blob) => panic!(
+                "Since we called `load_blob_from_relative_path` with an owned anchor, it should never return a borrowed blob"
+            ),
         }
     }
 

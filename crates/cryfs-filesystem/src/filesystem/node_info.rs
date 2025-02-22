@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::sync::OnceCell;
 
-use super::fsblobstore::{DirBlob, DirEntry, EntryType, FileBlob, FsBlob, DIR_LSTAT_SIZE};
+use super::fsblobstore::{DIR_LSTAT_SIZE, DirBlob, DirEntry, EntryType, FileBlob, FsBlob};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};

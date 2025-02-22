@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -100,7 +100,9 @@ impl Default for BasedirMetadata {
 
 #[derive(Debug, Error)]
 pub enum CheckFilesystemIdError {
-    #[error("Filesystem id for basedir {basedir} is incorrect. Expected {expected_id:?} but got {actual_id:?}. This likely means that the filesystem that was previously at this location was replaced with a different filesystem. CryFS prevents this to avoid malicious actors from replacing a file system without you noticing.")]
+    #[error(
+        "Filesystem id for basedir {basedir} is incorrect. Expected {expected_id:?} but got {actual_id:?}. This likely means that the filesystem that was previously at this location was replaced with a different filesystem. CryFS prevents this to avoid malicious actors from replacing a file system without you noticing."
+    )]
     FilesystemIdIncorrect {
         basedir: PathBuf,
         expected_id: FilesystemId,

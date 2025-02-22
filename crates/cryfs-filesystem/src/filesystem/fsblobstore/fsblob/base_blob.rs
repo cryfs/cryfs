@@ -1,4 +1,4 @@
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use binary_layout::Field;
 use futures::stream::BoxStream;
 use std::fmt::Debug;

@@ -101,7 +101,7 @@ mod tests {
     use cryfs_utils::data::Data;
     // TODO Separate InfallibleUnwrap from lockable crate and remove lockable crate from our dependencies
     use lockable::InfallibleUnwrap;
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use rand::{RngCore, SeedableRng, rngs::StdRng};
     use std::marker::PhantomData;
 
     // Take a plaintext and make sure it has enough prefix bytes available to transform it into a ciphertext

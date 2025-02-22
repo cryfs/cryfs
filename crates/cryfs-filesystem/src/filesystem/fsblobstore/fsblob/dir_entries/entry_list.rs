@@ -4,9 +4,9 @@ use std::future::Future;
 use std::io::Cursor;
 use std::time::SystemTime;
 
+use super::super::FsError;
 use super::super::atime_update_behavior::AtimeUpdateBehavior;
 use super::super::base_blob::BaseBlob;
-use super::super::FsError;
 use super::entry::{DirEntry, EntryType};
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};

@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -21,7 +21,7 @@ mod file_blob;
 pub use file_blob::FileBlob;
 
 mod dir_blob;
-pub use dir_blob::{DirBlob, DIR_LSTAT_SIZE, MODE_NEW_SYMLINK};
+pub use dir_blob::{DIR_LSTAT_SIZE, DirBlob, MODE_NEW_SYMLINK};
 
 mod symlink_blob;
 pub use symlink_blob::SymlinkBlob;

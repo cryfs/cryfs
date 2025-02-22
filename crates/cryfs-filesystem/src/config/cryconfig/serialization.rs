@@ -1,6 +1,6 @@
 use byte_unit::Byte;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use std::cmp::Ordering;
 use std::io::{Read, Write};
 use thiserror::Error;
@@ -12,13 +12,17 @@ use super::filesystem_id::FilesystemId;
 
 #[derive(Error, Debug)]
 pub enum DeserializationError {
-    #[error("File system format is {read_version}, which is not supported anymore. Please use CryFS 0.10 or 0.11 to migrate it to a newer format.")]
+    #[error(
+        "File system format is {read_version}, which is not supported anymore. Please use CryFS 0.10 or 0.11 to migrate it to a newer format."
+    )]
     VersionTooOld {
         // TODO Store as `Version` struct, not as String
         read_version: String,
     },
 
-    #[error("File system format is {read_version}, which is not supported yet. Please use a newer version of CryFS to access it.")]
+    #[error(
+        "File system format is {read_version}, which is not supported yet. Please use a newer version of CryFS to access it."
+    )]
     VersionTooNew {
         // TODO Store as `Version` struct, not as String
         read_version: String,
@@ -76,18 +80,19 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
             })?;
 
     if migrations.deprecated_has_version_numbers != Some(true) {
-        return Err(
-            DeserializationError::InvalidConfig{message: format!(
+        return Err(DeserializationError::InvalidConfig {
+            message: format!(
                 "File system version is {format_version} but hasVersionNumbers is not set to true. This should be impossible.",
-            )}
-        );
+            ),
+        });
     }
 
     if migrations.deprecated_has_parent_pointers != Some(true) {
-        return Err(
-        DeserializationError::InvalidConfig{message: format!(
-            "File system version is {format_version} but hasVersionNumbers is not set to true. This should be impossible.",
-        )});
+        return Err(DeserializationError::InvalidConfig {
+            message: format!(
+                "File system version is {format_version} but hasVersionNumbers is not set to true. This should be impossible.",
+            ),
+        });
     }
 
     let created_with_version = config.cryfs.created_with_version.ok_or_else(|| {

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use super::fsblobstore::FsBlobStore;
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
 use cryfs_blobstore::BlobStore;
-use cryfs_rustfs::{object_based_api::File, FsResult, OpenFlags};
+use cryfs_rustfs::{FsResult, OpenFlags, object_based_api::File};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryFile<'a, B>

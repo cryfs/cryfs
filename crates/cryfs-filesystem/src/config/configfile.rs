@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io::{BufReader, BufWriter, ErrorKind};

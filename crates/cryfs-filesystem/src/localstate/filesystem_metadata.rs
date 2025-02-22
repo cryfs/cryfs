@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, TryFromInto};
+use serde_with::{TryFromInto, serde_as};
 use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use thiserror::Error;
 
 use cryfs_blockstore::ClientId;
 use cryfs_utils::crypto::{
-    hash::{hash, Digest, Hash, Salt},
+    hash::{Digest, Hash, Salt, hash},
     symmetric::EncryptionKey,
 };
 
@@ -16,7 +16,9 @@ use crate::config::{Console, FilesystemId};
 
 #[derive(Error, Debug)]
 pub enum FilesystemMetadataError {
-    #[error("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?")]
+    #[error(
+        "The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?"
+    )]
     EncryptionKeyChanged,
 }
 

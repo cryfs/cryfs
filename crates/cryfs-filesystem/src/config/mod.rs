@@ -14,10 +14,10 @@ pub use configfile::{
 };
 pub use console::Console;
 pub use creator::ConfigCreateError;
-pub use cryconfig::{CryConfig, FilesystemId, FILESYSTEM_FORMAT_VERSION};
+pub use cryconfig::{CryConfig, FILESYSTEM_FORMAT_VERSION, FilesystemId};
 pub use loader::{
-    create, load_or_create, load_readonly, CommandLineFlags, ConfigLoadError, ConfigLoadResult,
-    CRYFS_VERSION,
+    CRYFS_VERSION, CommandLineFlags, ConfigLoadError, ConfigLoadResult, create, load_or_create,
+    load_readonly,
 };
 pub use password_provider::PasswordProvider;
 

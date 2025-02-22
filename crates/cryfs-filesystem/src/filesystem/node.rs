@@ -3,14 +3,14 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use super::CryDevice;
 use super::fsblobstore::FsBlob;
 use super::node_info::NodeInfo;
-use super::CryDevice;
 use super::{dir::CryDir, file::CryFile, symlink::CrySymlink};
 use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
-    object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 

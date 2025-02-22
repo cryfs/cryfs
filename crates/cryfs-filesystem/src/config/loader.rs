@@ -4,13 +4,13 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 use thiserror::Error;
 
+use super::CryConfig;
 use super::configfile::{
     Access, CreateConfigFileError, CryConfigFile, LoadConfigFileError, SaveConfigFileError,
 };
 use super::console::Console;
 use super::creator::ConfigCreateError;
 use super::password_provider::PasswordProvider;
-use super::CryConfig;
 use crate::localstate::{FilesystemMetadata, LocalStateDir};
 use cryfs_blockstore::ClientId;
 use cryfs_utils::{crypto::symmetric::EncryptionKey, progress::ProgressBarManager};
@@ -26,7 +26,9 @@ pub enum ConfigLoadError {
     #[error("Invalid data in config file: {0:?}")]
     InvalidConfig(anyhow::Error),
 
-    #[error("This filesystem is for CryFS {actual_format_version} but you're running CryFS {cryfs_version} which needs at least file system format version {min_supported_format_version}. Please migrate the file system to a supported version first by opening it with CryFS {min_supported_format_version}")]
+    #[error(
+        "This filesystem is for CryFS {actual_format_version} but you're running CryFS {cryfs_version} which needs at least file system format version {min_supported_format_version}. Please migrate the file system to a supported version first by opening it with CryFS {min_supported_format_version}"
+    )]
     TooOldFilesystemFormat {
         // TODO Store Version object instead of String
         actual_format_version: String,
@@ -34,7 +36,9 @@ pub enum ConfigLoadError {
         cryfs_version: VersionInfo<'static, 'static, 'static>,
     },
 
-    #[error("This filesystem is for CryFS {actual_format_version} and would have to be migrated to {max_supported_format_version} to be used with CryFS {cryfs_version} but the migration was declined.")]
+    #[error(
+        "This filesystem is for CryFS {actual_format_version} and would have to be migrated to {max_supported_format_version} to be used with CryFS {cryfs_version} but the migration was declined."
+    )]
     TooOldFilesystemFormatDeclinedMigration {
         // TODO Store Version object instead of String
         actual_format_version: String,
@@ -42,7 +46,9 @@ pub enum ConfigLoadError {
         cryfs_version: VersionInfo<'static, 'static, 'static>,
     },
 
-    #[error("This filesystem is in the format of CryFS {actual_format_version} but you're running CryFS {cryfs_version}, which uses file system format {max_supported_format_version}. Please update your CryFS version.")]
+    #[error(
+        "This filesystem is in the format of CryFS {actual_format_version} but you're running CryFS {cryfs_version}, which uses file system format {max_supported_format_version}. Please update your CryFS version."
+    )]
     TooNewFilesystemFormat {
         // TODO Store Version object instead of String
         actual_format_version: String,
@@ -77,13 +83,19 @@ pub enum ConfigLoadError {
     #[error("Error checking the local state of the file system: {0:?}")]
     LocalStateError(anyhow::Error),
 
-    #[error("You specified on the command line to treat missing blocks as integrity violations, but the file system is not setup to do that.")]
+    #[error(
+        "You specified on the command line to treat missing blocks as integrity violations, but the file system is not setup to do that."
+    )]
     FilesystemDoesNotTreatMissingBlocksAsIntegrityViolations,
 
-    #[error("You specified on the command line to not treat missing blocks as integrity violations, but the file system is setup to do that.")]
+    #[error(
+        "You specified on the command line to not treat missing blocks as integrity violations, but the file system is setup to do that."
+    )]
     FilesystemTreatsMissingBlocksAsIntegrityViolations,
 
-    #[error("File system is in single-client mode and can only be used from the client that created it.")]
+    #[error(
+        "File system is in single-client mode and can only be used from the client that created it."
+    )]
     FilesystemInSingleClientMode,
 
     #[error("Error interacting with the user: {0:?}")]

@@ -17,11 +17,11 @@ use super::{
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{
-    object_based_api::Dir, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
-    PathComponent, Uid,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, PathComponent, Uid,
+    object_based_api::Dir,
 };
 use cryfs_utils::{
-    async_drop::{flatten_async_drop, with_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop, with_async_drop},
     with_async_drop_2,
 };
 
@@ -419,15 +419,19 @@ where
                     let blob_id = entry.blob_id();
                     let remove_result = self.blobstore.remove_by_id(blob_id).await;
                     match remove_result {
-                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                                Err(FsError::CorruptedFilesystem { message: format!("Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove") })
-                            }
-                            Err(err) => {
-                                log::error!("Error removing blob: {err:?}");
-                                Err(FsError::UnknownError)
-                            }
+                        Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                        Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                            Err(FsError::CorruptedFilesystem {
+                                message: format!(
+                                    "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
+                                ),
+                            })
                         }
+                        Err(err) => {
+                            log::error!("Error removing blob: {err:?}");
+                            Err(FsError::UnknownError)
+                        }
+                    }
                 }
             },
         };
@@ -519,15 +523,19 @@ where
                     let blob_id = entry.blob_id();
                     let remove_result = self.blobstore.remove_by_id(blob_id).await;
                     match remove_result {
-                                Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                                Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                                    Err(FsError::CorruptedFilesystem { message: format!("Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove") })
-                                }
-                                Err(err) => {
-                                    log::error!("Error removing blob: {err:?}");
-                                    Err(FsError::UnknownError)
-                                }
-                            }
+                        Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                        Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                            Err(FsError::CorruptedFilesystem {
+                                message: format!(
+                                    "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
+                                ),
+                            })
+                        }
+                        Err(err) => {
+                            log::error!("Error removing blob: {err:?}");
+                            Err(FsError::UnknownError)
+                        }
+                    }
                 }
             },
         };

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -9,7 +9,7 @@ use super::atime_update_behavior::AtimeUpdateBehavior;
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
-use cryfs_blobstore::{Blob, BlobId, BlobStore, BLOBID_LEN};
+use cryfs_blobstore::{BLOBID_LEN, Blob, BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
 use cryfs_rustfs::{FsError, FsResult, PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};

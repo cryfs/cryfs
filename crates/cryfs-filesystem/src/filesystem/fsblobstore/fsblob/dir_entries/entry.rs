@@ -1,4 +1,4 @@
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use std::fmt::Debug;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -102,10 +102,23 @@ impl DirEntry {
 
     fn validate(&self) -> Result<()> {
         ensure!(
-            ((self.inner.entry_type == EntryType::File) && self.inner.mode.has_file_flag() && !self.inner.mode.has_dir_flag() && !self.inner.mode.has_symlink_flag()) ||
-            ((self.inner.entry_type == EntryType::Dir) && !self.inner.mode.has_file_flag() && self.inner.mode.has_dir_flag() && !self.inner.mode.has_symlink_flag()) ||
-            ((self.inner.entry_type == EntryType::Symlink) && !self.inner.mode.has_file_flag() && !self.inner.mode.has_dir_flag() && self.inner.mode.has_symlink_flag()),
-            "Wrong mode bit set. Entry type is {:?} and mode bits say is_file={}, is_dir={}, is_symlink={}", self.inner.entry_type, self.inner.mode.has_file_flag(), self.inner.mode.has_dir_flag(), self.inner.mode.has_symlink_flag(),
+            ((self.inner.entry_type == EntryType::File)
+                && self.inner.mode.has_file_flag()
+                && !self.inner.mode.has_dir_flag()
+                && !self.inner.mode.has_symlink_flag())
+                || ((self.inner.entry_type == EntryType::Dir)
+                    && !self.inner.mode.has_file_flag()
+                    && self.inner.mode.has_dir_flag()
+                    && !self.inner.mode.has_symlink_flag())
+                || ((self.inner.entry_type == EntryType::Symlink)
+                    && !self.inner.mode.has_file_flag()
+                    && !self.inner.mode.has_dir_flag()
+                    && self.inner.mode.has_symlink_flag()),
+            "Wrong mode bit set. Entry type is {:?} and mode bits say is_file={}, is_dir={}, is_symlink={}",
+            self.inner.entry_type,
+            self.inner.mode.has_file_flag(),
+            self.inner.mode.has_dir_flag(),
+            self.inner.mode.has_symlink_flag(),
         );
         Ok(())
     }

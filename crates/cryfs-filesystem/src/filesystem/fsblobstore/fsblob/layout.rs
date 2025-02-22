@@ -1,5 +1,5 @@
 use anyhow::bail;
-use binary_layout::{binary_layout, LayoutAs};
+use binary_layout::{LayoutAs, binary_layout};
 use std::convert::Infallible;
 
 use cryfs_blobstore::BLOBID_LEN;
