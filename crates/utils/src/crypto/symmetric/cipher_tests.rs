@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use rand::{RngCore, SeedableRng, rngs::StdRng};
 // TODO Separate out infallible from lockable and don't depend on lockable from this crate
 use generic_array::typenum::{U12, U16};
 use lockable::InfallibleUnwrap;

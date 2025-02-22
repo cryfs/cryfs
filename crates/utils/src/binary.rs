@@ -1,11 +1,11 @@
-use anyhow::{anyhow, ensure, Context, Error, Result};
+use anyhow::{Context, Error, Result, anyhow, ensure};
 use binrw::{BinRead, BinResult, BinWrite, Endian};
 use itertools::Itertools;
 use std::collections::hash_map::HashMap;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::{BufReader, BufWriter, ErrorKind, Read, Seek, SeekFrom, Write};
-use std::num::{NonZeroU32, NonZeroU8};
+use std::num::{NonZeroU8, NonZeroU32};
 use std::path::Path;
 use std::time::{Duration, SystemTime, SystemTimeError};
 
