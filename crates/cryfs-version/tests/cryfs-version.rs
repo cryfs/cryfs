@@ -50,7 +50,7 @@ mod test_macro_package_version {
             r#"
 [package]
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2021"
+edition = "2024"
 name = "cryfs-version-test"
 version = "{version}"
 
@@ -124,7 +124,7 @@ mod test_macro_cargo_version {
             r#"
 [package]
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2021"
+edition = "2024"
 name = "cryfs-version-test"
 version = "{version}"
 
@@ -184,7 +184,7 @@ mod test_macro_assert_cargo_version_equals_git_version {
             r#"
 [package]
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2021"
+edition = "2024"
 name = "cryfs-version-test"
 version = "{version}"
 
