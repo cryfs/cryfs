@@ -1,7 +1,7 @@
 use atomic_time::AtomicInstant;
 use cryfs_blockstore::IntegrityViolationError;
 use std::{
-    sync::{atomic::Ordering, Arc, Mutex},
+    sync::{Arc, Mutex, atomic::Ordering},
     time::Duration,
 };
 use tokio_util::sync::CancellationToken;

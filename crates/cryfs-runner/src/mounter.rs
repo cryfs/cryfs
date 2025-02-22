@@ -1,7 +1,7 @@
 use anyhow::Result;
 use cryfs_cli_utils::CliError;
 
-use crate::{background_process::BackgroundProcess, MountArgs};
+use crate::{MountArgs, background_process::BackgroundProcess};
 
 pub enum Mounter {
     MountInForeground,

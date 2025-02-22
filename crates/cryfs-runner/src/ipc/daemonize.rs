@@ -1,6 +1,6 @@
 use anyhow::Result;
 use daemonize::{Daemonize, Stdio};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use tokio::runtime::Handle;
 
 use crate::ipc::RpcConnection;
@@ -16,7 +16,9 @@ where
     Response: Serialize + DeserializeOwned + Send,
 {
     if Handle::try_current().is_ok() {
-        panic!("Cannot daemonize a process if tokio is running. Please daemonize before initializing tokio. See https://github.com/tokio-rs/tokio/issues/4301");
+        panic!(
+            "Cannot daemonize a process if tokio is running. Please daemonize before initializing tokio. See https://github.com/tokio-rs/tokio/issues/4301"
+        );
     }
 
     let rpc_pipes = RpcConnection::new_pipe()?;

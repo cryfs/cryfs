@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
-use super::pipe::{pipe, Receiver, Sender};
+use super::pipe::{Receiver, Sender, pipe};
 
 pub struct RpcConnection<Request, Response>
 where

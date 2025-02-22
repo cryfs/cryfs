@@ -5,8 +5,8 @@ use cryfs_blockstore::{
     LockingBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
 };
 use cryfs_cli_utils::{
-    setup_blockstore_stack, BlockstoreCallback, CliError, CliErrorKind, CliResultExt,
-    CliResultExtFn,
+    BlockstoreCallback, CliError, CliErrorKind, CliResultExt, CliResultExtFn,
+    setup_blockstore_stack,
 };
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::backend::fuser::{self, MountOption};

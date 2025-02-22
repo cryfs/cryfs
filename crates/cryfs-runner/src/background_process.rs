@@ -1,13 +1,13 @@
 use std::time::Duration;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use cryfs_cli_utils::{CliError, CliErrorKind, CliResultExt};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ipc::{start_background_process, RpcClient, RpcServer},
     MountArgs,
+    ipc::{RpcClient, RpcServer, start_background_process},
 };
 
 pub struct BackgroundProcess {
