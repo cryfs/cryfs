@@ -13,7 +13,7 @@ const CARGO_TOML: &str = concat!(
             [package]
             name = "my-testbin"
             version = "0.0.1"
-            edition = "2021"
+            edition = "2024"
             
             [dependencies]
             cryfs-cli-utils = {path = ""#
