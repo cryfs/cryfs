@@ -42,19 +42,19 @@ where
     }
 
     pub fn acquire(&mut self) -> HandleWithGeneration<Handle> {
-        if let Some(HandleWithGeneration {
+        match self.released_handles.pop()
+        { Some(HandleWithGeneration {
             handle,
             generation: last_used_generation,
-        }) = self.released_handles.pop()
-        {
+        }) => {
             assert!(last_used_generation < u64::MAX);
             self._acquire(handle, last_used_generation + 1)
-        } else {
+        } _ => {
             let handle = self.next_handle.clone();
             assert!(self.next_handle < Handle::from(u64::MAX));
             self.next_handle = Self::increment(self.next_handle.clone());
             self._acquire(handle, 0)
-        }
+        }}
     }
 
     /// Acquires a handle with a given value. If the handle is already acquired, this will panic.
@@ -71,17 +71,17 @@ where
             self.next_handle = Self::increment(handle.clone());
             self._acquire(handle, 0)
         } else {
-            if let Some(pos_in_released_handles) = self
+            match self
                 .released_handles
                 .iter()
                 .position(|h| h.handle == handle)
-            {
+            { Some(pos_in_released_handles) => {
                 let released_handle = self.released_handles.swap_remove(pos_in_released_handles);
                 assert_eq!(handle, released_handle.handle);
                 self._acquire(handle, released_handle.generation + 1)
-            } else {
+            } _ => {
                 panic!("Tried to acquire a specific handle but it was already acquired");
-            }
+            }}
         }
     }
 
