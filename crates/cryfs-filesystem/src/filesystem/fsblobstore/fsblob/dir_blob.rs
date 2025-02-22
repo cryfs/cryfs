@@ -75,7 +75,7 @@ where
     }
 
     // TODO DoubleEndedIterator + FusedIterator
-    pub fn entries(&self) -> impl Iterator<Item = &DirEntry> + ExactSizeIterator {
+    pub fn entries(&self) -> impl Iterator<Item = &DirEntry> + ExactSizeIterator + use<'_, B> {
         self.entries.iter()
     }
 
