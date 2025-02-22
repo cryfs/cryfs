@@ -1,4 +1,4 @@
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use log::warn;
 
 // TODO Separate InfallibleUnwrap from the lockable crate and don't depend on lockable from this crate
@@ -26,7 +26,10 @@ impl EncryptionKey {
         let lock_guard = match lock_guard {
             Ok(lock_guard) => Some(lock_guard),
             Err(err) => {
-                warn!("Couldn't protect the RAM page storing the encryption key, which means it could get swapped to the disk if your operating system chooses to. This does not hinder any functionality though. Error: {}", err);
+                warn!(
+                    "Couldn't protect the RAM page storing the encryption key, which means it could get swapped to the disk if your operating system chooses to. This does not hinder any functionality though. Error: {}",
+                    err
+                );
                 None
             }
         };

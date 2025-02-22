@@ -2,7 +2,7 @@
 //! on CPUs that are new enough to have that support. If the CPU doesn't support it, then `Aes256Gcm::new()`
 //! will return an error.
 
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{Context, Result, anyhow, ensure};
 use sodiumoxide::crypto::aead::{
     aes256gcm as sodium_aes256gcm, xchacha20poly1305_ietf as sodium_xchachapoly1305,
 };
@@ -212,7 +212,11 @@ fn _decrypt<
     encryption_key: &Key,
     mut ciphertext: Data,
 ) -> Result<Data> {
-    ensure!(ciphertext.len() >= CIPHERTEXT_OVERHEAD_PREFIX + CIPHERTEXT_OVERHEAD_SUFFIX, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
+    ensure!(
+        ciphertext.len() >= CIPHERTEXT_OVERHEAD_PREFIX + CIPHERTEXT_OVERHEAD_SUFFIX,
+        "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag",
+        ciphertext.len()
+    );
     let ciphertext_len = ciphertext.len();
     let (nonce, rest) = ciphertext.as_mut().split_at_mut(CIPHERTEXT_OVERHEAD_PREFIX);
     let (cipherdata, auth_tag) = rest.split_at_mut(rest.len() - CIPHERTEXT_OVERHEAD_SUFFIX);

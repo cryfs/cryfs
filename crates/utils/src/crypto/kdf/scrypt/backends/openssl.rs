@@ -3,8 +3,8 @@ use anyhow::Result;
 use lockable::InfallibleUnwrap;
 
 use crate::crypto::kdf::{
-    scrypt::{ScryptParams, ScryptSettings},
     PasswordBasedKDF,
+    scrypt::{ScryptParams, ScryptSettings},
 };
 use crate::crypto::symmetric::EncryptionKey;
 

@@ -154,8 +154,8 @@ mod tests {
     use super::PeriodicTask;
     use anyhow::bail;
     use std::sync::{
-        atomic::{AtomicU32, Ordering},
         Arc,
+        atomic::{AtomicU32, Ordering},
     };
     use tokio::time::Duration;
 

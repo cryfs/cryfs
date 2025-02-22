@@ -225,8 +225,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn given_type_with_drop_when_calling_async_drop_then_calls_async_drop_impl_and_then_calls_drop(
-    ) {
+    async fn given_type_with_drop_when_calling_async_drop_then_calls_async_drop_impl_and_then_calls_drop()
+     {
         let called = AtomicI32::new(0);
         let mut obj = AsyncDropGuard::new(MyStructWithDrop {
             on_async_drop: || async {

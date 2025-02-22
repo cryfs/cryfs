@@ -1,6 +1,6 @@
 use crate::crypto::kdf::{
-    scrypt::{ScryptParams, ScryptSettings},
     KDFParameters, PasswordBasedKDF,
+    scrypt::{ScryptParams, ScryptSettings},
 };
 
 #[generic_tests::define]
@@ -28,7 +28,10 @@ mod generic {
     {
         let kdf_parameters = ScryptParams::deserialize(&hex::decode("00040000000000000100000002000000E429AFB0500BD5D172089598B76E6B9ED6D0DDAF3B08F99AA05357F96F4F7823").unwrap()).unwrap();
         let rederived_key = S::derive_key(56, "mypassword", &kdf_parameters);
-        assert_eq!("70416B4E1569E2335442F7FE740E6A8ADC149514B7B6D7838A996AE0E2125F743341E72FF9F44C91A9675EAE459C0C0126FDB6CE220436E0", rederived_key.to_hex());
+        assert_eq!(
+            "70416B4E1569E2335442F7FE740E6A8ADC149514B7B6D7838A996AE0E2125F743341E72FF9F44C91A9675EAE459C0C0126FDB6CE220436E0",
+            rederived_key.to_hex()
+        );
     }
 
     #[test]

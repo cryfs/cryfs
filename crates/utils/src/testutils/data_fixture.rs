@@ -1,5 +1,5 @@
 use divrem::DivCeil;
-use rand::{rngs::SmallRng, RngCore, SeedableRng};
+use rand::{RngCore, SeedableRng, rngs::SmallRng};
 use rayon::prelude::*;
 
 const BLOCK_SIZE: usize = 2 * 1024;

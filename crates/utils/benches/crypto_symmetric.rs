@@ -1,5 +1,5 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use rand::{RngCore, SeedableRng, rngs::StdRng};
 
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;

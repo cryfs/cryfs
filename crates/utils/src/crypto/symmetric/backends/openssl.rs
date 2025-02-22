@@ -1,10 +1,10 @@
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use generic_array::{
-    typenum::{Unsigned, U16},
     ArrayLength, GenericArray,
+    typenum::{U16, Unsigned},
 };
-use openssl::symm::{decrypt_aead, encrypt_aead, Cipher as OpenSSLCipher};
-use rand::{rng, RngCore};
+use openssl::symm::{Cipher as OpenSSLCipher, decrypt_aead, encrypt_aead};
+use rand::{RngCore, rng};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
@@ -113,7 +113,11 @@ impl<C: CipherType> Cipher for AeadCipher<C> {
     }
 
     fn decrypt(&self, mut ciphertext: Data) -> Result<Data> {
-        ensure!(ciphertext.len() >= Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX, "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag", ciphertext.len());
+        ensure!(
+            ciphertext.len() >= Self::CIPHERTEXT_OVERHEAD_PREFIX + Self::CIPHERTEXT_OVERHEAD_SUFFIX,
+            "Ciphertext is only {} bytes. That's too small to be decrypted, doesn't even have enough space for IV and Tag",
+            ciphertext.len()
+        );
         let ciphertext_len = ciphertext.len();
         let (nonce, rest) = ciphertext
             .as_mut()

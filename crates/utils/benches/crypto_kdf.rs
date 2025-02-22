@@ -1,11 +1,11 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 
 use cryfs_utils::crypto::kdf::{
-    scrypt::{
-        backends::{openssl::ScryptOpenssl, scrypt::ScryptScrypt},
-        ScryptSettings,
-    },
     PasswordBasedKDF,
+    scrypt::{
+        ScryptSettings,
+        backends::{openssl::ScryptOpenssl, scrypt::ScryptScrypt},
+    },
 };
 
 fn bench_scrypt(c: &mut Criterion) {

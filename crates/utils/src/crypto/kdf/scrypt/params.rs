@@ -1,6 +1,6 @@
-use anyhow::{ensure, Result};
-use binrw::{binrw, helpers::until_eof, BinRead, BinWrite};
-use rand::{rng, RngCore};
+use anyhow::{Result, ensure};
+use binrw::{BinRead, BinWrite, binrw, helpers::until_eof};
+use rand::{RngCore, rng};
 use std::fmt::Debug;
 use std::io::Cursor;
 
