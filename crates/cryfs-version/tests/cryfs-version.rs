@@ -171,7 +171,10 @@ mod test_macro_assert_cargo_version_equals_git_version {
     fn doesnt_match_git_version() {
         if let Some(_our_gitversion) = OUR_GITVERSION {
             let project = make_version_test_project("0.1.0");
-            run_version_test_project_expect_build_error(&project, "Version mismatch: The version in the git tag does not match the version in Cargo.toml");
+            run_version_test_project_expect_build_error(
+                &project,
+                "Version mismatch: The version in the git tag does not match the version in Cargo.toml",
+            );
         }
     }
 

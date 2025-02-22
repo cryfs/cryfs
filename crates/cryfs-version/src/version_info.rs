@@ -19,7 +19,9 @@ impl<'a, 'b, 'c> VersionInfo<'a, 'b, 'c> {
                 Some(tag_info) => {
                     let git_version = konst::unwrap_ctx!(Version::parse_const(tag_info.tag));
                     if !version.eq_const(&git_version) {
-                        panic!("Version mismatch: The version in the git tag does not match the version in Cargo.toml");
+                        panic!(
+                            "Version mismatch: The version in the git tag does not match the version in Cargo.toml"
+                        );
                         // TODO Enable the following once `const_format_args` is stable
                         // panic!(
                         //     "Version mismatch: The version in the git tag ({}) does not match the version \
