@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use cryfs_rustfs::{object_based_api::File, AbsolutePathBuf, FsResult, OpenFlags};
+use cryfs_rustfs::{AbsolutePathBuf, FsResult, OpenFlags, object_based_api::File};
 use cryfs_utils::async_drop::AsyncDropGuard;
 
 use super::device::PassthroughDevice;

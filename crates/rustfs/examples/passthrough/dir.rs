@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    object_based_api::{Dir, Node},
     AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, PathComponent,
     Uid,
+    object_based_api::{Dir, Node},
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::os::unix::fs::OpenOptionsExt;
@@ -209,7 +209,7 @@ impl Dir for PassthroughDir {
 }
 
 fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
-    use nix::sys::stat::{mode_t, Mode};
+    use nix::sys::stat::{Mode, mode_t};
     // Most systems seems ot use u32 for [mode_t], but MacOS seems to use u16.
     let mode = mode_t::try_from(mode).unwrap();
     Mode::from_bits(mode.into()).unwrap()

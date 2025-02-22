@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tokio_util::sync::CancellationToken;
 
-use super::{backend_adapter::BackendAdapter, RunningFilesystem};
+use super::{RunningFilesystem, backend_adapter::BackendAdapter};
 use crate::common::FsError;
 use crate::low_level_api::{AsyncFilesystemLL, IntoFsLL};
 use cryfs_utils::async_drop::AsyncDrop;

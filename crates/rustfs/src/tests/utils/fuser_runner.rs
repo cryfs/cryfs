@@ -5,7 +5,7 @@ use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use super::filesystem_driver::FilesystemDriver;
 use super::mock_low_level_api::MockAsyncFilesystemLL;
-use crate::backend::fuser::{spawn_mount, RunningFilesystem};
+use crate::backend::fuser::{RunningFilesystem, spawn_mount};
 
 pub struct Runner {
     // Order of members is important. We need to Drop `running_filesystem` before `mountpoint` and `implementation`.
@@ -56,7 +56,7 @@ static LOG_INIT: OnceLock<()> = OnceLock::new();
 #[cfg(test)]
 mod tests {
     use crate::common::FsError;
-    use crate::tests::utils::{make_mock_filesystem, Runner};
+    use crate::tests::utils::{Runner, make_mock_filesystem};
 
     #[tokio::test]
     async fn setup_doesnt_panic() {

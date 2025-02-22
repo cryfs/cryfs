@@ -428,7 +428,7 @@ pub trait AsyncFilesystem {
     /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
     /// See [Self::listxattr_data] for a definition of what it returns.
     async fn listxattr_numbytes(&self, req: RequestInfo, path: &AbsolutePath)
-        -> FsResult<NumBytes>;
+    -> FsResult<NumBytes>;
 
     /// List extended attributes for a file.
     ///

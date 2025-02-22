@@ -7,8 +7,8 @@ use std::future::Future;
 use std::time::{Duration, SystemTime};
 
 use super::utils::{
-    assert_request_info_is_correct, make_mock_filesystem, FilesystemDriver, MockHelper, Runner,
-    ROOT_INO,
+    FilesystemDriver, MockHelper, ROOT_INO, Runner, assert_request_info_is_correct,
+    make_mock_filesystem,
 };
 use crate::common::{
     AbsolutePath, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
@@ -26,15 +26,15 @@ async fn test_mkdir<'a, F>(
     path: &AbsolutePath,
     call: impl FnOnce(FilesystemDriver) -> F,
     expectation: impl FnOnce(
-            &Fixture,
-            &RequestInfo,
-            InodeNumber,
-            &PathComponent,
-            Mode,
-            u32,
-        ) -> FsResult<ReplyEntry>
-        + Send
-        + 'static,
+        &Fixture,
+        &RequestInfo,
+        InodeNumber,
+        &PathComponent,
+        Mode,
+        u32,
+    ) -> FsResult<ReplyEntry>
+    + Send
+    + 'static,
 ) where
     F: Future<Output = nix::Result<()>>,
 {

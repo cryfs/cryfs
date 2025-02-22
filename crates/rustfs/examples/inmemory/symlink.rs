@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::{object_based_api::Symlink, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
+use cryfs_rustfs::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Symlink};
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};

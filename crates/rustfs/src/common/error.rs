@@ -29,10 +29,14 @@ pub enum FsError {
         fh: u64,
     },
 
-    #[error("The file descriptor represents a file that is open for writing, but the file is not open for reading")]
+    #[error(
+        "The file descriptor represents a file that is open for writing, but the file is not open for reading"
+    )]
     ReadOnWriteOnlyFileDescriptor,
 
-    #[error("The file descriptor represents a file that is open for reading, but the file is not open for writing")]
+    #[error(
+        "The file descriptor represents a file that is open for reading, but the file is not open for writing"
+    )]
     WriteOnReadOnlyFileDescriptor,
 
     #[error("Tried to create a file system node that already exists")]

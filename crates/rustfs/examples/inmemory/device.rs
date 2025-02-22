@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use std::sync::{Arc, Mutex};
 
 use cryfs_rustfs::{
-    object_based_api::{Device, Node},
     AbsolutePath, FsError, FsResult, Gid, Mode, Statfs, Uid,
+    object_based_api::{Device, Node},
 };
 use cryfs_utils::{async_drop::AsyncDropGuard, mutex::lock_in_ptr_order, with_async_drop_2};
 
@@ -118,7 +118,10 @@ impl Device for InMemoryDevice {
                         };
                         // TODO Use try_insert once stable
                         let insert_result = target_entries.insert(new_name.to_owned(), old_entry);
-                        assert!(insert_result.is_none(), "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail.");
+                        assert!(
+                            insert_result.is_none(),
+                            "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail."
+                        );
                         Ok(())
                     }
                 })

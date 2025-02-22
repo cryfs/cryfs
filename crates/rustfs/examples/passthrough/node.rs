@@ -3,14 +3,14 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use cryfs_rustfs::{
-    object_based_api::Node, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::errors::{IoResultExt, NixResultExt};
 use super::utils::{convert_metadata, convert_timespec};
 use super::{
-    dir::PassthroughDir, file::PassthroughFile, symlink::PassthroughSymlink, PassthroughDevice,
+    PassthroughDevice, dir::PassthroughDir, file::PassthroughFile, symlink::PassthroughSymlink,
 };
 
 #[derive(Debug)]

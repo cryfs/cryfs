@@ -54,14 +54,17 @@ impl RunningFilesystem {
     pub fn block_until_unmounted(&self) {
         loop {
             let session = self.session.lock().unwrap();
-            match &*session { Some(session) => {
-                if session.guard.is_finished() {
+            match &*session {
+                Some(session) => {
+                    if session.guard.is_finished() {
+                        return;
+                    }
+                }
+                _ => {
+                    // Session was dropped, so we're unmounted
                     return;
                 }
-            } _ => {
-                // Session was dropped, so we're unmounted
-                return;
-            }}
+            }
             std::mem::drop(session);
             // TODO Use condition variable instead of busy waiting
             thread::sleep(Duration::from_millis(100));

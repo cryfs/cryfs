@@ -2,7 +2,7 @@ use async_trait::async_trait;
 
 use super::errors::{IoResultExt, NixResultExt};
 use cryfs_rustfs::{
-    object_based_api::Device, AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs,
+    AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs, object_based_api::Device,
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
 

@@ -19,7 +19,7 @@ use crate::low_level_api::{
     ReplyLseek, ReplyOpen, ReplyWrite,
 };
 use cryfs_utils::{
-    async_drop::{flatten_async_drop, AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     with_async_drop_2,
 };
 use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};

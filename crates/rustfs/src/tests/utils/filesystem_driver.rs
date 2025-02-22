@@ -1,4 +1,4 @@
-use nix::{unistd, Result};
+use nix::{Result, unistd};
 use std::path::PathBuf;
 
 use crate::{AbsolutePathBuf, Mode};

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    object_based_api::OpenFile, Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::OpenFile,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use std::os::fd::{AsFd, AsRawFd};

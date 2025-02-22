@@ -2,14 +2,14 @@ use async_trait::async_trait;
 use std::time::SystemTime;
 
 use cryfs_rustfs::{
-    object_based_api::Node, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid,
+    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
 };
 use cryfs_utils::async_drop::AsyncDrop;
 
+use super::InMemoryDevice;
 use super::dir::InMemoryDirRef;
 use super::file::InMemoryFileRef;
 use super::symlink::InMemorySymlinkRef;
-use super::InMemoryDevice;
 
 // TODO We should update ctime whenever metadata changes
 // TODO We should update atime and mtime correctly when things change

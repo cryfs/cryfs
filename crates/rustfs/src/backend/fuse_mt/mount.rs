@@ -4,7 +4,7 @@ use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use super::{backend_adapter::BackendAdapter, RunningFilesystem};
+use super::{RunningFilesystem, backend_adapter::BackendAdapter};
 use crate::common::FsError;
 use crate::high_level_api::{AsyncFilesystem, IntoFs};
 use cryfs_utils::async_drop::AsyncDrop;
