@@ -30,7 +30,7 @@ impl Mounter {
             Self::MountInForeground => {
                 super::runner::mount_filesystem(mount_args, on_successfully_mounted).await
             }
-            Self::MountInBackgroud { ref mut rpc } => {
+            Self::MountInBackgroud { rpc } => {
                 // TODO Make rpc async?
                 rpc.mount_filesystem(mount_args)?;
                 on_successfully_mounted();
