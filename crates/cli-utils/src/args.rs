@@ -26,10 +26,10 @@ pub struct CombinedArgs<ConcreteArgs: Args> {
     pub immediate_exit_flags: ImmediateExitFlags,
 
     #[command(flatten)]
-    pub log: LogArgs,
+    pub concrete_args: ConcreteArgs,
 
     #[command(flatten)]
-    pub concrete_args: ConcreteArgs,
+    pub log: LogArgs,
 }
 
 pub enum ParseArgsResult<ConcreteArgs: Args> {
