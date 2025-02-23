@@ -56,13 +56,13 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
         )
     };
 
-    match parse_args::<App::ConcreteArgs>()? {
-        ParseArgsResult::ShowVersion => {
+    match parse_args::<App::ConcreteArgs>() {
+        Ok(ParseArgsResult::ShowVersion) => {
             // TODO We probably should initialize logging here before showing the version,
             // so that any http requests we do for checking for updates have a working logging backend.
             show_version(env);
         }
-        ParseArgsResult::Normal { log, args } => {
+        Ok(ParseArgsResult::Normal { log, args }) => {
             let app = App::new(args, env.clone())?;
             clap_logflag::init_logging!(
                 log.or_default(app.default_log_config()),
@@ -70,6 +70,16 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
             );
             show_version(env);
             app.main()?;
+        }
+        Err(err) => {
+            show_version(env);
+            if let Some(error) = err.error.downcast_ref::<clap::Error>() {
+                // clap error types can display colored output if exiting this way, otherwise they wouldn't
+                // TODO Is there a better way to handle this? We're ignoring the CliErrorKind here which is weird. Should we maybe return an enum Error type that can be either CliError or clap::Error?
+                error.exit();
+            } else {
+                return Err(err);
+            }
         }
     }
 

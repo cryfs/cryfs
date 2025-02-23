@@ -54,15 +54,28 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
                 ErrorKind::UnknownArgument => {
                     // Looks like some `ConcreteArgs` may have been present. In this case, we don't support the `--version` flag.
                     // So let's parse our flags and make sure that `--version` isn't present.
-                    let args = CombinedArgs::<ConcreteArgs>::parse();
-                    if args.immediate_exit_flags.version {
-                        return Err(CliError {
-                            kind: CliErrorKind::InvalidArguments,
-                            error: anyhow!(
-                                "the argument '--version' cannot be used with other arguments"
-                            ),
-                        });
-                    }
+                    let args = match CombinedArgs::<ConcreteArgs>::try_parse() {
+                        Ok(args) => {
+                            // We successfully parsed the arguments, so we can return them. But we don't support the `--version` flag together with other arguments.
+                            if args.immediate_exit_flags.version {
+                                return Err(CliError {
+                                    kind: CliErrorKind::InvalidArguments,
+                                    error: anyhow!(
+                                        "the argument '--version' cannot be used with other arguments"
+                                    ),
+                                });
+                            }
+                            args
+                        }
+                        Err(err) => {
+                            // We failed to parse the arguments, so we need to display a help message.
+                            // Let's parse the arguments again, but this time so that clap exits with an error.
+                            return Err(CliError {
+                                kind: CliErrorKind::InvalidArguments,
+                                error: err.into(),
+                            });
+                        }
+                    };
                     args
                 }
                 ErrorKind::DisplayVersion => {
