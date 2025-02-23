@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use cryfs_version::Version;
 use serde::Deserialize;
 use std::collections::HashMap;

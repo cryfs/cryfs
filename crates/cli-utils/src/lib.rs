@@ -15,7 +15,7 @@ mod env;
 pub use env::Environment;
 
 mod application;
-pub use application::{run, Application};
+pub use application::{Application, run};
 
 mod config;
 pub use config::print_config;
@@ -25,7 +25,7 @@ pub use error::{CliError, CliErrorKind, CliResultExt, CliResultExtFn};
 
 mod blockstore_setup;
 pub use blockstore_setup::{
-    setup_blockstore_stack, setup_blockstore_stack_dyn, BlockstoreCallback,
+    BlockstoreCallback, setup_blockstore_stack, setup_blockstore_stack_dyn,
 };
 
 pub use clap_logflag;

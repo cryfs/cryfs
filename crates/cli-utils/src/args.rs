@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::{
-    builder::{styling::AnsiColor, Styles},
-    error::ErrorKind,
     Args, Parser,
+    builder::{Styles, styling::AnsiColor},
+    error::ErrorKind,
 };
 use clap_logflag::LogArgs;
 
@@ -55,7 +55,9 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
                     // We need to display a help message. The easiest way to do that is to parse the arguments again,
                     // but this time including `ConcreteArgs`. Clap will then exit and display the help message.
                     let Err(err) = CombinedArgs::<ConcreteArgs>::try_parse() else {
-                        panic!("We expected the previous line to exit with a help message. CLI Parsing error was: {e:#?}");
+                        panic!(
+                            "We expected the previous line to exit with a help message. CLI Parsing error was: {e:#?}"
+                        );
                     };
                     return Err(ArgParseError::Clap(err));
                 }
@@ -83,7 +85,9 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
                     // Let's parse the arguments again, but this time so that clap exits with an error.
                     // TODO Can this actually happen?
                     let Err(err) = CombinedArgs::<ConcreteArgs>::try_parse() else {
-                        panic!("We expected the previous line to exit with an error. CLI Parsing error was: {e:#?}");
+                        panic!(
+                            "We expected the previous line to exit with an error. CLI Parsing error was: {e:#?}"
+                        );
                     };
                     return Err(ArgParseError::Clap(err));
                 }

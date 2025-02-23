@@ -22,8 +22,8 @@ mod fake_http_client {
     use super::*;
     use anyhow::anyhow;
     use std::collections::HashMap;
-    use std::sync::atomic::AtomicUsize;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
 
     /// A fake implementation of the `HttpClient` trait that can be used for testing
     pub struct FakeHttpClient {
@@ -174,28 +174,34 @@ mod tests {
         #[test]
         fn test_get_invalid_protocol() {
             let client = ReqwestHttpClient;
-            assert!(client
-                .get("invalid://example.com", Duration::from_secs(1))
-                .is_err());
+            assert!(
+                client
+                    .get("invalid://example.com", Duration::from_secs(1))
+                    .is_err()
+            );
         }
 
         #[test]
         fn test_get_invalid_tld() {
             let client = ReqwestHttpClient;
-            assert!(client
-                .get("http://example.invalidtld", Duration::from_secs(1))
-                .is_err());
+            assert!(
+                client
+                    .get("http://example.invalidtld", Duration::from_secs(1))
+                    .is_err()
+            );
         }
 
         #[test]
         fn test_get_invalid_domain() {
             let client = ReqwestHttpClient;
-            assert!(client
-                .get(
-                    "http://this_is_a_not_existing_domain.com",
-                    Duration::from_secs(1)
-                )
-                .is_err());
+            assert!(
+                client
+                    .get(
+                        "http://this_is_a_not_existing_domain.com",
+                        Duration::from_secs(1)
+                    )
+                    .is_err()
+            );
         }
 
         #[test]

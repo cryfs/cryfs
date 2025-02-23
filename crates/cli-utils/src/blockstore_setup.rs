@@ -5,8 +5,8 @@ use cryfs_blockstore::{
     IntegrityBlockStoreInitError, IntegrityConfig, LockingBlockStore, OptimizedBlockStoreWriter,
 };
 use cryfs_filesystem::config::{
-    ciphers::{lookup_cipher_async, AsyncCipherCallback, UnknownCipherError},
     CryConfig,
+    ciphers::{AsyncCipherCallback, UnknownCipherError, lookup_cipher_async},
 };
 use cryfs_filesystem::localstate::LocalStateDir;
 use cryfs_utils::{

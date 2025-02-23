@@ -6,10 +6,10 @@ use clap::Args;
 use cryfs_version::VersionInfo;
 use log::LevelFilter;
 
-use super::version::show_version;
 #[cfg(feature = "check_for_updates")]
 use super::version::ReqwestHttpClient;
-use crate::args::{parse_args, ArgParseError, ParseArgsResult};
+use super::version::show_version;
+use crate::args::{ArgParseError, ParseArgsResult, parse_args};
 use crate::env::Environment;
 use crate::error::CliError;
 
