@@ -132,13 +132,15 @@ async fn inner_node_with_subtree_unreferenced() {
         })
         .await;
 
-    let expected_errors: Vec<_> = vec![NodeUnreferencedError {
-        node_id,
-        node_info: NodeInfoAsSeenByLookingAtNode::InnerNode {
-            depth: NonZeroU8::new(2).unwrap(),
-        },
-    }
-    .into()];
+    let expected_errors: Vec<_> = vec![
+        NodeUnreferencedError {
+            node_id,
+            node_info: NodeInfoAsSeenByLookingAtNode::InnerNode {
+                depth: NonZeroU8::new(2).unwrap(),
+            },
+        }
+        .into(),
+    ];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);

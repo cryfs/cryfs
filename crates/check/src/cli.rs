@@ -7,13 +7,13 @@ use cryfs_blockstore::{
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,
 };
 use cryfs_cli_utils::{
-    password_provider::InteractivePasswordProvider, print_config, setup_blockstore_stack,
     Application, CliError, CliErrorKind, CliResultExt, Environment,
+    password_provider::InteractivePasswordProvider, print_config, setup_blockstore_stack,
 };
 use cryfs_filesystem::{
+    CRYFS_VERSION,
     config::{CommandLineFlags, ConfigLoadError, ConfigLoadResult, PasswordProvider},
     localstate::LocalStateDir,
-    CRYFS_VERSION,
 };
 use cryfs_utils::{
     async_drop::AsyncDropGuard,

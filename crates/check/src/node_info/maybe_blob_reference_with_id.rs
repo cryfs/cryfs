@@ -1,6 +1,6 @@
 use cryfs_blobstore::BlobId;
 
-use crate::{node_info::BlobReference, BlobReferenceWithId};
+use crate::{BlobReferenceWithId, node_info::BlobReference};
 
 #[derive(PartialEq, Debug, Eq, PartialOrd, Ord, Hash, Clone)]
 pub enum MaybeBlobReferenceWithId {

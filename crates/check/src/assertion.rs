@@ -27,12 +27,16 @@ impl Assertion {
         match self {
             Self::ExactErrorWasReported(expected_error) => {
                 if !reported_errors.contains(expected_error) {
-                    panic!("Expected error was not reported:\n{expected_error:?}.\n\nErrors that were reported:\n{reported_errors:?}");
+                    panic!(
+                        "Expected error was not reported:\n{expected_error:?}.\n\nErrors that were reported:\n{reported_errors:?}"
+                    );
                 }
             }
             Self::ErrorMatchingPredicateWasReported(predicate, location) => {
                 if !reported_errors.iter().any(|error| predicate(error)) {
-                    panic!("No error matching predicate was reported, location: {location:?}\n\nErrors that were reported:\n{reported_errors:?}");
+                    panic!(
+                        "No error matching predicate was reported, location: {location:?}\n\nErrors that were reported:\n{reported_errors:?}"
+                    );
                 }
             }
         }

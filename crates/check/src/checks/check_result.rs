@@ -1,4 +1,4 @@
-use crate::{assertion::Assertion, CorruptedError};
+use crate::{CorruptedError, assertion::Assertion};
 
 pub struct CheckResult {
     errors: Vec<CorruptedError>,

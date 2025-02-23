@@ -4,7 +4,7 @@
 mod args;
 
 mod cli;
-pub use cli::{check_filesystem, RecoverCli};
+pub use cli::{RecoverCli, check_filesystem};
 
 mod checks;
 mod console;

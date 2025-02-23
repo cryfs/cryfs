@@ -1,7 +1,7 @@
 use anyhow::Result;
 use cryfs_filesystem::filesystem::fsblobstore::EntryType;
-use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::Future;
+use futures::stream::{self, StreamExt, TryStreamExt};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -275,12 +275,12 @@ where
                 // Let's make sure it still looks the same (e.g. still has the same children) and then we can skip descending into it
                 if prev_seen.1 != now_seen.1 {
                     Err(CheckError::FilesystemModified {
-                    msg: format!(
-                        "{blob_referenced_as} was previously seen as {prev_seen:?} but now as {now_seen:?}",
-                        prev_seen = prev_seen,
-                        now_seen = now_seen,
-                    ),
-                })?;
+                        msg: format!(
+                            "{blob_referenced_as} was previously seen as {prev_seen:?} but now as {now_seen:?}",
+                            prev_seen = prev_seen,
+                            now_seen = now_seen,
+                        ),
+                    })?;
                 }
 
                 // But we do still want to process it so checks can notice this

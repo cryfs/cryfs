@@ -107,7 +107,7 @@ fn display_node_and_blob_reference(
             write!(
                 f,
                 "\n       {node_header} Non-root inner node [depth={depth}, parent_node={parent_id}]",
-                node_header=style("Node referenced as:").bold()
+                node_header = style("Node referenced as:").bold()
             )
         }
         NodeAndBlobReference::NonRootLeafNode {
@@ -159,12 +159,12 @@ fn display_maybe_blob_reference_with_id(
                 BlobType::Symlink => "symlink",
             };
             write!(
-                    f,
-                    "In {blob_type} at {path}\n       {blob_title} id={blob_id}, parent_blob={parent_id}",
-                    path = referenced_as.path,
-                    blob_title = style("Blob:").bold(),
-                    parent_id = referenced_as.parent_id,
-                )
+                f,
+                "In {blob_type} at {path}\n       {blob_title} id={blob_id}, parent_blob={parent_id}",
+                path = referenced_as.path,
+                blob_title = style("Blob:").bold(),
+                parent_id = referenced_as.parent_id,
+            )
         }
     }
 }

@@ -1,7 +1,7 @@
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{StreamExt, TryStreamExt};
 use std::future::Future;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
+use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 /// Call this with an `initial_task` and it will call that task, and all tasks recursively spawned by it, until all tasks are done.
@@ -46,8 +46,8 @@ impl<'f, E> TaskSpawner<'f, E> {
 mod tests {
     use super::*;
     use std::pin::Pin;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[tokio::test]
     async fn spawn_100_tasks_directly() {

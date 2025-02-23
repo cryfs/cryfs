@@ -5,7 +5,7 @@ use futures::{
     stream::{self, BoxStream, StreamExt},
 };
 use itertools::Itertools;
-use rand::{rngs::SmallRng, seq::IteratorRandom, SeedableRng};
+use rand::{SeedableRng, rngs::SmallRng, seq::IteratorRandom};
 use std::fmt::Debug;
 use std::time::SystemTime;
 

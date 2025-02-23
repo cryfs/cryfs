@@ -8,7 +8,7 @@ use cryfs_check::{BlobReference, BlobReferenceWithId, NodeAndBlobReference, Node
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{expect_blobs_to_have_unreferenced_root_nodes, SomeBlobs};
+use common::entry_helpers::{SomeBlobs, expect_blobs_to_have_unreferenced_root_nodes};
 use common::fixture::FilesystemFixture;
 
 #[rstest]
@@ -78,18 +78,20 @@ async fn root_dir_entirely_missing_without_children() {
         })
         .await;
 
-    let expected_errors = vec![NodeMissingError {
-        node_id: *root_dir_id.to_root_block_id(),
-        referenced_as: [NodeAndBlobReference::RootNode {
-            belongs_to_blob: BlobReferenceWithId {
-                blob_id: root_dir_id,
-                referenced_as: BlobReference::root_dir(),
-            },
-        }]
-        .into_iter()
-        .collect(),
-    }
-    .into()];
+    let expected_errors = vec![
+        NodeMissingError {
+            node_id: *root_dir_id.to_root_block_id(),
+            referenced_as: [NodeAndBlobReference::RootNode {
+                belongs_to_blob: BlobReferenceWithId {
+                    blob_id: root_dir_id,
+                    referenced_as: BlobReference::root_dir(),
+                },
+            }]
+            .into_iter()
+            .collect(),
+        }
+        .into(),
+    ];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_unordered_vec_eq(expected_errors, errors);

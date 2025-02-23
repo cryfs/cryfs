@@ -20,18 +20,19 @@ use cryfs_utils::{
     async_drop::{AsyncDropGuard, SyncDrop},
     progress::SilentProgressBarManager,
 };
-use futures::{future::BoxFuture, stream::StreamExt, Future};
-use rand::{rngs::SmallRng, SeedableRng};
+use futures::{Future, future::BoxFuture, stream::StreamExt};
+use rand::{SeedableRng, rngs::SmallRng};
 use std::fmt::{Debug, Formatter};
 use std::{collections::BTreeSet, path::PathBuf};
 use tempdir::TempDir;
 
 use super::console::FixtureCreationConsole;
 use super::entry_helpers::{
-    self, find_an_inner_node_of_a_large_blob, find_an_inner_node_of_a_large_blob_with_parent_id,
+    self, CreatedDirBlob, SomeBlobs, find_an_inner_node_of_a_large_blob,
+    find_an_inner_node_of_a_large_blob_with_parent_id,
     find_an_inner_node_of_a_small_blob_with_parent_id, find_inner_node_with_distance_from_root,
     find_inner_node_with_distance_from_root_with_parent_id, find_leaf_node_of_blob_with_parent_id,
-    find_leaf_node_with_parent_id, CreatedDirBlob, SomeBlobs,
+    find_leaf_node_with_parent_id,
 };
 
 const PASSWORD: &str = "mypassword";

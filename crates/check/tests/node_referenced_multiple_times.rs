@@ -1,7 +1,7 @@
 //! Tests where a node is referenced multiple times, either from the same or from a different blob
 
 use pretty_assertions::{assert_eq, assert_ne};
-use rand::{rngs::SmallRng, SeedableRng};
+use rand::{SeedableRng, rngs::SmallRng};
 use rstest::rstest;
 use rstest_reuse::{self, *};
 use std::collections::HashSet;
@@ -17,8 +17,8 @@ use cryfs_check::{
 
 mod common;
 use common::entry_helpers::{
-    expect_blobs_to_have_unreferenced_root_nodes, find_inner_node_id_and_parent,
-    find_leaf_id_and_parent, remove_subtree, SomeBlobs,
+    SomeBlobs, expect_blobs_to_have_unreferenced_root_nodes, find_inner_node_id_and_parent,
+    find_leaf_id_and_parent, remove_subtree,
 };
 use common::fixture::FilesystemFixture;
 

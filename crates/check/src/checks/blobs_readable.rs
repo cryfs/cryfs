@@ -5,8 +5,8 @@ use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockStore;
 
 use super::{
-    check_result::CheckResult, BlobToProcess, CheckError, FilesystemCheck,
-    NodeAndBlobReferenceFromReachableBlob, NodeToProcess,
+    BlobToProcess, CheckError, FilesystemCheck, NodeAndBlobReferenceFromReachableBlob,
+    NodeToProcess, check_result::CheckResult,
 };
 use crate::{error::BlobUnreadableError, node_info::BlobReference};
 

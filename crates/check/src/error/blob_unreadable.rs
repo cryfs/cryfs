@@ -5,7 +5,7 @@ use thiserror::Error;
 use cryfs_blobstore::BlobId;
 
 use super::display::{BlobErrorDisplayMessage, ErrorDisplayBlobInfo, ErrorTitle};
-use crate::{node_info::BlobReference, MaybeBlobInfoAsSeenByLookingAtBlob};
+use crate::{MaybeBlobInfoAsSeenByLookingAtBlob, node_info::BlobReference};
 
 #[derive(Error, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct BlobUnreadableError {

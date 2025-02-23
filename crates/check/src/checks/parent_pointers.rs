@@ -7,8 +7,8 @@ use cryfs_filesystem::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_utils::peekable::PeekableExt;
 
 use super::{
-    check_result::CheckResult, utils::reference_checker::ReferenceChecker, BlobToProcess,
-    CheckError, FilesystemCheck, NodeAndBlobReferenceFromReachableBlob, NodeToProcess,
+    BlobToProcess, CheckError, FilesystemCheck, NodeAndBlobReferenceFromReachableBlob,
+    NodeToProcess, check_result::CheckResult, utils::reference_checker::ReferenceChecker,
 };
 use crate::{
     assertion::Assertion,
@@ -152,7 +152,9 @@ impl FilesystemCheck for CheckParentPointers {
                     referenced_as.iter().cloned().collect(),
                 ));
             } else if referenced_as.len() == 0 {
-                panic!("Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs.");
+                panic!(
+                    "Algorithm invariant violated: blob was not referenced by any parent. The way the algorithm works, this should not happen since we only handle reachable blobs."
+                );
             }
 
             match seen_blob_info {

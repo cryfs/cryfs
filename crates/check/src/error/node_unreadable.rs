@@ -5,8 +5,8 @@ use thiserror::Error;
 use cryfs_blockstore::BlockId;
 
 use super::display::{ErrorDisplayNodeInfo, ErrorTitle, NodeErrorDisplayMessage};
-use crate::node_info::NodeAndBlobReference;
 use crate::MaybeNodeInfoAsSeenByLookingAtNode;
+use crate::node_info::NodeAndBlobReference;
 
 #[derive(Error, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct NodeUnreadableError {

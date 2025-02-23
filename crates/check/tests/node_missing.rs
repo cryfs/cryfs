@@ -11,7 +11,7 @@ use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
 use common::entry_helpers::{
-    expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced, SomeBlobs,
+    SomeBlobs, expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced,
 };
 use common::fixture::{FilesystemFixture, RemoveInnerNodeResult, RemoveSomeNodesResult};
 
@@ -106,11 +106,13 @@ async fn blob_with_missing_inner_node(
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
-    let mut expected_errors = vec![NodeMissingError {
-        node_id: removed_node,
-        referenced_as: [removed_node_info.into()].into_iter().collect(),
-    }
-    .into()];
+    let mut expected_errors = vec![
+        NodeMissingError {
+            node_id: removed_node,
+            referenced_as: [removed_node_info.into()].into_iter().collect(),
+        }
+        .into(),
+    ];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(
@@ -152,13 +154,15 @@ async fn blob_with_missing_leaf_node(#[case] blob: impl FnOnce(&SomeBlobs) -> Bl
 
     let removed_node = fs_fixture.remove_a_leaf_node(blob_info.clone()).await;
 
-    let mut expected_errors = vec![NodeMissingError {
-        node_id: removed_node.removed_node,
-        referenced_as: [removed_node.removed_node_info.into()]
-            .into_iter()
-            .collect(),
-    }
-    .into()];
+    let mut expected_errors = vec![
+        NodeMissingError {
+            node_id: removed_node.removed_node,
+            referenced_as: [removed_node.removed_node_info.into()]
+                .into_iter()
+                .collect(),
+        }
+        .into(),
+    ];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(

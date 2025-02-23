@@ -19,7 +19,7 @@ use cryfs_utils::{
 
 mod common;
 use common::{
-    entry_helpers::{expect_blobs_to_have_unreferenced_root_nodes, CreatedDirBlob},
+    entry_helpers::{CreatedDirBlob, expect_blobs_to_have_unreferenced_root_nodes},
     fixture::FilesystemFixture,
 };
 
@@ -252,11 +252,13 @@ async fn blob_unreferenced(
     let (fs_fixture, _some_blobs) = FilesystemFixture::new_with_some_blobs().await;
     let (blob_id, root_node_info) = make_blob(&fs_fixture).await;
 
-    let expected_errors: Vec<CorruptedError> = vec![NodeUnreferencedError {
-        node_id: *blob_id.to_root_block_id(),
-        node_info: root_node_info,
-    }
-    .into()];
+    let expected_errors: Vec<CorruptedError> = vec![
+        NodeUnreferencedError {
+            node_id: *blob_id.to_root_block_id(),
+            node_info: root_node_info,
+        }
+        .into(),
+    ];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(expected_errors, errors,);

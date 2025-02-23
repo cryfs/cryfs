@@ -5,8 +5,8 @@ use thiserror::Error;
 use cryfs_blockstore::BlockId;
 
 use super::display::{ErrorDisplayNodeInfo, ErrorTitle, NodeErrorDisplayMessage};
-use crate::node_info::NodeAndBlobReference;
 use crate::MaybeNodeInfoAsSeenByLookingAtNode;
+use crate::node_info::NodeAndBlobReference;
 
 #[derive(Error, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct NodeMissingError {
@@ -16,7 +16,10 @@ pub struct NodeMissingError {
 
 impl NodeMissingError {
     pub fn new(node_id: BlockId, referenced_as: BTreeSet<NodeAndBlobReference>) -> Self {
-        assert!(referenced_as.len() > 0, "NodeMissingError should only be created if the node is referenced by at least one other node or blob");
+        assert!(
+            referenced_as.len() > 0,
+            "NodeMissingError should only be created if the node is referenced by at least one other node or blob"
+        );
         Self {
             node_id,
             referenced_as,
@@ -31,7 +34,10 @@ const ERROR_TITLE: ErrorTitle = ErrorTitle {
 
 impl Display for NodeMissingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        assert!(self.referenced_as.len() > 0, "NodeMissingError should only be created if the node is referenced by at least one other node or blob");
+        assert!(
+            self.referenced_as.len() > 0,
+            "NodeMissingError should only be created if the node is referenced by at least one other node or blob"
+        );
 
         let error_display = NodeErrorDisplayMessage {
             error_title: ERROR_TITLE,

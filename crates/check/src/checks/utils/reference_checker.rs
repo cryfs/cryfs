@@ -1,4 +1,4 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -29,7 +29,10 @@ where
         match self.nodes.entry(node_id) {
             Entry::Occupied(mut entry) => {
                 if entry.get().0.is_some() {
-                    panic!("Node {node_id:?} was seen twice. The runner should guarantee that each node is only seen once.", node_id = entry.key());
+                    panic!(
+                        "Node {node_id:?} was seen twice. The runner should guarantee that each node is only seen once.",
+                        node_id = entry.key()
+                    );
                 }
                 entry.get_mut().0 = Some(seen_info);
             }

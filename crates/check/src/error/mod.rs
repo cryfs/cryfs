@@ -52,6 +52,8 @@ pub enum CorruptedError {
 /// A CheckError is an error found in the analysis itself. This doesn't necessarily mean that the file system is corrupted
 #[derive(Error, Debug)]
 pub enum CheckError {
-    #[error("The filesystem was modified while the check was running. Please make sure the file system is not mounted or modified for the duration of the check.\n Details: {msg}")]
+    #[error(
+        "The filesystem was modified while the check was running. Please make sure the file system is not mounted or modified for the duration of the check.\n Details: {msg}"
+    )]
     FilesystemModified { msg: String },
 }

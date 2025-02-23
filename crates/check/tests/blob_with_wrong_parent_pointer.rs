@@ -133,13 +133,15 @@ async fn blob_with_wrong_parent_pointer_referenced_from_one_dir(
 
     set_parent(&fs_fixture, blob_info.blob_id, new_parent.blob_id).await;
 
-    let expected_errors: Vec<CorruptedError> = vec![WrongParentPointerError {
-        blob_id: blob_info.blob_id,
-        blob_type: blob_info.referenced_as.blob_type,
-        parent_pointer: new_parent.blob_id,
-        referenced_as: iter::once(blob_info.referenced_as).collect(),
-    }
-    .into()];
+    let expected_errors: Vec<CorruptedError> = vec![
+        WrongParentPointerError {
+            blob_id: blob_info.blob_id,
+            blob_type: blob_info.referenced_as.blob_type,
+            parent_pointer: new_parent.blob_id,
+            referenced_as: iter::once(blob_info.referenced_as).collect(),
+        }
+        .into(),
+    ];
 
     let errors = fs_fixture.run_cryfs_check().await;
     assert_eq!(expected_errors, errors);

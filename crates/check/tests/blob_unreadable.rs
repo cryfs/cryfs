@@ -7,7 +7,7 @@ use cryfs_check::{BlobReferenceWithId, BlobUnreadableError, CorruptedError};
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
-use common::entry_helpers::{expect_blobs_to_have_unreferenced_root_nodes, SomeBlobs};
+use common::entry_helpers::{SomeBlobs, expect_blobs_to_have_unreferenced_root_nodes};
 use common::fixture::FilesystemFixture;
 
 #[rstest]

@@ -8,7 +8,7 @@ use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
 use common::entry_helpers::{
-    expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced, SomeBlobs,
+    SomeBlobs, expect_blobs_to_have_unreferenced_root_nodes, expect_nodes_to_be_unreferenced,
 };
 use common::fixture::{
     CorruptInnerNodeResult, CorruptLeafNodeResult, CorruptSomeNodesResult, FilesystemFixture,
@@ -181,11 +181,13 @@ async fn blob_with_unreadable_inner_node(
     let expected_errors_from_orphaned_nodes =
         expect_nodes_to_be_unreferenced(&fs_fixture, orphaned_nodes).await;
 
-    let mut expected_errors = vec![NodeUnreadableError {
-        node_id: corrupted_node,
-        referenced_as: [corrupted_node_info.into()].into_iter().collect(),
-    }
-    .into()];
+    let mut expected_errors = vec![
+        NodeUnreadableError {
+            node_id: corrupted_node,
+            referenced_as: [corrupted_node_info.into()].into_iter().collect(),
+        }
+        .into(),
+    ];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(
@@ -232,11 +234,13 @@ async fn blob_with_unreadable_leaf_node(
         corrupted_node_info,
     } = fs_fixture.corrupt_a_leaf_node(blob_info.clone()).await;
 
-    let mut expected_errors = vec![NodeUnreadableError {
-        node_id: corrupted_node,
-        referenced_as: [corrupted_node_info.into()].into_iter().collect(),
-    }
-    .into()];
+    let mut expected_errors = vec![
+        NodeUnreadableError {
+            node_id: corrupted_node,
+            referenced_as: [corrupted_node_info.into()].into_iter().collect(),
+        }
+        .into(),
+    ];
     if blob_info.referenced_as.blob_type == BlobType::Dir {
         // Dirs are reported as unreadable because we try to read them when checking the file system.
         expected_errors.push(
