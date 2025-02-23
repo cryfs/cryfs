@@ -9,7 +9,7 @@ use log::LevelFilter;
 use super::version::show_version;
 #[cfg(feature = "check_for_updates")]
 use super::version::ReqwestHttpClient;
-use crate::args::{parse_args, ParseArgsResult};
+use crate::args::{parse_args, ArgParseError, ParseArgsResult};
 use crate::env::Environment;
 use crate::error::CliError;
 
@@ -60,7 +60,9 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
         Ok(ParseArgsResult::ShowVersion) => {
             // TODO We probably should initialize logging here before showing the version,
             // so that any http requests we do for checking for updates have a working logging backend.
+            // Same for the cases below that don't initialize logging yet.
             show_version(env);
+            Ok(())
         }
         Ok(ParseArgsResult::Normal { log, args }) => {
             let app = App::new(args, env.clone())?;
@@ -69,21 +71,18 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
                 DEFAULT_LOG_LEVEL
             );
             show_version(env);
-            app.main()?;
+            app.main()
         }
-        Err(err) => {
+        Err(ArgParseError::Clap(err)) => {
             show_version(env);
-            if let Some(error) = err.error.downcast_ref::<clap::Error>() {
-                // clap error types can display colored output if exiting this way, otherwise they wouldn't
-                // TODO Is there a better way to handle this? We're ignoring the CliErrorKind here which is weird. Should we maybe return an enum Error type that can be either CliError or clap::Error?
-                error.exit();
-            } else {
-                return Err(err);
-            }
+            // clap error types can display colored output if exiting this way, otherwise they wouldn't
+            err.exit();
+        }
+        Err(ArgParseError::Other(err)) => {
+            show_version(env);
+            Err(err)
         }
     }
-
-    Ok(())
 }
 
 fn show_backtrace_on_panic<App: Application>() {

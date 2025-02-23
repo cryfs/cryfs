@@ -8,6 +8,11 @@ use clap_logflag::LogArgs;
 
 use crate::error::{CliError, CliErrorKind};
 
+pub enum ArgParseError {
+    Clap(clap::Error),
+    Other(CliError),
+}
+
 #[derive(Parser, Debug)]
 pub struct ImmediateExitFlags {
     #[arg(short = 'V', long)]
@@ -32,7 +37,7 @@ pub enum ParseArgsResult<ConcreteArgs: Args> {
     Normal { log: LogArgs, args: ConcreteArgs },
 }
 
-pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>, CliError> {
+pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>, ArgParseError> {
     // First try to parse ImmediateExitFlags by themselves. This is necessary because if we start by parsing `CombinedArgs`,
     // it would fail if `ConcreteArgs` aren't present.
     let args = match ImmediateExitFlags::try_parse() {
@@ -40,7 +45,8 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
             if immediate_exit_flags.version {
                 return Ok(ParseArgsResult::ShowVersion);
             } else {
-                CombinedArgs::<ConcreteArgs>::parse()
+                // TODO Can this actually happen? If ImmediateExitFlags parsed, we should have `--version` since that's the only flag right now.
+                CombinedArgs::<ConcreteArgs>::try_parse().map_err(ArgParseError::Clap)?
             }
         }
         Err(e) => {
@@ -48,34 +54,25 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
                 ErrorKind::DisplayHelp => {
                     // We need to display a help message. The easiest way to do that is to parse the arguments again,
                     // but this time including `ConcreteArgs`. Clap will then exit and display the help message.
-                    CombinedArgs::<ConcreteArgs>::parse();
-                    panic!("We expected the previous line to exit with a help message. CLI Parsing error was: {e:#?}");
+                    let Err(err) = CombinedArgs::<ConcreteArgs>::try_parse() else {
+                        panic!("We expected the previous line to exit with a help message. CLI Parsing error was: {e:#?}");
+                    };
+                    return Err(ArgParseError::Clap(err));
                 }
                 ErrorKind::UnknownArgument => {
                     // Looks like some `ConcreteArgs` may have been present. In this case, we don't support the `--version` flag.
                     // So let's parse our flags and make sure that `--version` isn't present.
-                    let args = match CombinedArgs::<ConcreteArgs>::try_parse() {
-                        Ok(args) => {
-                            // We successfully parsed the arguments, so we can return them. But we don't support the `--version` flag together with other arguments.
-                            if args.immediate_exit_flags.version {
-                                return Err(CliError {
-                                    kind: CliErrorKind::InvalidArguments,
-                                    error: anyhow!(
-                                        "the argument '--version' cannot be used with other arguments"
-                                    ),
-                                });
-                            }
-                            args
-                        }
-                        Err(err) => {
-                            // We failed to parse the arguments, so we need to display a help message.
-                            // Let's parse the arguments again, but this time so that clap exits with an error.
-                            return Err(CliError {
-                                kind: CliErrorKind::InvalidArguments,
-                                error: err.into(),
-                            });
-                        }
-                    };
+                    let args =
+                        CombinedArgs::<ConcreteArgs>::try_parse().map_err(ArgParseError::Clap)?;
+                    // We successfully parsed the arguments, so we can return them. But we don't support the `--version` flag together with other arguments.
+                    if args.immediate_exit_flags.version {
+                        return Err(ArgParseError::Other(CliError {
+                            kind: CliErrorKind::InvalidArguments,
+                            error: anyhow!(
+                                "the argument '--version' cannot be used with other arguments"
+                            ),
+                        }));
+                    }
                     args
                 }
                 ErrorKind::DisplayVersion => {
@@ -84,8 +81,11 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
                 _ => {
                     // Something went wrong parsing the arguments, e.g `--version=bad` or something like that was passed in.
                     // Let's parse the arguments again, but this time so that clap exits with an error.
-                    CombinedArgs::<ConcreteArgs>::parse();
-                    panic!("We expected the previous line to exit with an error. CLI Parsing error was: {e:#?}");
+                    // TODO Can this actually happen?
+                    let Err(err) = CombinedArgs::<ConcreteArgs>::try_parse() else {
+                        panic!("We expected the previous line to exit with an error. CLI Parsing error was: {e:#?}");
+                    };
+                    return Err(ArgParseError::Clap(err));
                 }
             }
         }
