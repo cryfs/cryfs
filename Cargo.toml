@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 authors = ["Sebastian Messmer <messmer@cryfs.org>"]
-edition = "2021"
+edition = "2024"
 rust-version = "1.85"
 homepage = "https://www.cryfs.org"
 repository = "https://github.com/cryfs/cryfs"
