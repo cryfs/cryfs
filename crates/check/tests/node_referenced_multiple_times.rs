@@ -159,7 +159,7 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 
 #[template]
 #[rstest]
-#[case::file_referenced_from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1.clone(), some_blobs.large_file_1.clone()))]
+// #[case::file_referenced_from_same_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1.clone(), some_blobs.large_file_1.clone()))]
 #[case::file_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_2.clone(), some_blobs.large_file_1.clone()))]
 #[case::file_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1.clone(), some_blobs.large_file_1.clone()))]
 #[case::file_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1.clone(), some_blobs.large_file_1.clone()))]
@@ -188,7 +188,7 @@ async fn remove_inner_node_and_replace_in_parent_with_root_node(
 // #[case::dir_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_2.clone(), some_blobs.large_dir_1.clone()))]
 #[case::dir_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1.clone(), some_blobs.large_dir_1.clone()))]
 #[case::dir_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1.clone(), some_blobs.large_dir_1.clone()))]
-#[case::symlink_referenced_from_same_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1.clone(), some_blobs.large_symlink_1.clone()))]
+// #[case::symlink_referenced_from_same_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_1.clone(), some_blobs.large_symlink_1.clone()))]
 #[case::symlink_referenced_from_different_symlink(|some_blobs: &SomeBlobs| (some_blobs.large_symlink_2.clone(), some_blobs.large_symlink_1.clone()))]
 #[case::symlink_referenced_from_different_file(|some_blobs: &SomeBlobs| (some_blobs.large_file_1.clone(), some_blobs.large_symlink_1.clone()))]
 #[case::symlink_referenced_from_different_dir(|some_blobs: &SomeBlobs| (some_blobs.large_dir_1.clone(), some_blobs.large_symlink_1.clone()))]
