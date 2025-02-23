@@ -8,8 +8,6 @@ use clap_logflag::LogArgs;
 
 use crate::error::{CliError, CliErrorKind};
 
-// TODO Flag for log verbosity, https://crates.io/crates/clap-verbosity-flag
-
 #[derive(Parser, Debug)]
 pub struct ImmediateExitFlags {
     #[arg(short = 'V', long)]
