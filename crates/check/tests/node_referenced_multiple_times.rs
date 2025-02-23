@@ -1,5 +1,6 @@
 //! Tests where a node is referenced multiple times, either from the same or from a different blob
 
+use pretty_assertions::{assert_eq, assert_ne};
 use rand::{rngs::SmallRng, SeedableRng};
 use rstest::rstest;
 use rstest_reuse::{self, *};
@@ -199,10 +200,31 @@ fn test_case_with_multiple_reference_scenarios(
 ) {
 }
 
-async fn errors_allowed_from_dir_blob_being_unreadable(
+async fn errors_allowed_from_blob_being_unreadable(
     fs_fixture: &FilesystemFixture,
     blob_info: BlobReferenceWithId,
 ) -> HashSet<CorruptedError> {
+    let blob_errors = [
+        BlobUnreadableError {
+            blob_id: blob_info.blob_id,
+            referenced_as: [blob_info.referenced_as.clone()].into_iter().collect(),
+        }
+        .into(),
+        // TODO Why is NodeMissing necessary here? Without it, tests seem to become flaky because it seems to be sometimes thrown
+        NodeMissingError {
+            node_id: *blob_info.blob_id.to_root_block_id(),
+            referenced_as: [NodeAndBlobReference::RootNode {
+                belongs_to_blob: BlobReferenceWithId {
+                    blob_id: blob_info.blob_id,
+                    referenced_as: blob_info.referenced_as,
+                },
+            }]
+            .into_iter()
+            .collect(),
+        }
+        .into(),
+    ]
+    .into_iter();
     if fs_fixture.is_dir_blob(blob_info.blob_id).await {
         expect_blobs_to_have_unreferenced_root_nodes(
             fs_fixture,
@@ -212,32 +234,10 @@ async fn errors_allowed_from_dir_blob_being_unreadable(
         )
         .await
         .into_iter()
-        .chain(
-            [
-                BlobUnreadableError {
-                    blob_id: blob_info.blob_id,
-                    referenced_as: [blob_info.referenced_as.clone()].into_iter().collect(),
-                }
-                .into(),
-                // TODO Why is NodeMissing necessary here? Without it, tests seem to become flaky because it seems to be sometimes thrown
-                NodeMissingError {
-                    node_id: *blob_info.blob_id.to_root_block_id(),
-                    referenced_as: [NodeAndBlobReference::RootNode {
-                        belongs_to_blob: BlobReferenceWithId {
-                            blob_id: blob_info.blob_id,
-                            referenced_as: blob_info.referenced_as,
-                        },
-                    }]
-                    .into_iter()
-                    .collect(),
-                }
-                .into(),
-            ]
-            .into_iter(),
-        )
+        .chain(blob_errors)
         .collect()
     } else {
-        HashSet::new()
+        blob_errors.collect()
     }
 }
 
@@ -254,7 +254,7 @@ async fn leaf_node_referenced_multiple_times(
     // runs this could make the blob unreadable while in others it wouldn't. So we have to
     // actually ignore these errors and allow for both cases to avoid test flakiness.
     let ignored_errors =
-        errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
+        errors_allowed_from_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
 
     let replace_result = remove_leaf_and_replace_in_parent_with_another_existing_leaf(
         &fs_fixture,
@@ -322,7 +322,7 @@ async fn inner_node_referenced_multiple_times(
     // runs this could make the blob unreadable while in others it wouldn't. So we have to
     // actually ignore these errors and allow for both cases to avoid test flakiness.
     let ignored_errors =
-        errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
+        errors_allowed_from_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
 
     let replace_result = remove_inner_node_and_replace_in_parent_with_another_existing_inner_node(
         &fs_fixture,
@@ -337,7 +337,7 @@ async fn inner_node_referenced_multiple_times(
     let expected_depth = NonZeroU8::new(expected_depth).expect("test invariant violated");
 
     let errors = fs_fixture.run_cryfs_check().await;
-    let errors = remove_all(errors, ignored_errors);
+    let errors = remove_all(errors, ignored_errors.clone());
     assert_eq!(
         vec![CorruptedError::NodeReferencedMultipleTimes(
             NodeReferencedMultipleTimesError {
@@ -366,7 +366,7 @@ async fn inner_node_referenced_multiple_times(
                 .into_iter()
                 .collect(),
             }
-        )],
+        ),],
         errors
     );
 }
@@ -391,7 +391,7 @@ async fn root_node_referenced(
     // runs this could make the blob unreadable while in others it wouldn't. So we have to
     // actually ignore these errors and allow for both cases to avoid test flakiness.
     let ignored_errors =
-        errors_allowed_from_dir_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
+        errors_allowed_from_blob_being_unreadable(&fs_fixture, blob1.clone()).await;
 
     const DEPTH_DISTANCE_FROM_ROOT: u8 = 5;
     let replace_result = remove_inner_node_and_replace_in_parent_with_root_node(
