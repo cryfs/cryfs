@@ -119,9 +119,9 @@ impl TestProject {
             .stdout(predicates::str::contains(self.expected_usage_header))
             .stdout(predicates::str::contains("-V, --version"))
             .stdout(predicates::str::contains("-h, --help"))
+            // TODO .stdout(predicates::str::contains("--log"))
             .stdout(
-                predicates::str::is_match(".*".to_string() + self.expected_usage_line_regex + ".*")
-                    .expect("Invalid Regex"),
+                predicates::str::is_match(self.expected_usage_line_regex).expect("Invalid Regex"),
             )
             .stdout(predicates::str::contains(MAIN_MESSAGE).not());
     }
@@ -184,7 +184,7 @@ lazy_static! {
             ),
         }
         .project(),
-        expected_usage_header: "Usage: my-testbin <MANDATORY_POSITIONAL>",
+        expected_usage_header: "Usage: my-testbin [OPTIONS] <MANDATORY_POSITIONAL>",
         expected_usage_line_regex: r"Arguments:[[:space:]]+<MANDATORY_POSITIONAL>",
     };
 
@@ -204,8 +204,8 @@ lazy_static! {
             ),
         }
         .project(),
-        expected_usage_header: "Usage: my-testbin [OPTIONAL_POSITIONAL]",
-        expected_usage_line_regex: r"Arguments:[[:space:]]+[OPTIONAL_POSITIONAL]",
+        expected_usage_header: "Usage: my-testbin [OPTIONS] [OPTIONAL_POSITIONAL]",
+        expected_usage_line_regex: r"Arguments:[[:space:]]+\[OPTIONAL_POSITIONAL\]",
     };
 
     static ref PROJECT_MANDATORY_ARGUMENT: TestProject = TestProject {
@@ -226,7 +226,7 @@ lazy_static! {
             ),
         }
         .project(),
-        expected_usage_header: "Usage: my-testbin --mandatory-argument <MANDATORY_ARGUMENT>",
+        expected_usage_header: "Usage: my-testbin [OPTIONS] --mandatory-argument <MANDATORY_ARGUMENT>",
         expected_usage_line_regex: r"-a, --mandatory-argument <MANDATORY_ARGUMENT>[[:space:]]+Mandatory Arg Documentation",
     };
 
