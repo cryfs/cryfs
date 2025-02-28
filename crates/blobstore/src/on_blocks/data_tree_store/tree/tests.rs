@@ -252,7 +252,7 @@ mod testutils {
                     nodestore.layout().max_children_per_inner_node() as usize,
                     children.len()
                 );
-                future::join_all(children.map(|child_id| async move {
+                future::join_all(children.map(async move |child_id| {
                     Box::pin(assert_is_max_data_tree(
                         child_id,
                         next_expected_depth,
@@ -291,7 +291,7 @@ mod testutils {
                 future::join_all(
                     children
                         .enumerate()
-                        .map(|(child_index, child_id)| async move {
+                        .map(async move |(child_index, child_id)| {
                             if child_index == children_len - 1 {
                                 Box::pin(assert_is_left_max_data_tree(
                                     child_id,

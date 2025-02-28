@@ -147,7 +147,7 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
 
         let base_store = self.base_store.as_ref().expect("Already destructed");
 
-        let exists_in_base_store = || async {
+        let exists_in_base_store = async || {
             if base_store.exists(block_id).await? {
                 Ok(BlockBaseStoreState::ExistsInBaseStore)
             } else {

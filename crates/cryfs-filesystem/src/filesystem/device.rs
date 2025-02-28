@@ -315,25 +315,22 @@ where
             return Err(FsError::InvalidOperation);
         };
 
-        let on_overwritten = |blobid: &BlobId| {
-            let blobid = *blobid;
-            async move {
-                let r = self.blobstore.remove_by_id(&blobid).await.map_err(|err| {
+        let on_overwritten = async move |blobid: &BlobId| {
+            let r = self.blobstore.remove_by_id(&blobid).await.map_err(|err| {
+                log::error!("Error removing blob: {:?}", err);
+                FsError::UnknownError
+            });
+            match r {
+                Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                    log::error!(
+                        "During rename->overwrite, tried to remove blob that doesn't exist"
+                    );
+                    Err(FsError::UnknownError)
+                }
+                Err(err) => {
                     log::error!("Error removing blob: {:?}", err);
-                    FsError::UnknownError
-                });
-                match r {
-                    Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                    Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                        log::error!(
-                            "During rename->overwrite, tried to remove blob that doesn't exist"
-                        );
-                        Err(FsError::UnknownError)
-                    }
-                    Err(err) => {
-                        log::error!("Error removing blob: {:?}", err);
-                        Err(FsError::UnknownError)
-                    }
+                    Err(FsError::UnknownError)
                 }
             }
         };

@@ -4,7 +4,7 @@ use futures::{
     stream::{FuturesOrdered, StreamExt},
 };
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
@@ -413,7 +413,7 @@ where
             let (oldparent, newparent) =
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
             let (mut oldparent, mut newparent) = flatten_async_drop(oldparent, newparent).await?;
-            let result = (|| async {
+            let result = (async || {
                 let oldparent_dir = oldparent.as_dir().await?;
                 let newparent_dir = newparent.as_dir().await?;
                 oldparent_dir
@@ -611,7 +611,7 @@ where
         ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
-        reply: ReplyDirectory,
+        mut reply: ReplyDirectory,
     ) {
         match self.trigger_on_operation().await {
             Ok(()) => (),
@@ -629,39 +629,32 @@ where
                 return;
             }
         };
-        // TODO Possible without Arc+Mutex?
-        let reply = Mutex::new(reply);
         let result: FsResult<()> = with_async_drop_2!(node, {
             let dir = node.as_dir().await?;
             let entries = dir.entries().await?;
-            let dir = Arc::new(dir);
             let offset = usize::try_from(u64::try_from(offset).unwrap()).unwrap(); // TODO No unwrap
             let entries =
                 entries
                     .into_iter()
                     .enumerate()
                     .skip(offset)
-                    .map(move |(offset, entry)| {
-                        // TODO Possible without Arc?
-                        let dir = Arc::clone(&dir);
-                        async move {
-                            let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
+                    .map(async |(offset, entry)| {
+                        let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
 
-                            // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
-                            //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
-                            //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
-                            //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
-                            //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
-                            let child_ino = self.add_inode(ino, child, &entry.name).await;
-                            (offset, child_ino.handle, entry)
-                        }
+                        // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
+                        //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
+                        //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
+                        //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
+                        //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
+                        let child_ino = self.add_inode(ino, child, &entry.name).await;
+                        (offset, child_ino.handle, entry)
                     });
             // TODO Does this need to be FuturesOrdered or can we reply them without order?
             let mut entries: FuturesOrdered<_> = entries.collect();
             while let Some((offset, ino, entry)) = entries.next().await {
                 // offset+1 because fuser actually expects us to return the offset of the **next** entry
                 let offset = i64::try_from(offset).unwrap() + 1; // TODO No unwrap
-                let buffer_is_full = reply.lock().unwrap().add(
+                let buffer_is_full = reply.add(
                     ino.into(),
                     offset,
                     convert_node_kind(entry.kind),
@@ -675,7 +668,6 @@ where
 
             Ok(())
         });
-        let reply = reply.into_inner().unwrap();
         match result {
             Ok(()) => reply.ok(),
             Err(err) => reply.error(err.system_error_code()),

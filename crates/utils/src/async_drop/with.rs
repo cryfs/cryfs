@@ -12,7 +12,8 @@ use super::{AsyncDrop, AsyncDropGuard};
 macro_rules! with_async_drop_2 {
     ($value:ident, $f:block) => {
         async {
-            let result = (|| async { $f })().await;
+            // TODO Now that we use an async closure here, can we simplify some call sites? Or can we simplify this function here? Why two async?
+            let result = (async || $f)().await;
             let mut value = $value;
             value.async_drop().await?;
             result

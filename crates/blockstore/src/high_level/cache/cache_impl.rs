@@ -1,7 +1,6 @@
 use anyhow::Result;
 use lockable::{AsyncLimit, Lockable, LockableLruCache};
 use std::fmt::Debug;
-use std::future::Future;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -48,21 +47,20 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
         self._cache().keys_with_entries_or_locked()
     }
 
-    pub async fn async_lock<F, OnEvictFn>(
+    pub async fn async_lock<OnEvictFn>(
         &self,
         block_id: BlockId,
         on_evict: OnEvictFn,
     ) -> Result<BlockCacheEntryGuard<B>>
     where
-        F: Future<Output = Result<()>>,
-        OnEvictFn: Fn(
+        OnEvictFn: AsyncFn(
             Vec<
                 <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
                     BlockId,
                     BlockCacheEntry<B>,
                 >>::OwnedGuard,
             >,
-        ) -> F,
+        ) -> Result<()>,
     {
         let guard = self
             ._cache()
@@ -70,9 +68,9 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
                 block_id,
                 AsyncLimit::SoftLimit {
                     max_entries: MAX_CACHE_ENTRIES,
-                    on_evict: move |evicted| {
+                    on_evict: async |evicted| {
                         // TODO Should we wrap this into a BlockCacheEntryGuard for better abstraction separation?
-                        on_evict(evicted)
+                        on_evict(evicted).await
                     },
                 },
             )
@@ -166,17 +164,14 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
         );
     }
 
-    pub async fn set_or_overwrite_entry_even_if_dirty<F>(
+    pub async fn set_or_overwrite_entry_even_if_dirty(
         &self,
         base_store: &Arc<AsyncDropGuard<B>>,
         entry: &mut BlockCacheEntryGuard<B>,
         new_value: Data,
         dirty: CacheEntryState,
-        base_store_state: impl FnOnce() -> F,
-    ) -> Result<()>
-    where
-        F: Future<Output = Result<BlockBaseStoreState>>,
-    {
+        base_store_state: impl AsyncFnOnce() -> Result<BlockBaseStoreState>,
+    ) -> Result<()> {
         let base_store_state = if let Some(entry) = entry.value() {
             entry.block_exists_in_base_store()
         } else {

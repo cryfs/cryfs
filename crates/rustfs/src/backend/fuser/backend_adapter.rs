@@ -58,14 +58,11 @@ where
         }
     }
 
-    fn run_blocking<R, F>(
+    fn run_blocking<R>(
         runtime: &tokio::runtime::Handle,
         log_msg: &str,
-        func: impl FnOnce() -> F,
-    ) -> Result<R, libc::c_int>
-    where
-        F: Future<Output = FsResult<R>>,
-    {
+        func: impl AsyncFnOnce() -> FsResult<R>,
+    ) -> Result<R, libc::c_int> {
         // TODO Is it ok to call block_on concurrently for multiple fs operations?
         runtime.block_on(async move {
             log::info!("{}...", log_msg);
@@ -418,7 +415,7 @@ where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     fn init(&mut self, req: &Request<'_>, config: &mut KernelConfig) -> Result<(), c_int> {
-        Self::run_blocking(&self.runtime, &format!("init"), || async {
+        Self::run_blocking(&self.runtime, &format!("init"), async || {
             self.fs
                 .write()
                 .await
@@ -428,7 +425,7 @@ where
     }
 
     fn destroy(&mut self) {
-        Self::run_blocking(&self.runtime, &format!("destroy"), || async {
+        Self::run_blocking(&self.runtime, &format!("destroy"), async || {
             let mut fs = self.fs.write().await;
             fs.destroy().await;
             fs.async_drop().await.unwrap();
@@ -453,7 +450,7 @@ where
         self.run_async_reply_entry(
             format!("lookup(parent={parent_ino:?}, name={name:?}"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.lookup(&req, parent_ino, &name).await
             },
@@ -463,7 +460,7 @@ where
     fn forget(&mut self, req: &Request, ino: u64, nlookup: u64) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
-        self.run_async_no_reply(format!("forget(ino={ino:?})"), move |fs| async move {
+        self.run_async_no_reply(format!("forget(ino={ino:?})"), async move |fs| {
             fs.read().await.forget(&req, ino, nlookup).await
         });
     }
@@ -476,11 +473,9 @@ where
     fn getattr(&mut self, req: &Request<'_>, ino: u64, reply: ReplyAttr) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
-        self.run_async_reply_attr(
-            format!("getattr(ino={ino:?})"),
-            reply,
-            move |fs| async move { fs.read().await.getattr(&req, ino).await },
-        );
+        self.run_async_reply_attr(format!("getattr(ino={ino:?})"), reply, async move |fs| {
+            fs.read().await.getattr(&req, ino).await
+        });
     }
 
     fn setattr(
@@ -513,7 +508,7 @@ where
         self.run_async_reply_attr(
             format!("setattr(ino={ino:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.setattr(&req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags).await
             });
     }
@@ -524,7 +519,7 @@ where
         self.run_async_reply_data(
             format!("readlink(ino={ino:?})"),
             reply,
-            move |fs, callback| async move { fs.read().await.readlink(&req, ino, callback).await },
+            async move |fs, callback| fs.read().await.readlink(&req, ino, callback).await,
         );
     }
 
@@ -545,7 +540,7 @@ where
         self.run_async_reply_entry(
             format!("mknod(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, rdev={rdev:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.mknod(&req, parent_ino, &name, mode, umask, rdev).await
             },
@@ -569,7 +564,7 @@ where
         self.run_async_reply_entry(
             format!("mkdir(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read()
                     .await
@@ -586,7 +581,7 @@ where
         self.run_async_reply_empty(
             format!("unlink(parent={parent_ino:?}, name={name:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.unlink(&req, parent_ino, &name).await
             },
@@ -600,7 +595,7 @@ where
         self.run_async_reply_empty(
             format!("rmdir(parent={parent_ino:?}, name={name:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.rmdir(&req, parent_ino, &name).await
             },
@@ -622,7 +617,7 @@ where
         self.run_async_reply_entry(
             format!("symlink(parent={parent_ino:?}, name={name:?}, link={link:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 let link = link
                     .into_os_string()
@@ -654,7 +649,7 @@ where
         self.run_async_reply_empty(
             format!("rename(parent={parent_ino:?}, name={name:?}, newparent={newparent:?}, newname={newname:?}, flags={flags:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
@@ -679,7 +674,7 @@ where
         self.run_async_reply_entry(
             format!("link(ino={ino:?}, newparent={newparent:?}, newname={newname:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.link(&req, ino, newparent, &newname).await
@@ -694,7 +689,7 @@ where
         self.run_async_reply_open(
             format!("open(ino={ino:?}, flags={flags:?})"),
             reply,
-            move |fs| async move { fs.read().await.open(&req, ino, flags).await },
+            async move |fs| fs.read().await.open(&req, ino, flags).await,
         );
     }
 
@@ -717,7 +712,7 @@ where
         self.run_async_reply_data(
             format!("read(ino={ino:?}, fh={fh:?}, offset={offset:?}, size={size:?}, flags={flags:?}, lock_owner={lock_owner:?})"),
             reply,
-            move |fs, callback| async move {
+            async move |fs, callback| {
                 fs.read().await.read(
                     &req,
                     ino,
@@ -753,7 +748,7 @@ where
         self.run_async_reply_write(
             format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, data={data:?}, write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.write(
                     &req,
                     ino,
@@ -776,7 +771,7 @@ where
         self.run_async_reply_empty(
             format!("flush(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?})"),
             reply,
-            move |fs| async move { fs.read().await.flush(&req, ino, fh, lock_owner).await },
+            async move |fs| fs.read().await.flush(&req, ino, fh, lock_owner).await,
         );
     }
 
@@ -796,7 +791,7 @@ where
         self.run_async_reply_empty(
             format!("release(ino={ino:?}, fh={fh:?}, flags={flags:?}, lock_owner={lock_owner:?}, flush={flush:?})"),
             reply,
-            move |fs| async move { fs.read().await.release(&req, ino, fh, flags, lock_owner, flush).await },
+            async move |fs| { fs.read().await.release(&req, ino, fh, flags, lock_owner, flush).await },
         );
     }
 
@@ -807,7 +802,7 @@ where
         self.run_async_reply_empty(
             format!("fsync(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
             reply,
-            move |fs| async move { fs.read().await.fsync(&req, ino, fh, datasync).await },
+            async move |fs| fs.read().await.fsync(&req, ino, fh, datasync).await,
         );
     }
 
@@ -817,7 +812,7 @@ where
         self.run_async_reply_open(
             format!("opendir(ino={ino:?}, flags={flags:?})"),
             reply,
-            move |fs| async move { fs.read().await.opendir(&req, ino, flags).await },
+            async move |fs| fs.read().await.opendir(&req, ino, flags).await,
         );
     }
 
@@ -835,7 +830,7 @@ where
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.readdir(&req, ino, fh, offset, reply).await;
                 Ok(())
             },
@@ -856,7 +851,7 @@ where
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdirplus(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
-            move |fs| async move {
+            async move |fs| {
                 fs.read()
                     .await
                     .readdirplus(&req, ino, fh, offset, reply)
@@ -873,7 +868,7 @@ where
         self.run_async_reply_empty(
             format!("releasedir(ino={ino:?}, fh={fh:?}, flags={flags:?})"),
             reply,
-            move |fs| async move { fs.read().await.releasedir(&req, ino, fh, flags).await },
+            async move |fs| fs.read().await.releasedir(&req, ino, fh, flags).await,
         );
     }
 
@@ -891,18 +886,16 @@ where
         self.run_async_reply_empty(
             format!("fsyncdir(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
             reply,
-            move |fs| async move { fs.read().await.fsyncdir(&req, ino, fh, datasync).await },
+            async move |fs| fs.read().await.fsyncdir(&req, ino, fh, datasync).await,
         );
     }
 
     fn statfs(&mut self, req: &Request<'_>, ino: u64, reply: ReplyStatfs) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
-        self.run_async_reply_statfs(
-            format!("statfs(ino={ino:?})"),
-            reply,
-            move |fs| async move { fs.read().await.statfs(&req, ino).await },
-        );
+        self.run_async_reply_statfs(format!("statfs(ino={ino:?})"), reply, async move |fs| {
+            fs.read().await.statfs(&req, ino).await
+        });
     }
 
     fn setxattr(
@@ -923,7 +916,7 @@ where
         self.run_async_reply_empty(
             format!("setxattr(ino={ino:?}, name={name:?}, value={value:?}, flags={flags:?}, position={position:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.setxattr(&req, ino, &name, &value, flags, position)
@@ -946,7 +939,7 @@ where
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
             format!("getxattr(ino={ino:?}, name={name:?}, size={size:?})"),
-            move |fs| async move {
+            async move |fs| {
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
                 fs.read()
@@ -964,7 +957,7 @@ where
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
             format!("listxattr(ino={ino:?}, size={size:?})"),
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.listxattr(&req, ino, size, reply).await;
                 Ok(())
             },
@@ -978,7 +971,7 @@ where
         self.run_async_reply_empty(
             format!("removexattr(ino={ino:?}, name={name:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.removexattr(&req, ino, &name).await
@@ -992,7 +985,7 @@ where
         self.run_async_reply_empty(
             format!("access(ino={ino:?}, mask={mask:?})"),
             reply,
-            move |fs| async move { fs.read().await.access(&req, ino, mask).await },
+            async move |fs| fs.read().await.access(&req, ino, mask).await,
         );
     }
 
@@ -1014,7 +1007,7 @@ where
         self.run_async_reply_create(
             format!("create(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, flags={flags:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.create(&req, parent_ino, &name, mode, umask, flags)
                     .await
@@ -1040,7 +1033,7 @@ where
         self.run_async_reply_lock(
             format!("getlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.getlk(&req, ino, fh, lock_owner, start, end, typ, pid)
                     .await
             },
@@ -1066,7 +1059,7 @@ where
         self.run_async_reply_empty(
             format!("setlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?}, sleep={sleep:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.setlk(&req, ino, fh, lock_owner, start, end, typ, pid, sleep)
                     .await
             },
@@ -1080,7 +1073,7 @@ where
         self.run_async_reply_bmap(
             format!("bmap(ino={ino:?}, blocksize={blocksize:?}, idx={idx:?})"),
             reply,
-            move |fs| async move { fs.read().await.bmap(&req, ino, blocksize, idx).await },
+            async move |fs| fs.read().await.bmap(&req, ino, blocksize, idx).await,
         );
     }
 
@@ -1101,7 +1094,7 @@ where
         let in_data = in_data.to_owned();
         self.run_async_no_reply(
             format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data={in_data:?}, out_size={out_size:?})"),
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.ioctl(&req, ino, fh, flags, cmd, &in_data, out_size, reply)
                     .await;
                 Ok(())
@@ -1130,7 +1123,7 @@ where
         self.run_async_reply_empty(
             format!("fallocate(ino={ino:?}, fh={fh:?}, offset={offset:?}, length={length:?}, mode={mode:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.fallocate(&req, ino, fh, offset, length, mode)
                     .await
             },
@@ -1153,7 +1146,7 @@ where
         self.run_async_reply_lseek(
             format!("lseek(ino={ino:?}, fh={fh:?}, offset={offset:?}, whence={whence:?})"),
             reply,
-            move |fs| async move { fs.read().await.lseek(&req, ino, fh, offset, whence).await },
+            async move |fs| fs.read().await.lseek(&req, ino, fh, offset, whence).await,
         );
     }
 
@@ -1181,7 +1174,7 @@ where
         self.run_async_reply_write(
             format!("copy_file_range(ino_in={ino_in:?}, fh_in={fh_in:?}, offset_in={offset_in:?}, ino_out={ino_out:?}, fh_out={fh_out:?}, offset_out={offset_out:?}, len={len:?}, flags={flags:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 fs.read().await.copy_file_range(
                     &req,
                     ino_in,
@@ -1205,7 +1198,7 @@ where
         self.run_async_reply_empty(
             format!("setvolname(name={name:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 // TODO InvalidPath is the wrong error here
                 let name = name
                     .into_os_string()
@@ -1236,7 +1229,7 @@ where
         self.run_async_reply_empty(
             format!("exchange(parent={parent:?}, name={name:?}, newparent={newparent:?}, newname={newname:?}, options={options:?})"),
             reply,
-            move |fs| async move {
+            async move |fs| {
                 // TODO InvalidPath is the wrong error here
                 let name: PathComponentBuf =
                     name.try_into().map_err(|err| FsError::InvalidPath)?;
@@ -1255,11 +1248,9 @@ where
     fn getxtimes(&mut self, req: &Request<'_>, ino: u64, reply: ReplyXTimes) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
-        self.run_async_reply_xtimes(
-            format!("getxtimes(ino={ino:?})"),
-            reply,
-            move |fs| async move { fs.read().await.getxtimes(&req, ino).await },
-        );
+        self.run_async_reply_xtimes(format!("getxtimes(ino={ino:?})"), reply, async move |fs| {
+            fs.read().await.getxtimes(&req, ino).await
+        });
     }
 }
 

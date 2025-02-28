@@ -59,10 +59,11 @@ where
         }
     }
 
-    fn run_async<R, F>(&self, log_msg: &str, func: impl FnOnce() -> F) -> Result<R, libc::c_int>
-    where
-        F: Future<Output = FsResult<R>>,
-    {
+    fn run_async<R>(
+        &self,
+        log_msg: &str,
+        func: impl AsyncFnOnce() -> FsResult<R>,
+    ) -> Result<R, libc::c_int> {
         // TODO Is it ok to call block_on concurrently for multiple fs operations? Probably not.
         self.runtime.block_on(async move {
             log::info!("{}...", log_msg);
@@ -86,7 +87,7 @@ where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     fn init(&self, req: RequestInfo) -> ResultEmpty {
-        self.run_async(&format!("init"), move || async move {
+        self.run_async(&format!("init"), async move || {
             let fs = self.fs.read().await;
             fs.init(req.into()).await?;
             Ok(())
@@ -94,7 +95,7 @@ where
     }
 
     fn destroy(&self) {
-        self.run_async(&format!("destroy"), move || async move {
+        self.run_async(&format!("destroy"), async move || {
             let mut fs = self.fs.write().await;
             fs.destroy().await;
             fs.async_drop().await?;
@@ -106,7 +107,7 @@ where
     }
 
     fn getattr(&self, req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
-        self.run_async(&format!("getattr {path:?}"), move || async move {
+        self.run_async(&format!("getattr {path:?}"), async move || {
             let path = parse_absolute_path(path)?;
             let response = self
                 .fs
@@ -119,7 +120,7 @@ where
     }
 
     fn chmod(&self, req: RequestInfo, path: &Path, fh: Option<u64>, mode: u32) -> ResultEmpty {
-        self.run_async(&format!("chmod({path:?}, mode={mode})"), || async move {
+        self.run_async(&format!("chmod({path:?}, mode={mode})"), async move || {
             let path = parse_absolute_path(path)?;
             self.fs
                 .read()
@@ -139,7 +140,7 @@ where
     ) -> ResultEmpty {
         self.run_async(
             &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
@@ -157,7 +158,7 @@ where
     }
 
     fn truncate(&self, req: RequestInfo, path: &Path, fh: Option<u64>, size: u64) -> ResultEmpty {
-        self.run_async(&format!("truncate({path:?}, {size})"), move || async move {
+        self.run_async(&format!("truncate({path:?}, {size})"), async move || {
             let path = parse_absolute_path(path)?;
             self.fs
                 .read()
@@ -177,7 +178,7 @@ where
     ) -> ResultEmpty {
         self.run_async(
             &format!("utimens({path:?}, fh={fh:?}, atime={atime:?}, mtime={mtime:?})"),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
@@ -199,14 +200,14 @@ where
         bkuptime: Option<SystemTime>,
         flags: Option<u32>,
     ) -> ResultEmpty {
-        self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), ||async move {
+        self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), async move ||{
             let path = parse_absolute_path(path)?;
             self.fs.read().await.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags).await
         })
     }
 
     fn readlink(&self, req: RequestInfo, path: &Path) -> ResultData {
-        self.run_async(&format!("readlink({path:?})"), move || async move {
+        self.run_async(&format!("readlink({path:?})"), async move || {
             let path = parse_absolute_path(path)?;
             let target = self.fs.read().await.readlink(req.into(), path).await?;
             Ok(target.into_bytes())
@@ -223,7 +224,7 @@ where
     ) -> ResultEntry {
         self.run_async(
             &format!("mknod({parent:?}, name={name:?}, mode={mode}, rdev={rdev})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
                     .fs
@@ -241,7 +242,7 @@ where
         // TODO Assert that file/symlink flags aren't set
         self.run_async(
             &format!("mkdir({parent:?}, name={name:?}, mode={mode:?})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self.fs.read().await.mkdir(req.into(), &path, mode).await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -252,7 +253,7 @@ where
     fn unlink(&self, req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
         self.run_async(
             &format!("unlink({parent:?}, name={name:?})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 self.fs.read().await.unlink(req.into(), &path).await
             },
@@ -262,7 +263,7 @@ where
     fn rmdir(&self, req: RequestInfo, parent: &Path, name: &OsStr) -> ResultEmpty {
         self.run_async(
             &format!("rmdir({parent:?}, name={name:?})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 self.fs.read().await.rmdir(req.into(), &path).await
             },
@@ -272,7 +273,7 @@ where
     fn symlink(&self, req: RequestInfo, parent: &Path, name: &OsStr, target: &Path) -> ResultEntry {
         self.run_async(
             &format!("symlink({parent:?}, parent={parent:?} name={name:?}, target={target:?})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 // TODO Use custom path type for target than can represent absolute-or-relative paths and enforces its invariants,
                 //      similar to how we have an `AbsolutePath` type. Then we won't need these manual checks here anymore.
@@ -303,7 +304,7 @@ where
             &format!(
                 "rename(oldparent={oldparent:?}, oldname={oldname:?}, newparent={newparent:?}, newname={newname:?})"
             ),
-            move || async move {
+            async move || {
                 let oldpath = parse_absolute_path_with_last_component(oldparent, oldname)?;
                 let newpath = parse_absolute_path_with_last_component(newparent, newname)?;
                 self.fs.read().await.rename(
@@ -324,7 +325,7 @@ where
     ) -> ResultEntry {
         self.run_async(
             &format!("link(oldpath={oldpath:?}, newparent={newparent:?}, newname={newname:?})"),
-            move || async move {
+            async move || {
                 let oldpath = parse_absolute_path(oldpath)?;
                 let newpath = parse_absolute_path_with_last_component(newparent, newname)?;
                 let response = self
@@ -341,21 +342,18 @@ where
     fn open(&self, req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
         // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
         let flags = flags as i32;
-        self.run_async(
-            &format!("open({path:?}, flags={flags})"),
-            move || async move {
-                let path = parse_absolute_path(path)?;
-                let response = self
-                    .fs
-                    .read()
-                    .await
-                    .open(req.into(), path, parse_openflags(flags))
-                    .await?;
-                // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-                let flags = convert_openflags(response.flags.into()) as u32;
-                Ok((response.fh.into(), flags))
-            },
-        )
+        self.run_async(&format!("open({path:?}, flags={flags})"), async move || {
+            let path = parse_absolute_path(path)?;
+            let response = self
+                .fs
+                .read()
+                .await
+                .open(req.into(), path, parse_openflags(flags))
+                .await?;
+            // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
+            let flags = convert_openflags(response.flags.into()) as u32;
+            Ok((response.fh.into(), flags))
+        })
     }
 
     fn read(
@@ -407,7 +405,7 @@ where
                 "write({path:?}, fh={fh}, offset={offset}, data=[{data_len} bytes], flags={flags})",
                 data_len = data.len(),
             ),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 let response = self
                     .fs
@@ -429,7 +427,7 @@ where
     }
 
     fn flush(&self, req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
-        self.run_async(&format!("flush({path:?}, fh={fh})"), || async move {
+        self.run_async(&format!("flush({path:?}, fh={fh})"), async move || {
             let path = parse_absolute_path(path)?;
             self.fs
                 .read()
@@ -454,7 +452,7 @@ where
             &format!(
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
             ),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
@@ -475,7 +473,7 @@ where
     fn fsync(&self, req: RequestInfo, path: &Path, fh: u64, datasync: bool) -> ResultEmpty {
         self.run_async(
             &format!("fsync({path:?}, fh={fh}, datasync={datasync})"),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
@@ -489,7 +487,7 @@ where
     fn opendir(&self, req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
         self.run_async(
             &format!("opendir({path:?}, flags={flags})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 let response = self
                     .fs
@@ -503,7 +501,7 @@ where
     }
 
     fn readdir(&self, req: RequestInfo, path: &Path, fh: u64) -> ResultReaddir {
-        self.run_async(&format!("readdir({path:?}, fh={fh})"), move || async move {
+        self.run_async(&format!("readdir({path:?}, fh={fh})"), async move || {
             let path = parse_absolute_path(path)?;
             let entries = self
                 .fs
@@ -518,7 +516,7 @@ where
     fn releasedir(&self, req: RequestInfo, path: &Path, fh: u64, flags: u32) -> ResultEmpty {
         self.run_async(
             &format!("releasedir({path:?}, fh={fh}, flags={flags})"),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
@@ -532,7 +530,7 @@ where
     fn fsyncdir(&self, req: RequestInfo, path: &Path, fh: u64, datasync: bool) -> ResultEmpty {
         self.run_async(
             &format!("fsyncdir({path:?}, fh={fh}, datasync={datasync})"),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs
                     .read()
@@ -544,7 +542,7 @@ where
     }
 
     fn statfs(&self, req: RequestInfo, path: &Path) -> ResultStatfs {
-        self.run_async(&format!("statfs({path:?})"), move || async move {
+        self.run_async(&format!("statfs({path:?})"), async move || {
             let path = parse_absolute_path(path)?;
             let response = self.fs.read().await.statfs(req.into(), path).await?;
             Ok(convert_statfs(response))
@@ -565,7 +563,7 @@ where
                 "setxattr({path:?}, name={name:?}, value=[{value_len} bytes], flags={flags}, position={position})",
                 value_len = value.len(),
             ),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 let name = parse_xattr_name(name)?;
                 self.fs.read().await.setxattr(
@@ -583,7 +581,7 @@ where
     fn getxattr(&self, req: RequestInfo, path: &Path, name: &OsStr, size: u32) -> ResultXattr {
         self.run_async(
             &format!("getxattr({path:?}, name={name:?}, size={size})"),
-            move || async move {
+            async move || {
                 let req = req.into();
                 let path = parse_absolute_path(path)?;
                 let name = parse_xattr_name(name)?;
@@ -613,7 +611,7 @@ where
     fn listxattr(&self, req: RequestInfo, path: &Path, size: u32) -> ResultXattr {
         self.run_async(
             &format!("getxattr({path:?}, size={size})"),
-            move || async move {
+            async move || {
                 let req = req.into();
                 let path = parse_absolute_path(path)?;
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
@@ -637,7 +635,7 @@ where
     fn removexattr(&self, req: RequestInfo, path: &Path, name: &OsStr) -> ResultEmpty {
         self.run_async(
             &format!("removexattr({path:?}, name={name:?})"),
-            || async move {
+            async move || {
                 let path = parse_absolute_path(path)?;
                 let name = parse_xattr_name(name)?;
                 self.fs
@@ -650,7 +648,7 @@ where
     }
 
     fn access(&self, req: RequestInfo, path: &Path, mask: u32) -> ResultEmpty {
-        self.run_async(&format!("access({path:?}, mask={mask})"), || async move {
+        self.run_async(&format!("access({path:?}, mask={mask})"), async move || {
             let path = parse_absolute_path(path)?;
             self.fs.read().await.access(req.into(), path, mask).await
         })
@@ -669,7 +667,7 @@ where
         // TODO Assert that dir/symlink flags aren't set
         self.run_async(
             &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags})"),
-            move || async move {
+            async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
                     .fs

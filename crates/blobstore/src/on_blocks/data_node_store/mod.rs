@@ -658,7 +658,7 @@ mod tests {
                 Box::pin(async move {
                     let children = future::join_all(
                         (0..nodestore.layout().max_children_per_inner_node())
-                            .map(|_| async { *new_inner_node(nodestore).await.block_id() })
+                            .map(async |_| *new_inner_node(nodestore).await.block_id())
                             .collect::<Vec<_>>(),
                     )
                     .await;

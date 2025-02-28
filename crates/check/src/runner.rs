@@ -177,27 +177,24 @@ where
     B: BlockStore + Send + Sync + 'static,
 {
     stream::iter(unreachable_nodes.iter())
-        .map(move |&node_id| {
-            let pb = pb.clone();
-            async move {
-                let loaded = nodestore.load(node_id).await;
-                let node_to_process = match loaded {
-                    Ok(Some(node)) => {
-                        NodeToProcess::Readable(node)
-                    }
-                    Ok(None) => {
-                        return Err(CheckError::FilesystemModified { msg: format!(
-                            "Node {node_id:?} previously present but then vanished during our checks."
-                        )});
-                    }
-                    Err(error) => {
-                        NodeToProcess::Unreadable(node_id)
-                    }
-                };
-                checks.process_unreachable_node(&node_to_process)?;
-                pb.inc(1);
-                Ok(())
-            }
+        .map(async |&node_id| {
+            let loaded = nodestore.load(node_id).await;
+            let node_to_process = match loaded {
+                Ok(Some(node)) => {
+                    NodeToProcess::Readable(node)
+                }
+                Ok(None) => {
+                    return Err(CheckError::FilesystemModified { msg: format!(
+                        "Node {node_id:?} previously present but then vanished during our checks."
+                    )});
+                }
+                Err(error) => {
+                    NodeToProcess::Unreadable(node_id)
+                }
+            };
+            checks.process_unreachable_node(&node_to_process)?;
+            pb.inc(1);
+            Ok(())
         })
         .buffer_unordered(MAX_CONCURRENCY)
         .try_collect::<Vec<()>>()
@@ -244,7 +241,7 @@ fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, 'async_recursion, B>(
     checks: &'c AllChecks,
     task_spawner: TaskSpawner<'f>,
     pb: impl Progress + 'd,
-) -> Pin<Box<dyn Future<Output = Result<()>> + 'async_recursion + Send>>
+) -> impl Future<Output = Result<()>> + 'async_recursion + Send
 where
     B: BlockStore + Send + Sync + 'static,
     'a: 'f,
@@ -254,7 +251,7 @@ where
     'f: 'async_recursion,
 {
     // TODO Function too large, split into subfunctions
-    Box::pin(async move {
+    async move {
         log::debug!("Entering blob {blob_referenced_as}");
 
         let loaded = blobstore.load(&blob_referenced_as.blob_id).await;
@@ -415,7 +412,7 @@ where
 
         log::debug!("Exiting blob {blob_referenced_as}");
         Ok(())
-    })
+    }
 }
 
 async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(
@@ -501,7 +498,7 @@ async fn check_all_nodes_of_reachable_blobs<B>(
 where
     B: BlockStore + Send + Sync + 'static,
 {
-    task_queue::run_to_completion(MAX_CONCURRENCY, move |task_spawner| async move {
+    task_queue::run_to_completion(MAX_CONCURRENCY, async move |task_spawner| {
         for (blob_id, referenced_as) in all_blobs {
             let already_processed_nodes = Arc::clone(&already_processed_nodes);
             let pb = pb.clone();

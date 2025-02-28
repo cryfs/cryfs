@@ -231,7 +231,7 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                 // TODO Is stream::iter().buffer_unordered() here faster than FuturesUnordered? It was in some other places.
                 let missing_blocks: FuturesUnordered<_> = expected_blocks
                     .into_iter()
-                    .map(|expected_block_id| async move {
+                    .map(async move |expected_block_id| {
                         // We have a block that our integrity data says should exist but the underlying block store says doesn't exist.
                         // This could be an integrity violation. However, there are race conditions. For example, the block could
                         // have been created after we checked the underlying block store and before we checked the integrity data.

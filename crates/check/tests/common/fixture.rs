@@ -1023,7 +1023,7 @@ impl FilesystemFixture {
     ) -> impl Iterator<Item = (BlockId, NodeInfoAsSeenByLookingAtNode)> + use<I> {
         self.update_nodestore(move |nodestore| {
             Box::pin(async move {
-                futures::future::join_all(node_ids.map(|child| async move {
+                futures::future::join_all(node_ids.map(async move |child| {
                     let node_info = match nodestore.load(child).await {
                         Ok(Some(node)) => entry_helpers::load_node_info(&node),
                         Ok(None) => panic!("Node not found"),

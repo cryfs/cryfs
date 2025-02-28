@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::fmt::Debug;
-use std::future::Future;
 use std::io::Cursor;
 use std::time::SystemTime;
 
@@ -193,7 +192,7 @@ impl DirEntryList {
         self.dirty = true;
     }
 
-    pub async fn add_or_overwrite<F>(
+    pub async fn add_or_overwrite(
         &mut self,
         name: PathComponentBuf,
         id: BlobId,
@@ -204,11 +203,8 @@ impl DirEntryList {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
         // TODO Return overwritten entry instead of taking an on_overwritten callback
-        on_overwritten: impl FnOnce(&BlobId) -> F,
-    ) -> Result<()>
-    where
-        F: Future<Output = FsResult<()>>,
-    {
+        on_overwritten: impl AsyncFnOnce(&BlobId) -> FsResult<()>,
+    ) -> Result<()> {
         let already_exists = self._get_by_name_with_index(&name);
         let entry = DirEntry::new(
             entry_type,
@@ -246,15 +242,12 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub async fn rename_by_name<F>(
+    pub async fn rename_by_name(
         &mut self,
         old_name: &PathComponent,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(&BlobId) -> F,
-    ) -> cryfs_rustfs::FsResult<()>
-    where
-        F: Future<Output = FsResult<()>>,
-    {
+        on_overwritten: impl AsyncFnOnce(&BlobId) -> FsResult<()>,
+    ) -> cryfs_rustfs::FsResult<()> {
         let Some((mut source_index, source_entry)) = self._get_by_name_with_index(old_name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
         };
@@ -308,9 +301,12 @@ impl DirEntryList {
             return Err(FsError::NodeDoesNotExist);
         };
         let old_name = old_entry.name().to_owned();
-        self.rename_by_name(&old_name, new_name, |b| {
-            futures::future::ready(on_overwritten(b))
-        })
+        self.rename_by_name(
+            &old_name,
+            new_name,
+            // TODO Why does future::Ready not work here?
+            async move |b| on_overwritten(b),
+        )
         .await
     }
 

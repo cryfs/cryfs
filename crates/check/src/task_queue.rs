@@ -45,7 +45,6 @@ impl<'f, E> TaskSpawner<'f, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::pin::Pin;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -53,10 +52,10 @@ mod tests {
     async fn spawn_100_tasks_directly() {
         let counter = Arc::new(AtomicUsize::new(0));
         let counter_clone = Arc::clone(&counter);
-        run_to_completion(10, |spawner: TaskSpawner<'_, ()>| async move {
+        run_to_completion(10, async move |spawner: TaskSpawner<'_, ()>| {
             for _ in 0..100 {
                 let counter_clone = Arc::clone(&counter_clone);
-                spawner.spawn(move |_| async move {
+                spawner.spawn(async move |_| {
                     counter_clone.fetch_add(1, Ordering::SeqCst);
                     Ok(())
                 });
@@ -77,16 +76,14 @@ mod tests {
             spawner: TaskSpawner<'static, ()>,
             counter: Arc<AtomicUsize>,
             index: usize,
-        ) -> Pin<Box<dyn Future<Output = Result<(), ()>> + Send>> {
-            Box::pin(async move {
+        ) -> impl Future<Output = Result<(), ()>> + Send {
+            async move {
                 counter.fetch_add(1, Ordering::SeqCst);
                 if index < 100 {
-                    spawner.spawn(move |spawner| async move {
-                        Box::pin(task(spawner, counter, index + 1)).await
-                    });
+                    spawner.spawn(async move |spawner| task(spawner, counter, index + 1).await);
                 }
                 Ok(())
-            })
+            }
         }
 
         run_to_completion(10, |spawner| task(spawner, Arc::clone(&counter), 1))
@@ -103,8 +100,8 @@ mod tests {
             spawner: TaskSpawner<'static, &'static str>,
             counter: Arc<AtomicUsize>,
             index: usize,
-        ) -> Pin<Box<dyn Future<Output = Result<(), &'static str>> + Send>> {
-            Box::pin(async move {
+        ) -> impl Future<Output = Result<(), &'static str>> + Send {
+            async move {
                 counter.fetch_add(1, Ordering::SeqCst);
                 if index < 100 {
                     spawner.spawn(move |spawner| async move {
@@ -114,7 +111,7 @@ mod tests {
                 } else {
                     Err("error message")
                 }
-            })
+            }
         }
 
         let result = run_to_completion(10, |spawner| task(spawner, Arc::clone(&counter), 1)).await;

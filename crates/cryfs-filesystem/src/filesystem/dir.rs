@@ -187,9 +187,9 @@ where
     async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
         let mut blob = self.load_blob().await?;
         let result = blob
-            .rename_entry_by_name(oldname, newname.to_owned(), |blob_id| {
+            .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
                 // TODO Is overwriting actually allowed here if the new entry already exists?
-                self.on_rename_overwrites_destination(*blob_id)
+                self.on_rename_overwrites_destination(*blob_id).await
             })
             .await;
         blob.async_drop().await?;
@@ -282,9 +282,9 @@ where
                 entry.gid(),
                 entry.last_access_time(),
                 entry.last_modification_time(),
-                |blob_id| {
+                async |blob_id| {
                     // TODO Is overwriting actually allowed here if the new entry already exists?
-                    self.on_rename_overwrites_destination(*blob_id)
+                    self.on_rename_overwrites_destination(*blob_id).await
                 },
             )
             .await;

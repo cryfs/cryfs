@@ -190,7 +190,7 @@ impl OnDiskBlockStore {
         Ok(
             ReadDirStream::new(tokio::fs::read_dir(&self.basedir).await?)
                 .map_err(Error::from)
-                .try_filter_map(|subdir| async move {
+                .try_filter_map(async move |subdir| {
                     if subdir.metadata().await?.is_dir()
                         && subdir.file_name().len() == PREFIX_LEN
                         && subdir
@@ -216,7 +216,7 @@ impl OnDiskBlockStore {
                     }
                 })
                 .try_flatten()
-                .try_filter_map(|blockfile| async move {
+                .try_filter_map(async move |blockfile| {
                     if blockfile.file_name().len() == NONPREFIX_LEN
                         && blockfile
                             .file_name()

@@ -326,7 +326,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
                 node.shrink_num_children(
                     NonZeroU32::new(needed_children_for_right_border_node).unwrap(),
                 )?;
-                for_each_unordered(children_to_delete.into_iter(), move |block_id| async move {
+                for_each_unordered(children_to_delete.into_iter(), async |block_id| {
                     DataTree::_remove_subtree_by_root_id(self.node_store, depth.get() - 1, block_id)
                         .await
                 })

@@ -60,7 +60,7 @@ where
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         let values = self.map.drain().map(|(_key, value)| value);
-        for_each_unordered(values, |mut value| async move {
+        for_each_unordered(values, async move |mut value| {
             value.async_drop().await?;
             Ok(())
         })

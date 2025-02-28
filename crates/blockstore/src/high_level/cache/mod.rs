@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use futures::join;
 use lockable::{Lockable, LockableLruCache};
 use std::fmt::Debug;
-use std::future::Future;
 use std::sync::Arc;
 use tokio::time::Duration;
 
@@ -57,8 +56,8 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
         self.cache
             .as_ref()
             .expect("Object is already destructed")
-            .async_lock(block_id, move |evicted| {
-                Self::_prune_blocks(Arc::clone(&cache), evicted.into_iter())
+            .async_lock(block_id, async move |evicted| {
+                Self::_prune_blocks(Arc::clone(&cache), evicted.into_iter()).await
             })
             .await
     }
@@ -91,17 +90,14 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
             .set_entry(base_store, entry, new_value, dirty, base_store_state);
     }
 
-    pub async fn set_or_overwrite_entry_even_if_dirty<F>(
+    pub async fn set_or_overwrite_entry_even_if_dirty(
         &self,
         base_store: &Arc<AsyncDropGuard<B>>,
         entry: &mut BlockCacheEntryGuard<B>,
         new_value: Data,
         dirty: CacheEntryState,
-        base_store_state: impl FnOnce() -> F,
-    ) -> Result<()>
-    where
-        F: Future<Output = Result<BlockBaseStoreState>>,
-    {
+        base_store_state: impl AsyncFnOnce() -> Result<BlockBaseStoreState>,
+    ) -> Result<()> {
         self.cache
             .as_ref()
             .expect("Object is already destructed")
@@ -237,7 +233,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop 
                 .expect("This can't fail since we are the only task having access");
             for_each_unordered::<(BlockId, BlockCacheEntry<B>), anyhow::Error, _>(
                 cache.into_entries_unordered().await,
-                |(key, mut value)| async move {
+                async move |(key, mut value)| {
                     value._flush_to_base_store(&key).await?;
                     Ok(())
                 },

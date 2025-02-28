@@ -116,7 +116,7 @@ impl NodeInfo {
 
                 // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
                 let blob_details = blob_details
-                    .get_or_try_init(|| async { get_blob_details(&mut parent_blob, name) })
+                    .get_or_try_init(async || get_blob_details(&mut parent_blob, name))
                     .await;
                 let blob_details = match blob_details {
                     Ok(blob_details) => Ok(blob_details),
@@ -170,7 +170,7 @@ impl NodeInfo {
                 name,
                 blob_details,
             } => Ok(*blob_details
-                .get_or_try_init(|| async {
+                .get_or_try_init(async || {
                     let mut parent_blob =
                         Self::_load_parent_blob(blobstore, parent_blob_id).await?;
                     let blob_details = get_blob_details(&mut parent_blob, name);
@@ -273,7 +273,7 @@ impl NodeInfo {
                 mut parent_blob,
                 ..
             } => {
-                let result = (|| async {
+                let result = (async || {
                     let lstat_size = self.load_lstat_size(blobstore).await?;
                     let entry = parent_blob
                         .entry_by_name(name)

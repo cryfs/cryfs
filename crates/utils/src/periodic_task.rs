@@ -163,8 +163,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_empty_task() {
-        let mut task =
-            PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async { Ok(()) });
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), async || Ok(()));
         task.async_drop().await.unwrap();
     }
 
@@ -247,7 +246,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_panic_task() {
         // TODO Why isn't this panic reported back?
-        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async {
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), async || {
             panic!("my error")
         });
         task.async_drop().await.unwrap();
@@ -256,7 +255,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn run_error_task() {
         // TODO Why isn't this error reported back?
-        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), || async {
+        let mut task = PeriodicTask::spawn("Test Task", Duration::from_millis(1), async || {
             bail!("my error")
         });
         task.async_drop().await.unwrap();

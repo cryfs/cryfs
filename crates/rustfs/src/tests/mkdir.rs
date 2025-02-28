@@ -22,9 +22,9 @@ struct Fixture {
     parent_ino: InodeNumber,
 }
 
-async fn test_mkdir<'a, F>(
+async fn test_mkdir<'a>(
     path: &AbsolutePath,
-    call: impl FnOnce(FilesystemDriver) -> F,
+    call: impl AsyncFnOnce(FilesystemDriver) -> nix::Result<()>,
     expectation: impl FnOnce(
         &Fixture,
         &RequestInfo,
@@ -35,9 +35,7 @@ async fn test_mkdir<'a, F>(
     ) -> FsResult<ReplyEntry>
     + Send
     + 'static,
-) where
-    F: Future<Output = nix::Result<()>>,
-{
+) {
     let (parent, name) = path.split_last().unwrap();
 
     let mut mock_filesystem = make_mock_filesystem();
@@ -102,7 +100,7 @@ mod arguments {
     ) {
         test_mkdir(
             path,
-            |driver| async move { driver.mkdir(&path, Mode::default()).await },
+            async move |driver| driver.mkdir(&path, Mode::default()).await,
             move |_, req, _parent_ino, _name, mode, _umask| {
                 assert_request_info_is_correct(req);
                 mkdir_return_ok(mode)
@@ -118,7 +116,7 @@ mod arguments {
     ) {
         test_mkdir(
             path,
-            |driver| async move { driver.mkdir(&path, Mode::default()).await },
+            async move |driver| driver.mkdir(&path, Mode::default()).await,
             |fixture: &Fixture, _req, parent_ino, _name, mode, _umask| {
                 assert_eq!(fixture.parent_ino, parent_ino);
                 mkdir_return_ok(mode)
@@ -134,7 +132,7 @@ mod arguments {
     ) {
         test_mkdir(
             path,
-            |driver| async move { driver.mkdir(&path, Mode::default()).await },
+            async move |driver| driver.mkdir(&path, Mode::default()).await,
             |_, _req, _parent_ino, name, mode, _umask| {
                 assert_eq!(path.split_last().unwrap().1, name);
                 mkdir_return_ok(mode)
@@ -172,7 +170,7 @@ mod arguments {
         ) {
             test_mkdir(
                 &path,
-                |driver| async move { driver.mkdir(&path, mode_arg).await },
+                async move |driver| driver.mkdir(&path, mode_arg).await,
                 move |_, _req, _parent_ino, _name, mode, _umask| {
                     assert_eq!(expected_mode_return, mode);
                     mkdir_return_ok(mode)
@@ -197,7 +195,7 @@ mod result {
     ) {
         test_mkdir(
             &path,
-            |driver| async move {
+            async move |driver| {
                 driver.mkdir(&path, Mode::default()).await.unwrap();
                 Ok(())
             },
@@ -220,7 +218,7 @@ mod result {
     ) {
         test_mkdir(
             &path,
-            |driver| async move {
+            async move |driver| {
                 let result = driver.mkdir(&path, Mode::default()).await.unwrap_err();
                 assert_eq!(Errno::from_i32(expected_error_code), result);
                 Ok(())
