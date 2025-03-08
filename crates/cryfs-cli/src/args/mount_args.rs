@@ -1,25 +1,8 @@
 use anyhow::Result;
 use byte_unit::Byte;
-use clap::{Args, Parser};
+use clap::Args;
 use cryfs_cli_utils::parse_path;
 use std::path::PathBuf;
-
-// TODO Evaluate `clap_mangen` as a potential automatic manpage generator
-// TODO Evaluate `clap_complete` as a potenatial shell completion generator
-// TODO Tests for each cli argument
-
-#[derive(Parser, Debug)]
-pub struct CryfsArgs {
-    #[command(flatten)]
-    pub mount: Option<MountArgs>,
-
-    /// Show a list with the supported encryption ciphers.
-    #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
-    pub show_ciphers: bool,
-    // TODO
-    // std::vector<std::string> _fuseOptions;
-    // bool _mountDirIsDriveLetter;
-}
 
 #[derive(Args, Debug)]
 #[group(multiple = true, id = "mount")]
@@ -144,5 +127,3 @@ mod tests {
         }
     }
 }
-
-// TODO Tests
