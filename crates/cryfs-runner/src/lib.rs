@@ -8,7 +8,7 @@ mod runner;
 mod unmount_trigger;
 
 pub use mounter::Mounter;
-pub use runner::{CreateOrLoad, MountArgs};
+pub use runner::{CreateOrLoad, FuseOption, MountArgs};
 
 cryfs_version::assert_cargo_version_equals_git_version!();
 

@@ -4,6 +4,8 @@ use clap::Args;
 use cryfs_cli_utils::parse_path;
 use std::path::PathBuf;
 
+use super::fuse_option::FuseOption;
+
 #[derive(Args, Debug)]
 #[group(multiple = true, id = "mount")]
 pub struct MountArgs {
@@ -72,6 +74,10 @@ pub struct MountArgs {
     /// Values are human readable durations, e.g. 30sec, 5min, 1h30m, etc.
     #[arg(long)]
     pub unmount_idle: Option<humantime::Duration>,
+
+    /// Additional fuse mount options. Can be specified multiple times, e.g. '-o allow_other -o allow_root'.
+    #[arg(short = 'o', long)]
+    pub fuse_option: Vec<FuseOption>,
 }
 
 fn parse_byte_amount(input: &str) -> Result<Byte> {

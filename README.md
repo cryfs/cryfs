@@ -11,3 +11,4 @@ Known differences between 1.0 and 2.0-alpha:
 - Breaking change: The `--logfile` argument was replaced with a more generic `--log` argument. To log to a file, replace `--logfile /path/to/file.log` with `--log file:/path/to/file.log`.
 - Local state is only partially compatible. Known block versions are fully forward and backward compatible, but the list of filesystem ids per basedir (i.e. the check that an attacker didn't replace the whole filesystem with a different filesystem) will not sync between 1.0 and 2.0. Both versions do have the check, but use their own version of the local state.
 - Windows and Mac don't work yet, only Linux for now
+- The old style of passing fuse options behind a double dash (e.g. `cryfs basedir mountdir -- allow_other`) was already deprecated in 1.0 and is now removed. Please use `cryfs basedir mountdir -o allow_other` instead.

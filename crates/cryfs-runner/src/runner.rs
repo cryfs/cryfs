@@ -36,6 +36,13 @@ pub struct MountArgs {
     pub my_client_id: ClientId,
     pub local_state_dir: LocalStateDir,
     pub unmount_idle: Option<Duration>,
+    pub fuse_option: Box<[FuseOption]>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum FuseOption {
+    AllowOther,
+    AllowRoot,
 }
 
 /// On error: will return the error
@@ -73,6 +80,7 @@ pub async fn mount_filesystem(
             on_successfully_mounted,
             unmount_trigger,
             unmount_idle: mount_args.unmount_idle,
+            fuse_options: mount_args.fuse_option,
         },
     )
     .await??;
@@ -99,6 +107,7 @@ struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
     pub on_successfully_mounted: OnSuccessfullyMounted,
     pub unmount_trigger: UnmountTrigger,
     pub unmount_idle: Option<Duration>,
+    pub fuse_options: Box<[FuseOption]>,
 }
 
 impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
@@ -160,7 +169,13 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         let mount_options = [
             MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
             MountOption::Subtype("cryfs".to_string()),
-        ];
+        ]
+        .into_iter()
+        .chain(self.fuse_options.iter().map(|o| match o {
+            FuseOption::AllowOther => MountOption::AllowOther,
+            FuseOption::AllowRoot => MountOption::AllowRoot,
+        }))
+        .collect::<Box<[_]>>();
         fuser::mount(
             fs,
             self.mountdir,

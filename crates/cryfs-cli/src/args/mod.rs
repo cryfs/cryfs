@@ -1,4 +1,5 @@
 mod cryfs_args;
+mod fuse_option;
 mod mount_args;
 
 pub use cryfs_args::CryfsArgs;
