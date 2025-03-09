@@ -19,7 +19,7 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn start(implementation: MockAsyncFilesystemLL) -> Self {
+    pub async fn start(implementation: MockAsyncFilesystemLL) -> Self {
         LOG_INIT.get_or_init(|| {
             env_logger::builder()
                 .filter_level(log::LevelFilter::Debug)
@@ -38,6 +38,7 @@ impl Runner {
             runtime,
             &[],
         )
+        .await
         .expect("Failed to spawn filesystem");
         Self {
             _running_filesystem: running_filesystem,

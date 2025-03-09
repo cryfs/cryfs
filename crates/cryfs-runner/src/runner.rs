@@ -164,7 +164,6 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         }
 
         let fs = |_uid, _gid| device;
-        // TODO Fuse options passed in from command line
         let mount_options = [
             MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
             MountOption::Subtype("cryfs".to_string()),
@@ -183,6 +182,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             &mount_options,
             self.on_successfully_mounted,
         )
+        .await
         .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;
         Ok(())
     }

@@ -83,8 +83,15 @@ where
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         match &mut self.inner {
-            MaybeInitializedFsImpl::Uninitialized(_) => Ok(()),
-            MaybeInitializedFsImpl::Initialized(fs) => fs.async_drop().await,
+            MaybeInitializedFsImpl::Uninitialized(fs) => {
+                // The function we have captured a filesystem that we need to async drop
+                if let Some(fs) = fs.take() {
+                    // We need to call the function with dummy values because we don't have a uid and gid
+                    fs(Uid::from(0), Gid::from(0)).async_drop().await?;
+                }
+            }
+            MaybeInitializedFsImpl::Initialized(fs) => fs.async_drop().await?,
         }
+        Ok(())
     }
 }

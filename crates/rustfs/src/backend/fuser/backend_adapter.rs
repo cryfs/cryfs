@@ -58,6 +58,10 @@ where
         }
     }
 
+    pub(super) fn internal_arc(&self) -> Arc<RwLock<AsyncDropGuard<Fs>>> {
+        Arc::clone(&self.fs)
+    }
+
     fn run_blocking<R>(
         runtime: &tokio::runtime::Handle,
         log_msg: &str,

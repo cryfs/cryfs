@@ -5,8 +5,8 @@ use fuse_mt::{
 };
 use std::ffi::OsStr;
 use std::fmt::Debug;
-use std::future::Future;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use crate::common::{
@@ -32,7 +32,7 @@ where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     // TODO RwLock is only needed for async drop. Can we remove it?
-    fs: tokio::sync::RwLock<AsyncDropGuard<Fs>>,
+    fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
 
     runtime: tokio::runtime::Handle,
 }
@@ -54,9 +54,13 @@ where
 {
     pub fn new(fs: AsyncDropGuard<Fs>, runtime: tokio::runtime::Handle) -> Self {
         Self {
-            fs: tokio::sync::RwLock::new(fs),
+            fs: Arc::new(tokio::sync::RwLock::new(fs)),
             runtime,
         }
+    }
+
+    pub(super) fn internal_arc(&self) -> Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>> {
+        Arc::clone(&self.fs)
     }
 
     fn run_async<R>(

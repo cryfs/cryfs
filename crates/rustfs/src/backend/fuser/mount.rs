@@ -9,7 +9,7 @@ use crate::common::FsError;
 use crate::low_level_api::{AsyncFilesystemLL, IntoFsLL};
 use cryfs_utils::async_drop::AsyncDrop;
 
-pub fn mount<Fs>(
+pub async fn mount<Fs>(
     fs: impl IntoFsLL<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
@@ -20,7 +20,7 @@ pub fn mount<Fs>(
 where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    let fs = spawn_mount(fs, mountpoint, runtime, mount_options)?;
+    let fs = spawn_mount(fs, mountpoint, runtime, mount_options).await?;
     on_successfully_mounted();
 
     if let Some(unmount_trigger) = unmount_trigger {
@@ -31,7 +31,7 @@ where
     Ok(())
 }
 
-pub fn spawn_mount<Fs>(
+pub async fn spawn_mount<Fs>(
     fs: impl IntoFsLL<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
@@ -42,7 +42,24 @@ where
 {
     let backend = BackendAdapter::new(fs.into_fs(), runtime);
 
-    let session = fuser::spawn_mount2(backend, mountpoint, mount_options)?;
+    // We need to keep a handle to the internal arc because we need to manually async drop it if fuser::spawn_mount2 fails.
+    // This is because usually, the internal Arc is dropped in BackendAdapter::destroy() but if fuser::spawn_mount2 fails,
+    // it will not call destroy().
+    let backend_internal_arc = backend.internal_arc();
+
+    let session = fuser::spawn_mount2(backend, mountpoint, mount_options);
+    let session = match session {
+        Ok(session) => {
+            std::mem::drop(backend_internal_arc);
+            session
+        }
+        Err(e) => {
+            let mut backend_internal_arc = backend_internal_arc.write().await;
+            backend_internal_arc.destroy().await;
+            backend_internal_arc.async_drop().await.unwrap();
+            return Err(e);
+        }
+    };
     let session = Arc::new(Mutex::new(Some(session)));
 
     Ok(RunningFilesystem::new(session))
