@@ -252,7 +252,7 @@ mod testutils {
                     nodestore.layout().max_children_per_inner_node() as usize,
                     children.len()
                 );
-                future::join_all(children.map(async move |child_id| {
+                future::join_all(children.map(async |child_id| {
                     Box::pin(assert_is_max_data_tree(
                         child_id,
                         next_expected_depth,
@@ -288,24 +288,19 @@ mod testutils {
                 let children = inner.children();
                 let children_len = children.len();
                 assert!(children_len >= 1);
-                future::join_all(
-                    children
-                        .enumerate()
-                        .map(async move |(child_index, child_id)| {
-                            if child_index == children_len - 1 {
-                                Box::pin(assert_is_left_max_data_tree(
-                                    child_id,
-                                    next_expected_depth,
-                                    nodestore,
-                                ))
-                                .await;
-                            } else {
-                                // Children not on the right boundary need to be full
-                                assert_is_max_data_tree(child_id, next_expected_depth, nodestore)
-                                    .await;
-                            }
-                        }),
-                )
+                future::join_all(children.enumerate().map(async |(child_index, child_id)| {
+                    if child_index == children_len - 1 {
+                        Box::pin(assert_is_left_max_data_tree(
+                            child_id,
+                            next_expected_depth,
+                            nodestore,
+                        ))
+                        .await;
+                    } else {
+                        // Children not on the right boundary need to be full
+                        assert_is_max_data_tree(child_id, next_expected_depth, nodestore).await;
+                    }
+                }))
                 .await;
             }
         }
@@ -459,7 +454,7 @@ mod num_bytes_and_num_nodes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -468,14 +463,14 @@ mod num_bytes_and_num_nodes {
             last_leaf_num_bytes: param_last_leaf_num_bytes,
         };
         run_tokio_test!({
-            let layout = NodeLayout { block_size_bytes };
+            let layout = NodeLayout { block_size };
             if param.num_full_leaves.eval(layout) > 0 && param.last_leaf_num_bytes.eval(layout) == 0
             {
                 // This is a special case where we can't build the tree via a call to [resize_num_bytes]
                 // because that would never leave the last leaf empty
                 return;
             }
-            with_treestore_with_blocksize(block_size_bytes, move |treestore| {
+            with_treestore_with_blocksize(block_size, move |treestore| {
                 Box::pin(async move {
                     let mut tree = treestore.create_tree().await.unwrap();
                     let num_bytes = layout.max_bytes_per_leaf() as u64
@@ -505,7 +500,7 @@ mod num_bytes_and_num_nodes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn build_tree_manually_and_check_num_bytes_and_num_nodes(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -514,36 +509,33 @@ mod num_bytes_and_num_nodes {
             last_leaf_num_bytes: param_last_leaf_num_bytes,
         };
         run_tokio_test!({
-            let layout = NodeLayout { block_size_bytes };
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
-                    Box::pin(async move {
-                        let root_id = param.create_tree(nodestore).await;
+            let layout = NodeLayout { block_size };
+            with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
+                Box::pin(async move {
+                    let root_id = param.create_tree(nodestore).await;
 
-                        let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
-                        assert_eq!(
-                            param.expected_num_bytes(layout),
-                            tree.num_bytes().await.unwrap()
-                        );
-                        assert_eq!(
-                            param.expected_num_nodes(layout),
-                            tree.num_nodes().await.unwrap()
-                        );
+                    let mut tree = treestore.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(
+                        param.expected_num_bytes(layout),
+                        tree.num_bytes().await.unwrap()
+                    );
+                    assert_eq!(
+                        param.expected_num_nodes(layout),
+                        tree.num_nodes().await.unwrap()
+                    );
 
-                        // Check the values are still the same when queried again
-                        // (they should now be returned from the cache instead of calculated)
-                        assert_eq!(
-                            param.expected_num_bytes(layout),
-                            tree.num_bytes().await.unwrap()
-                        );
-                        assert_eq!(
-                            param.expected_num_nodes(layout),
-                            tree.num_nodes().await.unwrap()
-                        );
-                    })
-                },
-            )
+                    // Check the values are still the same when queried again
+                    // (they should now be returned from the cache instead of calculated)
+                    assert_eq!(
+                        param.expected_num_bytes(layout),
+                        tree.num_bytes().await.unwrap()
+                    );
+                    assert_eq!(
+                        param.expected_num_nodes(layout),
+                        tree.num_nodes().await.unwrap()
+                    );
+                })
+            })
             .await;
         });
     }
@@ -629,7 +621,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn whole_tree(
-                #[values(40, 64, 512)] block_size_bytes: u32,
+                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
             ) {
@@ -638,16 +630,16 @@ macro_rules! instantiate_read_write_tests {
                     last_leaf_num_bytes: param_last_leaf_num_bytes,
                 };
                 run_tokio_test!({
-                    let layout = NodeLayout { block_size_bytes };
+                    let layout = NodeLayout { block_size };
                     let expected_num_bytes = param.expected_num_bytes(layout);
-                    $test_fn(block_size_bytes, param, 0, expected_num_bytes as usize).await;
+                    $test_fn(block_size, param, 0, expected_num_bytes as usize).await;
                 });
             }
 
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn single_byte(
-                #[values(40, 64, 512)] block_size_bytes: u32,
+                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
@@ -666,18 +658,18 @@ macro_rules! instantiate_read_write_tests {
                     last_leaf_num_bytes: param_last_leaf_num_bytes,
                 };
                 run_tokio_test!({
-                    let layout = NodeLayout { block_size_bytes };
+                    let layout = NodeLayout { block_size };
                     let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
                     let byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
                         + byte_index_in_leaf.eval(layout);
-                    $test_fn(block_size_bytes, param, byte_index, 1).await;
+                    $test_fn(block_size, param, byte_index, 1).await;
                 });
             }
 
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn two_bytes(
-                #[values(40, 64, 512)] block_size_bytes: u32,
+                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
@@ -697,18 +689,18 @@ macro_rules! instantiate_read_write_tests {
                     last_leaf_num_bytes: param_last_leaf_num_bytes,
                 };
                 run_tokio_test!({
-                    let layout = NodeLayout { block_size_bytes };
+                    let layout = NodeLayout { block_size };
                     let leaf_index = leaf_index.get(param.expected_num_leaves(layout));
                     let first_byte_index = leaf_index * layout.max_bytes_per_leaf() as u64
                         + first_byte_index_in_leaf.eval(layout);
-                    $test_fn(block_size_bytes, param, first_byte_index, 2).await;
+                    $test_fn(block_size, param, first_byte_index, 2).await;
                 });
             }
 
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn single_leaf(
-                #[values(40, 64, 512)] block_size_bytes: u32,
+                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(
@@ -733,14 +725,14 @@ macro_rules! instantiate_read_write_tests {
                     last_leaf_num_bytes: param_last_leaf_num_bytes,
                 };
                 run_tokio_test!({
-                    let layout = NodeLayout { block_size_bytes };
+                    let layout = NodeLayout { block_size };
                     let (begin_byte_index_in_leaf, end_byte_index_in_leaf) = byte_indices;
                     let first_leaf_byte = leaf_index.get(param.expected_num_leaves(layout))
                         * layout.max_bytes_per_leaf() as u64;
                     let begin_byte_index = first_leaf_byte + begin_byte_index_in_leaf.eval(layout);
                     let end_byte_index = first_leaf_byte + end_byte_index_in_leaf.eval(layout);
                     $test_fn(
-                        block_size_bytes,
+                        block_size,
                         param,
                         begin_byte_index,
                         (end_byte_index - begin_byte_index) as usize,
@@ -752,7 +744,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn across_leaves(
-                #[values(40, 64, 512)] block_size_bytes: u32,
+                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(
@@ -787,7 +779,7 @@ macro_rules! instantiate_read_write_tests {
                     last_leaf_num_bytes: param_last_leaf_num_bytes,
                 };
                 run_tokio_test!({
-                    let layout = NodeLayout { block_size_bytes };
+                    let layout = NodeLayout { block_size };
                     let (begin_leaf_index, last_leaf_index) = leaf_indices;
                     let begin_byte_index = {
                         let first_leaf_byte = begin_leaf_index.get(param.expected_num_leaves(layout))
@@ -803,7 +795,7 @@ macro_rules! instantiate_read_write_tests {
                         return;
                     }
                     $test_fn(
-                        block_size_bytes,
+                        block_size,
                         param,
                         begin_byte_index,
                         (end_byte_index - begin_byte_index) as usize,
@@ -853,15 +845,10 @@ mod read_bytes {
         );
     }
 
-    async fn test_read_bytes(
-        block_size_bytes: u32,
-        param: Parameter,
-        offset: u64,
-        num_bytes: usize,
-    ) {
-        let layout = NodeLayout { block_size_bytes };
+    async fn test_read_bytes(block_size: Byte, param: Parameter, offset: u64, num_bytes: usize) {
+        let layout = NodeLayout { block_size };
         let expected_num_bytes = param.expected_num_bytes(layout);
-        with_treestore_and_nodestore_with_blocksize(block_size_bytes, |treestore, nodestore| {
+        with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
             Box::pin(async move {
                 let data = DataFixture::new(0);
                 let tree_id = param.create_tree_with_data(nodestore, &data).await;
@@ -927,13 +914,13 @@ mod try_read_bytes {
     }
 
     async fn test_try_read_bytes(
-        block_size_bytes: u32,
+        block_size: Byte,
         param: Parameter,
         offset: u64,
         num_bytes: usize,
     ) {
-        let layout = NodeLayout { block_size_bytes };
-        with_treestore_and_nodestore_with_blocksize(block_size_bytes, |treestore, nodestore| {
+        let layout = NodeLayout { block_size };
+        with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
             Box::pin(async move {
                 let data = DataFixture::new(0);
                 let tree_id = param.create_tree_with_data(nodestore, &data).await;
@@ -963,7 +950,7 @@ mod read_all {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn read_whole_tree(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -972,23 +959,20 @@ mod read_all {
             last_leaf_num_bytes: param_last_leaf_num_bytes,
         };
         run_tokio_test!({
-            let layout = NodeLayout { block_size_bytes };
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
-                    Box::pin(async move {
-                        let data = DataFixture::new(0);
-                        let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                        let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+            let layout = NodeLayout { block_size };
+            with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
-                        let read_data = tree.read_all().await.unwrap();
-                        assert_eq!(param.expected_num_bytes(layout) as usize, read_data.len());
-                        let expected_data: Data =
-                            data.get(param.expected_num_bytes(layout) as usize).into();
-                        assert_eq!(expected_data, read_data);
-                    })
-                },
-            )
+                    let read_data = tree.read_all().await.unwrap();
+                    assert_eq!(param.expected_num_bytes(layout) as usize, read_data.len());
+                    let expected_data: Data =
+                        data.get(param.expected_num_bytes(layout) as usize).into();
+                    assert_eq!(expected_data, read_data);
+                })
+            })
             .await;
         });
     }
@@ -1000,14 +984,9 @@ mod write_bytes {
     use super::*;
     use cryfs_utils::data::Data;
 
-    async fn test_write_bytes(
-        block_size_bytes: u32,
-        params: Parameter,
-        offset: u64,
-        num_bytes: usize,
-    ) {
-        let layout = NodeLayout { block_size_bytes };
-        with_treestore_and_nodestore_with_blocksize(block_size_bytes, |treestore, nodestore| {
+    async fn test_write_bytes(block_size: Byte, params: Parameter, offset: u64, num_bytes: usize) {
+        let layout = NodeLayout { block_size };
+        with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
             Box::pin(async move {
                 let base_data = DataFixture::new(0);
                 let write_data = DataFixture::new(1);
@@ -1117,105 +1096,100 @@ mod resize_num_bytes {
     use cryfs_utils::data::Data;
 
     fn test_resize(
-        block_size_bytes: u32,
+        block_size: Byte,
         param_before_resize: Parameter,
         param_after_resize: Parameter,
     ) {
         run_tokio_test!({
-            let layout = NodeLayout { block_size_bytes };
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
-                    Box::pin(async move {
-                        let data = DataFixture::new(0);
+            let layout = NodeLayout { block_size };
+            with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
 
-                        // Create tree with `data`
-                        let tree_id = param_before_resize
-                            .create_tree_with_data(nodestore, &data)
-                            .await;
-                        let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-
-                        // Check the test case set it up correctly
-                        flush_caches(tree, nodestore, treestore).await;
-                        assert_tree_structure(
-                            tree_id,
-                            param_before_resize.expected_depth(layout),
-                            nodestore,
-                        )
+                    // Create tree with `data`
+                    let tree_id = param_before_resize
+                        .create_tree_with_data(nodestore, &data)
                         .await;
-                        assert_eq!(
-                            param_before_resize.expected_num_nodes(layout),
-                            nodestore.num_nodes().await.unwrap()
-                        );
-                        let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
-                        // Fill size cache (so we can check if it gets correctly updated)
-                        assert_eq!(
-                            param_before_resize.expected_num_bytes(layout),
-                            tree.num_bytes().await.unwrap()
-                        );
-                        assert_eq!(
-                            param_before_resize.expected_num_nodes(layout),
-                            tree.num_nodes().await.unwrap()
-                        );
+                    // Check the test case set it up correctly
+                    flush_caches(tree, nodestore, treestore).await;
+                    assert_tree_structure(
+                        tree_id,
+                        param_before_resize.expected_depth(layout),
+                        nodestore,
+                    )
+                    .await;
+                    assert_eq!(
+                        param_before_resize.expected_num_nodes(layout),
+                        nodestore.num_nodes().await.unwrap()
+                    );
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
-                        // Resize tree with `resize_num_bytes`
-                        let new_num_bytes = param_after_resize.expected_num_bytes(layout);
-                        tree.resize_num_bytes(new_num_bytes).await.unwrap();
+                    // Fill size cache (so we can check if it gets correctly updated)
+                    assert_eq!(
+                        param_before_resize.expected_num_bytes(layout),
+                        tree.num_bytes().await.unwrap()
+                    );
+                    assert_eq!(
+                        param_before_resize.expected_num_nodes(layout),
+                        tree.num_nodes().await.unwrap()
+                    );
 
-                        // Check key didn't change
-                        assert_eq!(tree_id, *tree.root_node_id());
+                    // Resize tree with `resize_num_bytes`
+                    let new_num_bytes = param_after_resize.expected_num_bytes(layout);
+                    tree.resize_num_bytes(new_num_bytes).await.unwrap();
 
-                        // Check tree has correct size (looked up from the size cache of the `tree` instance)
-                        assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
-                        assert_eq!(
-                            param_after_resize.expected_num_nodes(layout),
-                            tree.num_nodes().await.unwrap()
-                        );
+                    // Check key didn't change
+                    assert_eq!(tree_id, *tree.root_node_id());
 
-                        // Check tree has correct size (looked up after clearing the size cache of the `tree` instance)
-                        std::mem::drop(tree);
-                        let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
-                        assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
-                        assert_eq!(
-                            param_after_resize.expected_num_nodes(layout),
-                            tree.num_nodes().await.unwrap()
-                        );
+                    // Check tree has correct size (looked up from the size cache of the `tree` instance)
+                    assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
+                    assert_eq!(
+                        param_after_resize.expected_num_nodes(layout),
+                        tree.num_nodes().await.unwrap()
+                    );
 
-                        // Check tree data using `read_all`
-                        let read_data = tree.read_all().await.unwrap();
-                        let old_num_bytes = param_before_resize.expected_num_bytes(layout);
-                        let expected_new_data: Data = {
-                            let mut expected_new_data = vec![0; new_num_bytes as usize];
-                            expected_new_data[..old_num_bytes.min(new_num_bytes) as usize]
-                                .copy_from_slice(
-                                    &data.get(old_num_bytes.min(new_num_bytes) as usize),
-                                );
-                            expected_new_data.into()
-                        };
-                        assert_eq!(new_num_bytes, read_data.len() as u64);
-                        assert_eq!(expected_new_data, read_data);
+                    // Check tree has correct size (looked up after clearing the size cache of the `tree` instance)
+                    std::mem::drop(tree);
+                    let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
+                    assert_eq!(
+                        param_after_resize.expected_num_nodes(layout),
+                        tree.num_nodes().await.unwrap()
+                    );
 
-                        // Check the new tree structure is valid
-                        flush_caches(tree, nodestore, treestore).await;
-                        assert_tree_structure(
-                            tree_id,
-                            param_after_resize.expected_depth(layout),
-                            nodestore,
-                        )
-                        .await;
+                    // Check tree data using `read_all`
+                    let read_data = tree.read_all().await.unwrap();
+                    let old_num_bytes = param_before_resize.expected_num_bytes(layout);
+                    let expected_new_data: Data = {
+                        let mut expected_new_data = vec![0; new_num_bytes as usize];
+                        expected_new_data[..old_num_bytes.min(new_num_bytes) as usize]
+                            .copy_from_slice(&data.get(old_num_bytes.min(new_num_bytes) as usize));
+                        expected_new_data.into()
+                    };
+                    assert_eq!(new_num_bytes, read_data.len() as u64);
+                    assert_eq!(expected_new_data, read_data);
 
-                        // Check the data in the leaves is correct
-                        assert_leaf_data_is_correct(tree_id, &expected_new_data, nodestore).await;
+                    // Check the new tree structure is valid
+                    flush_caches(tree, nodestore, treestore).await;
+                    assert_tree_structure(
+                        tree_id,
+                        param_after_resize.expected_depth(layout),
+                        nodestore,
+                    )
+                    .await;
 
-                        // Check there weren't too many nodes created or left behind
-                        assert_eq!(
-                            param_after_resize.expected_num_nodes(layout),
-                            nodestore.num_nodes().await.unwrap()
-                        );
-                    })
-                },
-            )
+                    // Check the data in the leaves is correct
+                    assert_leaf_data_is_correct(tree_id, &expected_new_data, nodestore).await;
+
+                    // Check there weren't too many nodes created or left behind
+                    assert_eq!(
+                        param_after_resize.expected_num_nodes(layout),
+                        nodestore.num_nodes().await.unwrap()
+                    );
+                })
+            })
             .await;
         });
     }
@@ -1223,7 +1197,7 @@ mod resize_num_bytes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_resize_basic(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
         // param2_num_full_leaves and param2_last_leaf_num_bytes are set up the same way
@@ -1256,13 +1230,13 @@ mod resize_num_bytes {
             num_full_leaves: param2_num_full_leaves,
             last_leaf_num_bytes: param2_last_leaf_num_bytes,
         };
-        test_resize(block_size_bytes, param_before_resize, param_after_resize);
+        test_resize(block_size, param_before_resize, param_after_resize);
     }
 
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_resize_to_zero(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -1274,7 +1248,7 @@ mod resize_num_bytes {
             num_full_leaves: ParamNum::Val(0),
             last_leaf_num_bytes: ParamNum::Val(0),
         };
-        test_resize(block_size_bytes, param_before_resize, param_after_resize);
+        test_resize(block_size, param_before_resize, param_after_resize);
     }
 }
 
@@ -1286,7 +1260,7 @@ mod remove {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_remove(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -1295,29 +1269,26 @@ mod remove {
             last_leaf_num_bytes: param_last_leaf_num_bytes,
         };
         run_tokio_test!({
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
-                    Box::pin(async move {
-                        let data = DataFixture::new(0);
+            with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
 
-                        // Create tree with `data`
-                        let tree_id = param.create_tree_with_data(nodestore, &data).await;
-                        let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
+                    // Create tree with `data`
+                    let tree_id = param.create_tree_with_data(nodestore, &data).await;
+                    let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
-                        // Remove tree
-                        tree.remove().await.unwrap();
+                    // Remove tree
+                    tree.remove().await.unwrap();
 
-                        // Check tree is gone
-                        assert!(treestore.load_tree(tree_id).await.unwrap().is_none());
+                    // Check tree is gone
+                    assert!(treestore.load_tree(tree_id).await.unwrap().is_none());
 
-                        // Check nodes are deleted
-                        treestore.clear_cache_slow().await.unwrap();
-                        nodestore.clear_cache_slow().await.unwrap();
-                        assert_eq!(0, nodestore.num_nodes().await.unwrap());
-                    })
-                },
-            )
+                    // Check nodes are deleted
+                    treestore.clear_cache_slow().await.unwrap();
+                    nodestore.clear_cache_slow().await.unwrap();
+                    assert_eq!(0, nodestore.num_nodes().await.unwrap());
+                })
+            })
             .await;
         });
     }
@@ -1333,7 +1304,7 @@ mod all_blocks {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_all_blocks(
-        #[values(40, 64, 512)] block_size_bytes: u32,
+        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -1341,61 +1312,58 @@ mod all_blocks {
             num_full_leaves: param_num_full_leaves,
             last_leaf_num_bytes: param_last_leaf_num_bytes,
         };
-        let layout = NodeLayout { block_size_bytes };
+        let layout = NodeLayout { block_size };
         run_tokio_test!({
-            with_treestore_and_nodestore_with_blocksize(
-                block_size_bytes,
-                |treestore, nodestore| {
-                    Box::pin(async move {
-                        let data = DataFixture::new(0);
+            with_treestore_and_nodestore_with_blocksize(block_size, |treestore, nodestore| {
+                Box::pin(async move {
+                    let data = DataFixture::new(0);
 
-                        // Create a tree
-                        let tree1_id = param.create_tree_with_data(nodestore, &data).await;
-                        let expected_tree1_blocks: HashSet<BlockId> = {
-                            treestore.clear_cache_slow().await.unwrap();
-                            nodestore.clear_cache_slow().await.unwrap();
-                            let all_blocks: Result<HashSet<BlockId>, _> =
-                                nodestore.all_nodes().await.unwrap().try_collect().await;
-                            all_blocks.unwrap()
-                        };
-                        assert_eq!(
-                            param.expected_num_nodes(layout),
-                            expected_tree1_blocks.len() as u64,
-                        );
+                    // Create a tree
+                    let tree1_id = param.create_tree_with_data(nodestore, &data).await;
+                    let expected_tree1_blocks: HashSet<BlockId> = {
+                        treestore.clear_cache_slow().await.unwrap();
+                        nodestore.clear_cache_slow().await.unwrap();
+                        let all_blocks: Result<HashSet<BlockId>, _> =
+                            nodestore.all_nodes().await.unwrap().try_collect().await;
+                        all_blocks.unwrap()
+                    };
+                    assert_eq!(
+                        param.expected_num_nodes(layout),
+                        expected_tree1_blocks.len() as u64,
+                    );
 
-                        // Create another tree
-                        let tree2_id = param.create_tree_with_data(nodestore, &data).await;
-                        let expected_tree2_blocks: HashSet<BlockId> = {
-                            treestore.clear_cache_slow().await.unwrap();
-                            nodestore.clear_cache_slow().await.unwrap();
-                            let all_blocks: Result<HashSet<BlockId>, _> =
-                                nodestore.all_nodes().await.unwrap().try_collect().await;
-                            let mut expected_blocks = all_blocks.unwrap();
-                            for block in &expected_tree1_blocks {
-                                expected_blocks.remove(block);
-                            }
-                            expected_blocks
-                        };
-                        assert_eq!(
-                            param.expected_num_nodes(layout),
-                            expected_tree2_blocks.len() as u64,
-                        );
+                    // Create another tree
+                    let tree2_id = param.create_tree_with_data(nodestore, &data).await;
+                    let expected_tree2_blocks: HashSet<BlockId> = {
+                        treestore.clear_cache_slow().await.unwrap();
+                        nodestore.clear_cache_slow().await.unwrap();
+                        let all_blocks: Result<HashSet<BlockId>, _> =
+                            nodestore.all_nodes().await.unwrap().try_collect().await;
+                        let mut expected_blocks = all_blocks.unwrap();
+                        for block in &expected_tree1_blocks {
+                            expected_blocks.remove(block);
+                        }
+                        expected_blocks
+                    };
+                    assert_eq!(
+                        param.expected_num_nodes(layout),
+                        expected_tree2_blocks.len() as u64,
+                    );
 
-                        let tree1 = treestore.load_tree(tree1_id).await.unwrap().unwrap();
-                        let tree2 = treestore.load_tree(tree2_id).await.unwrap().unwrap();
+                    let tree1 = treestore.load_tree(tree1_id).await.unwrap().unwrap();
+                    let tree2 = treestore.load_tree(tree2_id).await.unwrap().unwrap();
 
-                        let tree1_blocks: Result<HashSet<BlockId>, _> =
-                            tree1.all_blocks().unwrap().try_collect().await;
-                        let tree1_blocks = tree1_blocks.unwrap();
-                        assert_eq!(expected_tree1_blocks, tree1_blocks);
+                    let tree1_blocks: Result<HashSet<BlockId>, _> =
+                        tree1.all_blocks().unwrap().try_collect().await;
+                    let tree1_blocks = tree1_blocks.unwrap();
+                    assert_eq!(expected_tree1_blocks, tree1_blocks);
 
-                        let tree2_blocks: Result<HashSet<BlockId>, _> =
-                            tree2.all_blocks().unwrap().try_collect().await;
-                        let tree2_blocks = tree2_blocks.unwrap();
-                        assert_eq!(expected_tree2_blocks, tree2_blocks);
-                    })
-                },
-            )
+                    let tree2_blocks: Result<HashSet<BlockId>, _> =
+                        tree2.all_blocks().unwrap().try_collect().await;
+                    let tree2_blocks = tree2_blocks.unwrap();
+                    assert_eq!(expected_tree2_blocks, tree2_blocks);
+                })
+            })
             .await;
         });
     }
