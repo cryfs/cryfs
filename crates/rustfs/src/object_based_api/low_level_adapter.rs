@@ -33,15 +33,15 @@ const TTL_CREATE: Duration = Duration::from_secs(1);
 const TTL_SYMLINK: Duration = Duration::from_secs(1);
 
 // TODO Can we share more code with [super::high_level_adapter::ObjectBasedFsAdapter]?
-pub struct ObjectBasedFsAdapterLL<Fs: Device>
+pub struct ObjectBasedFsAdapterLL<Fs>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
-    fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
+    fs: Arc<RwLock<AsyncDropGuard<MaybeInitializedFs<Fs>>>>,
 
     // TODO Do we need Arc for inodes?
     inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, AsyncDropArc<Fs::Node>>>>>,
@@ -50,14 +50,16 @@ where
     open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<FileHandle, Fs::OpenFile>>>,
 }
 
-impl<Fs: Device> ObjectBasedFsAdapterLL<Fs>
+impl<Fs> ObjectBasedFsAdapterLL<Fs>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
-    pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
+    pub fn new(
+        fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
+    ) -> AsyncDropGuard<Self> {
         let mut inodes = HandleMap::new();
         // We need to block zero because fuse seems to dislike it.
         inodes.block_handle(InodeNumber::from(0));
@@ -69,9 +71,9 @@ where
 
         let inodes = Arc::new(RwLock::new(inodes));
         AsyncDropGuard::new(Self {
-            fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
+            fs: Arc::new(RwLock::new(MaybeInitializedFs::new_uninitialized(
                 Box::new(fs),
-            )))),
+            ))),
             inodes,
             open_files,
         })
@@ -124,7 +126,7 @@ where
 impl<Fs> AsyncFilesystemLL for ObjectBasedFsAdapterLL<Fs>
 where
     // TODO Do we need those Send + Sync + 'static bounds?
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
@@ -137,9 +139,6 @@ where
 
     async fn destroy(&self) {
         log::info!("destroy");
-        self.open_files.write().await.async_drop().await.unwrap();
-        self.inodes.write().await.async_drop().await.unwrap();
-        self.fs.write().await.take().destroy().await;
         // Nothing.
     }
 
@@ -989,8 +988,8 @@ where
 
 impl<Fn, Fs> IntoFsLL<ObjectBasedFsAdapterLL<Fs>> for Fn
 where
-    Fn: FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static,
-    Fs: Device + Send + Sync + 'static,
+    Fn: FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
+    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
@@ -1001,7 +1000,7 @@ where
 
 impl<Fs: Device> Debug for ObjectBasedFsAdapterLL<Fs>
 where
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
@@ -1015,14 +1014,16 @@ where
 #[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapterLL<Fs>
 where
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        // TODO If the object was never used (e.g. destroy never called), we need to destroy members here.
+        self.open_files.write().await.async_drop().await.unwrap();
+        self.inodes.write().await.async_drop().await.unwrap();
+        self.fs.write().await.async_drop().await.unwrap();
         Ok(())
     }
 }

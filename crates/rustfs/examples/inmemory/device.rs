@@ -1,11 +1,16 @@
 use async_trait::async_trait;
+use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use cryfs_rustfs::{
     AbsolutePath, FsError, FsResult, Gid, Mode, Statfs, Uid,
     object_based_api::{Device, Node},
 };
-use cryfs_utils::{async_drop::AsyncDropGuard, mutex::lock_in_ptr_order, with_async_drop_2};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    mutex::lock_in_ptr_order,
+    with_async_drop_2,
+};
 
 use super::dir::{DirInode, InMemoryDirRef};
 use super::file::{InMemoryFileRef, InMemoryOpenFileRef};
@@ -58,10 +63,26 @@ pub struct InMemoryDevice {
 }
 
 impl InMemoryDevice {
-    pub fn new(uid: Uid, gid: Gid) -> Self {
-        Self {
+    pub fn new(uid: Uid, gid: Gid) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             rootdir: RootDir::new(uid, gid),
-        }
+        })
+    }
+}
+
+impl Debug for InMemoryDevice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InMemoryDevice").finish()
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for InMemoryDevice {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        // Nothing to do
+        Ok(())
     }
 }
 
@@ -131,9 +152,5 @@ impl Device for InMemoryDevice {
 
     async fn statfs(&self) -> FsResult<Statfs> {
         todo!()
-    }
-
-    async fn destroy(self) {
-        // Nothing to do
     }
 }

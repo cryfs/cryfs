@@ -4,7 +4,7 @@ use super::errors::{IoResultExt, NixResultExt};
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs, object_based_api::Device,
 };
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir::PassthroughDir;
 use super::file::PassthroughFile;
@@ -12,17 +12,28 @@ use super::node::PassthroughNode;
 use super::openfile::PassthroughOpenFile;
 use super::symlink::PassthroughSymlink;
 
+#[derive(Debug)]
 pub struct PassthroughDevice {
     basedir: AbsolutePathBuf,
 }
 
 impl PassthroughDevice {
-    pub fn new(basedir: AbsolutePathBuf) -> Self {
-        Self { basedir }
+    pub fn new(basedir: AbsolutePathBuf) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { basedir })
     }
 
     fn apply_basedir(&self, path: &AbsolutePath) -> AbsolutePathBuf {
         self.basedir.clone().push_all(path)
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for PassthroughDevice {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        // TODO Do we need to do anything here?
+        Ok(())
     }
 }
 
@@ -65,10 +76,6 @@ impl Device for PassthroughDevice {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
-    }
-
-    async fn destroy(self) {
-        // Nothing to do
     }
 }
 

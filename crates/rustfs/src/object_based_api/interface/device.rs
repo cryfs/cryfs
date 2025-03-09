@@ -39,7 +39,6 @@ pub trait Device {
     // TODO We can probably remove `rename`. It's only called from the fuse-mt backend and fuser uses CryDir::{rename_child,move_child_to} instead. We can probably make fuse-mt use those too.
     async fn rename(&self, from: &AbsolutePath, to: &AbsolutePath) -> FsResult<()>;
     async fn statfs(&self) -> FsResult<Statfs>;
-    async fn destroy(self);
 
     // If the node at `path` doesn't exist, it's ok to either immediately fail with [FsError::NodeDoesNotExist]
     // or to return a [Node] object that throws [FsError::NodeDoesNotExist] when any of its members that

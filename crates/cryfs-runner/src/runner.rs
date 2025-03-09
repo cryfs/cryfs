@@ -10,7 +10,6 @@ use cryfs_cli_utils::{
 };
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::backend::fuser::{self, MountOption};
-use cryfs_rustfs::object_based_api::Device;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -136,7 +135,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             }
         };
 
-        let device = match self.create_or_load {
+        let mut device = match self.create_or_load {
             CreateOrLoad::CreateNewFilesystem => {
                 CryDevice::create_new_filesystem(blobstore, root_blob_id)
                     .await
@@ -153,7 +152,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         {
             Ok(()) => {}
             Err(e) => {
-                device.destroy().await;
+                device.async_drop().await.unwrap();
                 return Err(e);
             }
         }

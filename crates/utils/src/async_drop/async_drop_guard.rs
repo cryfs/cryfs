@@ -30,6 +30,10 @@ impl<T: Debug> AsyncDropGuard<T> {
         Self(Some(v))
     }
 
+    pub fn new_invalid() -> Self {
+        Self(None)
+    }
+
     pub fn into_box(self) -> AsyncDropGuard<Box<T>> {
         self.map_unsafe(Box::new)
     }

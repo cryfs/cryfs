@@ -13,10 +13,7 @@ use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     AbsolutePath, FsError, FsResult, PathComponent, Statfs, object_based_api::Device,
 };
-use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
-    safe_panic,
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop};
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
@@ -41,25 +38,28 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
-    pub fn load_filesystem(blobstore: AsyncDropGuard<B>, root_blob_id: BlobId) -> Self {
-        Self {
+    pub fn load_filesystem(
+        blobstore: AsyncDropGuard<B>,
+        root_blob_id: BlobId,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             blobstore: AsyncDropArc::new(FsBlobStore::new(blobstore)),
             root_blob_id,
             last_access_time: Arc::new(AtomicInstant::now()),
-        }
+        })
     }
 
     pub async fn create_new_filesystem(
         blobstore: AsyncDropGuard<B>,
         root_blob_id: BlobId,
-    ) -> Result<Self> {
+    ) -> Result<AsyncDropGuard<Self>> {
         let mut fsblobstore = FsBlobStore::new(blobstore);
         match fsblobstore.create_root_dir_blob(&root_blob_id).await {
-            Ok(()) => Ok(Self {
+            Ok(()) => Ok(AsyncDropGuard::new(Self {
                 blobstore: AsyncDropArc::new(fsblobstore),
                 root_blob_id,
                 last_access_time: Arc::new(AtomicInstant::now()),
-            }),
+            })),
             Err(err) => {
                 fsblobstore.async_drop().await?;
                 Err(err)
@@ -262,6 +262,18 @@ where
     /// Returns the last time the filesystem was accessed. This is updated on every operation.
     pub fn last_access_time(&self) -> Arc<AtomicInstant> {
         Arc::clone(&self.last_access_time)
+    }
+}
+
+impl<B> Debug for CryDevice<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CryDevice")
+            .field("root_blob_id", &self.root_blob_id)
+            .finish()
     }
 }
 
@@ -503,22 +515,18 @@ where
             num_free_inodes: num_free_blocks,
         })
     }
-
-    async fn destroy(mut self) {
-        // TODO Can we do this without unwrap?
-        self.blobstore.async_drop().await.unwrap();
-    }
 }
 
-impl<B> Drop for CryDevice<B>
+#[async_trait]
+impl<B> AsyncDrop for CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
 {
-    fn drop(&mut self) {
-        if !self.blobstore.is_dropped() {
-            safe_panic!("CryDevice dropped without calling destroy() first");
-        }
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.blobstore.async_drop().await
     }
 }
 

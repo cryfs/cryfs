@@ -25,31 +25,33 @@ const TTL_MKDIR: Duration = Duration::from_secs(0);
 const TTL_SYMLINK: Duration = Duration::from_secs(0);
 const TTL_CREATE: Duration = Duration::from_secs(0);
 
-pub struct ObjectBasedFsAdapter<Fs: Device>
+pub struct ObjectBasedFsAdapter<Fs>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
-    Fs: Send + Sync + 'static,
+    Fs: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
-    fs: Arc<RwLock<MaybeInitializedFs<Fs>>>,
+    fs: Arc<RwLock<AsyncDropGuard<MaybeInitializedFs<Fs>>>>,
 
     // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
     open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<FileHandle, Fs::OpenFile>>>,
 }
 
-impl<Fs: Device> ObjectBasedFsAdapter<Fs>
+impl<Fs> ObjectBasedFsAdapter<Fs>
 where
     // TODO Is this send+sync bound only needed because fuse_mt goes multi threaded or would it also be required for fuser?
-    Fs: Send + Sync + 'static,
+    Fs: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
-    pub fn new(fs: impl FnOnce(Uid, Gid) -> Fs + Send + Sync + 'static) -> AsyncDropGuard<Self> {
+    pub fn new(
+        fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
+    ) -> AsyncDropGuard<Self> {
         let open_files = tokio::sync::RwLock::new(HandleMap::new());
         AsyncDropGuard::new(Self {
-            fs: Arc::new(RwLock::new(MaybeInitializedFs::Uninitialized(Some(
+            fs: Arc::new(RwLock::new(MaybeInitializedFs::new_uninitialized(
                 Box::new(fs),
-            )))),
+            ))),
             open_files,
         })
     }
@@ -66,7 +68,7 @@ where
 
 impl<Fs: Device> Debug for ObjectBasedFsAdapter<Fs>
 where
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -80,7 +82,7 @@ where
 impl<Fs> AsyncFilesystem for ObjectBasedFsAdapter<Fs>
 where
     // TODO Are these Send+Sync bounds only needed because fuse_mt goes multi threaded or would it also be required for fuser? And do we really need the 'static?
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     async fn init(&self, req: RequestInfo) -> FsResult<()> {
@@ -91,8 +93,6 @@ where
 
     async fn destroy(&self) {
         log::info!("destroy");
-        self.open_files.write().await.async_drop().await.unwrap();
-        self.fs.write().unwrap().take().destroy().await;
         // Nothing.
     }
 
@@ -744,8 +744,8 @@ where
 
 impl<Fn, D> IntoFs<ObjectBasedFsAdapter<D>> for Fn
 where
-    Fn: FnOnce(Uid, Gid) -> D + Send + Sync + 'static,
-    D: Device + Send + Sync + 'static,
+    Fn: FnOnce(Uid, Gid) -> AsyncDropGuard<D> + Send + Sync + 'static,
+    D: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
     D::OpenFile: Send + Sync,
 {
     fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapter<D>> {
@@ -757,13 +757,22 @@ where
 #[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapter<Fs>
 where
-    Fs: Device + Send + Sync + 'static,
+    Fs: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
     Fs::OpenFile: Send + Sync,
 {
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        // TODO If the object was never used (e.g. destroy never called), we need to destroy members here.
+        let mut open_files = std::mem::replace(
+            &mut *self.open_files.write().await,
+            AsyncDropGuard::new_invalid(),
+        );
+        open_files.async_drop().await?;
+        let mut fs = std::mem::replace(
+            &mut *self.fs.write().unwrap(),
+            AsyncDropGuard::new_invalid(),
+        );
+        fs.async_drop().await.map_err(|err| err)?;
         Ok(())
     }
 }
