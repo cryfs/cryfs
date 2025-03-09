@@ -76,7 +76,7 @@ pub struct MountArgs {
     pub unmount_idle: Option<humantime::Duration>,
 
     /// Additional fuse mount options. Can be specified multiple times, e.g. '-o allow_other -o allow_root'.
-    #[arg(short = 'o', long)]
+    #[arg(short = 'o', long, value_delimiter = ',')]
     pub fuse_option: Vec<FuseOption>,
 }
 
