@@ -20,6 +20,7 @@ fuser = { workspace = true, optional = true }
 futures.workspace = true
 libc.workspace = true
 log.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true

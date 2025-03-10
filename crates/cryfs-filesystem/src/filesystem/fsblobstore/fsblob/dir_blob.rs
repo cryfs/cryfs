@@ -2,16 +2,14 @@ use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
-use std::future::Future;
 use std::time::SystemTime;
 
-use super::atime_update_behavior::AtimeUpdateBehavior;
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::utils::fs_types::{Gid, Mode, Uid};
-use cryfs_blobstore::{BLOBID_LEN, Blob, BlobId, BlobStore};
+use cryfs_blobstore::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
-use cryfs_rustfs::{FsError, FsResult, PathComponent, PathComponentBuf};
+use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, PathComponent, PathComponentBuf};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};

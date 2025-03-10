@@ -8,9 +8,6 @@ use cryfs_blockstore::BlockId;
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-mod atime_update_behavior;
-pub use atime_update_behavior::AtimeUpdateBehavior;
-
 mod layout;
 pub use layout::BlobType;
 

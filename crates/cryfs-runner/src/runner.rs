@@ -8,8 +8,8 @@ use cryfs_cli_utils::{
     BlockstoreCallback, CliError, CliErrorKind, CliResultExt, CliResultExtFn,
     setup_blockstore_stack,
 };
-use cryfs_filesystem::filesystem::fsblobstore::AtimeUpdateBehavior;
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
+use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::backend::fuser::{self, MountOption};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use serde::{Deserialize, Serialize};

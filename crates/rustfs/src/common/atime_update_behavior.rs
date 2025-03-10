@@ -1,5 +1,3 @@
-// TODO This should probably live in fspp, not here
-
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
@@ -59,3 +57,5 @@ fn relatime(old_atime: SystemTime, old_mtime: SystemTime, new_atime: SystemTime)
     let yesterday = new_atime - Duration::from_secs(60 * 60 * 24);
     old_atime < old_mtime || old_atime < yesterday
 }
+
+// TODO Tests

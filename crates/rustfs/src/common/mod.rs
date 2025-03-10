@@ -45,3 +45,6 @@ pub use request_info::RequestInfo;
 
 mod callback;
 pub use callback::{Callback, CallbackImpl};
+
+mod atime_update_behavior;
+pub use atime_update_behavior::AtimeUpdateBehavior;
