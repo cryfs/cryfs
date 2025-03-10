@@ -830,10 +830,12 @@ dependencies = [
  "dialoguer",
  "escargot",
  "humantime",
+ "itertools 0.14.0",
  "konst",
  "lazy_static",
  "log",
  "predicates",
+ "rstest",
  "tokio",
 ]
 

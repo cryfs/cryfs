@@ -1,10 +1,11 @@
 // TODO This should probably live in fspp, not here
 
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
 /// Defines how atime timestamps of files and directories are accessed on read accesses
 /// (e.g. atime, strictatime, relatime, nodiratime)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AtimeUpdateBehavior {
     /// atime attribute (of both files and directories) is updated only during write access.
     Noatime,

@@ -8,7 +8,7 @@ use cryfs_runner::{CreateOrLoad, Mounter};
 use log::LevelFilter;
 
 use super::console::InteractiveConsole;
-use crate::args::{CryfsArgs, MountArgs};
+use crate::args::{AtimeOption, CryfsArgs, FuseOption, MountArgs};
 use cryfs_blockstore::AllowIntegrityViolations;
 use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
@@ -176,6 +176,12 @@ impl Cli {
             println!("To see more information, run `cryfs --help`.");
         };
 
+        let (atime_options, fuse_permission_options) =
+            FuseOption::partition(&mount_args.fuse_option);
+
+        let atime_behavior = AtimeOption::to_atime_behavior(&atime_options)
+            .map_cli_error(CliErrorKind::InvalidArguments)?;
+
         mounter
             .mount_filesystem(
                 cryfs_runner::MountArgs {
@@ -195,7 +201,8 @@ impl Cli {
                     my_client_id: config.my_client_id,
                     local_state_dir: self.local_state_dir.clone(),
                     unmount_idle: mount_args.unmount_idle.map(Into::into),
-                    fuse_option: mount_args.fuse_option.iter().map(Into::into).collect(),
+                    fuse_options: fuse_permission_options.iter().map(Into::into).collect(),
+                    atime_behavior,
                 },
                 on_successfully_mounted,
             )

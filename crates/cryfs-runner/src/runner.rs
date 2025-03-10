@@ -8,6 +8,7 @@ use cryfs_cli_utils::{
     BlockstoreCallback, CliError, CliErrorKind, CliResultExt, CliResultExtFn,
     setup_blockstore_stack,
 };
+use cryfs_filesystem::filesystem::fsblobstore::AtimeUpdateBehavior;
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::backend::fuser::{self, MountOption};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -35,7 +36,8 @@ pub struct MountArgs {
     pub my_client_id: ClientId,
     pub local_state_dir: LocalStateDir,
     pub unmount_idle: Option<Duration>,
-    pub fuse_option: Box<[FuseOption]>,
+    pub fuse_options: Box<[FuseOption]>,
+    pub atime_behavior: AtimeUpdateBehavior,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -79,7 +81,7 @@ pub async fn mount_filesystem(
             on_successfully_mounted,
             unmount_trigger,
             unmount_idle: mount_args.unmount_idle,
-            fuse_options: mount_args.fuse_option,
+            fuse_options: mount_args.fuse_options,
         },
     )
     .await??;

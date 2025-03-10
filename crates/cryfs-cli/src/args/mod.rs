@@ -3,6 +3,7 @@ mod fuse_option;
 mod mount_args;
 
 pub use cryfs_args::CryfsArgs;
+pub use fuse_option::{AtimeOption, FuseOption};
 pub use mount_args::MountArgs;
 
 // TODO Evaluate `clap_mangen` as a potential automatic manpage generator

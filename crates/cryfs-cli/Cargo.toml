@@ -27,6 +27,7 @@ cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 dialoguer.workspace = true
 humantime.workspace = true
+itertools.workspace = true
 konst.workspace = true
 tokio.workspace = true
 log.workspace = true
@@ -36,6 +37,7 @@ assert_cmd.workspace = true
 escargot.workspace = true
 lazy_static.workspace = true
 predicates.workspace = true
+rstest.workspace = true
 
 [features]
 default = ["check_for_updates"]

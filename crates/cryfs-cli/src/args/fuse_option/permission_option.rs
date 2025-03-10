@@ -1,7 +1,7 @@
 use clap::ValueEnum;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
-pub enum FuseOption {
+pub enum FusePermissionOption {
     /// Allow all users to access files on this filesystem. By default access is restricted to the user who mounted it.
     #[clap(rename_all = "snake_case")]
     AllowOther,
@@ -11,11 +11,11 @@ pub enum FuseOption {
     AllowRoot,
 }
 
-impl From<&FuseOption> for cryfs_runner::FuseOption {
-    fn from(value: &FuseOption) -> Self {
+impl From<&FusePermissionOption> for cryfs_runner::FuseOption {
+    fn from(value: &FusePermissionOption) -> Self {
         match value {
-            FuseOption::AllowOther => cryfs_runner::FuseOption::AllowOther,
-            FuseOption::AllowRoot => cryfs_runner::FuseOption::AllowRoot,
+            FusePermissionOption::AllowOther => cryfs_runner::FuseOption::AllowOther,
+            FusePermissionOption::AllowRoot => cryfs_runner::FuseOption::AllowRoot,
         }
     }
 }
