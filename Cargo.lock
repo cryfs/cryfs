@@ -943,7 +943,7 @@ dependencies = [
  "env_logger",
  "fuse_mt",
  "fuser 0.13.0",
- "fuser 0.14.0",
+ "fuser 0.15.1",
  "futures",
  "libc",
  "log",
@@ -1449,17 +1449,18 @@ dependencies = [
 
 [[package]]
 name = "fuser"
-version = "0.14.0"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e697f6f62c20b6fad1ba0f84ae909f25971cf16e735273524e3977c94604cf8"
+checksum = "53274f494609e77794b627b1a3cddfe45d675a6b2e9ba9c0fdc8d8eee2184369"
 dependencies = [
  "libc",
  "log",
  "memchr",
+ "nix",
  "page_size 0.6.0",
  "pkg-config",
  "smallvec",
- "zerocopy 0.7.35",
+ "zerocopy 0.8.21",
 ]
 
 [[package]]

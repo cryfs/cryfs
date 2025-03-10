@@ -179,6 +179,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
             MountOption::Subtype("cryfs".to_string()),
             fuse_atime_option,
+            // TODO What other MountOptions should we set (or let the user set on the command line)?
         ]
         .into_iter()
         .chain(self.fuse_options.iter().map(|o| match o {

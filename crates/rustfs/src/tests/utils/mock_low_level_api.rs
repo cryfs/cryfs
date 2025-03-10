@@ -43,7 +43,7 @@ mock! {
 
         async fn forget(&self, req: &RequestInfo, ino: InodeNumber, nlookup: u64) -> FsResult<()>;
 
-        async fn getattr(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr>;
+        async fn getattr(&self, req: &RequestInfo, ino: InodeNumber, fh: Option<FileHandle>) -> FsResult<ReplyAttr>;
 
         async fn setattr(
             &self,
@@ -420,8 +420,13 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         self.deref().forget(req, ino, nlookup).await
     }
 
-    async fn getattr(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr> {
-        self.deref().getattr(req, ino).await
+    async fn getattr(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        fh: Option<FileHandle>,
+    ) -> FsResult<ReplyAttr> {
+        self.deref().getattr(req, ino, fh).await
     }
 
     async fn setattr(

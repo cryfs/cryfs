@@ -113,7 +113,12 @@ pub trait AsyncFilesystemLL {
     // }
 
     /// Get file attributes.
-    async fn getattr(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr>;
+    async fn getattr(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        fh: Option<FileHandle>,
+    ) -> FsResult<ReplyAttr>;
 
     /// Set file attributes.
     async fn setattr(

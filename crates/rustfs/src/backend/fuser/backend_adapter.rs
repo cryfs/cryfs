@@ -474,12 +474,15 @@ where
     //     todo!()
     // }
 
-    fn getattr(&mut self, req: &Request<'_>, ino: u64, reply: ReplyAttr) {
+    fn getattr(&mut self, req: &Request<'_>, ino: u64, fh: Option<u64>, reply: ReplyAttr) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
-        self.run_async_reply_attr(format!("getattr(ino={ino:?})"), reply, async move |fs| {
-            fs.read().await.getattr(&req, ino).await
-        });
+        let fh = fh.map(FileHandle::from);
+        self.run_async_reply_attr(
+            format!("getattr(ino={ino:?}, fh={fh:?})"),
+            reply,
+            async move |fs| fs.read().await.getattr(&req, ino, fh).await,
+        );
     }
 
     fn setattr(

@@ -201,7 +201,12 @@ where
         Ok(())
     }
 
-    async fn getattr(&self, _req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyAttr> {
+    async fn getattr(
+        &self,
+        _req: &RequestInfo,
+        ino: InodeNumber,
+        fh: Option<FileHandle>,
+    ) -> FsResult<ReplyAttr> {
         self.trigger_on_operation().await?;
 
         let mut node = self.get_inode(ino).await?;
