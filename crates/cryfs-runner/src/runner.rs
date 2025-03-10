@@ -82,6 +82,7 @@ pub async fn mount_filesystem(
             unmount_trigger,
             unmount_idle: mount_args.unmount_idle,
             fuse_options: mount_args.fuse_options,
+            atime_behavior: mount_args.atime_behavior,
         },
     )
     .await??;
@@ -109,6 +110,7 @@ struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
     pub unmount_trigger: UnmountTrigger,
     pub unmount_idle: Option<Duration>,
     pub fuse_options: Box<[FuseOption]>,
+    pub atime_behavior: AtimeUpdateBehavior,
 }
 
 impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
@@ -166,9 +168,17 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         }
 
         let fs = |_uid, _gid| device;
+        let fuse_atime_option = match self.atime_behavior {
+            AtimeUpdateBehavior::Relatime
+            | AtimeUpdateBehavior::Strictatime
+            | AtimeUpdateBehavior::NodiratimeRelatime
+            | AtimeUpdateBehavior::NodiratimeStrictatime => MountOption::Atime,
+            AtimeUpdateBehavior::Noatime => MountOption::NoAtime,
+        };
         let mount_options = [
             MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
             MountOption::Subtype("cryfs".to_string()),
+            fuse_atime_option,
         ]
         .into_iter()
         .chain(self.fuse_options.iter().map(|o| match o {
