@@ -141,12 +141,12 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
 
         let mut device = match self.create_or_load {
             CreateOrLoad::CreateNewFilesystem => {
-                CryDevice::create_new_filesystem(blobstore, root_blob_id)
+                CryDevice::create_new_filesystem(blobstore, root_blob_id, self.atime_behavior)
                     .await
                     .map_cli_error(CliErrorKind::UnspecifiedError)?
             }
             CreateOrLoad::LoadExistingFilesystem => {
-                CryDevice::load_filesystem(blobstore, root_blob_id)
+                CryDevice::load_filesystem(blobstore, root_blob_id, self.atime_behavior)
             }
         };
         match device

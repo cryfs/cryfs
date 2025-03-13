@@ -147,7 +147,6 @@ where
             .set_attr_by_name(name, mode, uid, gid, atime, mtime)
     }
 
-    // TODO Actually call this
     pub fn maybe_update_access_timestamp_of_entry(
         &mut self,
         blob_id: &BlobId,

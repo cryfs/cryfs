@@ -65,12 +65,16 @@ where
     }
 
     async fn target(&self) -> FsResult<String> {
-        let mut blob = self.load_blob().await?;
-        blob.target().await.map_err(|err| {
-            FsError::CorruptedFilesystem {
-                // TODO Add to message what it actually is
-                message: format!("Unparseable symlink blob: {err:?}"),
-            }
-        })
+        self.node_info
+            .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
+                let mut blob = self.load_blob().await?;
+                blob.target().await.map_err(|err| {
+                    FsError::CorruptedFilesystem {
+                        // TODO Add to message what it actually is
+                        message: format!("Unparseable symlink blob: {err:?}"),
+                    }
+                })
+            })
+            .await
     }
 }

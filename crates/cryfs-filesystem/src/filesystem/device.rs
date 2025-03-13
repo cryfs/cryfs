@@ -2,6 +2,7 @@ use anyhow::{Context as _, Result};
 use async_trait::async_trait;
 use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
+use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::object_based_api::Dir as _;
 use futures::join;
 use maybe_owned::MaybeOwned;
@@ -29,6 +30,8 @@ where
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     root_blob_id: BlobId,
 
+    atime_update_behavior: AtimeUpdateBehavior,
+
     /// Time of the latest operation that was executed on the filesystem
     last_access_time: Arc<AtomicInstant>,
 }
@@ -41,10 +44,12 @@ where
     pub fn load_filesystem(
         blobstore: AsyncDropGuard<B>,
         root_blob_id: BlobId,
+        atime_update_behavior: AtimeUpdateBehavior,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore: AsyncDropArc::new(FsBlobStore::new(blobstore)),
             root_blob_id,
+            atime_update_behavior,
             last_access_time: Arc::new(AtomicInstant::now()),
         })
     }
@@ -52,12 +57,14 @@ where
     pub async fn create_new_filesystem(
         blobstore: AsyncDropGuard<B>,
         root_blob_id: BlobId,
+        atime_update_behavior: AtimeUpdateBehavior,
     ) -> Result<AsyncDropGuard<Self>> {
         let mut fsblobstore = FsBlobStore::new(blobstore);
         match fsblobstore.create_root_dir_blob(&root_blob_id).await {
             Ok(()) => Ok(AsyncDropGuard::new(Self {
                 blobstore: AsyncDropArc::new(fsblobstore),
                 root_blob_id,
+                atime_update_behavior,
                 last_access_time: Arc::new(AtomicInstant::now()),
             })),
             Err(err) => {
@@ -296,7 +303,7 @@ where
     }
 
     async fn rootdir(&self) -> FsResult<Self::Dir<'_>> {
-        let node_info = NodeInfo::new_rootdir(self.root_blob_id);
+        let node_info = NodeInfo::new_rootdir(self.root_blob_id, self.atime_update_behavior);
         Ok(CryDir::new(&self.blobstore, Arc::new(node_info)))
     }
 

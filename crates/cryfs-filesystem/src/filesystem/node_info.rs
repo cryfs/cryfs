@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::time::SystemTime;
+use tokio::join;
 use tokio::sync::OnceCell;
 
 use super::fsblobstore::{DIR_LSTAT_SIZE, DirBlob, DirEntry, EntryType, FileBlob, FsBlob};
@@ -7,7 +8,8 @@ use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
-    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, PathComponent, PathComponentBuf, Uid,
+    AtimeUpdateBehavior, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, PathComponent,
+    PathComponentBuf, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
@@ -21,6 +23,9 @@ pub struct BlobDetails {
 pub enum NodeInfo {
     IsRootDir {
         root_blob_id: BlobId,
+
+        // TODO atime_update_behavior is in both IsRootDir and IsNotRootDir, maybe we should pull it out of an enum into a surrounding struct.
+        atime_update_behavior: AtimeUpdateBehavior,
     },
     IsNotRootDir {
         parent_blob_id: BlobId,
@@ -37,7 +42,11 @@ pub enum NodeInfo {
         // TODO Maybe it's actually ok to store a Blob here? Except for rename, all operations should just operate on one node
         //      and not depend on another node so we shouldn't cause any deadlocks. This would simplify what we're doing here
         //      and would also allow us to avoid potential double loads where [load_parent_blob] is called multiple times.
+        //      For example, each update to atime or mtime currently loads the parent blob for a second time, which is slow and
+        //      means basically every operation does it.
         blob_details: OnceCell<BlobDetails>,
+
+        atime_update_behavior: AtimeUpdateBehavior,
     },
 }
 
@@ -57,15 +66,23 @@ where
 }
 
 impl NodeInfo {
-    pub fn new_rootdir(root_blob_id: BlobId) -> Self {
-        Self::IsRootDir { root_blob_id }
+    pub fn new_rootdir(root_blob_id: BlobId, atime_update_behavior: AtimeUpdateBehavior) -> Self {
+        Self::IsRootDir {
+            root_blob_id,
+            atime_update_behavior,
+        }
     }
 
-    pub fn new(parent_blob_id: BlobId, name: PathComponentBuf) -> Self {
+    pub fn new(
+        parent_blob_id: BlobId,
+        name: PathComponentBuf,
+        atime_update_behavior: AtimeUpdateBehavior,
+    ) -> Self {
         Self::IsNotRootDir {
             parent_blob_id,
             name,
             blob_details: OnceCell::default(),
+            atime_update_behavior,
         }
     }
 
@@ -104,13 +121,17 @@ impl NodeInfo {
         for<'c> <B as BlobStore>::ConcreteBlob<'c>: Send + Sync,
     {
         match self {
-            Self::IsRootDir { root_blob_id } => Ok(LoadParentBlobResult::IsRootDir {
+            Self::IsRootDir {
+                root_blob_id,
+                atime_update_behavior: _,
+            } => Ok(LoadParentBlobResult::IsRootDir {
                 root_blob: *root_blob_id,
             }),
             Self::IsNotRootDir {
                 parent_blob_id,
                 name,
                 blob_details,
+                atime_update_behavior: _,
             } => {
                 let mut parent_blob = Self::_load_parent_blob(blobstore, parent_blob_id).await?;
 
@@ -161,7 +182,10 @@ impl NodeInfo {
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
         match self {
-            Self::IsRootDir { root_blob_id } => Ok(BlobDetails {
+            Self::IsRootDir {
+                root_blob_id,
+                atime_update_behavior: _,
+            } => Ok(BlobDetails {
                 blob_id: root_blob_id.clone(),
                 blob_type: BlobType::Dir,
             }),
@@ -169,6 +193,7 @@ impl NodeInfo {
                 parent_blob_id,
                 name,
                 blob_details,
+                atime_update_behavior: _,
             } => Ok(*blob_details
                 .get_or_try_init(async || {
                     let mut parent_blob =
@@ -347,6 +372,113 @@ impl NodeInfo {
             log::error!("Error resizing file blob: {err:?}");
             FsError::UnknownError
         })
+    }
+
+    pub async fn concurrently_maybe_update_access_timestamp_in_parent<B, F>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+        concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
+    ) -> FsResult<F>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let (update_result, fn_result) = join!(
+            self.maybe_update_access_timestamp_in_parent(blobstore, self.atime_update_behavior()),
+            concurrent_fn(),
+        );
+        update_result?;
+        fn_result
+    }
+
+    pub async fn concurrently_update_modification_timestamp_in_parent<B, F>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+        concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
+    ) -> FsResult<F>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let (update_result, fn_result) = join!(
+            self.update_modification_timestamp_in_parent(blobstore),
+            concurrent_fn(),
+        );
+        update_result?;
+        fn_result
+    }
+
+    pub async fn maybe_update_access_timestamp_in_parent<B>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+        atime_update_behavior: AtimeUpdateBehavior,
+    ) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        self._update_in_parent(blobstore, |parent, blob_id| {
+            parent.maybe_update_access_timestamp_of_entry(blob_id, atime_update_behavior)
+        })
+        .await
+    }
+
+    pub async fn update_modification_timestamp_in_parent<B>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+    ) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        self._update_in_parent(blobstore, |parent, blob_id| {
+            parent.update_modification_timestamp_of_entry(blob_id)
+        })
+        .await
+    }
+
+    async fn _update_in_parent<B>(
+        &self,
+        blobstore: &FsBlobStore<B>,
+        update_fn: impl FnOnce(&mut DirBlob<B>, &BlobId) -> FsResult<()>,
+    ) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        // TODO Ideally we'd do this without loading the parent blob (we've already loaded it right before to be able to load the actual blob),
+        //      but if not possible, the least we can do is remember the current atime in BlobDetails on the first load before calling into here,
+        //      and decide if we need to update the timestamp based on that before loading the parent blob. Avoiding a load when it doesn't need to be updated.
+        //      Or at the very least, short circuit noatime to not load the parent blob.
+        let parent = self.load_parent_blob(blobstore).await?;
+        match parent {
+            LoadParentBlobResult::IsRootDir { .. } => {
+                //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
+            }
+            LoadParentBlobResult::IsNotRootDir {
+                name: _,
+                mut parent_blob,
+                blob_details,
+            } => {
+                update_fn(&mut parent_blob, &blob_details.blob_id)?;
+                parent_blob.async_drop().await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn atime_update_behavior(&self) -> AtimeUpdateBehavior {
+        match self {
+            Self::IsRootDir {
+                atime_update_behavior,
+                ..
+            } => *atime_update_behavior,
+            Self::IsNotRootDir {
+                atime_update_behavior,
+                ..
+            } => *atime_update_behavior,
+        }
     }
 }
 

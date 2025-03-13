@@ -177,7 +177,11 @@ where
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
         let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
-        let node_info = NodeInfo::new(self_blob_id, name.to_owned());
+        let node_info = NodeInfo::new(
+            self_blob_id,
+            name.to_owned(),
+            self.node_info.atime_update_behavior(),
+        );
         Ok(CryNode::new(
             AsyncDropArc::clone(&self.blobstore),
             node_info,
@@ -392,8 +396,14 @@ where
                     mtime,
                     ctime: mtime,
                 };
-                let node =
-                    CryDir::new(&self.blobstore, Arc::new(NodeInfo::new(self_blob_id, name)));
+                let node = CryDir::new(
+                    &self.blobstore,
+                    Arc::new(NodeInfo::new(
+                        self_blob_id,
+                        name,
+                        self.node_info.atime_update_behavior(),
+                    )),
+                );
                 Ok((attrs, node))
             })())
         })
@@ -482,8 +492,14 @@ where
                     FsError::UnknownError
                 })?;
 
-                let node =
-                    CrySymlink::new(&self.blobstore, Arc::new(NodeInfo::new(self_blob_id, name)));
+                let node = CrySymlink::new(
+                    &self.blobstore,
+                    Arc::new(NodeInfo::new(
+                        self_blob_id,
+                        name,
+                        self.node_info.atime_update_behavior(),
+                    )),
+                );
 
                 // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
                 let attrs = NodeAttrs {
@@ -601,6 +617,7 @@ where
                     blob_id: new_file_blob_id,
                     blob_type: BlobType::File,
                 })),
+                atime_update_behavior: self.node_info.atime_update_behavior(),
             });
 
             let node =
