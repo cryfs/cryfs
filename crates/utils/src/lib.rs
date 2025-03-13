@@ -1,9 +1,10 @@
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
 
 pub mod async_drop;
 pub mod at_exit;
 pub mod binary;
+pub mod concurrent_task;
 pub mod containers;
 pub mod crypto;
 pub mod data;
