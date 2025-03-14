@@ -90,6 +90,8 @@ impl Application for Cli {
     }
 
     fn main(self) -> Result<(), CliError> {
+        // TODO Once we support Windows, we need to check that we're running on a supported windows version. C++ CryFS only supported Windows 7 or later.
+
         if self.args.show_ciphers {
             self.show_ciphers();
             return Ok(());

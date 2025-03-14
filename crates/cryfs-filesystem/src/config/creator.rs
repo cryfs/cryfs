@@ -90,6 +90,7 @@ fn _generate_encryption_key(cipher_name: &str) -> Result<EncryptionKey, ConfigCr
         fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
             EncryptionKey::new(C::KEY_SIZE, |data| {
                 // TODO Which rng should we use?
+                // Probably a cheap one for tests and a cryptographically secure one for production
                 rng().fill_bytes(data);
                 Ok(())
             })
