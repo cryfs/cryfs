@@ -135,7 +135,7 @@ impl DirEntry {
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
-        // TODO Direct implementation would be faster because it'd avoid _update_metadata_change_time calls. Maybe we could even remove the other setters and only have this one?
+        // TODO Direct implementation would be faster because it'd avoid multiple _update_metadata_change_time calls. Maybe we could even remove the other setters and only have this one?
         if let Some(mode) = mode {
             self.set_mode(mode)?;
         }
@@ -198,14 +198,12 @@ impl DirEntry {
 
     pub fn set_last_access_time(&mut self, last_access_time: SystemTime) {
         self.inner.last_access_time = last_access_time;
-        // TODO Should this do the following?
-        //      self._update_metadata_change_time();
+        self._update_metadata_change_time();
     }
 
     pub fn update_access_time(&mut self) {
         self.inner.last_access_time = SystemTime::now();
-        // TODO Should this do the following?
-        //      self._update_metadata_change_time();
+        self._update_metadata_change_time();
     }
 
     pub fn last_modification_time(&self) -> SystemTime {
