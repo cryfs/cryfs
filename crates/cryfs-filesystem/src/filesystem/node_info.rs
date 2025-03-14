@@ -44,6 +44,9 @@ pub enum NodeInfo {
         //      and would also allow us to avoid potential double loads where [load_parent_blob] is called multiple times.
         //      For example, each update to atime or mtime currently loads the parent blob for a second time, which is slow and
         //      means basically every operation does it.
+        //      Actually, it's probably OpenFile that's the problem since it stores a NodeInfo for as long as the file is open.
+        //      Maybe we need to first implement ParallelAccessBlobStore ("CoalescingBlobStore"?) so that we can hold multiple
+        //      instances of the blob. Or alternatively, we have to change OpenFile to not store a NodeInfo.
         blob_details: OnceCell<BlobDetails>,
 
         atime_update_behavior: AtimeUpdateBehavior,
