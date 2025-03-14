@@ -376,6 +376,8 @@ where
     ) -> FsResult<ReplyEntry> {
         self.trigger_on_operation().await?;
 
+        // TODO Here (and maybe also in mkdir / create_file), existing nodes should be overwritten
+
         let parent = self.get_inode(parent_ino).await?;
         let (attrs, child) = with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
