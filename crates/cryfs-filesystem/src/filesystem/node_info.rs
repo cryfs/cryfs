@@ -19,7 +19,7 @@ pub struct BlobDetails {
     pub blob_type: BlobType,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum NodeInfo {
     IsRootDir {
         root_blob_id: BlobId,
