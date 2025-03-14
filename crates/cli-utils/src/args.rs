@@ -103,8 +103,8 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
 
 const fn clap_style() -> Styles {
     Styles::styled()
-        .header(AnsiColor::Yellow.on_default())
-        .usage(AnsiColor::Cyan.on_default())
+        .header(AnsiColor::Yellow.on_default().bold())
+        .usage(AnsiColor::Cyan.on_default().bold())
         .literal(AnsiColor::Cyan.on_default())
         .placeholder(AnsiColor::BrightCyan.on_default())
 }

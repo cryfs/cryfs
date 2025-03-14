@@ -59,7 +59,7 @@ pub struct MountArgs {
     /// Cipher to use for encryption.
     /// If creating a new file system, this will determine the cipher for the new file system.
     /// If opening an existing file system, this will verify that the file system actually uses that cipher.
-    /// See possible values by calling cryfs with --show-ciphers. Default: xchacha20-poly1305
+    /// Default: xchacha20-poly1305
     #[arg(long,value_parser=clap::builder::PossibleValuesParser::new(cryfs_filesystem::config::ALL_CIPHERS))]
     pub cipher: Option<String>, // TODO This should probably be an enum
 
