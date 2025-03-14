@@ -367,6 +367,14 @@ impl DirEntryList {
         Ok(())
     }
 
+    pub fn update_modification_timestamp_by_name(&mut self, name: &PathComponent) -> FsResult<()> {
+        let Some(entry) = self.get_by_name_mut(name) else {
+            return Err(FsError::NodeDoesNotExist);
+        };
+        entry.update_modification_time();
+        Ok(())
+    }
+
     pub fn remove_by_name(&mut self, name: &PathComponent) -> FsResult<DirEntry> {
         let Some((index, _entry)) = self._get_by_name_with_index(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist);

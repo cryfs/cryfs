@@ -147,6 +147,10 @@ where
             .set_attr_by_name(name, mode, uid, gid, atime, mtime)
     }
 
+    pub fn update_modification_timestamp_by_name(&mut self, name: &PathComponent) -> FsResult<()> {
+        self.entries.update_modification_timestamp_by_name(name)
+    }
+
     pub fn maybe_update_access_timestamp_of_entry(
         &mut self,
         blob_id: &BlobId,

@@ -349,9 +349,14 @@ impl NodeInfo {
                 let uid = uid.map(|uid| fs_types::Uid::from(u32::from(uid)));
                 let gid = gid.map(|gid| fs_types::Gid::from(u32::from(gid)));
                 let lstat_size = self.load_lstat_size(blobstore).await?;
+                // TODO Don't look up the entry by name twice when we have attrs and size.is_some(). Looking it up once should be enough.
                 let result = parent_blob
                     .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime)
                     .map(|result| dir_entry_to_node_attrs(result, lstat_size));
+                // Even if other fields are `None` (i.e. we don't run chmod, chown, utime), we still need to update the mtime in a truncate operation
+                if size.is_some() {
+                    parent_blob.update_modification_timestamp_by_name(name)?;
+                }
                 parent_blob.async_drop().await?;
                 result
             }
