@@ -3,7 +3,6 @@ use clap::Parser;
 use super::MountArgs;
 
 // TODO Set env var names and values from the constants in env.rs
-// TODO Only use ANSI coloring when the terminal supports it (here in FOOTER and in rest of help message)
 const FOOTER: &str = color_print::cstr!(
     r#"<yellow,bold>Environment variables:</yellow,bold>
   <cyan>CRYFS_FRONTEND=</cyan><bright-cyan>noninteractive</bright-cyan>
