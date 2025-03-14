@@ -12,7 +12,7 @@ pub mod password_provider;
 mod version;
 
 mod env;
-pub use env::Environment;
+pub use env::{ENV_VARS_DOCUMENTATION, EnvVarDoc, Environment};
 
 mod application;
 pub use application::{Application, run};

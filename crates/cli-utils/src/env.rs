@@ -10,6 +10,31 @@ const FRONTEND_NONINTERACTIVE: &str = "noninteractive";
 const NOUPDATECHECK_KEY: &str = "CRYFS_NO_UPDATE_CHECK";
 const LOCALSTATEDIR_KEY: &str = "CRYFS_LOCAL_STATE_DIR";
 
+pub struct EnvVarDoc {
+    pub key: &'static str,
+    pub value: &'static str,
+    pub description: &'static str,
+}
+
+pub const ENV_VARS_DOCUMENTATION: &[EnvVarDoc] = &[
+    EnvVarDoc {
+        key: FRONTEND_KEY,
+        value: FRONTEND_NONINTERACTIVE,
+        description: "Work better together with tools. With this option set, CryFS won't ask anything, but use default values for options you didn't specify on command line. Furthermore, it won't ask you to enter a new password a second time (password confirmation).",
+    },
+    #[cfg(feature = "check_for_updates")]
+    EnvVarDoc {
+        key: NOUPDATECHECK_KEY,
+        value: "true",
+        description: "By default, CryFS connects to the internet to check for known security vulnerabilities and new versions. This option disables this.",
+    },
+    EnvVarDoc {
+        key: LOCALSTATEDIR_KEY,
+        value: "[path]",
+        description: "Sets the directory cryfs uses to store local state. This local state is used to recognize known file systems and run integrity checks, i.e. check that they haven't been modified by an attacker.\nDefault value: /home/heinzi/.local/share/cryfs",
+    },
+];
+
 #[derive(Debug, Clone)]
 pub struct Environment {
     pub is_noninteractive: bool,

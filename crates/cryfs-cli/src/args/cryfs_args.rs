@@ -1,28 +1,29 @@
 use clap::Parser;
+use std::fmt::Write;
 
 use super::MountArgs;
+use cryfs_cli_utils::{ENV_VARS_DOCUMENTATION, EnvVarDoc};
 
-// TODO Set env var names and values from the constants in env.rs
-const FOOTER: &str = color_print::cstr!(
-    r#"<yellow,bold>Environment variables:</yellow,bold>
-  <cyan>CRYFS_FRONTEND=</cyan><bright-cyan>noninteractive</bright-cyan>
-	Work better together with tools.
-	With this option set, CryFS won't ask anything, but use default values
-	for options you didn't specify on command line. Furthermore, it won't
-	ask you to enter a new password a second time (password confirmation).
-  <cyan>CRYFS_NO_UPDATE_CHECK=</cyan><bright-cyan>true</bright-cyan>
-	By default, CryFS connects to the internet to check for known
-	security vulnerabilities and new versions. This option disables this.
-  <cyan>CRYFS_LOCAL_STATE_DIR=</cyan><bright-cyan>[path]</bright-cyan>
-	Sets the directory cryfs uses to store local state. This local state
-	is used to recognize known file systems and run integrity checks,
-	i.e. check that they haven't been modified by an attacker.
-	Default value: /home/heinzi/.local/share/cryfs
-"#
-);
+fn footer() -> String {
+    let mut output = color_print::cformat!("<yellow,bold>Environment variables:</yellow,bold>\n");
+    for EnvVarDoc {
+        key,
+        value,
+        description,
+    } in ENV_VARS_DOCUMENTATION
+    {
+        let description = description.replace('\n', "\n    ");
+        color_print::cwrite!(
+            &mut output,
+            "  <cyan>{key}=</cyan><bright-cyan>{value}</bright-cyan>\n    {description}\n"
+        )
+        .unwrap();
+    }
+    output
+}
 
 #[derive(Parser, Debug)]
-#[command(after_help = FOOTER)]
+#[command(after_help = footer())]
 pub struct CryfsArgs {
     #[command(flatten)]
     pub mount: Option<MountArgs>,
