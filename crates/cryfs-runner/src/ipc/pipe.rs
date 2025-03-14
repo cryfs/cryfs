@@ -1,4 +1,8 @@
 use anyhow::{Result, bail};
+use bincode::{
+    config::{Fixint, LittleEndian, NoLimit},
+    error::DecodeError,
+};
 use interprocess::os::unix::unnamed_pipe::UnnamedPipeExt;
 use serde::{Serialize, de::DeserializeOwned};
 use std::{
@@ -6,6 +10,12 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+
+const BINCODE_CONFIG: bincode::config::Configuration<LittleEndian, Fixint, NoLimit> =
+    bincode::config::standard()
+        .with_little_endian()
+        .with_fixed_int_encoding()
+        .with_no_limit();
 
 /// Create a new pipe that can be used across forking for interprocess communication.
 ///
@@ -38,7 +48,7 @@ where
     }
 
     pub fn send(&mut self, data: &T) -> Result<()> {
-        bincode::serialize_into(&mut self.sender, data)?;
+        bincode::serde::encode_into_std_write(data, &mut self.sender, BINCODE_CONFIG)?;
         Ok(())
     }
 }
@@ -64,7 +74,10 @@ where
 
     pub fn recv(&mut self) -> Result<T> {
         self.recver.set_nonblocking(false)?;
-        Ok(bincode::deserialize_from(&mut self.recver)?)
+        Ok(bincode::serde::decode_from_std_read(
+            &mut self.recver,
+            BINCODE_CONFIG,
+        )?)
     }
 
     pub fn recv_timeout(&mut self, timeout: Duration) -> Result<T>
@@ -74,18 +87,20 @@ where
         self.recver.set_nonblocking(true)?;
         let timeout_at = Instant::now() + timeout;
         loop {
-            let received = bincode::deserialize_from(&mut self.recver);
+            let received = bincode::serde::decode_from_std_read(&mut self.recver, BINCODE_CONFIG);
             match received {
                 Ok(data) => return Ok(data),
-                Err(error) => match *error {
-                    bincode::ErrorKind::Io(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                Err(error) => match error {
+                    DecodeError::Io { inner, .. }
+                        if inner.kind() == std::io::ErrorKind::WouldBlock =>
+                    {
                         if Instant::now() >= timeout_at {
                             bail!("Timeout in ipc::Receiver::recv_timeout");
                         }
                         thread::sleep(Duration::from_millis(1));
                     }
-                    bincode::ErrorKind::Io(err)
-                        if err.kind() == std::io::ErrorKind::UnexpectedEof =>
+                    DecodeError::Io { inner, .. }
+                        if inner.kind() == std::io::ErrorKind::UnexpectedEof =>
                     {
                         bail!("Sender closed the pipe");
                     }

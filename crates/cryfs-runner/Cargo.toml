@@ -22,7 +22,7 @@ cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 daemonize.workspace = true
 interprocess.workspace = true
-bincode.workspace = true
+bincode = { workspace = true, features = ["serde"] }
 tokio.workspace = true
 libc.workspace = true
 log.workspace = true
