@@ -189,15 +189,19 @@ where
     }
 
     async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
-        let mut blob = self.load_blob().await?;
-        let result = blob
-            .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
-                // TODO Is overwriting actually allowed here if the new entry already exists?
-                self.on_rename_overwrites_destination(*blob_id).await
+        self.node_info
+            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+                let mut blob = self.load_blob().await?;
+                let result = blob
+                    .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
+                        // TODO Is overwriting actually allowed here if the new entry already exists?
+                        self.on_rename_overwrites_destination(*blob_id).await
+                    })
+                    .await;
+                blob.async_drop().await?;
+                result
             })
-            .await;
-        blob.async_drop().await?;
-        result
+            .await
     }
 
     async fn move_child_to(
@@ -328,25 +332,29 @@ where
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
-        let blob = self.load_blob().await?;
-        with_async_drop(blob, |blob| {
-            future::ready((move || {
-                let entries = blob.entries();
+        self.node_info
+            .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
+                let blob = self.load_blob().await?;
+                with_async_drop(blob, |blob| {
+                    future::ready((move || {
+                        let entries = blob.entries();
 
-                let mut result = Vec::with_capacity(entries.len());
-                for entry in entries {
-                    let name = entry.name().to_owned();
-                    let kind = match entry.entry_type() {
-                        EntryType::Dir => NodeKind::Dir,
-                        EntryType::File => NodeKind::File,
-                        EntryType::Symlink => NodeKind::Symlink,
-                    };
-                    result.push(cryfs_rustfs::DirEntry { name, kind });
-                }
-                Ok(result)
-            })())
-        })
-        .await
+                        let mut result = Vec::with_capacity(entries.len());
+                        for entry in entries {
+                            let name = entry.name().to_owned();
+                            let kind = match entry.entry_type() {
+                                EntryType::Dir => NodeKind::Dir,
+                                EntryType::File => NodeKind::File,
+                                EntryType::Symlink => NodeKind::Symlink,
+                            };
+                            result.push(cryfs_rustfs::DirEntry { name, kind });
+                        }
+                        Ok(result)
+                    })())
+                })
+                .await
+            })
+            .await
     }
 
     async fn create_child_dir(
@@ -356,99 +364,106 @@ where
         uid: Uid,
         gid: Gid,
     ) -> FsResult<(NodeAttrs, CryDir<'_, B>)> {
-        let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
-        let (blob, new_dir_blob_id) = join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
-        let blob = blob?;
-        // TODO Is this possible without to_owned()?
-        let name = name.to_owned();
-        with_async_drop(blob, move |blob| {
-            future::ready((move || {
-                let new_dir_blob_id = new_dir_blob_id?;
+        self.node_info
+            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+                let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+                let (blob, new_dir_blob_id) =
+                    join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
+                let blob = blob?;
+                // TODO Is this possible without to_owned()?
+                let name = name.to_owned();
+                with_async_drop(blob, move |blob| {
+                    future::ready((move || {
+                        let new_dir_blob_id = new_dir_blob_id?;
 
-                let atime = SystemTime::now();
-                let mtime = atime;
+                        let atime = SystemTime::now();
+                        let mtime = atime;
 
-                blob.add_entry_dir(
-                    name.clone(),
-                    new_dir_blob_id,
-                    // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                    fs_types::Mode::from(u32::from(mode)),
-                    fs_types::Uid::from(u32::from(uid)),
-                    fs_types::Gid::from(u32::from(gid)),
-                    atime,
-                    mtime,
-                )
-                .map_err(|err| {
-                    log::error!("Error adding dir entry: {err:?}");
-                    FsError::UnknownError
-                })?;
+                        blob.add_entry_dir(
+                            name.clone(),
+                            new_dir_blob_id,
+                            // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
+                            fs_types::Mode::from(u32::from(mode)),
+                            fs_types::Uid::from(u32::from(uid)),
+                            fs_types::Gid::from(u32::from(gid)),
+                            atime,
+                            mtime,
+                        )
+                        .map_err(|err| {
+                            log::error!("Error adding dir entry: {err:?}");
+                            FsError::UnknownError
+                        })?;
 
-                // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
-                let attrs = NodeAttrs {
-                    nlink: 1,
-                    mode,
-                    uid,
-                    gid,
-                    // TODO What should NumBytes be?
-                    num_bytes: NumBytes::from(0),
-                    num_blocks: None,
-                    atime,
-                    mtime,
-                    ctime: mtime,
-                };
-                let node = CryDir::new(
-                    &self.blobstore,
-                    Arc::new(NodeInfo::new(
-                        self_blob_id,
-                        name,
-                        self.node_info.atime_update_behavior(),
-                    )),
-                );
-                Ok((attrs, node))
-            })())
-        })
-        .await
+                        // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
+                        let attrs = NodeAttrs {
+                            nlink: 1,
+                            mode,
+                            uid,
+                            gid,
+                            // TODO What should NumBytes be?
+                            num_bytes: NumBytes::from(0),
+                            num_blocks: None,
+                            atime,
+                            mtime,
+                            ctime: mtime,
+                        };
+                        let node = CryDir::new(
+                            &self.blobstore,
+                            Arc::new(NodeInfo::new(
+                                self_blob_id,
+                                name,
+                                self.node_info.atime_update_behavior(),
+                            )),
+                        );
+                        Ok((attrs, node))
+                    })())
+                })
+                .await
+            })
+            .await
     }
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
-        let mut blob = self.load_blob().await?;
+        self.node_info.concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+            let mut blob = self.load_blob().await?;
 
-        // TODO Check the entry is actually a dir before removing it
+            // TODO Check the entry is actually a dir before removing it
 
-        // First remove the entry, then flush that change, and only then remove the blob.
-        // This is to make sure the file system doesn't end up in an invalid state
-        // where the blob is removed but the entry is still there.
-        let result = match blob.remove_entry_by_name(name) {
-            Err(err) => Err(err),
-            Ok(entry) => match blob.flush().await {
-                Err(err) => {
-                    log::error!("Error flushing blob: {err:?}");
-                    Err(FsError::UnknownError)
-                }
-                Ok(()) => {
-                    let blob_id = entry.blob_id();
-                    let remove_result = self.blobstore.remove_by_id(blob_id).await;
-                    match remove_result {
-                        Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                        Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                            Err(FsError::CorruptedFilesystem {
-                                message: format!(
-                                    "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
-                                ),
-                            })
-                        }
-                        Err(err) => {
-                            log::error!("Error removing blob: {err:?}");
-                            Err(FsError::UnknownError)
+            // First remove the entry, then flush that change, and only then remove the blob.
+            // This is to make sure the file system doesn't end up in an invalid state
+            // where the blob is removed but the entry is still there.
+            let result = match blob.remove_entry_by_name(name) {
+                Err(err) => Err(err),
+                Ok(entry) => match blob.flush().await {
+                    Err(err) => {
+                        log::error!("Error flushing blob: {err:?}");
+                        Err(FsError::UnknownError)
+                    }
+                    Ok(()) => {
+                        let blob_id = entry.blob_id();
+                        let remove_result = self.blobstore.remove_by_id(blob_id).await;
+                        match remove_result {
+                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                                Err(FsError::CorruptedFilesystem {
+                                    message: format!(
+                                        "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
+                                    ),
+                                })
+                            }
+                            Err(err) => {
+                                log::error!("Error removing blob: {err:?}");
+                                Err(FsError::UnknownError)
+                            }
                         }
                     }
-                }
-            },
-        };
+                },
+            };
 
-        blob.async_drop().await?;
+            blob.async_drop().await?;
 
-        result
+            result
+        }).await
     }
 
     async fn create_child_symlink(
@@ -458,107 +473,113 @@ where
         uid: Uid,
         gid: Gid,
     ) -> FsResult<(NodeAttrs, CrySymlink<B>)> {
-        // TODO What should NumBytes be? Also, no unwrap?
-        let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
+        self.node_info
+            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+                // TODO What should NumBytes be? Also, no unwrap?
+                let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
-        let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+                let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
 
-        let (blob, new_symlink_blob_id) = join!(
-            self.load_blob(),
-            self.create_symlink_blob(target, &self_blob_id),
-        );
-        let blob = blob?;
-        // TODO Is this possible without to_owned()?
-        let name = name.to_owned();
-        with_async_drop(blob, move |blob| {
-            future::ready((move || {
-                let new_symlink_blob_id = new_symlink_blob_id?;
-
-                let atime = SystemTime::now();
-                let mtime = atime;
-
-                let result = blob.add_entry_symlink(
-                    name.clone(),
-                    new_symlink_blob_id,
-                    // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                    fs_types::Uid::from(u32::from(uid)),
-                    fs_types::Gid::from(u32::from(gid)),
-                    atime,
-                    mtime,
+                let (blob, new_symlink_blob_id) = join!(
+                    self.load_blob(),
+                    self.create_symlink_blob(target, &self_blob_id),
                 );
+                let blob = blob?;
+                // TODO Is this possible without to_owned()?
+                let name = name.to_owned();
+                with_async_drop(blob, move |blob| {
+                    future::ready((move || {
+                        let new_symlink_blob_id = new_symlink_blob_id?;
 
-                result.map_err(|err| {
-                    log::error!("Error adding dir entry: {err:?}");
-                    FsError::UnknownError
-                })?;
+                        let atime = SystemTime::now();
+                        let mtime = atime;
 
-                let node = CrySymlink::new(
-                    &self.blobstore,
-                    Arc::new(NodeInfo::new(
-                        self_blob_id,
-                        name,
-                        self.node_info.atime_update_behavior(),
-                    )),
-                );
+                        let result = blob.add_entry_symlink(
+                            name.clone(),
+                            new_symlink_blob_id,
+                            // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
+                            fs_types::Uid::from(u32::from(uid)),
+                            fs_types::Gid::from(u32::from(gid)),
+                            atime,
+                            mtime,
+                        );
 
-                // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-                let attrs = NodeAttrs {
-                    nlink: 1,
-                    // TODO Don't convert mode but unify both classes
-                    mode: cryfs_rustfs::Mode::from(u32::from(MODE_NEW_SYMLINK)),
-                    uid,
-                    gid,
-                    num_bytes,
-                    num_blocks: None,
-                    atime,
-                    mtime,
-                    ctime: mtime,
-                };
-                Ok((attrs, node))
-            })())
-        })
-        .await
+                        result.map_err(|err| {
+                            log::error!("Error adding dir entry: {err:?}");
+                            FsError::UnknownError
+                        })?;
+
+                        let node = CrySymlink::new(
+                            &self.blobstore,
+                            Arc::new(NodeInfo::new(
+                                self_blob_id,
+                                name,
+                                self.node_info.atime_update_behavior(),
+                            )),
+                        );
+
+                        // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
+                        let attrs = NodeAttrs {
+                            nlink: 1,
+                            // TODO Don't convert mode but unify both classes
+                            mode: cryfs_rustfs::Mode::from(u32::from(MODE_NEW_SYMLINK)),
+                            uid,
+                            gid,
+                            num_bytes,
+                            num_blocks: None,
+                            atime,
+                            mtime,
+                            ctime: mtime,
+                        };
+                        Ok((attrs, node))
+                    })())
+                })
+                .await
+            })
+            .await
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
-        let mut blob = self.load_blob().await?;
+        self.node_info.concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+            let mut blob = self.load_blob().await?;
 
-        // TODO Check the entry is actually a file or symlink before removing it
+            // TODO Check the entry is actually a file or symlink before removing it
 
-        // First remove the entry, then flush that change, and only then remove the blob.
-        // This is to make sure the file system doesn't end up in an invalid state
-        // where the blob is removed but the entry is still there.
-        let result = match blob.remove_entry_by_name(name) {
-            Err(err) => Err(err),
-            Ok(entry) => match blob.flush().await {
-                Err(err) => {
-                    log::error!("Error flushing blob: {err:?}");
-                    Err(FsError::UnknownError)
-                }
-                Ok(()) => {
-                    let blob_id = entry.blob_id();
-                    let remove_result = self.blobstore.remove_by_id(blob_id).await;
-                    match remove_result {
-                        Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                        Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                            Err(FsError::CorruptedFilesystem {
-                                message: format!(
-                                    "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
-                                ),
-                            })
-                        }
-                        Err(err) => {
-                            log::error!("Error removing blob: {err:?}");
-                            Err(FsError::UnknownError)
+            // First remove the entry, then flush that change, and only then remove the blob.
+            // This is to make sure the file system doesn't end up in an invalid state
+            // where the blob is removed but the entry is still there.
+            let result = match blob.remove_entry_by_name(name) {
+                Err(err) => Err(err),
+                Ok(entry) => match blob.flush().await {
+                    Err(err) => {
+                        log::error!("Error flushing blob: {err:?}");
+                        Err(FsError::UnknownError)
+                    }
+                    Ok(()) => {
+                        let blob_id = entry.blob_id();
+                        let remove_result = self.blobstore.remove_by_id(blob_id).await;
+                        match remove_result {
+                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                                Err(FsError::CorruptedFilesystem {
+                                    message: format!(
+                                        "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
+                                    ),
+                                })
+                            }
+                            Err(err) => {
+                                log::error!("Error removing blob: {err:?}");
+                                Err(FsError::UnknownError)
+                            }
                         }
                     }
-                }
-            },
-        };
+                },
+            };
 
-        blob.async_drop().await?;
+            blob.async_drop().await?;
 
-        result
+            result
+        }).await
     }
 
     async fn create_and_open_file(
@@ -572,59 +593,67 @@ where
         AsyncDropGuard<CryNode<B>>,
         AsyncDropGuard<CryOpenFile<B>>,
     )> {
-        let blob_id = self.node_info.blob_id(&self.blobstore).await?;
-        let (blob, new_file_blob_id) = join!(self.load_blob(), self.create_file_blob(&blob_id),);
-        let mut blob = blob?;
+        self.node_info
+            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+                let blob_id = self.node_info.blob_id(&self.blobstore).await?;
+                let (blob, new_file_blob_id) =
+                    join!(self.load_blob(), self.create_file_blob(&blob_id),);
+                let mut blob = blob?;
 
-        with_async_drop_2!(blob, {
-            let new_file_blob_id = new_file_blob_id?;
+                with_async_drop_2!(blob, {
+                    let new_file_blob_id = new_file_blob_id?;
 
-            let atime = SystemTime::now();
-            let mtime = atime;
+                    let atime = SystemTime::now();
+                    let mtime = atime;
 
-            blob.add_entry_file(
-                name.to_owned(),
-                new_file_blob_id,
-                // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                fs_types::Mode::from(u32::from(mode)),
-                fs_types::Uid::from(u32::from(uid)),
-                fs_types::Gid::from(u32::from(gid)),
-                atime,
-                mtime,
-            )
-            .map_err(|err| {
-                log::error!("Error adding dir entry: {err:?}");
-                FsError::UnknownError
-            })?;
+                    blob.add_entry_file(
+                        name.to_owned(),
+                        new_file_blob_id,
+                        // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
+                        fs_types::Mode::from(u32::from(mode)),
+                        fs_types::Uid::from(u32::from(uid)),
+                        fs_types::Gid::from(u32::from(gid)),
+                        atime,
+                        mtime,
+                    )
+                    .map_err(|err| {
+                        log::error!("Error adding dir entry: {err:?}");
+                        FsError::UnknownError
+                    })?;
 
-            // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-            let attrs = NodeAttrs {
-                nlink: 1,
-                mode,
-                uid,
-                gid,
-                num_bytes: NumBytes::from(0),
-                num_blocks: None,
-                atime,
-                mtime,
-                ctime: mtime,
-            };
+                    // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
+                    let attrs = NodeAttrs {
+                        nlink: 1,
+                        mode,
+                        uid,
+                        gid,
+                        num_bytes: NumBytes::from(0),
+                        num_blocks: None,
+                        atime,
+                        mtime,
+                        ctime: mtime,
+                    };
 
-            let node_info = Arc::new(NodeInfo::IsNotRootDir {
-                parent_blob_id: blob_id,
-                name: name.to_owned(),
-                blob_details: OnceCell::new_with(Some(BlobDetails {
-                    blob_id: new_file_blob_id,
-                    blob_type: BlobType::File,
-                })),
-                atime_update_behavior: self.node_info.atime_update_behavior(),
-            });
+                    let node_info = Arc::new(NodeInfo::IsNotRootDir {
+                        parent_blob_id: blob_id,
+                        name: name.to_owned(),
+                        blob_details: OnceCell::new_with(Some(BlobDetails {
+                            blob_id: new_file_blob_id,
+                            blob_type: BlobType::File,
+                        })),
+                        atime_update_behavior: self.node_info.atime_update_behavior(),
+                    });
 
-            let node =
-                CryNode::new_internal(AsyncDropArc::clone(self.blobstore), Arc::clone(&node_info));
-            let open_file = CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
+                    let node = CryNode::new_internal(
+                        AsyncDropArc::clone(self.blobstore),
+                        Arc::clone(&node_info),
+                    );
+                    let open_file =
+                        CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
 
-            Ok((attrs, node, open_file))
-        })
+                    Ok((attrs, node, open_file))
+                })
+            })
+            .await
     }
 }
