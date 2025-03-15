@@ -34,10 +34,13 @@ pub struct CryConfig {
 
     /// Original version of the format of this file system.
     /// This may differ from [CryConfig::format_version] if the file system was migrated
-    pub created_with_version: String, // TODO Store as VersionInfo<String>
+    pub created_with_version: String, // TODO Store as the same struct we use for `format_version` above
 
     /// Version of the last CryFS instance that opened this file system
-    pub last_opened_with_version: String, // TODO Store as VersionInfo<String>
+    // We could store this as a Version struct, but it would have to be [VersionInfo] with git commit hash etc.
+    // And we'd have to add a parser to be able to read config files. And changing the version string format later
+    // would be difficult. Probably not worth it. String is good enough and more forward compatible.
+    pub last_opened_with_version: String,
 
     /// Size of the on-disk (i.e. post-encryption) blocks
     pub blocksize: Byte,
