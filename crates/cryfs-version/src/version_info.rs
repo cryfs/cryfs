@@ -1,19 +1,25 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    borrow::Borrow,
+    fmt::{self, Debug, Display, Formatter},
+};
 
 use super::version::Version;
 use git2version::GitInfo;
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound(deserialize = "'de: 'a + 'b + 'c"))]
-pub struct VersionInfo<'a, 'b, 'c> {
-    version: Version<'a>,
+#[serde(bound(deserialize = "'de: 'b + 'c, P: Deserialize<'de>"))]
+pub struct VersionInfo<'b, 'c, P>
+where
+    P: Borrow<str>,
+{
+    version: Version<P>,
     gitinfo: Option<GitInfo<'b, 'c>>,
 }
 
-impl<'a, 'b, 'c> VersionInfo<'a, 'b, 'c> {
+impl<'a, 'b, 'c> VersionInfo<'b, 'c, &'a str> {
     #[track_caller]
-    pub const fn new(version: Version<'a>, gitinfo: Option<GitInfo<'b, 'c>>) -> Self {
+    pub const fn new(version: Version<&'a str>, gitinfo: Option<GitInfo<'b, 'c>>) -> Self {
         if let Some(gitinfo) = gitinfo {
             match gitinfo.tag_info {
                 Some(tag_info) => {
@@ -38,14 +44,19 @@ impl<'a, 'b, 'c> VersionInfo<'a, 'b, 'c> {
 
         Self { version, gitinfo }
     }
+}
 
+impl<'b, 'c, P> VersionInfo<'b, 'c, P>
+where
+    P: Borrow<str>,
+{
     pub const fn assert_cargo_version_equals_git_version(self) -> Self {
         // Nothing to do because we already assert this in the constructor
         self
     }
 
-    pub const fn version(&self) -> Version<'a> {
-        self.version
+    pub const fn version(&self) -> &Version<P> {
+        &self.version
     }
 
     pub const fn gitinfo(&self) -> Option<GitInfo<'b, 'c>> {
@@ -53,13 +64,19 @@ impl<'a, 'b, 'c> VersionInfo<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> Debug for VersionInfo<'a, 'b, 'c> {
+impl<'b, 'c, P> Debug for VersionInfo<'b, 'c, P>
+where
+    P: Borrow<str>,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(self, f)
     }
 }
 
-impl<'a, 'b, 'c> Display for VersionInfo<'a, 'b, 'c> {
+impl<'b, 'c, P> Display for VersionInfo<'b, 'c, P>
+where
+    P: Borrow<str>,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.version)?;
         if let Some(gitinfo) = self.gitinfo {
@@ -90,7 +107,7 @@ mod tests {
 
         #[test]
         fn no_prerelease_and_no_gitinfo() {
-            let version = VersionInfo {
+            let version: VersionInfo<&str> = VersionInfo {
                 version: Version {
                     major: 1,
                     minor: 2,
@@ -105,7 +122,7 @@ mod tests {
 
         #[test]
         fn with_prerelease_and_no_gitinfo() {
-            let version = VersionInfo {
+            let version: VersionInfo<&str> = VersionInfo {
                 version: Version {
                     major: 1,
                     minor: 2,
@@ -120,7 +137,7 @@ mod tests {
 
         #[test]
         fn no_prerelease_and_with_gitinfo() {
-            let version = VersionInfo {
+            let version: VersionInfo<&str> = VersionInfo {
                 version: Version {
                     major: 1,
                     minor: 2,
@@ -164,7 +181,7 @@ mod tests {
 
         #[test]
         fn no_prerelease_and_with_gitinfo_and_modified() {
-            let version = VersionInfo {
+            let version: VersionInfo<&str> = VersionInfo {
                 version: Version {
                     major: 1,
                     minor: 2,
@@ -208,7 +225,7 @@ mod tests {
 
         #[test]
         fn no_prerelease_and_with_gitinfo_ontag() {
-            let version = VersionInfo {
+            let version: VersionInfo<&str> = VersionInfo {
                 version: Version {
                     major: 1,
                     minor: 2,
@@ -252,7 +269,7 @@ mod tests {
 
         #[test]
         fn no_prerelease_and_with_gitinfo_and_modified_ontag() {
-            let version = VersionInfo {
+            let version: VersionInfo<&str> = VersionInfo {
                 version: Version {
                     major: 1,
                     minor: 2,

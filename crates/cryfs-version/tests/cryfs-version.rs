@@ -2,7 +2,7 @@ use cryfs_version::Version;
 use tempproject::{TempProject, TempProjectBuilder};
 
 const OUR_CRATE_PATH: &str = env!("CARGO_MANIFEST_DIR");
-const OUR_GITVERSION: Option<Version> = match cryfs_version::GITINFO {
+const OUR_GITVERSION: Option<Version<&'static str>> = match cryfs_version::GITINFO {
     None => None,
     Some(gitinfo) => match gitinfo.tag_info {
         Some(tag_info) => Some(konst::unwrap_ctx!(Version::parse_const(tag_info.tag))),
@@ -73,11 +73,14 @@ serde_json = "^1.0.96"
         project.build().unwrap()
     }
 
-    fn run_version_test_project_expect_success(project: &TempProject, expected_version: &Version) {
+    fn run_version_test_project_expect_success(
+        project: &TempProject,
+        expected_version: &Version<&'static str>,
+    ) {
         let run = project.run_debug().unwrap().assert().success();
         let output = run.get_output();
 
-        let actual_version: Version = serde_json::from_slice(&output.stdout).unwrap();
+        let actual_version: Version<&str> = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(expected_version, &actual_version);
     }
 
@@ -147,11 +150,11 @@ serde_json = "^1.0.96"
         project.build().unwrap()
     }
 
-    fn run_version_test_project(project: &TempProject, expected_version: &Version) {
+    fn run_version_test_project(project: &TempProject, expected_version: &Version<&'static str>) {
         let run = project.run_debug().unwrap().assert().success();
         let output = run.get_output();
 
-        let actual_version: Version = serde_json::from_slice(&output.stdout).unwrap();
+        let actual_version: Version<&str> = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(expected_version, &actual_version);
     }
 }

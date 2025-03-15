@@ -10,7 +10,7 @@ pub fn show_version(
     env: &Environment,
     name: &str,
     #[cfg(feature = "check_for_updates")] http_client: impl HttpClient,
-    version_info: VersionInfo,
+    version_info: VersionInfo<&str>,
 ) {
     _show_version(
         env,
@@ -26,7 +26,7 @@ fn _show_version(
     env: &Environment,
     name: &str,
     #[cfg(feature = "check_for_updates")] http_client: impl HttpClient,
-    version_info: VersionInfo,
+    version_info: VersionInfo<&str>,
     stderr: &mut (impl Write + ?Sized),
 ) {
     // TODO If this happens due to the user specifying --version, we should print to stdout instead of stderr.
@@ -61,14 +61,14 @@ fn _show_version(
     .unwrap();
 
     #[cfg(feature = "check_for_updates")]
-    _maybe_check_for_updates(env, http_client, version_info.version(), stderr);
+    _maybe_check_for_updates(env, http_client, *version_info.version(), stderr);
 }
 
 #[cfg(feature = "check_for_updates")]
 fn _maybe_check_for_updates<'a>(
     env: &Environment,
     http_client: impl HttpClient,
-    version: Version<'a>,
+    version: Version<&'a str>,
     stderr: &mut (impl Write + ?Sized),
 ) {
     use super::update_checker::UpdateCheckResult;
@@ -121,7 +121,7 @@ mod tests {
         env: &Environment,
         name: &str,
         #[cfg(feature = "check_for_updates")] http_client: impl HttpClient,
-        version_info: VersionInfo,
+        version_info: VersionInfo<&str>,
     ) -> String {
         let mut output = BufWriter::new(Vec::new());
         _show_version(
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[cfg(feature = "check_for_updates")]
-    fn fake_http_client<'a>(newest_version: Version<'a>) -> FakeHttpClient {
+    fn fake_http_client<'a>(newest_version: Version<&'a str>) -> FakeHttpClient {
         let mut http_client = FakeHttpClient::new();
         http_client.add_website(
             "https://www.cryfs.org/version_info.json".to_string(),
@@ -152,7 +152,7 @@ mod tests {
 
     #[cfg(feature = "check_for_updates")]
     fn fake_http_client_with_security_warning<'a>(
-        newest_version: Version<'a>,
+        newest_version: Version<&'a str>,
         security_warning_version: &str,
         security_warning: &str,
     ) -> FakeHttpClient {

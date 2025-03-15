@@ -14,10 +14,9 @@ pub trait Console {
     /// TODO The C++ message here was "This filesystem is for CryFS " + config.Version() + " (or a later version with the same storage format). You're running a CryFS version using storage format " + CryConfig::FilesystemFormatVersion + ". It is recommended to create a new filesystem with CryFS 0.10 and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you won't be getting some of the performance advantages of the 0.10 release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data. Do you want to attempt a migration now?"
     fn ask_migrate_filesystem(
         &self,
-        // TODO Pass in a version struct instead of strings
-        current_filesystem_format_version: &Version,
-        new_filesystem_format_version: &Version,
-        cryfs_version: &VersionInfo,
+        current_filesystem_format_version: &Version<&str>,
+        new_filesystem_format_version: &Version<&str>,
+        cryfs_version: &VersionInfo<&str>,
     ) -> Result<bool>;
 
     /// We're in the process of opening a filesystem but the encryption key is different than the last time

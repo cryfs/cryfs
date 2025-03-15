@@ -17,7 +17,7 @@ macro_rules! package_version {
             // and maybe other gitinfo would be wrong as well.
             $crate::assert_cargo_version_equals_git_version!();
 
-            const VERSION_INFO: $crate::VersionInfo = $crate::VersionInfo::new(
+            const VERSION_INFO: $crate::VersionInfo<&'static str> = $crate::VersionInfo::new(
                     // This needs to be a macro instead of a const right here because
                     // we need to run it in the context of the client crate, otherwise
                     // it'll just return our own version number.
@@ -39,7 +39,7 @@ macro_rules! cargo_version {
             // This needs to be a macro instead of a const right here because
             // we need to run it in the context of the client crate, otherwise
             // it'll just return our own version number.
-            const RESULT: $crate::Version = $crate::Version {
+            const RESULT: $crate::Version<&'static str> = $crate::Version {
                 major: $crate::konst::unwrap_ctx!($crate::konst::primitive::parse_u32(env!(
                     "CARGO_PKG_VERSION_MAJOR"
                 ))),
@@ -67,8 +67,8 @@ macro_rules! cargo_version {
 macro_rules! assert_cargo_version_equals_git_version {
     () => {
         mod assert_cargo_version_equals_git_version {
-            const CARGO_VERSION: $crate::Version = $crate::cargo_version!();
-            const _VERSION_INFO: $crate::VersionInfo =
+            const CARGO_VERSION: $crate::Version<&'static str> = $crate::cargo_version!();
+            const _VERSION_INFO: $crate::VersionInfo<&'static str> =
                 $crate::VersionInfo::new(CARGO_VERSION, $crate::GITINFO)
                     .assert_cargo_version_equals_git_version();
         }

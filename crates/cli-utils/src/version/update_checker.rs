@@ -11,7 +11,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub fn check_for_updates<'a>(
     http_client: impl HttpClient,
-    current_version: Version<'a>,
+    current_version: Version<&'a str>,
 ) -> Result<UpdateCheckResult> {
     // TODO can we make this async?
     let response_json = http_client.get(UPDATE_INFO_URL, REQUEST_TIMEOUT)?;
@@ -52,7 +52,7 @@ struct VersionResponseVersionInfo {
 
 fn parse_warning<'a>(
     warnings: &Option<HashMap<String, String>>,
-    version: Version<'a>,
+    version: Version<&'a str>,
 ) -> Option<String> {
     let warnings = warnings.as_ref()?;
 
@@ -74,9 +74,10 @@ mod tests {
     use super::super::http_client::FakeHttpClient;
     use super::*;
 
-    const OLDER_VERSION: Version<'static> = konst::unwrap_ctx!(Version::parse_const("0.11.0"));
-    const CURRENT_VERSION: Version<'static> = konst::unwrap_ctx!(Version::parse_const("1.0.0"));
-    const NEWER_VERSION: Version<'static> = konst::unwrap_ctx!(Version::parse_const("1.0.1"));
+    const OLDER_VERSION: Version<&'static str> = konst::unwrap_ctx!(Version::parse_const("0.11.0"));
+    const CURRENT_VERSION: Version<&'static str> =
+        konst::unwrap_ctx!(Version::parse_const("1.0.0"));
+    const NEWER_VERSION: Version<&'static str> = konst::unwrap_ctx!(Version::parse_const("1.0.1"));
 
     #[test]
     fn http_error() {

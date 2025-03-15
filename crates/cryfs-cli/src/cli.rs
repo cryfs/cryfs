@@ -49,7 +49,7 @@ pub struct Cli {
 impl Application for Cli {
     type ConcreteArgs = CryfsArgs;
     const NAME: &'static str = "cryfs";
-    const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
+    const VERSION: VersionInfo<'static, 'static, &'static str> = CRYFS_VERSION;
 
     // Returns None if the program should exit immediately with a success error code
     fn new(args: CryfsArgs, env: Environment) -> Result<Self, CliError> {

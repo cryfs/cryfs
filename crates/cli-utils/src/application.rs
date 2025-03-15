@@ -19,7 +19,7 @@ pub trait Application: Sized {
     type ConcreteArgs: Args;
 
     const NAME: &'static str;
-    const VERSION: VersionInfo<'static, 'static, 'static>;
+    const VERSION: VersionInfo<'static, 'static, &'static str>;
 
     fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self, CliError>;
 

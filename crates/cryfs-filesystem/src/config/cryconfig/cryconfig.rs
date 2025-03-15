@@ -6,7 +6,8 @@ use cryfs_version::Version;
 
 use super::filesystem_id::FilesystemId;
 
-pub const FILESYSTEM_FORMAT_VERSION: Version = konst::unwrap_ctx!(Version::parse_const("0.10"));
+pub const FILESYSTEM_FORMAT_VERSION: Version<&'static str> =
+    konst::unwrap_ctx!(Version::parse_const("0.10"));
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
 /// Note that the `Serialize`, `Deserialize` implementations here are **not** used to (de)serialize the config file. That happens in [super::serialization]
@@ -28,15 +29,15 @@ pub struct CryConfig {
     pub cipher: String,
 
     /// Current version of the format of this file system
-    /// TODO Store version numbers as a struct instead of String
+    // TODO Store this as a Version struct instead of String, but we should use a separate struct, not `cryfs_version::Version` because we only store major and minor version here
     pub format_version: String,
 
     /// Original version of the format of this file system.
     /// This may differ from [CryConfig::format_version] if the file system was migrated
-    pub created_with_version: String,
+    pub created_with_version: String, // TODO Store as VersionInfo<String>
 
     /// Version of the last CryFS instance that opened this file system
-    pub last_opened_with_version: String,
+    pub last_opened_with_version: String, // TODO Store as VersionInfo<String>
 
     /// Size of the on-disk (i.e. post-encryption) blocks
     pub blocksize: Byte,

@@ -13,9 +13,9 @@ pub struct RecoverConsole;
 impl Console for RecoverConsole {
     fn ask_migrate_filesystem(
         &self,
-        _current_filesystem_format_version: &Version,
-        _new_filesystem_format_version: &Version,
-        _cryfs_version: &VersionInfo,
+        _current_filesystem_format_version: &Version<&str>,
+        _new_filesystem_format_version: &Version<&str>,
+        _cryfs_version: &VersionInfo<&str>,
     ) -> Result<bool> {
         todo!()
     }

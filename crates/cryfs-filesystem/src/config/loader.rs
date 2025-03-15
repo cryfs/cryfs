@@ -17,9 +17,11 @@ use cryfs_utils::{crypto::symmetric::EncryptionKey, progress::ProgressBarManager
 use cryfs_version::{Version, VersionInfo};
 
 use crate::config::FILESYSTEM_FORMAT_VERSION;
-pub const CRYFS_VERSION: VersionInfo = crate::version::CRYFS_VERSION;
-const MIN_SUPPORTED_FORMAT_VERSION: Version = konst::unwrap_ctx!(Version::parse_const("0.10"));
-const MAX_SUPPORTED_FORMAT_VERSION: Version = FILESYSTEM_FORMAT_VERSION;
+pub const CRYFS_VERSION: VersionInfo<'static, 'static, &'static str> =
+    crate::version::CRYFS_VERSION;
+const MIN_SUPPORTED_FORMAT_VERSION: Version<&'static str> =
+    konst::unwrap_ctx!(Version::parse_const("0.10"));
+const MAX_SUPPORTED_FORMAT_VERSION: Version<&'static str> = FILESYSTEM_FORMAT_VERSION;
 
 #[derive(Error, Debug)]
 pub enum ConfigLoadError {
@@ -30,30 +32,27 @@ pub enum ConfigLoadError {
         "This filesystem is for CryFS {actual_format_version} but you're running CryFS {cryfs_version} which needs at least file system format version {min_supported_format_version}. Please migrate the file system to a supported version first by opening it with CryFS {min_supported_format_version}"
     )]
     TooOldFilesystemFormat {
-        // TODO Store Version object instead of String
-        actual_format_version: String,
-        min_supported_format_version: Version<'static>,
-        cryfs_version: VersionInfo<'static, 'static, 'static>,
+        actual_format_version: Version<String>,
+        min_supported_format_version: Version<&'static str>,
+        cryfs_version: VersionInfo<'static, 'static, &'static str>,
     },
 
     #[error(
         "This filesystem is for CryFS {actual_format_version} and would have to be migrated to {max_supported_format_version} to be used with CryFS {cryfs_version} but the migration was declined."
     )]
     TooOldFilesystemFormatDeclinedMigration {
-        // TODO Store Version object instead of String
-        actual_format_version: String,
-        max_supported_format_version: Version<'static>,
-        cryfs_version: VersionInfo<'static, 'static, 'static>,
+        actual_format_version: Version<String>,
+        max_supported_format_version: Version<&'static str>,
+        cryfs_version: VersionInfo<'static, 'static, &'static str>,
     },
 
     #[error(
         "This filesystem is in the format of CryFS {actual_format_version} but you're running CryFS {cryfs_version}, which uses file system format {max_supported_format_version}. Please update your CryFS version."
     )]
     TooNewFilesystemFormat {
-        // TODO Store Version object instead of String
-        actual_format_version: String,
-        max_supported_format_version: Version<'static>,
-        cryfs_version: VersionInfo<'static, 'static, 'static>,
+        actual_format_version: Version<String>,
+        max_supported_format_version: Version<&'static str>,
+        cryfs_version: VersionInfo<'static, 'static, &'static str>,
     },
 
     #[error("Error loading config file: {0:?}")]
@@ -293,8 +292,8 @@ fn _load(
     })
 }
 
-fn _check_version(
-    config: &CryConfig,
+fn _check_version<'a>(
+    config: &'a CryConfig,
     console: &(impl Console + ?Sized),
     allow_filesystem_upgrade: bool,
 ) -> Result<(), ConfigLoadError> {
@@ -305,20 +304,20 @@ fn _check_version(
         ))
     })?;
     // TODO Make these asserts const_assert
-    assert!(CRYFS_VERSION.version() >= MAX_SUPPORTED_FORMAT_VERSION);
+    assert!(*CRYFS_VERSION.version() >= MAX_SUPPORTED_FORMAT_VERSION);
     assert!(MAX_SUPPORTED_FORMAT_VERSION >= MIN_SUPPORTED_FORMAT_VERSION);
-    assert!(CRYFS_VERSION.version() >= MIN_SUPPORTED_FORMAT_VERSION);
+    assert!(*CRYFS_VERSION.version() >= MIN_SUPPORTED_FORMAT_VERSION);
 
     if actual_format_version < MIN_SUPPORTED_FORMAT_VERSION {
         return Err(ConfigLoadError::TooOldFilesystemFormat {
-            actual_format_version: actual_format_version.to_string(),
+            actual_format_version: actual_format_version.to_owned(),
             min_supported_format_version: MIN_SUPPORTED_FORMAT_VERSION,
             cryfs_version: CRYFS_VERSION,
         });
     }
     if actual_format_version > MAX_SUPPORTED_FORMAT_VERSION {
         return Err(ConfigLoadError::TooNewFilesystemFormat {
-            actual_format_version: actual_format_version.to_string(),
+            actual_format_version: actual_format_version.to_owned(),
             max_supported_format_version: MAX_SUPPORTED_FORMAT_VERSION,
             cryfs_version: CRYFS_VERSION,
         });
@@ -333,7 +332,7 @@ fn _check_version(
             .map_err(ConfigLoadError::InteractionError)?;
         if !allow_migration {
             return Err(ConfigLoadError::TooOldFilesystemFormatDeclinedMigration {
-                actual_format_version: actual_format_version.to_string(),
+                actual_format_version: actual_format_version.to_owned(),
                 max_supported_format_version: MAX_SUPPORTED_FORMAT_VERSION,
                 cryfs_version: CRYFS_VERSION,
             });

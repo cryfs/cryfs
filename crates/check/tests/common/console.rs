@@ -11,9 +11,9 @@ pub struct FixtureCreationConsole;
 impl Console for FixtureCreationConsole {
     fn ask_migrate_filesystem(
         &self,
-        _current_filesystem_format_version: &Version,
-        _new_filesystem_format_version: &Version,
-        _cryfs_version: &VersionInfo,
+        _current_filesystem_format_version: &Version<&str>,
+        _new_filesystem_format_version: &Version<&str>,
+        _cryfs_version: &VersionInfo<&str>,
     ) -> Result<bool> {
         panic!("unused")
     }

@@ -34,7 +34,7 @@ pub struct RecoverCli {
 impl Application for RecoverCli {
     type ConcreteArgs = CryfsRecoverArgs;
     const NAME: &'static str = "cryfs-check";
-    const VERSION: VersionInfo<'static, 'static, 'static> = CRYFS_VERSION;
+    const VERSION: VersionInfo<'static, 'static, &'static str> = CRYFS_VERSION;
 
     fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self, CliError> {
         // TODO Make sure we have tests for the local_state_dir location
