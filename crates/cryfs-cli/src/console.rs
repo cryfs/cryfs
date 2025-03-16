@@ -79,11 +79,25 @@ impl Console for InteractiveConsole {
 
     /// We're in the process of creating a new file system and need to ask the user for the scrypt settings to use
     fn ask_scrypt_settings_for_new_filesystem(&self) -> Result<ScryptSettings> {
+        let options = [
+            option(
+                "1. Low Memory: less secure, but works on devices with less memory",
+                ScryptSettings::LOW_MEMORY,
+            ),
+            option("2. Default", ScryptSettings::DEFAULT),
+            option(
+                "3. Paranoid: more secure, but mounting will be slow",
+                ScryptSettings::PARANOID,
+            ),
+        ];
+        const DEFAULT_INDEX: usize = 1;
+
         if self._use_default_creation_settings()? {
-            return Ok(ScryptSettings::DEFAULT);
+            return Ok(options[DEFAULT_INDEX].1);
         }
 
         // TODO Allow custom parameters
+        // TODO Add command line parameters for scrypt settings
 
         fn option(name: &str, opt: ScryptSettings) -> (String, ScryptSettings) {
             (
@@ -102,19 +116,8 @@ impl Console for InteractiveConsole {
                 "Scrypt is used to derive an encryption key from your password, to protect your file system against brute force attacks",
             ),
             "Please select the scrypt settings to use",
-            [
-                option(
-                    "1. Low Memory: less secure, but works on devices with less memory",
-                    ScryptSettings::LOW_MEMORY,
-                ),
-                option("2. Default", ScryptSettings::DEFAULT),
-                option(
-                    "3. Paranoid: more secure, but mounting will be slow",
-                    ScryptSettings::PARANOID,
-                ),
-            ]
-            .into_iter(),
-            1, // TODO Unify default definition between here and above under _use_default_creation_settings() so there's just one place if we want to change it later
+            options.into_iter(),
+            DEFAULT_INDEX,
         )
     }
 

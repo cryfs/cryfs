@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ScryptSettings {
     pub log_n: u8,
     pub r: u32,
