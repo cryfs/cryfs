@@ -13,3 +13,6 @@ Known differences between 1.0 and 2.0-alpha:
 - Windows and Mac don't work yet, only Linux for now
 - The old style of passing fuse options behind a double dash (e.g. `cryfs basedir mountdir -- allow_other`) was already deprecated in 1.0 and is now removed. Please use `cryfs basedir mountdir -o allow_other` instead.
   Also, the list of supported options is now limited to options that are known to work well with CryFS. See `cryfs --help` in CryFS 2.0 for the list of supported options.
+
+Some other changes:
+* scrypt parameters are now configurable when creating a new file system.
