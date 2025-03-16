@@ -39,7 +39,7 @@ fn _show_version(
     // TODO If this happens due to the user specifying --version, we should print to stdout instead of stderr.
     write!(
         stderr,
-        "{}",
+        "  {}",
         style(format!("{name} {version_info}\n")).bold()
     )
     .unwrap();
