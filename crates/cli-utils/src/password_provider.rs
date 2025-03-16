@@ -13,7 +13,10 @@ impl PasswordProvider for InteractivePasswordProvider {
         loop {
             let password = ask_password_from_console("Password: ")?;
             match check_password(&password) {
-                Ok(()) => return Ok(password),
+                Ok(()) => {
+                    println!();
+                    return Ok(password);
+                }
                 Err(err) => {
                     println!("Error: {}", err);
                     continue;
