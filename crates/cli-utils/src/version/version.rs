@@ -36,6 +36,8 @@ fn _show_version(
     version_info: VersionInfo<&str>,
     stderr: &mut (impl Write + ?Sized),
 ) {
+    #![allow(unused_assignments)]
+
     // TODO If this happens due to the user specifying --version, we should print to stdout instead of stderr.
     write!(
         stderr,
@@ -43,6 +45,7 @@ fn _show_version(
         style(format!("{name} {version_info}\n\n")).bold()
     )
     .unwrap();
+
     let mut showing_warnings = false;
     if let Some(gitinfo) = version_info.gitinfo() {
         if let Some(tag_info) = gitinfo.tag_info {

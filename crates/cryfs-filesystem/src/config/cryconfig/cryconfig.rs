@@ -65,7 +65,7 @@ impl CryConfig {
         super::serialization::deserialize(reader)
     }
 
-    pub fn missingBlockIsIntegrityViolation(&self) -> bool {
+    pub fn missing_block_is_integrity_violation(&self) -> bool {
         return self.exclusive_client_id.is_some();
     }
 }

@@ -53,7 +53,7 @@ pub async fn mount_filesystem(
     on_successfully_mounted: impl FnOnce() + Send + Sync,
 ) -> Result<(), CliError> {
     let missing_block_is_integrity_violation =
-        if mount_args.config.missingBlockIsIntegrityViolation() {
+        if mount_args.config.missing_block_is_integrity_violation() {
             MissingBlockIsIntegrityViolation::IsAViolation
         } else {
             MissingBlockIsIntegrityViolation::IsNotAViolation
