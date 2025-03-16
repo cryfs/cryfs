@@ -16,3 +16,4 @@ Known differences between 1.0 and 2.0-alpha:
 
 Some other changes:
 * scrypt parameters are now configurable when creating a new file system.
+* updated default scrypt parameters
