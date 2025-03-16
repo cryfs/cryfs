@@ -7,8 +7,6 @@ use cryfs_filesystem::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 
-// TODO Check if dialoguer colorful theme looks better
-
 // TODO Put default block size & cipher into a central place so we can share it with the code that creates file systems with "use default settings? yes"
 
 pub struct InteractiveConsole;
