@@ -50,7 +50,7 @@ impl TestConfig {
         let main_app = stringify!(
             type ConcreteArgs = MyArgs;
             const NAME: &'static str = "my-cli-name";
-            const VERSION: VersionInfo<'static, 'static, 'static> = VersionInfo::new(
+            const VERSION: VersionInfo<'static, 'static, &'static str> = VersionInfo::new(
                 Version {
                     major: 1,
                     minor: 2,
