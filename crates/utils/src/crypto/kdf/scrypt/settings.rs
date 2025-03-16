@@ -8,16 +8,23 @@ pub struct ScryptSettings {
 
 impl ScryptSettings {
     pub const PARANOID: Self = Self {
-        log_n: 20,
+        log_n: 24,
         r: 8,
-        p: 16,
+        p: 1,
         salt_len: 32,
     };
 
     pub const DEFAULT: Self = Self {
-        log_n: 20,
-        r: 4,
-        p: 8,
+        log_n: 22,
+        r: 8,
+        p: 1,
+        salt_len: 32,
+    };
+
+    pub const LOW_MEMORY: Self = Self {
+        log_n: 22,
+        r: 2,
+        p: 4,
         salt_len: 32,
     };
 
@@ -29,4 +36,27 @@ impl ScryptSettings {
         p: 2,
         salt_len: 32,
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::ScryptSettings;
+    use crate::crypto::kdf::scrypt::ScryptParams;
+
+    #[rstest]
+    fn params_are_valid(
+        #[values(
+            ScryptSettings::PARANOID,
+            ScryptSettings::DEFAULT,
+            ScryptSettings::LOW_MEMORY,
+            ScryptSettings::TEST
+        )]
+        settings: ScryptSettings,
+    ) {
+        let params = ScryptParams::generate(&settings).unwrap();
+        scrypt::Params::new(params.log_n(), params.r(), params.p(), 32)
+            .expect("Invalid scrypt parameters");
+    }
 }

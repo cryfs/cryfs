@@ -76,11 +76,18 @@ impl Console for InteractiveConsole {
             ),
             "Please select the scrypt settings to use",
             [
-                option("1. Default", ScryptSettings::DEFAULT),
-                option("2. Paranoid & Slow", ScryptSettings::PARANOID),
+                option(
+                    "1. Low Memory: less secure, but works on devices with less memory",
+                    ScryptSettings::LOW_MEMORY,
+                ),
+                option("2. Default", ScryptSettings::DEFAULT),
+                option(
+                    "3. Paranoid: more secure, but mounting will be slow",
+                    ScryptSettings::PARANOID,
+                ),
             ]
             .into_iter(),
-            0,
+            1,
         )
     }
 
