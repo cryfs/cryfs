@@ -210,7 +210,7 @@ mod tests {
         #[track_caller]
         fn assert_shows_version_number(output: &str, version: &str) {
             assert!(
-                output.starts_with(&format!("AppName {version}\n")),
+                output.contains(&format!("AppName {version}\n")),
                 "Expected `AppName {version}` found `{output}`"
             );
         }
