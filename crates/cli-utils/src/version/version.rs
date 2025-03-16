@@ -1,3 +1,4 @@
+use console::style;
 use std::io::Write;
 
 use crate::env::Environment;
@@ -5,6 +6,12 @@ use cryfs_version::{Version, VersionInfo};
 
 #[cfg(feature = "check_for_updates")]
 use super::http_client::HttpClient;
+
+fn warning(content: &str) -> String {
+    let header = style("WARNING!").yellow().bold();
+    let content = style(content).bold();
+    format!("  {header} {content}")
+}
 
 pub fn show_version(
     env: &Environment,
@@ -30,38 +37,62 @@ fn _show_version(
     stderr: &mut (impl Write + ?Sized),
 ) {
     // TODO If this happens due to the user specifying --version, we should print to stdout instead of stderr.
-    // TODO Colorize the output
-    write!(stderr, "{name} {version_info}\n").unwrap();
+    write!(
+        stderr,
+        "{}",
+        style(format!("{name} {version_info}\n\n")).bold()
+    )
+    .unwrap();
+    let mut showing_warnings = false;
     if let Some(gitinfo) = version_info.gitinfo() {
         if let Some(tag_info) = gitinfo.tag_info {
             if tag_info.commits_since_tag > 0 {
-                write!(stderr,
-                    "WARNING! This is a development version based on git commit {}. Please don't use in production.\n",
+                write!(stderr, "{}", warning(&format!(
+                    "This is a development version based on git commit {}. Please don't use in production.\n",
                     gitinfo.commit_id,
-                ).unwrap();
+                ))).unwrap();
+                showing_warnings = true;
             }
         }
         if gitinfo.modified {
-            write!(stderr, "WARNING! There were uncommitted changes in the repository when building this version.\n").unwrap();
+            write!(
+                stderr,
+                "{}",
+                warning(
+                    "There were uncommitted changes in the repository when building this version.\n"
+                )
+            )
+            .unwrap();
+            showing_warnings = true;
         }
     }
     if version_info.version().prerelease.is_some() {
         write!(
             stderr,
-            "WARNING! This is a prerelease version. Please backup your data frequently!\n"
+            "{}",
+            warning("This is a prerelease version. Please backup your data frequently!\n",)
         )
         .unwrap();
+        showing_warnings = true;
     }
 
     #[cfg(debug_assertions)]
-    write!(
-        stderr,
-        "WARNING! This is a debug build. Performance might be slow.\n"
-    )
-    .unwrap();
+    {
+        write!(
+            stderr,
+            "{}",
+            warning("This is a debug build. Performance might be slow.\n"),
+        )
+        .unwrap();
+        showing_warnings = true;
+    }
 
     #[cfg(feature = "check_for_updates")]
     _maybe_check_for_updates(env, http_client, *version_info.version(), stderr);
+
+    if showing_warnings {
+        println!();
+    }
 }
 
 #[cfg(feature = "check_for_updates")]
@@ -185,7 +216,7 @@ mod tests {
         }
 
         const DEVELOPMENT_VERSION_WARNING: &str =
-            "WARNING! This is a development version based on git commit";
+            "This is a development version based on git commit";
 
         #[track_caller]
         fn assert_contains_development_version_warning(output: &str, commit_id: &str) {
@@ -200,7 +231,7 @@ mod tests {
         }
 
         const UNCOMMITTED_CHANGES_WARNING: &str =
-            "WARNING! There were uncommitted changes in the repository when building this version.";
+            "There were uncommitted changes in the repository when building this version.";
 
         #[track_caller]
         fn assert_contains_uncommitted_changes_warning(output: &str) {
@@ -213,7 +244,7 @@ mod tests {
         }
 
         const PRERELEASE_WARNING: &str =
-            "WARNING! This is a prerelease version. Please backup your data frequently!";
+            "This is a prerelease version. Please backup your data frequently!";
 
         #[track_caller]
         fn assert_contains_prerelease_warning(output: &str) {
@@ -225,8 +256,7 @@ mod tests {
             assert!(!output.contains(PRERELEASE_WARNING));
         }
 
-        const DEBUG_BUILD_WARNING: &str =
-            "WARNING! This is a debug build. Performance might be slow.";
+        const DEBUG_BUILD_WARNING: &str = "This is a debug build. Performance might be slow.";
 
         #[track_caller]
         fn assert_debug_warning_shown_if_debug_build(output: &str) {
