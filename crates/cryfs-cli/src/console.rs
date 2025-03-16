@@ -126,7 +126,7 @@ impl Console for InteractiveConsole {
         // TODO Formatting. e.g. can we somehow highlight the path? By color or font? Also check other questions here for what we can do. The console or dialoguer crates could be useful.
         let explanation = format!("Could not find the vault at '{}'.", path.display());
         let prompt = "Do you want to create a new vault?";
-        ask_yes_no(Some(&explanation), &prompt, false)
+        ask_yes_no(Some(&explanation), &prompt, true)
     }
 
     fn ask_create_mountdir(&self, path: &Path) -> Result<bool> {
@@ -135,7 +135,7 @@ impl Console for InteractiveConsole {
             path.display()
         );
         let prompt = "Do you want to create a new directory?";
-        ask_yes_no(Some(&explanation), &prompt, false)
+        ask_yes_no(Some(&explanation), &prompt, true)
     }
 }
 
@@ -147,7 +147,7 @@ fn ask_yes_no(explanation: Option<&str>, prompt: &str, default: bool) -> Result<
     loop {
         let response = Confirm::with_theme(&ColorfulTheme::default())
             .with_prompt(format!("{prompt}"))
-            .default(false)
+            .default(default)
             .show_default(true)
             .interact_opt()?;
         if let Some(response) = response {
