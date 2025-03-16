@@ -1,6 +1,7 @@
 use anyhow::Result;
 use byte_unit::Byte;
 use dialoguer::{Confirm, Select, console::style, theme::ColorfulTheme};
+use once_cell::unsync::OnceCell;
 use std::path::Path;
 
 use cryfs_filesystem::config::Console;
@@ -9,7 +10,26 @@ use cryfs_version::{Version, VersionInfo};
 
 // TODO Put default block size & cipher into a central place so we can share it with the code that creates file systems with "use default settings? yes"
 
-pub struct InteractiveConsole;
+pub struct InteractiveConsole {
+    /// First time we ask for a creation setting, we ask the user if they want to use the default settings.
+    /// If they say yes, we store the answer in this variable to avoid asking again.
+    /// This only applies to filesystem creation settings, not to other questions we ask the user.
+    use_default_creation_settings: OnceCell<bool>,
+}
+
+impl InteractiveConsole {
+    pub fn new() -> Self {
+        Self {
+            use_default_creation_settings: OnceCell::new(),
+        }
+    }
+
+    fn _use_default_creation_settings(&self) -> Result<bool> {
+        self.use_default_creation_settings
+            .get_or_try_init(|| ask_yes_no(Some("You can either manually configure the file system, or use the default settings."), "Use default settings?", true))
+            .copied()
+    }
+}
 
 impl Console for InteractiveConsole {
     // TODO Test how all of these look like on the console
@@ -47,13 +67,23 @@ impl Console for InteractiveConsole {
     }
 
     fn ask_single_client_mode_for_new_filesystem(&self) -> Result<bool> {
+        const DEFAULT: bool = false;
+
+        if self._use_default_creation_settings()? {
+            return Ok(DEFAULT);
+        }
+
         let explanation = "Most integrity checks are enabled by default. However, by default CryFS does not treat missing blocks as integrity violations.\nThat is, if CryFS finds a block missing, it will assume that this is due to a synchronization delay and not because an attacker deleted the block.\nIf you are in a single-client setting, you can let it treat missing blocks as integrity violations, which will ensure that you notice if an attacker deletes one of your files.\nHowever, in this case, you will not be able to use the file system with other devices anymore.";
         let prompt = "Do you want to treat missing blocks as integrity violations?";
-        ask_yes_no(Some(explanation), &prompt, false)
+        ask_yes_no(Some(explanation), &prompt, DEFAULT)
     }
 
     /// We're in the process of creating a new file system and need to ask the user for the scrypt settings to use
     fn ask_scrypt_settings_for_new_filesystem(&self) -> Result<ScryptSettings> {
+        if self._use_default_creation_settings()? {
+            return Ok(ScryptSettings::DEFAULT);
+        }
+
         // TODO Allow custom parameters
 
         fn option(name: &str, opt: ScryptSettings) -> (String, ScryptSettings) {
@@ -85,24 +115,36 @@ impl Console for InteractiveConsole {
                 ),
             ]
             .into_iter(),
-            1,
+            1, // TODO Unify default definition between here and above under _use_default_creation_settings() so there's just one place if we want to change it later
         )
     }
 
     fn ask_cipher_for_new_filesystem(&self) -> Result<String> {
+        // TODO Define default cipher somewhere in a constant not by index but by cipher name or enum, and show it correctly in the `--help` as well.
+        const DEFAULT_CIPHER_INDEX: usize = 0;
+
+        if self._use_default_creation_settings()? {
+            return Ok(cryfs_filesystem::ALL_CIPHERS[DEFAULT_CIPHER_INDEX].to_string());
+        }
+
         ask_multiple_choice(
             None,
             "Which cipher do you want to use to encrypt your file system?",
             cryfs_filesystem::ALL_CIPHERS
                 .iter()
                 .map(|cipher| (cipher.to_string(), cipher.to_string())),
-            0, // TODO Define default cipher somewhere in a constant not by index but by cipher name or enum, and show it correctly in the `--help` as well.
+            DEFAULT_CIPHER_INDEX,
         )
     }
 
     fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<Byte> {
         // TODO Allow custom block sizes. Careful to use Byte::parse_str(ignore_case=true) or it will interpret smaller case letters as bits.
         const OPTIONS: &[Byte] = &[kb(4), kb(8), kb(16), kb(32), kb(64), kb(512), mb(1), mb(4)];
+        const DEFAULT_BLOCKSIZE_INDEX: usize = 2;
+
+        if self._use_default_creation_settings()? {
+            return Ok(OPTIONS[DEFAULT_BLOCKSIZE_INDEX]);
+        }
 
         ask_multiple_choice(
             Some("CryFS splits all data into same-size blocks to hide file and directory sizes."),
@@ -116,7 +158,7 @@ impl Console for InteractiveConsole {
                     *option,
                 )
             }),
-            2,
+            DEFAULT_BLOCKSIZE_INDEX,
         )
     }
 

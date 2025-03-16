@@ -868,6 +868,7 @@ dependencies = [
  "konst",
  "lazy_static",
  "log",
+ "once_cell",
  "predicates",
  "rstest",
  "tokio",

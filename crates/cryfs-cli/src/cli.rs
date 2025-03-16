@@ -235,7 +235,7 @@ impl Cli {
         let config = cryfs_filesystem::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
-            self.console(),
+            &self.console(),
             &CommandLineFlags {
                 missing_block_is_integrity_violation: mount_args
                     .missing_block_is_integrity_violation,
@@ -375,9 +375,9 @@ impl Cli {
         }
     }
 
-    fn console(&self) -> &'static dyn Console {
+    fn console(&self) -> impl Console {
         // TODO Implement NoninteractiveConsole
-        &InteractiveConsole
+        InteractiveConsole::new()
     }
 }
 
