@@ -95,6 +95,11 @@ impl OuterConfig {
     pub fn deserialize(source: &mut (impl Read + Seek)) -> Result<Self> {
         let layout =
             OuterConfigLayout::read(source).context("Trying to read config file content")?;
+        let config_file_size = len(source).context("Trying to get config file size")?;
+        ensure!(
+            config_file_size <= CONFIG_SIZE,
+            "Config file size {config_file_size} is larger than expected {CONFIG_SIZE}",
+        );
         let read_header: String = layout
             .header
             .try_into()
@@ -127,4 +132,15 @@ impl OuterConfig {
     pub fn kdf_parameters(&self) -> &[u8] {
         &self.kdf_parameters_serialized
     }
+}
+
+fn len(mut source: impl Seek) -> Result<usize> {
+    let current_pos = source
+        .stream_position()
+        .context("Trying to get stream position")?;
+    let end_pos = source
+        .seek(std::io::SeekFrom::End(0))
+        .context("Trying to seek to end of file")?;
+    source.seek(std::io::SeekFrom::Start(current_pos))?;
+    Ok((end_pos - current_pos) as usize)
 }
