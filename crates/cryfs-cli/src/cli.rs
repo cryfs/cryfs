@@ -158,24 +158,25 @@ impl Cli {
         print_config(&config);
 
         let on_successfully_mounted = || {
+            // TODO Output formatting, e.g. colorization
             println!(
-                "CryFS has been successfully mounted to {}",
+                "  CryFS has been successfully mounted to {}",
                 mount_args.mountdir.display()
             );
             if mount_args.foreground {
                 println!(
                     // TODO Add necessary escape sequences to the mountdir path, e.g. " -> \"
-                    "You can unmount it by pressing Ctrl+C or by running `cryfs-unmount \"{}\"`.",
+                    "  You can unmount it by pressing Ctrl+C or by running `cryfs-unmount \"{}\"`.",
                     mount_args.mountdir.display(),
                 );
             } else {
                 println!(
                     // TODO Add necessary escape sequences to the mountdir path, e.g. " -> \"
-                    "You can unmount it by running `cryfs-unmount \"{}\"`.",
+                    "  You can unmount it by running `cryfs-unmount \"{}\"`.",
                     mount_args.mountdir.display(),
                 );
             }
-            println!("To see more information, run `cryfs --help`.");
+            println!("  To see more information, run `cryfs --help`.");
         };
 
         let (atime_options, fuse_permission_options) =
@@ -212,7 +213,8 @@ impl Cli {
 
         if mount_args.foreground {
             // In foreground mode, we only return after unmount
-            println!("CryFS has been unmounted.");
+            // TODO Output formatting, e.g. colorization (and search the codebase for other println statements that might be missing it)
+            println!("  CryFS has been unmounted.");
         }
 
         Ok(())

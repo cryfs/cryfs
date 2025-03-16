@@ -35,7 +35,8 @@ pub fn run<App: Application>() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             // TODO Coloring the output would be nice
-            eprintln!("Error: {}", err);
+            // TODO This indentation matches cryfs-cli, but it might not match cryfs-check. We should either add indentation to cryfs-check, or make it conditional here.
+            eprintln!("  Error: {}", err);
             err.kind.exit_code()
         }
     }
