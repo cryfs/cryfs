@@ -15,6 +15,7 @@ async-trait.workspace = true
 byte-unit.workspace = true
 clap = { workspace = true, features = ["derive"] }
 clap-logflag.workspace = true
+console.workspace = true
 cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }

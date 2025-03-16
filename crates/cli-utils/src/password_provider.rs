@@ -1,4 +1,5 @@
 use anyhow::{Result, ensure};
+use console::style;
 
 use cryfs_filesystem::config::PasswordProvider;
 
@@ -60,7 +61,9 @@ impl PasswordProvider for NoninteractivePasswordProvider {
 }
 
 fn ask_password_from_console(prompt: &str) -> Result<String> {
-    let password = rpassword::prompt_password(prompt)?;
+    let indent = "  ";
+    let prompt = format!("{indent}{prompt}");
+    let password = rpassword::prompt_password(style(prompt).bold())?;
     Ok(password)
 }
 

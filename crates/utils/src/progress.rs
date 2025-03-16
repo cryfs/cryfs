@@ -175,6 +175,6 @@ impl ConsoleProgressImpl {
 impl Drop for ConsoleProgressImpl {
     fn drop(&mut self) {
         self.pb
-            .finish_with_message(format!("{}...done", self.message));
+            .finish_with_message(format!("{}...done\n", self.message));
     }
 }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use byte_unit::Byte;
-use dialoguer::{Confirm, Select};
+use dialoguer::{Confirm, Select, theme::ColorfulTheme};
 use std::path::Path;
 
 use cryfs_filesystem::config::Console;
@@ -23,30 +23,35 @@ impl Console for InteractiveConsole {
         new_filesystem_format_version: &Version<&str>,
         cryfs_version: &VersionInfo<&str>,
     ) -> Result<bool> {
-        let prompt = format!(
-            "This filesystem uses file system format {current_filesystem_format_version}. You're running a CryFS version using format {new_filesystem_format_version}. It is recommended to create a new filesystem with CryFS {cryfs_version} and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you might not get some of the performance advantages of the new release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data.\nDo you want to attempt a migration now?"
+        let explanation = format!(
+            "This filesystem uses file system format {current_filesystem_format_version}. You're running a CryFS version using format {new_filesystem_format_version}. It is recommended to create a new filesystem with CryFS {cryfs_version} and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you might not get some of the performance advantages of the new release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data."
         );
-        ask_yes_no(&prompt, false)
+        let prompt = "Do you want to attempt a migration now?";
+        ask_yes_no(Some(&explanation), &prompt, false)
     }
 
     fn ask_allow_replaced_filesystem(&self) -> Result<bool> {
-        let prompt = "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did. Do you want to continue loading the file system?";
-        ask_yes_no(prompt, false)
+        let explanation = "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did.";
+        let prompt = "Do you want to continue loading the file system?";
+        ask_yes_no(Some(explanation), prompt, false)
     }
 
     fn ask_allow_changed_encryption_key(&self) -> Result<bool> {
-        let prompt = "The encryption key differs from the last time we loaded this filesystem. An attacker may have replaced the file system with a different file system.\nDo you want to continue loading?";
-        ask_yes_no(prompt, false)
+        let explanation = "The encryption key differs from the last time we loaded this filesystem. An attacker may have replaced the file system with a different file system.";
+        let prompt = "Do you want to continue loading?";
+        ask_yes_no(Some(explanation), prompt, false)
     }
 
     fn ask_disable_single_client_mode(&self) -> Result<bool> {
-        let prompt = "This filesystem is setup to treat missing blocks as integrity violations and therefore only works in single-client mode. You are trying to access it from a different client.\nDo you want to disable this integrity feature and stop treating missing blocks as integrity violations?\nChoosing yes will not affect the confidentiality of your data, but in future you might not notice if an attacker deletes one of your files.";
-        ask_yes_no(&prompt, false)
+        let explanation = "This filesystem is setup to treat missing blocks as integrity violations and therefore only works in single-client mode. You are trying to access it from a different client.\nYou can disable this integrity feature and stop treating missing blocks as integrity violations?\nChoosing yes will not affect the confidentiality of your data, but in future you might not notice if an attacker deletes one of your files.";
+        let prompt = "Do you want to stop treating missing blocks as integrity violations?";
+        ask_yes_no(Some(explanation), &prompt, false)
     }
 
     fn ask_single_client_mode_for_new_filesystem(&self) -> Result<bool> {
-        let prompt = "Most integrity checks are enabled by default. However, by default CryFS does not treat missing blocks as integrity violations.\nThat is, if CryFS finds a block missing, it will assume that this is due to a synchronization delay and not because an attacker deleted the block.\nIf you are in a single-client setting, you can let it treat missing blocks as integrity violations, which will ensure that you notice if an attacker deletes one of your files.\nHowever, in this case, you will not be able to use the file system with other devices anymore.\nDo you want to treat missing blocks as integrity violations?";
-        ask_yes_no(&prompt, false)
+        let explanation = "Most integrity checks are enabled by default. However, by default CryFS does not treat missing blocks as integrity violations.\nThat is, if CryFS finds a block missing, it will assume that this is due to a synchronization delay and not because an attacker deleted the block.\nIf you are in a single-client setting, you can let it treat missing blocks as integrity violations, which will ensure that you notice if an attacker deletes one of your files.\nHowever, in this case, you will not be able to use the file system with other devices anymore.";
+        let prompt = "Do you want to treat missing blocks as integrity violations?";
+        ask_yes_no(Some(explanation), &prompt, false)
     }
 
     /// We're in the process of creating a new file system and need to ask the user for the scrypt settings to use
@@ -66,6 +71,9 @@ impl Console for InteractiveConsole {
         }
 
         ask_multiple_choice(
+            Some(
+                "Scrypt is used to derive an encryption key from your password, to protect your file system against brute force attacks",
+            ),
             "Please select the scrypt settings to use",
             [
                 option("1. Default", ScryptSettings::DEFAULT),
@@ -78,7 +86,8 @@ impl Console for InteractiveConsole {
 
     fn ask_cipher_for_new_filesystem(&self) -> Result<String> {
         ask_multiple_choice(
-            "Which block cipher do you want to use?",
+            None,
+            "Which cipher do you want to use to encrypt your file system?",
             cryfs_filesystem::ALL_CIPHERS
                 .iter()
                 .map(|cipher| (cipher.to_string(), cipher.to_string())),
@@ -91,6 +100,7 @@ impl Console for InteractiveConsole {
         const OPTIONS: &[Byte] = &[kb(4), kb(8), kb(16), kb(32), kb(64), kb(512), mb(1), mb(4)];
 
         ask_multiple_choice(
+            Some("CryFS splits all data into same-size blocks to hide file and directory sizes."),
             "Which block size do you want to use?",
             OPTIONS.iter().map(|option| {
                 (
@@ -107,30 +117,34 @@ impl Console for InteractiveConsole {
 
     fn ask_create_basedir(&self, path: &Path) -> Result<bool> {
         // TODO Formatting. e.g. can we somehow highlight the path? By color or font? Also check other questions here for what we can do. The console or dialoguer crates could be useful.
-        let prompt = format!(
-            "Could not find the vault at '{}'. Do you want to create a new vault?",
-            path.display()
-        );
-        ask_yes_no(&prompt, false)
+        let explanation = format!("Could not find the vault at '{}'.", path.display());
+        let prompt = "Do you want to create a new vault?";
+        ask_yes_no(Some(&explanation), &prompt, false)
     }
 
     fn ask_create_mountdir(&self, path: &Path) -> Result<bool> {
-        let prompt = format!(
-            "Could not find the mount directory at '{}'. Do you want to create a new directory?",
+        let explanation = format!(
+            "Could not find the mount directory at '{}'.",
             path.display()
         );
-        ask_yes_no(&prompt, false)
+        let prompt = "Do you want to create a new directory?";
+        ask_yes_no(Some(&explanation), &prompt, false)
     }
 }
 
-fn ask_yes_no(prompt: &str, default: bool) -> Result<bool> {
+fn ask_yes_no(explanation: Option<&str>, prompt: &str, default: bool) -> Result<bool> {
+    println!();
+    if let Some(explanation) = explanation {
+        println!("{}", format_explanation(explanation));
+    }
     loop {
-        let response = Confirm::new()
-            .with_prompt(prompt)
+        let response = Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt(format!("{prompt}"))
             .default(false)
             .show_default(true)
             .interact_opt()?;
         if let Some(response) = response {
+            println!();
             return Ok(response);
         } else {
             // TODO Use dialoguer for this output
@@ -142,6 +156,7 @@ fn ask_yes_no(prompt: &str, default: bool) -> Result<bool> {
 }
 
 fn ask_multiple_choice<S, T>(
+    explanation: Option<&str>,
     prompt: &str,
     options: impl Iterator<Item = (S, T)>,
     default: usize,
@@ -151,18 +166,33 @@ where
 {
     let (options_str, options_t): (Vec<_>, Vec<_>) = options.unzip();
 
-    let response = Select::new()
+    println!();
+    if let Some(explanation) = explanation {
+        println!("{}", format_explanation(explanation));
+    }
+
+    let response = Select::with_theme(&ColorfulTheme::default())
         .clear(false) // TODO Should we clear(true)?
-        .with_prompt(prompt)
+        .with_prompt(format!("{prompt}"))
         .default(default)
         .items(&options_str)
         .interact()?;
     // TODO Check we don't have an off-by-one here
-    Ok(options_t
+    let response = options_t
         .into_iter()
         .skip(response)
         .next()
-        .expect("Out of bounds"))
+        .expect("Out of bounds");
+    println!();
+    Ok(response)
+}
+
+fn format_explanation(explanation: &str) -> String {
+    let indent = "  ";
+    format!(
+        "{indent}{}",
+        explanation.replace("\n", &format!("\n{indent}"))
+    )
 }
 
 const fn kb(kb: u64) -> Byte {

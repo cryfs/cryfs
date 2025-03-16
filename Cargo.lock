@@ -883,6 +883,7 @@ dependencies = [
  "byte-unit",
  "clap",
  "clap-logflag",
+ "console",
  "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-filesystem",
