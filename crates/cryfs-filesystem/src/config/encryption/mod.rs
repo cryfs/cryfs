@@ -90,6 +90,7 @@ impl ConfigEncryptionKey {
         password: &str,
         progress_bars: impl ProgressBarManager,
     ) -> ConfigEncryptionKey {
+        println!();
         let pb = progress_bars.new_spinner_autotick("Deriving key from password");
         let combined_key = KDF::derive_key(Self::COMBINED_KEY_SIZE, password, kdf_parameters);
         pb.finish();

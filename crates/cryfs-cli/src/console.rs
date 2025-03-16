@@ -193,7 +193,6 @@ fn ask_yes_no(explanation: Option<&str>, prompt: &str, default: bool) -> Result<
             .show_default(true)
             .interact_opt()?;
         if let Some(response) = response {
-            println!();
             return Ok(response);
         } else {
             // TODO Use dialoguer for this output
@@ -232,7 +231,6 @@ where
         .skip(response)
         .next()
         .expect("Out of bounds");
-    println!();
     Ok(response)
 }
 

@@ -11,10 +11,10 @@ impl PasswordProvider for InteractivePasswordProvider {
     fn password_for_existing_filesystem(&self) -> Result<String> {
         // TODO Check how this flow looks like when actually running
         loop {
+            println!();
             let password = ask_password_from_console("Password: ")?;
             match check_password(&password) {
                 Ok(()) => {
-                    println!();
                     return Ok(password);
                 }
                 Err(err) => {
@@ -28,11 +28,13 @@ impl PasswordProvider for InteractivePasswordProvider {
     fn password_for_new_filesystem(&self) -> Result<String> {
         // TODO Check how this flow looks like when actually running
         loop {
+            println!();
             let password = ask_password_from_console("Password: ")?;
             match check_password(&password) {
                 Ok(()) => {
                     let confirm_password = ask_password_from_console("Confirm Password: ")?;
                     if password != confirm_password {
+                        // TODO Error message formatting (e.g. colorization), here and above
                         println!("Passwords do not match. Please try again.");
                         continue;
                     }

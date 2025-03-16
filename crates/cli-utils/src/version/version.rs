@@ -36,66 +36,49 @@ fn _show_version(
     version_info: VersionInfo<&str>,
     stderr: &mut (impl Write + ?Sized),
 ) {
-    #![allow(unused_assignments)]
-
     // TODO If this happens due to the user specifying --version, we should print to stdout instead of stderr.
     write!(
         stderr,
         "{}",
-        style(format!("{name} {version_info}\n\n")).bold()
+        style(format!("{name} {version_info}\n")).bold()
     )
     .unwrap();
 
-    let mut showing_warnings = false;
+    let mut has_shown_warnings = false;
+    let mut show_warning = |message: &str| {
+        if !has_shown_warnings {
+            write!(stderr, "\n").unwrap();
+            has_shown_warnings = true;
+        }
+        write!(stderr, "{}\n", warning(message)).unwrap();
+    };
+
     if let Some(gitinfo) = version_info.gitinfo() {
         if let Some(tag_info) = gitinfo.tag_info {
             if tag_info.commits_since_tag > 0 {
-                write!(stderr, "{}", warning(&format!(
-                    "This is a development version based on git commit {}. Please don't use in production.\n",
+                show_warning(&format!(
+                    "This is a development version based on git commit {}. Please don't use in production.",
                     gitinfo.commit_id,
-                ))).unwrap();
-                showing_warnings = true;
+                ));
             }
         }
         if gitinfo.modified {
-            write!(
-                stderr,
-                "{}",
-                warning(
-                    "There were uncommitted changes in the repository when building this version.\n"
-                )
-            )
-            .unwrap();
-            showing_warnings = true;
+            show_warning(
+                "There were uncommitted changes in the repository when building this version.",
+            );
         }
     }
     if version_info.version().prerelease.is_some() {
-        write!(
-            stderr,
-            "{}",
-            warning("This is a prerelease version. Please backup your data frequently!\n",)
-        )
-        .unwrap();
-        showing_warnings = true;
+        show_warning("This is a prerelease version. Please backup your data frequently!");
     }
 
     #[cfg(debug_assertions)]
     {
-        write!(
-            stderr,
-            "{}",
-            warning("This is a debug build. Performance might be slow.\n"),
-        )
-        .unwrap();
-        showing_warnings = true;
+        show_warning("This is a debug build. Performance might be slow.");
     }
 
     #[cfg(feature = "check_for_updates")]
     _maybe_check_for_updates(env, http_client, *version_info.version(), stderr);
-
-    if showing_warnings {
-        println!();
-    }
 }
 
 #[cfg(feature = "check_for_updates")]
