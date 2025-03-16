@@ -195,9 +195,8 @@ fn ask_yes_no(explanation: Option<&str>, prompt: &str, default: bool) -> Result<
         if let Some(response) = response {
             return Ok(response);
         } else {
-            // TODO Use dialoguer for this output
-            // TODO Is it actually 'yes' / 'no' or 'y' / 'n'?
-            println!("Please enter yes or no");
+            // TODO Output formatting
+            println!("Please press [y] for yes or [n] for no");
             continue;
         }
     }
@@ -225,7 +224,6 @@ where
         .default(default)
         .items(&options_str)
         .interact()?;
-    // TODO Check we don't have an off-by-one here
     let response = options_t
         .into_iter()
         .skip(response)
