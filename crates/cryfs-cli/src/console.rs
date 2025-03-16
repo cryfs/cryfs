@@ -1,6 +1,6 @@
 use anyhow::Result;
 use byte_unit::Byte;
-use dialoguer::{Confirm, Select, theme::ColorfulTheme};
+use dialoguer::{Confirm, Select, console::style, theme::ColorfulTheme};
 use std::path::Path;
 
 use cryfs_filesystem::config::Console;
@@ -196,10 +196,8 @@ where
 
 fn format_explanation(explanation: &str) -> String {
     let indent = "  ";
-    format!(
-        "{indent}{}",
-        explanation.replace("\n", &format!("\n{indent}"))
-    )
+    let explanation = explanation.replace("\n", &format!("\n{indent}"));
+    format!("{indent}{}", style(explanation).dim())
 }
 
 const fn kb(kb: u64) -> Byte {
