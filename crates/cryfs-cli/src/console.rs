@@ -36,7 +36,6 @@ impl Console for InteractiveConsole {
 
     fn ask_migrate_filesystem(
         &self,
-        // TODO Pass in a version struct instead of strings
         current_filesystem_format_version: &Version<&str>,
         new_filesystem_format_version: &Version<&str>,
         cryfs_version: &VersionInfo<&str>,
@@ -120,7 +119,7 @@ impl Console for InteractiveConsole {
     }
 
     fn ask_cipher_for_new_filesystem(&self) -> Result<String> {
-        // TODO Define default cipher somewhere in a constant not by index but by cipher name or enum, and show it correctly in the `--help` as well.
+        // TODO Define default cipher somewhere in a constant not by index but by cipher name or enum, and show it correctly in the `--help` as well. Same for blocksize bytes.
         const DEFAULT_CIPHER_INDEX: usize = 0;
 
         if self._use_default_creation_settings()? {
