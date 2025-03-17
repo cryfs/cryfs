@@ -323,6 +323,7 @@ where
             }
         }
         // TODO Drop concurrently and drop latter even if first one fails
+        //      Or maybe the drop order is important because it could decide the order it's written to the file system?
         self_blob.async_drop().await?;
         source_parent.async_drop().await?;
         dest_parent.async_drop().await?;
