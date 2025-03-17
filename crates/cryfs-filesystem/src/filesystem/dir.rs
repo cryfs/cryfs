@@ -337,18 +337,17 @@ where
                 let blob = self.load_blob().await?;
                 with_async_drop(blob, |blob| {
                     future::ready((move || {
-                        let entries = blob.entries();
-
-                        let mut result = Vec::with_capacity(entries.len());
-                        for entry in entries {
-                            let name = entry.name().to_owned();
-                            let kind = match entry.entry_type() {
-                                EntryType::Dir => NodeKind::Dir,
-                                EntryType::File => NodeKind::File,
-                                EntryType::Symlink => NodeKind::Symlink,
-                            };
-                            result.push(cryfs_rustfs::DirEntry { name, kind });
-                        }
+                        let result = blob
+                            .entries()
+                            .map(|entry| cryfs_rustfs::DirEntry {
+                                name: entry.name().to_owned(),
+                                kind: match entry.entry_type() {
+                                    EntryType::Dir => NodeKind::Dir,
+                                    EntryType::File => NodeKind::File,
+                                    EntryType::Symlink => NodeKind::Symlink,
+                                },
+                            })
+                            .collect();
                         Ok(result)
                     })())
                 })
