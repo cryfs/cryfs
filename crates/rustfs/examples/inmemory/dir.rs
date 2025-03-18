@@ -334,7 +334,6 @@ impl Dir for InMemoryDirRef {
 
 impl Debug for InMemoryDirRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let inode = self.inode.lock().unwrap();
         f.debug_struct("InMemoryDirRef").finish()
     }
 }

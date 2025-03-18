@@ -127,7 +127,6 @@ impl Symlink for InMemorySymlinkRef {
 
 impl Debug for InMemorySymlinkRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let inode = self.inode.lock().unwrap();
         f.debug_struct("InMemorySymlinkRef").finish()
     }
 }

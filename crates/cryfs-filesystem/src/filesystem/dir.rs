@@ -1,7 +1,5 @@
-use anyhow::ensure;
 use async_trait::async_trait;
 use cryfs_rustfs::NumBytes;
-use cryfs_rustfs::object_based_api::Node;
 use futures::{future, join};
 use std::fmt::Debug;
 use std::sync::Arc;

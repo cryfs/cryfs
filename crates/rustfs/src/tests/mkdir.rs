@@ -3,7 +3,6 @@
 use mockall::predicate::{always, eq};
 use nix::errno::Errno;
 use rstest::rstest;
-use std::future::Future;
 use std::time::{Duration, SystemTime};
 
 use super::utils::{

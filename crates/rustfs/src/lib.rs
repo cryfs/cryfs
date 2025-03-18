@@ -16,9 +16,6 @@ pub mod backend;
 
 pub use cryfs_utils::data::Data;
 
-#[cfg(test)]
-use rstest_reuse;
-
 // Needed for `use` statements in doctests
 // TODO Is there a better way?
 pub use common::{Callback, CallbackImpl};
