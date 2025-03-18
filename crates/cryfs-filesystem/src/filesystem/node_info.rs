@@ -513,6 +513,7 @@ where
 
 fn dir_entry_to_node_attrs(entry: &DirEntry, num_bytes: NumBytes) -> NodeAttrs {
     NodeAttrs {
+        //TODO If possible without performance loss, then for a directory, nlink should return number of dir entries (including "." and "..")
         nlink: 1,
         // TODO Remove those conversions
         mode: cryfs_rustfs::Mode::from(u32::from(entry.mode())),
