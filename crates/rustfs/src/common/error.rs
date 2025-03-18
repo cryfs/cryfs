@@ -63,6 +63,9 @@ pub enum FsError {
     #[error("Cannot overwrite a non-empty directory with a rename operation")]
     CannotOverwriteNonEmptyDirectory,
 
+    #[error("Cannot remove a non-empty directory")]
+    CannotRemoveNonEmptyDirectory,
+
     #[error("The path is invalid")]
     InvalidPath,
 
@@ -89,6 +92,7 @@ impl FsError {
             FsError::CannotOverwriteDirectoryWithNonDirectory => libc::EISDIR,
             FsError::CannotOverwriteNonDirectoryWithDirectory => libc::ENOTDIR,
             FsError::CannotOverwriteNonEmptyDirectory => libc::ENOTEMPTY,
+            FsError::CannotRemoveNonEmptyDirectory => libc::ENOTEMPTY,
             FsError::CorruptedFilesystem { .. } => libc::EIO,
             FsError::InternalError { .. } => libc::EIO,
         }

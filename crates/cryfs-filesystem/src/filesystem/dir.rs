@@ -1,5 +1,7 @@
+use anyhow::ensure;
 use async_trait::async_trait;
 use cryfs_rustfs::NumBytes;
+use cryfs_rustfs::object_based_api::Node;
 use futures::{future, join};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -425,46 +427,55 @@ where
     }
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
-        self.node_info.concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
-            let mut blob = self.load_blob().await?;
-
-            // TODO Check the entry is actually a dir before removing it
-
-            // First remove the entry, then flush that change, and only then remove the blob.
-            // This is to make sure the file system doesn't end up in an invalid state
-            // where the blob is removed but the entry is still there.
-            let result = match blob.remove_entry_by_name(name) {
-                Err(err) => Err(err),
-                Ok(entry) => match blob.flush().await {
-                    Err(err) => {
-                        log::error!("Error flushing blob: {err:?}");
-                        Err(FsError::UnknownError)
+        self.node_info
+            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+                let mut self_blob = self.load_blob().await?;
+                with_async_drop_2!(self_blob, {
+                    let child_entry = self_blob.entry_by_name(name).ok_or_else(|| FsError::NodeDoesNotExist)?;
+                    if child_entry.entry_type() != EntryType::Dir {
+                        Err(FsError::NodeIsNotADirectory)?;
                     }
-                    Ok(()) => {
-                        let blob_id = entry.blob_id();
-                        let remove_result = self.blobstore.remove_by_id(blob_id).await;
-                        match remove_result {
-                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                                Err(FsError::CorruptedFilesystem {
-                                    message: format!(
-                                        "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
-                                    ),
-                                })
-                            }
-                            Err(err) => {
-                                log::error!("Error removing blob: {err:?}");
-                                Err(FsError::UnknownError)
-                            }
+                    let child_id = child_entry.blob_id();
+                    let child_blob = self.blobstore.load(child_id).await.map_err(|_| FsError::NodeDoesNotExist)?.ok_or_else(|| FsError::NodeDoesNotExist)?;
+                    let mut child_blob = FsBlob::into_dir(child_blob).await.map_err(|err| {
+                        FsError::CorruptedFilesystem {
+                            // TODO Add to message what it actually is
+                            message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", child_id),
                         }
-                    }
-                },
-            };
-
-            blob.async_drop().await?;
-
-            result
-        }).await
+                    })?;
+    
+                    let result = if child_blob.entries().len() > 0 {
+                        child_blob.async_drop().await?;
+                        Err(FsError::CannotRemoveNonEmptyDirectory)
+                    } else {
+                        // First remove the entry, then flush that change, and only then remove the blob.
+                        // This is to make sure the file system doesn't end up in an invalid state
+                        // where the blob is removed but the entry is still there.
+                        match self_blob.remove_entry_by_name(name) {
+                            Err(err) => Err(err),
+                            Ok(entry) => match self_blob.flush().await {
+                                Err(err) => {
+                                    log::error!("Error flushing blob: {err:?}");
+                                    Err(FsError::UnknownError)
+                                }
+                                Ok(()) => {
+                                    assert_eq!(*entry.blob_id(), child_blob.blob_id());
+                                    let remove_result = DirBlob::remove(child_blob).await;
+                                    match remove_result {
+                                        Ok(()) => Ok(()),
+                                        Err(err) => {
+                                            log::error!("Error removing blob: {err:?}");
+                                            Err(FsError::UnknownError)
+                                        }
+                                    }
+                                }
+                            },
+                        }
+                    };
+                    result
+                })
+            })
+            .await
     }
 
     async fn create_child_symlink(
