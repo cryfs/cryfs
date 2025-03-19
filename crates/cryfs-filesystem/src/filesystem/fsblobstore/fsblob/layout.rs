@@ -42,6 +42,7 @@ impl LayoutAs<u8> for BlobType {
 binary_layout!(fsblob_header, LittleEndian, {
     format_version_header: u16,
     blob_type: BlobType as u8,
+    // TODO We're currently not checking the parent pointers when loading a blob. We should probably check all the parent pointers on a path from the root to a loaded blob when traversing down the tree to load that blob.
     parent: [u8; BLOBID_LEN], // TODO `BlobId as [u8; BLOBID_LEN]` with binary_layout::LayoutAs
 });
 
