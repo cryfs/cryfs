@@ -346,6 +346,7 @@ where
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
+        // TODO This needs to return entries for `.` and `..`, but maybe we should do that in rustfs, not here.
         // TODO Can we return an iterator instead of a Vec from here? But it'll need state with an async destructor. Probably needs async generators.
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
