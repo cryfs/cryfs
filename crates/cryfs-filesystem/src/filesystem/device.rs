@@ -491,7 +491,7 @@ where
                 dest_parent.async_drop().await?;
                 Ok(())
 
-                // TODO We need to update timestamps of the parent directories in the grandparent blobs.
+                // TODO We need to update timestamps of the parent directories in the grandparent blobs. We already do it in Dir::move_child_to, which is used by low_level_adapter, but this function is used by high_level_adapter and here we don't do it yet.
             }
         }
     }

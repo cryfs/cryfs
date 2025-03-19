@@ -322,11 +322,24 @@ where
                 return Err(FsError::UnknownError);
             }
         }
+
+        // TODO We can probably do this concurrently with the other modifications further up
+        let (source_update, dest_update) = join!(
+            self.node_info.update_modification_timestamp_in_parent(&self.blobstore),
+            newparent
+                .node_info
+                .update_modification_timestamp_in_parent(&self.blobstore),
+        );
+
         // TODO Drop concurrently and drop latter even if first one fails
         //      Or maybe the drop order is important because it could decide the order it's written to the file system?
         self_blob.async_drop().await?;
         source_parent.async_drop().await?;
         dest_parent.async_drop().await?;
+
+        source_update?;
+        dest_update?;
+
         Ok(())
 
         // TODO We need to update timestamps of the parent directories in the grandparent blobs.
