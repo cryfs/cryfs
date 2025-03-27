@@ -156,6 +156,11 @@ impl DirEntry {
 
     pub fn set_mode(&mut self, mode: Mode) -> FsResult<()> {
         let old_mode = self.inner.mode;
+        if old_mode == mode {
+            // shortcut, so we don't update metadata change time here.
+            return Ok(());
+        }
+
         let old_last_metadata_change_time = self.inner.last_metadata_change_time;
 
         self.inner.mode = mode;
