@@ -935,6 +935,7 @@ dependencies = [
  "lockable",
  "log",
  "maybe-owned",
+ "nix",
  "rand 0.9.0",
  "serde",
  "serde_json",

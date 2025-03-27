@@ -30,6 +30,7 @@ libc.workspace = true
 lockable.workspace = true
 log.workspace = true
 maybe-owned.workspace = true
+nix.workspace = true
 rand.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

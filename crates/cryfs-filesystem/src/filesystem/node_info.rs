@@ -278,7 +278,9 @@ impl NodeInfo {
             LoadParentBlobResult::IsRootDir { .. } => {
                 // We're the root dir
                 // TODO What should we do here?
+                let now = SystemTime::now();
                 Ok(NodeAttrs {
+                    // TODO If possible without performance loss, then for a directory, st_nlink should return number of dir entries (including "." and "..")
                     nlink: 1,
                     // TODO Remove those conversions
                     mode: cryfs_rustfs::Mode::default()
@@ -286,14 +288,15 @@ impl NodeInfo {
                         .add_user_read_flag()
                         .add_user_write_flag()
                         .add_user_exec_flag(),
-                    uid: cryfs_rustfs::Uid::from(1000),
-                    gid: cryfs_rustfs::Gid::from(1000),
+                    // TODO Windows doesn't have Uid/Gid, so we need to put something else here
+                    uid: cryfs_rustfs::Uid::from(nix::unistd::Uid::current().as_raw()),
+                    gid: cryfs_rustfs::Gid::from(nix::unistd::Gid::current().as_raw()),
                     num_bytes: cryfs_rustfs::NumBytes::from(DIR_LSTAT_SIZE),
                     // Setting num_blocks to none means it'll be automatically calculated for us
                     num_blocks: None,
-                    atime: SystemTime::now(),
-                    mtime: SystemTime::now(),
-                    ctime: SystemTime::now(),
+                    atime: now,
+                    mtime: now,
+                    ctime: now,
                 })
             }
             LoadParentBlobResult::IsNotRootDir {
