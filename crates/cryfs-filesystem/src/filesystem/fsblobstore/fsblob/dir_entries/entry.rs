@@ -198,12 +198,12 @@ impl DirEntry {
 
     pub fn set_last_access_time(&mut self, last_access_time: SystemTime) {
         self.inner.last_access_time = last_access_time;
-        self._update_metadata_change_time();
+        // According to the POSIX standard, ctime does not get updated when atime changed.
+        // ctime only gets updated when the content or metadata changes (atime/mtime fields don't count as metadata).
     }
 
     pub fn update_access_time(&mut self) {
-        self.inner.last_access_time = SystemTime::now();
-        self._update_metadata_change_time();
+        self.set_last_access_time(SystemTime::now());
     }
 
     pub fn last_modification_time(&self) -> SystemTime {
