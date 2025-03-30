@@ -256,7 +256,8 @@ where
                 }
             }
         }
-        // TODO See [DirEntryList::_check_allowed_overwrite] for other checks (i.e. we're not allowed to overwrite a dir with a non-dir or the other way round)
+        // TODO See [DirEntryList::_check_allowed_overwrite] for other checks (i.e. we're not allowed to overwrite a dir with a non-dir or the other way round).
+        //      Probably makes sense to centralize that check and reuse the function.
 
         // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
         //      But it likely has some dependency with source_parent_blob.

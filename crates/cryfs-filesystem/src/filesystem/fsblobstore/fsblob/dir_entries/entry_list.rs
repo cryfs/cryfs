@@ -260,11 +260,7 @@ impl DirEntryList {
             }
 
             let source = &self.entries[source_index];
-            Self::_check_allowed_overwrite(
-                found_same_name.entry_type(),
-                &new_name,
-                source.entry_type(),
-            )?;
+            Self::_check_allowed_overwrite(found_same_name.entry_type(), source.entry_type())?;
             on_overwritten(found_same_name.blob_id()).await?;
 
             self.dirty = true;
