@@ -314,15 +314,16 @@ where
                 source_path = source_path,
                 dest_path = dest_path
             );
-            return Err(FsError::InvalidOperation);
+            return Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself);
         }
         if dest_path.is_ancestor_of(source_path) {
+            // TODO Is this check actually necessary? We're checking that the target is non-empty anyways if it's a dir.
             log::error!(
                 "Tried to rename {source_path} into its ancestor {dest_path}",
                 source_path = source_path,
                 dest_path = dest_path
             );
-            return Err(FsError::InvalidOperation);
+            return Err(FsError::CannotOverwriteNonEmptyDirectory);
         }
 
         let Some((source_parent, source_name)) = source_path.split_last() else {
@@ -334,12 +335,10 @@ where
             return Err(FsError::InvalidOperation);
         };
 
-        let on_overwritten = async move |blobid: &BlobId| {
-            let r = self.blobstore.remove_by_id(&blobid).await.map_err(|err| {
-                log::error!("Error removing blob: {:?}", err);
-                FsError::UnknownError
-            });
-            match r {
+        let on_overwritten =
+            async move |blobid: &BlobId| match self.blobstore.remove_by_id(&blobid).await {
+                // TODO If we figure out exception safety (see below), we can move the existing_dir_check into here.
+                //      Currently, some checks already happen inside of [add_or_overwrite_entry], e.g. that we don't overwrite dirs with non-dirs.
                 Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
                 Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
                     log::error!(
@@ -351,8 +350,7 @@ where
                     log::error!("Error removing blob: {:?}", err);
                     Err(FsError::UnknownError)
                 }
-            }
-        };
+            };
 
         let parents = self.load_two_blobs(source_parent, dest_parent).await?;
         match parents {
@@ -360,7 +358,7 @@ where
                 let mut parent = FsBlob::into_dir(blob)
                     .await
                     .map_err(|_| FsError::NodeIsNotADirectory)?;
-                // TODO Is overwriting allowed here if the new entry already exists?
+                // TODO Don't allow overriding a non-empty directory
                 parent
                     .rename_entry_by_name(source_name, dest_name.to_owned(), on_overwritten)
                     .await?;
@@ -466,6 +464,7 @@ where
                 match res {
                     Ok(()) => (),
                     Err(err) => {
+                        // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
                         // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;
@@ -478,6 +477,7 @@ where
                 match res {
                     Ok(()) => (),
                     Err(err) => {
+                        // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
                         // TODO Drop concurrently and drop latter even if first one fails
                         source_parent.async_drop().await?;
                         dest_parent.async_drop().await?;

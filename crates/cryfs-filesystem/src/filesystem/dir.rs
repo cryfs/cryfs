@@ -258,8 +258,6 @@ where
                 }
             }
         }
-        // TODO See [DirEntryList::_check_allowed_overwrite] for other checks (i.e. we're not allowed to overwrite a dir with a non-dir or the other way round).
-        //      Probably makes sense to centralize that check and reuse the function.
 
         // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
         //      But it likely has some dependency with source_parent_blob.
@@ -328,7 +326,8 @@ where
                 entry.last_access_time(),
                 entry.last_modification_time(),
                 async |blob_id| {
-                    // TODO Is overwriting actually allowed here if the new entry already exists?
+                    // TODO If we figure out exception safety (see below), we can move the existing_dir_check into here.
+                    //      Currently, some checks already happen inside of [add_or_overwrite_entry], e.g. that we don't overwrite dirs with non-dirs.
                     self.on_rename_overwrites_destination(*blob_id).await
                 },
             )
