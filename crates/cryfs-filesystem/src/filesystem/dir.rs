@@ -373,8 +373,6 @@ where
         dest_update?;
 
         Ok(())
-
-        // TODO We need to update timestamps of the parent directories in the grandparent blobs.
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
