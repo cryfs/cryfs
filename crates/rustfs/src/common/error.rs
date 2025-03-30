@@ -71,6 +71,9 @@ pub enum FsError {
 
     #[error("The operation is invalid")]
     InvalidOperation,
+
+    #[error("Cannot move a directory into itself or a subdirectory of itself")]
+    CannotMoveDirectoryIntoSubdirectoryOfItself,
 }
 
 impl FsError {
@@ -95,6 +98,7 @@ impl FsError {
             FsError::CannotRemoveNonEmptyDirectory => libc::ENOTEMPTY,
             FsError::CorruptedFilesystem { .. } => libc::EIO,
             FsError::InternalError { .. } => libc::EIO,
+            FsError::CannotMoveDirectoryIntoSubdirectoryOfItself => libc::EINVAL,
         }
     }
 }

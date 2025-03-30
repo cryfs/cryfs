@@ -45,4 +45,6 @@ cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
 lockable = { workspace = true, features = ["slow_assertions"] }
 
 [features]
+default = ["ancestor_checks_on_move"]
 testutils = ["cryfs-blobstore/testutils"]
+ancestor_checks_on_move = []

@@ -13,6 +13,14 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
+// TODO The ancestor_checks_on_move feature implements checks that when moving a node to a different directory,
+//      it doesn't get moved into an ancestor or child of itself. But it requires that `NodeInfo` remembers the blob ids
+//      of all ancestors, from the root blob to the blob itself. This could be expensive? Or maybe not?
+//      We need to test how expensive it is and if we should remove it. Note also that this check might be
+//      unnecessary, because I think fuser already implements this check? But need to verify that they do, and
+//      even if they do, maybe it's better to check ourselves as well and not fully trust fuser because it could
+//      break file system consistency when broken?
+
 #[derive(Debug, Clone, Copy)]
 pub struct BlobDetails {
     pub blob_id: BlobId,
@@ -28,7 +36,12 @@ pub enum NodeInfo {
         atime_update_behavior: AtimeUpdateBehavior,
     },
     IsNotRootDir {
+        #[cfg(not(feature = "ancestor_checks_on_move"))]
         parent_blob_id: BlobId,
+        /// ancestors.first() is the root blob id, ancestors.last() is the immediate parent of this node.
+        #[cfg(feature = "ancestor_checks_on_move")]
+        ancestors: Box<[BlobId]>,
+
         name: PathComponentBuf,
 
         // While fields in [parent_blob_id] and [name] are always set, a [CryNode]/[NodeInfo] object can exist even before we
@@ -77,12 +90,16 @@ impl NodeInfo {
     }
 
     pub fn new(
-        parent_blob_id: BlobId,
+        #[cfg(not(feature = "ancestor_checks_on_move"))] parent_blob_id: BlobId,
+        #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
         name: PathComponentBuf,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> Self {
         Self::IsNotRootDir {
+            #[cfg(not(feature = "ancestor_checks_on_move"))]
             parent_blob_id,
+            #[cfg(feature = "ancestor_checks_on_move")]
+            ancestors,
             name,
             blob_details: OnceCell::default(),
             atime_update_behavior,
@@ -131,11 +148,17 @@ impl NodeInfo {
                 root_blob: *root_blob_id,
             }),
             Self::IsNotRootDir {
+                #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
+                #[cfg(feature = "ancestor_checks_on_move")]
+                ancestors,
                 name,
                 blob_details,
                 atime_update_behavior: _,
             } => {
+                #[cfg(feature = "ancestor_checks_on_move")]
+                let parent_blob_id = ancestors.last().unwrap();
+
                 let mut parent_blob = Self::_load_parent_blob(blobstore, parent_blob_id).await?;
 
                 // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
@@ -169,6 +192,48 @@ impl NodeInfo {
             .map(|blob_details| blob_details.blob_id)
     }
 
+    #[cfg(feature = "ancestor_checks_on_move")]
+    pub fn ancestors(&self) -> &[BlobId] {
+        match self {
+            Self::IsRootDir { .. } => {
+                // Return an empty array for the root dir
+                &[]
+            }
+            Self::IsNotRootDir { ancestors, .. } => {
+                // Return the stored ancestors
+                ancestors
+            }
+        }
+    }
+
+    #[cfg(feature = "ancestor_checks_on_move")]
+    pub async fn ancestors_and_self<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        // TODO Both self.blob_id and self.ancestors() match over Self::{IsRootDir/IsNotRootDir}, can we combine that into just one branch?
+        let self_blob_id = self.blob_id(&blobstore).await?;
+        let ancestors_and_self = self
+            .ancestors()
+            .iter()
+            .copied()
+            .chain(std::iter::once(self_blob_id))
+            .collect::<Box<[BlobId]>>();
+        Ok(AncestorChain::new(ancestors_and_self))
+    }
+
+    #[cfg(not(feature = "ancestor_checks_on_move"))]
+    pub async fn ancestors_and_self<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        // In this case, we just return the self blob id since ancestor checks are disabled
+        // for move operations.
+        Ok(AncestorChain::new(self.blob_id(&blobstore).await?))
+    }
+
     pub async fn node_type<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobType>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -193,19 +258,27 @@ impl NodeInfo {
                 blob_type: BlobType::Dir,
             }),
             Self::IsNotRootDir {
+                #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
+                #[cfg(feature = "ancestor_checks_on_move")]
+                ancestors,
                 name,
                 blob_details,
                 atime_update_behavior: _,
-            } => Ok(*blob_details
-                .get_or_try_init(async || {
-                    let mut parent_blob =
-                        Self::_load_parent_blob(blobstore, parent_blob_id).await?;
-                    let blob_details = get_blob_details(&mut parent_blob, name);
-                    parent_blob.async_drop().await?;
-                    blob_details
-                })
-                .await?),
+            } => {
+                #[cfg(feature = "ancestor_checks_on_move")]
+                let parent_blob_id = ancestors.last().unwrap();
+
+                Ok(*blob_details
+                    .get_or_try_init(async || {
+                        let mut parent_blob =
+                            Self::_load_parent_blob(blobstore, parent_blob_id).await?;
+                        let blob_details = get_blob_details(&mut parent_blob, name);
+                        parent_blob.async_drop().await?;
+                        blob_details
+                    })
+                    .await?)
+            }
         }
     }
 
@@ -528,5 +601,55 @@ fn dir_entry_to_node_attrs(entry: &DirEntry, num_bytes: NumBytes) -> NodeAttrs {
         atime: entry.last_access_time(),
         mtime: entry.last_modification_time(),
         ctime: entry.last_metadata_change_time(),
+    }
+}
+
+pub struct AncestorChain {
+    // When `ancestor_checks_on_move` feature is disabled, we only need the self blob id, no ancestors
+    #[cfg(not(feature = "ancestor_checks_on_move"))]
+    self_blob_id: BlobId,
+    // This is the list of ancestors from the root to this node, including this node itself.
+    #[cfg(feature = "ancestor_checks_on_move")]
+    ancestors_and_self: Box<[BlobId]>,
+}
+
+impl AncestorChain {
+    pub fn new(
+        #[cfg(not(feature = "ancestor_checks_on_move"))] self_blob_id: BlobId,
+        #[cfg(feature = "ancestor_checks_on_move")] ancestors_and_self: Box<[BlobId]>,
+    ) -> Self {
+        #[cfg(feature = "ancestor_checks_on_move")]
+        assert!(
+            !ancestors_and_self.is_empty(),
+            "Ancestors should not be empty, there must be at least the self node"
+        );
+        Self {
+            #[cfg(not(feature = "ancestor_checks_on_move"))]
+            self_blob_id,
+            #[cfg(feature = "ancestor_checks_on_move")]
+            ancestors_and_self,
+        }
+    }
+
+    pub fn self_blob_id(&self) -> &BlobId {
+        #[cfg(not(feature = "ancestor_checks_on_move"))]
+        return &self.self_blob_id;
+
+        #[cfg(feature = "ancestor_checks_on_move")]
+        return self
+            .ancestors_and_self
+            .last()
+            .expect("Ancestors should not be empty");
+    }
+
+    #[cfg(feature = "ancestor_checks_on_move")]
+    pub fn ancestors_and_self(self) -> Box<[BlobId]> {
+        // Return the stored ancestors
+        self.ancestors_and_self
+    }
+
+    #[cfg(not(feature = "ancestor_checks_on_move"))]
+    pub fn ancestors_and_self(self) -> BlobId {
+        self.self_blob_id
     }
 }

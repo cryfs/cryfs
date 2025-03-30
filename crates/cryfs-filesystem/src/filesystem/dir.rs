@@ -158,6 +158,20 @@ where
             }
         }
     }
+
+    // TODO Add tests for this ancestor check
+    #[cfg(feature = "ancestor_checks_on_move")]
+    async fn validate_move_doesnt_cause_cycle(&self, child_to_move: &BlobId, newparent: &Self) -> FsResult<()> {
+        let dest_ancestors = newparent.node_info.ancestors_and_self(&newparent.blobstore).await?;
+
+        // Check we're not moving a directory into itself or one of its own subdirectories
+        // TODO Do we handle moving /path/to/file to /path/to/file/newname correctly? Or does it only work with /path/to/dir ?
+        if dest_ancestors.ancestors_and_self().contains(&child_to_move) {
+            Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[async_trait]
@@ -176,9 +190,10 @@ where
     }
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
-        let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+        let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
+
         let node_info = NodeInfo::new(
-            self_blob_id,
+            ancestors_and_self.ancestors_and_self(),
             name.to_owned(),
             self.node_info.atime_update_behavior(),
         );
@@ -210,6 +225,10 @@ where
         newparent: Self,
         newname: &PathComponent,
     ) -> FsResult<()> {
+        // TODO We're loading two blobs here, self and newparent. Can this cause a deadlock?
+        // What if they're the same? Or what if their parents are the same or one is the parent of the other?
+        // We need to load the parent to lookup our own blob id.
+
         let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
         // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
         let (mut source_parent, mut dest_parent) =
@@ -224,6 +243,19 @@ where
             }
         };
         let self_blob_id = entry.blob_id();
+        #[cfg(feature = "ancestor_checks_on_move")]
+        {
+            // TODO This can happen concurrently with the load_blob above
+            match self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent).await {
+                Ok(()) => (),
+                Err(err) => {
+                    // TODO Drop concurrently and drop latter even if first one fails
+                    source_parent.async_drop().await?;
+                    dest_parent.async_drop().await?;
+                    return Err(err);
+                }
+            }
+        }
         // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
         //      But it likely has some dependency with source_parent_blob.
         let self_blob = self.blobstore.load(self_blob_id).await;
@@ -381,7 +413,8 @@ where
     ) -> FsResult<(NodeAttrs, CryDir<'_, B>)> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
-                let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+                let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
+                let self_blob_id = ancestors_and_self.self_blob_id();
                 let (blob, new_dir_blob_id) =
                     join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
                 let blob = blob?;
@@ -425,7 +458,7 @@ where
                         let node = CryDir::new(
                             &self.blobstore,
                             Arc::new(NodeInfo::new(
-                                self_blob_id,
+                                ancestors_and_self.ancestors_and_self(),
                                 name,
                                 self.node_info.atime_update_behavior(),
                             )),
@@ -502,7 +535,8 @@ where
                 // TODO What should NumBytes be? Also, no unwrap?
                 let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
-                let self_blob_id = self.node_info.blob_id(&self.blobstore).await?;
+                let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
+                let self_blob_id = ancestors_and_self.self_blob_id();
 
                 let (blob, new_symlink_blob_id) = join!(
                     self.load_blob(),
@@ -536,7 +570,7 @@ where
                         let node = CrySymlink::new(
                             &self.blobstore,
                             Arc::new(NodeInfo::new(
-                                self_blob_id,
+                                ancestors_and_self.ancestors_and_self(),
                                 name,
                                 self.node_info.atime_update_behavior(),
                             )),
@@ -619,9 +653,10 @@ where
     )> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
-                let blob_id = self.node_info.blob_id(&self.blobstore).await?;
+                let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
+                let self_blob_id = ancestors_and_self.self_blob_id();
                 let (blob, new_file_blob_id) =
-                    join!(self.load_blob(), self.create_file_blob(&blob_id),);
+                    join!(self.load_blob(), self.create_file_blob(&self_blob_id),);
                 let mut blob = blob?;
 
                 with_async_drop_2!(blob, {
@@ -659,7 +694,11 @@ where
                     };
 
                     let node_info = Arc::new(NodeInfo::IsNotRootDir {
-                        parent_blob_id: blob_id,
+                        #[cfg(not(feature = "ancestor_checks_on_move"))]
+                        parent_blob_id: ancestors_and_self.ancestors_and_self(),
+                        #[cfg(feature = "ancestor_checks_on_move")]
+                        ancestors: ancestors_and_self.ancestors_and_self(),
+
                         name: name.to_owned(),
                         blob_details: OnceCell::new_with(Some(BlobDetails {
                             blob_id: new_file_blob_id,
