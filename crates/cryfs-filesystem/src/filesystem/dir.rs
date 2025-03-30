@@ -209,7 +209,7 @@ where
                 let mut blob = self.load_blob().await?;
                 let result = blob
                     .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
-                        // TODO Is overwriting actually allowed here if the new entry already exists?
+                        // TODO Don't allow overwriting nonempty directories, but allow overwriting files and symlinks and empty directories
                         self.on_rename_overwrites_destination(*blob_id).await
                     })
                     .await;
@@ -256,6 +256,8 @@ where
                 }
             }
         }
+        // TODO See [DirEntryList::_check_allowed_overwrite] for other checks (i.e. we're not allowed to overwrite a dir with a non-dir or the other way round)
+
         // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
         //      But it likely has some dependency with source_parent_blob.
         let self_blob = self.blobstore.load(self_blob_id).await;

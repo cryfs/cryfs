@@ -227,11 +227,7 @@ impl DirEntryList {
 
     fn _overwrite(&mut self, index: usize, entry: DirEntry) -> Result<()> {
         assert_eq!(self.entries[index].name(), entry.name());
-        Self::_check_allowed_overwrite(
-            self.entries[index].entry_type(),
-            entry.name(),
-            entry.entry_type(),
-        )?;
+        Self::_check_allowed_overwrite(self.entries[index].entry_type(), entry.entry_type())?;
 
         // The new entry has possibly a different blockId, so it has to be in a different list position (list is ordered by blockIds).
         // That's why we remove-and-add instead of just modifying the existing entry.
@@ -398,11 +394,7 @@ impl DirEntryList {
         };
     }
 
-    fn _check_allowed_overwrite(
-        prev_dest_type: EntryType,
-        name: &PathComponent,
-        source_type: EntryType,
-    ) -> FsResult<()> {
+    fn _check_allowed_overwrite(prev_dest_type: EntryType, source_type: EntryType) -> FsResult<()> {
         if prev_dest_type != source_type {
             if prev_dest_type == EntryType::Dir {
                 // new path is an existing directory, but old path is not a directory
