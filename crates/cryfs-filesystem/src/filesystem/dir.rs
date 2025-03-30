@@ -361,6 +361,8 @@ where
         }
 
         // TODO We can probably do this concurrently with the other modifications further up
+        // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
+        //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
         let (source_update, dest_update) = join!(
             self.node_info.update_modification_timestamp_in_parent(&self.blobstore),
             newparent
