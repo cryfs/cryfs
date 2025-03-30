@@ -49,44 +49,116 @@ impl AtimeOption {
         }
 
         match flags {
-            Flags {noatime: true, atime: false, relatime: false, strictatime: false, nodiratime: _} => {
+            Flags {
+                noatime: true,
+                atime: false,
+                relatime: false,
+                strictatime: false,
+                nodiratime: _,
+            } => {
                 // note: can have nodiratime flag set but that is ignored because it is already included in the noatime policy.
                 Ok(AtimeUpdateBehavior::Noatime)
             }
-            Flags {noatime: true, atime: true, ..} => {
+            Flags {
+                noatime: true,
+                atime: true,
+                ..
+            } => {
                 bail!("Cannot use both noatime and atime");
             }
-            Flags {noatime: true, relatime: true, ..} => {
+            Flags {
+                noatime: true,
+                relatime: true,
+                ..
+            } => {
                 bail!("Cannot use both noatime and relatime");
             }
-            Flags {noatime: true, strictatime: true, ..} => {
+            Flags {
+                noatime: true,
+                strictatime: true,
+                ..
+            } => {
                 bail!("Cannot use both noatime and strictatime");
             }
-            Flags {atime: true, strictatime: true, ..} => {
+            Flags {
+                atime: true,
+                strictatime: true,
+                ..
+            } => {
                 bail!("Cannot use both atime and strictatime");
             }
-            Flags {relatime: true, strictatime: true, ..} => {
+            Flags {
+                relatime: true,
+                strictatime: true,
+                ..
+            } => {
                 bail!("Cannot use both relatime and strictatime");
             }
-            Flags {atime: true, noatime: false, strictatime: false, nodiratime: true, relatime: _} | Flags {relatime: true, noatime: false, strictatime: false, nodiratime: true, atime: _} => {
+            Flags {
+                atime: true,
+                noatime: false,
+                strictatime: false,
+                nodiratime: true,
+                relatime: _,
+            }
+            | Flags {
+                relatime: true,
+                noatime: false,
+                strictatime: false,
+                nodiratime: true,
+                atime: _,
+            } => {
                 // note: atime and relatime can be combined because they're identical
                 Ok(AtimeUpdateBehavior::NodiratimeRelatime)
             }
-            Flags {atime: true, noatime: false, strictatime: false, nodiratime: false, relatime: _} | Flags {relatime: true, noatime: false, strictatime: false, nodiratime: false, atime: _}=> {
+            Flags {
+                atime: true,
+                noatime: false,
+                strictatime: false,
+                nodiratime: false,
+                relatime: _,
+            }
+            | Flags {
+                relatime: true,
+                noatime: false,
+                strictatime: false,
+                nodiratime: false,
+                atime: _,
+            } => {
                 // note: atime and relatime can be combined because they're identical
                 Ok(AtimeUpdateBehavior::Relatime)
             }
-            Flags {strictatime: true, noatime: false, atime: false, relatime: false, nodiratime: true} => {
-                Ok(AtimeUpdateBehavior::NodiratimeStrictatime)
-            }
-            Flags {strictatime: true, noatime: false, atime: false, relatime: false, nodiratime: false} => {
-                Ok(AtimeUpdateBehavior::Strictatime)
-            }
-            Flags {nodiratime: true, noatime: false, atime: false, relatime: false, strictatime: false} => {
+            Flags {
+                strictatime: true,
+                noatime: false,
+                atime: false,
+                relatime: false,
+                nodiratime: true,
+            } => Ok(AtimeUpdateBehavior::NodiratimeStrictatime),
+            Flags {
+                strictatime: true,
+                noatime: false,
+                atime: false,
+                relatime: false,
+                nodiratime: false,
+            } => Ok(AtimeUpdateBehavior::Strictatime),
+            Flags {
+                nodiratime: true,
+                noatime: false,
+                atime: false,
+                relatime: false,
+                strictatime: false,
+            } => {
                 // note: nodiratime is ignored if noatime is not set
                 Ok(AtimeUpdateBehavior::Noatime)
             }
-            Flags {noatime: false, atime: false, relatime: false, strictatime: false, nodiratime: false} => {
+            Flags {
+                noatime: false,
+                atime: false,
+                relatime: false,
+                strictatime: false,
+                nodiratime: false,
+            } => {
                 // Default is NOATIME, this reduces the probability for synchronization conflicts
                 Ok(AtimeUpdateBehavior::Noatime)
             }
@@ -107,7 +179,8 @@ mod tests {
             (AtimeOption::Noatime, AtimeUpdateBehavior::Noatime),
             (AtimeOption::Relatime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Nodiratime, AtimeUpdateBehavior::Noatime)
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             AtimeOption::to_atime_behavior(&[option.0]).unwrap(),
@@ -123,7 +196,8 @@ mod tests {
             (AtimeOption::Noatime, AtimeUpdateBehavior::Noatime),
             (AtimeOption::Relatime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Nodiratime, AtimeUpdateBehavior::Noatime)
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             AtimeOption::to_atime_behavior(&[option.0, option.0]).unwrap(),
@@ -137,7 +211,8 @@ mod tests {
             (AtimeOption::Atime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Relatime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Nodiratime, AtimeUpdateBehavior::NodiratimeRelatime),
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             option.1,
@@ -150,9 +225,15 @@ mod tests {
         #[values(
             (AtimeOption::Strictatime, "Cannot use both atime and strictatime"),
             (AtimeOption::Noatime, "Cannot use both noatime and atime"),
-        )] option: (AtimeOption, &str),
+        )]
+        option: (AtimeOption, &str),
     ) {
-        assert_eq!(option.1, AtimeOption::to_atime_behavior(&[AtimeOption::Atime, option.0]).unwrap_err().to_string());
+        assert_eq!(
+            option.1,
+            AtimeOption::to_atime_behavior(&[AtimeOption::Atime, option.0])
+                .unwrap_err()
+                .to_string()
+        );
     }
 
     #[rstest]
@@ -160,7 +241,8 @@ mod tests {
         #[values(
             (AtimeOption::Strictatime, AtimeUpdateBehavior::Strictatime),
             (AtimeOption::Nodiratime, AtimeUpdateBehavior::NodiratimeStrictatime),
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             option.1,
@@ -174,9 +256,15 @@ mod tests {
             (AtimeOption::Atime, "Cannot use both atime and strictatime"),
             (AtimeOption::Noatime, "Cannot use both noatime and strictatime"),
             (AtimeOption::Relatime, "Cannot use both relatime and strictatime"),
-        )] option: (AtimeOption, &str),
+        )]
+        option: (AtimeOption, &str),
     ) {
-        assert_eq!(option.1, AtimeOption::to_atime_behavior(&[AtimeOption::Strictatime, option.0]).unwrap_err().to_string());
+        assert_eq!(
+            option.1,
+            AtimeOption::to_atime_behavior(&[AtimeOption::Strictatime, option.0])
+                .unwrap_err()
+                .to_string()
+        );
     }
 
     #[rstest]
@@ -184,7 +272,8 @@ mod tests {
         #[values(
             (AtimeOption::Noatime, AtimeUpdateBehavior::Noatime),
             (AtimeOption::Nodiratime, AtimeUpdateBehavior::Noatime),
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             option.1,
@@ -198,9 +287,15 @@ mod tests {
             (AtimeOption::Atime, "Cannot use both noatime and atime"),
             (AtimeOption::Strictatime, "Cannot use both noatime and strictatime"),
             (AtimeOption::Relatime, "Cannot use both noatime and relatime"),
-        )] option: (AtimeOption, &str),
+        )]
+        option: (AtimeOption, &str),
     ) {
-        assert_eq!(option.1, AtimeOption::to_atime_behavior(&[AtimeOption::Noatime, option.0]).unwrap_err().to_string());
+        assert_eq!(
+            option.1,
+            AtimeOption::to_atime_behavior(&[AtimeOption::Noatime, option.0])
+                .unwrap_err()
+                .to_string()
+        );
     }
 
     #[rstest]
@@ -209,7 +304,8 @@ mod tests {
             (AtimeOption::Relatime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Atime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Nodiratime, AtimeUpdateBehavior::NodiratimeRelatime),
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             option.1,
@@ -222,9 +318,15 @@ mod tests {
         #[values(
             (AtimeOption::Strictatime, "Cannot use both relatime and strictatime"),
             (AtimeOption::Noatime, "Cannot use both noatime and relatime"),
-        )] option: (AtimeOption, &str),
+        )]
+        option: (AtimeOption, &str),
     ) {
-        assert_eq!(option.1, AtimeOption::to_atime_behavior(&[AtimeOption::Relatime, option.0]).unwrap_err().to_string());
+        assert_eq!(
+            option.1,
+            AtimeOption::to_atime_behavior(&[AtimeOption::Relatime, option.0])
+                .unwrap_err()
+                .to_string()
+        );
     }
 
     #[rstest]
@@ -235,12 +337,12 @@ mod tests {
             (AtimeOption::Strictatime, AtimeUpdateBehavior::NodiratimeStrictatime),
             (AtimeOption::Atime, AtimeUpdateBehavior::NodiratimeRelatime),
             (AtimeOption::Relatime, AtimeUpdateBehavior::NodiratimeRelatime),
-        )] option: (AtimeOption, AtimeUpdateBehavior),
+        )]
+        option: (AtimeOption, AtimeUpdateBehavior),
     ) {
         assert_eq!(
             option.1,
             AtimeOption::to_atime_behavior(&[AtimeOption::Nodiratime, option.0]).unwrap(),
         );
     }
-
 }
