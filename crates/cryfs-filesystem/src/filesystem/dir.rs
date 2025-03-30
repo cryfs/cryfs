@@ -228,6 +228,8 @@ where
         // TODO We're loading two blobs here, self and newparent. Can this cause a deadlock?
         // What if they're the same? Or what if their parents are the same or one is the parent of the other?
         // We need to load the parent to lookup our own blob id.
+        // Actually, they can't be the same per API contract, otherwise rustfs would call rename_child instead (but can we assert that?).
+        // Also, the other cases may apply.
 
         let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
         // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
