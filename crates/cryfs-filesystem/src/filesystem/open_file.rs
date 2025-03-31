@@ -174,6 +174,7 @@ where
         // is closed (calls to close() can't return errors in fuse).
         // We're just ignoring the call to flush() here.
         // TODO Is there actually something we should do?
+        Ok(())
     }
 
     async fn fsync(&self, datasync: bool) -> FsResult<()> {
