@@ -169,7 +169,11 @@ where
     }
 
     async fn flush(&self) -> FsResult<()> {
-        self.flush_file_contents().await
+        // Flush is different from fsync, it's not meant to flush contents or metadata to disk,
+        // but it's meant to give the file system a chance to return an error when a descriptor
+        // is closed (calls to close() can't return errors in fuse).
+        // We're just ignoring the call to flush() here.
+        // TODO Is there actually something we should do?
     }
 
     async fn fsync(&self, datasync: bool) -> FsResult<()> {
