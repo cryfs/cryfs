@@ -26,7 +26,7 @@ use cryfs_utils::{
 
 mod sysinfo;
 
-// TODO Check if tokio-uring is faster than tokio::fs
+// TODO Check if tokio-uring o uring-fs is faster than tokio::fs
 
 const FORMAT_VERSION_HEADER_PREFIX: &[u8] = b"cryfs;block;";
 const FORMAT_VERSION_HEADER: &[u8] = b"cryfs;block;0\0";

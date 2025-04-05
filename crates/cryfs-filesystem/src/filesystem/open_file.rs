@@ -174,6 +174,9 @@ where
         // is closed (calls to close() can't return errors in fuse).
         // We're just ignoring the call to flush() here.
         // TODO Is there actually something we should do?
+
+        // TODO For now we're calling fsync here because C++ was doing that, so we have a fairer performance comparison. But we should remove this
+        fsync(false).await?;
         Ok(())
     }
 

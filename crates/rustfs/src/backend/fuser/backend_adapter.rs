@@ -27,6 +27,8 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO For some reason, `dd if=/dev/zero of=mountdir/file bs=20M count=1000` seems to be much slower on the fuser backend (with the inmemory example) than on the fuse_mt backend. Why?
 
+// TODO Implement async file io. And actually, would this allow CryFS to benefit from being used with io-uring or not?
+
 pub struct BackendAdapter<Fs>
 where
     // TODO Send + Sync + 'static needed?
