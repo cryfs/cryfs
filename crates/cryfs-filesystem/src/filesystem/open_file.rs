@@ -176,7 +176,7 @@ where
         // TODO Is there actually something we should do?
 
         // TODO For now we're calling fsync here because C++ was doing that, so we have a fairer performance comparison. But we should remove this
-        fsync(false).await?;
+        self.fsync(false).await?;
         Ok(())
     }
 
