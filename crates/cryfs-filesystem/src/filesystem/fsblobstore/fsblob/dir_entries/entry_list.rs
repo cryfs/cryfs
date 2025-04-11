@@ -104,9 +104,13 @@ impl DirEntryList {
     }
 
     pub fn get_by_id_mut(&mut self, id: &BlobId) -> Option<&mut DirEntry> {
-        self.dirty = true;
-        self._get_index_by_id(id)
-            .map(|index| &mut self.entries[index])
+        match self._get_index_by_id(id) {
+            None => None,
+            Some(entry) => {
+                self.dirty = true;
+                Some(&mut self.entries[entry])
+            }
+        }
     }
 
     pub async fn deserialize<'a, B: BlobStore + Debug + 'a>(
@@ -231,6 +235,7 @@ impl DirEntryList {
 
         // The new entry has possibly a different blockId, so it has to be in a different list position (list is ordered by blockIds).
         // That's why we remove-and-add instead of just modifying the existing entry.
+        // TODO Removing moves the whole tail of elements, while it would be more performant to move the elements between the old and the new position.
         self.entries.remove(index);
         self._add(entry);
 
