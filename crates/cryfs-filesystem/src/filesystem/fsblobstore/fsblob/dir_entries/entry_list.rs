@@ -145,6 +145,7 @@ impl DirEntryList {
                 entry.serialize(&mut writer)?;
             }
             let data = writer.into_inner();
+            // TODO Would it have a better performance to concurrently resize and write?
             blob.resize_data(data.len() as u64).await?;
             blob.write_data(&data, 0).await?;
             self.dirty = false;
