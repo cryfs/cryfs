@@ -1028,6 +1028,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        // TODO Can we add a check here that open_files and inodes are empty? To ensure we've handled them correctly?
         self.open_files.write().await.async_drop().await.unwrap();
         self.inodes.write().await.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
