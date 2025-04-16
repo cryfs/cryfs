@@ -1210,7 +1210,7 @@ where
             async move |fs| {
                 // TODO InvalidPath is the wrong error here
                 let name = name
-                    .into_os_string()
+                    .to_os_string()
                     .into_string()
                     .map_err(|err| FsError::InvalidPath)?;
                 fs.read().await.setvolname(&req, &name).await
@@ -1223,9 +1223,9 @@ where
     fn exchange(
         &mut self,
         req: &Request<'_>,
-        parent: u64,
+        parent_ino: u64,
         name: &OsStr,
-        newparent: u64,
+        newparent_ino: u64,
         newname: &OsStr,
         options: u64,
         reply: ReplyEmpty,
@@ -1233,10 +1233,10 @@ where
         let req = RequestInfo::from(req);
         let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
-        let newparent = FileHandle::from(newparent);
+        let newparent_ino = InodeNumber::from(newparent_ino);
         let newname = newname.to_owned();
         self.run_async_reply_empty(
-            format!("exchange(parent={parent:?}, name={name:?}, newparent={newparent:?}, newname={newname:?}, options={options:?})"),
+            format!("exchange(parent={parent_ino:?}, name={name:?}, newparent={newparent_ino:?}, newname={newname:?}, options={options:?})"),
             reply,
             async move |fs| {
                 // TODO InvalidPath is the wrong error here
@@ -1245,7 +1245,7 @@ where
                 // TODO InvalidPath is the wrong error here
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.exchange(&req, parent, &name, newparent, &newname, options)
+                fs.read().await.exchange(&req, parent_ino, &name, newparent_ino, &newname, options)
                     .await
             },
         );

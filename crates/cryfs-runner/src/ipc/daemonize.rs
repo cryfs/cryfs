@@ -25,6 +25,8 @@ where
 
     // get current umask value because `daemonize` force overwrites it but we don't really want it to change, so we give it the old value
     let umask = unsafe { libc::umask(0) };
+    #[cfg(target_os = "macos")]
+    let umask = u32::from(umask);
     match Daemonize::new()
         .umask(umask)
         // We're keeping stdout and stderr bound to the parent at first, but will close them in the child after mounting was successful

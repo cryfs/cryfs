@@ -6,6 +6,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
 use std::time::SystemTime;
 
+#[cfg(target_os = "macos")]
+use crate::low_level_api::ReplyXTimes;
 use crate::{
     common::{
         Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenFlags,

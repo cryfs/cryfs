@@ -14,6 +14,8 @@ use crate::common::{
     Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
     Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
 };
+#[cfg(target_os = "macos")]
+use crate::low_level_api::ReplyXTimes;
 use crate::low_level_api::{
     AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock,
     ReplyLseek, ReplyOpen, ReplyWrite,

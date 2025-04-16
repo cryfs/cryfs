@@ -23,6 +23,9 @@ impl FilesystemDriver {
     pub async fn mkdir<'a>(&self, path: &str, mode: Mode) -> Result<()> {
         let path = self._path(path);
         // TODO Why do we need from_bits_retain instead of just from_bits here? It seems to fail when the ISDIR bit is set otherwise.
+        #[cfg(target_os = "macos")]
+        let mode = nix::sys::stat::Mode::from_bits_retain(u16::try_from(u32::from(mode)).unwrap());
+        #[cfg(not(target_os = "macos"))]
         let mode = nix::sys::stat::Mode::from_bits_retain(mode.into());
         tokio::task::spawn_blocking(move || unistd::mkdir(&path, mode))
             .await
