@@ -161,8 +161,15 @@ where
 
     // TODO Add tests for this ancestor check
     #[cfg(feature = "ancestor_checks_on_move")]
-    async fn validate_move_doesnt_cause_cycle(&self, child_to_move: &BlobId, newparent: &Self) -> FsResult<()> {
-        let dest_ancestors = newparent.node_info.ancestors_and_self(&newparent.blobstore).await?;
+    async fn validate_move_doesnt_cause_cycle(
+        &self,
+        child_to_move: &BlobId,
+        newparent: &Self,
+    ) -> FsResult<()> {
+        let dest_ancestors = newparent
+            .node_info
+            .ancestors_and_self(&newparent.blobstore)
+            .await?;
 
         // Check we're not moving a directory into itself or one of its own subdirectories
         // TODO Do we handle moving /path/to/file to /path/to/file/newname correctly? Or does it only work with /path/to/dir ?
@@ -248,7 +255,10 @@ where
         #[cfg(feature = "ancestor_checks_on_move")]
         {
             // TODO This can happen concurrently with the load_blob above
-            match self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent).await {
+            match self
+                .validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
+                .await
+            {
                 Ok(()) => (),
                 Err(err) => {
                     // TODO Drop concurrently and drop latter even if first one fails
@@ -363,7 +373,8 @@ where
         // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
         //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
         let (source_update, dest_update) = join!(
-            self.node_info.update_modification_timestamp_in_parent(&self.blobstore),
+            self.node_info
+                .update_modification_timestamp_in_parent(&self.blobstore),
             newparent
                 .node_info
                 .update_modification_timestamp_in_parent(&self.blobstore),
@@ -492,7 +503,7 @@ where
                             message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", child_id),
                         }
                     })?;
-    
+
                     let result = if child_blob.entries().len() > 0 {
                         child_blob.async_drop().await?;
                         Err(FsError::CannotRemoveNonEmptyDirectory)

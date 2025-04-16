@@ -174,7 +174,7 @@ mod tests {
     #[rstest]
     fn test_one_flag(
         #[values(
-            (AtimeOption::Atime, AtimeUpdateBehavior::Relatime), 
+            (AtimeOption::Atime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Strictatime, AtimeUpdateBehavior::Strictatime),
             (AtimeOption::Noatime, AtimeUpdateBehavior::Noatime),
             (AtimeOption::Relatime, AtimeUpdateBehavior::Relatime),
@@ -191,7 +191,7 @@ mod tests {
     #[rstest]
     fn test_double_flag(
         #[values(
-            (AtimeOption::Atime, AtimeUpdateBehavior::Relatime), 
+            (AtimeOption::Atime, AtimeUpdateBehavior::Relatime),
             (AtimeOption::Strictatime, AtimeUpdateBehavior::Strictatime),
             (AtimeOption::Noatime, AtimeUpdateBehavior::Noatime),
             (AtimeOption::Relatime, AtimeUpdateBehavior::Relatime),
