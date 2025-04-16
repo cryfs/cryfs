@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
-use super::utils::MaybeInitializedFs;
+use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
     Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
@@ -48,8 +48,7 @@ where
     // TODO Do we need Arc for inodes?
     inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, AsyncDropArc<Fs::Node>>>>>,
 
-    // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
-    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<FileHandle, Fs::OpenFile>>>,
+    open_files: AsyncDropGuard<OpenFileList<Fs::OpenFile>>,
 }
 
 impl<Fs> ObjectBasedFsAdapterLL<Fs>
@@ -69,15 +68,13 @@ where
         if fuser::FUSE_ROOT_ID != 0 {
             inodes.block_handle(FUSE_ROOT_ID);
         }
-        let open_files = tokio::sync::RwLock::new(HandleMap::new());
 
-        let inodes = Arc::new(RwLock::new(inodes));
         AsyncDropGuard::new(Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::new_uninitialized(
                 Box::new(fs),
             ))),
-            inodes,
-            open_files,
+            inodes: Arc::new(RwLock::new(inodes)),
+            open_files: OpenFileList::new(),
         })
     }
 
@@ -462,7 +459,7 @@ where
             let file = inode.as_file().await?;
             let open_file = file.open(flags);
             let open_file = open_file.await?;
-            let fh = self.open_files.write().await.add(open_file);
+            let fh = self.open_files.add(open_file).await;
             Ok(ReplyOpen {
                 fh: fh.handle,
                 // TODO What flags to return here? Just same as the argument?
@@ -493,13 +490,10 @@ where
             }
         }
 
-        let open_files = self.open_files.read().await;
-        let Some(open_file) = open_files.get(fh) else {
-            log::error!("read: no open file with handle {}", u64::from(fh));
-            return callback.call(Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) }));
-        };
-
-        let data = open_file.read(offset, size).await;
+        let data = self
+            .open_files
+            .get(fh, async |open_file| open_file.read(offset, size).await)
+            .await;
         let data = match data {
             Ok(ref data) => Ok(data.as_ref()),
             Err(err) => Err(err),
@@ -521,13 +515,12 @@ where
         self.trigger_on_operation().await?;
 
         // TODO What to do with WriteFlags, flags, lock_owner?
-        let open_files = self.open_files.read().await;
-        let Some(open_file) = open_files.get(fh) else {
-            log::error!("write: no open file with handle {}", u64::from(fh));
-            return Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) });
-        };
+        self.open_files
+            .get(fh, async |open_file| {
+                open_file.write(offset, data.to_vec().into()).await
+            })
+            .await?;
 
-        open_file.write(offset, data.to_vec().into()).await?;
         Ok(ReplyWrite {
             // TODO No unwrap
             written: u32::try_from(data.len()).unwrap(),
@@ -544,14 +537,9 @@ where
         self.trigger_on_operation().await?;
 
         // TODO What to do about lock_owner?
-        let open_files = self.open_files.read().await;
-        let Some(open_file) = open_files.get(fh) else {
-            log::error!("write: no open file with handle {}", u64::from(fh));
-            // TODO Add a self.get_open_file() function that deduplicates this logic of throwing InvalidFileDescriptor between file system operations
-            return Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) });
-        };
-
-        open_file.flush().await
+        self.open_files
+            .get(fh, async |open_file| open_file.flush().await)
+            .await
     }
 
     async fn release(
@@ -568,7 +556,7 @@ where
         // TODO Would it make sense to have `fh` always be equal to `ino`? Might simplify some things. Also, we could add an `assert_eq!(ino, fh)` here.
 
         // TODO What to do with flags, lock_owner?
-        let open_file = self.open_files.write().await.remove(fh);
+        let open_file = self.open_files.remove(fh).await;
         with_async_drop_2!(open_file, {
             if flush {
                 // TODO Is this actually what the `flush` parameter should do?
@@ -588,14 +576,9 @@ where
         self.trigger_on_operation().await?;
 
         // TODO What to do about lock_owner?
-        let open_files = self.open_files.read().await;
-        let Some(open_file) = open_files.get(fh) else {
-            log::error!("write: no open file with handle {}", u64::from(fh));
-            // TODO Add a self.get_open_file() function that deduplicates this logic of throwing InvalidFileDescriptor between file system operations
-            return Err(FsError::InvalidFileDescriptor { fh: u64::from(fh) });
-        };
-
-        open_file.fsync(datasync).await
+        self.open_files
+            .get(fh, async |open_file| open_file.fsync(datasync).await)
+            .await
     }
 
     async fn opendir(
@@ -831,7 +814,7 @@ where
             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
             let child_ino = self.add_inode(parent_ino, child_node, name).await;
 
-            let fh = self.open_files.write().await.add(open_file);
+            let fh = self.open_files.add(open_file).await;
             Ok(ReplyCreate {
                 ttl: TTL_CREATE,
                 attr,
@@ -1031,7 +1014,7 @@ where
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         // TODO Can we add a check here that open_files and inodes are empty? To ensure we've handled them correctly?
-        self.open_files.write().await.async_drop().await.unwrap();
+        self.open_files.async_drop().await.unwrap();
         self.inodes.write().await.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
         Ok(())

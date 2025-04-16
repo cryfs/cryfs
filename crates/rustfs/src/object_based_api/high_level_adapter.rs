@@ -3,11 +3,11 @@ use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 
-use super::utils::MaybeInitializedFs;
+use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, HandleMap, Mode,
-    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, Mode, NumBytes,
+    OpenFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
@@ -34,8 +34,7 @@ where
     // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
     fs: Arc<RwLock<AsyncDropGuard<MaybeInitializedFs<Fs>>>>,
 
-    // TODO Can we improve concurrency by locking less in open_files and instead making OpenFileList concurrency safe somehow?
-    open_files: tokio::sync::RwLock<AsyncDropGuard<HandleMap<FileHandle, Fs::OpenFile>>>,
+    open_files: AsyncDropGuard<OpenFileList<Fs::OpenFile>>,
 }
 
 impl<Fs> ObjectBasedFsAdapter<Fs>
@@ -47,12 +46,11 @@ where
     pub fn new(
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
     ) -> AsyncDropGuard<Self> {
-        let open_files = tokio::sync::RwLock::new(HandleMap::new());
         AsyncDropGuard::new(Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::new_uninitialized(
                 Box::new(fs),
             ))),
-            open_files,
+            open_files: OpenFileList::new(),
         })
     }
 
@@ -105,14 +103,11 @@ where
         self.trigger_on_operation().await?;
 
         let attrs = if let Some(fh) = fh {
-            // TODO No unwrap
-            let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh).ok_or_else(|| {
-                log::error!("getattr: no open file with handle {}", u64::from(fh));
-                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-            })?;
-            open_file.getattr().await?
+            self.open_files
+                .get(fh, async |open_file| open_file.getattr().await)
+                .await?
         } else {
+            // TODO No unwrap
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
             with_async_drop_2!(node, { node.getattr().await })?
@@ -134,13 +129,12 @@ where
 
         // TODO Make sure file/symlink/dir flags are correctly set by this
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh).ok_or_else(|| {
-                log::error!("chmod: no open file with handle {}", u64::from(fh));
-                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-            })?;
-            open_file
-                .setattr(Some(mode), None, None, None, None, None, None)
+            self.open_files
+                .get(fh, async |open_file| {
+                    open_file
+                        .setattr(Some(mode), None, None, None, None, None, None)
+                        .await
+                })
                 .await?;
         } else {
             let fs = self.fs.read().unwrap();
@@ -164,13 +158,12 @@ where
         self.trigger_on_operation().await?;
 
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh).ok_or_else(|| {
-                log::error!("chown: no open file with handle {}", u64::from(fh));
-                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-            })?;
-            open_file
-                .setattr(None, uid, gid, None, None, None, None)
+            self.open_files
+                .get(fh, async |open_file| {
+                    open_file
+                        .setattr(None, uid, gid, None, None, None, None)
+                        .await
+                })
                 .await?;
         } else {
             let fs = self.fs.read().unwrap();
@@ -193,13 +186,12 @@ where
         self.trigger_on_operation().await?;
 
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh).ok_or_else(|| {
-                log::error!("truncate: no open file with handle {}", u64::from(fh));
-                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-            })?;
-            open_file
-                .setattr(None, None, None, Some(size), None, None, None)
+            self.open_files
+                .get(fh, async |open_file| {
+                    open_file
+                        .setattr(None, None, None, Some(size), None, None, None)
+                        .await
+                })
                 .await?;
         } else {
             let fs = self.fs.read().unwrap();
@@ -223,13 +215,12 @@ where
         self.trigger_on_operation().await?;
 
         if let Some(fh) = fh {
-            let open_file_list = self.open_files.read().await;
-            let open_file = open_file_list.get(fh).ok_or_else(|| {
-                log::error!("utimens: no open file with handle {}", u64::from(fh));
-                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-            })?;
-            open_file
-                .setattr(None, None, None, None, atime, mtime, None)
+            self.open_files
+                .get(fh, async |open_file| {
+                    open_file
+                        .setattr(None, None, None, None, atime, mtime, None)
+                        .await
+                })
                 .await?;
         } else {
             let fs = self.fs.read().unwrap();
@@ -421,7 +412,7 @@ where
             let result = match file.open(flags).await {
                 Err(err) => Err(err),
                 Ok(open_file) => {
-                    let fh = self.open_files.write().await.add(open_file);
+                    let fh = self.open_files.add(open_file).await;
                     Ok(OpenResponse {
                         fh: fh.handle,
                         // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
@@ -452,21 +443,14 @@ where
             }
         }
 
-        let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh).ok_or_else(|| {
-            log::error!("read: no open file with handle {}", u64::from(fh));
-            FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-        });
-        match open_file {
-            Ok(open_file) => {
-                let data = open_file.read(offset, size).await;
-                match data {
-                    Ok(data) => {
-                        let result = callback.call(Ok(data.as_ref()));
-                        result
-                    }
-                    Err(err) => callback.call(Err(err)),
-                }
+        let data = self
+            .open_files
+            .get(fh, async |open_file| open_file.read(offset, size).await)
+            .await;
+        match data {
+            Ok(data) => {
+                let result = callback.call(Ok(data.as_ref()));
+                result
             }
             Err(err) => callback.call(Err(err)),
         }
@@ -486,12 +470,11 @@ where
 
         let data_len = data.len();
         let data = data.into();
-        let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh).ok_or_else(|| {
-            log::error!("write: no open file with handle {}", u64::from(fh));
-            FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-        })?;
-        open_file.write(offset, data).await?;
+
+        self.open_files
+            .get(fh, async |open_file| open_file.write(offset, data).await)
+            .await?;
+
         // TODO No unwrap
         Ok(NumBytes::from(u64::try_from(data_len).unwrap()))
     }
@@ -505,12 +488,10 @@ where
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh).ok_or_else(|| {
-            log::error!("flush: no open file with handle {}", u64::from(fh));
-            FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-        })?;
-        open_file.flush().await?;
+        self.open_files
+            .get(fh, async |open_file| open_file.flush().await)
+            .await?;
+
         Ok(())
     }
 
@@ -525,8 +506,7 @@ where
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        // TODO No unwrap
-        let mut removed = self.open_files.write().await.remove(fh);
+        let mut removed = self.open_files.remove(fh).await;
         removed.async_drop().await?;
         Ok(())
     }
@@ -540,12 +520,10 @@ where
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        let open_file_list = self.open_files.read().await;
-        let open_file = open_file_list.get(fh).ok_or_else(|| {
-            log::error!("fsync: no open file with handle {}", u64::from(fh));
-            FsError::InvalidFileDescriptor { fh: u64::from(fh) }
-        })?;
-        open_file.fsync(datasync).await?;
+        self.open_files
+            .get(fh, async |open_file| open_file.fsync(datasync).await)
+            .await?;
+
         Ok(())
     }
 
@@ -730,7 +708,7 @@ where
                 .create_and_open_file(&name, mode, req.uid, req.gid)
                 .await?;
             node.async_drop().await?;
-            let fh = self.open_files.write().await.add(open_file);
+            let fh = self.open_files.add(open_file).await;
             Ok(CreateResponse {
                 ttl: TTL_CREATE,
                 attrs: file_attrs,
@@ -753,7 +731,6 @@ where
     }
 }
 
-// TODO ObjectBasedFsAdapter doesn't need to be AsyncDrop
 #[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapter<Fs>
 where
@@ -763,11 +740,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let mut open_files = std::mem::replace(
-            &mut *self.open_files.write().await,
-            AsyncDropGuard::new_invalid(),
-        );
-        open_files.async_drop().await?;
+        self.open_files.async_drop().await?;
         let mut fs = std::mem::replace(
             &mut *self.fs.write().unwrap(),
             AsyncDropGuard::new_invalid(),
