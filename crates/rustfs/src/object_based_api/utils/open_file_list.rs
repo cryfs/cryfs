@@ -70,7 +70,10 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let open_files = std::mem::replace(&mut self.open_files, Mutex::new(HandleMap::new()));
+        let open_files = std::mem::replace(
+            &mut self.open_files,
+            Mutex::new(AsyncDropGuard::new_invalid()),
+        );
         let mut open_files = open_files.into_inner().unwrap();
         open_files.async_drop().await.unwrap();
         Ok(())
