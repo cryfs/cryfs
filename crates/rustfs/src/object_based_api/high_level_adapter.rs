@@ -412,7 +412,7 @@ where
             let result = match file.open(flags).await {
                 Err(err) => Err(err),
                 Ok(open_file) => {
-                    let fh = self.open_files.add(open_file).await;
+                    let fh = self.open_files.add(open_file);
                     Ok(OpenResponse {
                         fh: fh.handle,
                         // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
@@ -506,7 +506,7 @@ where
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        let mut removed = self.open_files.remove(fh).await;
+        let mut removed = self.open_files.remove(fh);
         removed.async_drop().await?;
         Ok(())
     }
@@ -708,7 +708,7 @@ where
                 .create_and_open_file(&name, mode, req.uid, req.gid)
                 .await?;
             node.async_drop().await?;
-            let fh = self.open_files.add(open_file).await;
+            let fh = self.open_files.add(open_file);
             Ok(CreateResponse {
                 ttl: TTL_CREATE,
                 attrs: file_attrs,

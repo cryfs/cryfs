@@ -459,7 +459,7 @@ where
             let file = inode.as_file().await?;
             let open_file = file.open(flags);
             let open_file = open_file.await?;
-            let fh = self.open_files.add(open_file).await;
+            let fh = self.open_files.add(open_file);
             Ok(ReplyOpen {
                 fh: fh.handle,
                 // TODO What flags to return here? Just same as the argument?
@@ -556,7 +556,7 @@ where
         // TODO Would it make sense to have `fh` always be equal to `ino`? Might simplify some things. Also, we could add an `assert_eq!(ino, fh)` here.
 
         // TODO What to do with flags, lock_owner?
-        let open_file = self.open_files.remove(fh).await;
+        let open_file = self.open_files.remove(fh);
         with_async_drop_2!(open_file, {
             if flush {
                 // TODO Is this actually what the `flush` parameter should do?
@@ -814,7 +814,7 @@ where
             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
             let child_ino = self.add_inode(parent_ino, child_node, name).await;
 
-            let fh = self.open_files.add(open_file).await;
+            let fh = self.open_files.add(open_file);
             Ok(ReplyCreate {
                 ttl: TTL_CREATE,
                 attr,
@@ -1013,7 +1013,8 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        // TODO Can we add a check here that open_files and inodes are empty? To ensure we've handled them correctly?
+        // TODO Can we add a check here that inodes are empty? To ensure we've handled them correctly?
+        //      Or is it actually allowed fuse behavior to keep files open and/or inodes active on shutdown?
         self.open_files.async_drop().await.unwrap();
         self.inodes.write().await.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
