@@ -16,7 +16,10 @@
 			"settings": {
 				// OhMyFish needs a nerd font
 				"terminal.integrated.fontFamily": "'Hack Nerd Font Mono', monospace",
-			}
+			},
+			"extensions": [
+				"fill-labs.dependi"
+			]
 		}
 	}
 }
