@@ -761,7 +761,7 @@ where
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let data = data.to_owned();
         self.run_async_reply_write(
-            format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, data={data:?}, write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})"),
+            format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, size={size:?}, write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})", size=data.len()),
             reply,
             async move |fs| {
                 fs.read().await.write(
