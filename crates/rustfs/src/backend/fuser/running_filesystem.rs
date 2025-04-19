@@ -36,6 +36,8 @@ impl RunningFilesystem {
     }
 
     pub fn unmount_join(&self) {
+        // TODO For unmount to work correctly, we may have to do DokanRemoveMountPoint in Dokan. That's what C++ CryFS did at least.
+
         if let Some(session) = self.session.lock().unwrap().take() {
             session.join();
         }
