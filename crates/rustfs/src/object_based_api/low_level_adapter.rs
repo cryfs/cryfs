@@ -667,6 +667,8 @@ where
                 );
                 if buffer_is_full {
                     // TODO Can we cancel the stream if the buffer is full?
+
+                    // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
                     break;
                 }
             }
