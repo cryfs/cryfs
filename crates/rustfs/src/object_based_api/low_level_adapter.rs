@@ -597,13 +597,13 @@ where
 
     async fn opendir(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        flags: i32,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _flags: i32,
     ) -> FsResult<ReplyOpen> {
         self.trigger_on_operation().await?;
 
-        // TODO
+        // We don't need opendir/releasedir because readdir works directly on the inode.
         Ok(ReplyOpen {
             fh: FileHandle::from(0),
             flags: OpenFlags::ReadWrite,
@@ -614,7 +614,7 @@ where
         &self,
         _req: &RequestInfo,
         ino: InodeNumber,
-        fh: FileHandle,
+        _fh: FileHandle,
         offset: NumBytes,
         mut reply: ReplyDirectory,
     ) {
@@ -701,14 +701,14 @@ where
 
     async fn releasedir(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        flags: i32,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _flags: i32,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        // TODO
+        // We don't need opendir/releasedir because readdir works directly on the inode.
         Ok(())
     }
 
