@@ -15,8 +15,12 @@ async-trait.workspace = true
 cryfs-utils = { path = "../utils" }
 derive_more.workspace = true
 fuse_mt = { workspace = true, optional = true }
-fuse_mt_fuser = { workspace = true, optional = true }
-fuser = { workspace = true, optional = true }
+# TODO Which ABI feature to set for Fuse?
+#      7.31 is the newest supported by fuser as of time of writing and was introduced in
+#      Linux Kernel 5.2, see https://github.com/torvalds/linux/blob/v5.2/include/uapi/linux/fuse.h .
+#      But probably make this configurable in the future.
+fuse_mt_fuser = { workspace = true, optional = true, features = ["abi-7-31"] }
+fuser = { workspace = true, optional = true, features = ["abi-7-31"] }
 futures.workspace = true
 libc.workspace = true
 log.workspace = true
