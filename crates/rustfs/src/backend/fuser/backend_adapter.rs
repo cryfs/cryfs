@@ -425,12 +425,10 @@ where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     fn init(&mut self, req: &Request<'_>, config: &mut KernelConfig) -> Result<(), c_int> {
+        // TODO Allow a way to set KernelConfig? Or should we make choices in rustfs? The fuse-mt crate chose to hide it.
+
         Self::run_blocking(&self.runtime, &format!("init"), async || {
-            self.fs
-                .write()
-                .await
-                .init(&RequestInfo::from(req), config)
-                .await
+            self.fs.write().await.init(&RequestInfo::from(req)).await
         })
     }
 

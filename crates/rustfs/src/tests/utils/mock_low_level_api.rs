@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
-use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
+use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
 use mockall::mock;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
@@ -21,7 +21,7 @@ use crate::{
 
 pub fn make_mock_filesystem() -> MockAsyncFilesystemLL {
     let mut mock = MockAsyncFilesystemLL::new();
-    mock.expect_init().once().returning(|_, _| Ok(()));
+    mock.expect_init().once().returning(|_| Ok(()));
     mock.expect_destroy().once().returning(|| ());
     mock.expect_async_drop_impl().once().returning(|| Ok(()));
     mock
@@ -32,7 +32,7 @@ mock! {
 
     #[async_trait]
     impl AsyncFilesystemLL for AsyncFilesystemLL {
-        async fn init(&self, req: &RequestInfo, config: &mut KernelConfig) -> FsResult<()>;
+        async fn init(&self, req: &RequestInfo) -> FsResult<()>;
 
         async fn destroy(&self);
 
@@ -401,8 +401,8 @@ impl Debug for MockAsyncFilesystemLL {
 /// to run the file system.
 #[async_trait]
 impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
-    async fn init(&self, req: &RequestInfo, config: &mut KernelConfig) -> FsResult<()> {
-        self.deref().init(req, config).await
+    async fn init(&self, req: &RequestInfo) -> FsResult<()> {
+        self.deref().init(req).await
     }
 
     async fn destroy(&self) {

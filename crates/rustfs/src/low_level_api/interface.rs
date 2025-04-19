@@ -79,7 +79,7 @@ pub trait AsyncFilesystemLL {
     /// Initialize filesystem.
     /// Called before any other filesystem method.
     /// The kernel module connection can be configured using the KernelConfig object
-    async fn init(&self, req: &RequestInfo, config: &mut KernelConfig) -> FsResult<()>;
+    async fn init(&self, req: &RequestInfo) -> FsResult<()>;
 
     /// Clean up filesystem.
     /// Called on filesystem exit.

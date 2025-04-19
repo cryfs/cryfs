@@ -24,7 +24,7 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     with_async_drop_2,
 };
-use fuser::{KernelConfig, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
+use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
 
 const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 
@@ -129,8 +129,7 @@ where
     for<'a> Fs::File<'a>: Send,
     Fs::OpenFile: Send + Sync,
 {
-    async fn init(&self, req: &RequestInfo, _config: &mut KernelConfig) -> FsResult<()> {
-        // TODO Allow implementations to change KernelConfig? Or at least parts of it?
+    async fn init(&self, req: &RequestInfo) -> FsResult<()> {
         log::info!("init");
         self.fs.write().await.initialize(req.uid, req.gid);
         Ok(())
