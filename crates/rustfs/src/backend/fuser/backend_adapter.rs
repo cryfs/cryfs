@@ -29,6 +29,8 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Implement async file io. And actually, would this allow CryFS to benefit from being used with io-uring or not?
 
+// TODO Use tracing crate for logging of file system operations
+
 pub struct BackendAdapter<Fs>
 where
     // TODO Send + Sync + 'static needed?
