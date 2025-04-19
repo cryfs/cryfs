@@ -408,7 +408,7 @@ where
     ) -> ResultWrite {
         self.run_async(
             &format!(
-                "write({path:?}, fh={fh}, offset={offset}, data=[{data_len} bytes], flags={flags})",
+                "write({path:?}, fh={fh}, offset={offset}, size={data_len}, flags={flags})",
                 data_len = data.len(),
             ),
             async move || {
