@@ -208,10 +208,15 @@ where
     ) -> FsResult<ReplyAttr> {
         self.trigger_on_operation().await?;
 
-        let mut node = self.get_inode(ino).await?;
-        let attr = node.getattr().await;
-        node.async_drop().await?;
-        let attr = attr?;
+        let attr = if let Some(fh) = fh {
+            self.open_files
+                .get(fh, async |open_file| open_file.getattr().await)
+                .await?
+        } else {
+            let node = self.get_inode(ino).await?;
+            with_async_drop_2!(node, { node.getattr().await })?
+        };
+
         Ok(ReplyAttr {
             ttl: TTL_GETATTR,
             attr,
@@ -238,14 +243,23 @@ where
     ) -> FsResult<ReplyAttr> {
         self.trigger_on_operation().await?;
 
+        let attr = if let Some(fh) = fh {
+            self.open_files
+                .get(fh, async |open_file| {
+                    open_file
+                        .setattr(mode, uid, gid, size, atime, mtime, ctime)
+                        .await
+                })
+                .await?
+        } else {
+            let node = self.get_inode(ino).await?;
+            with_async_drop_2!(node, {
+                node.setattr(mode, uid, gid, size, atime, mtime, ctime)
+                    .await
+            })?
+        };
+
         // TODO What to do with crtime, chgtime, bkuptime, flags?
-        // TODO setattr based on fh?
-        let mut node = self.get_inode(ino).await?;
-        let attr = node
-            .setattr(mode, uid, gid, size, atime, mtime, ctime)
-            .await;
-        node.async_drop().await?;
-        let attr = attr?;
         Ok(ReplyAttr {
             ttl: TTL_GETATTR,
             attr,

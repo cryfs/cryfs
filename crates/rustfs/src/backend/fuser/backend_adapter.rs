@@ -567,6 +567,8 @@ where
         umask: u32,
         reply: ReplyEntry,
     ) {
+        // TODO A comment in our C++ code base said that DokanY seems to call mkdir('/') and had code ignoring that. Do we still need that?
+
         // TODO Assert that file/symlink flags aren't set
         let req = RequestInfo::from(req);
         let parent_ino = InodeNumber::from(parent_ino);

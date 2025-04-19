@@ -242,6 +242,8 @@ where
     }
 
     fn mkdir(&self, req: RequestInfo, parent: &Path, name: &OsStr, mode: u32) -> ResultEntry {
+        // TODO A comment in our C++ code base said that DokanY seems to call mkdir('/') and had code ignoring that. Do we still need that?
+
         let mode = Mode::from(mode).add_dir_flag();
         // TODO Assert that file/symlink flags aren't set
         self.run_async(
