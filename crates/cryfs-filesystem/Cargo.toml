@@ -18,7 +18,7 @@ binrw.workspace = true
 byte-unit = { workspace = true, features = ["serde"] }
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
-cryfs-rustfs = { path = "../rustfs" }
+cryfs-rustfs = { path = "../rustfs", default-features=false }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
