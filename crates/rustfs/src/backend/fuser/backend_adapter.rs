@@ -31,6 +31,8 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Use tracing crate for logging of file system operations
 
+// TODO This was written based on C++ CryFS, which was written using FUSE_USE_VERSION=26. Are there changes in fuser since then that we need to adapt to?
+
 pub struct BackendAdapter<Fs>
 where
     // TODO Send + Sync + 'static needed?
