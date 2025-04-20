@@ -28,3 +28,4 @@ mod tests;
 // TODO Test mount/spawn_mount correctly mount
 // TODO Test RunningFilesystem::unmount_join correctly unmounts and SIGINT correctly unmounts.
 // TODO Test the file system mountpoint is correctly freed after unmounting (e.g. we can re-mount to the same directory)
+// TODO pjdfs could be useful for testing POSIX conformity. The fuser crate seems to use the fork here https://github.com/fleetfs/pjdfstest
