@@ -747,43 +747,48 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn getxattr(
+    async fn getxattr_numbytes(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         name: &PathComponent,
-        size: NumBytes,
-        reply: ReplyXattr,
-    ) {
-        match self.trigger_on_operation().await {
-            Ok(()) => (),
-            Err(err) => {
-                reply.error(err.system_error_code());
-                return;
-            }
-        }
+    ) -> FsResult<NumBytes> {
+        self.trigger_on_operation().await?;
 
         // TODO
-        reply.error(libc::ENOSYS)
+        return Err(FsError::NotImplemented);
     }
 
-    async fn listxattr(
+    async fn getxattr_data(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        size: NumBytes,
-        reply: ReplyXattr,
-    ) {
-        match self.trigger_on_operation().await {
-            Ok(()) => (),
-            Err(err) => {
-                reply.error(err.system_error_code());
-                return;
-            }
-        }
+        name: &PathComponent,
+        max_bytes_to_read: NumBytes,
+    ) -> FsResult<Vec<u8>> {
+        self.trigger_on_operation().await?;
 
         // TODO
-        reply.error(libc::ENOSYS)
+        return Err(FsError::NotImplemented);
+    }
+
+    async fn listxattr_numbytes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<NumBytes> {
+        self.trigger_on_operation().await?;
+
+        // TODO
+        return Err(FsError::NotImplemented);
+    }
+
+    async fn listxattr_data(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        max_bytes_to_read: NumBytes,
+    ) -> FsResult<Vec<u8>> {
+        self.trigger_on_operation().await?;
+
+        // TODO
+        return Err(FsError::NotImplemented);
     }
 
     async fn removexattr(

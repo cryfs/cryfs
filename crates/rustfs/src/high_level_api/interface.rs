@@ -411,21 +411,21 @@ pub trait AsyncFilesystem {
     /// * `name`: attribute name.
     /// * `size`: the maximum number of bytes to read.
     ///
+    /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
+    ///
     /// TODO Should we change the API to a callback based one, similar to how `read` works? Could reduce amount of copies needed
     async fn getxattr_data(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         name: &str,
-        size: NumBytes,
+        max_bytes_to_read: NumBytes,
     ) -> FsResult<Vec<u8>>;
 
-    /// List extended attributes for a file.
+    /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
     ///
     /// * `path`: path to the file.
-    /// * `size`: maximum number of bytes to return.
     ///
-    /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
     /// See [Self::listxattr_data] for a definition of what it returns.
     async fn listxattr_numbytes(&self, req: RequestInfo, path: &AbsolutePath)
     -> FsResult<NumBytes>;
@@ -435,13 +435,15 @@ pub trait AsyncFilesystem {
     /// * `path`: path to the file.
     /// * `size`: maximum number of bytes to return.
     ///
+    /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
+    ///
     /// Return all the null-terminated attribute names.
     /// // TODO Come up with a better way to handle this return, and its combination with listxattr_numbytes.
     async fn listxattr_data(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
-        size: NumBytes,
+        max_bytes_to_read: NumBytes,
     ) -> FsResult<Vec<u8>>;
 
     /// Remove an extended attribute for a file.

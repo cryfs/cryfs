@@ -427,33 +427,43 @@ pub trait AsyncFilesystemLL {
         position: NumBytes,
     ) -> FsResult<()>;
 
-    /// Get an extended attribute.
-    /// If `size` is 0, the size of the value should be sent with `reply.size()`.
-    /// If `size` is not 0, and the value fits, send it with `reply.data()`, or
-    /// `reply.error(ERANGE)` if it doesn't.
-    async fn getxattr(
+    /// Get the size of a file extended attribute.
+    async fn getxattr_numbytes(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
-        size: NumBytes,
-        // TODO Return this instead of passing in a Reply type
-        reply: ReplyXattr,
-    );
+    ) -> FsResult<NumBytes>;
 
-    /// List extended attribute names.
-    /// If `size` is 0, the size of the value should be sent with `reply.size()`.
-    /// If `size` is not 0, and the value fits, send it with `reply.data()`, or
-    /// `reply.error(ERANGE)` if it doesn't.
-    async fn listxattr(
+    /// Get the data stored in a file extended attribute.
+    /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
+    ///
+    /// TODO Should we change the API to a callback based one, similar to how `read` works? Could reduce amount of copies needed
+    async fn getxattr_data(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        size: NumBytes,
-        // TODO Return this instead of passing in a Reply type
-        reply: ReplyXattr,
-    );
+        // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
+        name: &PathComponent,
+        max_bytes_to_read: NumBytes,
+    ) -> FsResult<Vec<u8>>;
+
+    /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
+    ///
+    /// See [Self::listxattr_data] for a definition of what it returns.
+    async fn listxattr_numbytes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<NumBytes>;
+
+    /// List extended attributes for a file. Return all the null-terminated attribute names.
+    /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
+    ///
+    /// // TODO Come up with a better way to handle this return, and its combination with listxattr_numbytes.
+    async fn listxattr_data(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        max_bytes_to_read: NumBytes,
+    ) -> FsResult<Vec<u8>>;
 
     /// Remove an extended attribute.
     async fn removexattr(

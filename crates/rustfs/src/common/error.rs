@@ -74,6 +74,9 @@ pub enum FsError {
 
     #[error("Cannot move a directory into itself or a subdirectory of itself")]
     CannotMoveDirectoryIntoSubdirectoryOfItself,
+
+    #[error("The extended attributes don't fit into the buffer provided")]
+    XattrBufferTooSmall,
 }
 
 impl FsError {
@@ -99,6 +102,7 @@ impl FsError {
             FsError::CorruptedFilesystem { .. } => libc::EIO,
             FsError::InternalError { .. } => libc::EIO,
             FsError::CannotMoveDirectoryIntoSubdirectoryOfItself => libc::EINVAL,
+            FsError::XattrBufferTooSmall => libc::ERANGE,
         }
     }
 }

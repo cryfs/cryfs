@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use tokio::sync::RwLock;
 
+use crate::PathComponent;
 use crate::common::{
     Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
     OpenFlags, PathComponentBuf, RequestInfo, Statfs, Uid,
@@ -948,18 +949,43 @@ where
     ) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
-        let name = name.to_owned();
+        let name = match parse_xattr_name(name) {
+            Ok(name) => name.to_owned(),
+            Err(err) => {
+                log::info!("getxattr(ino={ino:?}, name={name:?})...failed: {}", err);
+                reply.error(err.system_error_code());
+                return;
+            }
+        };
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
             format!("getxattr(ino={ino:?}, name={name:?}, size={size:?})"),
             async move |fs| {
-                // TODO InvalidPath is probably the wrong error here
-                let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
-                fs.read()
-                    .await
-                    .getxattr(&req, ino, &name, size, reply)
-                    .await;
-                Ok(())
+                if NumBytes::from(0) == size {
+                    let response = fs.read().await.getxattr_numbytes(&req, ino, &name).await;
+                    match response {
+                        Ok(response) => {
+                            reply.size(u64::from(response).try_into().unwrap());
+                            Ok(())
+                        }
+                        Err(err) => {
+                            reply.error(err.system_error_code());
+                            Err(err)
+                        }
+                    }
+                } else {
+                    let response = fs.read().await.getxattr_data(&req, ino, &name, size).await;
+                    match response {
+                        Ok(response) => {
+                            reply.data(&response);
+                            Ok(())
+                        }
+                        Err(err) => {
+                            reply.error(err.system_error_code());
+                            Err(err)
+                        }
+                    }
+                }
             },
         );
     }
@@ -971,8 +997,35 @@ where
         self.run_async_no_reply(
             format!("listxattr(ino={ino:?}, size={size:?})"),
             async move |fs| {
-                fs.read().await.listxattr(&req, ino, size, reply).await;
-                Ok(())
+                if NumBytes::from(0) == size {
+                    let response = fs.read().await.listxattr_numbytes(&req, ino).await;
+                    match response {
+                        Ok(response) => {
+                            reply.size(u64::from(response).try_into().unwrap());
+                            Ok(())
+                        }
+                        Err(err) => {
+                            reply.error(err.system_error_code());
+                            Err(err)
+                        }
+                    }
+                } else {
+                    let response = fs
+                        .read()
+                        .await
+                        .listxattr_data(&req, ino, NumBytes::from(u64::from(size)))
+                        .await;
+                    match response {
+                        Ok(response) => {
+                            reply.data(&response);
+                            Ok(())
+                        }
+                        Err(err) => {
+                            reply.error(err.system_error_code());
+                            Err(err)
+                        }
+                    }
+                }
             },
         );
     }
@@ -1344,6 +1397,20 @@ fn convert_permission_bits(mode: Mode) -> u16 {
     // TODO Is 0o777 the right mask or do we need 0o7777?
     let perm_bits = mode_bits & 0o777;
     perm_bits as u16
+}
+
+fn parse_xattr_name(name: &OsStr) -> FsResult<&PathComponent> {
+    // TODO We should probably introduce a custom wrapper type for XattrName, similar to how we have a PathComponent type, and enforce invariants there.
+    let name = name.to_str().ok_or_else(|| {
+        log::error!("xattr name is not valid UTF-8");
+        // TODO Better error return type
+        FsError::UnknownError
+    })?;
+    <&PathComponent>::try_from(name).map_err(|err| {
+        log::error!("xattr name is not valid: {}", err);
+        // TODO InvalidPath is probably the wrong error here
+        FsError::InvalidPath
+    })
 }
 
 struct DataCallback {

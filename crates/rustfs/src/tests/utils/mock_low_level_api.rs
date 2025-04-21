@@ -247,22 +247,29 @@ mock! {
             position: NumBytes,
         ) -> FsResult<()>;
 
-        async fn getxattr(
+        async fn getxattr_numbytes(
             &self,
             req: &RequestInfo,
             ino: InodeNumber,
             name: &PathComponent,
-            size: NumBytes,
-            reply: ReplyXattr,
-        );
+        ) -> FsResult<NumBytes>;
 
-        async fn listxattr(
+        async fn getxattr_data(
             &self,
             req: &RequestInfo,
             ino: InodeNumber,
-            size: NumBytes,
-            reply: ReplyXattr,
-        );
+            name: &PathComponent,
+            max_bytes_to_read: NumBytes,
+        ) -> FsResult<Vec<u8>>;
+
+        async fn listxattr_numbytes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<NumBytes>;
+
+        async fn listxattr_data(
+            &self,
+            req: &RequestInfo,
+            ino: InodeNumber,
+            max_bytes_to_read: NumBytes,
+        ) -> FsResult<Vec<u8>>;
 
         async fn removexattr(
             &self,
@@ -689,25 +696,40 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
             .await
     }
 
-    async fn getxattr(
+    async fn getxattr_numbytes(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         name: &PathComponent,
-        size: NumBytes,
-        reply: ReplyXattr,
-    ) {
-        self.deref().getxattr(req, ino, name, size, reply).await
+    ) -> FsResult<NumBytes> {
+        self.deref().getxattr_numbytes(req, ino, name).await
     }
 
-    async fn listxattr(
+    async fn getxattr_data(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        size: NumBytes,
-        reply: ReplyXattr,
-    ) {
-        self.deref().listxattr(req, ino, size, reply).await
+        name: &PathComponent,
+        max_bytes_to_read: NumBytes,
+    ) -> FsResult<Vec<u8>> {
+        self.deref()
+            .getxattr_data(req, ino, name, max_bytes_to_read)
+            .await
+    }
+
+    async fn listxattr_numbytes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<NumBytes> {
+        self.deref().listxattr_numbytes(req, ino).await
+    }
+
+    async fn listxattr_data(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        max_bytes_to_read: NumBytes,
+    ) -> FsResult<Vec<u8>> {
+        self.deref()
+            .listxattr_data(req, ino, max_bytes_to_read)
+            .await
     }
 
     async fn removexattr(
