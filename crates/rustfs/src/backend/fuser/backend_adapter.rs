@@ -32,6 +32,8 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO This was written based on C++ CryFS, which was written using FUSE_USE_VERSION=26. Are there changes in fuser since then that we need to adapt to?
 
+// TODO Check read/write and other operations, from here to the actual cryfs implementation, and minimize copies of data while it is being passed around.
+
 pub struct BackendAdapter<Fs>
 where
     // TODO Send + Sync + 'static needed?
@@ -261,7 +263,8 @@ where
                     let bsize = reply.blocksize;
                     let namelen = reply.max_filename_length;
                     // TODO What is fragment size? Should it be different to blocksize?
-                    let frsize = reply.blocksize;
+                    // f_frsize, f_favail, f_fsid and f_flag are ignored in fuse, see http://fuse.sourcearchive.com/documentation/2.7.0/structfuse__operations_4e765e29122e7b6b533dc99849a52655.html#4e765e29122e7b6b533dc99849a52655
+                    let frsize = reply.blocksize; // even though this is supposed to be ignored, macFUSE needs it.
                     fuser_reply.statfs(blocks, bfree, bavail, files, ffree, bsize, namelen, frsize);
                 }
                 Err(err) => {
