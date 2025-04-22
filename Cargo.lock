@@ -912,6 +912,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryfs-e2e-perf-tests"
+version = "2.0.0-alpha1"
+
+[[package]]
 name = "cryfs-filesystem"
 version = "2.0.0-alpha1"
 dependencies = [
