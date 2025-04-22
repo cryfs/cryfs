@@ -26,8 +26,6 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 //      See https://github.com/libfuse/libfuse/blob/d92bf83c152ff88c2d92bd852752d4c326004400/include/fuse_lowlevel.h#L69-L81 and https://github.com/wfraser/fuse-mt/issues/19
 //      This means currently, CryFS can't be used over NFS. We should fix this.
 
-// TODO For some reason, `dd if=/dev/zero of=mountdir/file bs=20M count=1000` seems to be much slower on the fuser backend (with the inmemory example) than on the fuse_mt backend. Why?
-
 // TODO Implement async file io. And actually, would this allow CryFS to benefit from being used with io-uring or not?
 
 // TODO Use tracing crate for logging of file system operations
@@ -768,7 +766,7 @@ where
                     ino,
                     fh,
                     offset,
-                    &data,
+                    data,
                     write_flags,
                     flags,
                     lock_owner,

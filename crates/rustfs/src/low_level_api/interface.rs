@@ -280,7 +280,7 @@ pub trait AsyncFilesystemLL {
         fh: FileHandle,
         // TODO offset was i32 not u32 in fuser, why?
         offset: NumBytes,
-        data: &[u8],
+        data: Vec<u8>,
         // TODO Wrapper type for write_flags
         write_flags: u32,
         // TODO Wrapper type for flags

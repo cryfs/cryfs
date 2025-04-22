@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
-use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
+use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl};
 use mockall::mock;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
@@ -162,7 +162,7 @@ mock! {
             ino: InodeNumber,
             fh: FileHandle,
             offset: NumBytes,
-            data: &[u8],
+            data: Vec<u8>,
             write_flags: u32,
             flags: i32,
             lock_owner: Option<u64>,
@@ -583,7 +583,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
-        data: &[u8],
+        data: Vec<u8>,
         write_flags: u32,
         flags: i32,
         lock_owner: Option<u64>,

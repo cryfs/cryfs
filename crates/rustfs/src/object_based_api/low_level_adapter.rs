@@ -520,23 +520,25 @@ where
         _ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
-        data: &[u8],
+        data: Vec<u8>,
         _write_flags: u32,
         _flags: i32,
         _lock_owner: Option<u64>,
     ) -> FsResult<ReplyWrite> {
         self.trigger_on_operation().await?;
 
+        let len = data.len();
+
         // TODO What to do with WriteFlags, flags, lock_owner?
         self.open_files
             .get(fh, async |open_file| {
-                open_file.write(offset, data.to_vec().into()).await
+                open_file.write(offset, data.into()).await
             })
             .await?;
 
         Ok(ReplyWrite {
             // TODO No unwrap
-            written: u32::try_from(data.len()).unwrap(),
+            written: u32::try_from(len).unwrap(),
         })
     }
 
