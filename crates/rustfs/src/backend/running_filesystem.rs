@@ -1,12 +1,39 @@
 use cryfs_utils::at_exit::AtExitHandler;
-use fuse_mt_fuser::BackgroundSession;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
-pub struct RunningFilesystem {
-    session: Arc<Mutex<Option<BackgroundSession>>>,
+pub trait BackgroundSession {
+    fn join(self);
+    fn is_finished(&self) -> bool;
+}
+
+#[cfg(feature = "fuse_mt")]
+impl BackgroundSession for fuse_mt_fuser::BackgroundSession {
+    fn join(self) {
+        self.join();
+    }
+    fn is_finished(&self) -> bool {
+        self.guard.is_finished()
+    }
+}
+
+#[cfg(feature = "fuser")]
+impl BackgroundSession for fuser::BackgroundSession {
+    fn join(self) {
+        self.join();
+    }
+    fn is_finished(&self) -> bool {
+        self.guard.is_finished()
+    }
+}
+
+pub struct RunningFilesystem<BS>
+where
+    BS: BackgroundSession + Send + 'static,
+{
+    session: Arc<Mutex<Option<BS>>>,
 
     /// This holds the `AtExitHandler` instance which makes sure the filesystem is unmounted if the process receives a SIGTERM, SIGINT, or SIGQUIT signal.
     /// We need to keep this alive as a RAII guard, when [RunningFilesystem] is destructed, the exit handler will be dropped as well.
@@ -14,8 +41,11 @@ pub struct RunningFilesystem {
     unmount_atexit: AtExitHandler,
 }
 
-impl RunningFilesystem {
-    pub(super) fn new(session: Arc<Mutex<Option<BackgroundSession>>>) -> Self {
+impl<BS: BackgroundSession> RunningFilesystem<BS>
+where
+    BS: BackgroundSession + Send + 'static,
+{
+    pub(super) fn new(session: Arc<Mutex<Option<BS>>>) -> Self {
         let session_clone = session.clone();
         let unmount_atexit = AtExitHandler::new(move || {
             log::info!("Received exit signal, unmounting filesystem...");
@@ -33,7 +63,7 @@ impl RunningFilesystem {
         fs
     }
 
-    pub fn unmount_join(self) {
+    pub fn unmount_join(&self) {
         // TODO For unmount to work correctly, we may have to do DokanRemoveMountPoint in Dokan. That's what C++ CryFS did at least.
 
         if let Some(session) = self.session.lock().unwrap().take() {
@@ -55,7 +85,7 @@ impl RunningFilesystem {
         loop {
             let session = self.session.lock().unwrap();
             if let Some(session) = &*session {
-                if session.guard.is_finished() {
+                if session.is_finished() {
                     return;
                 }
             } else {

@@ -24,7 +24,7 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     with_async_drop_2,
 };
-use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyXattr};
+use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl};
 
 const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 

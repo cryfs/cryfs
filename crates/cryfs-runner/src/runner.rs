@@ -10,7 +10,7 @@ use cryfs_cli_utils::{
 };
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::AtimeUpdateBehavior;
-use cryfs_rustfs::backend::fuser::{self, MountOption};
+use cryfs_rustfs::backend::fuse_mt::{self, MountOption};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -187,7 +187,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             FuseOption::AllowRoot => MountOption::AllowRoot,
         }))
         .collect::<Box<[_]>>();
-        fuser::mount(
+        fuse_mt::mount(
             fs,
             self.mountdir,
             tokio::runtime::Handle::current(),
