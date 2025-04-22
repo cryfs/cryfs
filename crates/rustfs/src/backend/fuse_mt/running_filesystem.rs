@@ -3,6 +3,7 @@ use fuse_mt_fuser::BackgroundSession;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use tokio_util::sync::CancellationToken;
 
 pub struct RunningFilesystem {
     session: Arc<Mutex<Option<BackgroundSession>>>,
@@ -33,9 +34,21 @@ impl RunningFilesystem {
     }
 
     pub fn unmount_join(self) {
+        // TODO For unmount to work correctly, we may have to do DokanRemoveMountPoint in Dokan. That's what C++ CryFS did at least.
+
         if let Some(session) = self.session.lock().unwrap().take() {
             session.join();
         }
+    }
+
+    pub fn unmount_on_trigger(&self, unmount_trigger: CancellationToken) {
+        let session_clone = self.session.clone();
+        tokio::task::spawn(async move {
+            unmount_trigger.cancelled().await;
+            if let Some(session) = session_clone.lock().unwrap().take() {
+                session.join();
+            }
+        });
     }
 
     pub fn block_until_unmounted(&self) {

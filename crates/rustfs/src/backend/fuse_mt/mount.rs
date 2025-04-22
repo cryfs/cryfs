@@ -1,8 +1,10 @@
 use fuse_mt::FuseMT;
+use fuse_mt_fuser::MountOption;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use tokio_util::sync::CancellationToken;
 
 use super::{RunningFilesystem, backend_adapter::BackendAdapter};
 use crate::common::FsError;
@@ -15,11 +17,20 @@ pub async fn mount<Fs>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
+    unmount_trigger: Option<CancellationToken>,
+    mount_options: &[MountOption],
+    on_successfully_mounted: impl FnOnce(),
 ) -> std::io::Result<()>
 where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    let fs = spawn_mount(fs, mountpoint, runtime).await?;
+    let fs = spawn_mount(fs, mountpoint, runtime, mount_options).await?;
+    on_successfully_mounted();
+
+    if let Some(unmount_trigger) = unmount_trigger {
+        fs.unmount_on_trigger(unmount_trigger);
+    }
+
     fs.block_until_unmounted();
     Ok(())
 }
@@ -28,6 +39,7 @@ pub async fn spawn_mount<Fs>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
+    mount_options: &[MountOption],
 ) -> std::io::Result<RunningFilesystem>
 where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
@@ -42,7 +54,7 @@ where
     let fs = FuseMT::new(backend, num_threads());
 
     // TODO Fuse args (e.g. filesystem name)
-    let session = fuse_mt::spawn_mount(fs, mountpoint, &[]);
+    let session = fuse_mt_fuser::spawn_mount2(fs, mountpoint, mount_options);
     let session = match session {
         Ok(session) => {
             std::mem::drop(backend_internal_arc);

@@ -6,4 +6,5 @@ pub use running_filesystem::RunningFilesystem;
 mod backend_adapter;
 
 mod mount;
+pub use fuse_mt_fuser::MountOption;
 pub use mount::{mount, spawn_mount};
