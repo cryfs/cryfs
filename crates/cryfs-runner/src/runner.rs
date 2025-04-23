@@ -122,44 +122,13 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
-        let mut blobstore = BlobStoreOnBlocks::new(blockstore, self.config.blocksize)
-            .await
-            .map_cli_error(|_: &InvalidBlockSizeError| CliErrorKind::UnspecifiedError)?;
-
-        let root_blob_id = BlobId::from_hex(&self.config.root_blob);
-        let root_blob_id = match root_blob_id {
-            Ok(root_blob_id) => root_blob_id,
-            Err(e) => {
-                if let Err(err) = blobstore.async_drop().await {
-                    log::error!("Error while dropping blockstore: {:?}", err);
-                }
-                return Err(e)
-                    .context("Error parsing root blob id")
-                    .map_cli_error(CliErrorKind::InvalidFilesystem);
-            }
-        };
-
-        let mut device = match self.create_or_load {
-            CreateOrLoad::CreateNewFilesystem => {
-                CryDevice::create_new_filesystem(blobstore, root_blob_id, self.atime_behavior)
-                    .await
-                    .map_cli_error(CliErrorKind::UnspecifiedError)?
-            }
-            CreateOrLoad::LoadExistingFilesystem => {
-                CryDevice::load_filesystem(blobstore, root_blob_id, self.atime_behavior)
-            }
-        };
-        match device
-            .sanity_check()
-            .await
-            .map_cli_error(CliErrorKind::InvalidFilesystem)
-        {
-            Ok(()) => {}
-            Err(e) => {
-                device.async_drop().await.unwrap();
-                return Err(e);
-            }
-        }
+        let device = make_device(
+            blockstore,
+            self.config,
+            self.create_or_load,
+            self.atime_behavior,
+        )
+        .await?;
 
         // TODO Test unmounting after idle works correctly
         if let Some(unmount_idle) = self.unmount_idle {
@@ -199,6 +168,57 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;
         Ok(())
     }
+}
+
+pub async fn make_device<B>(
+    blockstore: AsyncDropGuard<LockingBlockStore<B>>,
+    config: &CryConfig,
+    create_or_load: CreateOrLoad,
+    atime_behavior: AtimeUpdateBehavior,
+) -> Result<AsyncDropGuard<CryDevice<BlobStoreOnBlocks<B>>>, CliError>
+where
+    B: BlockStore + Send + Sync + AsyncDrop + 'static,
+{
+    let mut blobstore = BlobStoreOnBlocks::new(blockstore, config.blocksize)
+        .await
+        .map_cli_error(|_: &InvalidBlockSizeError| CliErrorKind::UnspecifiedError)?;
+
+    let root_blob_id = BlobId::from_hex(&config.root_blob);
+    let root_blob_id = match root_blob_id {
+        Ok(root_blob_id) => root_blob_id,
+        Err(e) => {
+            if let Err(err) = blobstore.async_drop().await {
+                log::error!("Error while dropping blockstore: {:?}", err);
+            }
+            return Err(e)
+                .context("Error parsing root blob id")
+                .map_cli_error(CliErrorKind::InvalidFilesystem);
+        }
+    };
+
+    let mut device = match create_or_load {
+        CreateOrLoad::CreateNewFilesystem => {
+            CryDevice::create_new_filesystem(blobstore, root_blob_id, atime_behavior)
+                .await
+                .map_cli_error(CliErrorKind::UnspecifiedError)?
+        }
+        CreateOrLoad::LoadExistingFilesystem => {
+            CryDevice::load_filesystem(blobstore, root_blob_id, atime_behavior)
+        }
+    };
+    match device
+        .sanity_check()
+        .await
+        .map_cli_error(CliErrorKind::InvalidFilesystem)
+    {
+        Ok(()) => {}
+        Err(e) => {
+            device.async_drop().await.unwrap();
+            return Err(e);
+        }
+    }
+
+    Ok(device)
 }
 
 // TODO Tests

@@ -10,3 +10,16 @@ readme.workspace = true
 version.workspace = true
 
 [dependencies]
+cryfs-filesystem = { path = "../cryfs-filesystem" }
+cryfs-rustfs = { path = "../rustfs", default-features=false, features = ["fuser", "fuse_mt"] }
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-utils = { path = "../utils" }
+cryfs-cli-utils = { path = "../cli-utils" }
+cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
+cryfs-version = { path = "../cryfs-version" }
+cryfs-runner = { path = "../cryfs-runner" }
+byte-unit.workspace = true
+tempdir.workspace = true
+tokio.workspace = true
+fuser.workspace = true
+futures.workspace = true

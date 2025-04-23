@@ -28,6 +28,16 @@ pub struct ActionCounts {
     pub created: u32,
 }
 
+impl ActionCounts {
+    pub const ZERO: Self = Self {
+        exists: 0,
+        loaded: 0,
+        stored: 0,
+        removed: 0,
+        created: 0,
+    };
+}
+
 /// Wraps a BlockStore into a block store that counts the number of loaded, resized, written, ... blocks.
 /// It is used for testing that operations only access few blocks (performance tests).
 #[derive(Debug)]

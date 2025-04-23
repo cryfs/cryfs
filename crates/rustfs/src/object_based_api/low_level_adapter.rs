@@ -26,7 +26,7 @@ use cryfs_utils::{
 };
 use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl};
 
-const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
+pub const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);

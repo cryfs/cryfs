@@ -9,7 +9,7 @@ mod common;
 pub use common::{
     AbsolutePath, AbsolutePathBuf, AtimeUpdateBehavior, DirEntry, FsError, FsResult, Gid, Mode,
     NodeAttrs, NodeKind, NumBytes, OpenFlags, ParsePathError, PathComponent, PathComponentBuf,
-    Statfs, Uid,
+    RequestInfo, Statfs, Uid,
 };
 
 pub mod backend;
