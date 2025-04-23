@@ -23,3 +23,5 @@ tempdir.workspace = true
 tokio.workspace = true
 fuser.workspace = true
 futures.workspace = true
+rstest.workspace = true
+rstest_reuse.workspace = true

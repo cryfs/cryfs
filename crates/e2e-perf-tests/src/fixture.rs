@@ -35,6 +35,12 @@ pub struct FilesystemFixture {
 
 impl FilesystemFixture {
     pub async fn create_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
+        let fixture = Self::create_uninitialized_filesystem(atime_behavior).await;
+        fixture.filesystem.init(&request_info()).await.unwrap();
+        fixture
+    }
+
+    pub async fn create_uninitialized_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
         let blockstore = InMemoryBlockStore::new();
         let blockstore = TrackingBlockStore::new(blockstore);
         let blockstore = SharedBlockStore::new(blockstore);
@@ -73,13 +79,15 @@ impl FilesystemFixture {
         // TODO Test both low level and high level API (i.e. ObjectBasedFsAdapterLL for fuser and ObjectBasedFsAdapter for fuse_mt)
         let filesystem = ObjectBasedFsAdapterLL::new(device);
 
-        filesystem.init(&request_info()).await.unwrap();
-
         Self {
             filesystem: SyncDrop::new(filesystem),
             blockstore: SyncDrop::new(blockstore),
             _local_state_tempdir: local_state_tempdir,
         }
+    }
+
+    pub fn totals(&self) -> ActionCounts {
+        self.blockstore.totals()
     }
 
     pub async fn run_operation(

@@ -926,6 +926,8 @@ dependencies = [
  "cryfs-version",
  "fuser 0.15.1",
  "futures",
+ "rstest",
+ "rstest_reuse",
  "tempdir",
  "tokio",
 ]

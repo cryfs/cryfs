@@ -3,12 +3,19 @@ use cryfs_rustfs::{
     AtimeUpdateBehavior, PathComponent, low_level_api::AsyncFilesystemLL as _,
     object_based_api::FUSE_ROOT_ID,
 };
+use rstest::rstest;
+use rstest_reuse::apply;
 
-use crate::fixture::{FilesystemFixture, request_info};
+use crate::{
+    fixture::{FilesystemFixture, request_info},
+    rstest::all_atime_behaviors,
+};
 
+#[apply(all_atime_behaviors)]
+#[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn notexisting_from_rootdir() {
-    let fixture = FilesystemFixture::create_filesystem(AtimeUpdateBehavior::Noatime).await;
+async fn notexisting_from_rootdir(atime_behavior: AtimeUpdateBehavior) {
+    let fixture = FilesystemFixture::create_filesystem(atime_behavior).await;
 
     let counts = fixture
         .run_operation(async |fs| {
