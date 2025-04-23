@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+mod filesystem_test_ext;
 mod fixture;
 mod operations;
 mod rstest;

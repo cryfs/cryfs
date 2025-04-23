@@ -3,8 +3,6 @@
 mod backend_adapter;
 
 mod mount;
-// TODO BackendAdapter is currently only needed for e2e-perf-tests. Can we remove it from the public API?
-pub use backend_adapter::BackendAdapter;
 pub use fuser::MountOption;
 pub use mount::{mount, spawn_mount};
 

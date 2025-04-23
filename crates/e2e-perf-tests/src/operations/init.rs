@@ -1,25 +1,25 @@
-use crate::fixture::FilesystemFixture;
-use crate::fixture::request_info;
+use crate::filesystem_test_ext::FilesystemTestExt as _;
+use crate::rstest::FixtureFactory;
+use crate::rstest::all_atime_behaviors;
+use crate::rstest::all_fixtures;
 use cryfs_blockstore::ActionCounts;
 use cryfs_rustfs::AtimeUpdateBehavior;
-use cryfs_rustfs::low_level_api::AsyncFilesystemLL as _;
 use rstest::rstest;
 use rstest_reuse::apply;
 
-use crate::rstest::all_atime_behaviors;
-
+#[apply(all_fixtures)]
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn notexisting_from_rootdir(atime_behavior: AtimeUpdateBehavior) {
-    let fixture = FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await;
+async fn init(fixture: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
+    let fixture = fixture
+        .create_uninitialized_filesystem(atime_behavior)
+        .await;
 
     let mut counts = fixture.totals();
 
     counts += fixture
-        .run_operation(async |fs| {
-            fs.init(&request_info()).await.unwrap();
-        })
+        .run_operation(async |fs| fs.init().await.unwrap())
         .await;
     assert_eq!(
         counts,

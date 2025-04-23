@@ -1,4 +1,4 @@
 mod init;
-mod lookup;
+mod mkdir;
 
 // TODO Test other operations

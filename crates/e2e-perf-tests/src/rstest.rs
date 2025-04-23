@@ -1,4 +1,13 @@
+use cryfs_blobstore::BlobStoreOnBlocks;
+use cryfs_blockstore::DynBlockStore;
+use cryfs_filesystem::filesystem::CryDevice;
+use cryfs_rustfs::{
+    AtimeUpdateBehavior,
+    object_based_api::{ObjectBasedFsAdapter, ObjectBasedFsAdapterLL},
+};
 use rstest_reuse::{self, *};
+
+use crate::{filesystem_test_ext::FilesystemTestExt, fixture::FilesystemFixture};
 
 #[template]
 pub fn all_atime_behaviors(
@@ -10,5 +19,59 @@ pub fn all_atime_behaviors(
         AtimeUpdateBehavior::NodiratimeStrictatime
     )]
     atime_behavior: AtimeUpdateBehavior,
+) {
+}
+
+pub trait FixtureFactory {
+    type Filesystem: FilesystemTestExt;
+
+    async fn create_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Filesystem>;
+
+    async fn create_uninitialized_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Filesystem>;
+}
+
+pub struct HLFixture;
+impl FixtureFactory for HLFixture {
+    type Filesystem = ObjectBasedFsAdapter<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>;
+    async fn create_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Filesystem> {
+        FilesystemFixture::create_filesystem(atime_behavior).await
+    }
+    async fn create_uninitialized_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Filesystem> {
+        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
+    }
+}
+
+pub struct LLFixture;
+impl FixtureFactory for LLFixture {
+    type Filesystem = ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>;
+    async fn create_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Filesystem> {
+        FilesystemFixture::create_filesystem(atime_behavior).await
+    }
+    async fn create_uninitialized_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Filesystem> {
+        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
+    }
+}
+
+#[template]
+pub fn all_fixtures(
+    #[values(crate::rstest::HLFixture, crate::rstest::LLFixture)] fixture: impl FixtureFactory,
 ) {
 }

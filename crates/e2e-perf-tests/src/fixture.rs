@@ -14,37 +14,68 @@ use cryfs_filesystem::{
     localstate::LocalStateDir,
 };
 use cryfs_runner::{CreateOrLoad, make_device};
-use cryfs_rustfs::{
-    AtimeUpdateBehavior, Gid, RequestInfo, Uid, low_level_api::AsyncFilesystemLL,
-    object_based_api::ObjectBasedFsAdapterLL,
-};
-use cryfs_utils::async_drop::SyncDrop;
+use cryfs_rustfs::{AtimeUpdateBehavior, Gid, RequestInfo, Uid};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
+use std::fmt::Debug;
 use tempdir::TempDir;
+
+use crate::filesystem_test_ext::FilesystemTestExt;
 
 const BLOCKSIZE_BYTES: u64 = 4096;
 const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
 
-pub struct FilesystemFixture {
+// ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>
+
+pub struct FilesystemFixture<FS>
+where
+    FS: FilesystemTestExt + Debug + AsyncDrop,
+{
     // filesystem needs to be dropped before _local_state_tempdir, so it's declared first in the struct
-    filesystem: SyncDrop<ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>>,
+    filesystem: SyncDrop<FS>,
 
     blockstore: SyncDrop<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
 
     _local_state_tempdir: TempDir,
 }
 
-impl FilesystemFixture {
+impl<FS> FilesystemFixture<FS>
+where
+    FS: FilesystemTestExt,
+{
     pub async fn create_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
         let fixture = Self::create_uninitialized_filesystem(atime_behavior).await;
-        fixture.filesystem.init(&request_info()).await.unwrap();
+        fixture.filesystem.init().await.unwrap();
         fixture
     }
 
     pub async fn create_uninitialized_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
+        let blockstore = Self::make_blockstore().await;
+        let (local_state_tempdir, device) = Self::make_device(&blockstore, atime_behavior).await;
+
+        let filesystem = FS::new(device).await;
+
+        Self {
+            filesystem: SyncDrop::new(filesystem),
+            blockstore: SyncDrop::new(blockstore),
+            _local_state_tempdir: local_state_tempdir,
+        }
+    }
+
+    async fn make_blockstore()
+    -> AsyncDropGuard<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>> {
         let blockstore = InMemoryBlockStore::new();
         let blockstore = TrackingBlockStore::new(blockstore);
         let blockstore = SharedBlockStore::new(blockstore);
+        blockstore
+    }
 
+    async fn make_device(
+        blockstore: &AsyncDropGuard<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> (
+        TempDir,
+        AsyncDropGuard<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>,
+    ) {
         let local_state_tempdir = TempDir::new("cryfs-e2e-perf-tests").unwrap();
 
         let locking_blockstore = setup_blockstore_stack_dyn(
@@ -74,35 +105,24 @@ impl FilesystemFixture {
         .await
         .unwrap();
 
-        let device = |_uid, _gid| device;
-
-        // TODO Test both low level and high level API (i.e. ObjectBasedFsAdapterLL for fuser and ObjectBasedFsAdapter for fuse_mt)
-        let filesystem = ObjectBasedFsAdapterLL::new(device);
-
-        Self {
-            filesystem: SyncDrop::new(filesystem),
-            blockstore: SyncDrop::new(blockstore),
-            _local_state_tempdir: local_state_tempdir,
-        }
+        (local_state_tempdir, device)
     }
 
     pub fn totals(&self) -> ActionCounts {
         self.blockstore.totals()
     }
 
-    pub async fn run_operation(
-        &self,
-        operation: impl AsyncFnOnce(
-            &ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>,
-        ),
-    ) -> ActionCounts {
+    pub async fn run_operation(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
         self.blockstore.get_and_reset_totals();
         operation(&self.filesystem).await;
         self.blockstore.get_and_reset_totals()
     }
 }
 
-impl Drop for FilesystemFixture {
+impl<FS> Drop for FilesystemFixture<FS>
+where
+    FS: FilesystemTestExt,
+{
     fn drop(&mut self) {
         futures::executor::block_on(self.filesystem.destroy());
     }
