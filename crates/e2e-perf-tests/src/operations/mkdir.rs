@@ -2,6 +2,7 @@ use crate::filesystem_test_ext::FilesystemTestExt as _;
 use crate::rstest::FixtureFactory;
 use crate::rstest::{all_atime_behaviors, all_fixtures};
 use cryfs_blockstore::ActionCounts;
+use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::AtimeUpdateBehavior;
 use rstest::rstest;
 use rstest_reuse::apply;
@@ -14,8 +15,6 @@ async fn notexisting_from_rootdir(
     fixture: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    use cryfs_rustfs::AbsolutePath;
-
     let fixture = fixture.create_filesystem(atime_behavior).await;
 
     let counts = fixture
@@ -43,8 +42,6 @@ async fn notexisting_from_rootdir(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn existing_from_rootdir(fixture: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    use cryfs_rustfs::AbsolutePath;
-
     let fixture = fixture.create_filesystem(atime_behavior).await;
 
     // First create it so that it already exists
