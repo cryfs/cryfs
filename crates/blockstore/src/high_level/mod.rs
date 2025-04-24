@@ -253,6 +253,8 @@ impl<B: super::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
     pub async fn create(&self, data: &Data) -> Result<BlockId> {
         loop {
             let block_id = BlockId::new_random();
+            // TODO try_create first checks if a block id exists before creating it. That's expensive. Is the collision probability low enough that we can skip this?
+            //      To make things worse, OnDiskBlockStore::try_create() is called when the cache is flushed and actually checks existence a second time before storing.
             let created = self.try_create(&block_id, data).await?;
             match created {
                 TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists => { /* just continue */ }
