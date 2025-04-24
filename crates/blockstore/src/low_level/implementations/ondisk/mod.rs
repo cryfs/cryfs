@@ -4,7 +4,6 @@ use base64::engine::{Engine as _, general_purpose::STANDARD as base64_STANDARD};
 use byte_unit::Byte;
 use futures::stream::{BoxStream, Stream, StreamExt, TryStreamExt};
 use std::fmt::{self, Debug};
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
@@ -50,16 +49,7 @@ impl OnDiskBlockStore {
 impl BlockStoreReader for OnDiskBlockStore {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         let path = self._block_path(id);
-        match tokio::fs::metadata(path).await {
-            Ok(_) => Ok(true),
-            Err(err) => {
-                if err.kind() == ErrorKind::NotFound {
-                    Ok(false)
-                } else {
-                    Err(err.into())
-                }
-            }
-        }
+        path_exists(&path).await
     }
 
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
@@ -158,11 +148,8 @@ impl OptimizedBlockStoreWriter for OnDiskBlockStore {
 }
 
 async fn path_exists(path: &Path) -> Result<bool> {
-    match tokio::fs::metadata(path).await {
-        Ok(_) => Ok(true),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(err) => Err(err.into()),
-    }
+    let exists = tokio::fs::try_exists(path).await?;
+    Ok(exists)
 }
 
 impl Debug for OnDiskBlockStore {
