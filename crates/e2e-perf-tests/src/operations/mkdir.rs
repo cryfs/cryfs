@@ -28,11 +28,10 @@ async fn notexisting_from_rootdir(
     assert_eq!(
         counts,
         ActionCounts {
-            // TODO This should have stored: 2 or created since we're (1) updating the root blob and (2) creating a new blob
-            //      Reason it doesn't is the cache in LockingBlockStore. Can we disable that cache for tests?
             exists: 1,
             loaded: 0,
-            stored: 0,
+            // Add new directory blob and add it to its parent.
+            stored: 2,
             removed: 0,
             created: 0,
         }

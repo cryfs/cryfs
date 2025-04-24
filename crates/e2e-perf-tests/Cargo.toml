@@ -12,7 +12,7 @@ version.workspace = true
 [dependencies]
 cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-rustfs = { path = "../rustfs", default-features=false, features = ["fuser", "fuse_mt"] }
-cryfs-blobstore = { path = "../blobstore" }
+cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
 cryfs-utils = { path = "../utils" }
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }

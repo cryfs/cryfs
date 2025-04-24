@@ -1,7 +1,7 @@
 use std::num::NonZeroU32;
 
 use byte_unit::Byte;
-use cryfs_blobstore::BlobStoreOnBlocks;
+use cryfs_blobstore::{BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
     ActionCounts, ClientId, DynBlockStore, InMemoryBlockStore, IntegrityConfig, SharedBlockStore,
     TrackingBlockStore,
@@ -15,7 +15,7 @@ use cryfs_filesystem::{
 };
 use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::{AtimeUpdateBehavior, Gid, RequestInfo, Uid};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, SyncDrop};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
 use std::fmt::Debug;
 use tempdir::TempDir;
 
@@ -34,6 +34,7 @@ where
     filesystem: SyncDrop<FS>,
 
     blockstore: SyncDrop<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+    blobstore: SyncDrop<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>,
 
     _local_state_tempdir: TempDir,
 }
@@ -50,13 +51,16 @@ where
 
     pub async fn create_uninitialized_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
         let blockstore = Self::make_blockstore().await;
-        let (local_state_tempdir, device) = Self::make_device(&blockstore, atime_behavior).await;
+        let (local_state_tempdir, blobstore) = Self::make_blobstore(&blockstore).await;
+        let blobstore = AsyncDropArc::new(blobstore);
+        let device = Self::make_device(&blobstore, atime_behavior).await;
 
         let filesystem = FS::new(device).await;
 
         Self {
             filesystem: SyncDrop::new(filesystem),
             blockstore: SyncDrop::new(blockstore),
+            blobstore: SyncDrop::new(blobstore),
             _local_state_tempdir: local_state_tempdir,
         }
     }
@@ -69,13 +73,9 @@ where
         blockstore
     }
 
-    async fn make_device(
+    async fn make_blobstore(
         blockstore: &AsyncDropGuard<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> (
-        TempDir,
-        AsyncDropGuard<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>,
-    ) {
+    ) -> (TempDir, AsyncDropGuard<BlobStoreOnBlocks<DynBlockStore>>) {
         let local_state_tempdir = TempDir::new("cryfs-e2e-perf-tests").unwrap();
 
         let locking_blockstore = setup_blockstore_stack_dyn(
@@ -96,8 +96,21 @@ where
         .await
         .unwrap();
 
+        let blobstore = BlobStoreOnBlocks::new(locking_blockstore, config().blocksize)
+            .await
+            .unwrap();
+
+        (local_state_tempdir, blobstore)
+    }
+
+    async fn make_device(
+        blobstore: &AsyncDropGuard<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>> {
+        let blobstore = AsyncDropArc::clone(blobstore);
+
         let device = make_device(
-            locking_blockstore,
+            blobstore,
             &config(),
             CreateOrLoad::CreateNewFilesystem,
             atime_behavior,
@@ -105,7 +118,7 @@ where
         .await
         .unwrap();
 
-        (local_state_tempdir, device)
+        device
     }
 
     pub fn totals(&self) -> ActionCounts {
@@ -115,6 +128,7 @@ where
     pub async fn run_operation(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
         self.blockstore.get_and_reset_totals();
         operation(&self.filesystem).await;
+        self.blobstore.clear_cache_slow().await.unwrap();
         self.blockstore.get_and_reset_totals()
     }
 }

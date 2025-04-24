@@ -7,7 +7,7 @@ use cryfs_rustfs::{
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapter, ObjectBasedFsAdapterLL},
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use std::fmt::Debug;
 
 use crate::fixture::request_info;
@@ -15,7 +15,7 @@ use crate::fixture::request_info;
 /// An interface abstracting over [AsyncFilesystem] and [AsyncFilesystemLL], offering common file system operations.
 pub trait FilesystemTestExt: AsyncDrop + Debug {
     async fn new(
-        device: AsyncDropGuard<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>,
+        device: AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>,
     ) -> AsyncDropGuard<Self>
     where
         Self: Sized;
@@ -25,9 +25,11 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
     async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()>;
 }
 
-impl FilesystemTestExt for ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>> {
+impl FilesystemTestExt
+    for ObjectBasedFsAdapterLL<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>
+{
     async fn new(
-        device: AsyncDropGuard<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>,
+        device: AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>,
     ) -> AsyncDropGuard<Self> {
         ObjectBasedFsAdapterLL::new(|_uid, _gid| device)
     }
@@ -68,9 +70,11 @@ impl FilesystemTestExt for ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<Dy
     }
 }
 
-impl FilesystemTestExt for ObjectBasedFsAdapter<CryDevice<BlobStoreOnBlocks<DynBlockStore>>> {
+impl FilesystemTestExt
+    for ObjectBasedFsAdapter<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>
+{
     async fn new(
-        device: AsyncDropGuard<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>,
+        device: AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>,
     ) -> AsyncDropGuard<Self> {
         ObjectBasedFsAdapter::new(|_uid, _gid| device)
     }

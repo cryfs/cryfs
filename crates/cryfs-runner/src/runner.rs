@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockStore, ClientId, IntegrityConfig, InvalidBlockSizeError,
     LockingBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
@@ -122,8 +122,12 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
+        let blobstore = BlobStoreOnBlocks::new(blockstore, self.config.blocksize)
+            .await
+            .map_cli_error(|_: &InvalidBlockSizeError| CliErrorKind::UnspecifiedError)?;
+
         let device = make_device(
-            blockstore,
+            blobstore,
             self.config,
             self.create_or_load,
             self.atime_behavior,
@@ -171,18 +175,14 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
 }
 
 pub async fn make_device<B>(
-    blockstore: AsyncDropGuard<LockingBlockStore<B>>,
+    mut blobstore: AsyncDropGuard<B>,
     config: &CryConfig,
     create_or_load: CreateOrLoad,
     atime_behavior: AtimeUpdateBehavior,
-) -> Result<AsyncDropGuard<CryDevice<BlobStoreOnBlocks<B>>>, CliError>
+) -> Result<AsyncDropGuard<CryDevice<B>>, CliError>
 where
-    B: BlockStore + Send + Sync + AsyncDrop + 'static,
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
 {
-    let mut blobstore = BlobStoreOnBlocks::new(blockstore, config.blocksize)
-        .await
-        .map_cli_error(|_: &InvalidBlockSizeError| CliErrorKind::UnspecifiedError)?;
-
     let root_blob_id = BlobId::from_hex(&config.root_blob);
     let root_blob_id = match root_blob_id {
         Ok(root_blob_id) => root_blob_id,

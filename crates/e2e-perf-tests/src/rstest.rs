@@ -5,6 +5,7 @@ use cryfs_rustfs::{
     AtimeUpdateBehavior,
     object_based_api::{ObjectBasedFsAdapter, ObjectBasedFsAdapterLL},
 };
+use cryfs_utils::async_drop::AsyncDropArc;
 use rstest_reuse::{self, *};
 
 use crate::{filesystem_test_ext::FilesystemTestExt, fixture::FilesystemFixture};
@@ -38,7 +39,8 @@ pub trait FixtureFactory {
 
 pub struct HLFixture;
 impl FixtureFactory for HLFixture {
-    type Filesystem = ObjectBasedFsAdapter<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>;
+    type Filesystem =
+        ObjectBasedFsAdapter<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>;
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
@@ -55,7 +57,8 @@ impl FixtureFactory for HLFixture {
 
 pub struct LLFixture;
 impl FixtureFactory for LLFixture {
-    type Filesystem = ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>;
+    type Filesystem =
+        ObjectBasedFsAdapterLL<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>;
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
