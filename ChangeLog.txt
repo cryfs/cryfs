@@ -1,3 +1,7 @@
+Version 1.0.2 (unreleased)
+---------------
+* Fix building with Boost 1.88 (see https://github.com/cryfs/cryfs/pull/494 )
+
 Version 1.0.1
 ---------------
 Fixes
