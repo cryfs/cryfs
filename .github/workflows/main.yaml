@@ -187,7 +187,7 @@ jobs:
         run_clang_tidy: [false]
         gtest_args: [""]
         exclude:
-          # MacOS CI doesn't have Clang 7, 8, 9, 10, 11 or GCC 7, 8 anymore. And other GCC versions are often incompatible, so we don't support them officially.
+          # MacOS CI doesn't have Clang 7, 8, 9, 10, 11, 13 or GCC 7, 8 anymore. And other GCC versions are often incompatible, so we don't support them officially.
           - os: macos-13
             compiler: {compiler: clang, version: 7.1, libcxx: libc++, cc: clang-7, cxx: clang++-7, macos_cc: llvm@7/bin/clang, macos_cxx: llvm@7/bin/clang++, apt_package: "clang-7 libc++-7-dev libc++abi-7-dev", homebrew_package: llvm@7}
           - os: macos-13
@@ -198,6 +198,8 @@ jobs:
             compiler: {compiler: clang, version: 10, libcxx: libc++, cc: clang-10, cxx: clang++-10, macos_cc: llvm@10/bin/clang, macos_cxx: llvm@10/bin/clang++, apt_package: "clang-10 libc++-10-dev libc++abi-10-dev", homebrew_package: llvm@10}
           - os: macos-13
             compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: llvm@11/bin/clang, macos_cxx: llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+          - os: macos-13
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-13
             compiler: {compiler: gcc, version: 7, libcxx: libstdc++11, cc: gcc-7, cxx: g++-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: macos-13
@@ -214,7 +216,7 @@ jobs:
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: macos-13
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
-          # MacOS 14 doesn't have Clang 7, 8, 9, 10, 11, 12 or GCC 7, 8 anymore. And other GCC versions are often incompatible, so we don't support them officially.
+          # MacOS 14 doesn't have Clang 7, 8, 9, 10, 11, 12, 13 or GCC 7, 8 anymore. And other GCC versions are often incompatible, so we don't support them officially.
           - os: macos-14
             compiler: {compiler: clang, version: 7.1, libcxx: libc++, cc: clang-7, cxx: clang++-7, macos_cc: llvm@7/bin/clang, macos_cxx: llvm@7/bin/clang++, apt_package: "clang-7 libc++-7-dev libc++abi-7-dev", homebrew_package: llvm@7}
           - os: macos-14
@@ -225,6 +227,8 @@ jobs:
             compiler: {compiler: clang, version: 10, libcxx: libc++, cc: clang-10, cxx: clang++-10, macos_cc: llvm@10/bin/clang, macos_cxx: llvm@10/bin/clang++, apt_package: "clang-10 libc++-10-dev libc++abi-10-dev", homebrew_package: llvm@10}
           - os: macos-14
             compiler: {compiler: clang, version: 11, libcxx: libc++, cc: clang-11, cxx: clang++-11, macos_cc: llvm@11/bin/clang, macos_cxx: llvm@11/bin/clang++, apt_package: "clang-11 libc++-11-dev libc++abi-11-dev libomp5-11 libomp-11-dev", homebrew_package: llvm@11}
+          - os: macos-14
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-14
             compiler: {compiler: gcc, version: 7, libcxx: libstdc++11, cc: gcc-7, cxx: g++-7, homebrew_package: gcc@7, apt_package: g++-7}
           - os: macos-14
