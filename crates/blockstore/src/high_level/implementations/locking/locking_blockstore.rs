@@ -10,6 +10,7 @@ use futures::stream::BoxStream;
 use futures::{StreamExt, TryStreamExt as _, future, stream};
 
 use crate::high_level::Block as _;
+use crate::high_level::interface::BlockStore;
 use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
 
 use super::LockingBlock;
@@ -32,81 +33,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
             base_store: Some(Arc::new(base_store)),
             cache: BlockCache::new(),
         })
-    }
-
-    pub async fn load(&self, block_id: BlockId) -> Result<Option<LockingBlock<B>>> {
-        // TODO Cache non-existence?
-        let mut cache_entry = self.cache.async_lock(block_id).await?;
-        if cache_entry.value().is_none() {
-            let base_store = self.base_store.as_ref().expect("Already destructed");
-            let loaded = base_store.load(&block_id).await?;
-            if let Some(loaded) = loaded {
-                self.cache.set_entry(
-                    base_store,
-                    &mut cache_entry,
-                    loaded,
-                    CacheEntryState::Clean,
-                    BlockBaseStoreState::ExistsInBaseStore,
-                );
-            }
-        }
-        if cache_entry.value().is_some() {
-            Ok(Some(LockingBlock { cache_entry }))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
-        let mut cache_entry = self.cache.async_lock(*block_id).await?;
-        if cache_entry.value().is_some() {
-            // Block already exists in the cache
-            return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
-        }
-        let base_store = self.base_store.as_ref().expect("Already destructed");
-        if base_store.exists(block_id).await? {
-            return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
-        }
-        self.cache.set_entry(
-            base_store,
-            &mut cache_entry,
-            data.clone(),
-            CacheEntryState::Dirty,
-            BlockBaseStoreState::DoesntExistInBaseStore,
-        );
-        Ok(TryCreateResult::SuccessfullyCreated)
-    }
-
-    pub async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
-        let mut cache_entry = self.cache.async_lock(*block_id).await?;
-
-        let base_store = self.base_store.as_ref().expect("Already destructed");
-
-        let exists_in_base_store = async || {
-            if base_store.exists(block_id).await? {
-                Ok(BlockBaseStoreState::ExistsInBaseStore)
-            } else {
-                Ok(BlockBaseStoreState::DoesntExistInBaseStore)
-            }
-        };
-
-        // Add the new value to the cache.
-        self.cache
-            .set_or_overwrite_entry_even_if_dirty(
-                base_store,
-                &mut cache_entry,
-                data.clone(),
-                CacheEntryState::Dirty,
-                exists_in_base_store,
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    pub async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
-        let cache_entry_guard = self.cache.async_lock(*block_id).await?;
-        self._remove(block_id, cache_entry_guard).await
     }
 
     pub(super) async fn _remove(
@@ -146,19 +72,108 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         }
     }
 
-    // Note: for any blocks that are created or removed while the returned stream is running,
-    // we don't give any guarantees for whether they're counted or not.
-    pub async fn num_blocks(&self) -> Result<u64> {
+    pub async fn into_inner_block_store(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B>> {
+        let mut this = this.unsafe_into_inner_dont_drop();
+        // TODO Exception safety. Drop base_store if dropping the cache fails.
+        this.cache.async_drop().await?;
+
+        let base_store = this.base_store.take().expect("Already destructed");
+        let base_store = Arc::try_unwrap(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
+        Ok(base_store)
+    }
+}
+
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockStore
+    for LockingBlockStore<B>
+{
+    type Block = LockingBlock<B>;
+
+    async fn load(&self, block_id: BlockId) -> Result<Option<LockingBlock<B>>> {
+        // TODO Cache non-existence?
+        let mut cache_entry = self.cache.async_lock(block_id).await?;
+        if cache_entry.value().is_none() {
+            let base_store = self.base_store.as_ref().expect("Already destructed");
+            let loaded = base_store.load(&block_id).await?;
+            if let Some(loaded) = loaded {
+                self.cache.set_entry(
+                    base_store,
+                    &mut cache_entry,
+                    loaded,
+                    CacheEntryState::Clean,
+                    BlockBaseStoreState::ExistsInBaseStore,
+                );
+            }
+        }
+        if cache_entry.value().is_some() {
+            Ok(Some(LockingBlock { cache_entry }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
+        let mut cache_entry = self.cache.async_lock(*block_id).await?;
+        if cache_entry.value().is_some() {
+            // Block already exists in the cache
+            return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
+        }
+        let base_store = self.base_store.as_ref().expect("Already destructed");
+        if base_store.exists(block_id).await? {
+            return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
+        }
+        self.cache.set_entry(
+            base_store,
+            &mut cache_entry,
+            data.clone(),
+            CacheEntryState::Dirty,
+            BlockBaseStoreState::DoesntExistInBaseStore,
+        );
+        Ok(TryCreateResult::SuccessfullyCreated)
+    }
+
+    async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
+        let mut cache_entry = self.cache.async_lock(*block_id).await?;
+
+        let base_store = self.base_store.as_ref().expect("Already destructed");
+
+        let exists_in_base_store = async || {
+            if base_store.exists(block_id).await? {
+                Ok(BlockBaseStoreState::ExistsInBaseStore)
+            } else {
+                Ok(BlockBaseStoreState::DoesntExistInBaseStore)
+            }
+        };
+
+        // Add the new value to the cache.
+        self.cache
+            .set_or_overwrite_entry_even_if_dirty(
+                base_store,
+                &mut cache_entry,
+                data.clone(),
+                CacheEntryState::Dirty,
+                exists_in_base_store,
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
+        let cache_entry_guard = self.cache.async_lock(*block_id).await?;
+        self._remove(block_id, cache_entry_guard).await
+    }
+
+    async fn num_blocks(&self) -> Result<u64> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
         Ok(base_store.num_blocks().await? + self.cache.num_blocks_in_cache_but_not_in_base_store())
     }
 
-    pub fn estimate_num_free_bytes(&self) -> Result<Byte> {
+    fn estimate_num_free_bytes(&self) -> Result<Byte> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
         base_store.estimate_num_free_bytes()
     }
 
-    pub fn block_size_from_physical_block_size(
+    fn block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
@@ -166,10 +181,8 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         base_store.block_size_from_physical_block_size(block_size)
     }
 
-    // Note: for any blocks that are created or removed while the returned stream is running,
-    // we don't give any guarantees for whether they'll be part of the stream or not.
     // TODO Make sure we have tests that have some blocks in the cache and some in the base store
-    pub async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
+    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
 
         // TODO Is keys_with_entries_or_locked the right thing here? Do we want to count locked entries?
@@ -185,7 +198,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
             .boxed())
     }
 
-    pub async fn create(&self, data: &Data) -> Result<BlockId> {
+    async fn create(&self, data: &Data) -> Result<BlockId> {
         loop {
             let block_id = BlockId::new_random();
             // TODO try_create first checks if a block id exists before creating it. That's expensive. Is the collision probability low enough that we can skip this?
@@ -200,7 +213,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         }
     }
 
-    pub async fn flush_block(&self, block: &mut LockingBlock<B>) -> Result<()> {
+    async fn flush_block(&self, block: &mut LockingBlock<B>) -> Result<()> {
         let block_id = *block.block_id();
         let entry = block
             .cache_entry
@@ -209,26 +222,13 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         self.cache.flush_block(entry, &block_id).await
     }
 
-    pub async fn into_inner_block_store(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B>> {
-        let mut this = this.unsafe_into_inner_dont_drop();
-        // TODO Exception safety. Drop base_store if dropping the cache fails.
-        this.cache.async_drop().await?;
-
-        let base_store = this.base_store.take().expect("Already destructed");
-        let base_store = Arc::try_unwrap(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
-        Ok(base_store)
-    }
-
-    /// clear_cache_slow is only used in test cases. Without test cases calling it, they would only
-    /// ever test cached blocks and never have to store/reload them to the base store.
-    /// This is implemented in a very slow way and shouldn't be used in non-test code.
     #[cfg(any(test, feature = "testutils"))]
-    pub async fn clear_cache_slow(&self) -> Result<()> {
+    async fn clear_cache_slow(&self) -> Result<()> {
         self.cache.prune_all_blocks().await
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
+    async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
         self.cache.prune_unloaded_blocks().await
     }
 }

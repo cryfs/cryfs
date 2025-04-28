@@ -6,7 +6,8 @@ use std::num::{NonZeroU8, NonZeroU32};
 use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::DataNode;
 use cryfs_blockstore::{
-    BLOCKID_LEN, Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore,
+    BLOCKID_LEN, Block as _, BlockId, BlockStore as _, LLBlockStore, LockingBlock,
+    LockingBlockStore,
 };
 use cryfs_utils::data::{Data, ZeroedData};
 

@@ -7,7 +7,7 @@ mod utils;
 pub use utils::{RemoveResult, TryCreateResult};
 
 mod high_level;
-pub use high_level::{Block, LockingBlock, LockingBlockStore};
+pub use high_level::{Block, BlockStore, LockingBlock, LockingBlockStore}; // TODO Remove LockingBlock from being exported
 
 mod low_level;
 pub use low_level::{

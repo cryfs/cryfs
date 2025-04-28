@@ -6,10 +6,10 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 
 pub use crate::RemoveResult;
-use cryfs_blockstore::TryCreateResult;
 use cryfs_blockstore::{
-    BLOCKID_LEN, BlockId, LLBlockStore, InvalidBlockSizeError, LockingBlockStore,
+    BLOCKID_LEN, BlockId, InvalidBlockSizeError, LLBlockStore, LockingBlockStore,
 };
+use cryfs_blockstore::{BlockStore as _, TryCreateResult};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,

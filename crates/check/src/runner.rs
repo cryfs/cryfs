@@ -24,7 +24,7 @@ use crate::{
 use cryfs_blobstore::{
     BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore,
 };
-use cryfs_blockstore::{BlockId, LLBlockStore, LockingBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore as _, LLBlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
 use cryfs_filesystem::{
     config::ConfigLoadResult,
