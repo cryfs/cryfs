@@ -7,8 +7,9 @@ use std::fmt::{self, Debug};
 
 use super::super::{DataLeafNode, DataNode, DataNodeStore, layout::node};
 use cryfs_blockstore::{
-    BlockId, LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
-    InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult, tests::Fixture,
+    BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
+    InvalidBlockSizeError, LLBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
+    tests::Fixture,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -88,7 +89,7 @@ impl BlockStoreReader for BlockStoreAdapter {
 impl BlockStoreDeleter for BlockStoreAdapter {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         if let Some(leaf) = self.load_leaf(*id).await? {
-            leaf.upcast().remove(&self.0).await?;
+            self.0.remove(leaf.upcast()).await?;
             Ok(RemoveResult::SuccessfullyRemoved)
         } else {
             Ok(RemoveResult::NotRemovedBecauseItDoesntExist)

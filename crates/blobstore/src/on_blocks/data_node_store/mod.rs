@@ -196,6 +196,10 @@ impl<B: LLBlockStore + Send + Sync> DataNodeStore<B> {
         self.block_store.remove_by_id(block_id).await
     }
 
+    pub async fn remove(&self, node: DataNode<B>) -> Result<()> {
+        self.block_store.remove(node._into_block()).await
+    }
+
     #[cfg(test)]
     pub async fn all_nodes(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
         self.block_store.all_blocks().await
@@ -875,9 +879,9 @@ mod tests {
                     let leaf1 = new_full_leaf_node(nodestore).await;
                     let leaf2 = new_full_leaf_node(nodestore).await;
                     assert_eq!(2, nodestore.num_nodes().await.unwrap());
-                    leaf1.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf1.upcast()).await.unwrap();
                     assert_eq!(1, nodestore.num_nodes().await.unwrap());
-                    leaf2.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf2.upcast()).await.unwrap();
                     assert_eq!(0, nodestore.num_nodes().await.unwrap());
                 })
             })
@@ -914,9 +918,9 @@ mod tests {
                         .unwrap();
                     assert_eq!(2, nodestore.num_nodes().await.unwrap());
 
-                    inner.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(inner.upcast()).await.unwrap();
                     assert_eq!(1, nodestore.num_nodes().await.unwrap());
-                    leaf.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf.upcast()).await.unwrap();
                     assert_eq!(0, nodestore.num_nodes().await.unwrap());
                 })
             })

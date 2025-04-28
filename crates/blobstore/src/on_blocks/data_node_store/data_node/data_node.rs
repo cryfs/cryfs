@@ -1,16 +1,11 @@
 use anyhow::{Result, ensure};
 
-use super::super::{
-    DataNodeStore,
-    layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
-};
+use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{
-    Block as _, BlockId, BlockStore as _, LLBlockStore, LockingBlock, LockingBlockStore,
-};
+use cryfs_blockstore::{Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]
@@ -66,12 +61,7 @@ impl<B: LLBlockStore + Send + Sync> DataNode<B> {
         }
     }
 
-    pub async fn remove(self, node_store: &DataNodeStore<B>) -> Result<()> {
-        // TODO The API in BlockStore was turned around from block.remove(&store) to store.remove(block). Should we do the same for datanodestore and other layers?
-        node_store.block_store.remove(self._into_block()).await
-    }
-
-    fn _into_block(self) -> LockingBlock<B> {
+    pub(crate) fn _into_block(self) -> LockingBlock<B> {
         match self {
             Self::Leaf(leaf) => leaf.into_block(),
             Self::Inner(inner) => inner.into_block(),
@@ -728,7 +718,7 @@ mod tests {
                     let leaf = new_full_leaf_node(nodestore).await.upcast();
                     let node_id = *leaf.block_id();
 
-                    leaf.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
             })
@@ -743,7 +733,7 @@ mod tests {
                     let node_id = *new_full_leaf_node(nodestore).await.block_id();
                     let leaf = nodestore.load(node_id).await.unwrap().unwrap();
 
-                    leaf.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
             })
@@ -763,8 +753,8 @@ mod tests {
                         .upcast();
                     let node_id = *node.block_id();
 
-                    leaf.remove(nodestore).await.unwrap();
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
@@ -785,8 +775,8 @@ mod tests {
                         .block_id();
                     let node = nodestore.load(node_id).await.unwrap().unwrap();
 
-                    leaf.remove(nodestore).await.unwrap();
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
@@ -804,7 +794,7 @@ mod tests {
                     let node = new_full_leaf_node(nodestore).await.upcast();
                     let node_id = *node.block_id();
 
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
@@ -822,7 +812,7 @@ mod tests {
                     let node_id = *new_full_leaf_node(nodestore).await.block_id();
                     let node = nodestore.load(node_id).await.unwrap().unwrap();
 
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
@@ -839,7 +829,7 @@ mod tests {
 
                     let node = new_full_leaf_node(nodestore).await.upcast();
 
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert_full_inner_node_is_valid(nodestore, full_inner).await;
                 })
@@ -857,7 +847,7 @@ mod tests {
                     let node_id = *new_full_leaf_node(nodestore).await.block_id();
                     let node = nodestore.load(node_id).await.unwrap().unwrap();
 
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert_full_inner_node_is_valid(nodestore, full_inner).await;
                 })
@@ -880,8 +870,8 @@ mod tests {
                         .upcast();
                     let node_id = *node.block_id();
 
-                    leaf.remove(nodestore).await.unwrap();
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
@@ -904,8 +894,8 @@ mod tests {
                         .block_id();
                     let node = nodestore.load(node_id).await.unwrap().unwrap();
 
-                    leaf.remove(nodestore).await.unwrap();
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert!(nodestore.load(node_id).await.unwrap().is_none());
                 })
@@ -927,8 +917,8 @@ mod tests {
                         .unwrap()
                         .upcast();
 
-                    leaf.remove(nodestore).await.unwrap();
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert_full_inner_node_is_valid(nodestore, full_inner).await;
                 })
@@ -951,8 +941,8 @@ mod tests {
                         .block_id();
                     let node = nodestore.load(node_id).await.unwrap().unwrap();
 
-                    leaf.remove(nodestore).await.unwrap();
-                    node.remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf).await.unwrap();
+                    nodestore.remove(node).await.unwrap();
 
                     assert_full_inner_node_is_valid(nodestore, full_inner).await;
                 })

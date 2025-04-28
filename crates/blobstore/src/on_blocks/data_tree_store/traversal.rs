@@ -690,7 +690,7 @@ async fn _while_root_has_only_one_child_replace_root_with_its_child<
                 )
                 .await?;
                 let overwritten_root = root.overwrite_node_with(&new_root, node_store.layout())?;
-                new_root.remove(node_store).await?;
+                node_store.remove(new_root).await?;
                 Ok(overwritten_root)
             } else {
                 Ok(root)
@@ -724,7 +724,7 @@ async fn _while_root_has_only_one_child_remove_root_return_child<B: LLBlockStore
                         .expect("Inner node must have at least one child"),
                 ))
                 .await?;
-                current.remove(node_store).await?;
+                node_store.remove(current).await?;
                 Ok(result)
             } else {
                 Ok(current)

@@ -448,7 +448,7 @@ impl FilesystemFixture {
                 let orphaned_nodes = blob_root_node.children().collect::<Vec<_>>();
                 let inner_node_id = *blob_root_node.block_id();
                 assert_eq!(blob_info.blob_id.to_root_block_id(), blob_root_node.block_id());
-                blob_root_node.upcast().remove(nodestore).await.unwrap();
+                nodestore.remove(blob_root_node.upcast()).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
                     removed_node_info: NodeAndBlobReferenceFromReachableBlob {
@@ -532,7 +532,7 @@ impl FilesystemFixture {
                 let depth = inner_node.depth();
                 let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
                 let inner_node_id = *inner_node.block_id();
-                inner_node.upcast().remove(nodestore).await.unwrap();
+                nodestore.remove(inner_node.upcast()).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
                     removed_node_info: NodeAndBlobReferenceFromReachableBlob {
@@ -599,7 +599,7 @@ impl FilesystemFixture {
                 let depth = inner_node.depth();
                 let orphaned_nodes = inner_node.children().collect::<Vec<_>>();
                 let inner_node_id = *inner_node.block_id();
-                inner_node.upcast().remove(nodestore).await.unwrap();
+                nodestore.remove(inner_node.upcast()).await.unwrap();
                 RemoveInnerNodeResult {
                     removed_node: inner_node_id,
                     removed_node_info: NodeAndBlobReferenceFromReachableBlob {
@@ -699,7 +699,7 @@ impl FilesystemFixture {
                             parent_id: inner_below_a_parent_id,
                         },
                     ));
-                    inner_below_a.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(inner_below_a.upcast()).await.unwrap();
 
                     let (leaf_below_a, leaf_below_a_parent_id) =
                         find_leaf_node_with_parent_id(nodestore, subchild2, &mut rng).await;
@@ -712,7 +712,7 @@ impl FilesystemFixture {
                             parent_id: leaf_below_a_parent_id,
                         },
                     ));
-                    leaf_below_a.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(leaf_below_a.upcast()).await.unwrap();
 
                     orphaned_nodes.extend(inner_node_a.children());
                     removed_nodes.push((
@@ -723,7 +723,7 @@ impl FilesystemFixture {
                             parent_id: inner_node_a_parent_id,
                         },
                     ));
-                    inner_node_a.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(inner_node_a.upcast()).await.unwrap();
                 }
 
                 // for child2, find an inner node A. Remove an inner node B below A. Also remove an inner node C below A and its direct child. Don't remove A.
@@ -749,7 +749,7 @@ impl FilesystemFixture {
                             parent_id: inner_node_b_parent_id,
                         },
                     ));
-                    inner_node_b.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(inner_node_b.upcast()).await.unwrap();
 
                     let (inner_node_c, inner_node_c_parent_id) =
                         find_inner_node_with_distance_from_root_with_parent_id(
@@ -769,7 +769,7 @@ impl FilesystemFixture {
                         .unwrap();
                     orphaned_nodes.extend(child_of_c.children());
                     // Don't add child_of_c to removed_nodes because its parent is removed too so it's not referenced&&missing
-                    child_of_c.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(child_of_c.upcast()).await.unwrap();
 
                     orphaned_nodes.extend(
                         inner_node_c
@@ -784,7 +784,7 @@ impl FilesystemFixture {
                             parent_id: inner_node_c_parent_id,
                         },
                     ));
-                    inner_node_c.upcast().remove(nodestore).await.unwrap();
+                    nodestore.remove(inner_node_c.upcast()).await.unwrap();
                 }
 
                 RemoveSomeNodesResult {
@@ -954,7 +954,7 @@ impl FilesystemFixture {
                 let (leaf_node, leaf_node_parent_id) =
                     find_leaf_node_of_blob_with_parent_id(nodestore, &blob_info.blob_id).await;
                 let leaf_node_id = *leaf_node.block_id();
-                leaf_node.upcast().remove(nodestore).await.unwrap();
+                nodestore.remove(leaf_node.upcast()).await.unwrap();
                 RemoveLeafNodeResult {
                     removed_node: leaf_node_id,
                     removed_node_info: NodeAndBlobReferenceFromReachableBlob {

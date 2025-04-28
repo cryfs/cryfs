@@ -569,7 +569,7 @@ impl<'a, B: LLBlockStore + Send + Sync> DataTree<'a, B> {
     async fn _remove_subtree(node_store: &DataNodeStore<B>, root: DataNode<B>) -> Result<()> {
         match root {
             DataNode::Leaf(_) => {
-                root.remove(node_store).await?;
+                node_store.remove(root).await?;
                 Ok(())
             }
             DataNode::Inner(root) => {
@@ -587,7 +587,7 @@ impl<'a, B: LLBlockStore + Send + Sync> DataTree<'a, B> {
         // This has a higher chance of keeping the file system in a consistent state if there's a power loss in the middle.
         let children: Vec<_> = root.children().collect();
         let depth = root.depth().get();
-        root.upcast().remove(node_store).await?;
+        node_store.remove(root.upcast()).await?;
         for_each_unordered(children.into_iter(), |child_block_id| {
             Self::_remove_subtree_by_root_id(node_store, depth - 1, child_block_id)
         })
