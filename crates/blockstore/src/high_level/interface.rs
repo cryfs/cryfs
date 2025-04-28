@@ -1,10 +1,14 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 
 use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
 use cryfs_utils::data::Data;
 
+// TODO Now that we have the interface, go through downstream code and see where we can replace direct use of LockingBlockStore with the BlockStore trait.
+
+#[async_trait]
 pub trait Block {
     fn block_id(&self) -> &BlockId;
     fn data(&self) -> &Data;
@@ -12,6 +16,7 @@ pub trait Block {
     async fn resize(&mut self, new_size: usize);
 }
 
+#[async_trait]
 pub trait BlockStore {
     type Block: Block;
 

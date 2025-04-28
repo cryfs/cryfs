@@ -7,8 +7,9 @@ use std::fmt::{self, Debug};
 use super::super::BlobStoreOnBlocks;
 use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
-    BlockId, LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
-    InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult, tests::Fixture,
+    BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
+    InvalidBlockSizeError, LLBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
+    tests::Fixture,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -18,7 +19,7 @@ use cryfs_utils::{
 /// Wrap a [BlobStore] into a [BlockStore] so that we can run the regular block store tests on it.
 /// Each block is stored as a blob.
 pub struct BlockStoreAdapter {
-    underlying_store: AsyncDropGuard<BlobStoreOnBlocks<InMemoryBlockStore>>,
+    underlying_store: AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>,
     block_size: Byte,
 }
 

@@ -4,12 +4,11 @@ use binary_layout::Field;
 use byte_unit::Byte;
 #[cfg(test)]
 use futures::stream::BoxStream;
+use std::fmt::Debug;
 
 pub use crate::RemoveResult;
-use cryfs_blockstore::{
-    BLOCKID_LEN, BlockId, InvalidBlockSizeError, LLBlockStore, LockingBlockStore,
-};
-use cryfs_blockstore::{BlockStore as _, TryCreateResult};
+use cryfs_blockstore::TryCreateResult;
+use cryfs_blockstore::{BLOCKID_LEN, BlockId, BlockStore, InvalidBlockSizeError};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
@@ -29,15 +28,15 @@ mod testutils;
 mod test_as_blockstore;
 
 #[derive(Debug)]
-pub struct DataNodeStore<B: LLBlockStore + Send + Sync> {
-    block_store: AsyncDropGuard<LockingBlockStore<B>>,
+pub struct DataNodeStore<B: BlockStore + AsyncDrop + Debug + Send> {
+    block_store: AsyncDropGuard<B>,
     layout: NodeLayout,
     physical_block_size: Byte,
 }
 
-impl<B: LLBlockStore + Send + Sync> DataNodeStore<B> {
+impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
     pub async fn new(
-        mut block_store: AsyncDropGuard<LockingBlockStore<B>>,
+        mut block_store: AsyncDropGuard<B>,
         physical_block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         let block_size = match Self::_block_size(&block_store, physical_block_size) {
@@ -59,7 +58,7 @@ impl<B: LLBlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     fn _block_size(
-        block_store: &LockingBlockStore<B>,
+        block_store: &B,
         physical_block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         let block_size = block_store.block_size_from_physical_block_size(physical_block_size)?;
@@ -236,8 +235,8 @@ impl<B: LLBlockStore + Send + Sync> DataNodeStore<B> {
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
-    type Error = anyhow::Error;
+impl<B: BlockStore + AsyncDrop + Debug + Send> AsyncDrop for DataNodeStore<B> {
+    type Error = <B as AsyncDrop>::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         self.block_store.async_drop().await
@@ -248,7 +247,7 @@ impl<B: LLBlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
 mod tests {
     use super::*;
     use cryfs_blockstore::{
-        BlockStoreReader, InMemoryBlockStore, MockBlockStore, SharedBlockStore,
+        BlockStoreReader, InMemoryBlockStore, LockingBlockStore, MockBlockStore, SharedBlockStore,
     };
     use futures::{StreamExt, TryStreamExt, stream};
     use testutils::*;
@@ -428,7 +427,10 @@ mod tests {
     mod create_new_leaf_node {
         use super::*;
 
-        async fn test(nodestore: &DataNodeStore<InMemoryBlockStore>, data: Data) {
+        async fn test(
+            nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
+            data: Data,
+        ) {
             let node = nodestore.create_new_leaf_node(&data).await.unwrap();
             assert_eq!(data.as_ref(), node.data());
 
@@ -486,7 +488,10 @@ mod tests {
             BlockId::from_hex("4fbf746746da1a28137df88c5815572c").unwrap()
         }
 
-        async fn test(nodestore: &DataNodeStore<InMemoryBlockStore>, data: Data) {
+        async fn test(
+            nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
+            data: Data,
+        ) {
             let node = nodestore
                 .try_create_new_leaf_node(blockid(), &data)
                 .await
@@ -574,7 +579,7 @@ mod tests {
         use super::*;
 
         async fn test(
-            nodestore: &DataNodeStore<InMemoryBlockStore>,
+            nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
             depth: u8,
             children: &[BlockId],
         ) {
@@ -1658,7 +1663,9 @@ mod tests {
     mod all_nodes {
         use super::*;
 
-        async fn call_all_nodes(nodestore: &DataNodeStore<MockBlockStore>) -> Vec<BlockId> {
+        async fn call_all_nodes(
+            nodestore: &DataNodeStore<LockingBlockStore<MockBlockStore>>,
+        ) -> Vec<BlockId> {
             nodestore
                 .all_nodes()
                 .await

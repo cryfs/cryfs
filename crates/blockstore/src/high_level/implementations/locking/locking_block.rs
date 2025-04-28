@@ -2,12 +2,14 @@ use std::fmt::{self, Debug};
 
 use super::cache::BlockCacheEntryGuard;
 use crate::{BlockId, LLBlockStore, high_level::Block};
+use async_trait::async_trait;
 use cryfs_utils::data::Data;
 
 pub struct LockingBlock<B: LLBlockStore + Send + Sync + Debug + 'static> {
     pub(super) cache_entry: BlockCacheEntryGuard<B>,
 }
 
+#[async_trait]
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug> Block for LockingBlock<B> {
     #[inline]
     fn block_id(&self) -> &BlockId {

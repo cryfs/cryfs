@@ -6,7 +6,7 @@ use divrem::DivCeil;
 use futures::future::BoxFuture;
 
 use cryfs_blockstore::{
-    ActionCounts, BlockId, LLBlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
+    ActionCounts, BlockId, InMemoryBlockStore, LLBlockStore, LockingBlockStore, SharedBlockStore,
     TrackingBlockStore,
 };
 
@@ -29,7 +29,9 @@ mod testutils {
 
     pub async fn with_treestore_and_tracking_blockstore(
         f: impl for<'a> FnOnce(
-            &'a DataTreeStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+            &'a DataTreeStore<
+                LockingBlockStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+            >,
             &'a SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
         ) -> BoxFuture<'a, ()>,
     ) {
@@ -47,7 +49,9 @@ mod testutils {
     }
 
     pub async fn create_empty_tree(
-        treestore: &DataTreeStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+        treestore: &DataTreeStore<
+            LockingBlockStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+        >,
         blockstore: &SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
         let tree = treestore.create_tree().await.unwrap();
@@ -59,7 +63,9 @@ mod testutils {
     }
 
     pub async fn create_nonempty_tree(
-        treestore: &DataTreeStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+        treestore: &DataTreeStore<
+            LockingBlockStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+        >,
         blockstore: &SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
         let mut tree = treestore.create_tree().await.unwrap();
@@ -591,8 +597,11 @@ macro_rules! instantiate_read_tests {
 mod read_bytes {
     use super::testutils::*;
     use super::*;
+    use cryfs_blockstore::BlockStore;
+    use cryfs_utils::async_drop::AsyncDrop;
+    use std::fmt::Debug;
 
-    async fn read_fn<B: LLBlockStore + Send + Sync>(
+    async fn read_fn<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync>(
         tree: &mut DataTree<'_, B>,
         offset: u64,
         len: usize,
@@ -609,8 +618,11 @@ mod read_bytes {
 mod try_read_bytes {
     use super::testutils::*;
     use super::*;
+    use cryfs_blockstore::BlockStore;
+    use cryfs_utils::async_drop::AsyncDrop;
+    use std::fmt::Debug;
 
-    async fn read_fn<B: LLBlockStore + Send + Sync>(
+    async fn read_fn<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync>(
         tree: &mut DataTree<'_, B>,
         offset: u64,
         len: usize,

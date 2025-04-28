@@ -5,20 +5,17 @@ use std::num::{NonZeroU8, NonZeroU32};
 
 use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::DataNode;
-use cryfs_blockstore::{
-    BLOCKID_LEN, Block as _, BlockId, BlockStore as _, LLBlockStore, LockingBlock,
-    LockingBlockStore,
-};
+use cryfs_blockstore::{BLOCKID_LEN, Block, BlockId, BlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;
 
-pub struct DataInnerNode<B: LLBlockStore + Send + Sync> {
-    block: LockingBlock<B>,
+pub struct DataInnerNode<B: BlockStore> {
+    block: B::Block,
 }
 
-impl<B: LLBlockStore + Send + Sync> DataInnerNode<B> {
-    pub fn new(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
+impl<B: BlockStore> DataInnerNode<B> {
+    pub fn new(block: B::Block, layout: &NodeLayout) -> Result<Self> {
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = node::data::OFFSET + 2 * BLOCKID_LEN;
         assert!(
@@ -80,11 +77,11 @@ impl<B: LLBlockStore + Send + Sync> DataInnerNode<B> {
         self.block.data()
     }
 
-    pub(super) fn into_block(self) -> LockingBlock<B> {
+    pub(super) fn into_block(self) -> B::Block {
         self.block
     }
 
-    pub(super) async fn flush(&mut self, blockstore: &LockingBlockStore<B>) -> Result<()> {
+    pub(super) async fn flush(&mut self, blockstore: &B) -> Result<()> {
         blockstore.flush_block(&mut self.block).await
     }
 
@@ -234,7 +231,7 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
     }
 }
 
-impl<B: LLBlockStore + Send + Sync> Debug for DataInnerNode<B> {
+impl<B: BlockStore> Debug for DataInnerNode<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DataInnerNode")
             .field("block_id", &self.block_id())
@@ -249,7 +246,7 @@ mod tests {
     use super::super::super::testutils::*;
     use super::*;
     use byte_unit::Byte;
-    use cryfs_blockstore::InMemoryBlockStore;
+    use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
 
     #[allow(non_snake_case)]
     mod new {
@@ -262,7 +259,11 @@ mod tests {
                     let node = new_full_inner_node(nodestore).await;
 
                     let block = node.into_block();
-                    let node = DataInnerNode::new(block, nodestore.layout()).unwrap();
+                    let node = DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    )
+                    .unwrap();
 
                     assert_eq!(
                         nodestore.layout().max_children_per_inner_node(),
@@ -285,7 +286,11 @@ mod tests {
                         .unwrap();
 
                     let block = node.into_block();
-                    let node = DataInnerNode::new(block, nodestore.layout()).unwrap();
+                    let node = DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    )
+                    .unwrap();
 
                     assert_eq!(1, node.num_children().get(),);
                     assert_eq!(2, node.depth().get());
@@ -308,7 +313,7 @@ mod tests {
 
                     assert_eq!(
                         "Loaded a node with format version 10 but the current version is 0",
-                        DataInnerNode::new(block, nodestore.layout())
+                        DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -332,7 +337,10 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let _ = DataInnerNode::new(block, nodestore.layout());
+                    let _ = DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    );
                 })
             })
             .await;
@@ -350,9 +358,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded block of size 1023 but expected 1024",
-                        DataInnerNode::new(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
                 })
             })
@@ -371,9 +382,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded block of size 1025 but expected 1024",
-                        DataInnerNode::new(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
                 })
             })
@@ -390,7 +404,11 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let node = DataInnerNode::new(block, nodestore.layout()).unwrap();
+                    let node = DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    )
+                    .unwrap();
                     assert_eq!(2, node.num_children().get());
                 })
             })
@@ -427,9 +445,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded an inner node with depth 11 but the maximum is 10",
-                        DataInnerNode::new(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
 
                     // Still fails when loading
@@ -454,7 +475,7 @@ mod tests {
 
                     assert_eq!(
                         "Loaded an inner node that claims to store 0 children but the minimum is 1.",
-                        DataInnerNode::new(block, nodestore.layout())
+                        DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -481,7 +502,7 @@ mod tests {
 
                     assert_eq!(
                         "Loaded an inner node that claims to store 64 children but the maximum is 63.",
-                        DataInnerNode::new(block, nodestore.layout())
+                        DataInnerNode::<LockingBlockStore<InMemoryBlockStore>>::new(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -784,7 +805,7 @@ mod tests {
 
         fn assert_all_children_except_n_are_zeroed_out(
             n: usize,
-            node: &DataInnerNode<InMemoryBlockStore>,
+            node: &DataInnerNode<LockingBlockStore<InMemoryBlockStore>>,
         ) {
             for &byte in &node.raw_blockdata()[node::data::OFFSET..][(BLOCKID_LEN * n)..] {
                 assert_eq!(0, byte);

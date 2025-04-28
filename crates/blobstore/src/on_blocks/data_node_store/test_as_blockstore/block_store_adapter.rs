@@ -18,9 +18,11 @@ use cryfs_utils::{
 
 const MAX_BLOCK_SIZE: Byte = Byte::from_u64(1024 * 1024);
 
+// TODO Now that we have [blockstore::BlockStore] trait for a high level block store, should we use that instead? That one likely should have or already has test adapters to run the low level tests on it, and maybe additional tests. We can have an adapter here mapping to that.
+
 /// Wrap a [DataNodeStore] into a [BlockStore] so that we can run the regular block store tests on it.
 /// Each block is stored as a DataLeafNode with the block data.
-pub struct BlockStoreAdapter(AsyncDropGuard<DataNodeStore<InMemoryBlockStore>>);
+pub struct BlockStoreAdapter(AsyncDropGuard<DataNodeStore<LockingBlockStore<InMemoryBlockStore>>>);
 
 impl BlockStoreAdapter {
     pub async fn new() -> AsyncDropGuard<Self> {
@@ -38,7 +40,10 @@ impl BlockStoreAdapter {
         self.0.clear_cache_slow().await
     }
 
-    async fn load_leaf(&self, id: BlockId) -> Result<Option<DataLeafNode<InMemoryBlockStore>>> {
+    async fn load_leaf(
+        &self,
+        id: BlockId,
+    ) -> Result<Option<DataLeafNode<LockingBlockStore<InMemoryBlockStore>>>> {
         match self.0.load(id).await? {
             Some(DataNode::Leaf(leaf)) => Ok(Some(leaf)),
             Some(DataNode::Inner(_)) => panic!("This node store should only have leaf nodes"),

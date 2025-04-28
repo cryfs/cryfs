@@ -1,8 +1,10 @@
 use anyhow::{Result, anyhow, bail};
+use std::fmt::Debug;
 use std::num::NonZeroU64;
 
 use crate::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout};
-use cryfs_blockstore::{BlockId, LLBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_utils::async_drop::AsyncDrop;
 
 #[derive(Clone, Copy)]
 pub enum SizeCache {
@@ -20,7 +22,7 @@ pub enum SizeCache {
 }
 
 impl SizeCache {
-    pub async fn get_or_calculate_num_leaves<B: LLBlockStore + Send + Sync>(
+    pub async fn get_or_calculate_num_leaves<B: BlockStore + AsyncDrop + Debug + Send>(
         &mut self,
         node_store: &DataNodeStore<B>,
         root_node: &DataNode<B>,
@@ -50,7 +52,7 @@ impl SizeCache {
         }
     }
 
-    pub async fn get_or_calculate_num_bytes<B: LLBlockStore + Send + Sync>(
+    pub async fn get_or_calculate_num_bytes<B: BlockStore + AsyncDrop + Debug + Send + Sync>(
         &mut self,
         node_store: &DataNodeStore<B>,
         root_node: &DataNode<B>,
@@ -136,7 +138,7 @@ impl SizeCache {
         Ok(())
     }
 
-    async fn _calculate_leaf_size<B: LLBlockStore + Send + Sync>(
+    async fn _calculate_leaf_size<B: BlockStore + AsyncDrop + Debug + Send + Sync>(
         node_store: &DataNodeStore<B>,
         rightmost_leaf_id: BlockId,
     ) -> Result<u32> {
@@ -161,7 +163,7 @@ struct NumLeavesAndRightmostLeafId {
     pub rightmost_leaf_id: BlockId,
 }
 
-async fn calculate_num_leaves_and_rightmost_leaf_id<B: LLBlockStore + Send + Sync>(
+async fn calculate_num_leaves_and_rightmost_leaf_id<B: BlockStore + AsyncDrop + Debug + Send>(
     node_store: &DataNodeStore<B>,
     root_node: &DataInnerNode<B>,
 ) -> Result<NumLeavesAndRightmostLeafId> {

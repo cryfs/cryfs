@@ -13,7 +13,7 @@ use crate::FilesystemFixture;
 use cryfs_blobstore::{
     BlobId, BlobStore, DataInnerNode, DataLeafNode, DataNode, DataNodeStore, DataTree,
 };
-use cryfs_blockstore::{BlockId, LLBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_check::{
     BlobReference, BlobReferenceWithId, CorruptedError, NodeInfoAsSeenByLookingAtNode,
     NodeUnreferencedError,
@@ -494,7 +494,7 @@ pub async fn find_an_inner_node_of_a_large_blob<B>(
     blob_id: &BlobId,
 ) -> DataInnerNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_an_inner_node_of_a_large_blob_with_parent_id(nodestore, blob_id)
         .await
@@ -506,7 +506,7 @@ pub async fn find_an_inner_node_of_a_large_blob_with_parent_id<B>(
     blob_id: &BlobId,
 ) -> (DataInnerNode<B>, BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_inner_node_with_distance_from_root_with_parent_id(nodestore, *blob_id.to_root_block_id())
         .await
@@ -517,7 +517,7 @@ pub async fn find_inner_node_with_distance_from_root<B>(
     root: BlockId,
 ) -> DataInnerNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_inner_node_with_distance_from_root_with_parent_id(nodestore, root)
         .await
@@ -529,7 +529,7 @@ pub async fn find_inner_node_with_distance_from_root_with_parent_id<B>(
     root: BlockId,
 ) -> (DataInnerNode<B>, BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let root_node = nodestore
         .load(root)
@@ -559,7 +559,7 @@ pub async fn find_an_inner_node_of_a_small_blob<B>(
     blob_id: &BlobId,
 ) -> DataInnerNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_an_inner_node_of_a_small_blob_with_parent_id(nodestore, blob_id)
         .await
@@ -571,7 +571,7 @@ pub async fn find_an_inner_node_of_a_small_blob_with_parent_id<B>(
     blob_id: &BlobId,
 ) -> (DataInnerNode<B>, BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_inner_node_without_distance_from_root_with_parent_id(
         nodestore,
@@ -585,7 +585,7 @@ pub async fn find_inner_node_without_distance_from_root_with_parent_id<B>(
     root: BlockId,
 ) -> (DataInnerNode<B>, BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let root_node = nodestore
         .load(root)
@@ -607,7 +607,7 @@ pub async fn find_leaf_node_of_blob<B>(
     blob_id: &BlobId,
 ) -> DataLeafNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_leaf_node_of_blob_with_parent_id(nodestore, blob_id)
         .await
@@ -619,7 +619,7 @@ pub async fn find_leaf_node_of_blob_with_parent_id<B>(
     blob_id: &BlobId,
 ) -> (DataLeafNode<B>, BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let mut rng = SmallRng::seed_from_u64(0);
     find_leaf_node_with_parent_id(nodestore, *blob_id.to_root_block_id(), &mut rng).await
@@ -631,7 +631,7 @@ pub async fn find_leaf_id<B>(
     rng: &mut SmallRng,
 ) -> BlockId
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     *find_leaf_node_and_parent(nodestore, root, rng)
         .await
@@ -645,7 +645,7 @@ pub async fn find_leaf_node_with_parent_id<B>(
     rng: &mut SmallRng,
 ) -> (DataLeafNode<B>, BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let (leaf, parent, _index) = find_leaf_node_and_parent(nodestore, root, rng).await;
     (leaf, *parent.block_id())
@@ -657,7 +657,7 @@ pub async fn find_leaf_node<B>(
     rng: &mut SmallRng,
 ) -> DataLeafNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_leaf_node_and_parent(nodestore, root, rng).await.0
 }
@@ -668,7 +668,7 @@ pub async fn find_leaf_id_and_parent<B>(
     rng: &mut SmallRng,
 ) -> (BlockId, DataInnerNode<B>, usize)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let (leaf, parent, index) = find_leaf_node_and_parent(nodestore, root, rng).await;
     (*leaf.block_id(), parent, index)
@@ -680,7 +680,7 @@ pub async fn find_leaf_node_and_parent<B>(
     rng: &mut SmallRng,
 ) -> (DataLeafNode<B>, DataInnerNode<B>, usize)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let blob_root_node = nodestore
         .load(root)
@@ -699,7 +699,7 @@ pub async fn _find_leaf_node_and_parent<B>(
     rng: &mut SmallRng,
 ) -> (DataLeafNode<B>, DataInnerNode<B>, usize)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let children = root.children();
     let (index, child) = children
@@ -719,7 +719,7 @@ pub async fn find_inner_node_of_blob<B>(
     depth_distance_from_root: u8,
 ) -> DataInnerNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let mut rng = SmallRng::seed_from_u64(0);
     find_inner_node(
@@ -738,7 +738,7 @@ pub async fn find_inner_node_id<B>(
     rng: &mut SmallRng,
 ) -> BlockId
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     *find_inner_node_and_parent(nodestore, root, depth_distance_from_root, rng)
         .await
@@ -753,7 +753,7 @@ pub async fn find_inner_node<B>(
     rng: &mut SmallRng,
 ) -> DataInnerNode<B>
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     find_inner_node_and_parent(nodestore, root, depth_distance_from_root, rng)
         .await
@@ -767,7 +767,7 @@ pub async fn find_inner_node_id_and_parent<B>(
     rng: &mut SmallRng,
 ) -> (BlockId, DataInnerNode<B>, usize)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let (node, parent, index) =
         find_inner_node_and_parent(nodestore, root, depth_distance_from_root, rng).await;
@@ -781,7 +781,7 @@ pub async fn find_inner_node_and_parent<B>(
     rng: &mut SmallRng,
 ) -> (DataInnerNode<B>, DataInnerNode<B>, usize)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     let blob_root_node = nodestore
         .load(root)
@@ -801,7 +801,7 @@ pub async fn _find_inner_node_and_parent<B>(
     rng: &mut SmallRng,
 ) -> (DataInnerNode<B>, DataInnerNode<B>, usize)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
 {
     assert!(depth_distance_from_root >= 1);
 
@@ -902,7 +902,7 @@ where
 
 pub async fn remove_subtree<B>(nodestore: &DataNodeStore<B>, root: BlockId)
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
 {
     let node = nodestore.load(root).await.unwrap().unwrap();
     DataTree::remove_subtree(nodestore, node).await.unwrap();
@@ -910,7 +910,7 @@ where
 
 pub fn load_node_info<B>(node: &DataNode<B>) -> NodeInfoAsSeenByLookingAtNode
 where
-    B: LLBlockStore + Send + Sync,
+    B: BlockStore + Send + Sync,
 {
     match node {
         DataNode::Inner(node) => NodeInfoAsSeenByLookingAtNode::InnerNode {

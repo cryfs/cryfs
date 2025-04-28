@@ -83,6 +83,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
     }
 }
 
+#[async_trait]
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockStore
     for LockingBlockStore<B>
 {

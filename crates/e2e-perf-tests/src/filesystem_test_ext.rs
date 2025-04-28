@@ -1,5 +1,5 @@
 use cryfs_blobstore::BlobStoreOnBlocks;
-use cryfs_blockstore::DynBlockStore;
+use cryfs_blockstore::{DynBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, FsError, FsResult, Mode,
@@ -15,7 +15,9 @@ use crate::fixture::request_info;
 /// An interface abstracting over [AsyncFilesystem] and [AsyncFilesystemLL], offering common file system operations.
 pub trait FilesystemTestExt: AsyncDrop + Debug {
     async fn new(
-        device: AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>,
+        device: AsyncDropGuard<
+            CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        >,
     ) -> AsyncDropGuard<Self>
     where
         Self: Sized;
@@ -26,10 +28,14 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
 }
 
 impl FilesystemTestExt
-    for ObjectBasedFsAdapterLL<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>
+    for ObjectBasedFsAdapterLL<
+        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+    >
 {
     async fn new(
-        device: AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>,
+        device: AsyncDropGuard<
+            CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        >,
     ) -> AsyncDropGuard<Self> {
         ObjectBasedFsAdapterLL::new(|_uid, _gid| device)
     }
@@ -71,10 +77,14 @@ impl FilesystemTestExt
 }
 
 impl FilesystemTestExt
-    for ObjectBasedFsAdapter<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>
+    for ObjectBasedFsAdapter<
+        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+    >
 {
     async fn new(
-        device: AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>,
+        device: AsyncDropGuard<
+            CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        >,
     ) -> AsyncDropGuard<Self> {
         ObjectBasedFsAdapter::new(|_uid, _gid| device)
     }

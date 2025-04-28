@@ -2,20 +2,21 @@ use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
 use std::fmt;
+use std::fmt::Debug;
 
 use super::blob_on_blocks::BlobOnBlocks;
 use super::data_tree_store::DataTreeStore;
 use crate::{BlobId, BlobStore, RemoveResult};
-use cryfs_blockstore::{BlockId, LLBlockStore, InvalidBlockSizeError, LockingBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-pub struct BlobStoreOnBlocks<B: LLBlockStore + Send + Sync> {
+pub struct BlobStoreOnBlocks<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
     tree_store: AsyncDropGuard<DataTreeStore<B>>,
 }
 
-impl<B: LLBlockStore + Send + Sync> BlobStoreOnBlocks<B> {
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobStoreOnBlocks<B> {
     pub async fn new(
-        blockstore: AsyncDropGuard<LockingBlockStore<B>>,
+        blockstore: AsyncDropGuard<B>,
         block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
@@ -44,8 +45,13 @@ impl<B: LLBlockStore + Send + Sync> BlobStoreOnBlocks<B> {
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
-    type ConcreteBlob<'a> = BlobOnBlocks<'a, B>;
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobStore
+    for BlobStoreOnBlocks<B>
+{
+    type ConcreteBlob<'a>
+        = BlobOnBlocks<'a, B>
+    where
+        B: 'a;
 
     async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
         Ok(BlobOnBlocks::new(self.tree_store.create_tree().await?))
@@ -93,15 +99,19 @@ impl<B: LLBlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
     }
 }
 
-impl<B: LLBlockStore + Send + Sync> fmt::Debug for BlobStoreOnBlocks<B> {
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> fmt::Debug
+    for BlobStoreOnBlocks<B>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlockStoreOnBlocks")
     }
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync> AsyncDrop for BlobStoreOnBlocks<B> {
-    type Error = anyhow::Error;
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> AsyncDrop
+    for BlobStoreOnBlocks<B>
+{
+    type Error = <B as AsyncDrop>::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         self.tree_store.async_drop().await

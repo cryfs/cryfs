@@ -1,5 +1,5 @@
 use cryfs_blobstore::BlobStoreOnBlocks;
-use cryfs_blockstore::DynBlockStore;
+use cryfs_blockstore::{DynBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AtimeUpdateBehavior,
@@ -39,8 +39,9 @@ pub trait FixtureFactory {
 
 pub struct HLFixture;
 impl FixtureFactory for HLFixture {
-    type Filesystem =
-        ObjectBasedFsAdapter<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>;
+    type Filesystem = ObjectBasedFsAdapter<
+        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+    >;
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
@@ -57,8 +58,9 @@ impl FixtureFactory for HLFixture {
 
 pub struct LLFixture;
 impl FixtureFactory for LLFixture {
-    type Filesystem =
-        ObjectBasedFsAdapterLL<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>>;
+    type Filesystem = ObjectBasedFsAdapterLL<
+        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+    >;
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,

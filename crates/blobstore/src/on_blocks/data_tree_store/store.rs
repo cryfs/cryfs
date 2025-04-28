@@ -6,12 +6,13 @@ use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 #[cfg(test)]
 use std::collections::HashSet;
+use std::fmt::Debug;
 
 use crate::{
     RemoveResult,
     on_blocks::data_node_store::{DataNode, DataNodeStore},
 };
-use cryfs_blockstore::{BlockId, LLBlockStore, InvalidBlockSizeError, LockingBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
@@ -23,13 +24,13 @@ use super::{
 };
 
 #[derive(Debug)]
-pub struct DataTreeStore<B: LLBlockStore + Send + Sync> {
+pub struct DataTreeStore<B: BlockStore + AsyncDrop + Debug + Send + Sync> {
     node_store: AsyncDropGuard<DataNodeStore<B>>,
 }
 
-impl<B: LLBlockStore + Send + Sync> DataTreeStore<B> {
+impl<B: BlockStore + AsyncDrop + Debug + Send + Sync> DataTreeStore<B> {
     pub async fn new(
-        block_store: AsyncDropGuard<LockingBlockStore<B>>,
+        block_store: AsyncDropGuard<B>,
         block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
@@ -38,7 +39,7 @@ impl<B: LLBlockStore + Send + Sync> DataTreeStore<B> {
     }
 }
 
-impl<B: LLBlockStore + Send + Sync> DataTreeStore<B> {
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTreeStore<B> {
     pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<DataTree<'_, B>>> {
         Ok(self
             .node_store
@@ -133,8 +134,10 @@ impl<B: LLBlockStore + Send + Sync> DataTreeStore<B> {
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync> AsyncDrop for DataTreeStore<B> {
-    type Error = anyhow::Error;
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> AsyncDrop
+    for DataTreeStore<B>
+{
+    type Error = <B as AsyncDrop>::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         self.node_store.async_drop().await
@@ -148,7 +151,7 @@ mod tests {
     use super::super::testutils::*;
     use super::*;
     use anyhow::anyhow;
-    use cryfs_blockstore::{InMemoryBlockStore, MockBlockStore};
+    use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore, MockBlockStore};
 
     fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
         let mut blockstore = AsyncDropGuard::new(MockBlockStore::new());

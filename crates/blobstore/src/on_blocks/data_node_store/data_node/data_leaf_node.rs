@@ -7,17 +7,15 @@ use super::super::{
     DataNode,
     layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
 };
-use cryfs_blockstore::{
-    Block as _, BlockId, BlockStore as _, LLBlockStore, LockingBlock, LockingBlockStore,
-};
+use cryfs_blockstore::{Block, BlockId, BlockStore};
 use cryfs_utils::data::Data;
 
-pub struct DataLeafNode<B: LLBlockStore + Send + Sync> {
-    block: LockingBlock<B>,
+pub struct DataLeafNode<B: BlockStore> {
+    block: B::Block,
 }
 
-impl<B: LLBlockStore + Send + Sync> DataLeafNode<B> {
-    pub fn new(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
+impl<B: BlockStore> DataLeafNode<B> {
+    pub fn new(block: B::Block, layout: &NodeLayout) -> Result<Self> {
         assert!(
             layout.block_size.as_u64() > u64::try_from(node::data::OFFSET).unwrap(),
             "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new"
@@ -61,11 +59,11 @@ impl<B: LLBlockStore + Send + Sync> DataLeafNode<B> {
         self.block.data()
     }
 
-    pub(super) fn into_block(self) -> LockingBlock<B> {
+    pub(super) fn into_block(self) -> B::Block {
         self.block
     }
 
-    pub(super) async fn flush(&mut self, blockstore: &LockingBlockStore<B>) -> Result<()> {
+    pub(super) async fn flush(&mut self, blockstore: &B) -> Result<()> {
         blockstore.flush_block(&mut self.block).await
     }
 
@@ -148,7 +146,7 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
     data
 }
 
-impl<B: LLBlockStore + Send + Sync> Debug for DataLeafNode<B> {
+impl<B: BlockStore> Debug for DataLeafNode<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DataLeafNode")
             .field("block_id", &self.block_id())
@@ -161,7 +159,7 @@ impl<B: LLBlockStore + Send + Sync> Debug for DataLeafNode<B> {
 mod tests {
     use super::super::super::testutils::*;
     use super::*;
-    use cryfs_blockstore::BLOCKID_LEN;
+    use cryfs_blockstore::{BLOCKID_LEN, InMemoryBlockStore, LockingBlockStore};
     use rand::{Rng, SeedableRng, rngs::SmallRng};
 
     #[allow(non_snake_case)]
@@ -175,7 +173,11 @@ mod tests {
                     let node = new_full_leaf_node(nodestore).await;
 
                     let block = node.into_block();
-                    let node = DataLeafNode::new(block, nodestore.layout()).unwrap();
+                    let node = DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    )
+                    .unwrap();
 
                     assert_eq!(
                         nodestore.layout().max_bytes_per_leaf() as usize,
@@ -193,7 +195,11 @@ mod tests {
                     let node = new_empty_leaf_node(nodestore).await;
 
                     let block = node.into_block();
-                    let node = DataLeafNode::new(block, nodestore.layout()).unwrap();
+                    let node = DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    )
+                    .unwrap();
 
                     assert_eq!(0, node.data().len());
                 })
@@ -215,7 +221,7 @@ mod tests {
 
                     assert_eq!(
                         "Loaded a node with format version 10 but the current version is 0",
-                        DataLeafNode::new(block, nodestore.layout())
+                        DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -239,7 +245,10 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let _ = DataLeafNode::new(block, nodestore.layout());
+                    let _ = DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    );
                 })
             })
             .await;
@@ -257,9 +266,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded block of size 1023 but expected 1024",
-                        DataLeafNode::new(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
                 })
             })
@@ -278,9 +290,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded block of size 1025 but expected 1024",
-                        DataLeafNode::new(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
                 })
             })
@@ -297,7 +312,11 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let node = DataLeafNode::new(block, nodestore.layout()).unwrap();
+                    let node = DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                        block,
+                        nodestore.layout(),
+                    )
+                    .unwrap();
                     assert_eq!(
                         nodestore.layout().max_bytes_per_leaf() as usize,
                         node.data().len()
@@ -339,9 +358,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded a leaf that claims to store 1017 bytes but the maximum is 1016.",
-                        DataLeafNode::new(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataLeafNode::<LockingBlockStore<InMemoryBlockStore>>::new(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
 
                     // Still fails when loading

@@ -6,14 +6,14 @@ use futures::future::BoxFuture;
 use futures::{future, join};
 #[cfg(feature = "slow-tests-any")]
 use iter_chunks::IterChunks;
-
-use cryfs_blockstore::{
-    BlockId, LLBlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
-};
-use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
+use std::fmt::Debug;
 
 use super::super::data_node_store::{DataNodeStore, NodeLayout};
 use super::{store::DataTreeStore, tree::DataTree};
+use cryfs_blockstore::{
+    BlockId, BlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
+};
+use cryfs_utils::{async_drop::AsyncDrop, data::Data, testutils::data_fixture::DataFixture};
 
 pub const PHYSICAL_BLOCK_SIZE: Byte = Byte::from_u64(128);
 
@@ -24,7 +24,9 @@ pub struct TreeFixture {
 }
 
 impl TreeFixture {
-    pub async fn create_tree_with_data<B: LLBlockStore + Send + Sync>(
+    pub async fn create_tree_with_data<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         store: &DataTreeStore<B>,
         num_bytes: usize,
         data_seed: u64,
@@ -40,7 +42,9 @@ impl TreeFixture {
         }
     }
 
-    pub async fn create_tree_with_data_and_id<B: LLBlockStore + Send + Sync>(
+    pub async fn create_tree_with_data_and_id<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         store: &DataTreeStore<B>,
         id: BlockId,
         num_bytes: usize,
@@ -57,7 +61,9 @@ impl TreeFixture {
         }
     }
 
-    pub async fn assert_data_is_still_intact<B: LLBlockStore + Send + Sync>(
+    pub async fn assert_data_is_still_intact<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         &self,
         store: &DataTreeStore<B>,
     ) {
@@ -75,13 +81,17 @@ fn data(size: usize, seed: u64) -> Data {
     DataFixture::new(seed).get(size).into()
 }
 
-pub async fn create_one_leaf_tree<B: LLBlockStore + Send + Sync>(
+pub async fn create_one_leaf_tree<
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+>(
     store: &DataTreeStore<B>,
 ) -> DataTree<B> {
     store.create_tree().await.unwrap()
 }
 
-pub async fn create_multi_leaf_tree<B: LLBlockStore + Send + Sync>(
+pub async fn create_multi_leaf_tree<
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+>(
     store: &DataTreeStore<B>,
     num_leaves: u64,
 ) -> DataTree<B> {
@@ -158,14 +168,14 @@ pub async fn manually_create_tree<B: LLBlockStore + Send + Sync>(
 }
 
 pub async fn with_treestore(
-    f: impl FnOnce(&DataTreeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
+    f: impl FnOnce(&DataTreeStore<LockingBlockStore<InMemoryBlockStore>>) -> BoxFuture<'_, ()>,
 ) {
     with_treestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
 }
 
 pub async fn with_treestore_with_blocksize(
     blocksize_bytes: Byte,
-    f: impl FnOnce(&DataTreeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
+    f: impl FnOnce(&DataTreeStore<LockingBlockStore<InMemoryBlockStore>>) -> BoxFuture<'_, ()>,
 ) {
     let mut treestore = DataTreeStore::new(
         LockingBlockStore::new(InMemoryBlockStore::new()),
@@ -179,8 +189,8 @@ pub async fn with_treestore_with_blocksize(
 
 pub async fn with_treestore_and_nodestore(
     f: impl for<'a> FnOnce(
-        &'a DataTreeStore<SharedBlockStore<InMemoryBlockStore>>,
-        &'a DataNodeStore<SharedBlockStore<InMemoryBlockStore>>,
+        &'a DataTreeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
+        &'a DataNodeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
     ) -> BoxFuture<'a, ()>,
 ) {
     with_treestore_and_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
@@ -189,8 +199,8 @@ pub async fn with_treestore_and_nodestore(
 pub async fn with_treestore_and_nodestore_with_blocksize(
     blocksize: Byte,
     f: impl for<'a> FnOnce(
-        &'a DataTreeStore<SharedBlockStore<InMemoryBlockStore>>,
-        &'a DataNodeStore<SharedBlockStore<InMemoryBlockStore>>,
+        &'a DataTreeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
+        &'a DataNodeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
     ) -> BoxFuture<'a, ()>,
 ) {
     let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());

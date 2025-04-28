@@ -5,17 +5,17 @@ use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore};
+use cryfs_blockstore::{Block, BlockId, BlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]
-pub enum DataNode<B: LLBlockStore + Send + Sync> {
+pub enum DataNode<B: BlockStore> {
     Inner(DataInnerNode<B>),
     Leaf(DataLeafNode<B>),
 }
 
-impl<B: LLBlockStore + Send + Sync> DataNode<B> {
-    pub fn parse(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
+impl<B: BlockStore> DataNode<B> {
+    pub fn parse(block: B::Block, layout: &NodeLayout) -> Result<Self> {
         ensure!(
             usize::try_from(layout.block_size).unwrap() == block.data().len(),
             "Expected to load block of size {} but loaded block {:?} had size {}",
@@ -61,14 +61,14 @@ impl<B: LLBlockStore + Send + Sync> DataNode<B> {
         }
     }
 
-    pub(crate) fn _into_block(self) -> LockingBlock<B> {
+    pub(crate) fn _into_block(self) -> B::Block {
         match self {
             Self::Leaf(leaf) => leaf.into_block(),
             Self::Inner(inner) => inner.into_block(),
         }
     }
 
-    pub(crate) async fn flush(&mut self, block_store: &LockingBlockStore<B>) -> Result<()> {
+    pub(crate) async fn flush(&mut self, block_store: &B) -> Result<()> {
         match self {
             Self::Leaf(leaf) => leaf.flush(block_store).await,
             Self::Inner(inner) => inner.flush(block_store).await,
@@ -140,7 +140,7 @@ mod tests {
     use super::*;
     use binary_layout::Field;
     use byte_unit::Byte;
-    use cryfs_blockstore::{BLOCKID_LEN, InMemoryBlockStore};
+    use cryfs_blockstore::{BLOCKID_LEN, InMemoryBlockStore, LockingBlockStore};
 
     #[allow(non_snake_case)]
     mod parse {
@@ -153,7 +153,12 @@ mod tests {
                     let node = new_full_inner_node(nodestore).await;
 
                     let block = node.into_block();
-                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    let DataNode::Inner(node) =
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout(),
+                        )
+                        .unwrap()
                     else {
                         panic!("Expected inner node");
                     };
@@ -179,7 +184,12 @@ mod tests {
                         .unwrap();
 
                     let block = node.into_block();
-                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    let DataNode::Inner(node) =
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout(),
+                        )
+                        .unwrap()
                     else {
                         panic!("Expected inner node");
                     };
@@ -198,7 +208,12 @@ mod tests {
                     let node = new_full_leaf_node(nodestore).await;
 
                     let block = node.into_block();
-                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    let DataNode::Leaf(node) =
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout(),
+                        )
+                        .unwrap()
                     else {
                         panic!("Expected leaf node");
                     };
@@ -219,7 +234,12 @@ mod tests {
                     let node = new_empty_leaf_node(nodestore).await;
 
                     let block = node.into_block();
-                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    let DataNode::Leaf(node) =
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout(),
+                        )
+                        .unwrap()
                     else {
                         panic!("Expected leaf node");
                     };
@@ -244,7 +264,7 @@ mod tests {
 
                     assert_eq!(
                         format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -273,7 +293,7 @@ mod tests {
 
                     assert_eq!(
                         format!("Loaded a node BlockId({}) with format_version_header == 10. This is not a supported format.", node_id.to_hex()),
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -301,7 +321,7 @@ mod tests {
 
                     assert_eq!(
                         format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1023", node_id.to_hex()),
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -323,7 +343,7 @@ mod tests {
 
                     assert_eq!(
                         format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1025", node_id.to_hex()),
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -345,7 +365,7 @@ mod tests {
 
                     assert_eq!(
                         format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1023", node_id.to_hex()),
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -367,7 +387,7 @@ mod tests {
 
                     assert_eq!(
                         format!("Expected to load block of size 1024 but loaded block BlockId({}) had size 1025", node_id.to_hex()),
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -386,7 +406,12 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let DataNode::Inner(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    let DataNode::Inner(node) =
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout(),
+                        )
+                        .unwrap()
                     else {
                         panic!("Expected an inner node");
                     };
@@ -406,7 +431,12 @@ mod tests {
 
                     let block = node.into_block();
 
-                    let DataNode::Leaf(node) = DataNode::parse(block, nodestore.layout()).unwrap()
+                    let DataNode::Leaf(node) =
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout(),
+                        )
+                        .unwrap()
                     else {
                         panic!("Expected a leaf node");
                     };
@@ -465,9 +495,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded an inner node with depth 11 but the maximum is 10",
-                        DataNode::parse(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
 
                     // Still fails when loading
@@ -492,7 +525,7 @@ mod tests {
 
                     assert_eq!(
                         "Loaded an inner node that claims to store 0 children but the minimum is 1.",
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -519,7 +552,7 @@ mod tests {
 
                     assert_eq!(
                         "Loaded an inner node that claims to store 64 children but the maximum is 63.",
-                        DataNode::parse(block, nodestore.layout())
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(block, nodestore.layout())
                             .unwrap_err()
                             .to_string(),
                     );
@@ -548,9 +581,12 @@ mod tests {
 
                     assert_eq!(
                         "Loaded a leaf that claims to store 1017 bytes but the maximum is 1016.",
-                        DataNode::parse(block, nodestore.layout())
-                            .unwrap_err()
-                            .to_string(),
+                        DataNode::<LockingBlockStore<InMemoryBlockStore>>::parse(
+                            block,
+                            nodestore.layout()
+                        )
+                        .unwrap_err()
+                        .to_string(),
                     );
 
                     // Still fails when loading
@@ -1017,6 +1053,8 @@ mod tests {
     }
 
     mod overwrite_node_with {
+        use cryfs_blockstore::LockingBlockStore;
+
         use super::*;
 
         #[tokio::test]

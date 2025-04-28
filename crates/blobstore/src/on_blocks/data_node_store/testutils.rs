@@ -10,8 +10,8 @@ use cryfs_utils::data::Data;
 pub const PHYSICAL_BLOCK_SIZE: Byte = Byte::from_u64(1024);
 
 pub async fn new_full_leaf_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
-) -> DataLeafNode<InMemoryBlockStore> {
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
+) -> DataLeafNode<LockingBlockStore<InMemoryBlockStore>> {
     nodestore
         .create_new_leaf_node(&data_fixture(
             nodestore.layout().max_bytes_per_leaf() as usize,
@@ -22,8 +22,8 @@ pub async fn new_full_leaf_node(
 }
 
 pub async fn new_empty_leaf_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
-) -> DataLeafNode<InMemoryBlockStore> {
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
+) -> DataLeafNode<LockingBlockStore<InMemoryBlockStore>> {
     nodestore
         .create_new_leaf_node(&vec![].into())
         .await
@@ -31,8 +31,8 @@ pub async fn new_empty_leaf_node(
 }
 
 pub async fn new_inner_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
-) -> DataInnerNode<InMemoryBlockStore> {
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
+) -> DataInnerNode<LockingBlockStore<InMemoryBlockStore>> {
     let leaf1_data = full_leaf_data(1);
     let leaf2_data = half_full_leaf_data(2);
     let (leaf1, leaf2) = join!(
@@ -46,8 +46,8 @@ pub async fn new_inner_node(
 }
 
 pub async fn new_full_inner_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
-) -> DataInnerNode<InMemoryBlockStore> {
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
+) -> DataInnerNode<LockingBlockStore<InMemoryBlockStore>> {
     let leaves = future::join_all(
         (0..nodestore.layout().max_children_per_inner_node())
             .map(|_| new_full_leaf_node(&nodestore))
@@ -61,16 +61,16 @@ pub async fn new_full_inner_node(
 }
 
 pub async fn load_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
     block_id: BlockId,
-) -> DataNode<InMemoryBlockStore> {
+) -> DataNode<LockingBlockStore<InMemoryBlockStore>> {
     nodestore.load(block_id).await.unwrap().unwrap()
 }
 
 pub async fn load_inner_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
     block_id: BlockId,
-) -> DataInnerNode<InMemoryBlockStore> {
+) -> DataInnerNode<LockingBlockStore<InMemoryBlockStore>> {
     let DataNode::Inner(inner) = nodestore.load(block_id).await.unwrap().unwrap() else {
         panic!("Expected to load an inner node but got a leaf node instead");
     };
@@ -78,9 +78,9 @@ pub async fn load_inner_node(
 }
 
 pub async fn load_leaf_node(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
     block_id: BlockId,
-) -> DataLeafNode<InMemoryBlockStore> {
+) -> DataLeafNode<LockingBlockStore<InMemoryBlockStore>> {
     let DataNode::Leaf(leaf) = nodestore.load(block_id).await.unwrap().unwrap() else {
         panic!("Expected to load a leaf node but got an inner node instead");
     };
@@ -88,14 +88,14 @@ pub async fn load_leaf_node(
 }
 
 pub async fn with_nodestore(
-    f: impl FnOnce(&DataNodeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
+    f: impl FnOnce(&DataNodeStore<LockingBlockStore<InMemoryBlockStore>>) -> BoxFuture<'_, ()>,
 ) {
     with_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
 }
 
 pub async fn with_nodestore_with_blocksize(
     blocksize: Byte,
-    f: impl FnOnce(&DataNodeStore<InMemoryBlockStore>) -> BoxFuture<'_, ()>,
+    f: impl FnOnce(&DataNodeStore<LockingBlockStore<InMemoryBlockStore>>) -> BoxFuture<'_, ()>,
 ) {
     let mut nodestore =
         DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), blocksize)
@@ -150,7 +150,7 @@ pub fn data_fixture(len: usize, seed: u64) -> Data {
 }
 
 pub async fn new_full_leaves(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
     num: u32,
 ) -> Vec<BlockId> {
     future::join_all(
@@ -165,7 +165,7 @@ pub async fn new_full_leaves(
 }
 
 pub async fn new_inner_nodes(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
     num: u32,
 ) -> Vec<BlockId> {
     future::join_all(
@@ -180,7 +180,7 @@ pub async fn new_inner_nodes(
 }
 
 pub async fn assert_full_inner_node_is_valid(
-    nodestore: &DataNodeStore<InMemoryBlockStore>,
+    nodestore: &DataNodeStore<LockingBlockStore<InMemoryBlockStore>>,
     inner_node_id: BlockId,
 ) {
     let inner = load_inner_node(nodestore, inner_node_id).await;

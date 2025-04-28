@@ -96,7 +96,9 @@ impl FilesystemFixture {
         .expect("Failed to setup blockstore stack")
     }
 
-    async fn make_nodestore(&self) -> AsyncDropGuard<DataNodeStore<DynBlockStore>> {
+    async fn make_nodestore(
+        &self,
+    ) -> AsyncDropGuard<DataNodeStore<LockingBlockStore<DynBlockStore>>> {
         let blockstore = self.make_locking_blockstore().await;
 
         DataNodeStore::new(blockstore, self.config.config.config().blocksize)
@@ -104,7 +106,9 @@ impl FilesystemFixture {
             .expect("Failed to create DataNodeStore")
     }
 
-    async fn make_blobstore(&self) -> AsyncDropGuard<BlobStoreOnBlocks<DynBlockStore>> {
+    async fn make_blobstore(
+        &self,
+    ) -> AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>> {
         let blockstore = self.make_locking_blockstore().await;
 
         BlobStoreOnBlocks::new(blockstore, self.config.config.config().blocksize)
@@ -114,7 +118,7 @@ impl FilesystemFixture {
 
     async fn make_fsblobstore(
         &self,
-    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>> {
+    ) -> AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>> {
         let blobstore = self.make_blobstore().await;
 
         FsBlobStore::new(blobstore)
@@ -134,7 +138,9 @@ impl FilesystemFixture {
 
     pub async fn update_nodestore<R>(
         &self,
-        update_fn: impl for<'b> FnOnce(&'b DataNodeStore<DynBlockStore>) -> BoxFuture<'b, R>,
+        update_fn: impl for<'b> FnOnce(
+            &'b DataNodeStore<LockingBlockStore<DynBlockStore>>,
+        ) -> BoxFuture<'b, R>,
     ) -> R {
         let mut nodestore = self.make_nodestore().await;
         let result = update_fn(&nodestore).await;
@@ -144,7 +150,9 @@ impl FilesystemFixture {
 
     pub async fn update_blobstore<R>(
         &self,
-        update_fn: impl for<'b> FnOnce(&'b BlobStoreOnBlocks<DynBlockStore>) -> BoxFuture<'b, R>,
+        update_fn: impl for<'b> FnOnce(
+            &'b BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>,
+        ) -> BoxFuture<'b, R>,
     ) -> R {
         let mut blobstore = self.make_blobstore().await;
         let result = update_fn(&blobstore).await;
@@ -155,7 +163,7 @@ impl FilesystemFixture {
     pub async fn update_fsblobstore<R>(
         &self,
         update_fn: impl for<'b> FnOnce(
-            &'b FsBlobStore<BlobStoreOnBlocks<DynBlockStore>>,
+            &'b FsBlobStore<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
         ) -> BoxFuture<'b, R>,
     ) -> R {
         let mut fsblobstore = self.make_fsblobstore().await;

@@ -3,8 +3,8 @@ use std::num::NonZeroU32;
 use byte_unit::Byte;
 use cryfs_blobstore::{BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    ActionCounts, ClientId, DynBlockStore, InMemoryBlockStore, IntegrityConfig, SharedBlockStore,
-    TrackingBlockStore,
+    ActionCounts, ClientId, DynBlockStore, InMemoryBlockStore, IntegrityConfig, LockingBlockStore,
+    SharedBlockStore, TrackingBlockStore,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
@@ -24,7 +24,7 @@ use crate::filesystem_test_ext::FilesystemTestExt;
 const BLOCKSIZE_BYTES: u64 = 4096;
 const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
 
-// ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<DynBlockStore>>>
+// ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>
 
 pub struct FilesystemFixture<FS>
 where
@@ -34,7 +34,7 @@ where
     filesystem: SyncDrop<FS>,
 
     blockstore: SyncDrop<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
-    blobstore: SyncDrop<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>,
+    blobstore: SyncDrop<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
 
     _local_state_tempdir: TempDir,
 }
@@ -75,7 +75,10 @@ where
 
     async fn make_blobstore(
         blockstore: &AsyncDropGuard<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
-    ) -> (TempDir, AsyncDropGuard<BlobStoreOnBlocks<DynBlockStore>>) {
+    ) -> (
+        TempDir,
+        AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
+    ) {
         let local_state_tempdir = TempDir::new("cryfs-e2e-perf-tests").unwrap();
 
         let locking_blockstore = setup_blockstore_stack_dyn(
@@ -104,9 +107,12 @@ where
     }
 
     async fn make_device(
-        blobstore: &AsyncDropGuard<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>,
+        blobstore: &AsyncDropGuard<
+            AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
+        >,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<DynBlockStore>>>> {
+    ) -> AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>>
+    {
         let blobstore = AsyncDropArc::clone(blobstore);
 
         let device = make_device(

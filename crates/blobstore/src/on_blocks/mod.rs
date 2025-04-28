@@ -24,7 +24,7 @@ mod tests {
     struct TestFixture<const BLOCK_SIZE_BYTES: u64>;
     #[async_trait]
     impl<const BLOCK_SIZE_BYTES: u64> Fixture for TestFixture<BLOCK_SIZE_BYTES> {
-        type ConcreteBlobStore = BlobStoreOnBlocks<InMemoryBlockStore>;
+        type ConcreteBlobStore = BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>;
         fn new() -> Self {
             Self {}
         }
