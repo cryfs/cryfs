@@ -6,7 +6,7 @@ use std::fmt::{self, Debug};
 
 use crate::{
     BlockId,
-    high_level::{Block as _, BlockStore as _, LockingBlockStore},
+    high_level::{Block as _, BlockStore, LockingBlockStore},
     low_level::{
         BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
     },
@@ -17,13 +17,15 @@ use cryfs_utils::{
     data::Data,
 };
 
-/// Wrap a [LockingBlockStore] into a [BlockStore] so that we can run the regular block store tests on it.
-pub struct BlockStoreAdapter<B: LLBlockStore + Send + Sync + Debug + 'static>(
-    AsyncDropGuard<LockingBlockStore<B>>,
-);
+/// Wrap a [BlockStore] into a [LLBlockStore] so that we can run the regular block store tests on it.
+pub struct BlockStoreAdapter<
+    B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static,
+>(AsyncDropGuard<B>);
 
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreAdapter<B> {
-    pub fn new(store: AsyncDropGuard<LockingBlockStore<B>>) -> AsyncDropGuard<Self> {
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
+    BlockStoreAdapter<B>
+{
+    pub fn new(store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self(store))
     }
 
@@ -33,7 +35,9 @@ impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreAdapter<B> {
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreReader for BlockStoreAdapter<B> {
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
+    BlockStoreReader for BlockStoreAdapter<B>
+{
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         Ok(self.0.load(*id).await?.is_some())
     }
@@ -67,14 +71,18 @@ impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreReader for Block
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreDeleter for BlockStoreAdapter<B> {
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
+    BlockStoreDeleter for BlockStoreAdapter<B>
+{
     async fn remove(&self, id: &BlockId) -> Result<crate::utils::RemoveResult> {
         self.0.remove_by_id(id).await
     }
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreWriter for BlockStoreAdapter<B> {
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
+    BlockStoreWriter for BlockStoreAdapter<B>
+{
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<crate::utils::TryCreateResult> {
         self.0.try_create(id, &data.to_vec().into()).await
     }
@@ -84,24 +92,31 @@ impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreWriter for Block
     }
 }
 
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> Debug for BlockStoreAdapter<B> {
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static> Debug
+    for BlockStoreAdapter<B>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlockStoreAdapter")
     }
 }
 
 #[async_trait]
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop for BlockStoreAdapter<B> {
-    type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static> AsyncDrop
+    for BlockStoreAdapter<B>
+{
+    type Error = <B as AsyncDrop>::Error;
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         self.0.async_drop().await
     }
 }
 
-impl<B: LLBlockStore + Send + Sync + Debug + 'static> LLBlockStore for BlockStoreAdapter<B> {}
+impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static> LLBlockStore
+    for BlockStoreAdapter<B>
+{
+}
 
-/// TestFixtureAdapter takes a [Fixture] for a [BlockStore] and makes it into
-/// a [Fixture] that creates a [LockingBlockStore] based on that [BlockStore].
+/// TestFixtureAdapter takes a [Fixture] for a [LLBlockStore] and makes it into
+/// a [Fixture] that creates a [LockingBlockStore] based on that [LLBlockStore].
 /// This allows using our block store test suite on [LockingBlockStore].
 pub struct TestFixtureAdapter<F: Fixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> {
     f: F,
@@ -110,7 +125,7 @@ pub struct TestFixtureAdapter<F: Fixture + Sync, const FLUSH_CACHE_ON_YIELD: boo
 impl<F: Fixture + Send + Sync, const FLUSH_CACHE_ON_YIELD: bool> crate::tests::Fixture
     for TestFixtureAdapter<F, FLUSH_CACHE_ON_YIELD>
 {
-    type ConcreteBlockStore = BlockStoreAdapter<F::ConcreteBlockStore>;
+    type ConcreteBlockStore = BlockStoreAdapter<LockingBlockStore<F::ConcreteBlockStore>>;
     fn new() -> Self {
         Self { f: F::new() }
     }
