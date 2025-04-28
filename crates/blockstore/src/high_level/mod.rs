@@ -1,2 +1,2 @@
 mod implementations;
-pub use implementations::{Block, LockingBlockStore};
+pub use implementations::{LockingBlock, LockingBlockStore};

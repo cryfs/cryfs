@@ -7,15 +7,15 @@ use super::super::{
     DataNode,
     layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
 };
-use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{LockingBlock, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::Data;
 
 pub struct DataLeafNode<B: BlockStore + Send + Sync> {
-    block: Block<B>,
+    block: LockingBlock<B>,
 }
 
 impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
-    pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
+    pub fn new(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
         assert!(
             layout.block_size.as_u64() > u64::try_from(node::data::OFFSET).unwrap(),
             "Block doesn't have enough space for header. This should have been checked before calling DataLeafNode::new"
@@ -59,7 +59,7 @@ impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
         self.block.data()
     }
 
-    pub(super) fn into_block(self) -> Block<B> {
+    pub(super) fn into_block(self) -> LockingBlock<B> {
         self.block
     }
 

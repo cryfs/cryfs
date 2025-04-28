@@ -5,11 +5,11 @@ use super::{LockingBlockStore, cache::BlockCacheEntryGuard};
 use crate::{BlockId, BlockStore, RemoveResult};
 use cryfs_utils::data::Data;
 
-pub struct Block<B: BlockStore + Send + Sync + Debug + 'static> {
+pub struct LockingBlock<B: BlockStore + Send + Sync + Debug + 'static> {
     pub(super) cache_entry: BlockCacheEntryGuard<B>,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug> Block<B> {
+impl<B: crate::low_level::BlockStore + Send + Sync + Debug> LockingBlock<B> {
     #[inline]
     pub fn block_id(&self) -> &BlockId {
         self.cache_entry.key()
@@ -54,7 +54,9 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug> Block<B> {
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> fmt::Debug for Block<B> {
+impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> fmt::Debug
+    for LockingBlock<B>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Block")
             .field("block_id", self.block_id())

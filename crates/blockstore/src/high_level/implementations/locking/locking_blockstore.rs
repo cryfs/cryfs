@@ -11,7 +11,7 @@ use futures::{StreamExt, TryStreamExt as _, future, stream};
 
 use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
 
-use super::Block;
+use super::LockingBlock;
 use super::cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
 
 // TODO Should we require B: OptimizedBlockStoreWriter and use its methods?
@@ -33,7 +33,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         })
     }
 
-    pub async fn load(&self, block_id: BlockId) -> Result<Option<Block<B>>> {
+    pub async fn load(&self, block_id: BlockId) -> Result<Option<LockingBlock<B>>> {
         // TODO Cache non-existence?
         let mut cache_entry = self.cache.async_lock(block_id).await?;
         if cache_entry.value().is_none() {
@@ -50,7 +50,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
             }
         }
         if cache_entry.value().is_some() {
-            Ok(Some(Block { cache_entry }))
+            Ok(Some(LockingBlock { cache_entry }))
         } else {
             Ok(None)
         }
@@ -199,7 +199,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
         }
     }
 
-    pub async fn flush_block(&self, block: &mut Block<B>) -> Result<()> {
+    pub async fn flush_block(&self, block: &mut LockingBlock<B>) -> Result<()> {
         let block_id = *block.block_id();
         let entry = block
             .cache_entry

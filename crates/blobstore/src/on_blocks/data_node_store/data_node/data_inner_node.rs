@@ -5,17 +5,17 @@ use std::num::{NonZeroU8, NonZeroU32};
 
 use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::DataNode;
-use cryfs_blockstore::{BLOCKID_LEN, Block, BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{BLOCKID_LEN, LockingBlock, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;
 
 pub struct DataInnerNode<B: BlockStore + Send + Sync> {
-    block: Block<B>,
+    block: LockingBlock<B>,
 }
 
 impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
-    pub fn new(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
+    pub fn new(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = node::data::OFFSET + 2 * BLOCKID_LEN;
         assert!(
@@ -77,7 +77,7 @@ impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
         self.block.data()
     }
 
-    pub(super) fn into_block(self) -> Block<B> {
+    pub(super) fn into_block(self) -> LockingBlock<B> {
         self.block
     }
 

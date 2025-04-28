@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::{
-    high_level::{Block, LockingBlockStore},
+    high_level::{LockingBlock, LockingBlockStore},
     low_level::BlockStore,
     tests::{Fixture, data},
     utils::RemoveResult,
@@ -61,7 +61,7 @@ where
 
 async fn assert_block_is_usable<B: BlockStore + Send + Sync + Debug>(
     store: &LockingBlockStore<B>,
-    mut block: Block<B>,
+    mut block: LockingBlock<B>,
 ) {
     // Write full block space and check it was correctly written
     let fixture = data(block.data().len(), 102);

@@ -8,7 +8,7 @@ use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{Block, BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{LockingBlock, BlockId, BlockStore, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub enum DataNode<B: BlockStore + Send + Sync> {
 }
 
 impl<B: BlockStore + Send + Sync> DataNode<B> {
-    pub fn parse(block: Block<B>, layout: &NodeLayout) -> Result<Self> {
+    pub fn parse(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
         ensure!(
             usize::try_from(layout.block_size).unwrap() == block.data().len(),
             "Expected to load block of size {} but loaded block {:?} had size {}",
@@ -68,7 +68,7 @@ impl<B: BlockStore + Send + Sync> DataNode<B> {
         self._into_block().remove(&node_store.block_store).await
     }
 
-    fn _into_block(self) -> Block<B> {
+    fn _into_block(self) -> LockingBlock<B> {
         match self {
             Self::Leaf(leaf) => leaf.into_block(),
             Self::Inner(inner) => inner.into_block(),

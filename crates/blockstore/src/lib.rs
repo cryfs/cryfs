@@ -7,7 +7,7 @@ mod utils;
 pub use utils::{RemoveResult, TryCreateResult};
 
 mod high_level;
-pub use high_level::{Block, LockingBlockStore};
+pub use high_level::{LockingBlock, LockingBlockStore};
 
 mod low_level;
 pub use low_level::{

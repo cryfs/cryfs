@@ -1,2 +1,2 @@
 mod locking;
-pub use locking::{Block, LockingBlockStore};
+pub use locking::{LockingBlock, LockingBlockStore};
