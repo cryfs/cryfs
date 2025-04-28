@@ -24,7 +24,7 @@ use crate::{
 use cryfs_blobstore::{
     BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore,
 };
-use cryfs_blockstore::{BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
 use cryfs_filesystem::{
     config::ConfigLoadResult,
@@ -49,7 +49,7 @@ pub struct RecoverRunner<'c, PBM: ProgressBarManager> {
 impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> {
     type Result = Result<Vec<CorruptedError>>;
 
-    async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
+    async fn callback<B: LLBlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
         mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
@@ -162,7 +162,7 @@ async fn get_all_node_ids<B>(
     blockstore: &AsyncDropGuard<LockingBlockStore<B>>,
 ) -> Result<HashSet<BlockId>>
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
 {
     blockstore.all_blocks().await?.try_collect().await
 }
@@ -174,7 +174,7 @@ async fn check_all_unreachable_nodes<B>(
     pb: impl Progress,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
 {
     stream::iter(unreachable_nodes.iter())
         .map(async |&node_id| {
@@ -211,7 +211,7 @@ async fn check_all_reachable_blobs<B>(
     pb: impl Progress,
 ) -> Result<()>
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
 {
     task_queue::run_to_completion(MAX_CONCURRENCY, |task_spawner| {
         _check_all_reachable_blobs(
@@ -243,7 +243,7 @@ fn _check_all_reachable_blobs<'a, 'b, 'c, 'd, 'f, 'async_recursion, B>(
     pb: impl Progress + 'd,
 ) -> impl Future<Output = Result<()>> + 'async_recursion + Send
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
@@ -426,7 +426,7 @@ async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(
     pb: impl Progress + 'e,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'd: 'f,
@@ -496,7 +496,7 @@ async fn check_all_nodes_of_reachable_blobs<B>(
     pb: impl Progress,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
 {
     task_queue::run_to_completion(MAX_CONCURRENCY, async move |task_spawner| {
         for (blob_id, referenced_as) in all_blobs {
@@ -539,7 +539,7 @@ async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     pb: impl Progress + 'd,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
@@ -678,7 +678,7 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
     task_spawner: TaskSpawner<'f, CheckError>,
     pb: impl Progress + 'd,
 ) where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
@@ -763,7 +763,7 @@ impl SeenNodeInfo {
 
 fn seen_node_info<B>(node: &DataNode<B>) -> SeenNodeInfo
 where
-    B: BlockStore + Send + Sync + 'static,
+    B: LLBlockStore + Send + Sync + 'static,
 {
     match node {
         DataNode::Leaf(_) => SeenNodeInfo::Leaf,

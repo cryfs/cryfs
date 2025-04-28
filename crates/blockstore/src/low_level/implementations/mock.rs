@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use crate::{
     BlockId,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
     },
     utils::{RemoveResult, TryCreateResult},
 };
@@ -36,7 +36,7 @@ mock! {
         type Error = anyhow::Error;
         fn async_drop_impl<'a, 'r>(&'a mut self) -> BoxFuture<'r, Result<()>> where 'a: 'r;
     }
-    impl BlockStore for BlockStore {}
+    impl LLBlockStore for BlockStore {}
 }
 impl Debug for MockBlockStore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

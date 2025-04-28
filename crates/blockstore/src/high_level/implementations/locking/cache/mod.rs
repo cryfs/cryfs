@@ -27,14 +27,14 @@ const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
 // The cutoff age of blocks. Each time the task runs, blocks older than this will be pruned.
 const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
 
-pub struct BlockCache<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct BlockCache<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // Always Some except during destruction
     cache: Option<Arc<BlockCacheImpl<B>>>,
     // Always Some except during destruction
     prune_task: Option<AsyncDropGuard<PeriodicTask>>,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCache<B> {
     pub fn new() -> AsyncDropGuard<Self> {
         let cache = BlockCacheImpl::new();
         let cache_clone = Arc::clone(&cache);
@@ -209,7 +209,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
 }
 
 #[async_trait]
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop for BlockCache<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop for BlockCache<B> {
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<()> {
@@ -252,7 +252,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop 
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Debug for BlockCache<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Debug for BlockCache<B> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("BlockCache").finish()
     }

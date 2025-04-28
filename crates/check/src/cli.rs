@@ -3,7 +3,7 @@ use std::path::Path;
 
 use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_blockstore::{
-    AllowIntegrityViolations, BlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
+    AllowIntegrityViolations, LLBlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,
 };
 use cryfs_cli_utils::{
@@ -100,7 +100,7 @@ impl RecoverCli {
 }
 
 pub async fn check_filesystem(
-    blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Sync + Send>,
+    blockstore: AsyncDropGuard<impl LLBlockStore + OptimizedBlockStoreWriter + Sync + Send>,
     config_file_path: &Path,
     local_state_dir: &LocalStateDir,
     password_provider: &impl PasswordProvider,

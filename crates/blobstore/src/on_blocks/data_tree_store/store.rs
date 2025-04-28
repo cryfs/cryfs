@@ -11,7 +11,7 @@ use crate::{
     RemoveResult,
     on_blocks::data_node_store::{DataNode, DataNodeStore},
 };
-use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore, InvalidBlockSizeError, LockingBlockStore};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
@@ -23,11 +23,11 @@ use super::{
 };
 
 #[derive(Debug)]
-pub struct DataTreeStore<B: BlockStore + Send + Sync> {
+pub struct DataTreeStore<B: LLBlockStore + Send + Sync> {
     node_store: AsyncDropGuard<DataNodeStore<B>>,
 }
 
-impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
+impl<B: LLBlockStore + Send + Sync> DataTreeStore<B> {
     pub async fn new(
         block_store: AsyncDropGuard<LockingBlockStore<B>>,
         block_size: Byte,
@@ -38,7 +38,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
     }
 }
 
-impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
+impl<B: LLBlockStore + Send + Sync> DataTreeStore<B> {
     pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<DataTree<'_, B>>> {
         Ok(self
             .node_store
@@ -133,7 +133,7 @@ impl<B: BlockStore + Send + Sync> DataTreeStore<B> {
 }
 
 #[async_trait]
-impl<B: BlockStore + Send + Sync> AsyncDrop for DataTreeStore<B> {
+impl<B: LLBlockStore + Send + Sync> AsyncDrop for DataTreeStore<B> {
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {

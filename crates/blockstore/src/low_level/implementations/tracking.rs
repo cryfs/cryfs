@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use crate::{
     BlockId, RemoveResult, TryCreateResult,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError,
         OptimizedBlockStoreWriter,
     },
 };
@@ -150,7 +150,7 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     }
 }
 
-impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
+impl<B: LLBlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> LLBlockStore
     for TrackingBlockStore<B>
 {
 }

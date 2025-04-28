@@ -4,16 +4,16 @@ use futures::stream::BoxStream;
 
 use super::data_tree_store::DataTree;
 use crate::{Blob, BlobId};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore};
 use cryfs_utils::data::Data;
 
 #[derive(Debug)]
-pub struct BlobOnBlocks<'a, B: BlockStore + Send + Sync> {
+pub struct BlobOnBlocks<'a, B: LLBlockStore + Send + Sync> {
     // Always Some unless during destruction
     tree: Option<DataTree<'a, B>>,
 }
 
-impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
+impl<'a, B: LLBlockStore + Send + Sync> BlobOnBlocks<'a, B> {
     pub(super) fn new(tree: DataTree<'a, B>) -> Self {
         Self { tree: Some(tree) }
     }
@@ -33,7 +33,7 @@ impl<'a, B: BlockStore + Send + Sync> BlobOnBlocks<'a, B> {
 }
 
 #[async_trait]
-impl<'a, B: BlockStore + Send + Sync> Blob for BlobOnBlocks<'a, B> {
+impl<'a, B: LLBlockStore + Send + Sync> Blob for BlobOnBlocks<'a, B> {
     fn id(&self) -> BlobId {
         BlobId {
             root: *self._tree().root_node_id(),

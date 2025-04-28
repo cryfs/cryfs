@@ -11,7 +11,7 @@ use thiserror::Error;
 use crate::on_blocks::data_node_store::{
     DataInnerNode, DataLeafNode, DataNode, DataNodeStore, NodeLayout,
 };
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore};
 use cryfs_utils::data::Data;
 
 // TODO All following TODOs apply for here and for tree.rs
@@ -24,7 +24,7 @@ use cryfs_utils::data::Data;
 //  - Look at assert vs ensure - when something can be caused by the data on disk instead of a programming bug, it must be ensure!
 //  - Look at assertions and make sure they all show a good error message
 
-pub enum LeafHandle<'a, B: BlockStore + Send + Sync> {
+pub enum LeafHandle<'a, B: LLBlockStore + Send + Sync> {
     Borrowed {
         leaf: &'a mut DataLeafNode<B>,
     },
@@ -37,7 +37,7 @@ pub enum LeafHandle<'a, B: BlockStore + Send + Sync> {
     },
 }
 
-impl<'a, B: BlockStore + Send + Sync> LeafHandle<'a, B> {
+impl<'a, B: LLBlockStore + Send + Sync> LeafHandle<'a, B> {
     pub fn new_not_loaded_yet(store: &'a DataNodeStore<B>, leaf_block_id: BlockId) -> Self {
         Self::NotLoadedYet {
             store,
@@ -100,7 +100,7 @@ impl<'a, B: BlockStore + Send + Sync> LeafHandle<'a, B> {
 }
 
 #[async_trait]
-pub trait TraversalCallbacks<B: BlockStore + Send + Sync> {
+pub trait TraversalCallbacks<B: LLBlockStore + Send + Sync> {
     async fn on_existing_leaf(
         &self,
         leaf_index: u64,
@@ -112,7 +112,7 @@ pub trait TraversalCallbacks<B: BlockStore + Send + Sync> {
 }
 
 pub async fn traverse_and_return_new_root<
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
     C: TraversalCallbacks<B> + Sync,
     const ALLOW_WRITES: bool,
 >(
@@ -134,7 +134,7 @@ pub async fn traverse_and_return_new_root<
 }
 
 async fn _traverse_and_return_new_root<
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
     C: TraversalCallbacks<B> + Sync,
     const ALLOW_WRITES: bool,
 >(
@@ -225,7 +225,7 @@ async fn _traverse_and_return_new_root<
 
 // TODO leaf_offset u32 or u64?
 async fn _traverse_existing_subtree<
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
     C: TraversalCallbacks<B> + Sync,
     const ALLOW_WRITES: bool,
 >(
@@ -297,7 +297,7 @@ async fn _traverse_existing_subtree<
 
 // TODO leaf_offset u32 or u64?
 async fn _traverse_existing_subtree_of_inner_node<
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
     C: TraversalCallbacks<B> + Sync,
     const ALLOW_WRITES: bool,
 >(
@@ -354,7 +354,7 @@ async fn _traverse_existing_subtree_of_inner_node<
             })?;
         struct PanicCallbacks;
         #[async_trait]
-        impl<B: BlockStore + Send + Sync> TraversalCallbacks<B> for PanicCallbacks {
+        impl<B: LLBlockStore + Send + Sync> TraversalCallbacks<B> for PanicCallbacks {
             async fn on_existing_leaf(
                 &self,
                 _index: u64,
@@ -472,7 +472,7 @@ async fn _traverse_existing_subtree_of_inner_node<
             callbacks: &'a C,
         }
         #[async_trait]
-        impl<'a, B: BlockStore + Send + Sync, C: TraversalCallbacks<B> + Sync>
+        impl<'a, B: LLBlockStore + Send + Sync, C: TraversalCallbacks<B> + Sync>
             CreateNewSubtreeCallbacks<B> for Callbacks<'a, C>
         {
             fn on_create_leaf(&self, index: u64) -> Data {
@@ -522,7 +522,7 @@ fn _create_max_size_leaf(layout: &NodeLayout) -> Data {
     Data::from(vec![0; max_bytes_per_leaf])
 }
 
-async fn _increase_tree_depth<B: BlockStore + Send + Sync>(
+async fn _increase_tree_depth<B: LLBlockStore + Send + Sync>(
     node_store: &DataNodeStore<B>,
     root: DataNode<B>,
 ) -> Result<DataNode<B>> {
@@ -534,14 +534,14 @@ async fn _increase_tree_depth<B: BlockStore + Send + Sync>(
 }
 
 #[async_trait]
-trait CreateNewSubtreeCallbacks<B: BlockStore + Send + Sync> {
+trait CreateNewSubtreeCallbacks<B: LLBlockStore + Send + Sync> {
     fn on_create_leaf(&self, index: u64) -> Data;
     async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()>;
 }
 
 // TODO leaf_offset u32 or u64?
 async fn _create_new_subtree<
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
     C: CreateNewSubtreeCallbacks<B> + Sync,
 >(
     node_store: &DataNodeStore<B>,
@@ -602,7 +602,7 @@ async fn _create_new_subtree<
             })?;
             struct Callbacks;
             #[async_trait]
-            impl<B: BlockStore + Send + Sync> CreateNewSubtreeCallbacks<B> for Callbacks {
+            impl<B: LLBlockStore + Send + Sync> CreateNewSubtreeCallbacks<B> for Callbacks {
                 fn on_create_leaf(&self, _index: u64) -> Data {
                     panic!("We're only creating gap leaves here, not traversing any");
                 }
@@ -664,7 +664,7 @@ async fn _create_new_subtree<
 }
 
 async fn _while_root_has_only_one_child_replace_root_with_its_child<
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
     const ALLOW_WRITES: bool,
 >(
     node_store: &DataNodeStore<B>,
@@ -700,7 +700,7 @@ async fn _while_root_has_only_one_child_replace_root_with_its_child<
 }
 
 // TODO Iterative instead of recursive implementation? We wouldn't need the Box::pin for the async recursion then.
-async fn _while_root_has_only_one_child_remove_root_return_child<B: BlockStore + Send + Sync>(
+async fn _while_root_has_only_one_child_remove_root_return_child<B: LLBlockStore + Send + Sync>(
     node_store: &DataNodeStore<B>,
     root_block_id: &BlockId,
 ) -> Result<DataNode<B>> {
@@ -753,7 +753,7 @@ pub async fn load_all_nodes_in_subtree_of_id<'a, B>(
     subtree_root_id: BlockId,
 ) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>>
 where
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
 {
     let child = node_store.load(subtree_root_id).await;
     match child {
@@ -777,7 +777,7 @@ pub fn load_all_nodes_in_subtree<'a, B>(
     subtree_root: DataNode<B>,
 ) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>>
 where
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
 {
     match subtree_root {
         DataNode::Leaf(leaf) => stream::once(future::ready(Ok(DataNode::Leaf(leaf)))).boxed(),
@@ -795,7 +795,7 @@ fn _load_all_nodes_descendants_of<'a, B>(
     subtree_root: &DataInnerNode<B>,
 ) -> BoxStream<'a, Result<DataNode<B>, LoadNodeError>>
 where
-    B: BlockStore + Send + Sync,
+    B: LLBlockStore + Send + Sync,
 {
     // iter<stream<result<block_id>>>
     let subtree_stream = subtree_root.children().map(|child_id| {

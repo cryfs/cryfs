@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use crate::{
     BlockId,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
         OptimizedBlockStoreWriter, interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -131,7 +131,7 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     }
 }
 
-impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
+impl<B: LLBlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> LLBlockStore
     for CompressingBlockStore<B>
 {
 }

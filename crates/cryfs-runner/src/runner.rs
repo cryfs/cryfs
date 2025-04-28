@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    AllowIntegrityViolations, BlockStore, ClientId, IntegrityConfig, InvalidBlockSizeError,
+    AllowIntegrityViolations, LLBlockStore, ClientId, IntegrityConfig, InvalidBlockSizeError,
     LockingBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
 };
 use cryfs_cli_utils::{
@@ -118,7 +118,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
 {
     type Result = Result<(), CliError>;
 
-    async fn callback<B: BlockStore + Send + Sync + AsyncDrop + 'static>(
+    async fn callback<B: LLBlockStore + Send + Sync + AsyncDrop + 'static>(
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {

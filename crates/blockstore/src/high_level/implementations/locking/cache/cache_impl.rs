@@ -18,7 +18,7 @@ use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
 // TODO Replace unsafe{NonZeroUSize::new_unchecked(_)} with NonZeroUsize::new(_).unwrap() once unwrap is const
 const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(10240) };
 
-pub struct BlockCacheImpl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct BlockCacheImpl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // Only None while it is being dropped
     cache: Option<Arc<LockableLruCache<BlockId, BlockCacheEntry<B>>>>,
 
@@ -29,7 +29,7 @@ pub struct BlockCacheImpl<B: crate::low_level::BlockStore + Send + Sync + Debug 
     num_blocks_in_cache_but_not_in_base_store: AtomicU64,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCacheImpl<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCacheImpl<B> {
     pub fn new() -> Arc<Self> {
         Arc::new(BlockCacheImpl {
             cache: Some(Arc::new(LockableLruCache::new())),
@@ -282,7 +282,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Debug for BlockCacheImpl<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Debug for BlockCacheImpl<B> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("BlockCacheImpl").finish()
     }

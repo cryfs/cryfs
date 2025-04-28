@@ -89,7 +89,7 @@ impl<B: OptimizedBlockStoreWriter + Sync> BlockStoreWriter for B {
     }
 }
 
-pub trait BlockStore:
+pub trait LLBlockStore:
     BlockStoreReader
     + BlockStoreWriter
     + BlockStoreDeleter

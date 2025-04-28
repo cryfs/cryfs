@@ -6,7 +6,7 @@ use divrem::DivCeil;
 use futures::future::BoxFuture;
 
 use cryfs_blockstore::{
-    ActionCounts, BlockId, BlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
+    ActionCounts, BlockId, LLBlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
     TrackingBlockStore,
 };
 
@@ -592,7 +592,7 @@ mod read_bytes {
     use super::testutils::*;
     use super::*;
 
-    async fn read_fn<B: BlockStore + Send + Sync>(
+    async fn read_fn<B: LLBlockStore + Send + Sync>(
         tree: &mut DataTree<'_, B>,
         offset: u64,
         len: usize,
@@ -610,7 +610,7 @@ mod try_read_bytes {
     use super::testutils::*;
     use super::*;
 
-    async fn read_fn<B: BlockStore + Send + Sync>(
+    async fn read_fn<B: LLBlockStore + Send + Sync>(
         tree: &mut DataTree<'_, B>,
         offset: u64,
         len: usize,

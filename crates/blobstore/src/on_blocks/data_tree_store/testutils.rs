@@ -8,7 +8,7 @@ use futures::{future, join};
 use iter_chunks::IterChunks;
 
 use cryfs_blockstore::{
-    BlockId, BlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
+    BlockId, LLBlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
 };
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
@@ -24,7 +24,7 @@ pub struct TreeFixture {
 }
 
 impl TreeFixture {
-    pub async fn create_tree_with_data<B: BlockStore + Send + Sync>(
+    pub async fn create_tree_with_data<B: LLBlockStore + Send + Sync>(
         store: &DataTreeStore<B>,
         num_bytes: usize,
         data_seed: u64,
@@ -40,7 +40,7 @@ impl TreeFixture {
         }
     }
 
-    pub async fn create_tree_with_data_and_id<B: BlockStore + Send + Sync>(
+    pub async fn create_tree_with_data_and_id<B: LLBlockStore + Send + Sync>(
         store: &DataTreeStore<B>,
         id: BlockId,
         num_bytes: usize,
@@ -57,7 +57,7 @@ impl TreeFixture {
         }
     }
 
-    pub async fn assert_data_is_still_intact<B: BlockStore + Send + Sync>(
+    pub async fn assert_data_is_still_intact<B: LLBlockStore + Send + Sync>(
         &self,
         store: &DataTreeStore<B>,
     ) {
@@ -75,13 +75,13 @@ fn data(size: usize, seed: u64) -> Data {
     DataFixture::new(seed).get(size).into()
 }
 
-pub async fn create_one_leaf_tree<B: BlockStore + Send + Sync>(
+pub async fn create_one_leaf_tree<B: LLBlockStore + Send + Sync>(
     store: &DataTreeStore<B>,
 ) -> DataTree<B> {
     store.create_tree().await.unwrap()
 }
 
-pub async fn create_multi_leaf_tree<B: BlockStore + Send + Sync>(
+pub async fn create_multi_leaf_tree<B: LLBlockStore + Send + Sync>(
     store: &DataTreeStore<B>,
     num_leaves: u64,
 ) -> DataTree<B> {
@@ -93,7 +93,7 @@ pub async fn create_multi_leaf_tree<B: BlockStore + Send + Sync>(
 }
 
 #[cfg(feature = "slow-tests-any")]
-pub async fn manually_create_tree<B: BlockStore + Send + Sync>(
+pub async fn manually_create_tree<B: LLBlockStore + Send + Sync>(
     nodestore: &DataNodeStore<B>,
     num_full_leaves: u64,
     last_leaf_num_bytes: u64,

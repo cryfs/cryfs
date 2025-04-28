@@ -6,7 +6,7 @@ use crate::BlockId;
 
 pub struct BlockCacheEntryGuard<B>
 where
-    B: crate::low_level::BlockStore + Send + Sync + Debug + 'static,
+    B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static,
 {
     pub(super) guard: <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
         BlockId,
@@ -16,7 +16,7 @@ where
 
 impl<B> BlockCacheEntryGuard<B>
 where
-    B: crate::low_level::BlockStore + Send + Sync + Debug + 'static,
+    B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static,
 {
     pub fn key(&self) -> &BlockId {
         self.guard.key()
@@ -37,7 +37,7 @@ where
 
 impl<B> Debug for BlockCacheEntryGuard<B>
 where
-    B: crate::low_level::BlockStore + Send + Sync + Debug + 'static,
+    B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlockCacheEntryGuard({:?})", self.guard)

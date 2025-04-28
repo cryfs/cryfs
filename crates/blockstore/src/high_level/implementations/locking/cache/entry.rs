@@ -23,7 +23,7 @@ pub(super) enum FlushResult {
     DidntAddANewBlockToTheBaseStoreBecauseItAlreadyExistedInTheBaseStore,
     DidntAddANewBlockToTheBaseStoreBecauseCacheEntryWasntDirty,
 }
-pub struct BlockCacheEntry<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct BlockCacheEntry<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // TODO Do we really need to store the base_store in each cache entry? It's only used in flush().
     base_store: Arc<AsyncDropGuard<B>>,
     dirty: CacheEntryState,
@@ -31,7 +31,7 @@ pub struct BlockCacheEntry<B: crate::low_level::BlockStore + Send + Sync + Debug
     block_exists_in_base_store: BlockBaseStoreState,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCacheEntry<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCacheEntry<B> {
     #[inline]
     pub fn new(
         base_store: Arc<AsyncDropGuard<B>>,
@@ -99,7 +99,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> BlockCache
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> fmt::Debug
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> fmt::Debug
     for BlockCacheEntry<B>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -109,7 +109,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> fmt::Debug
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Drop for BlockCacheEntry<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Drop for BlockCacheEntry<B> {
     fn drop(&mut self) {
         // User code never gets access to BlockCacheEntry by value, so they can't do this mistake.
         // If a dirty block is really dropped, it is our mistake.

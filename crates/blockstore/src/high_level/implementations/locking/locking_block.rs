@@ -2,14 +2,14 @@ use anyhow::{Result, bail};
 use std::fmt::{self, Debug};
 
 use super::{LockingBlockStore, cache::BlockCacheEntryGuard};
-use crate::{BlockId, BlockStore, RemoveResult, high_level::Block};
+use crate::{BlockId, LLBlockStore, RemoveResult, high_level::Block};
 use cryfs_utils::data::Data;
 
-pub struct LockingBlock<B: BlockStore + Send + Sync + Debug + 'static> {
+pub struct LockingBlock<B: LLBlockStore + Send + Sync + Debug + 'static> {
     pub(super) cache_entry: BlockCacheEntryGuard<B>,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug> Block for LockingBlock<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug> Block for LockingBlock<B> {
     type BlockStore = LockingBlockStore<B>;
 
     #[inline]
@@ -56,7 +56,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug> Block for LockingBlo
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> fmt::Debug
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> fmt::Debug
     for LockingBlock<B>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

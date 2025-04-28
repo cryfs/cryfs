@@ -3,7 +3,7 @@
 
 use async_trait::async_trait;
 
-use crate::{BlockId, low_level::BlockStore};
+use crate::{BlockId, low_level::LLBlockStore};
 use cryfs_utils::{async_drop::AsyncDropGuard, data::Data, testutils::data_fixture::DataFixture};
 
 /// By writing a [Fixture] implementation and using the [instantiate_blockstore_tests!](crate::instantiate_blockstore_tests!) macro,
@@ -13,7 +13,7 @@ use cryfs_utils::{async_drop::AsyncDropGuard, data::Data, testutils::data_fixtur
 /// required by the block store.
 #[async_trait]
 pub trait Fixture {
-    type ConcreteBlockStore: BlockStore + Send + Sync;
+    type ConcreteBlockStore: LLBlockStore + Send + Sync;
 
     /// Instantiate the fixture
     fn new() -> Self;

@@ -7,14 +7,14 @@ use super::super::{
     DataNode,
     layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
 };
-use cryfs_blockstore::{Block as _, BlockId, BlockStore, LockingBlock, LockingBlockStore};
+use cryfs_blockstore::{Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore};
 use cryfs_utils::data::Data;
 
-pub struct DataLeafNode<B: BlockStore + Send + Sync> {
+pub struct DataLeafNode<B: LLBlockStore + Send + Sync> {
     block: LockingBlock<B>,
 }
 
-impl<B: BlockStore + Send + Sync> DataLeafNode<B> {
+impl<B: LLBlockStore + Send + Sync> DataLeafNode<B> {
     pub fn new(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
         assert!(
             layout.block_size.as_u64() > u64::try_from(node::data::OFFSET).unwrap(),
@@ -146,7 +146,7 @@ pub fn serialize_leaf_node_optimized(mut data: Data, num_bytes: u32, layout: &No
     data
 }
 
-impl<B: BlockStore + Send + Sync> Debug for DataLeafNode<B> {
+impl<B: LLBlockStore + Send + Sync> Debug for DataLeafNode<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DataLeafNode")
             .field("block_id", &self.block_id())

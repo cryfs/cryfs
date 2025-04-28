@@ -16,7 +16,7 @@ use super::LockingBlock;
 use super::cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
 
 // TODO Should we require B: OptimizedBlockStoreWriter and use its methods?
-pub struct LockingBlockStore<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> {
+pub struct LockingBlockStore<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // Always Some unless during destruction
     base_store: Option<Arc<AsyncDropGuard<B>>>,
 
@@ -26,7 +26,7 @@ pub struct LockingBlockStore<B: crate::low_level::BlockStore + Send + Sync + Deb
     cache: AsyncDropGuard<BlockCache<B>>,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlockStore<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingBlockStore<B> {
     pub fn new(base_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             base_store: Some(Arc::new(base_store)),
@@ -234,7 +234,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> LockingBlo
 }
 
 #[async_trait]
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop
     for LockingBlockStore<B>
 {
     type Error = anyhow::Error;
@@ -254,7 +254,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> AsyncDrop
     }
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug + 'static> Debug
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Debug
     for LockingBlockStore<B>
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

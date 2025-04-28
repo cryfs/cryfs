@@ -7,14 +7,14 @@ use crate::{
     BlockId, RemoveResult, TryCreateResult,
     low_level::{
         InvalidBlockSizeError,
-        interface::{BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+        interface::{LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
     },
 };
 use cryfs_utils::async_drop::AsyncDrop;
 use cryfs_utils::data::Data;
 
 #[derive(Debug)]
-pub struct DynBlockStore(pub Box<dyn BlockStore + Sync + Send>);
+pub struct DynBlockStore(pub Box<dyn LLBlockStore + Sync + Send>);
 
 #[async_trait]
 impl BlockStoreReader for DynBlockStore {
@@ -82,4 +82,4 @@ impl AsyncDrop for DynBlockStore {
     }
 }
 
-impl BlockStore for DynBlockStore {}
+impl LLBlockStore for DynBlockStore {}

@@ -11,7 +11,7 @@ use crate::low_level::InvalidBlockSizeError;
 use crate::{
     BlockId, RemoveResult, TryCreateResult,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
     },
 };
@@ -157,7 +157,7 @@ impl AsyncDrop for InMemoryBlockStore {
     }
 }
 
-impl BlockStore for InMemoryBlockStore {}
+impl LLBlockStore for InMemoryBlockStore {}
 
 #[cfg(test)]
 mod tests {

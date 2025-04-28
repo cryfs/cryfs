@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 
 use cryfs_blobstore::BlobId;
-use cryfs_blockstore::BlockStore;
+use cryfs_blockstore::LLBlockStore;
 
 use super::{
     BlobToProcess, CheckError, FilesystemCheck, NodeAndBlobReferenceFromReachableBlob,
@@ -27,7 +27,7 @@ impl CheckBlobsReadable {
 impl FilesystemCheck for CheckBlobsReadable {
     fn process_reachable_blob<'a, 'b>(
         &mut self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         match blob {
@@ -47,7 +47,7 @@ impl FilesystemCheck for CheckBlobsReadable {
 
     fn process_reachable_blob_again<'a, 'b>(
         &mut self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         self.process_reachable_blob(blob, referenced_as)
@@ -55,7 +55,7 @@ impl FilesystemCheck for CheckBlobsReadable {
 
     fn process_reachable_node<'a>(
         &mut self,
-        _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        _node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
         _referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         // do nothing
@@ -64,7 +64,7 @@ impl FilesystemCheck for CheckBlobsReadable {
 
     fn process_unreachable_node<'a>(
         &mut self,
-        _node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        _node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
         // do nothing
         Ok(())

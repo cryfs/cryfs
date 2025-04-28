@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use crate::{
     BLOCKID_LEN, BlockId,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
         interface::{InvalidBlockSizeError, block_data::IBlockData},
     },
     utils::{RemoveResult, TryCreateResult},
@@ -509,7 +509,7 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     }
 }
 
-impl<B: BlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> BlockStore
+impl<B: LLBlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> LLBlockStore
     for IntegrityBlockStore<B>
 {
 }

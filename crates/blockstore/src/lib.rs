@@ -11,10 +11,10 @@ pub use high_level::{Block, LockingBlock, LockingBlockStore};
 
 mod low_level;
 pub use low_level::{
-    AllowIntegrityViolations, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter,
-    ClientId, CompressingBlockStore, DynBlockStore, EncryptedBlockStore, InMemoryBlockStore,
+    AllowIntegrityViolations, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, ClientId,
+    CompressingBlockStore, DynBlockStore, EncryptedBlockStore, InMemoryBlockStore,
     IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig, IntegrityViolationError,
-    InvalidBlockSizeError, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
+    InvalidBlockSizeError, LLBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
     OptimizedBlockStoreWriter, ReadOnlyBlockStore,
 };
 

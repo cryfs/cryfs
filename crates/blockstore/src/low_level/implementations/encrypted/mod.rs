@@ -11,7 +11,7 @@ use crate::low_level::interface::InvalidBlockSizeError;
 use crate::{
     BlockId,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -220,9 +220,9 @@ impl<
 
 impl<
     C: 'static + CipherDef + Send + Sync,
-    _B: BlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
+    _B: LLBlockStore + OptimizedBlockStoreWriter + Send + Sync + Debug,
     B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
-> BlockStore for EncryptedBlockStore<C, _B, B>
+> LLBlockStore for EncryptedBlockStore<C, _B, B>
 {
 }
 

@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use crate::{
     high_level::{Block as _, LockingBlock, LockingBlockStore},
-    low_level::BlockStore,
+    low_level::LLBlockStore,
     tests::{Fixture, data},
     utils::RemoveResult,
 };
@@ -26,7 +26,7 @@ pub use block_store_adapter::TestFixtureAdapter;
 /// to run LockingBlockStore tests on it.
 #[async_trait]
 pub trait LockingBlockStoreFixture {
-    type UnderlyingBlockStore: BlockStore + Send + Sync + Debug + 'static;
+    type UnderlyingBlockStore: LLBlockStore + Send + Sync + Debug + 'static;
 
     fn new() -> Self;
     async fn store(&mut self) -> AsyncDropGuard<LockingBlockStore<Self::UnderlyingBlockStore>>;
@@ -59,7 +59,7 @@ where
     }
 }
 
-async fn assert_block_is_usable<B: BlockStore + Send + Sync + Debug>(
+async fn assert_block_is_usable<B: LLBlockStore + Send + Sync + Debug>(
     store: &LockingBlockStore<B>,
     mut block: LockingBlock<B>,
 ) {

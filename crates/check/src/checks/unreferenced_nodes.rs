@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::num::NonZeroU8;
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore};
 use cryfs_filesystem::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_rustfs::AbsolutePath;
 
@@ -52,7 +52,7 @@ impl UnreferencedNodesReferenceChecker {
 
     pub fn process_node(
         &mut self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
         expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
         match node {
@@ -65,7 +65,7 @@ impl UnreferencedNodesReferenceChecker {
 
     fn process_readable_node(
         &mut self,
-        node: &DataNode<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &DataNode<impl LLBlockStore + Send + Sync + Debug + 'static>,
         expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
         let depth = NonZeroU8::new(node.depth());
@@ -154,7 +154,7 @@ impl UnreferencedNodesReferenceChecker {
     //      This means we do report each unreachable blob in the tree as an error, not just the root.
     pub fn process_blob(
         &mut self,
-        blob: &FsBlob<BlobStoreOnBlocks<impl BlockStore + Send + Sync + Debug + 'static>>,
+        blob: &FsBlob<BlobStoreOnBlocks<impl LLBlockStore + Send + Sync + Debug + 'static>>,
         path: &AbsolutePath,
     ) -> Result<(), CheckError> {
         match blob {
@@ -279,7 +279,7 @@ impl CheckUnreferencedNodes {
 impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_node<'a>(
         &mut self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
         expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         self.reachable_nodes_checker
@@ -289,7 +289,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
 
     fn process_unreachable_node<'a>(
         &mut self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
         self.unreachable_nodes_checker.process_node(node, None)?;
         Ok(())
@@ -297,7 +297,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
 
     fn process_reachable_blob<'a, 'b>(
         &mut self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         match blob {
@@ -314,7 +314,7 @@ impl FilesystemCheck for CheckUnreferencedNodes {
 
     fn process_reachable_blob_again<'a, 'b>(
         &mut self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         // TODO What should we do here?

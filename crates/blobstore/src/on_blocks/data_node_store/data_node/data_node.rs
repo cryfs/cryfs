@@ -8,16 +8,16 @@ use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{Block as _, BlockId, BlockStore, LockingBlock, LockingBlockStore};
+use cryfs_blockstore::{Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]
-pub enum DataNode<B: BlockStore + Send + Sync> {
+pub enum DataNode<B: LLBlockStore + Send + Sync> {
     Inner(DataInnerNode<B>),
     Leaf(DataLeafNode<B>),
 }
 
-impl<B: BlockStore + Send + Sync> DataNode<B> {
+impl<B: LLBlockStore + Send + Sync> DataNode<B> {
     pub fn parse(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
         ensure!(
             usize::try_from(layout.block_size).unwrap() == block.data().len(),

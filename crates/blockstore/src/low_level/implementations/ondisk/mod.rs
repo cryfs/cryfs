@@ -12,7 +12,7 @@ use crate::low_level::InvalidBlockSizeError;
 use crate::{
     BLOCKID_LEN, BlockId,
     low_level::{
-        BlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -166,7 +166,7 @@ impl AsyncDrop for OnDiskBlockStore {
     }
 }
 
-impl BlockStore for OnDiskBlockStore {}
+impl LLBlockStore for OnDiskBlockStore {}
 
 impl OnDiskBlockStore {
     fn _block_path(&self, block_id: &BlockId) -> PathBuf {

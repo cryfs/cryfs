@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use cryfs_blockstore::{
-    BlockStore, ClientId, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
+    LLBlockStore, ClientId, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
     IntegrityBlockStoreInitError, IntegrityConfig, LockingBlockStore, OptimizedBlockStoreWriter,
 };
 use cryfs_filesystem::config::{
@@ -20,7 +20,7 @@ pub trait BlockstoreCallback {
     type Result;
 
     #[allow(async_fn_in_trait)]
-    async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
+    async fn callback<B: LLBlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result;
@@ -29,7 +29,7 @@ pub trait BlockstoreCallback {
 /// Set up a blockstore stack (i.e. EncryptedBlockStore, IntegrityBlockStore) using the cipher specified in the config file.
 /// Give it the base blockstore (i.e. OnDiskBlockStore) and it will set up the blockstore stack as needed for a cryfs device.
 pub async fn setup_blockstore_stack<CB: BlockstoreCallback + Send + Sync>(
-    base_blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync>,
+    base_blockstore: AsyncDropGuard<impl LLBlockStore + OptimizedBlockStoreWriter + Send + Sync>,
     config: &CryConfig,
     my_client_id: ClientId,
     local_state_dir: &LocalStateDir,
@@ -60,7 +60,7 @@ pub async fn setup_blockstore_stack<CB: BlockstoreCallback + Send + Sync>(
 struct CipherCallbackForBlockstoreSetup<
     'c,
     'l,
-    B: BlockStore + OptimizedBlockStoreWriter + Send + Sync,
+    B: LLBlockStore + OptimizedBlockStoreWriter + Send + Sync,
     CB: BlockstoreCallback,
 > {
     base_blockstore: AsyncDropGuard<B>,
@@ -71,7 +71,7 @@ struct CipherCallbackForBlockstoreSetup<
     callback: CB,
 }
 
-impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCallback + Send>
+impl<B: LLBlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCallback + Send>
     AsyncCipherCallback for CipherCallbackForBlockstoreSetup<'_, '_, B, CB>
 {
     type Result = Result<CB::Result, CliError>;
@@ -135,7 +135,7 @@ impl<B: BlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCall
 }
 
 pub async fn setup_blockstore_stack_dyn(
-    base_blockstore: AsyncDropGuard<impl BlockStore + OptimizedBlockStoreWriter + Send + Sync>,
+    base_blockstore: AsyncDropGuard<impl LLBlockStore + OptimizedBlockStoreWriter + Send + Sync>,
     config: &CryConfig,
     my_client_id: ClientId,
     local_state_dir: &LocalStateDir,
@@ -157,12 +157,12 @@ struct DynCallback;
 impl BlockstoreCallback for DynCallback {
     type Result = Result<AsyncDropGuard<LockingBlockStore<DynBlockStore>>>;
 
-    async fn callback<B: BlockStore + AsyncDrop + Send + Sync + 'static>(
+    async fn callback<B: LLBlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
         let inner = LockingBlockStore::into_inner_block_store(blockstore).await?;
-        let inner: Box<dyn BlockStore + Send + Sync> =
+        let inner: Box<dyn LLBlockStore + Send + Sync> =
             Box::new(inner.unsafe_into_inner_dont_drop());
         let inner = AsyncDropGuard::new(DynBlockStore(inner));
         Ok(LockingBlockStore::new(inner))

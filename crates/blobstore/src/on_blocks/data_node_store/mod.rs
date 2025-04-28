@@ -8,7 +8,7 @@ use futures::stream::BoxStream;
 pub use crate::RemoveResult;
 use cryfs_blockstore::TryCreateResult;
 use cryfs_blockstore::{
-    BLOCKID_LEN, BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore,
+    BLOCKID_LEN, BlockId, LLBlockStore, InvalidBlockSizeError, LockingBlockStore,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -29,13 +29,13 @@ mod testutils;
 mod test_as_blockstore;
 
 #[derive(Debug)]
-pub struct DataNodeStore<B: BlockStore + Send + Sync> {
+pub struct DataNodeStore<B: LLBlockStore + Send + Sync> {
     block_store: AsyncDropGuard<LockingBlockStore<B>>,
     layout: NodeLayout,
     physical_block_size: Byte,
 }
 
-impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
+impl<B: LLBlockStore + Send + Sync> DataNodeStore<B> {
     pub async fn new(
         mut block_store: AsyncDropGuard<LockingBlockStore<B>>,
         physical_block_size: Byte,
@@ -232,7 +232,7 @@ impl<B: BlockStore + Send + Sync> DataNodeStore<B> {
 }
 
 #[async_trait]
-impl<B: BlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
+impl<B: LLBlockStore + Send + Sync> AsyncDrop for DataNodeStore<B> {
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {

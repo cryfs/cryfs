@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use super::super::BlobStoreOnBlocks;
 use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
-    BlockId, BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
+    BlockId, LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
     InvalidBlockSizeError, LockingBlockStore, RemoveResult, TryCreateResult, tests::Fixture,
 };
 use cryfs_utils::{
@@ -148,7 +148,7 @@ impl AsyncDrop for BlockStoreAdapter {
     }
 }
 
-impl BlockStore for BlockStoreAdapter {}
+impl LLBlockStore for BlockStoreAdapter {}
 
 /// TestFixtureAdapter takes a [Fixture] for a [BlockStore] and makes it into
 /// a [Fixture] that creates a [DataNodeStore] based on that [BlockStore].

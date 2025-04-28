@@ -17,10 +17,10 @@ use crate::{
     RemoveResult,
     on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout},
 };
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore};
 use cryfs_utils::{data::Data, stream::for_each_unordered};
 
-pub struct DataTree<'a, B: BlockStore + Send + Sync> {
+pub struct DataTree<'a, B: LLBlockStore + Send + Sync> {
     // The lock on the root node also ensures that there never are two [DataTree] instances for the same tree
     // &mut self in all the methods makes sure we don't run into race conditions where
     // one task modifies a tree we're currently trying to read somewhere else.
@@ -36,7 +36,7 @@ pub struct DataTree<'a, B: BlockStore + Send + Sync> {
     num_bytes_cache: SizeCache,
 }
 
-impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
+impl<'a, B: LLBlockStore + Send + Sync> DataTree<'a, B> {
     pub fn new(root_node: DataNode<B>, node_store: &'a DataNodeStore<B>) -> Self {
         Self {
             root_node: Some(root_node),
@@ -118,7 +118,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             target: Mutex<&'a mut [u8]>,
         }
         #[async_trait]
-        impl<'a, B: BlockStore + Send + Sync> TraversalByByteIndicesCallbacks<B> for Callbacks<'a> {
+        impl<'a, B: LLBlockStore + Send + Sync> TraversalByByteIndicesCallbacks<B> for Callbacks<'a> {
             async fn on_existing_leaf(
                 &self,
                 index_of_first_leaf_byte: u64,
@@ -185,7 +185,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
             source: &'a [u8],
         }
         #[async_trait]
-        impl<'a, B: BlockStore + Send + Sync> TraversalByByteIndicesCallbacks<B> for Callbacks<'a> {
+        impl<'a, B: LLBlockStore + Send + Sync> TraversalByByteIndicesCallbacks<B> for Callbacks<'a> {
             async fn on_existing_leaf(
                 &self,
                 index_of_first_leaf_byte: u64,
@@ -259,13 +259,13 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
     }
 
     pub async fn resize_num_bytes(&mut self, new_num_bytes: u64) -> Result<()> {
-        struct Callbacks<'a, B: BlockStore + Send + Sync> {
+        struct Callbacks<'a, B: LLBlockStore + Send + Sync> {
             node_store: &'a DataNodeStore<B>,
             new_num_leaves: NonZeroU64,
             new_last_leaf_size: u32,
         }
         #[async_trait]
-        impl<'a, B: BlockStore + Send + Sync> traversal::TraversalCallbacks<B> for Callbacks<'a, B> {
+        impl<'a, B: LLBlockStore + Send + Sync> traversal::TraversalCallbacks<B> for Callbacks<'a, B> {
             async fn on_existing_leaf(
                 &self,
                 index: u64,
@@ -411,7 +411,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         let end_leaf = DivCeil::div_ceil(end_byte, max_bytes_per_leaf);
         struct WrappedCallbacks<
             'a,
-            B: BlockStore + Send + Sync,
+            B: LLBlockStore + Send + Sync,
             C: TraversalByByteIndicesCallbacks<B>,
             const ALLOW_WRITES: bool,
         > {
@@ -427,7 +427,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
         #[async_trait]
         impl<
             'a,
-            B: BlockStore + Send + Sync,
+            B: LLBlockStore + Send + Sync,
             C: TraversalByByteIndicesCallbacks<B> + Sync,
             const ALLOW_WRITES: bool,
         > traversal::TraversalCallbacks<B> for WrappedCallbacks<'a, B, C, ALLOW_WRITES>
@@ -691,7 +691,7 @@ impl<'a, B: BlockStore + Send + Sync> DataTree<'a, B> {
 }
 
 #[async_trait]
-trait TraversalByByteIndicesCallbacks<B: BlockStore + Send + Sync> {
+trait TraversalByByteIndicesCallbacks<B: LLBlockStore + Send + Sync> {
     // TODO begin/count u32 or u64?
     async fn on_existing_leaf(
         &self,
@@ -704,7 +704,7 @@ trait TraversalByByteIndicesCallbacks<B: BlockStore + Send + Sync> {
     fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data;
 }
 
-impl<'a, B: BlockStore + Send + Sync> Debug for DataTree<'a, B> {
+impl<'a, B: LLBlockStore + Send + Sync> Debug for DataTree<'a, B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "DataTree")
     }

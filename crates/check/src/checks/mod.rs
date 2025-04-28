@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use std::sync::Mutex;
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
-use cryfs_blockstore::{BlockId, BlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore};
 use cryfs_filesystem::filesystem::fsblobstore::FsBlob;
 
 use super::assertion::Assertion;
@@ -34,7 +34,7 @@ use crate::node_info::{BlobReference, NodeAndBlobReferenceFromReachableBlob};
 #[derivative(Clone(bound = ""), Copy(bound = ""))]
 pub enum BlobToProcess<'a, 'b, B>
 where
-    B: BlockStore + Send + Sync + Debug + 'static,
+    B: LLBlockStore + Send + Sync + Debug + 'static,
 {
     Readable(&'a FsBlob<'b, BlobStoreOnBlocks<B>>),
     Unreadable(BlobId),
@@ -43,7 +43,7 @@ where
 #[derive(Debug)]
 pub enum NodeToProcess<B>
 where
-    B: BlockStore + Send + Sync + Debug + 'static,
+    B: LLBlockStore + Send + Sync + Debug + 'static,
 {
     Readable(DataNode<B>),
     Unreadable(BlockId),
@@ -58,7 +58,7 @@ pub trait FilesystemCheck {
     /// Called for each blob that is reachable from the root of the file system via its directory structure.
     fn process_reachable_blob<'a, 'b>(
         &mut self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError>;
 
@@ -66,21 +66,21 @@ pub trait FilesystemCheck {
     /// i.e. there are multiple references to it in the file system.
     fn process_reachable_blob_again<'a, 'b>(
         &mut self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is part of a reachable blob
     fn process_reachable_node(
         &mut self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
         expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError>;
 
     /// Called for each node that is not part of a reachable blob
     fn process_unreachable_node<'a>(
         &mut self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError>;
 
     /// Called to get the results and all accumulated errors
@@ -120,7 +120,7 @@ impl AllChecks {
 
     pub fn process_reachable_blob<'a, 'b>(
         &self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         // TODO Here and in other methods, avoid having to list all the members and risking to forget one. Maybe a macro?
@@ -141,7 +141,7 @@ impl AllChecks {
 
     pub fn process_reachable_blob_again<'a, 'b>(
         &self,
-        blob: BlobToProcess<'a, 'b, impl BlockStore + Send + Sync + Debug + 'static>,
+        blob: BlobToProcess<'a, 'b, impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
@@ -161,7 +161,7 @@ impl AllChecks {
 
     pub fn process_reachable_node<'a>(
         &self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
         referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
@@ -181,7 +181,7 @@ impl AllChecks {
 
     pub fn process_unreachable_node<'a>(
         &self,
-        node: &NodeToProcess<impl BlockStore + Send + Sync + Debug + 'static>,
+        node: &NodeToProcess<impl LLBlockStore + Send + Sync + Debug + 'static>,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes
             .lock()

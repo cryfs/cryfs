@@ -6,17 +6,17 @@ use std::num::{NonZeroU8, NonZeroU32};
 use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::DataNode;
 use cryfs_blockstore::{
-    BLOCKID_LEN, Block as _, BlockId, BlockStore, LockingBlock, LockingBlockStore,
+    BLOCKID_LEN, Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore,
 };
 use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;
 
-pub struct DataInnerNode<B: BlockStore + Send + Sync> {
+pub struct DataInnerNode<B: LLBlockStore + Send + Sync> {
     block: LockingBlock<B>,
 }
 
-impl<B: BlockStore + Send + Sync> DataInnerNode<B> {
+impl<B: LLBlockStore + Send + Sync> DataInnerNode<B> {
     pub fn new(block: LockingBlock<B>, layout: &NodeLayout) -> Result<Self> {
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size = node::data::OFFSET + 2 * BLOCKID_LEN;
@@ -233,7 +233,7 @@ fn _serialize_children(dest: &mut [u8], children: &[BlockId]) {
     }
 }
 
-impl<B: BlockStore + Send + Sync> Debug for DataInnerNode<B> {
+impl<B: LLBlockStore + Send + Sync> Debug for DataInnerNode<B> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DataInnerNode")
             .field("block_id", &self.block_id())

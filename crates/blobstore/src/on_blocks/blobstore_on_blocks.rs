@@ -6,14 +6,14 @@ use std::fmt;
 use super::blob_on_blocks::BlobOnBlocks;
 use super::data_tree_store::DataTreeStore;
 use crate::{BlobId, BlobStore, RemoveResult};
-use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError, LockingBlockStore};
+use cryfs_blockstore::{BlockId, LLBlockStore, InvalidBlockSizeError, LockingBlockStore};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-pub struct BlobStoreOnBlocks<B: BlockStore + Send + Sync> {
+pub struct BlobStoreOnBlocks<B: LLBlockStore + Send + Sync> {
     tree_store: AsyncDropGuard<DataTreeStore<B>>,
 }
 
-impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
+impl<B: LLBlockStore + Send + Sync> BlobStoreOnBlocks<B> {
     pub async fn new(
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
         block_size: Byte,
@@ -44,7 +44,7 @@ impl<B: BlockStore + Send + Sync> BlobStoreOnBlocks<B> {
 }
 
 #[async_trait]
-impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
+impl<B: LLBlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
     type ConcreteBlob<'a> = BlobOnBlocks<'a, B>;
 
     async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
@@ -93,14 +93,14 @@ impl<B: BlockStore + Send + Sync> BlobStore for BlobStoreOnBlocks<B> {
     }
 }
 
-impl<B: BlockStore + Send + Sync> fmt::Debug for BlobStoreOnBlocks<B> {
+impl<B: LLBlockStore + Send + Sync> fmt::Debug for BlobStoreOnBlocks<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlockStoreOnBlocks")
     }
 }
 
 #[async_trait]
-impl<B: BlockStore + Send + Sync> AsyncDrop for BlobStoreOnBlocks<B> {
+impl<B: LLBlockStore + Send + Sync> AsyncDrop for BlobStoreOnBlocks<B> {
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {

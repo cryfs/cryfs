@@ -4,7 +4,7 @@ use super::super::super::data_tree_store::DataTree;
 use super::super::testutils::*;
 use cryfs_blockstore::BlockId;
 #[cfg(feature = "slow-tests-any")]
-use cryfs_blockstore::BlockStore;
+use cryfs_blockstore::LLBlockStore;
 #[cfg(feature = "slow-tests-any")]
 use cryfs_utils::testutils::data_fixture::DataFixture;
 #[cfg(any(
@@ -127,7 +127,7 @@ mod testutils {
         }
 
         #[cfg(feature = "slow-tests-1")]
-        pub async fn create_tree<B: BlockStore + Send + Sync>(
+        pub async fn create_tree<B: LLBlockStore + Send + Sync>(
             &self,
             nodestore: &DataNodeStore<B>,
         ) -> BlockId {
@@ -142,7 +142,7 @@ mod testutils {
             id
         }
 
-        pub async fn create_tree_with_data<B: BlockStore + Send + Sync>(
+        pub async fn create_tree_with_data<B: LLBlockStore + Send + Sync>(
             &self,
             nodestore: &DataNodeStore<B>,
             data: &DataFixture,
@@ -226,7 +226,7 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_is_max_data_tree<B: BlockStore + Send + Sync>(
+    pub async fn assert_is_max_data_tree<B: LLBlockStore + Send + Sync>(
         root_id: BlockId,
         expected_depth: u8,
         nodestore: &DataNodeStore<B>,
@@ -266,7 +266,7 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_is_left_max_data_tree<B: BlockStore + Send + Sync>(
+    pub async fn assert_is_left_max_data_tree<B: LLBlockStore + Send + Sync>(
         root_id: BlockId,
         expected_depth: u8,
         nodestore: &DataNodeStore<B>,
@@ -307,7 +307,7 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn flush_caches<'a, B: BlockStore + Send + Sync>(
+    pub async fn flush_caches<'a, B: LLBlockStore + Send + Sync>(
         tree: DataTree<'a, B>,
         nodestore: &DataNodeStore<B>,
         treestore: &DataTreeStore<B>,
@@ -324,7 +324,7 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_tree_structure<B: BlockStore + Send + Sync>(
+    pub async fn assert_tree_structure<B: LLBlockStore + Send + Sync>(
         root_id: BlockId,
         expected_depth: u8,
         nodestore: &DataNodeStore<B>,
@@ -348,7 +348,7 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_leaf_data_is_correct<B: BlockStore + Send + Sync>(
+    pub async fn assert_leaf_data_is_correct<B: LLBlockStore + Send + Sync>(
         root_id: BlockId,
         expected_data: &[u8],
         nodestore: &DataNodeStore<B>,
@@ -366,7 +366,7 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn for_each_leaf<B: BlockStore + Send + Sync>(
+    pub async fn for_each_leaf<B: LLBlockStore + Send + Sync>(
         root_id: BlockId,
         first_leaf_index: u64,
         nodestore: &DataNodeStore<B>,
@@ -811,7 +811,7 @@ mod read_bytes {
     use super::testutils::*;
     use super::*;
 
-    async fn assert_reads_correct_data<'a, B: BlockStore + Send + Sync>(
+    async fn assert_reads_correct_data<'a, B: LLBlockStore + Send + Sync>(
         tree: &mut DataTree<'a, B>,
         data: &DataFixture,
         offset: u64,
@@ -824,7 +824,7 @@ mod read_bytes {
         assert_eq!(expected_data, read_data);
     }
 
-    async fn assert_reading_is_out_of_range<'a, B: BlockStore + Send + Sync>(
+    async fn assert_reading_is_out_of_range<'a, B: LLBlockStore + Send + Sync>(
         tree: &mut DataTree<'a, B>,
         layout: NodeLayout,
         params: &Parameter,
@@ -875,7 +875,7 @@ mod try_read_bytes {
     use super::testutils::*;
     use super::*;
 
-    async fn assert_reads_correct_data<'a, B: BlockStore + Send + Sync>(
+    async fn assert_reads_correct_data<'a, B: LLBlockStore + Send + Sync>(
         tree: &mut DataTree<'a, B>,
         data: &DataFixture,
         offset: u64,
@@ -889,7 +889,7 @@ mod try_read_bytes {
         assert_eq!(expected_data, read_data);
     }
 
-    async fn assert_reading_is_out_of_range<'a, B: BlockStore + Send + Sync>(
+    async fn assert_reading_is_out_of_range<'a, B: LLBlockStore + Send + Sync>(
         tree: &mut DataTree<'a, B>,
         layout: NodeLayout,
         data: &DataFixture,
