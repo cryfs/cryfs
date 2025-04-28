@@ -8,7 +8,7 @@ use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{LockingBlock, BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{Block as _, BlockId, BlockStore, LockingBlock, LockingBlockStore};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]

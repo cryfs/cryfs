@@ -9,8 +9,8 @@ use std::sync::{
 };
 
 use super::*;
-use crate::tests::data;
 use crate::{BlockId, low_level::MockBlockStore};
+use crate::{high_level::Block as _, tests::data};
 use cryfs_utils::async_drop::AsyncDropGuard;
 
 fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {

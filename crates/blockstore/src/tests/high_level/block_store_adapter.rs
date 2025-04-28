@@ -6,7 +6,7 @@ use std::fmt::{self, Debug};
 
 use crate::{
     BlockId,
-    high_level::LockingBlockStore,
+    high_level::{Block as _, LockingBlockStore},
     low_level::{
         BlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
     },

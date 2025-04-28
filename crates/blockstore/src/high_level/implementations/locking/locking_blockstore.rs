@@ -9,6 +9,7 @@ use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryStreamExt as _, future, stream};
 
+use crate::high_level::Block as _;
 use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
 
 use super::LockingBlock;

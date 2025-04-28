@@ -5,7 +5,9 @@ use std::num::{NonZeroU8, NonZeroU32};
 
 use super::super::layout::{FORMAT_VERSION_HEADER, NodeLayout, node};
 use super::DataNode;
-use cryfs_blockstore::{BLOCKID_LEN, LockingBlock, BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{
+    BLOCKID_LEN, Block as _, BlockId, BlockStore, LockingBlock, LockingBlockStore,
+};
 use cryfs_utils::data::{Data, ZeroedData};
 
 pub(super) const MAX_DEPTH: u8 = 10;

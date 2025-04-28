@@ -7,7 +7,7 @@ use super::super::{
     DataNode,
     layout::{FORMAT_VERSION_HEADER, NodeLayout, node},
 };
-use cryfs_blockstore::{LockingBlock, BlockId, BlockStore, LockingBlockStore};
+use cryfs_blockstore::{Block as _, BlockId, BlockStore, LockingBlock, LockingBlockStore};
 use cryfs_utils::data::Data;
 
 pub struct DataLeafNode<B: BlockStore + Send + Sync> {

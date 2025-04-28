@@ -2,21 +2,23 @@ use anyhow::{Result, bail};
 use std::fmt::{self, Debug};
 
 use super::{LockingBlockStore, cache::BlockCacheEntryGuard};
-use crate::{BlockId, BlockStore, RemoveResult};
+use crate::{BlockId, BlockStore, RemoveResult, high_level::Block};
 use cryfs_utils::data::Data;
 
 pub struct LockingBlock<B: BlockStore + Send + Sync + Debug + 'static> {
     pub(super) cache_entry: BlockCacheEntryGuard<B>,
 }
 
-impl<B: crate::low_level::BlockStore + Send + Sync + Debug> LockingBlock<B> {
+impl<B: crate::low_level::BlockStore + Send + Sync + Debug> Block for LockingBlock<B> {
+    type BlockStore = LockingBlockStore<B>;
+
     #[inline]
-    pub fn block_id(&self) -> &BlockId {
+    fn block_id(&self) -> &BlockId {
         self.cache_entry.key()
     }
 
     #[inline]
-    pub fn data(&self) -> &Data {
+    fn data(&self) -> &Data {
         self.cache_entry
             .value()
             .expect("An existing block cannot have a None cache entry")
@@ -24,14 +26,14 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug> LockingBlock<B> {
     }
 
     #[inline]
-    pub fn data_mut(&mut self) -> &mut Data {
+    fn data_mut(&mut self) -> &mut Data {
         self.cache_entry
             .value_mut()
             .expect("An existing block cannot have a None cache entry")
             .data_mut()
     }
 
-    pub async fn resize(&mut self, new_size: usize) {
+    async fn resize(&mut self, new_size: usize) {
         self.cache_entry
             .value_mut()
             .expect("An existing block cannot have a None cache entry")
@@ -39,7 +41,7 @@ impl<B: crate::low_level::BlockStore + Send + Sync + Debug> LockingBlock<B> {
             .await;
     }
 
-    pub async fn remove(self, block_store: &LockingBlockStore<B>) -> Result<()> {
+    async fn remove(self, block_store: &LockingBlockStore<B>) -> Result<()> {
         // TODO Keep cache entry locked until removal is finished
         let block_id = *self.block_id();
         match block_store._remove(&block_id, self.cache_entry).await? {

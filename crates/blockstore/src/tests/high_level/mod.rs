@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::{
-    high_level::{LockingBlock, LockingBlockStore},
+    high_level::{Block as _, LockingBlock, LockingBlockStore},
     low_level::BlockStore,
     tests::{Fixture, data},
     utils::RemoveResult,
