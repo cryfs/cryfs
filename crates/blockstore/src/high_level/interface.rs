@@ -22,7 +22,7 @@ pub trait BlockStore {
     async fn load(&self, block_id: BlockId) -> Result<Option<Self::Block>>;
     async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult>;
     async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()>;
-    async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult>;
+    async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult>;
 
     // Note: for any blocks that are created or removed while the returned stream is running,
     // we don't give any guarantees for whether they're counted or not.

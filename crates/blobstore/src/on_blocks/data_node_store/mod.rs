@@ -193,7 +193,7 @@ impl<B: LLBlockStore + Send + Sync> DataNodeStore<B> {
     }
 
     pub async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult> {
-        self.block_store.remove(block_id).await
+        self.block_store.remove_by_id(block_id).await
     }
 
     #[cfg(test)]

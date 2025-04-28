@@ -69,7 +69,7 @@ impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreReader for Block
 #[async_trait]
 impl<B: LLBlockStore + Send + Sync + Debug + 'static> BlockStoreDeleter for BlockStoreAdapter<B> {
     async fn remove(&self, id: &BlockId) -> Result<crate::utils::RemoveResult> {
-        self.0.remove(id).await
+        self.0.remove_by_id(id).await
     }
 }
 

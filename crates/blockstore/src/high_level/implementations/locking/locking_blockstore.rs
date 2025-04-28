@@ -158,7 +158,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
         Ok(())
     }
 
-    async fn remove(&self, block_id: &BlockId) -> Result<RemoveResult> {
+    async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult> {
         let cache_entry_guard = self.cache.async_lock(*block_id).await?;
         self._remove(block_id, cache_entry_guard).await
     }

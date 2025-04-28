@@ -111,7 +111,7 @@ pub mod remove {
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
-            store.remove(&blockid).await.unwrap()
+            store.remove_by_id(&blockid).await.unwrap()
         );
         f.yield_fixture(&store).await;
 
