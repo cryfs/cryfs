@@ -406,7 +406,7 @@ impl KnownBlockVersions {
 mod tests {
     #![allow(non_snake_case)]
     use super::*;
-    use crate::tests::blockid;
+    use crate::tests::utils::blockid;
     use base64::engine::{Engine as _, general_purpose::STANDARD as base64_STANDARD};
     use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 

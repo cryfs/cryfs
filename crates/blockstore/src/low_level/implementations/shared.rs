@@ -8,7 +8,7 @@ use std::ops::Deref;
 use crate::{
     BlockId, RemoveResult, TryCreateResult,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError,
+        BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError, LLBlockStore,
         OptimizedBlockStoreWriter,
     },
 };
@@ -134,11 +134,11 @@ mod tests {
     use super::*;
     use crate::instantiate_blockstore_tests;
     use crate::low_level::InMemoryBlockStore;
-    use crate::tests::Fixture;
+    use crate::tests::low_level::LLFixture;
 
     struct TestFixture {}
     #[async_trait]
-    impl Fixture for TestFixture {
+    impl LLFixture for TestFixture {
         type ConcreteBlockStore = SharedBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
             Self {}

@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use crate::{
     BLOCKID_LEN, BlockId,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
         interface::{InvalidBlockSizeError, block_data::IBlockData},
     },
     utils::{RemoveResult, TryCreateResult},
@@ -518,7 +518,7 @@ impl<B: LLBlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> LLBlockS
 mod generic_tests {
     use super::*;
     use crate::low_level::InMemoryBlockStore;
-    use crate::tests::Fixture;
+    use crate::tests::low_level::LLFixture;
     use std::num::NonZeroU32;
     use tempdir::TempDir;
 
@@ -532,7 +532,8 @@ mod generic_tests {
     }
     #[async_trait]
     impl<const ALLOW_INTEGRITY_VIOLATIONS: bool, const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool>
-        Fixture for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
+        LLFixture
+        for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>
     {
         type ConcreteBlockStore = IntegrityBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
@@ -627,7 +628,7 @@ mod specialized_tests {
     use super::integrity_data::testutils::{clientid, version};
     use super::*;
     use crate::low_level::{BlockStoreWriter, InMemoryBlockStore, SharedBlockStore};
-    use crate::tests::{blockid, data};
+    use crate::tests::utils::{blockid, data};
     use common_macros::hash_set;
     use cryfs_utils::async_drop::SyncDrop;
     use futures::future::BoxFuture;

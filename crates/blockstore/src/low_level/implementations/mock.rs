@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use crate::{
     BlockId,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+        BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
     },
     utils::{RemoveResult, TryCreateResult},
 };
@@ -213,7 +213,7 @@ mod tests {
 
     struct TestFixture {}
     #[async_trait]
-    impl crate::tests::Fixture for TestFixture {
+    impl crate::tests::low_level::LLFixture for TestFixture {
         type ConcreteBlockStore = MockBlockStore;
         fn new() -> Self {
             Self {}

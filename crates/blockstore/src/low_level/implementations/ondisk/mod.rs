@@ -357,14 +357,14 @@ mod tests {
     use super::*;
     use crate::instantiate_blockstore_tests;
     use crate::low_level::BlockStoreWriter;
-    use crate::tests::{Fixture, blockid, data};
+    use crate::tests::{low_level::LLFixture, utils::{blockid, data}};
     use tempdir::TempDir;
 
     struct TestFixture {
         basedir: TempDir,
     }
     #[async_trait]
-    impl Fixture for TestFixture {
+    impl LLFixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
             let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();

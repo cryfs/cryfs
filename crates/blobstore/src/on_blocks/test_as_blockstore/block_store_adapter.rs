@@ -9,7 +9,7 @@ use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
     BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
     InvalidBlockSizeError, LLBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
-    tests::Fixture,
+    tests::low_level::LLFixture,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -36,6 +36,8 @@ impl BlockStoreAdapter {
         })
     }
 }
+
+// TODO Should we implement [BlockStore] instead of [LLBlockStore] for this adapter and run the high level tests? Seems to be a closer fit?
 
 #[async_trait]
 impl BlockStoreReader for BlockStoreAdapter {
@@ -156,7 +158,7 @@ impl LLBlockStore for BlockStoreAdapter {}
 /// This allows using our block store test suite on [DataNodeStore].
 pub struct TestFixtureAdapter<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> {}
 #[async_trait]
-impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> Fixture
+impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> LLFixture
     for TestFixtureAdapter<FLUSH_CACHE_ON_YIELD, BLOCK_SIZE_BYTES>
 {
     type ConcreteBlockStore = BlockStoreAdapter;

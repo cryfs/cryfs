@@ -11,7 +11,7 @@ use crate::low_level::interface::InvalidBlockSizeError;
 use crate::{
     BlockId,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -275,7 +275,10 @@ mod tests {
 
     use crate::instantiate_blockstore_tests;
     use crate::low_level::{BlockStoreReader, BlockStoreWriter, InMemoryBlockStore};
-    use crate::tests::{Fixture, blockid, data};
+    use crate::tests::{
+        low_level::LLFixture,
+        utils::{blockid, data},
+    };
     use cryfs_utils::{
         async_drop::AsyncDropArc,
         crypto::symmetric::{
@@ -298,7 +301,7 @@ mod tests {
         _c: PhantomData<C>,
     }
     #[async_trait]
-    impl<C: 'static + CipherDef + Send + Sync> Fixture for TestFixture<C> {
+    impl<C: 'static + CipherDef + Send + Sync> LLFixture for TestFixture<C> {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore, InMemoryBlockStore>;
         fn new() -> Self {
             Self { _c: PhantomData }

@@ -9,7 +9,7 @@ use std::sync::{
 };
 
 use super::*;
-use crate::tests::data;
+use crate::tests::utils::data;
 use crate::{BlockId, high_level::interface::BlockStore as _, low_level::MockBlockStore};
 use cryfs_utils::async_drop::AsyncDropGuard;
 

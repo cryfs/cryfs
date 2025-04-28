@@ -163,13 +163,13 @@ async fn _compress(data: Data) -> Result<Data> {
 mod generic_tests {
     use super::*;
     use crate::low_level::InMemoryBlockStore;
-    use crate::tests::Fixture;
+    use crate::tests::low_level::LLFixture;
 
     use crate::instantiate_blockstore_tests;
 
     struct TestFixture {}
     #[async_trait]
-    impl Fixture for TestFixture {
+    impl LLFixture for TestFixture {
         type ConcreteBlockStore = CompressingBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
             Self {}

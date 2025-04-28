@@ -129,7 +129,7 @@ mod tests {
     use tempdir::TempDir;
 
     use super::testutils::{clientid, version};
-    use crate::tests::blockid;
+    use crate::tests::utils::blockid;
     use cryfs_utils::async_drop::SyncDrop;
 
     struct Fixture {
