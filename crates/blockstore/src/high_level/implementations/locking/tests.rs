@@ -9,8 +9,8 @@ use std::sync::{
 };
 
 use super::*;
+use crate::tests::data;
 use crate::{BlockId, high_level::interface::BlockStore as _, low_level::MockBlockStore};
-use crate::{high_level::Block as _, tests::data};
 use cryfs_utils::async_drop::AsyncDropGuard;
 
 fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
@@ -85,7 +85,7 @@ async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCrea
 
     let block_id = store.create(&data(1024, 0)).await.unwrap();
     let block = store.load(block_id).await.unwrap().unwrap();
-    block.remove(&store).await.unwrap();
+    store.remove(block).await.unwrap();
 
     store.async_drop().await.unwrap();
 }
@@ -114,7 +114,7 @@ async fn test_whenRemovingABlockThatWasJustCreatedButThenFlushed_thenActuallyRem
     let block_id = store.create(&data(1024, 0)).await.unwrap();
     let mut block = store.load(block_id).await.unwrap().unwrap();
     store.flush_block(&mut block).await.unwrap();
-    block.remove(&store).await.unwrap();
+    store.remove(block).await.unwrap();
 
     store.async_drop().await.unwrap();
 }

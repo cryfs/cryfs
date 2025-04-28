@@ -8,7 +8,9 @@ use super::{
     data_inner_node::{self, DataInnerNode},
     data_leaf_node::DataLeafNode,
 };
-use cryfs_blockstore::{Block as _, BlockId, LLBlockStore, LockingBlock, LockingBlockStore};
+use cryfs_blockstore::{
+    Block as _, BlockId, BlockStore as _, LLBlockStore, LockingBlock, LockingBlockStore,
+};
 use cryfs_utils::data::{Data, ZeroedData};
 
 #[derive(Debug)]
@@ -65,7 +67,8 @@ impl<B: LLBlockStore + Send + Sync> DataNode<B> {
     }
 
     pub async fn remove(self, node_store: &DataNodeStore<B>) -> Result<()> {
-        self._into_block().remove(&node_store.block_store).await
+        // TODO The API in BlockStore was turned around from block.remove(&store) to store.remove(block). Should we do the same for datanodestore and other layers?
+        node_store.block_store.remove(self._into_block()).await
     }
 
     fn _into_block(self) -> LockingBlock<B> {

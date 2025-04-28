@@ -1,8 +1,7 @@
-use anyhow::{Result, bail};
 use std::fmt::{self, Debug};
 
-use super::{LockingBlockStore, cache::BlockCacheEntryGuard};
-use crate::{BlockId, LLBlockStore, RemoveResult, high_level::Block};
+use super::cache::BlockCacheEntryGuard;
+use crate::{BlockId, LLBlockStore, high_level::Block};
 use cryfs_utils::data::Data;
 
 pub struct LockingBlock<B: LLBlockStore + Send + Sync + Debug + 'static> {
@@ -10,8 +9,6 @@ pub struct LockingBlock<B: LLBlockStore + Send + Sync + Debug + 'static> {
 }
 
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug> Block for LockingBlock<B> {
-    type BlockStore = LockingBlockStore<B>;
-
     #[inline]
     fn block_id(&self) -> &BlockId {
         self.cache_entry.key()
@@ -39,20 +36,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug> Block for LockingB
             .expect("An existing block cannot have a None cache entry")
             .resize(new_size)
             .await;
-    }
-
-    async fn remove(self, block_store: &LockingBlockStore<B>) -> Result<()> {
-        // TODO Keep cache entry locked until removal is finished
-        let block_id = *self.block_id();
-        match block_store._remove(&block_id, self.cache_entry).await? {
-            RemoveResult::SuccessfullyRemoved => Ok(()),
-            RemoveResult::NotRemovedBecauseItDoesntExist => {
-                bail!(
-                    "Tried to remove a loaded block {:?} but didn't find it",
-                    &block_id,
-                );
-            }
-        }
     }
 }
 

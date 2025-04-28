@@ -3,26 +3,23 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 
 use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
-use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
+use cryfs_utils::data::Data;
 
 pub trait Block {
-    type BlockStore: BlockStore<Block = Self>;
-
     fn block_id(&self) -> &BlockId;
     fn data(&self) -> &Data;
     fn data_mut(&mut self) -> &mut Data;
     async fn resize(&mut self, new_size: usize);
-    // TODO This is a weird API. We should probably change this so that code calls block_store.remove(block) instead. Then we can remove the `type BlockStore` above.
-    async fn remove(self, block_store: &Self::BlockStore) -> Result<()>;
 }
 
 pub trait BlockStore {
-    type Block: Block<BlockStore = Self>;
+    type Block: Block;
 
     async fn load(&self, block_id: BlockId) -> Result<Option<Self::Block>>;
     async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult>;
     async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()>;
     async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult>;
+    async fn remove(&self, block: Self::Block) -> Result<()>;
 
     // Note: for any blocks that are created or removed while the returned stream is running,
     // we don't give any guarantees for whether they're counted or not.

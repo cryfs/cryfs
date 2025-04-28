@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::{collections::HashSet, fmt::Debug};
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_utils::async_drop::AsyncDrop;
@@ -35,7 +35,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         })
     }
 
-    pub(super) async fn _remove(
+    async fn _remove(
         &self,
         block_id: &BlockId,
         mut cache_entry_guard: BlockCacheEntryGuard<B>,
@@ -161,6 +161,20 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
     async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult> {
         let cache_entry_guard = self.cache.async_lock(*block_id).await?;
         self._remove(block_id, cache_entry_guard).await
+    }
+
+    async fn remove(&self, block: LockingBlock<B>) -> Result<()> {
+        // TODO Keep cache entry locked until removal is finished
+        let block_id = *block.block_id();
+        match self._remove(&block_id, block.cache_entry).await? {
+            RemoveResult::SuccessfullyRemoved => Ok(()),
+            RemoveResult::NotRemovedBecauseItDoesntExist => {
+                bail!(
+                    "Tried to remove a loaded block {:?} but didn't find it",
+                    &block_id,
+                );
+            }
+        }
     }
 
     async fn num_blocks(&self) -> Result<u64> {
