@@ -28,17 +28,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
         self.tree_store.load_block_depth(id).await
     }
 
-    #[cfg(test)]
-    pub async fn all_blobs(&self) -> Result<Vec<BlobId>> {
-        Ok(self
-            .tree_store
-            .all_tree_roots()
-            .await?
-            .into_iter()
-            .map(|root| BlobId { root })
-            .collect())
-    }
-
     pub fn into_inner_tree_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataTreeStore<B>> {
         this.unsafe_into_inner_dont_drop().tree_store
     }
@@ -96,6 +85,17 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()> {
         self.tree_store.clear_cache_slow().await
+    }
+
+    #[cfg(test)]
+    async fn all_blobs(&self) -> Result<Vec<BlobId>> {
+        Ok(self
+            .tree_store
+            .all_tree_roots()
+            .await?
+            .into_iter()
+            .map(|root| BlobId { root })
+            .collect())
     }
 }
 

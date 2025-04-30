@@ -18,29 +18,29 @@ use cryfs_utils::{
 
 /// Wrap a [BlobStore] into a [BlockStore] so that we can run the regular block store tests on it.
 /// Each block is stored as a blob.
-pub struct BlockStoreAdapter {
-    underlying_store: AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>,
-    block_size: Byte,
+pub struct BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
+    underlying_store: AsyncDropGuard<B>,
 }
 
-impl BlockStoreAdapter {
-    pub async fn new(block_size: Byte) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self {
-            underlying_store: BlobStoreOnBlocks::new(
-                LockingBlockStore::new(InMemoryBlockStore::new()),
-                block_size,
-            )
-            .await
-            .unwrap(),
-            block_size,
-        })
+impl<B> BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
+    pub async fn new(underlying_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { underlying_store })
     }
 }
 
 // TODO Should we implement [BlockStore] instead of [LLBlockStore] for this adapter and run the high level tests? Seems to be a closer fit?
 
 #[async_trait]
-impl BlockStoreReader for BlockStoreAdapter {
+impl<B> BlockStoreReader for BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         Ok(self
             .underlying_store
@@ -50,7 +50,9 @@ impl BlockStoreReader for BlockStoreAdapter {
     }
 
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
-        if let Some(mut blob) = self.underlying_store.load(&BlobId { root: *id }).await? {
+        let blob_id = BlobId { root: *id };
+        let loaded = self.underlying_store.load(&blob_id);
+        if let Some(mut blob) = loaded.await? {
             Ok(Some(blob.read_all().await?))
         } else {
             Ok(None)
@@ -76,12 +78,7 @@ impl BlockStoreReader for BlockStoreAdapter {
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
-        let overhead = Byte::from_u64(u64::from(self.underlying_store.virtual_block_size_bytes()))
-            .subtract(self.block_size)
-            .unwrap();
-        block_size
-            .subtract(overhead)
-            .ok_or_else(|| InvalidBlockSizeError::new(format!("block size out of range")))
+        Ok(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -96,7 +93,10 @@ impl BlockStoreReader for BlockStoreAdapter {
 }
 
 #[async_trait]
-impl BlockStoreDeleter for BlockStoreAdapter {
+impl<B> BlockStoreDeleter for BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         self.underlying_store
             .remove_by_id(&BlobId { root: *id })
@@ -105,7 +105,10 @@ impl BlockStoreDeleter for BlockStoreAdapter {
 }
 
 #[async_trait]
-impl BlockStoreWriter for BlockStoreAdapter {
+impl<B> BlockStoreWriter for BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<TryCreateResult> {
         let Some(mut blob) = self
             .underlying_store
@@ -137,21 +140,30 @@ impl BlockStoreWriter for BlockStoreAdapter {
     }
 }
 
-impl Debug for BlockStoreAdapter {
+impl<B> Debug for BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "BlockStoreAdapter")
     }
 }
 
 #[async_trait]
-impl AsyncDrop for BlockStoreAdapter {
+impl<B> AsyncDrop for BlockStoreAdapter<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+{
     type Error = anyhow::Error;
     async fn async_drop_impl(&mut self) -> Result<()> {
         self.underlying_store.async_drop().await
     }
 }
 
-impl LLBlockStore for BlockStoreAdapter {}
+impl<B> LLBlockStore for BlockStoreAdapter<B> where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static
+{
+}
 
 /// TestFixtureAdapter takes a [Fixture] for a [BlockStore] and makes it into
 /// a [Fixture] that creates a [DataNodeStore] based on that [BlockStore].
@@ -161,13 +173,23 @@ pub struct TestFixtureAdapter<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE
 impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> LLFixture
     for TestFixtureAdapter<FLUSH_CACHE_ON_YIELD, BLOCK_SIZE_BYTES>
 {
-    type ConcreteBlockStore = BlockStoreAdapter;
+    type ConcreteBlockStore =
+        BlockStoreAdapter<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>;
     fn new() -> Self {
         Self {}
     }
     async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
-        BlockStoreAdapter::new(Byte::from_u64(BLOCK_SIZE_BYTES)).await
+        BlockStoreAdapter::new(
+            BlobStoreOnBlocks::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                Byte::from_u64(BLOCK_SIZE_BYTES),
+            )
+            .await
+            .unwrap(),
+        )
+        .await
     }
+
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
         if FLUSH_CACHE_ON_YIELD {
             store.underlying_store.clear_cache_slow().await.unwrap();

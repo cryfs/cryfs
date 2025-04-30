@@ -54,4 +54,7 @@ pub trait BlobStore {
 
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()>;
+
+    #[cfg(test)]
+    async fn all_blobs(&self) -> Result<Vec<BlobId>>;
 }

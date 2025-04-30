@@ -51,6 +51,11 @@ impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<
     async fn clear_cache_slow(&self) -> Result<()> {
         self.deref().clear_cache_slow().await
     }
+
+    #[cfg(test)]
+    async fn all_blobs(&self) -> Result<Vec<BlobId>> {
+        self.deref().all_blobs().await
+    }
 }
 
 #[cfg(test)]
