@@ -109,7 +109,9 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> fmt::Deb
     }
 }
 
-impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Drop for BlockCacheEntry<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Drop
+    for BlockCacheEntry<B>
+{
     fn drop(&mut self) {
         // User code never gets access to BlockCacheEntry by value, so they can't do this mistake.
         // If a dirty block is really dropped, it is our mistake.

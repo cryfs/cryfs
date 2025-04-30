@@ -7,7 +7,7 @@ use crate::{
     BlockId, RemoveResult, TryCreateResult,
     low_level::{
         InvalidBlockSizeError,
-        interface::{LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter},
+        interface::{BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore},
     },
 };
 use cryfs_utils::async_drop::AsyncDrop;

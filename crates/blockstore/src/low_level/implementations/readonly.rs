@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use crate::{
     BlockId, RemoveResult, TryCreateResult,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError,
+        BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError, LLBlockStore,
         OptimizedBlockStoreWriter,
     },
 };

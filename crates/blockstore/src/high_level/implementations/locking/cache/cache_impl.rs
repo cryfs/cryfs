@@ -282,7 +282,9 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     }
 }
 
-impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Debug for BlockCacheImpl<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> Debug
+    for BlockCacheImpl<B>
+{
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("BlockCacheImpl").finish()
     }

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    AllowIntegrityViolations, LLBlockStore, ClientId, IntegrityConfig, InvalidBlockSizeError,
+    AllowIntegrityViolations, ClientId, IntegrityConfig, InvalidBlockSizeError, LLBlockStore,
     LockingBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
 };
 use cryfs_cli_utils::{

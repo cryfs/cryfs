@@ -3,7 +3,7 @@ use std::path::Path;
 
 use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_blockstore::{
-    AllowIntegrityViolations, LLBlockStore, IntegrityConfig, MissingBlockIsIntegrityViolation,
+    AllowIntegrityViolations, IntegrityConfig, LLBlockStore, MissingBlockIsIntegrityViolation,
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,
 };
 use cryfs_cli_utils::{

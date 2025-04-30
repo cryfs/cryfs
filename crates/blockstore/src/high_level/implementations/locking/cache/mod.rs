@@ -209,7 +209,9 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
 }
 
 #[async_trait]
-impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop for BlockCache<B> {
+impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop
+    for BlockCache<B>
+{
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<()> {
