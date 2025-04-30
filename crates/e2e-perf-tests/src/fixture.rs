@@ -3,8 +3,8 @@ use std::num::NonZeroU32;
 use byte_unit::Byte;
 use cryfs_blobstore::{BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    ActionCounts, ClientId, DynBlockStore, InMemoryBlockStore, IntegrityConfig, LockingBlockStore,
-    SharedBlockStore, TrackingBlockStore,
+    ActionCounts, ClientId, DynBlockStore, InMemoryBlockStore, IntegrityConfig, LLSharedBlockStore,
+    LockingBlockStore, TrackingBlockStore,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
@@ -33,7 +33,7 @@ where
     // filesystem needs to be dropped before _local_state_tempdir, so it's declared first in the struct
     filesystem: SyncDrop<FS>,
 
-    blockstore: SyncDrop<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+    blockstore: SyncDrop<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
     blobstore: SyncDrop<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
 
     _local_state_tempdir: TempDir,
@@ -66,15 +66,15 @@ where
     }
 
     async fn make_blockstore()
-    -> AsyncDropGuard<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>> {
+    -> AsyncDropGuard<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>> {
         let blockstore = InMemoryBlockStore::new();
         let blockstore = TrackingBlockStore::new(blockstore);
-        let blockstore = SharedBlockStore::new(blockstore);
+        let blockstore = LLSharedBlockStore::new(blockstore);
         blockstore
     }
 
     async fn make_blobstore(
-        blockstore: &AsyncDropGuard<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+        blockstore: &AsyncDropGuard<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
     ) -> (
         TempDir,
         AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
@@ -82,7 +82,7 @@ where
         let local_state_tempdir = TempDir::new("cryfs-e2e-perf-tests").unwrap();
 
         let locking_blockstore = setup_blockstore_stack_dyn(
-            SharedBlockStore::clone(&blockstore),
+            LLSharedBlockStore::clone(&blockstore),
             &config(),
             ClientId { id: MY_CLIENT_ID },
             &LocalStateDir::new(local_state_tempdir.path().to_owned()),

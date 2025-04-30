@@ -11,7 +11,7 @@ use std::fmt::Debug;
 use super::super::data_node_store::{DataNodeStore, NodeLayout};
 use super::{store::DataTreeStore, tree::DataTree};
 use cryfs_blockstore::{
-    BlockId, BlockStore, InMemoryBlockStore, LockingBlockStore, SharedBlockStore,
+    BlockId, BlockStore, InMemoryBlockStore, LLSharedBlockStore, LockingBlockStore,
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data, testutils::data_fixture::DataFixture};
 
@@ -189,8 +189,8 @@ pub async fn with_treestore_with_blocksize(
 
 pub async fn with_treestore_and_nodestore(
     f: impl for<'a> FnOnce(
-        &'a DataTreeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
-        &'a DataNodeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
+        &'a DataTreeStore<LockingBlockStore<LLSharedBlockStore<InMemoryBlockStore>>>,
+        &'a DataNodeStore<LockingBlockStore<LLSharedBlockStore<InMemoryBlockStore>>>,
     ) -> BoxFuture<'a, ()>,
 ) {
     with_treestore_and_nodestore_with_blocksize(PHYSICAL_BLOCK_SIZE, f).await
@@ -199,13 +199,13 @@ pub async fn with_treestore_and_nodestore(
 pub async fn with_treestore_and_nodestore_with_blocksize(
     blocksize: Byte,
     f: impl for<'a> FnOnce(
-        &'a DataTreeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
-        &'a DataNodeStore<LockingBlockStore<SharedBlockStore<InMemoryBlockStore>>>,
+        &'a DataTreeStore<LockingBlockStore<LLSharedBlockStore<InMemoryBlockStore>>>,
+        &'a DataNodeStore<LockingBlockStore<LLSharedBlockStore<InMemoryBlockStore>>>,
     ) -> BoxFuture<'a, ()>,
 ) {
-    let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+    let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
     let mut nodestore = DataNodeStore::new(
-        LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+        LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
         blocksize,
     )
     .await

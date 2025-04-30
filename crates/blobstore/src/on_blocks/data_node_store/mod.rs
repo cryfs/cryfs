@@ -247,7 +247,7 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> AsyncDrop for DataNodeStore<B> {
 mod tests {
     use super::*;
     use cryfs_blockstore::{
-        BlockStoreReader, InMemoryBlockStore, LockingBlockStore, MockBlockStore, SharedBlockStore,
+        BlockStoreReader, InMemoryBlockStore, LLSharedBlockStore, LockingBlockStore, MockBlockStore,
     };
     use futures::{StreamExt, TryStreamExt, stream};
     use testutils::*;
@@ -1275,9 +1275,9 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_created_leaf_node() {
-            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
             let mut nodestore = DataNodeStore::new(
-                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
             .await
@@ -1314,9 +1314,9 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_loaded_leaf_node() {
-            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
             let mut nodestore = DataNodeStore::new(
-                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
             .await
@@ -1372,9 +1372,9 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_created_inner_node() {
-            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
             let mut nodestore = DataNodeStore::new(
-                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
             .await
@@ -1416,9 +1416,9 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_loaded_inner_node() {
-            let mut blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
             let mut nodestore = DataNodeStore::new(
-                LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+                LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
             .await

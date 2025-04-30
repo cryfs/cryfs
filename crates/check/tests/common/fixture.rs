@@ -1,8 +1,8 @@
 use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, DataNodeStore, RemoveResult};
 use cryfs_blockstore::{
     AllowIntegrityViolations, BlockId, BlockStoreReader, BlockStoreWriter, DynBlockStore,
-    InMemoryBlockStore, IntegrityConfig, LockingBlockStore, MissingBlockIsIntegrityViolation,
-    SharedBlockStore,
+    InMemoryBlockStore, IntegrityConfig, LLSharedBlockStore, LockingBlockStore,
+    MissingBlockIsIntegrityViolation,
 };
 use cryfs_check::{
     BlobReference, BlobReferenceWithId, CorruptedError, MaybeBlobReferenceWithId,
@@ -39,7 +39,7 @@ const PASSWORD: &str = "mypassword";
 
 pub struct FilesystemFixture {
     root_blob_id: BlobId,
-    blockstore: SyncDrop<SharedBlockStore<InMemoryBlockStore>>,
+    blockstore: SyncDrop<LLSharedBlockStore<InMemoryBlockStore>>,
     config: ConfigLoadResult,
 
     // tempdir should be in last position so it gets dropped last
@@ -55,7 +55,7 @@ impl FilesystemFixture {
 
     pub async fn new() -> Self {
         let tempdir = FixtureTempDir::new();
-        let blockstore = SharedBlockStore::new(InMemoryBlockStore::new());
+        let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
         let config = tempdir.create_config();
         let root_blob_id = BlobId::from_hex(&config.config.config().root_blob).unwrap();
         let result = Self {
@@ -79,7 +79,7 @@ impl FilesystemFixture {
 
     async fn make_locking_blockstore(&self) -> AsyncDropGuard<LockingBlockStore<DynBlockStore>> {
         setup_blockstore_stack_dyn(
-            SharedBlockStore::clone(&self.blockstore),
+            LLSharedBlockStore::clone(&self.blockstore),
             &self.config.config.config(),
             self.config.my_client_id,
             &self.tempdir.local_state_dir(),
@@ -126,7 +126,7 @@ impl FilesystemFixture {
 
     pub async fn update_blockstore<'s, 'b, 'f, F, R>(
         &'s self,
-        update_fn: impl FnOnce(&'b SharedBlockStore<InMemoryBlockStore>) -> F,
+        update_fn: impl FnOnce(&'b LLSharedBlockStore<InMemoryBlockStore>) -> F,
     ) -> R
     where
         F: 'f + Future<Output = R>,

@@ -6,7 +6,7 @@ use divrem::DivCeil;
 use futures::future::BoxFuture;
 
 use cryfs_blockstore::{
-    ActionCounts, BlockId, InMemoryBlockStore, LLBlockStore, LockingBlockStore, SharedBlockStore,
+    ActionCounts, BlockId, InMemoryBlockStore, LLBlockStore, LLSharedBlockStore, LockingBlockStore,
     TrackingBlockStore,
 };
 
@@ -30,15 +30,15 @@ mod testutils {
     pub async fn with_treestore_and_tracking_blockstore(
         f: impl for<'a> FnOnce(
             &'a DataTreeStore<
-                LockingBlockStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+                LockingBlockStore<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
             >,
-            &'a SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
+            &'a LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
         ) -> BoxFuture<'a, ()>,
     ) {
         let mut blockstore =
-            SharedBlockStore::new(TrackingBlockStore::new(InMemoryBlockStore::new()));
+            LLSharedBlockStore::new(TrackingBlockStore::new(InMemoryBlockStore::new()));
         let mut treestore = DataTreeStore::new(
-            LockingBlockStore::new(SharedBlockStore::clone(&blockstore)),
+            LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
             LAYOUT.block_size,
         )
         .await
@@ -50,9 +50,9 @@ mod testutils {
 
     pub async fn create_empty_tree(
         treestore: &DataTreeStore<
-            LockingBlockStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+            LockingBlockStore<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
         >,
-        blockstore: &SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
+        blockstore: &LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
         let tree = treestore.create_tree().await.unwrap();
         let id = *tree.root_node_id();
@@ -64,9 +64,9 @@ mod testutils {
 
     pub async fn create_nonempty_tree(
         treestore: &DataTreeStore<
-            LockingBlockStore<SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+            LockingBlockStore<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
         >,
-        blockstore: &SharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
+        blockstore: &LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
         let mut tree = treestore.create_tree().await.unwrap();
         tree.resize_num_bytes(NUM_LEAVES * LAYOUT.max_bytes_per_leaf() as u64)
