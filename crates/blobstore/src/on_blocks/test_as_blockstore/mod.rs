@@ -13,7 +13,7 @@ mod blockstore_tests {
 
         mod with_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     true, MINIMAL_SIZE,
                 >,
@@ -22,7 +22,7 @@ mod blockstore_tests {
         }
         mod without_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     false, MINIMAL_SIZE,
                 >,
@@ -35,7 +35,7 @@ mod blockstore_tests {
         use super::*;
         mod with_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     true, 1024,
                 >,
@@ -44,7 +44,7 @@ mod blockstore_tests {
         }
         mod without_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     false, 1024,
                 >,
@@ -57,7 +57,7 @@ mod blockstore_tests {
         use super::*;
         mod with_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     true, {32 * 1024},
                 >,
@@ -66,7 +66,7 @@ mod blockstore_tests {
         }
         mod without_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     false, {32 * 1024},
                 >,
@@ -79,7 +79,7 @@ mod blockstore_tests {
         use super::*;
         mod with_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     true, {4 * 1024 * 1024},
                 >,
@@ -88,7 +88,7 @@ mod blockstore_tests {
         }
         mod without_flushing {
             use super::*;
-            cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+            cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
                 block_store_adapter::TestFixtureAdapter<
                     false, {4 * 1024 * 1024},
                 >,
