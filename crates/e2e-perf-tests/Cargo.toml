@@ -25,3 +25,4 @@ fuser.workspace = true
 futures.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
+derive_more.workspace = true

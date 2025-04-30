@@ -1,9 +1,9 @@
-use std::fmt::Debug;
-
 use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
+use std::fmt::Debug;
+use std::ops::Deref;
 
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use cryfs_utils::data::Data;
@@ -27,6 +27,12 @@ where
     pub fn new(underlying_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_store: AsyncDropArc::new(underlying_store),
+        })
+    }
+
+    pub fn clone(this: &AsyncDropGuard<Self>) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
+            underlying_store: AsyncDropArc::clone(&this.underlying_store),
         })
     }
 }
@@ -97,6 +103,18 @@ where
         self.underlying_store
             .clear_unloaded_blocks_from_cache()
             .await
+    }
+}
+
+impl<B> Deref for SharedBlockStore<B>
+where
+    B: BlockStore + AsyncDrop + Debug + Send + Sync,
+    B::Block: Send,
+{
+    type Target = B;
+
+    fn deref(&self) -> &Self::Target {
+        &self.underlying_store
     }
 }
 

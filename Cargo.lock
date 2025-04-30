@@ -924,6 +924,7 @@ dependencies = [
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
+ "derive_more 2.0.1",
  "fuser 0.15.1",
  "futures",
  "rstest",

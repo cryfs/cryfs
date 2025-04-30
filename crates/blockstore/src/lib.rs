@@ -19,12 +19,15 @@ pub use low_level::{
 };
 
 #[cfg(any(test, feature = "testutils"))]
-pub use low_level::{
-    ActionCounts, MockBlockStore, SharedBlockStore as LLSharedBlockStore, TrackingBlockStore,
+pub use high_level::{
+    ActionCounts as HLActionCounts, SharedBlockStore as HLSharedBlockStore,
+    TrackingBlockStore as HLTrackingBlockStore,
 };
-
 #[cfg(any(test, feature = "testutils"))]
-pub use high_level::SharedBlockStore as HLSharedBlockStore;
+pub use low_level::{
+    ActionCounts as LLActionCounts, MockBlockStore, SharedBlockStore as LLSharedBlockStore,
+    TrackingBlockStore as LLTrackingBlockStore,
+};
 
 #[cfg(any(test, feature = "testutils"))]
 pub mod tests;

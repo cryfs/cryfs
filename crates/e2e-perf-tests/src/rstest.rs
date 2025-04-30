@@ -1,5 +1,7 @@
 use cryfs_blobstore::BlobStoreOnBlocks;
-use cryfs_blockstore::{DynBlockStore, LockingBlockStore};
+use cryfs_blockstore::{
+    DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
+};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AtimeUpdateBehavior,
@@ -23,8 +25,15 @@ pub fn all_atime_behaviors(
 ) {
 }
 
+pub enum FixtureType {
+    Fuser,
+    Fusemt,
+}
+
 pub trait FixtureFactory {
     type Filesystem: FilesystemTestExt;
+
+    fn fixture_type(&self) -> FixtureType;
 
     async fn create_filesystem(
         &self,
@@ -40,8 +49,18 @@ pub trait FixtureFactory {
 pub struct HLFixture;
 impl FixtureFactory for HLFixture {
     type Filesystem = ObjectBasedFsAdapter<
-        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        CryDevice<
+            AsyncDropArc<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
+            >,
+        >,
     >;
+    fn fixture_type(&self) -> FixtureType {
+        FixtureType::Fusemt
+    }
+
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
@@ -59,8 +78,17 @@ impl FixtureFactory for HLFixture {
 pub struct LLFixture;
 impl FixtureFactory for LLFixture {
     type Filesystem = ObjectBasedFsAdapterLL<
-        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        CryDevice<
+            AsyncDropArc<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
+            >,
+        >,
     >;
+    fn fixture_type(&self) -> FixtureType {
+        FixtureType::Fuser
+    }
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
@@ -77,6 +105,6 @@ impl FixtureFactory for LLFixture {
 
 #[template]
 pub fn all_fixtures(
-    #[values(crate::rstest::HLFixture, crate::rstest::LLFixture)] fixture: impl FixtureFactory,
+    #[values(crate::rstest::HLFixture, crate::rstest::LLFixture)] fixture_factory: impl FixtureFactory,
 ) {
 }

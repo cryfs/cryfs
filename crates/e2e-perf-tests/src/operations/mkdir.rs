@@ -1,21 +1,25 @@
-use crate::filesystem_test_ext::FilesystemTestExt as _;
-use crate::rstest::FixtureFactory;
-use crate::rstest::{all_atime_behaviors, all_fixtures};
-use cryfs_blockstore::ActionCounts;
-use cryfs_rustfs::AbsolutePath;
-use cryfs_rustfs::AtimeUpdateBehavior;
 use rstest::rstest;
 use rstest_reuse::apply;
+
+use crate::filesystem_test_ext::FilesystemTestExt as _;
+use crate::fixture::ActionCounts;
+use crate::rstest::FixtureFactory;
+use crate::rstest::FixtureType;
+use crate::rstest::{all_atime_behaviors, all_fixtures};
+use cryfs_blockstore::HLActionCounts;
+use cryfs_blockstore::LLActionCounts;
+use cryfs_rustfs::AbsolutePath;
+use cryfs_rustfs::AtimeUpdateBehavior;
 
 #[apply(all_fixtures)]
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn notexisting_from_rootdir(
-    fixture: impl FixtureFactory,
+    fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     let counts = fixture
         .run_operation(async |fs| {
@@ -27,11 +31,24 @@ async fn notexisting_from_rootdir(
     assert_eq!(
         counts,
         ActionCounts {
-            exists: 1, // Check if a blob with the new blob id already exists before creating it.
-            loaded: 0,
-            stored: 2, // Create new directory blob and add an entry for it to the root blob.
-            removed: 0,
-            created: 0,
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                loaded: 0,
+                stored: 2, // Create new directory blob and add an entry for it to the root blob.
+                removed: 0,
+                created: 0,
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                loaded: 2,
+                read: 18,
+                written: 4,
+                overwritten: 0,
+                created: 1,
+                removed: 0,
+                resized: 0,
+                flushed: 0,
+            },
         }
     );
 }
@@ -40,8 +57,11 @@ async fn notexisting_from_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn existing_from_rootdir(fixture: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture.create_filesystem(atime_behavior).await;
+async fn existing_from_rootdir(
+    fixture_factory: impl FixtureFactory,
+    atime_behavior: AtimeUpdateBehavior,
+) {
+    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create it so that it already exists
     fixture
@@ -62,11 +82,24 @@ async fn existing_from_rootdir(fixture: impl FixtureFactory, atime_behavior: Ati
     assert_eq!(
         counts,
         ActionCounts {
-            exists: 1, // Check if a blob with the new blob id already exists before creating it.
-            loaded: 1, // TODO What are we loading here? The root dir should already be cached in the device.
-            stored: 0,
-            removed: 0,
-            created: 0,
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                loaded: 1, // TODO What are we loading here? The root dir should already be cached in the device.
+                stored: 0,
+                removed: 0,
+                created: 0,
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                loaded: 3,
+                read: 19,
+                written: 2,
+                overwritten: 0,
+                created: 1,
+                removed: 1,
+                resized: 0,
+                flushed: 0,
+            },
         }
     );
 }
@@ -76,10 +109,10 @@ async fn existing_from_rootdir(fixture: impl FixtureFactory, atime_behavior: Ati
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn notexisting_from_nesteddir(
-    fixture: impl FixtureFactory,
+    fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
     fixture
@@ -100,11 +133,30 @@ async fn notexisting_from_nesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            exists: 1, // Check if a blob with the new blob id already exists before creating it.
-            loaded: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-            stored: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
-            removed: 0,
-            created: 0,
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                loaded: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                stored: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
+                removed: 0,
+                created: 0,
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                loaded: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 5, // TODO Why one more than Fusemt?
+                    FixtureType::Fusemt => 4,
+                },
+                read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 47, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 38,
+                },
+                written: 5,
+                overwritten: 0,
+                created: 1,
+                removed: 0,
+                resized: 0,
+                flushed: 0,
+            },
         }
     );
 }
@@ -114,10 +166,10 @@ async fn notexisting_from_nesteddir(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn existing_from_nesteddir(
-    fixture: impl FixtureFactory,
+    fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
     fixture
@@ -147,11 +199,30 @@ async fn existing_from_nesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            exists: 1, // Check if a blob with the new blob id already exists before creating it.
-            loaded: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-            stored: 1, // TODO What are we storing here? We didn't make any changes.
-            removed: 0,
-            created: 0,
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                loaded: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                stored: 1, // TODO What are we storing here? We didn't make any changes.
+                removed: 0,
+                created: 0,
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                loaded: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 6, // TODO Why one more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                overwritten: 0,
+                read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 48, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 39,
+                },
+                written: 3,
+                created: 1,
+                removed: 1,
+                resized: 0,
+                flushed: 0,
+            },
         }
     );
 }
@@ -161,10 +232,10 @@ async fn existing_from_nesteddir(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn notexisting_from_deeplynesteddir(
-    fixture: impl FixtureFactory,
+    fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
     fixture
@@ -199,11 +270,30 @@ async fn notexisting_from_deeplynesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            exists: 1, // Check if a blob with the new blob id already exists before creating it.
-            loaded: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-            stored: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
-            removed: 0,
-            created: 0,
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                loaded: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                stored: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
+                removed: 0,
+                created: 0,
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                loaded: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 9, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 6,
+                },
+                overwritten: 0,
+                read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 83, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 56,
+                },
+                written: 5,
+                created: 1,
+                removed: 0,
+                resized: 0,
+                flushed: 0,
+            },
         }
     );
 }
@@ -213,10 +303,10 @@ async fn notexisting_from_deeplynesteddir(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn existing_from_deeplynesteddir(
-    fixture: impl FixtureFactory,
+    fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
     fixture
@@ -260,11 +350,30 @@ async fn existing_from_deeplynesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            exists: 1, // Check if a blob with the new blob id already exists before creating it.
-            loaded: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-            stored: 1, // TODO What are we storing here? We didn't make any changes.
-            removed: 0,
-            created: 0,
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                loaded: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                stored: 1, // TODO What are we storing here? We didn't make any changes.
+                removed: 0,
+                created: 0,
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                loaded: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 10, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 7,
+                },
+                overwritten: 0,
+                read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 84, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 57,
+                },
+                written: 3,
+                created: 1,
+                removed: 1,
+                resized: 0,
+                flushed: 0,
+            },
         }
     );
 }

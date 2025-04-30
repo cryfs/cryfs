@@ -1,10 +1,14 @@
-use std::num::NonZeroU32;
-
 use byte_unit::Byte;
+use derive_more::{Add, AddAssign, Sum};
+use std::fmt::Debug;
+use std::num::NonZeroU32;
+use tempdir::TempDir;
+
 use cryfs_blobstore::{BlobStore, BlobStoreOnBlocks};
 use cryfs_blockstore::{
-    ActionCounts, ClientId, DynBlockStore, InMemoryBlockStore, IntegrityConfig, LLSharedBlockStore,
-    LockingBlockStore, TrackingBlockStore,
+    ClientId, DynBlockStore, HLActionCounts, HLSharedBlockStore, HLTrackingBlockStore,
+    InMemoryBlockStore, IntegrityConfig, LLActionCounts, LLSharedBlockStore, LLTrackingBlockStore,
+    LockingBlockStore,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
@@ -16,15 +20,17 @@ use cryfs_filesystem::{
 use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::{AtimeUpdateBehavior, Gid, RequestInfo, Uid};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
-use std::fmt::Debug;
-use tempdir::TempDir;
 
 use crate::filesystem_test_ext::FilesystemTestExt;
 
 const BLOCKSIZE_BYTES: u64 = 4096;
 const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
 
-// ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>
+#[derive(Debug, Default, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
+pub struct ActionCounts {
+    pub low_level: LLActionCounts,
+    pub high_level: HLActionCounts,
+}
 
 pub struct FilesystemFixture<FS>
 where
@@ -33,8 +39,16 @@ where
     // filesystem needs to be dropped before _local_state_tempdir, so it's declared first in the struct
     filesystem: SyncDrop<FS>,
 
-    blockstore: SyncDrop<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
-    blobstore: SyncDrop<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+    ll_blockstore: SyncDrop<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
+    hl_blockstore:
+        SyncDrop<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
+    blobstore: SyncDrop<
+        AsyncDropArc<
+            BlobStoreOnBlocks<
+                HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+            >,
+        >,
+    >,
 
     _local_state_tempdir: TempDir,
 }
@@ -50,8 +64,10 @@ where
     }
 
     pub async fn create_uninitialized_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
-        let blockstore = Self::make_blockstore().await;
-        let (local_state_tempdir, blobstore) = Self::make_blobstore(&blockstore).await;
+        let ll_blockstore = Self::make_ll_blockstore().await;
+        let (local_state_tempdir, hl_blockstore) = Self::make_hl_blockstore(&ll_blockstore).await;
+        let blobstore = Self::make_blobstore(&hl_blockstore).await;
+
         let blobstore = AsyncDropArc::new(blobstore);
         let device = Self::make_device(&blobstore, atime_behavior).await;
 
@@ -59,30 +75,33 @@ where
 
         Self {
             filesystem: SyncDrop::new(filesystem),
-            blockstore: SyncDrop::new(blockstore),
+            ll_blockstore: SyncDrop::new(ll_blockstore),
+            hl_blockstore: SyncDrop::new(hl_blockstore),
             blobstore: SyncDrop::new(blobstore),
             _local_state_tempdir: local_state_tempdir,
         }
     }
 
-    async fn make_blockstore()
-    -> AsyncDropGuard<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>> {
+    async fn make_ll_blockstore()
+    -> AsyncDropGuard<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>> {
         let blockstore = InMemoryBlockStore::new();
-        let blockstore = TrackingBlockStore::new(blockstore);
+        let blockstore = LLTrackingBlockStore::new(blockstore);
         let blockstore = LLSharedBlockStore::new(blockstore);
         blockstore
     }
 
-    async fn make_blobstore(
-        blockstore: &AsyncDropGuard<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+    async fn make_hl_blockstore(
+        ll_blockstore: &AsyncDropGuard<
+            LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
+        >,
     ) -> (
         TempDir,
-        AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
+        AsyncDropGuard<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
     ) {
         let local_state_tempdir = TempDir::new("cryfs-e2e-perf-tests").unwrap();
 
         let locking_blockstore = setup_blockstore_stack_dyn(
-            LLSharedBlockStore::clone(&blockstore),
+            LLSharedBlockStore::clone(&ll_blockstore),
             &config(),
             ClientId { id: MY_CLIENT_ID },
             &LocalStateDir::new(local_state_tempdir.path().to_owned()),
@@ -99,20 +118,46 @@ where
         .await
         .unwrap();
 
-        let blobstore = BlobStoreOnBlocks::new(locking_blockstore, config().blocksize)
-            .await
-            .unwrap();
+        let tracking_block_store = HLTrackingBlockStore::new(locking_blockstore);
+        let shared_block_store = HLSharedBlockStore::new(tracking_block_store);
+        (local_state_tempdir, shared_block_store)
+    }
 
-        (local_state_tempdir, blobstore)
+    async fn make_blobstore(
+        hl_blockstore: &AsyncDropGuard<
+            HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+        >,
+    ) -> AsyncDropGuard<
+        BlobStoreOnBlocks<
+            HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+        >,
+    > {
+        let blobstore =
+            BlobStoreOnBlocks::new(HLSharedBlockStore::clone(hl_blockstore), config().blocksize)
+                .await
+                .unwrap();
+
+        blobstore
     }
 
     async fn make_device(
         blobstore: &AsyncDropGuard<
-            AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
+            AsyncDropArc<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
+            >,
         >,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> AsyncDropGuard<CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>>
-    {
+    ) -> AsyncDropGuard<
+        CryDevice<
+            AsyncDropArc<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
+            >,
+        >,
+    > {
         let blobstore = AsyncDropArc::clone(blobstore);
 
         let device = make_device(
@@ -128,14 +173,21 @@ where
     }
 
     pub fn totals(&self) -> ActionCounts {
-        self.blockstore.totals()
+        ActionCounts {
+            low_level: self.ll_blockstore.totals(),
+            high_level: self.hl_blockstore.totals(),
+        }
     }
 
     pub async fn run_operation(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
-        self.blockstore.get_and_reset_totals();
+        self.ll_blockstore.get_and_reset_totals();
+        self.hl_blockstore.get_and_reset_totals();
         operation(&self.filesystem).await;
         self.blobstore.clear_cache_slow().await.unwrap();
-        self.blockstore.get_and_reset_totals()
+        ActionCounts {
+            low_level: self.ll_blockstore.get_and_reset_totals(),
+            high_level: self.hl_blockstore.get_and_reset_totals(),
+        }
     }
 }
 

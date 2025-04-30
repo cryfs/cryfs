@@ -6,8 +6,8 @@ use divrem::DivCeil;
 use futures::future::BoxFuture;
 
 use cryfs_blockstore::{
-    ActionCounts, BlockId, InMemoryBlockStore, LLBlockStore, LLSharedBlockStore, LockingBlockStore,
-    TrackingBlockStore,
+    BlockId, InMemoryBlockStore, LLActionCounts, LLSharedBlockStore, LLTrackingBlockStore,
+    LockingBlockStore,
 };
 
 use super::super::testutils::*;
@@ -30,13 +30,13 @@ mod testutils {
     pub async fn with_treestore_and_tracking_blockstore(
         f: impl for<'a> FnOnce(
             &'a DataTreeStore<
-                LockingBlockStore<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+                LockingBlockStore<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
             >,
-            &'a LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
+            &'a LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
         ) -> BoxFuture<'a, ()>,
     ) {
         let mut blockstore =
-            LLSharedBlockStore::new(TrackingBlockStore::new(InMemoryBlockStore::new()));
+            LLSharedBlockStore::new(LLTrackingBlockStore::new(InMemoryBlockStore::new()));
         let mut treestore = DataTreeStore::new(
             LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
             LAYOUT.block_size,
@@ -50,9 +50,9 @@ mod testutils {
 
     pub async fn create_empty_tree(
         treestore: &DataTreeStore<
-            LockingBlockStore<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+            LockingBlockStore<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
         >,
-        blockstore: &LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
+        blockstore: &LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
         let tree = treestore.create_tree().await.unwrap();
         let id = *tree.root_node_id();
@@ -64,9 +64,9 @@ mod testutils {
 
     pub async fn create_nonempty_tree(
         treestore: &DataTreeStore<
-            LockingBlockStore<LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>>,
+            LockingBlockStore<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
         >,
-        blockstore: &LLSharedBlockStore<TrackingBlockStore<InMemoryBlockStore>>,
+        blockstore: &LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
         let mut tree = treestore.create_tree().await.unwrap();
         tree.resize_num_bytes(NUM_LEAVES * LAYOUT.max_bytes_per_leaf() as u64)
@@ -192,7 +192,7 @@ mod num_nodes {
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
 
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 1,
                         ..Default::default()
                     },
@@ -200,7 +200,7 @@ mod num_nodes {
                 );
                 assert_eq!(1, tree.num_nodes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 0,
                         ..Default::default()
                     },
@@ -218,7 +218,7 @@ mod num_nodes {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 1,
                         ..Default::default()
                     },
@@ -229,7 +229,7 @@ mod num_nodes {
                 // because the root node is already loaded and, as opposed to num_bytes, the leaf doesn't need to be loaded.
                 assert_eq!(NUM_NODES, tree.num_nodes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: (DEPTH - 1) as u32,
                         ..Default::default()
                     },
@@ -239,7 +239,7 @@ mod num_nodes {
                 // Calling num_nodes() again shouldn't load any more nodes, it's now cached.
                 assert_eq!(NUM_NODES, tree.num_nodes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 0,
                         ..Default::default()
                     },
@@ -262,7 +262,7 @@ mod num_bytes {
                 let block_id = create_empty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 1,
                         ..Default::default()
                     },
@@ -271,7 +271,7 @@ mod num_bytes {
 
                 assert_eq!(0, tree.num_bytes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 0,
                         ..Default::default()
                     },
@@ -289,7 +289,7 @@ mod num_bytes {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 1,
                         ..Default::default()
                     },
@@ -300,7 +300,7 @@ mod num_bytes {
                 // because the root node is already loaded and, as opposed to num_leaves, the leaf needs to be loaded.
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: DEPTH as u32,
                         ..Default::default()
                     },
@@ -310,7 +310,7 @@ mod num_bytes {
                 // Calling num_bytes() again shouldn't load any more nodes, it's now cached.
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 0,
                         ..Default::default()
                     },
@@ -328,7 +328,7 @@ mod num_bytes {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 1,
                         ..Default::default()
                     },
@@ -339,7 +339,7 @@ mod num_bytes {
                 // because the root node is already loaded and, as opposed to num_bytes, the leaf doesn't need to be loaded.
                 assert_eq!(NUM_NODES, tree.num_nodes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: (DEPTH - 1) as u32,
                         ..Default::default()
                     },
@@ -349,7 +349,7 @@ mod num_bytes {
                 // Calling num_bytes() should now only have to load one node (i.e. the leaf)
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 1,
                         ..Default::default()
                     },
@@ -359,7 +359,7 @@ mod num_bytes {
                 // Calling num_bytes() again shouldn't load any more nodes, it's now cached.
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: 0,
                         ..Default::default()
                     },
@@ -382,7 +382,7 @@ mod create_tree {
                 treestore.create_tree().await.unwrap();
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 1,
                         stored: 1,
                         ..Default::default()
@@ -407,7 +407,7 @@ mod try_create_tree {
                 treestore.try_create_tree(block_id).await.unwrap().unwrap();
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 1,
                         stored: 1,
                         ..Default::default()
@@ -434,7 +434,7 @@ mod try_create_tree {
                 assert!(treestore.try_create_tree(block_id).await.unwrap().is_none());
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 1,
                         stored: 0,
                         ..Default::default()
@@ -467,7 +467,7 @@ macro_rules! instantiate_read_tests {
                     // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
                     // it is already loaded inside of the `tree` instance. That means reading the leaf should load `DEPTH` nodes.
                     assert_eq!(
-                        ActionCounts {
+                        LLActionCounts {
                             loaded: DEPTH as u32,
                             ..Default::default()
                         },
@@ -496,7 +496,7 @@ macro_rules! instantiate_read_tests {
                     //      but the current implementation is inefficent because it first needs to load the num_bytes in to the cache
                     let expected_loaded = 14;
                     assert_eq!(
-                        ActionCounts {
+                        LLActionCounts {
                             loaded: expected_loaded,
                             ..Default::default()
                         },
@@ -539,7 +539,7 @@ macro_rules! instantiate_read_tests {
                         expected_num_loaded_inner_nodes_without_root + NUM_ACCESSED_LEAVES;
 
                     assert_eq!(
-                        ActionCounts {
+                        LLActionCounts {
                             loaded: expected_num_loaded_nodes as u32,
                             ..Default::default()
                         },
@@ -580,7 +580,7 @@ macro_rules! instantiate_read_tests {
                     let expected_num_loaded_nodes = 33;
 
                     assert_eq!(
-                        ActionCounts {
+                        LLActionCounts {
                             loaded: expected_num_loaded_nodes as u32,
                             ..Default::default()
                         },
@@ -655,7 +655,7 @@ mod read_all {
 
                 // We need to load the full tree except for the root node, which is already loaded in the `tree` instance.
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: NUM_NODES as u32 - 1,
                         ..Default::default()
                     },
@@ -678,7 +678,7 @@ mod read_all {
 
                 // We need to load the full tree except for the root node, which is already loaded in the `tree` instance.
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: NUM_NODES as u32 - 1,
                         ..Default::default()
                     },
@@ -715,7 +715,7 @@ mod write_bytes {
                 // it is already loaded inside of the `tree` instance. We also have to load the leaf itself, because we only write part of it.
                 // That means reading the leaf should load `DEPTH` nodes.
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: DEPTH as u32,
                         ..Default::default()
                     },
@@ -726,7 +726,7 @@ mod write_bytes {
                 std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: 1,
                         ..Default::default()
                     },
@@ -755,7 +755,7 @@ mod write_bytes {
                 // That means reading the leaf should load `DEPTH` nodes.
                 let expected_loaded = DEPTH as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
@@ -766,7 +766,7 @@ mod write_bytes {
                 std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: 1,
                         ..Default::default()
                     },
@@ -802,7 +802,7 @@ mod write_bytes {
                 // it is already loaded inside of the `tree` instance. We don't have to load the leaf itself, because we fully overwrite it.
                 // That means reading the leaf should load `DEPTH - 1` nodes.
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 1, // TODO Why do we need exists here?
                         loaded: DEPTH as u32 - 1,
                         ..Default::default()
@@ -814,7 +814,7 @@ mod write_bytes {
                 std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: 1,
                         ..Default::default()
                     },
@@ -848,7 +848,7 @@ mod write_bytes {
                 // That means reading the leaf should load `DEPTH - 1` nodes.
                 let expected_loaded = DEPTH as u32 - 1;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 1, // TODO Why do we need exists here?
                         loaded: expected_loaded,
                         ..Default::default()
@@ -860,7 +860,7 @@ mod write_bytes {
                 std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: 1,
                         ..Default::default()
                     },
@@ -905,7 +905,7 @@ mod write_bytes {
                 // only partially overwriting those
                 let expected_num_loaded_nodes = expected_num_loaded_inner_nodes_without_root + 2;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: NUM_ACCESSED_LEAVES as u32 - 2, // TODO Why do we need exists here?
                         loaded: expected_num_loaded_nodes as u32,
                         ..Default::default()
@@ -917,7 +917,7 @@ mod write_bytes {
                 std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: NUM_ACCESSED_LEAVES as u32,
                         ..Default::default()
                     },
@@ -960,7 +960,7 @@ mod write_bytes {
                 let expected_num_loaded_nodes = expected_num_loaded_inner_nodes_without_root + 2;
 
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: NUM_ACCESSED_LEAVES as u32 - 2, // TODO Why do we need exists here?
                         loaded: expected_num_loaded_nodes as u32,
                         ..Default::default()
@@ -972,7 +972,7 @@ mod write_bytes {
                 std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: NUM_ACCESSED_LEAVES as u32,
                         ..Default::default()
                     },
@@ -1006,7 +1006,7 @@ mod write_bytes {
                 // it is already loaded inside of the `tree` instance. We also have to load the leaf itself, because we only write part of it.
                 // That means reading the leaf should load `DEPTH` nodes.
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
                         loaded: DEPTH as u32,
                         ..Default::default()
@@ -1021,7 +1021,7 @@ mod write_bytes {
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
                         as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
@@ -1052,7 +1052,7 @@ mod write_bytes {
                 // That means reading the leaf should load `DEPTH` nodes.
                 let expected_loaded = DEPTH as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
                         loaded: expected_loaded,
                         ..Default::default()
@@ -1067,7 +1067,7 @@ mod write_bytes {
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
                         as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
@@ -1105,7 +1105,7 @@ mod write_bytes {
                 // That means reading the leaf should load `DEPTH - 1` nodes.
                 // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
                         loaded: DEPTH as u32,
                         ..Default::default()
@@ -1120,7 +1120,7 @@ mod write_bytes {
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
                         as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
@@ -1156,7 +1156,7 @@ mod write_bytes {
                 // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
                 let expected_loaded = DEPTH as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
                         loaded: expected_loaded,
                         ..Default::default()
@@ -1171,7 +1171,7 @@ mod write_bytes {
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
                         as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
@@ -1212,7 +1212,7 @@ mod write_bytes {
                 // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
                 let expected_loaded = DEPTH as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 103, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
                         loaded: expected_loaded,
                         ..Default::default()
@@ -1228,7 +1228,7 @@ mod write_bytes {
                     FIRST_ACCESSED_LEAF + NUM_ACCESSED_LEAVES,
                 ) as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: expected_stored + 3, // TODO Why +3?
                         ..Default::default()
                     },
@@ -1266,7 +1266,7 @@ mod write_bytes {
                 // TODO For some reason, we actually need to load `DEPTH` nodes. Maybe we do load the leaf. Fix this.
                 let expected_loaded = DEPTH as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         exists: 103, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
                         loaded: expected_loaded,
                         ..Default::default()
@@ -1282,7 +1282,7 @@ mod write_bytes {
                     FIRST_ACCESSED_LEAF + NUM_ACCESSED_LEAVES,
                 ) as u32;
                 assert_eq!(
-                    ActionCounts {
+                    LLActionCounts {
                         stored: expected_stored + 3, // TODO Why +3?
                         ..Default::default()
                     },

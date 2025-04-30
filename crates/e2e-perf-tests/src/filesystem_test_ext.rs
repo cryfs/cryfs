@@ -1,5 +1,7 @@
 use cryfs_blobstore::BlobStoreOnBlocks;
-use cryfs_blockstore::{DynBlockStore, LockingBlockStore};
+use cryfs_blockstore::{
+    DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
+};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, FsError, FsResult, Mode,
@@ -16,7 +18,13 @@ use crate::fixture::request_info;
 pub trait FilesystemTestExt: AsyncDrop + Debug {
     async fn new(
         device: AsyncDropGuard<
-            CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+            CryDevice<
+                AsyncDropArc<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
+                >,
+            >,
         >,
     ) -> AsyncDropGuard<Self>
     where
@@ -29,12 +37,24 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
 
 impl FilesystemTestExt
     for ObjectBasedFsAdapterLL<
-        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        CryDevice<
+            AsyncDropArc<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
+            >,
+        >,
     >
 {
     async fn new(
         device: AsyncDropGuard<
-            CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+            CryDevice<
+                AsyncDropArc<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
+                >,
+            >,
         >,
     ) -> AsyncDropGuard<Self> {
         ObjectBasedFsAdapterLL::new(|_uid, _gid| device)
@@ -78,12 +98,24 @@ impl FilesystemTestExt
 
 impl FilesystemTestExt
     for ObjectBasedFsAdapter<
-        CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+        CryDevice<
+            AsyncDropArc<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
+            >,
+        >,
     >
 {
     async fn new(
         device: AsyncDropGuard<
-            CryDevice<AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>>,
+            CryDevice<
+                AsyncDropArc<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
+                >,
+            >,
         >,
     ) -> AsyncDropGuard<Self> {
         ObjectBasedFsAdapter::new(|_uid, _gid| device)
