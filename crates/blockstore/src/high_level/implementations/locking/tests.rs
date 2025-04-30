@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 use anyhow::anyhow;
+use async_trait::async_trait;
 use byte_unit::Byte;
 use mockall::predicate::{always, function};
 use std::sync::{
@@ -9,9 +10,45 @@ use std::sync::{
 };
 
 use super::*;
-use crate::tests::utils::data;
-use crate::{BlockId, high_level::interface::BlockStore as _, low_level::MockBlockStore};
+use crate::{
+    BlockId, InMemoryBlockStore, high_level::interface::BlockStore as _, low_level::MockBlockStore,
+    tests::high_level::HLFixture,
+};
+use crate::{instantiate_blockstore_tests_for_highlevel_blockstore, tests::utils::data};
 use cryfs_utils::async_drop::AsyncDropGuard;
+
+struct TestFixture<const FLUSH_CACHE_ON_YIELD: bool> {}
+#[async_trait]
+impl<const FLUSH_CACHE_ON_YIELD: bool> HLFixture for TestFixture<FLUSH_CACHE_ON_YIELD> {
+    type ConcreteBlockStore = LockingBlockStore<InMemoryBlockStore>;
+    fn new() -> Self {
+        Self {}
+    }
+    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+        LockingBlockStore::new(InMemoryBlockStore::new())
+    }
+    async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
+        if FLUSH_CACHE_ON_YIELD {
+            store.clear_cache_slow().await.unwrap();
+        }
+    }
+}
+
+mod with_flushing {
+    use super::*;
+    instantiate_blockstore_tests_for_highlevel_blockstore!(
+        TestFixture<true>,
+        (flavor = "multi_thread")
+    );
+}
+
+mod without_flushing {
+    use super::*;
+    instantiate_blockstore_tests_for_highlevel_blockstore!(
+        TestFixture<false>,
+        (flavor = "multi_thread")
+    );
+}
 
 fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
     let mut store = AsyncDropGuard::new(MockBlockStore::new());

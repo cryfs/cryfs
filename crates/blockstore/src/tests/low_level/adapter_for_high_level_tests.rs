@@ -3,20 +3,21 @@ use cryfs_utils::async_drop::AsyncDropGuard;
 use std::fmt::Debug;
 
 use super::LLFixture;
-use crate::{BlockStore as _, LockingBlockStore, tests::high_level::HLFixture};
+use crate::{BlockStore as _, LLBlockStore, LockingBlockStore, tests::high_level::HLFixture};
 
-/// Take a [LLFixture] meant to set up a [LLBlockStore] and create a [HLFixture] that sets up a [BlockStore] by wrapping the [LLBlockStore] into a [LockingBlockStore].
-/// This way, we can run the high level block store tests on it.
-pub struct LockingBlockStoreFixture<F: LLFixture, const FLUSH_CACHE_ON_YIELD: bool> {
+/// [FixtureAdapterForHLTests] takes a [LLFixture] for a [LLBlockStore] and makes it into
+/// a [HLFixture] that creates a [LockingBlockStore] based on that [LLBlockStore].
+/// This allows using our high level block store test suite on a low level [LLBlockStore].
+pub struct FixtureAdapterForHLTests<F: LLFixture, const FLUSH_CACHE_ON_YIELD: bool> {
     f: F,
 }
 
 #[async_trait]
 impl<F, const FLUSH_CACHE_ON_YIELD: bool> HLFixture
-    for LockingBlockStoreFixture<F, FLUSH_CACHE_ON_YIELD>
+    for FixtureAdapterForHLTests<F, FLUSH_CACHE_ON_YIELD>
 where
     F: LLFixture + Send + Sync,
-    F::ConcreteBlockStore: Send + Sync + Debug + 'static,
+    F::ConcreteBlockStore: LLBlockStore + Send + Sync + Debug + 'static,
 {
     type ConcreteBlockStore = LockingBlockStore<F::ConcreteBlockStore>;
 

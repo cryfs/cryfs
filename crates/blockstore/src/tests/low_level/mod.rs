@@ -5,6 +5,6 @@ mod fixture;
 pub use fixture::LLFixture;
 
 mod adapter_for_high_level_tests;
-pub use adapter_for_high_level_tests::LockingBlockStoreFixture;
+pub use adapter_for_high_level_tests::FixtureAdapterForHLTests;
 
 pub mod tests;

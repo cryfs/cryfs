@@ -117,8 +117,8 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
 }
 
 /// [FixtureAdapterForLLTests] takes a [HLFixture] for a [BlockStore] and makes it into
-/// a [LLFixture] that creates a [LockingBlockStore] based on that [LLBlockStore].
-/// This allows using our block store test suite on [LockingBlockStore].
+/// a [LLFixture] that creates a [BlockStoreToLLBlockStoreAdapter] implementing [LLBlockStore] for that [BlockStore].
+/// This allows using our low level block store test suite on a high level [BlockStore].
 pub struct FixtureAdapterForLLTests<F: HLFixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> {
     f: F,
 }

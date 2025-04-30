@@ -82,7 +82,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         Ok(base_store)
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub fn inner_block_store(&self) -> &AsyncDropGuard<B> {
         self.base_store.as_ref().expect("Already destructed")
     }
