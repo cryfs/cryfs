@@ -273,7 +273,7 @@ mod tests {
     use rand::{RngCore, SeedableRng, rngs::StdRng};
     use std::marker::PhantomData;
 
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
     use crate::low_level::{BlockStoreReader, BlockStoreWriter, InMemoryBlockStore};
     use crate::tests::{
         low_level::LLFixture,
@@ -317,11 +317,14 @@ mod tests {
 
     mod aes256gcm {
         use super::*;
-        instantiate_blockstore_tests!(super::TestFixture<Aes256Gcm>, (flavor = "multi_thread"));
+        instantiate_blockstore_tests_for_lowlevel_blockstore!(
+            super::TestFixture<Aes256Gcm>,
+            (flavor = "multi_thread")
+        );
     }
     mod aes128gcm {
         use super::*;
-        crate::instantiate_blockstore_tests!(
+        crate::instantiate_blockstore_tests_for_lowlevel_blockstore!(
             super::TestFixture<Aes128Gcm>,
             (flavor = "multi_thread")
         );
@@ -329,7 +332,7 @@ mod tests {
 
     mod xchachapoly1305 {
         use super::*;
-        crate::instantiate_blockstore_tests!(
+        crate::instantiate_blockstore_tests_for_lowlevel_blockstore!(
             super::TestFixture<XChaCha20Poly1305>,
             (flavor = "multi_thread")
         );

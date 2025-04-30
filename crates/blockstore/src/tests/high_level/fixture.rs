@@ -1,43 +1,28 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::{BlockStore as _, LLBlockStore, LockingBlockStore, tests::low_level::LLFixture};
-use cryfs_utils::async_drop::AsyncDropGuard;
+use crate::BlockStore;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-/// Based on a [crate::tests::Fixture], we define a [LockingBlockStoreFixture]
-/// that uses the underlying fixture and wraps its blockstore into a [LockingBlockStore]
-/// to run LockingBlockStore tests on it.
+/// By writing a [HLFixture] implementation and using the [instantiate_highlevel_blockstore_tests!](crate::instantiate_highlevel_blockstore_tests!) macro,
+/// our suite of high level block store tests is instantiated for a given block store.
+///
+/// The fixture is kept alive for as long as the test runs, so it can hold RAII resources
+/// required by the block store.
 #[async_trait]
-pub trait LockingBlockStoreFixture {
-    type UnderlyingBlockStore: LLBlockStore + Send + Sync + Debug + 'static;
+pub trait HLFixture {
+    type ConcreteBlockStore: BlockStore + AsyncDrop + Debug + Send + Sync + 'static;
 
+    /// Instantiate the fixture
     fn new() -> Self;
-    async fn store(&mut self) -> AsyncDropGuard<LockingBlockStore<Self::UnderlyingBlockStore>>;
-    async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>);
-}
 
-pub struct LockingBlockStoreFixtureImpl<F: LLFixture, const FLUSH_CACHE_ON_YIELD: bool> {
-    f: F,
-}
+    /// Create a new block store for testing
+    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore>;
 
-#[async_trait]
-impl<F, const FLUSH_CACHE_ON_YIELD: bool> LockingBlockStoreFixture
-    for LockingBlockStoreFixtureImpl<F, FLUSH_CACHE_ON_YIELD>
-where
-    F: LLFixture + Send + Sync,
-    F::ConcreteBlockStore: Send + Sync + Debug + 'static,
-{
-    type UnderlyingBlockStore = F::ConcreteBlockStore;
-    fn new() -> Self {
-        Self { f: F::new() }
-    }
-    async fn store(&mut self) -> AsyncDropGuard<LockingBlockStore<Self::UnderlyingBlockStore>> {
-        let inner = self.f.store().await;
-        LockingBlockStore::new(inner)
-    }
-    async fn yield_fixture(&self, store: &LockingBlockStore<Self::UnderlyingBlockStore>) {
-        if FLUSH_CACHE_ON_YIELD {
-            store.clear_cache_slow().await.unwrap();
-        }
-    }
+    /// Run some action defined by the fixture. This is often called
+    /// by test cases between making changes and asserting that the changes
+    /// were correctly made. Test fixtures can do things like flushing here
+    /// if they want to test that flushing doesn't break anything.
+    /// Most fixtures will likely implement this as a no-op.
+    async fn yield_fixture(&self, store: &Self::ConcreteBlockStore);
 }

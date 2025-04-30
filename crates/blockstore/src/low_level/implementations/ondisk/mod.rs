@@ -12,7 +12,7 @@ use crate::low_level::InvalidBlockSizeError;
 use crate::{
     BLOCKID_LEN, BlockId,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, OptimizedBlockStoreWriter,
+        BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -355,9 +355,12 @@ mod tests {
     #![allow(non_snake_case)]
 
     use super::*;
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
     use crate::low_level::BlockStoreWriter;
-    use crate::tests::{low_level::LLFixture, utils::{blockid, data}};
+    use crate::tests::{
+        low_level::LLFixture,
+        utils::{blockid, data},
+    };
     use tempdir::TempDir;
 
     struct TestFixture {
@@ -376,7 +379,7 @@ mod tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
-    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
     async fn test_block_path() {

@@ -6,16 +6,17 @@ use std::fmt::{self, Debug};
 
 use crate::{
     BlockId,
-    high_level::{Block as _, BlockStore, LockingBlockStore},
+    high_level::{Block as _, BlockStore},
     low_level::{
         BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
     },
-    tests::low_level::LLFixture,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
 };
+
+use super::HLFixture;
 
 /// Wrap a [BlockStore] into a [LLBlockStore] so that we can run the low level block store tests on it.
 pub struct BlockStoreToLLBlockStoreAdapter<
@@ -115,28 +116,30 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
 {
 }
 
-/// [FixtureAdapterForLLTests] takes a [LLFixture] for a [LLBlockStore] and makes it into
+/// [FixtureAdapterForLLTests] takes a [HLFixture] for a [BlockStore] and makes it into
 /// a [LLFixture] that creates a [LockingBlockStore] based on that [LLBlockStore].
 /// This allows using our block store test suite on [LockingBlockStore].
-pub struct FixtureAdapterForLLTests<F: LLFixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> {
+pub struct FixtureAdapterForLLTests<F: HLFixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> {
     f: F,
 }
 #[async_trait]
-impl<F: LLFixture + Send + Sync, const FLUSH_CACHE_ON_YIELD: bool>
-    crate::tests::low_level::LLFixture for FixtureAdapterForLLTests<F, FLUSH_CACHE_ON_YIELD>
+impl<
+    F: HLFixture<ConcreteBlockStore: AsyncDrop<Error = anyhow::Error>> + Send + Sync,
+    const FLUSH_CACHE_ON_YIELD: bool,
+> crate::tests::low_level::LLFixture for FixtureAdapterForLLTests<F, FLUSH_CACHE_ON_YIELD>
 {
-    type ConcreteBlockStore =
-        BlockStoreToLLBlockStoreAdapter<LockingBlockStore<F::ConcreteBlockStore>>;
+    type ConcreteBlockStore = BlockStoreToLLBlockStoreAdapter<F::ConcreteBlockStore>;
     fn new() -> Self {
         Self { f: F::new() }
     }
     async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
         let inner: AsyncDropGuard<F::ConcreteBlockStore> = self.f.store().await;
-        BlockStoreToLLBlockStoreAdapter::new(LockingBlockStore::new(inner))
+        BlockStoreToLLBlockStoreAdapter::new(inner)
     }
     async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
         if FLUSH_CACHE_ON_YIELD {
             store.clear_cache_slow().await.unwrap();
         }
+        self.f.yield_fixture(&store.0).await;
     }
 }

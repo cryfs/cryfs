@@ -7,7 +7,7 @@ use std::fmt::{self, Debug};
 use crate::{
     BlockId,
     low_level::{
-        LLBlockStore, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+        BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
         OptimizedBlockStoreWriter, interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -165,7 +165,7 @@ mod generic_tests {
     use crate::low_level::InMemoryBlockStore;
     use crate::tests::low_level::LLFixture;
 
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
 
     struct TestFixture {}
     #[async_trait]
@@ -180,7 +180,7 @@ mod generic_tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
-    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {

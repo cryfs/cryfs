@@ -162,7 +162,7 @@ impl LLBlockStore for InMemoryBlockStore {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
     use crate::tests::low_level::LLFixture;
 
     struct TestFixture {}
@@ -178,7 +178,7 @@ mod tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
-    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
     async fn test_block_size_from_physical_block_size() {

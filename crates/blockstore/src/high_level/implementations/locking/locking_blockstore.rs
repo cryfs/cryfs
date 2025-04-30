@@ -81,6 +81,11 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         let base_store = Arc::try_unwrap(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         Ok(base_store)
     }
+
+    #[cfg(test)]
+    pub fn inner_block_store(&self) -> &AsyncDropGuard<B> {
+        self.base_store.as_ref().expect("Already destructed")
+    }
 }
 
 #[async_trait]

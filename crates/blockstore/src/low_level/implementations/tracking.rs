@@ -158,7 +158,7 @@ impl<B: LLBlockStore + OptimizedBlockStoreWriter + Sync + Send + Debug> LLBlockS
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
     use crate::low_level::{BlockStoreWriter, InMemoryBlockStore};
     use crate::tests::low_level::LLFixture;
 
@@ -175,7 +175,7 @@ mod tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
-    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
     async fn counters_start_at_zero() {

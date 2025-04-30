@@ -47,7 +47,7 @@ impl Debug for MockBlockStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
     use crate::low_level::InMemoryBlockStore;
     use async_trait::async_trait;
     use cryfs_utils::async_drop::AsyncDropGuard;
@@ -224,5 +224,5 @@ mod tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
-    instantiate_blockstore_tests!(TestFixture, (flavor = "multi_thread"));
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 }

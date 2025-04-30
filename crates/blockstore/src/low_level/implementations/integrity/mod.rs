@@ -522,7 +522,7 @@ mod generic_tests {
     use std::num::NonZeroU32;
     use tempdir::TempDir;
 
-    use crate::instantiate_blockstore_tests;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
 
     struct TestFixture<
         const ALLOW_INTEGRITY_VIOLATIONS: bool,
@@ -572,23 +572,23 @@ mod generic_tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
     }
 
-    instantiate_blockstore_tests!(TestFixture<false, false>, (flavor = "multi_thread"));
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture<false, false>, (flavor = "multi_thread"));
 
     mod multiclient {
         use super::*;
-        instantiate_blockstore_tests!(TestFixture<false, false>, (flavor = "multi_thread"));
+        instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture<false, false>, (flavor = "multi_thread"));
     }
     mod singleclient {
         use super::*;
-        instantiate_blockstore_tests!(TestFixture<false, true>, (flavor = "multi_thread"));
+        instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture<false, true>, (flavor = "multi_thread"));
     }
     mod multiclient_allow_integrity_violations {
         use super::*;
-        instantiate_blockstore_tests!(TestFixture<true, false>, (flavor = "multi_thread"));
+        instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture<true, false>, (flavor = "multi_thread"));
     }
     mod singleclient_allow_integrity_violations {
         use super::*;
-        instantiate_blockstore_tests!(TestFixture<true, true>, (flavor = "multi_thread"));
+        instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture<true, true>, (flavor = "multi_thread"));
     }
 
     #[tokio::test]

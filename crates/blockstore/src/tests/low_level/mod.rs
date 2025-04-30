@@ -4,21 +4,7 @@
 mod fixture;
 pub use fixture::LLFixture;
 
-pub mod tests;
+mod adapter_for_high_level_tests;
+pub use adapter_for_high_level_tests::LockingBlockStoreFixture;
 
-#[macro_export]
-macro_rules! instantiate_blockstore_tests {
-    ($type: ty) => {
-        $crate::instantiate_blockstore_tests!($type, ());
-    };
-    ($type: ty, $tokio_test_args: tt) => {
-        mod low_level {
-            use super::*;
-            $crate::instantiate_lowlevel_blockstore_tests!($type, $tokio_test_args);
-        }
-        mod high_level {
-            use super::*;
-            $crate::instantiate_highlevel_blockstore_tests!($type, $tokio_test_args);
-        }
-    };
-}
+pub mod tests;

@@ -9,37 +9,20 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::LockingBlockStoreFixture;
-use crate::{
-    high_level::{Block as _, BlockStore as _, LockingBlock, LockingBlockStore},
-    low_level::LLBlockStore,
-    tests::utils::data,
-    utils::RemoveResult,
-};
-use cryfs_utils::testutils::asserts::assert_data_range_eq;
+use super::HLFixture;
+use crate::{Block as _, BlockStore, tests::utils::data, utils::RemoveResult};
+use cryfs_utils::{async_drop::AsyncDropGuard, testutils::asserts::assert_data_range_eq};
 
 // TODO Other functions to test? e.g. Block::remove(self) instead of just BlockStore::remove(&self, blockid)
 
 /// This macro instantiates all LockingBlockStore tests for a given blockstore.
-/// See [crate::tests::Fixture] and [LockingBlockStoreFixture] for how to invoke it.
+/// See [crate::tests::Fixture] and [HLFixture] for how to invoke it.
 #[macro_export]
 macro_rules! instantiate_highlevel_blockstore_tests {
     ($target: ty) => {
         $crate::instantiate_highlevel_blockstore_tests!($target, ());
     };
     ($target: ty, $tokio_test_args: tt) => {
-        // Run all low level tests on this block store (using an adapter to map the APIs)
-        mod low_level_adapter {
-            use super::*;
-            mod without_flushing {
-                use super::*;
-                $crate::instantiate_lowlevel_blockstore_tests!($crate::tests::high_level::FixtureAdapterForLLTests<$target, false>, $tokio_test_args);
-            }
-            mod with_flushing {
-                use super::*;
-                $crate::instantiate_lowlevel_blockstore_tests!($crate::tests::high_level::FixtureAdapterForLLTests<$target, true>, $tokio_test_args);
-            }
-        }
         // And run some additional tests for APIs only we have
         $crate::_instantiate_highlevel_blockstore_tests!(@module create, $target, $tokio_test_args,
             test_twoCreatedBlocksHaveDifferentIds
@@ -85,32 +68,26 @@ macro_rules! _instantiate_highlevel_blockstore_tests {
         mod $module_name {
             use super::*;
 
-            mod without_flushing {
-                use super::*;
-                $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args, false $(, $test_cases)*);
-            }
-            mod with_flushing {
-                use super::*;
-                $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args, true $(, $test_cases)*);
-            }
+            $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
         }
     };
-    (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt, $flush_cache_on_yield: expr) => {
+    (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt) => {
     };
-    (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt, $flush_cache_on_yield: expr, $head_test_case: ident $(, $tail_test_cases: ident)*) => {
+    (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt, $head_test_case: ident $(, $tail_test_cases: ident)*) => {
         #[tokio::test$tokio_test_args]
         #[allow(non_snake_case)]
         async fn $head_test_case() {
-            let fixture = <$crate::tests::high_level::LockingBlockStoreFixtureImpl::<$target, $flush_cache_on_yield> as $crate::tests::high_level::LockingBlockStoreFixture>::new();
+            let fixture = <$target as $crate::tests::high_level::HLFixture>::new();
             $crate::tests::high_level::tests::$module_name::$head_test_case(fixture).await;
         }
-        $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args, $flush_cache_on_yield $(, $tail_test_cases)*);
+        $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
     };
 }
 
-async fn assert_block_is_usable<B: LLBlockStore + Send + Sync + Debug>(
-    store: &LockingBlockStore<B>,
-    mut block: LockingBlock<B>,
+// TODO Send + Sync + Debug still needed?
+async fn assert_block_is_usable<B: BlockStore + Send + Sync + Debug>(
+    store: &AsyncDropGuard<B>,
+    mut block: B::Block,
 ) {
     // Write full block space and check it was correctly written
     let fixture = data(block.data().len(), 102);
@@ -127,7 +104,7 @@ async fn assert_block_is_usable<B: LLBlockStore + Send + Sync + Debug>(
 pub mod create {
     use super::*;
 
-    pub async fn test_twoCreatedBlocksHaveDifferentIds(mut f: impl LockingBlockStoreFixture) {
+    pub async fn test_twoCreatedBlocksHaveDifferentIds(mut f: impl HLFixture) {
         let mut store = f.store().await;
         let first = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -147,7 +124,7 @@ pub mod create {
 pub mod remove {
     use super::*;
 
-    pub async fn test_canRemoveAModifiedBlock(mut f: impl LockingBlockStoreFixture) {
+    pub async fn test_canRemoveAModifiedBlock(mut f: impl HLFixture) {
         let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
@@ -172,7 +149,7 @@ pub mod resize {
     use super::*;
 
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
@@ -190,7 +167,7 @@ pub mod resize {
     }
 
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
@@ -207,7 +184,7 @@ pub mod resize {
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
@@ -225,7 +202,7 @@ pub mod resize {
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
@@ -242,7 +219,7 @@ pub mod resize {
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenSucceeds(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
@@ -260,7 +237,7 @@ pub mod resize {
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenBlockIsStillUsable(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
@@ -277,7 +254,7 @@ pub mod resize {
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
@@ -295,7 +272,7 @@ pub mod resize {
     }
 
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable(
-        mut f: impl LockingBlockStoreFixture,
+        mut f: impl HLFixture,
     ) {
         let mut store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
@@ -343,7 +320,7 @@ pub mod data {
         DataRange::new(1024 - 100, 100, 1024 - 200), // non-full size leaf, access middle to end
     ];
 
-    pub async fn test_writeAndReadImmediately(mut f: impl LockingBlockStoreFixture) {
+    pub async fn test_writeAndReadImmediately(mut f: impl HLFixture) {
         for data_range in DATA_RANGES {
             let mut store = f.store().await;
 
@@ -380,7 +357,7 @@ pub mod data {
         }
     }
 
-    pub async fn test_writeAndReadAfterLoading(mut f: impl LockingBlockStoreFixture) {
+    pub async fn test_writeAndReadAfterLoading(mut f: impl HLFixture) {
         for data_range in DATA_RANGES {
             let mut store = f.store().await;
 
@@ -426,7 +403,7 @@ pub mod data {
 pub mod overwrite {
     use super::*;
 
-    pub async fn test_whenOverwritingWhileLoaded_thenBlocks(mut f: impl LockingBlockStoreFixture) {
+    pub async fn test_whenOverwritingWhileLoaded_thenBlocks(mut f: impl HLFixture) {
         let store = Arc::new(f.store().await);
 
         let blockid = store.create(&data(1024, 0)).await.unwrap();
@@ -447,9 +424,7 @@ pub mod overwrite {
         Arc::try_unwrap(store).unwrap().async_drop().await.unwrap();
     }
 
-    pub async fn test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites(
-        mut f: impl LockingBlockStoreFixture,
-    ) {
+    pub async fn test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites(mut f: impl HLFixture) {
         let store = Arc::new(f.store().await);
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         let block = store.load(blockid).await.unwrap().unwrap();
