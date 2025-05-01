@@ -15,7 +15,7 @@ mod test_as_blockstore;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::Fixture;
+    use crate::tests::fixture::Fixture;
     use async_trait::async_trait;
     use byte_unit::Byte;
     use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};

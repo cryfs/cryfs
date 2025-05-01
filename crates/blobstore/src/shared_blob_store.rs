@@ -61,7 +61,7 @@ impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BlobStoreOnBlocks, tests::Fixture};
+    use crate::{BlobStoreOnBlocks, tests::fixture::Fixture};
     use async_trait::async_trait;
     use byte_unit::Byte;
     use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
