@@ -770,6 +770,7 @@ dependencies = [
  "futures",
  "iter-chunks",
  "log",
+ "pretty_assertions",
  "rand 0.9.1",
  "rstest",
  "rstest_reuse",

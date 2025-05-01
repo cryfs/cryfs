@@ -32,6 +32,7 @@ rand = { workspace = true, features = ["small_rng"] }
 rstest.workspace = true
 rstest_reuse.workspace = true
 tokio = { workspace = true, features = ["macros"] }
+pretty_assertions.workspace = true
 
 [features]
 # Enable tests that are very slow to build or run

@@ -1,0 +1,21 @@
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BlobStoreActionCounts {
+    pub blob_num_bytes: u64,
+    pub blob_resize: u64,
+    pub blob_read_all: u64,
+    pub blob_read: u64,
+    pub blob_try_read: u64,
+    pub blob_write: u64,
+    pub blob_flush: u64,
+    pub blob_num_nodes: u64,
+    pub blob_remove: u64,
+    pub blob_all_blocks: u64,
+    pub store_create: u64,
+    pub store_try_create: u64,
+    pub store_load: u64,
+    pub store_remove_by_id: u64,
+    pub store_load_block_depth: u64,
+    pub store_num_nodes: u64,
+    pub store_estimate_space_for_num_blocks_left: u64,
+    pub store_virtual_block_size_bytes: u64,
+}
