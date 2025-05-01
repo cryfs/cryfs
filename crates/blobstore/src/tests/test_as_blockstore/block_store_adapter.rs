@@ -40,8 +40,6 @@ where
     }
 }
 
-// TODO Should we implement [BlockStore] instead of [LLBlockStore] for this adapter and run the high level tests? Seems to be a closer fit? Same for data_node_store::test_as_blockstore
-
 #[async_trait]
 impl<B> BlockStoreReader for BlockStoreAdapter<B>
 where
