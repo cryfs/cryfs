@@ -58,7 +58,7 @@ mod testutils {
         let id = *tree.root_node_id();
         std::mem::drop(tree);
         treestore.clear_cache_slow().await.unwrap();
-        blockstore.get_and_reset_totals();
+        blockstore.get_and_reset_counts();
         id
     }
 
@@ -75,7 +75,7 @@ mod testutils {
         let id = *tree.root_node_id();
         std::mem::drop(tree);
         treestore.clear_cache_slow().await.unwrap();
-        blockstore.get_and_reset_totals();
+        blockstore.get_and_reset_counts();
         id
     }
 
@@ -196,7 +196,7 @@ mod num_nodes {
                         loaded: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
                 assert_eq!(1, tree.num_nodes().await.unwrap());
                 assert_eq!(
@@ -204,7 +204,7 @@ mod num_nodes {
                         loaded: 0,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -222,7 +222,7 @@ mod num_nodes {
                         loaded: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // The tree has `DEPTH+1` right border nodes. A call to num_nodes() should look up `DEPTH-1` nodes,
@@ -233,7 +233,7 @@ mod num_nodes {
                         loaded: (DEPTH - 1) as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // Calling num_nodes() again shouldn't load any more nodes, it's now cached.
@@ -243,7 +243,7 @@ mod num_nodes {
                         loaded: 0,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -266,7 +266,7 @@ mod num_bytes {
                         loaded: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 assert_eq!(0, tree.num_bytes().await.unwrap());
@@ -275,7 +275,7 @@ mod num_bytes {
                         loaded: 0,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -293,7 +293,7 @@ mod num_bytes {
                         loaded: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // The tree has `DEPTH+1` right border nodes. A call to num_bytes() should look up `DEPTH` nodes,
@@ -304,7 +304,7 @@ mod num_bytes {
                         loaded: DEPTH as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // Calling num_bytes() again shouldn't load any more nodes, it's now cached.
@@ -314,7 +314,7 @@ mod num_bytes {
                         loaded: 0,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -332,7 +332,7 @@ mod num_bytes {
                         loaded: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // The tree has `DEPTH+1` right border nodes. A call to num_nodes() should look up `DEPTH-1` nodes,
@@ -343,7 +343,7 @@ mod num_bytes {
                         loaded: (DEPTH - 1) as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // Calling num_bytes() should now only have to load one node (i.e. the leaf)
@@ -353,7 +353,7 @@ mod num_bytes {
                         loaded: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // Calling num_bytes() again shouldn't load any more nodes, it's now cached.
@@ -363,7 +363,7 @@ mod num_bytes {
                         loaded: 0,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -387,7 +387,7 @@ mod create_tree {
                         stored: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -412,7 +412,7 @@ mod try_create_tree {
                         stored: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -428,7 +428,7 @@ mod try_create_tree {
                 // First make sure that the tree already exists
                 treestore.try_create_tree(block_id).await.unwrap().unwrap();
                 treestore.clear_cache_slow().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 // And then run our creation op
                 assert!(treestore.try_create_tree(block_id).await.unwrap().is_none());
@@ -439,7 +439,7 @@ mod try_create_tree {
                         stored: 0,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -458,7 +458,7 @@ macro_rules! instantiate_read_tests {
                     // Load num_bytes so that the size cache is already loaded
                     tree.num_bytes().await.unwrap();
                     treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                    blockstore.get_and_reset_totals();
+                    blockstore.get_and_reset_counts();
 
                     let read_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
 
@@ -471,7 +471,7 @@ macro_rules! instantiate_read_tests {
                             loaded: DEPTH as u32,
                             ..Default::default()
                         },
-                        blockstore.get_and_reset_totals(),
+                        blockstore.get_and_reset_counts(),
                     );
                 })
             })
@@ -484,7 +484,7 @@ macro_rules! instantiate_read_tests {
                 Box::pin(async move {
                     let block_id = create_nonempty_tree(treestore, blockstore).await;
                     let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                    blockstore.get_and_reset_totals();
+                    blockstore.get_and_reset_counts();
 
                     let read_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
 
@@ -500,7 +500,7 @@ macro_rules! instantiate_read_tests {
                             loaded: expected_loaded,
                             ..Default::default()
                         },
-                        blockstore.get_and_reset_totals(),
+                        blockstore.get_and_reset_counts(),
                     );
                 })
             })
@@ -516,7 +516,7 @@ macro_rules! instantiate_read_tests {
                     // Load num_bytes so that the size cache is already loaded
                     tree.num_bytes().await.unwrap();
                     treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                    blockstore.get_and_reset_totals();
+                    blockstore.get_and_reset_counts();
 
                     const FIRST_ACCESSED_LEAF: u64 = 40;
                     const NUM_ACCESSED_LEAVES: u64 = 11;
@@ -543,7 +543,7 @@ macro_rules! instantiate_read_tests {
                             loaded: expected_num_loaded_nodes as u32,
                             ..Default::default()
                         },
-                        blockstore.get_and_reset_totals(),
+                        blockstore.get_and_reset_counts(),
                     );
                 })
             })
@@ -556,7 +556,7 @@ macro_rules! instantiate_read_tests {
                 Box::pin(async move {
                     let block_id = create_nonempty_tree(treestore, blockstore).await;
                     let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                    blockstore.get_and_reset_totals();
+                    blockstore.get_and_reset_counts();
 
                     const FIRST_ACCESSED_LEAF: u64 = 40;
                     const NUM_ACCESSED_LEAVES: u64 = 11;
@@ -584,7 +584,7 @@ macro_rules! instantiate_read_tests {
                             loaded: expected_num_loaded_nodes as u32,
                             ..Default::default()
                         },
-                        blockstore.get_and_reset_totals(),
+                        blockstore.get_and_reset_counts(),
                     );
                 })
             })
@@ -649,7 +649,7 @@ mod read_all {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 tree.read_all().await.unwrap();
 
@@ -659,7 +659,7 @@ mod read_all {
                         loaded: NUM_NODES as u32 - 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -672,7 +672,7 @@ mod read_all {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 tree.read_all().await.unwrap();
 
@@ -682,7 +682,7 @@ mod read_all {
                         loaded: NUM_NODES as u32 - 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -704,7 +704,7 @@ mod write_bytes {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 let write_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
 
@@ -719,7 +719,7 @@ mod write_bytes {
                         loaded: DEPTH as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -730,7 +730,7 @@ mod write_bytes {
                         stored: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -743,7 +743,7 @@ mod write_bytes {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 let write_offset = (40.5 * LAYOUT.max_bytes_per_leaf() as f32) as u64;
 
@@ -759,7 +759,7 @@ mod write_bytes {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -770,7 +770,7 @@ mod write_bytes {
                         stored: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -786,7 +786,7 @@ mod write_bytes {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 let write_offset = 40 * LAYOUT.max_bytes_per_leaf();
 
@@ -807,7 +807,7 @@ mod write_bytes {
                         loaded: DEPTH as u32 - 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -818,7 +818,7 @@ mod write_bytes {
                         stored: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -831,7 +831,7 @@ mod write_bytes {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 let write_offset = 40 * LAYOUT.max_bytes_per_leaf();
 
@@ -853,7 +853,7 @@ mod write_bytes {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -864,7 +864,7 @@ mod write_bytes {
                         stored: 1,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -880,7 +880,7 @@ mod write_bytes {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const FIRST_ACCESSED_LEAF: u64 = 40;
                 const NUM_ACCESSED_LEAVES: u64 = 11;
@@ -910,7 +910,7 @@ mod write_bytes {
                         loaded: expected_num_loaded_nodes as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -921,7 +921,7 @@ mod write_bytes {
                         stored: NUM_ACCESSED_LEAVES as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -934,7 +934,7 @@ mod write_bytes {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const FIRST_ACCESSED_LEAF: u64 = 40;
                 const NUM_ACCESSED_LEAVES: u64 = 11;
@@ -965,7 +965,7 @@ mod write_bytes {
                         loaded: expected_num_loaded_nodes as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -976,7 +976,7 @@ mod write_bytes {
                         stored: NUM_ACCESSED_LEAVES as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -992,7 +992,7 @@ mod write_bytes {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const WRITTEN_LEAF_INDEX: u32 = 140;
 
@@ -1011,7 +1011,7 @@ mod write_bytes {
                         loaded: DEPTH as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -1025,7 +1025,7 @@ mod write_bytes {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -1038,7 +1038,7 @@ mod write_bytes {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const WRITTEN_LEAF_INDEX: u32 = 140;
                 let write_offset =
@@ -1057,7 +1057,7 @@ mod write_bytes {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -1071,7 +1071,7 @@ mod write_bytes {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -1087,7 +1087,7 @@ mod write_bytes {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const WRITTEN_LEAF_INDEX: u32 = 140;
                 let write_offset = WRITTEN_LEAF_INDEX * LAYOUT.max_bytes_per_leaf();
@@ -1110,7 +1110,7 @@ mod write_bytes {
                         loaded: DEPTH as u32,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -1124,7 +1124,7 @@ mod write_bytes {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -1137,7 +1137,7 @@ mod write_bytes {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const WRITTEN_LEAF_INDEX: u32 = 140;
                 let write_offset = WRITTEN_LEAF_INDEX * LAYOUT.max_bytes_per_leaf();
@@ -1161,7 +1161,7 @@ mod write_bytes {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -1175,7 +1175,7 @@ mod write_bytes {
                         stored: expected_stored + 3, // TODO Why + 3 ?
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -1191,7 +1191,7 @@ mod write_bytes {
                 // Load num_bytes so that the size cache is already loaded
                 tree.num_bytes().await.unwrap();
                 treestore.clear_unloaded_blocks_from_cache().await.unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const FIRST_ACCESSED_LEAF: u64 = 140;
                 const NUM_ACCESSED_LEAVES: u64 = 11;
@@ -1217,7 +1217,7 @@ mod write_bytes {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -1232,7 +1232,7 @@ mod write_bytes {
                         stored: expected_stored + 3, // TODO Why +3?
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })
@@ -1245,7 +1245,7 @@ mod write_bytes {
             Box::pin(async move {
                 let block_id = create_nonempty_tree(treestore, blockstore).await;
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
-                blockstore.get_and_reset_totals();
+                blockstore.get_and_reset_counts();
 
                 const FIRST_ACCESSED_LEAF: u64 = 140;
                 const NUM_ACCESSED_LEAVES: u64 = 11;
@@ -1271,7 +1271,7 @@ mod write_bytes {
                         loaded: expected_loaded,
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
 
                 // After flushing, the new content should have been written
@@ -1286,7 +1286,7 @@ mod write_bytes {
                         stored: expected_stored + 3, // TODO Why +3?
                         ..Default::default()
                     },
-                    blockstore.get_and_reset_totals(),
+                    blockstore.get_and_reset_counts(),
                 );
             })
         })

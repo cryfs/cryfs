@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use derive_more::{Add, AddAssign, Sum};
 use futures::stream::BoxStream;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
@@ -44,28 +43,23 @@ impl ActionCounts {
 pub struct TrackingBlockStore<B: Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>> {
     underlying_store: AsyncDropGuard<B>,
 
-    // TODO Do we even need counts_for_block or do we only need totals and can simplify the whole class?
-    counts: Mutex<HashMap<BlockId, ActionCounts>>,
+    counts: Mutex<ActionCounts>,
 }
 
 impl<B: Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>> TrackingBlockStore<B> {
     pub fn new(underlying: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_store: underlying,
-            counts: Mutex::new(HashMap::new()),
+            counts: Mutex::new(ActionCounts::ZERO),
         })
     }
 
-    pub fn counts_for_block(&self, block_id: BlockId) -> ActionCounts {
-        *self.counts.lock().unwrap().entry(block_id).or_default()
+    pub fn counts(&self) -> ActionCounts {
+        *self.counts.lock().unwrap()
     }
 
-    pub fn totals(&self) -> ActionCounts {
-        self.counts.lock().unwrap().values().copied().sum()
-    }
-
-    pub fn get_and_reset_totals(&self) -> ActionCounts {
-        self.counts.lock().unwrap().drain().map(|(_, v)| v).sum()
+    pub fn get_and_reset_counts(&self) -> ActionCounts {
+        std::mem::take(&mut self.counts.lock().unwrap())
     }
 }
 
@@ -74,12 +68,12 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
     for TrackingBlockStore<B>
 {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
-        self.counts.lock().unwrap().entry(*id).or_default().exists += 1;
+        self.counts.lock().unwrap().exists += 1;
         self.underlying_store.exists(id).await
     }
 
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
-        self.counts.lock().unwrap().entry(*id).or_default().loaded += 1;
+        self.counts.lock().unwrap().loaded += 1;
         self.underlying_store.load(id).await
     }
 
@@ -109,7 +103,7 @@ impl<B: BlockStoreDeleter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Erro
     BlockStoreDeleter for TrackingBlockStore<B>
 {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
-        self.counts.lock().unwrap().entry(*id).or_default().removed += 1;
+        self.counts.lock().unwrap().removed += 1;
         self.underlying_store.remove(id).await
     }
 }
@@ -129,12 +123,12 @@ impl<B: OptimizedBlockStoreWriter + Debug + Sync + Send + AsyncDrop<Error = anyh
         id: &BlockId,
         data: Self::BlockData,
     ) -> Result<TryCreateResult> {
-        self.counts.lock().unwrap().entry(*id).or_default().created += 1;
+        self.counts.lock().unwrap().created += 1;
         self.underlying_store.try_create_optimized(id, data).await
     }
 
     async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()> {
-        self.counts.lock().unwrap().entry(*id).or_default().stored += 1;
+        self.counts.lock().unwrap().stored += 1;
         self.underlying_store.store_optimized(id, data).await
     }
 }
@@ -190,7 +184,7 @@ mod tests {
                 loaded: 0,
                 removed: 0,
             },
-            store.totals(),
+            store.counts(),
         );
 
         store.async_drop().await.unwrap();
@@ -214,27 +208,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                exists: 1,
-                created: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                exists: 1,
-                created: 0,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 exists: 2,
                 created: 1,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -264,27 +242,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                loaded: 3,
-                created: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                loaded: 1,
-                created: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 loaded: 4,
                 created: 2,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -309,26 +271,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                stored: 3,
-                removed: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                stored: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 stored: 4,
                 removed: 1,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -365,26 +312,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                stored: 3,
-                removed: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                stored: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 stored: 4,
                 removed: 1,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -435,27 +367,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                removed: 4,
-                created: 2,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                removed: 1,
-                created: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 removed: 5,
                 created: 3,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -494,26 +410,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                created: 3,
-                removed: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                created: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 created: 4,
                 removed: 1,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -564,26 +465,11 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                created: 3,
-                removed: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id1)
-        );
-        assert_eq!(
-            ActionCounts {
-                created: 1,
-                ..ActionCounts::default()
-            },
-            store.counts_for_block(id2)
-        );
-        assert_eq!(
-            ActionCounts {
                 created: 4,
                 removed: 1,
                 ..ActionCounts::default()
             },
-            store.totals()
+            store.counts()
         );
 
         store.async_drop().await.unwrap();
@@ -630,7 +516,7 @@ mod tests {
                 stored: 12,
                 loaded: 14,
             },
-            store.get_and_reset_totals(),
+            store.get_and_reset_counts(),
         );
         assert_eq!(
             ActionCounts {
@@ -640,7 +526,7 @@ mod tests {
                 stored: 0,
                 loaded: 0,
             },
-            store.get_and_reset_totals(),
+            store.get_and_reset_counts(),
         );
 
         store.async_drop().await.unwrap();

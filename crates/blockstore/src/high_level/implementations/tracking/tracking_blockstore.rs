@@ -3,12 +3,11 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use derive_more::{Add, AddAssign, Sum};
 use futures::stream::BoxStream;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use super::tracking_block::TrackingBlock;
-use crate::{Block as _, BlockStore};
+use crate::BlockStore;
 use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::data::Data;
@@ -46,8 +45,7 @@ where
 {
     underlying_store: AsyncDropGuard<B>,
 
-    // TODO Do we even need counts_for_block or do we only need totals and can simplify the whole class?
-    counts: Arc<Mutex<HashMap<BlockId, ActionCounts>>>,
+    counts: Arc<Mutex<ActionCounts>>,
 }
 
 impl<B> TrackingBlockStore<B>
@@ -58,20 +56,16 @@ where
     pub fn new(underlying_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_store,
-            counts: Arc::new(Mutex::new(HashMap::new())),
+            counts: Arc::new(Mutex::new(ActionCounts::ZERO)),
         })
     }
 
-    pub fn counts_for_block(&self, block_id: BlockId) -> ActionCounts {
-        *self.counts.lock().unwrap().entry(block_id).or_default()
+    pub fn counts(&self) -> ActionCounts {
+        *self.counts.lock().unwrap()
     }
 
-    pub fn totals(&self) -> ActionCounts {
-        self.counts.lock().unwrap().values().copied().sum()
-    }
-
-    pub fn get_and_reset_totals(&self) -> ActionCounts {
-        self.counts.lock().unwrap().drain().map(|(_, v)| v).sum()
+    pub fn get_and_reset_counts(&self) -> ActionCounts {
+        std::mem::take(&mut self.counts.lock().unwrap())
     }
 }
 
@@ -84,53 +78,28 @@ where
     type Block = TrackingBlock<B::Block>;
 
     async fn load(&self, block_id: BlockId) -> Result<Option<Self::Block>> {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(block_id)
-            .or_default()
-            .loaded += 1;
+        self.counts.lock().unwrap().loaded += 1;
         let result = self.underlying_store.load(block_id).await?;
         Ok(result.map(|block| TrackingBlock::new(block, Arc::clone(&self.counts))))
     }
 
     async fn try_create(&self, block_id: &BlockId, data: &Data) -> Result<TryCreateResult> {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*block_id)
-            .or_default()
-            .created += 1;
+        self.counts.lock().unwrap().created += 1;
         self.underlying_store.try_create(block_id, data).await
     }
 
     async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*block_id)
-            .or_default()
-            .overwritten += 1;
+        self.counts.lock().unwrap().overwritten += 1;
         self.underlying_store.overwrite(block_id, data).await
     }
 
     async fn remove_by_id(&self, block_id: &BlockId) -> Result<RemoveResult> {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*block_id)
-            .or_default()
-            .removed += 1;
+        self.counts.lock().unwrap().removed += 1;
         self.underlying_store.remove_by_id(block_id).await
     }
 
     async fn remove(&self, block: Self::Block) -> Result<()> {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*block.block_id())
-            .or_default()
-            .removed += 1;
+        self.counts.lock().unwrap().removed += 1;
         self.underlying_store.remove(block.into_inner()).await
     }
 
@@ -156,22 +125,12 @@ where
 
     async fn create(&self, data: &Data) -> Result<BlockId> {
         let block_id = self.underlying_store.create(data).await?;
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(block_id)
-            .or_default()
-            .created += 1;
+        self.counts.lock().unwrap().created += 1;
         Ok(block_id)
     }
 
     async fn flush_block(&self, block: &mut Self::Block) -> Result<()> {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*block.block_id())
-            .or_default()
-            .flushed += 1;
+        self.counts.lock().unwrap().flushed += 1;
         self.underlying_store.flush_block(block.inner_mut()).await
     }
 

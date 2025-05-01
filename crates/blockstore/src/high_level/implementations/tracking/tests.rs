@@ -58,7 +58,7 @@ async fn counters_start_at_zero() {
             resized: 0,
             flushed: 0,
         },
-        store.totals(),
+        store.counts(),
     );
 
     store.async_drop().await.unwrap();
@@ -79,27 +79,11 @@ async fn load_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 3,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            loaded: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             loaded: 4,
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     store.async_drop().await.unwrap();
@@ -128,27 +112,11 @@ async fn overwrite_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            overwritten: 2,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            overwritten: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             overwritten: 3,
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     store.async_drop().await.unwrap();
@@ -172,34 +140,11 @@ async fn remove_by_id_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            removed: 2,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            removed: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
-            removed: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(unknown_id)
-    );
-    assert_eq!(
-        ActionCounts {
             removed: 4,
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     store.async_drop().await.unwrap();
@@ -221,30 +166,12 @@ async fn remove_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            removed: 1,
-            loaded: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            removed: 1,
-            loaded: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             removed: 2,
             loaded: 2,
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     store.async_drop().await.unwrap();
@@ -295,26 +222,11 @@ async fn try_create_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 3,
-            removed: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             created: 4,
             removed: 1,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     store.async_drop().await.unwrap();
@@ -325,29 +237,15 @@ async fn create_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
     let mut store = fixture.store().await;
 
-    let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
-    let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
+    store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
+    store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
 
-    assert_eq!(
-        ActionCounts {
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
     assert_eq!(
         ActionCounts {
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     store.async_drop().await.unwrap();
@@ -370,30 +268,12 @@ async fn resize_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 1,
-            loaded: 1,
-            resized: 2,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            created: 1,
-            loaded: 1,
-            resized: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             created: 2,
             loaded: 2,
             resized: 3,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     std::mem::drop(block1);
@@ -419,30 +299,12 @@ async fn flush_block_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 1,
-            loaded: 1,
-            flushed: 2,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            created: 1,
-            loaded: 1,
-            flushed: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             created: 2,
             loaded: 2,
             flushed: 3,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     std::mem::drop(block1);
@@ -470,30 +332,12 @@ async fn read_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 1,
-            read: 3,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            loaded: 1,
-            read: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             loaded: 2,
             read: 4,
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     std::mem::drop(block1);
@@ -521,30 +365,12 @@ async fn write_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 1,
-            written: 3,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id1)
-    );
-    assert_eq!(
-        ActionCounts {
-            loaded: 1,
-            written: 1,
-            created: 1,
-            ..ActionCounts::default()
-        },
-        store.counts_for_block(id2)
-    );
-    assert_eq!(
-        ActionCounts {
             loaded: 2,
             written: 4,
             created: 2,
             ..ActionCounts::default()
         },
-        store.totals()
+        store.counts()
     );
 
     std::mem::drop(block1);
@@ -605,7 +431,7 @@ async fn get_and_reset_totals_works() {
             resized: 0,
             flushed: 0,
         },
-        store.get_and_reset_totals(),
+        store.get_and_reset_counts(),
     );
 
     assert_eq!(
@@ -619,7 +445,7 @@ async fn get_and_reset_totals_works() {
             resized: 0,
             flushed: 0,
         },
-        store.get_and_reset_totals(),
+        store.get_and_reset_counts(),
     );
 
     store.async_drop().await.unwrap();

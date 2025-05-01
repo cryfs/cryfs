@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use std::{
-    collections::HashMap,
     fmt::Debug,
     sync::{Arc, Mutex},
 };
@@ -14,11 +13,11 @@ use super::tracking_blockstore::ActionCounts;
 pub struct TrackingBlock<B: Block> {
     underlying_block: B,
 
-    counts: Arc<Mutex<HashMap<BlockId, ActionCounts>>>,
+    counts: Arc<Mutex<ActionCounts>>,
 }
 
 impl<B: Block> TrackingBlock<B> {
-    pub fn new(underlying_block: B, counts: Arc<Mutex<HashMap<BlockId, ActionCounts>>>) -> Self {
+    pub fn new(underlying_block: B, counts: Arc<Mutex<ActionCounts>>) -> Self {
         Self {
             underlying_block,
             counts,
@@ -41,32 +40,17 @@ impl<B: Block + Send + Sync> Block for TrackingBlock<B> {
     }
 
     fn data(&self) -> &Data {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*self.block_id())
-            .or_default()
-            .read += 1;
+        self.counts.lock().unwrap().read += 1;
         self.underlying_block.data()
     }
 
     fn data_mut(&mut self) -> &mut Data {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*self.block_id())
-            .or_default()
-            .written += 1;
+        self.counts.lock().unwrap().written += 1;
         self.underlying_block.data_mut()
     }
 
     async fn resize(&mut self, new_size: usize) {
-        self.counts
-            .lock()
-            .unwrap()
-            .entry(*self.block_id())
-            .or_default()
-            .resized += 1;
+        self.counts.lock().unwrap().resized += 1;
         self.underlying_block.resize(new_size).await
     }
 }

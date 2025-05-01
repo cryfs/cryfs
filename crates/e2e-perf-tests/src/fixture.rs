@@ -174,19 +174,19 @@ where
 
     pub fn totals(&self) -> ActionCounts {
         ActionCounts {
-            low_level: self.ll_blockstore.totals(),
-            high_level: self.hl_blockstore.totals(),
+            low_level: self.ll_blockstore.counts(),
+            high_level: self.hl_blockstore.counts(),
         }
     }
 
     pub async fn run_operation(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
-        self.ll_blockstore.get_and_reset_totals();
-        self.hl_blockstore.get_and_reset_totals();
+        self.ll_blockstore.get_and_reset_counts();
+        self.hl_blockstore.get_and_reset_counts();
         operation(&self.filesystem).await;
         self.blobstore.clear_cache_slow().await.unwrap();
         ActionCounts {
-            low_level: self.ll_blockstore.get_and_reset_totals(),
-            high_level: self.hl_blockstore.get_and_reset_totals(),
+            low_level: self.ll_blockstore.get_and_reset_counts(),
+            high_level: self.hl_blockstore.get_and_reset_counts(),
         }
     }
 }
