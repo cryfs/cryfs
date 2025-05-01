@@ -538,7 +538,7 @@ async fn get_and_reset_totals_works() {
         let _ = block.data();
 
         // Perform writes
-        block.data_mut()[0] += 1;
+        block.data_mut()[0] = block.data()[0].overflowing_add(1).0;
     }
 
     // Call num_blocks multiple times
@@ -579,7 +579,7 @@ async fn get_and_reset_totals_works() {
     assert_eq!(
         ActionCounts {
             store_load: 5 + 2 + 1 + 2, // Original 5 + 2 for flush_block + 1 for resize + 2 for remove
-            blob_data: 10,
+            blob_data: 15,
             blob_data_mut: 5,
             store_overwrite: 4,
             store_try_create: 2,

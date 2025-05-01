@@ -683,7 +683,7 @@ mod specialized_tests {
             id: &BlockId,
         ) {
             let mut data = store.load(id).await.unwrap().unwrap();
-            data[0] += 1;
+            data[0] = data[0].overflowing_add(1).0;
             store.store(id, &data).await.unwrap();
         }
 
@@ -773,9 +773,9 @@ mod specialized_tests {
         store: &IntegrityBlockStore<SharedBlockStore<InMemoryBlockStore>>,
         data: &[u8],
     ) -> BlockId {
-        let mut id_seed = 0;
+        let mut id_seed = 0u64;
         loop {
-            id_seed += 1;
+            id_seed = id_seed.overflowing_add(1).0;
             let blockid = blockid(id_seed);
             if TryCreateResult::SuccessfullyCreated
                 == store.try_create(&blockid, data).await.unwrap()
@@ -1248,7 +1248,7 @@ mod specialized_tests {
                 Box::pin(async move {
                     let blockid = create_block_return_key(&store, &data(1024, 1)).await;
                     let mut modified_block_id = blockid.data().clone();
-                    modified_block_id[0] += 1;
+                    modified_block_id[0] = modified_block_id[0].overflowing_add(1).0;
                     let modified_block_id = BlockId::from_slice(&modified_block_id).unwrap();
                     fixture
                         .modify_block_id_header(&blockid, &modified_block_id)

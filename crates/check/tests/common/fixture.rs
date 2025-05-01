@@ -422,7 +422,7 @@ impl FilesystemFixture {
                 // The first u16 is the format version. Increase it by 1 to make the blob invalid
                 let mut format_version = [0u8; 2];
                 blob.read(&mut format_version, 0).await.unwrap();
-                format_version[1] += 1;
+                format_version[1] = format_version[1].overflowing_add(1).0;
                 blob.write(&format_version, 0).await.unwrap();
             })
         })

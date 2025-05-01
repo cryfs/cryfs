@@ -414,7 +414,7 @@ mod tests {
         block_id: &BlockId,
     ) {
         let mut data = bs.load(block_id).await.unwrap().unwrap();
-        data[0] += 1;
+        data[0] = data[0].overflowing_add(1).0;
         bs.store(block_id, &data).await.unwrap();
     }
 
