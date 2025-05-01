@@ -9,12 +9,11 @@ pub use blob_id::BlobId;
 mod interface;
 pub use interface::{BLOBID_LEN, Blob, BlobStore};
 
-mod on_blocks;
-pub use on_blocks::{
+mod implementations;
+pub use implementations::{
     BlobOnBlocks, BlobStoreOnBlocks, DataInnerNode, DataLeafNode, DataNode, DataNodeStore,
     DataTree, DataTreeStore, LoadNodeError,
 };
-mod shared_blob_store;
 
 pub use cryfs_blockstore::RemoveResult;
 

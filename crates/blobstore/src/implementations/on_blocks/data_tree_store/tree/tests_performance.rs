@@ -11,7 +11,7 @@ use cryfs_blockstore::{
 };
 
 use super::super::testutils::*;
-use crate::on_blocks::{
+use crate::implementations::on_blocks::{
     data_node_store::NodeLayout,
     data_tree_store::{DataTree, DataTreeStore},
 };

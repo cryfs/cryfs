@@ -3,8 +3,7 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use std::{fmt::Debug, ops::Deref};
 
-use super::interface::BlobStore;
-use crate::BlobId;
+use crate::{BlobId, interface::BlobStore};
 use cryfs_blockstore::{BlockId, RemoveResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
 

@@ -39,9 +39,9 @@ mod tests {
     mod block_size_minimal {
         use super::*;
 
-        const MINIMAL_SIZE: u64 = crate::on_blocks::data_node_store::NodeLayout::header_len()
-            as u64
-            + 2 * crate::BLOBID_LEN as u64;
+        const MINIMAL_SIZE: u64 =
+            crate::implementations::on_blocks::data_node_store::NodeLayout::header_len() as u64
+                + 2 * crate::BLOBID_LEN as u64;
 
         crate::instantiate_tests_for_blobstore!(
             TestFixture<MINIMAL_SIZE>,

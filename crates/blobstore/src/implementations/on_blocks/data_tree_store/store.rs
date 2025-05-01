@@ -10,7 +10,7 @@ use std::fmt::Debug;
 
 use crate::{
     RemoveResult,
-    on_blocks::data_node_store::{DataNode, DataNodeStore},
+    implementations::on_blocks::data_node_store::{DataNode, DataNodeStore},
 };
 use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError};
 use cryfs_utils::{

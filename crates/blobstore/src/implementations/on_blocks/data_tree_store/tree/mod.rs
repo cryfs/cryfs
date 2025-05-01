@@ -15,7 +15,9 @@ use super::size_cache::SizeCache;
 use super::traversal::{self, LeafHandle};
 use crate::{
     RemoveResult,
-    on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout},
+    implementations::on_blocks::data_node_store::{
+        DataInnerNode, DataNode, DataNodeStore, NodeLayout,
+    },
 };
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::{async_drop::AsyncDrop, data::Data, stream::for_each_unordered};

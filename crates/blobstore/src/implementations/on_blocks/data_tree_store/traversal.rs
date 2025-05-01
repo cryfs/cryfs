@@ -9,7 +9,7 @@ use futures::{
 use std::fmt::Debug;
 use thiserror::Error;
 
-use crate::on_blocks::data_node_store::{
+use crate::implementations::on_blocks::data_node_store::{
     DataInnerNode, DataLeafNode, DataNode, DataNodeStore, NodeLayout,
 };
 use cryfs_blockstore::{BlockId, BlockStore};

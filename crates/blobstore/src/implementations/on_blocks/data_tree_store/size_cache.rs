@@ -2,7 +2,9 @@ use anyhow::{Result, anyhow, bail};
 use std::fmt::Debug;
 use std::num::NonZeroU64;
 
-use crate::on_blocks::data_node_store::{DataInnerNode, DataNode, DataNodeStore, NodeLayout};
+use crate::implementations::on_blocks::data_node_store::{
+    DataInnerNode, DataNode, DataNodeStore, NodeLayout,
+};
 use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_utils::async_drop::AsyncDrop;
 
