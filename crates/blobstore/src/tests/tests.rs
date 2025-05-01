@@ -5,12 +5,12 @@ use crate::BlobStore as _;
 /// This macro instantiates all blobstore tests for a given blobstore.
 /// See [Fixture] for how to invoke it.
 #[macro_export]
-macro_rules! instantiate_blobstore_tests {
+macro_rules! instantiate_blobstore_specific_tests {
     ($target: ty) => {
-        $crate::instantiate_blobstore_tests!($target, ());
+        $crate::instantiate_blobstore_specific_tests!($target, ());
     };
     ($target: ty, $tokio_test_args: tt) => {
-        $crate::_instantiate_blobstore_tests!(@module load, $target, $tokio_test_args,
+        $crate::_instantiate_blobstore_specific_tests!(@module load, $target, $tokio_test_args,
             test_givenEmptyBlobstore_whenLoadingNonexistingBlob_thenReturnsNone,
             test_givenNonEmptyBlobstore_whenLoadingNonexistingBlob_thenReturnsNone,
         );
@@ -18,12 +18,12 @@ macro_rules! instantiate_blobstore_tests {
 }
 
 #[macro_export]
-macro_rules! _instantiate_blobstore_tests {
+macro_rules! _instantiate_blobstore_specific_tests {
     (@module $module_name: ident, $target: ty, $tokio_test_args: tt $(, $test_cases: ident)* $(,)?) => {
         mod $module_name {
             use super::*;
 
-            $crate::_instantiate_blobstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
+            $crate::_instantiate_blobstore_specific_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
         }
     };
     (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt) => {
@@ -35,7 +35,7 @@ macro_rules! _instantiate_blobstore_tests {
             let fixture = <$target as $crate::tests::fixture::Fixture>::new();
             $crate::tests::tests::$module_name::$head_test_case(fixture).await
         }
-        $crate::_instantiate_blobstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
+        $crate::_instantiate_blobstore_specific_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
     };
 }
 

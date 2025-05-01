@@ -5,7 +5,7 @@ mod blockstore_tests {
     use super::*;
     mod with_flushing {
         use super::*;
-        cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+        cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
             block_store_adapter::TestFixtureAdapter<
                 true,
             >,
@@ -14,7 +14,7 @@ mod blockstore_tests {
     }
     mod without_flushing {
         use super::*;
-        cryfs_blockstore::instantiate_lowlevel_blockstore_tests!(
+        cryfs_blockstore::instantiate_blockstore_tests_for_lowlevel_blockstore!(
             block_store_adapter::TestFixtureAdapter<
                 false,
             >,

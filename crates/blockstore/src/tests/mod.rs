@@ -12,20 +12,20 @@ macro_rules! instantiate_blockstore_tests_for_lowlevel_blockstore {
     ($type: ty, $tokio_test_args: tt) => {
         mod low_level {
             use super::*;
-            $crate::instantiate_lowlevel_blockstore_tests!($type, $tokio_test_args);
+            $crate::instantiate_lowlevel_blockstore_specific_tests!($type, $tokio_test_args);
         }
         mod wrapped_in_high_level {
             use super::*;
             mod with_flushing {
                 use super::*;
-                $crate::instantiate_highlevel_blockstore_tests!(
+                $crate::instantiate_highlevel_blockstore_specific_tests!(
                         $crate::tests::low_level::FixtureAdapterForHLTests<$type, false>,
                     $tokio_test_args
                 );
             }
             mod without_flushing {
                 use super::*;
-                $crate::instantiate_highlevel_blockstore_tests!(
+                $crate::instantiate_highlevel_blockstore_specific_tests!(
                         $crate::tests::low_level::FixtureAdapterForHLTests<$type, true>,
                     $tokio_test_args
                 );
@@ -36,7 +36,7 @@ macro_rules! instantiate_blockstore_tests_for_lowlevel_blockstore {
             use super::*;
             mod with_flushing {
                 use super::*;
-                $crate::instantiate_lowlevel_blockstore_tests!(
+                $crate::instantiate_lowlevel_blockstore_specific_tests!(
                     $crate::tests::high_level::FixtureAdapterForLLTests<
                         $crate::tests::low_level::FixtureAdapterForHLTests<$type, true>,
                         false, // can be false since we don't need to double flush
@@ -46,7 +46,7 @@ macro_rules! instantiate_blockstore_tests_for_lowlevel_blockstore {
             }
             mod without_flushing {
                 use super::*;
-                $crate::instantiate_lowlevel_blockstore_tests!(
+                $crate::instantiate_lowlevel_blockstore_specific_tests!(
                     $crate::tests::high_level::FixtureAdapterForLLTests<
                         $crate::tests::low_level::FixtureAdapterForHLTests<$type, false>,
                         false,
@@ -68,20 +68,20 @@ macro_rules! instantiate_blockstore_tests_for_highlevel_blockstore {
     ($type: ty, $tokio_test_args: tt) => {
         mod high_level {
             use super::*;
-            $crate::instantiate_highlevel_blockstore_tests!($type, $tokio_test_args);
+            $crate::instantiate_highlevel_blockstore_specific_tests!($type, $tokio_test_args);
         }
         mod wrapped_in_low_level {
             use super::*;
             mod with_flushing {
                 use super::*;
-                $crate::instantiate_lowlevel_blockstore_tests!(
+                $crate::instantiate_lowlevel_blockstore_specific_tests!(
                     $crate::tests::high_level::FixtureAdapterForLLTests<$type, false>,
                     $tokio_test_args
                 );
             }
             mod without_flushing {
                 use super::*;
-                $crate::instantiate_lowlevel_blockstore_tests!(
+                $crate::instantiate_lowlevel_blockstore_specific_tests!(
                     $crate::tests::high_level::FixtureAdapterForLLTests<$type, true>,
                     $tokio_test_args
                 );
@@ -92,7 +92,7 @@ macro_rules! instantiate_blockstore_tests_for_highlevel_blockstore {
             use super::*;
             mod with_flushing {
                 use super::*;
-                $crate::instantiate_highlevel_blockstore_tests!(
+                $crate::instantiate_highlevel_blockstore_specific_tests!(
                     $crate::tests::low_level::FixtureAdapterForHLTests<
                         $crate::tests::high_level::FixtureAdapterForLLTests<$type, true>,
                         false, // can be false since we don't need to double flush
@@ -102,7 +102,7 @@ macro_rules! instantiate_blockstore_tests_for_highlevel_blockstore {
             }
             mod without_flushing {
                 use super::*;
-                $crate::instantiate_highlevel_blockstore_tests!(
+                $crate::instantiate_highlevel_blockstore_specific_tests!(
                     $crate::tests::low_level::FixtureAdapterForHLTests<
                         $crate::tests::high_level::FixtureAdapterForLLTests<$type, false>,
                         false,

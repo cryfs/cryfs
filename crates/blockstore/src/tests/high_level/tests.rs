@@ -18,25 +18,25 @@ use cryfs_utils::{async_drop::AsyncDropGuard, testutils::asserts::assert_data_ra
 /// This macro instantiates all LockingBlockStore tests for a given blockstore.
 /// See [crate::tests::Fixture] and [HLFixture] for how to invoke it.
 #[macro_export]
-macro_rules! instantiate_highlevel_blockstore_tests {
+macro_rules! instantiate_highlevel_blockstore_specific_tests {
     ($target: ty) => {
-        $crate::instantiate_highlevel_blockstore_tests!($target, ());
+        $crate::instantiate_highlevel_blockstore_specific_tests!($target, ());
     };
     ($target: ty, $tokio_test_args: tt) => {
         // And run some additional tests for APIs only we have
-        $crate::_instantiate_highlevel_blockstore_tests!(@module create, $target, $tokio_test_args,
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module create, $target, $tokio_test_args,
             test_twoCreatedBlocksHaveDifferentIds
         );
         // try_create is tested through the low_level tests
         // load is tested through the low_level tests
         // overwrite (=store) is tested through the low_level tests
-        $crate::_instantiate_highlevel_blockstore_tests!(@module remove, $target, $tokio_test_args,
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module remove, $target, $tokio_test_args,
             // The low_level tests have further test cases for `remove`
             test_canRemoveAModifiedBlock,
         );
         // num_blocks is tested through the low_level tests
         // all_blocks is tested through the low_level tests
-        $crate::_instantiate_highlevel_blockstore_tests!(@module resize, $target, $tokio_test_args,
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module resize, $target, $tokio_test_args,
             test_givenZeroSizeBlock_whenResizingToBeLarger_thenSucceeds,
             test_givenZeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable,
             test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenSucceeds,
@@ -46,11 +46,11 @@ macro_rules! instantiate_highlevel_blockstore_tests {
             test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds,
             test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable,
         );
-        $crate::_instantiate_highlevel_blockstore_tests!(@module data, $target, $tokio_test_args,
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module data, $target, $tokio_test_args,
             test_writeAndReadImmediately,
             test_writeAndReadAfterLoading,
         );
-        $crate::_instantiate_highlevel_blockstore_tests!(@module overwrite, $target, $tokio_test_args,
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module overwrite, $target, $tokio_test_args,
             test_whenOverwritingWhileLoaded_thenBlocks,
             test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites,
         );
@@ -63,12 +63,12 @@ macro_rules! instantiate_highlevel_blockstore_tests {
 }
 
 #[macro_export]
-macro_rules! _instantiate_highlevel_blockstore_tests {
+macro_rules! _instantiate_highlevel_blockstore_specific_tests {
     (@module $module_name: ident, $target: ty, $tokio_test_args: tt $(, $test_cases: ident)* $(,)?) => {
         mod $module_name {
             use super::*;
 
-            $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
+            $crate::_instantiate_highlevel_blockstore_specific_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
         }
     };
     (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt) => {
@@ -80,7 +80,7 @@ macro_rules! _instantiate_highlevel_blockstore_tests {
             let fixture = <$target as $crate::tests::high_level::HLFixture>::new();
             $crate::tests::high_level::tests::$module_name::$head_test_case(fixture).await;
         }
-        $crate::_instantiate_highlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
     };
 }
 

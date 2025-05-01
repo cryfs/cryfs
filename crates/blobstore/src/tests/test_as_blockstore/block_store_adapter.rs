@@ -4,12 +4,10 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
-use super::super::BlobStoreOnBlocks;
 use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
-    BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
-    InvalidBlockSizeError, LLBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
-    tests::low_level::LLFixture,
+    BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
+    LLBlockStore, RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -32,9 +30,17 @@ where
     pub async fn new(underlying_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { underlying_store })
     }
+
+    pub fn inner(&self) -> &B {
+        &self.underlying_store
+    }
+
+    pub async fn clear_cache_slow(&self) -> Result<()> {
+        self.underlying_store.clear_cache_slow().await
+    }
 }
 
-// TODO Should we implement [BlockStore] instead of [LLBlockStore] for this adapter and run the high level tests? Seems to be a closer fit?
+// TODO Should we implement [BlockStore] instead of [LLBlockStore] for this adapter and run the high level tests? Seems to be a closer fit? Same for data_node_store::test_as_blockstore
 
 #[async_trait]
 impl<B> BlockStoreReader for BlockStoreAdapter<B>
@@ -163,36 +169,4 @@ where
 impl<B> LLBlockStore for BlockStoreAdapter<B> where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static
 {
-}
-
-/// TestFixtureAdapter takes a [Fixture] for a [BlockStore] and makes it into
-/// a [Fixture] that creates a [DataNodeStore] based on that [BlockStore].
-/// This allows using our block store test suite on [DataNodeStore].
-pub struct TestFixtureAdapter<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> {}
-#[async_trait]
-impl<const FLUSH_CACHE_ON_YIELD: bool, const BLOCK_SIZE_BYTES: u64> LLFixture
-    for TestFixtureAdapter<FLUSH_CACHE_ON_YIELD, BLOCK_SIZE_BYTES>
-{
-    type ConcreteBlockStore =
-        BlockStoreAdapter<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>;
-    fn new() -> Self {
-        Self {}
-    }
-    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
-        BlockStoreAdapter::new(
-            BlobStoreOnBlocks::new(
-                LockingBlockStore::new(InMemoryBlockStore::new()),
-                Byte::from_u64(BLOCK_SIZE_BYTES),
-            )
-            .await
-            .unwrap(),
-        )
-        .await
-    }
-
-    async fn yield_fixture(&self, store: &Self::ConcreteBlockStore) {
-        if FLUSH_CACHE_ON_YIELD {
-            store.underlying_store.clear_cache_slow().await.unwrap();
-        }
-    }
 }

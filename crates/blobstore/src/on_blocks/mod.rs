@@ -10,9 +10,6 @@ pub use data_node_store::{DataInnerNode, DataLeafNode, DataNode, DataNodeStore};
 pub use data_tree_store::{DataTree, DataTreeStore, LoadNodeError};
 
 #[cfg(test)]
-mod test_as_blockstore;
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use crate::tests::fixture::Fixture;
@@ -39,5 +36,39 @@ mod tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlobStore) {}
     }
 
-    crate::instantiate_blobstore_tests!(TestFixture<1024>, (flavor = "multi_thread"));
+    mod block_size_minimal {
+        use super::*;
+
+        const MINIMAL_SIZE: u64 = crate::on_blocks::data_node_store::NodeLayout::header_len()
+            as u64
+            + 2 * crate::BLOBID_LEN as u64;
+
+        crate::instantiate_tests_for_blobstore!(
+            TestFixture<MINIMAL_SIZE>,
+            (flavor = "multi_thread")
+        );
+    }
+
+    mod block_size_1kb {
+        use super::*;
+        crate::instantiate_tests_for_blobstore!(TestFixture<1024>, (flavor = "multi_thread"));
+    }
+
+    mod block_size_32kb {
+        use super::*;
+        crate::instantiate_tests_for_blobstore!(
+            TestFixture<{ 32 * 1024 }>,
+            (flavor = "multi_thread")
+        );
+    }
+
+    mod block_size_4mb {
+        use super::*;
+        crate::instantiate_tests_for_blobstore!(
+            TestFixture<{ 4 * 1024 * 1024 }>,
+            (flavor = "multi_thread")
+        );
+    }
+
+    // TODO For these tests, we need to make sure that blockstore tests actually contain tests with large data amounts, otherwise we don't really test the tree structure.
 }

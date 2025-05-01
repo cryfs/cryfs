@@ -17,12 +17,12 @@ use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 /// This macro instantiates all blockstore tests for a given blockstore.
 /// See [Fixture] for how to invoke it.
 #[macro_export]
-macro_rules! instantiate_lowlevel_blockstore_tests {
+macro_rules! instantiate_lowlevel_blockstore_specific_tests {
     ($target: ty) => {
-        $crate::instantiate_lowlevel_blockstore_tests!($target, ());
+        $crate::instantiate_lowlevel_blockstore_specific_tests!($target, ());
     };
     ($target: ty, $tokio_test_args: tt) => {
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module try_create, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module try_create, $target, $tokio_test_args,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingBlock_thenFails,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnExistingEmptyBlock_thenFails,
             test_givenNonEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds,
@@ -30,13 +30,13 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
             test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withEmptyData_thenSucceeds,
             test_givenEmptyBlockStore_whenCallingTryCreateOnNonExistingBlock_withNonEmptyData_thenSucceeds,
         );
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module load, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module load, $target, $tokio_test_args,
             test_givenNonEmptyBlockStore_whenLoadExistingBlock_withEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenLoadExistingBlock_withNonEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenLoadNonexistingBlock_thenFails,
             test_givenEmptyBlockStore_whenLoadNonexistingBlock_thenFails,
         );
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module store, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module store, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds,
             test_givenEmptyBlockStore_whenStoringNonExistingBlock_withNonEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenStoringNonExistingBlock_withEmptyData_thenSucceeds,
@@ -44,7 +44,7 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
             test_givenNonEmptyBlockStore_whenStoringExistingBlock_withEmptyData_thenSucceeds,
             test_givenNonEmptyBlockStore_whenStoringExistingBlock_withNonEmptyData_thenSucceeds,
         );
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module remove, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module remove, $target, $tokio_test_args,
             test_givenOtherwiseEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore,
             test_givenOtherwiseEmptyBlockStore_whenRemovingNonEmptyBlock_thenBlockIsNotLoadableAnymore,
             test_givenNonEmptyBlockStore_whenRemovingEmptyBlock_thenBlockIsNotLoadableAnymore,
@@ -52,14 +52,14 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
             test_givenEmptyBlockStore_whenRemovingNonexistingBlock_thenFails,
             test_givenNonEmptyBlockStore_whenRemovingNonexistingBlock_thenFails,
         );
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module num_blocks, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module num_blocks, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterStoringBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterStoringBlocks_withSameId_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterTryCreatingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
             test_afterRemovingBlocks_whenCallingNumBlocks_thenReturnsCorrectResult,
         );
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module all_blocks, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module all_blocks, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingAllBlocks_thenReturnsCorrectResult,
             test_givenBlockStoreWithOneNonEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult,
             test_givenBlockStoreWithOneEmptyBlock_whenCallingAllBlocks_thenReturnsCorrectResult,
@@ -67,7 +67,7 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
             test_givenBlockStoreWithThreeBlocks_whenCallingAllBlocks_thenReturnsCorrectResult,
             test_afterRemovingBlock_whenCallingAllBlocks_doesntListRemovedBlocks,
         );
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module exists, $target, $tokio_test_args,
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module exists, $target, $tokio_test_args,
             test_givenEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse,
             test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse,
             test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue,
@@ -80,12 +80,12 @@ macro_rules! instantiate_lowlevel_blockstore_tests {
 }
 
 #[macro_export]
-macro_rules! _instantiate_lowlevel_blockstore_tests {
+macro_rules! _instantiate_lowlevel_blockstore_specific_tests {
     (@module $module_name: ident, $target: ty, $tokio_test_args: tt $(, $test_cases: ident)* $(,)?) => {
         mod $module_name {
             use super::*;
 
-            $crate::_instantiate_lowlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
+            $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $test_cases)*);
         }
     };
     (@module_impl $module_name: ident, $target: ty, $tokio_test_args: tt) => {
@@ -97,7 +97,7 @@ macro_rules! _instantiate_lowlevel_blockstore_tests {
             let fixture = <$target as $crate::tests::low_level::LLFixture>::new();
             $crate::tests::low_level::tests::$module_name::$head_test_case(fixture).await
         }
-        $crate::_instantiate_lowlevel_blockstore_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module_impl $module_name, $target, $tokio_test_args $(, $tail_test_cases)*);
     };
 }
 

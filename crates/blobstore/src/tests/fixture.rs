@@ -11,7 +11,12 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 /// required by the block store.
 #[async_trait]
 pub trait Fixture {
-    type ConcreteBlobStore: BlobStore + Debug + AsyncDrop + Send + Sync;
+    type ConcreteBlobStore: BlobStore
+        + Debug
+        + AsyncDrop<Error = anyhow::Error>
+        + Send
+        + Sync
+        + 'static;
 
     /// Instantiate the fixture
     fn new() -> Self;

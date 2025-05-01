@@ -67,9 +67,9 @@ mod tests {
     use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
     use cryfs_utils::async_drop::AsyncDropGuard;
 
-    struct TestFixture<const BLOCK_SIZE_BYTES: u64>;
+    struct TestFixture;
     #[async_trait]
-    impl<const BLOCK_SIZE_BYTES: u64> Fixture for TestFixture<BLOCK_SIZE_BYTES> {
+    impl Fixture for TestFixture {
         type ConcreteBlobStore =
             AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>;
         fn new() -> Self {
@@ -79,7 +79,7 @@ mod tests {
             AsyncDropArc::new(
                 BlobStoreOnBlocks::new(
                     LockingBlockStore::new(InMemoryBlockStore::new()),
-                    Byte::from_u64(BLOCK_SIZE_BYTES),
+                    Byte::from_u64(1024),
                 )
                 .await
                 .unwrap(),
@@ -88,5 +88,5 @@ mod tests {
         async fn yield_fixture(&self, _store: &Self::ConcreteBlobStore) {}
     }
 
-    crate::instantiate_blobstore_tests!(TestFixture<1024>, (flavor = "multi_thread"));
+    crate::instantiate_tests_for_blobstore!(TestFixture, (flavor = "multi_thread"));
 }
