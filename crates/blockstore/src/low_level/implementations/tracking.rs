@@ -18,22 +18,30 @@ use cryfs_utils::{
     data::Data,
 };
 
-#[derive(Debug, Default, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
 pub struct ActionCounts {
     pub exists: u32,
-    pub loaded: u32,
-    pub stored: u32,
-    pub removed: u32,
-    pub created: u32,
+    pub load: u32,
+    pub num_blocks: u32,
+    pub estimate_num_free_bytes: u32,
+    pub block_size_from_physical_block_size: u32,
+    pub all_blocks: u32,
+    pub remove: u32,
+    pub try_create: u32,
+    pub store: u32,
 }
 
 impl ActionCounts {
     pub const ZERO: Self = Self {
         exists: 0,
-        loaded: 0,
-        stored: 0,
-        removed: 0,
-        created: 0,
+        load: 0,
+        num_blocks: 0,
+        estimate_num_free_bytes: 0,
+        block_size_from_physical_block_size: 0,
+        all_blocks: 0,
+        remove: 0,
+        try_create: 0,
+        store: 0,
     };
 }
 
@@ -59,7 +67,7 @@ impl<B: Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>> TrackingBlockSto
     }
 
     pub fn get_and_reset_counts(&self) -> ActionCounts {
-        std::mem::take(&mut self.counts.lock().unwrap())
+        std::mem::replace(&mut self.counts.lock().unwrap(), ActionCounts::ZERO)
     }
 }
 
@@ -73,15 +81,17 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
     }
 
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
-        self.counts.lock().unwrap().loaded += 1;
+        self.counts.lock().unwrap().load += 1;
         self.underlying_store.load(id).await
     }
 
     async fn num_blocks(&self) -> Result<u64> {
+        self.counts.lock().unwrap().num_blocks += 1;
         self.underlying_store.num_blocks().await
     }
 
     fn estimate_num_free_bytes(&self) -> Result<Byte> {
+        self.counts.lock().unwrap().estimate_num_free_bytes += 1;
         self.underlying_store.estimate_num_free_bytes()
     }
 
@@ -89,11 +99,16 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
+        self.counts
+            .lock()
+            .unwrap()
+            .block_size_from_physical_block_size += 1;
         self.underlying_store
             .block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
+        self.counts.lock().unwrap().all_blocks += 1;
         self.underlying_store.all_blocks().await
     }
 }
@@ -103,7 +118,7 @@ impl<B: BlockStoreDeleter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Erro
     BlockStoreDeleter for TrackingBlockStore<B>
 {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
-        self.counts.lock().unwrap().removed += 1;
+        self.counts.lock().unwrap().remove += 1;
         self.underlying_store.remove(id).await
     }
 }
@@ -123,12 +138,12 @@ impl<B: OptimizedBlockStoreWriter + Debug + Sync + Send + AsyncDrop<Error = anyh
         id: &BlockId,
         data: Self::BlockData,
     ) -> Result<TryCreateResult> {
-        self.counts.lock().unwrap().created += 1;
+        self.counts.lock().unwrap().try_create += 1;
         self.underlying_store.try_create_optimized(id, data).await
     }
 
     async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()> {
-        self.counts.lock().unwrap().stored += 1;
+        self.counts.lock().unwrap().store += 1;
         self.underlying_store.store_optimized(id, data).await
     }
 }
@@ -179,10 +194,14 @@ mod tests {
         assert_eq!(
             ActionCounts {
                 exists: 0,
-                created: 0,
-                stored: 0,
-                loaded: 0,
-                removed: 0,
+                load: 0,
+                num_blocks: 0,
+                estimate_num_free_bytes: 0,
+                block_size_from_physical_block_size: 0,
+                all_blocks: 0,
+                remove: 0,
+                try_create: 0,
+                store: 0,
             },
             store.counts(),
         );
@@ -209,8 +228,8 @@ mod tests {
         assert_eq!(
             ActionCounts {
                 exists: 2,
-                created: 1,
-                ..ActionCounts::default()
+                try_create: 1,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -242,9 +261,9 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                loaded: 4,
-                created: 2,
-                ..ActionCounts::default()
+                load: 4,
+                try_create: 2,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -271,9 +290,9 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                stored: 4,
-                removed: 1,
-                ..ActionCounts::default()
+                store: 4,
+                remove: 1,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -312,9 +331,9 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                stored: 4,
-                removed: 1,
-                ..ActionCounts::default()
+                store: 4,
+                remove: 1,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -367,9 +386,9 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                removed: 5,
-                created: 3,
-                ..ActionCounts::default()
+                remove: 5,
+                try_create: 3,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -410,9 +429,9 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                created: 4,
-                removed: 1,
-                ..ActionCounts::default()
+                try_create: 4,
+                remove: 1,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -465,9 +484,139 @@ mod tests {
 
         assert_eq!(
             ActionCounts {
-                created: 4,
-                removed: 1,
-                ..ActionCounts::default()
+                try_create: 4,
+                remove: 1,
+                ..ActionCounts::ZERO
+            },
+            store.counts()
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_block_size_from_physical_block_size() {
+        let mut fixture = TestFixture::new();
+        let mut store = fixture.store().await;
+        let expected_overhead = Byte::from_u64(0);
+
+        assert_eq!(
+            Byte::from_u64(0),
+            store
+                .block_size_from_physical_block_size(expected_overhead)
+                .unwrap()
+        );
+        assert_eq!(
+            Byte::from_u64(20),
+            store
+                .block_size_from_physical_block_size(
+                    expected_overhead.add(Byte::from_u64(20)).unwrap()
+                )
+                .unwrap()
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn num_blocks_increases_counter() {
+        let mut fixture = TestFixture::new();
+        let mut store = fixture.store().await;
+
+        // Create some blocks to make the test more meaningful
+        let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
+        let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
+        let _ = store.try_create(&id1, &[1, 2, 3]).await.unwrap();
+        let _ = store.try_create(&id2, &[4, 5, 6]).await.unwrap();
+
+        // Call num_blocks multiple times
+        store.num_blocks().await.unwrap();
+        store.num_blocks().await.unwrap();
+        store.num_blocks().await.unwrap();
+
+        assert_eq!(
+            ActionCounts {
+                num_blocks: 3,
+                try_create: 2,
+                ..ActionCounts::ZERO
+            },
+            store.counts()
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn estimate_num_free_bytes_increases_counter() {
+        let mut fixture = TestFixture::new();
+        let mut store = fixture.store().await;
+
+        // Call estimate_num_free_bytes multiple times
+        store.estimate_num_free_bytes().unwrap();
+        store.estimate_num_free_bytes().unwrap();
+        store.estimate_num_free_bytes().unwrap();
+        store.estimate_num_free_bytes().unwrap();
+
+        assert_eq!(
+            ActionCounts {
+                estimate_num_free_bytes: 4,
+                ..ActionCounts::ZERO
+            },
+            store.counts()
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn block_size_from_physical_block_size_increases_counter() {
+        let mut fixture = TestFixture::new();
+        let mut store = fixture.store().await;
+
+        // Call block_size_from_physical_block_size multiple times
+        store
+            .block_size_from_physical_block_size(Byte::from_u64(1024))
+            .unwrap();
+        store
+            .block_size_from_physical_block_size(Byte::from_u64(2048))
+            .unwrap();
+        store
+            .block_size_from_physical_block_size(Byte::from_u64(4096))
+            .unwrap();
+
+        assert_eq!(
+            ActionCounts {
+                block_size_from_physical_block_size: 3,
+                ..ActionCounts::ZERO
+            },
+            store.counts()
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn all_blocks_increases_counter() {
+        let mut fixture = TestFixture::new();
+        let mut store = fixture.store().await;
+
+        // Create some blocks to make the test more meaningful
+        let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
+        let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
+        let _ = store.try_create(&id1, &[1, 2, 3]).await.unwrap();
+        let _ = store.try_create(&id2, &[4, 5, 6]).await.unwrap();
+
+        // Call all_blocks multiple times and execute the streams to completion
+        let s1 = store.all_blocks().await.unwrap();
+        let _ = futures::StreamExt::collect::<Vec<_>>(s1).await;
+        let s2 = store.all_blocks().await.unwrap();
+        let _ = futures::StreamExt::collect::<Vec<_>>(s2).await;
+
+        assert_eq!(
+            ActionCounts {
+                all_blocks: 2,
+                try_create: 2,
+                ..ActionCounts::ZERO
             },
             store.counts()
         );
@@ -508,50 +657,45 @@ mod tests {
             let _ = store.load(&id2).await.unwrap();
         }
 
+        for _ in 0..3 {
+            let _ = store.exists(&id1).await.unwrap();
+        }
+
+        for _ in 0..2 {
+            let _ = store.num_blocks().await.unwrap();
+        }
+
+        for _ in 0..4 {
+            let _ = store.estimate_num_free_bytes().unwrap();
+        }
+
+        for _ in 0..3 {
+            let _ = store
+                .block_size_from_physical_block_size(Byte::from_u64(1024))
+                .unwrap();
+        }
+
+        for _ in 0..2 {
+            let s = store.all_blocks().await.unwrap();
+            let _ = futures::StreamExt::collect::<Vec<_>>(s).await;
+        }
+
         assert_eq!(
             ActionCounts {
-                exists: 0,
-                created: 8,
-                removed: 10,
-                stored: 12,
-                loaded: 14,
+                exists: 3,
+                try_create: 8,
+                remove: 10,
+                store: 12,
+                load: 14,
+                num_blocks: 2,
+                estimate_num_free_bytes: 4,
+                block_size_from_physical_block_size: 3,
+                all_blocks: 2,
             },
             store.get_and_reset_counts(),
         );
-        assert_eq!(
-            ActionCounts {
-                exists: 0,
-                created: 0,
-                removed: 0,
-                stored: 0,
-                loaded: 0,
-            },
-            store.get_and_reset_counts(),
-        );
 
-        store.async_drop().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
-        let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
-        let expected_overhead = Byte::from_u64(0);
-
-        assert_eq!(
-            Byte::from_u64(0),
-            store
-                .block_size_from_physical_block_size(expected_overhead)
-                .unwrap()
-        );
-        assert_eq!(
-            Byte::from_u64(20),
-            store
-                .block_size_from_physical_block_size(
-                    expected_overhead.add(Byte::from_u64(20)).unwrap()
-                )
-                .unwrap()
-        );
+        assert_eq!(ActionCounts::ZERO, store.get_and_reset_counts(),);
 
         store.async_drop().await.unwrap();
     }

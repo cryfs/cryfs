@@ -7,7 +7,7 @@ use std::{
 use crate::{Block, BlockId};
 use cryfs_utils::data::Data;
 
-use super::tracking_blockstore::ActionCounts;
+use super::ActionCounts;
 
 /// A wrapper for blocks from an underlying block store
 pub struct TrackingBlock<B: Block> {
@@ -40,17 +40,17 @@ impl<B: Block + Send + Sync> Block for TrackingBlock<B> {
     }
 
     fn data(&self) -> &Data {
-        self.counts.lock().unwrap().read += 1;
+        self.counts.lock().unwrap().blob_data += 1;
         self.underlying_block.data()
     }
 
     fn data_mut(&mut self) -> &mut Data {
-        self.counts.lock().unwrap().written += 1;
+        self.counts.lock().unwrap().blob_data_mut += 1;
         self.underlying_block.data_mut()
     }
 
     async fn resize(&mut self, new_size: usize) {
-        self.counts.lock().unwrap().resized += 1;
+        self.counts.lock().unwrap().blob_resize += 1;
         self.underlying_block.resize(new_size).await
     }
 }

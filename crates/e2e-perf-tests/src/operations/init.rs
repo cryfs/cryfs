@@ -1,11 +1,13 @@
+use pretty_assertions::assert_eq;
+use rstest::rstest;
+use rstest_reuse::apply;
+
 use crate::filesystem_test_ext::FilesystemTestExt as _;
 use crate::rstest::FixtureFactory;
 use crate::rstest::all_atime_behaviors;
 use crate::rstest::all_fixtures;
 use cryfs_blockstore::{HLActionCounts, LLActionCounts};
 use cryfs_rustfs::AtimeUpdateBehavior;
-use rstest::rstest;
-use rstest_reuse::apply;
 
 #[apply(all_fixtures)]
 #[apply(all_atime_behaviors)]
@@ -28,21 +30,19 @@ async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateB
         ActionCounts {
             low_level: LLActionCounts {
                 exists: 1,
-                loaded: 0,
-                stored: 1,
-                removed: 0,
-                created: 0,
+                store: 1,
+                block_size_from_physical_block_size: 1,
+                ..LLActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                loaded: 2,
-                read: 15,
-                written: 2,
-                overwritten: 0,
-                created: 1,
-                removed: 0,
-                resized: 0,
-                flushed: 1,
+                store_load: 2,
+                blob_data: 15,
+                blob_data_mut: 2,
+                store_try_create: 1,
+                store_flush_block: 1,
+                store_block_size_from_physical_block_size: 1,
+                ..HLActionCounts::ZERO
             },
         }
     );

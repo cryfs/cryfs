@@ -1,5 +1,5 @@
 mod locking;
-pub use locking::{LockingBlock, LockingBlockStore};
+pub use locking::LockingBlockStore;
 
 #[cfg(any(test, feature = "testutils"))]
 mod tracking;

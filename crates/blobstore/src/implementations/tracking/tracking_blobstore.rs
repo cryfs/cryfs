@@ -27,7 +27,7 @@ where
     pub fn new(underlying_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_store,
-            counts: Arc::new(Mutex::new(BlobStoreActionCounts::default())),
+            counts: Arc::new(Mutex::new(BlobStoreActionCounts::ZERO)),
         })
     }
 
@@ -36,7 +36,10 @@ where
     }
 
     pub fn get_and_reset_counts(&self) -> BlobStoreActionCounts {
-        std::mem::take(&mut self.counts.lock().unwrap())
+        std::mem::replace(
+            &mut self.counts.lock().unwrap(),
+            BlobStoreActionCounts::ZERO,
+        )
     }
 }
 

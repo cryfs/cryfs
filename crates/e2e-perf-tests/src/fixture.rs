@@ -26,7 +26,7 @@ use crate::filesystem_test_ext::FilesystemTestExt;
 const BLOCKSIZE_BYTES: u64 = 4096;
 const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
 
-#[derive(Debug, Default, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
 pub struct ActionCounts {
     pub low_level: LLActionCounts,
     pub high_level: HLActionCounts,

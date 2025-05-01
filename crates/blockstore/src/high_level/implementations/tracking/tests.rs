@@ -1,9 +1,12 @@
 use async_trait::async_trait;
+use byte_unit::Byte;
+use futures::stream::StreamExt;
+use pretty_assertions::assert_eq;
+
 use cryfs_utils::async_drop::AsyncDropGuard;
 use cryfs_utils::data::Data;
 
-use super::TrackingBlockStore;
-use crate::high_level::implementations::tracking::tracking_blockstore::ActionCounts;
+use super::{ActionCounts, TrackingBlockStore};
 use crate::{
     Block, BlockId, BlockStore as _, instantiate_blockstore_tests_for_highlevel_blockstore,
 };
@@ -49,14 +52,20 @@ async fn counters_start_at_zero() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 0,
-            read: 0,
-            written: 0,
-            overwritten: 0,
-            created: 0,
-            removed: 0,
-            resized: 0,
-            flushed: 0,
+            store_load: 0,
+            store_try_create: 0,
+            store_overwrite: 0,
+            store_remove_by_id: 0,
+            store_remove: 0,
+            store_num_blocks: 0,
+            store_estimate_num_free_bytes: 0,
+            store_block_size_from_physical_block_size: 0,
+            store_all_blocks: 0,
+            store_create: 0,
+            store_flush_block: 0,
+            blob_data: 0,
+            blob_data_mut: 0,
+            blob_resize: 0,
         },
         store.counts(),
     );
@@ -79,9 +88,9 @@ async fn load_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 4,
-            created: 2,
-            ..ActionCounts::default()
+            store_load: 4,
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -112,9 +121,9 @@ async fn overwrite_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            overwritten: 3,
-            created: 2,
-            ..ActionCounts::default()
+            store_overwrite: 3,
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -140,9 +149,9 @@ async fn remove_by_id_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            removed: 4,
-            created: 2,
-            ..ActionCounts::default()
+            store_remove_by_id: 4,
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -166,10 +175,10 @@ async fn remove_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            removed: 2,
-            loaded: 2,
-            created: 2,
-            ..ActionCounts::default()
+            store_remove: 2,
+            store_load: 2,
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -222,9 +231,9 @@ async fn try_create_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 4,
-            removed: 1,
-            ..ActionCounts::default()
+            store_try_create: 4,
+            store_remove_by_id: 1,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -242,8 +251,8 @@ async fn create_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 2,
-            ..ActionCounts::default()
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -268,10 +277,10 @@ async fn resize_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 2,
-            loaded: 2,
-            resized: 3,
-            ..ActionCounts::default()
+            store_create: 2,
+            store_load: 2,
+            blob_resize: 3,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -299,10 +308,10 @@ async fn flush_block_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            created: 2,
-            loaded: 2,
-            flushed: 3,
-            ..ActionCounts::default()
+            store_create: 2,
+            store_load: 2,
+            store_flush_block: 3,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -314,7 +323,7 @@ async fn flush_block_increases_counter() {
 }
 
 #[tokio::test]
-async fn read_increases_counter() {
+async fn data_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
     let mut store = fixture.store().await;
 
@@ -332,10 +341,10 @@ async fn read_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 2,
-            read: 4,
-            created: 2,
-            ..ActionCounts::default()
+            store_load: 2,
+            blob_data: 4,
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
@@ -347,7 +356,7 @@ async fn read_increases_counter() {
 }
 
 #[tokio::test]
-async fn write_increases_counter() {
+async fn data_mut_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
     let mut store = fixture.store().await;
 
@@ -365,16 +374,116 @@ async fn write_increases_counter() {
 
     assert_eq!(
         ActionCounts {
-            loaded: 2,
-            written: 4,
-            created: 2,
-            ..ActionCounts::default()
+            store_load: 2,
+            blob_data_mut: 4,
+            store_create: 2,
+            ..ActionCounts::ZERO
         },
         store.counts()
     );
 
     std::mem::drop(block1);
     std::mem::drop(block2);
+
+    store.async_drop().await.unwrap();
+}
+
+#[tokio::test]
+async fn num_blocks_increases_counter() {
+    let mut fixture = TestFixture::<false>::new();
+    let mut store = fixture.store().await;
+
+    // Create some blocks to make the test more meaningful
+    store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
+    store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
+
+    // Call num_blocks multiple times
+    store.num_blocks().await.unwrap();
+    store.num_blocks().await.unwrap();
+    store.num_blocks().await.unwrap();
+
+    assert_eq!(
+        ActionCounts {
+            store_num_blocks: 3,
+            store_create: 2,
+            ..ActionCounts::ZERO
+        },
+        store.counts()
+    );
+
+    store.async_drop().await.unwrap();
+}
+
+#[tokio::test]
+async fn estimate_num_free_bytes_increases_counter() {
+    let mut fixture = TestFixture::<false>::new();
+    let mut store = fixture.store().await;
+
+    store.estimate_num_free_bytes().unwrap();
+    store.estimate_num_free_bytes().unwrap();
+    store.estimate_num_free_bytes().unwrap();
+    store.estimate_num_free_bytes().unwrap();
+
+    assert_eq!(
+        ActionCounts {
+            store_estimate_num_free_bytes: 4,
+            ..ActionCounts::ZERO
+        },
+        store.counts()
+    );
+
+    store.async_drop().await.unwrap();
+}
+
+#[tokio::test]
+async fn block_size_from_physical_block_size_increases_counter() {
+    let mut fixture = TestFixture::<false>::new();
+    let mut store = fixture.store().await;
+
+    store
+        .block_size_from_physical_block_size(Byte::from_u64(1024))
+        .unwrap();
+    store
+        .block_size_from_physical_block_size(Byte::from_u64(2048))
+        .unwrap();
+    store
+        .block_size_from_physical_block_size(Byte::from_u64(4096))
+        .unwrap();
+
+    assert_eq!(
+        ActionCounts {
+            store_block_size_from_physical_block_size: 3,
+            ..ActionCounts::ZERO
+        },
+        store.counts()
+    );
+
+    store.async_drop().await.unwrap();
+}
+
+#[tokio::test]
+async fn all_blocks_increases_counter() {
+    let mut fixture = TestFixture::<false>::new();
+    let mut store = fixture.store().await;
+
+    // Create some blocks to make the test more meaningful
+    store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
+    store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
+
+    // Call all_blocks multiple times and execute streams to completion
+    let s1 = store.all_blocks().await.unwrap();
+    let _ = s1.collect::<Vec<_>>().await;
+    let s2 = store.all_blocks().await.unwrap();
+    let _ = s2.collect::<Vec<_>>().await;
+
+    assert_eq!(
+        ActionCounts {
+            store_all_blocks: 2,
+            store_create: 2,
+            ..ActionCounts::ZERO
+        },
+        store.counts()
+    );
 
     store.async_drop().await.unwrap();
 }
@@ -387,7 +496,7 @@ async fn get_and_reset_totals_works() {
     let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
     let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
 
-    // Create some blocks
+    // Create some blocks using try_create
     for _ in 0..2 {
         let _ = store
             .try_create(&id1, &Data::from(vec![1, 2, 3]))
@@ -395,9 +504,21 @@ async fn get_and_reset_totals_works() {
             .unwrap();
     }
 
-    // Remove some blocks
+    // Create some blocks using create
+    for _ in 0..3 {
+        let _ = store.create(&Data::from(vec![7, 8, 9])).await.unwrap();
+    }
+
+    // Remove some blocks by ID
     for _ in 0..3 {
         let _ = store.remove_by_id(&id1).await.unwrap();
+    }
+
+    // Remove some blocks by object
+    for _ in 0..2 {
+        let id = store.create(&Data::from(vec![10, 11, 12])).await.unwrap();
+        let block = store.load(id).await.unwrap().unwrap();
+        store.remove(block).await.unwrap();
     }
 
     // Overwrite some blocks
@@ -420,33 +541,62 @@ async fn get_and_reset_totals_works() {
         block.data_mut()[0] += 1;
     }
 
+    // Call num_blocks multiple times
+    for _ in 0..3 {
+        store.num_blocks().await.unwrap();
+    }
+
+    // Call estimate_num_free_bytes multiple times
+    for _ in 0..2 {
+        store.estimate_num_free_bytes().unwrap();
+    }
+
+    // Call block_size_from_physical_block_size multiple times
+    for _ in 0..4 {
+        store
+            .block_size_from_physical_block_size(Byte::from_u64(1024))
+            .unwrap();
+    }
+
+    // Call all_blocks multiple times
+    for _ in 0..3 {
+        let _ = store.all_blocks().await.unwrap();
+    }
+
+    // Call flush_block
+    for _ in 0..2 {
+        if let Some(mut block) = store.load(id2).await.unwrap() {
+            store.flush_block(&mut block).await.unwrap();
+        }
+    }
+
+    // Call resize
+    if let Some(mut block) = store.load(id2).await.unwrap() {
+        block.resize(10).await;
+        block.resize(20).await;
+    }
+
     assert_eq!(
         ActionCounts {
-            loaded: 5,
-            read: 10,
-            written: 5,
-            overwritten: 4,
-            created: 2,
-            removed: 3,
-            resized: 0,
-            flushed: 0,
+            store_load: 5 + 2 + 1 + 2, // Original 5 + 2 for flush_block + 1 for resize + 2 for remove
+            blob_data: 10,
+            blob_data_mut: 5,
+            store_overwrite: 4,
+            store_try_create: 2,
+            store_create: 3 + 2, // 3 direct creates + 2 for remove test
+            store_remove_by_id: 3,
+            store_remove: 2,
+            store_num_blocks: 3,
+            store_estimate_num_free_bytes: 2,
+            store_block_size_from_physical_block_size: 4,
+            store_all_blocks: 3,
+            store_flush_block: 2,
+            blob_resize: 2,
         },
         store.get_and_reset_counts(),
     );
 
-    assert_eq!(
-        ActionCounts {
-            loaded: 0,
-            read: 0,
-            written: 0,
-            overwritten: 0,
-            created: 0,
-            removed: 0,
-            resized: 0,
-            flushed: 0,
-        },
-        store.get_and_reset_counts(),
-    );
+    assert_eq!(ActionCounts::ZERO, store.get_and_reset_counts(),);
 
     store.async_drop().await.unwrap();
 }

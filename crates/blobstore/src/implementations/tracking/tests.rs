@@ -88,7 +88,7 @@ mod counter_tests {
         assert_eq!(
             BlobStoreActionCounts {
                 store_create: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -116,7 +116,7 @@ mod counter_tests {
         assert_eq!(
             BlobStoreActionCounts {
                 store_try_create: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -145,7 +145,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_load: 3,
                 store_create: 1,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -185,7 +185,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 store_remove_by_id: 3,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -205,7 +205,7 @@ mod counter_tests {
         assert_eq!(
             BlobStoreActionCounts {
                 store_num_nodes: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -214,7 +214,7 @@ mod counter_tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn store_estimate_space_increases_counter() {
+    async fn store_estimate_space_for_num_blocks_left_increases_counter() {
         let mut fixture = super::TestFixture::new();
         let mut store = fixture.store().await;
 
@@ -225,7 +225,7 @@ mod counter_tests {
         assert_eq!(
             BlobStoreActionCounts {
                 store_estimate_space_for_num_blocks_left: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -245,7 +245,7 @@ mod counter_tests {
         assert_eq!(
             BlobStoreActionCounts {
                 store_virtual_block_size_bytes: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -277,7 +277,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 store_load_block_depth: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -299,7 +299,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_num_bytes: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -322,7 +322,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_resize: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -345,7 +345,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_read_all: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -372,7 +372,7 @@ mod counter_tests {
                 store_create: 1,
                 blob_write: 1,
                 blob_read: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -399,7 +399,7 @@ mod counter_tests {
                 store_create: 1,
                 blob_write: 1,
                 blob_try_read: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -423,7 +423,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_write: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -447,7 +447,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_flush: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -470,7 +470,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_num_nodes: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -492,7 +492,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_remove: 1,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -518,7 +518,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_all_blocks: 2,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -543,7 +543,7 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_all_blocks: 1,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             counts
         );
@@ -554,13 +554,13 @@ mod counter_tests {
             BlobStoreActionCounts {
                 store_create: 1,
                 blob_all_blocks: 1,
-                ..Default::default()
+                ..BlobStoreActionCounts::ZERO
             },
             reset_counts
         );
 
         let new_counts = store.counts();
-        assert_eq!(BlobStoreActionCounts::default(), new_counts);
+        assert_eq!(BlobStoreActionCounts::ZERO, new_counts);
 
         store.async_drop().await.unwrap();
     }

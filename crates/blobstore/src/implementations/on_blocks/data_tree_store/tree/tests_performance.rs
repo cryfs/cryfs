@@ -26,6 +26,7 @@ const NUM_BYTES: u64 = NUM_LEAVES * LAYOUT.max_bytes_per_leaf() as u64;
 
 mod testutils {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     pub async fn with_treestore_and_tracking_blockstore(
         f: impl for<'a> FnOnce(
@@ -183,6 +184,7 @@ mod testutils {
 mod num_nodes {
     use super::testutils::*;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn empty_tree() {
@@ -193,16 +195,16 @@ mod num_nodes {
 
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 1,
-                        ..Default::default()
+                        load: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
                 assert_eq!(1, tree.num_nodes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 0,
-                        ..Default::default()
+                        load: 0,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -219,8 +221,8 @@ mod num_nodes {
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 1,
-                        ..Default::default()
+                        load: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -230,8 +232,8 @@ mod num_nodes {
                 assert_eq!(NUM_NODES, tree.num_nodes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: (DEPTH - 1) as u32,
-                        ..Default::default()
+                        load: (DEPTH - 1) as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -240,8 +242,8 @@ mod num_nodes {
                 assert_eq!(NUM_NODES, tree.num_nodes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 0,
-                        ..Default::default()
+                        load: 0,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -254,6 +256,7 @@ mod num_nodes {
 mod num_bytes {
     use super::testutils::*;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn empty_tree() {
@@ -263,8 +266,8 @@ mod num_bytes {
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 1,
-                        ..Default::default()
+                        load: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -272,8 +275,8 @@ mod num_bytes {
                 assert_eq!(0, tree.num_bytes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 0,
-                        ..Default::default()
+                        load: 0,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -290,8 +293,8 @@ mod num_bytes {
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 1,
-                        ..Default::default()
+                        load: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -301,8 +304,8 @@ mod num_bytes {
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: DEPTH as u32,
-                        ..Default::default()
+                        load: DEPTH as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -311,8 +314,8 @@ mod num_bytes {
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 0,
-                        ..Default::default()
+                        load: 0,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -329,8 +332,8 @@ mod num_bytes {
                 let mut tree = treestore.load_tree(block_id).await.unwrap().unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 1,
-                        ..Default::default()
+                        load: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -340,8 +343,8 @@ mod num_bytes {
                 assert_eq!(NUM_NODES, tree.num_nodes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: (DEPTH - 1) as u32,
-                        ..Default::default()
+                        load: (DEPTH - 1) as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -350,8 +353,8 @@ mod num_bytes {
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 1,
-                        ..Default::default()
+                        load: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -360,8 +363,8 @@ mod num_bytes {
                 assert_eq!(NUM_BYTES, tree.num_bytes().await.unwrap());
                 assert_eq!(
                     LLActionCounts {
-                        loaded: 0,
-                        ..Default::default()
+                        load: 0,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -374,6 +377,7 @@ mod num_bytes {
 mod create_tree {
     use super::testutils::*;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn only_creates_one_leaf() {
@@ -384,8 +388,9 @@ mod create_tree {
                 assert_eq!(
                     LLActionCounts {
                         exists: 1,
-                        stored: 1,
-                        ..Default::default()
+                        store: 1,
+                        block_size_from_physical_block_size: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -398,6 +403,7 @@ mod create_tree {
 mod try_create_tree {
     use super::testutils::*;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn nonexisting_tree() {
@@ -409,8 +415,9 @@ mod try_create_tree {
                 assert_eq!(
                     LLActionCounts {
                         exists: 1,
-                        stored: 1,
-                        ..Default::default()
+                        store: 1,
+                        block_size_from_physical_block_size: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -436,8 +443,8 @@ mod try_create_tree {
                 assert_eq!(
                     LLActionCounts {
                         exists: 1,
-                        stored: 0,
-                        ..Default::default()
+                        store: 0,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -466,10 +473,10 @@ macro_rules! instantiate_read_tests {
 
                     // The tree has `DEPTH+1` nodes on the path from the root to the leaf. The root shouldn't get loaded because
                     // it is already loaded inside of the `tree` instance. That means reading the leaf should load `DEPTH` nodes.
-                    assert_eq!(
+                    pretty_assertions::assert_eq!(
                         LLActionCounts {
-                            loaded: DEPTH as u32,
-                            ..Default::default()
+                            load: DEPTH as u32,
+                            ..LLActionCounts::ZERO
                         },
                         blockstore.get_and_reset_counts(),
                     );
@@ -495,10 +502,10 @@ macro_rules! instantiate_read_tests {
                     // TODO This should be `let expected_loaded =  DEPTH as u32,`
                     //      but the current implementation is inefficent because it first needs to load the num_bytes in to the cache
                     let expected_loaded = 14;
-                    assert_eq!(
+                    pretty_assertions::assert_eq!(
                         LLActionCounts {
-                            loaded: expected_loaded,
-                            ..Default::default()
+                            load: expected_loaded,
+                            ..LLActionCounts::ZERO
                         },
                         blockstore.get_and_reset_counts(),
                     );
@@ -538,10 +545,10 @@ macro_rules! instantiate_read_tests {
                     let expected_num_loaded_nodes =
                         expected_num_loaded_inner_nodes_without_root + NUM_ACCESSED_LEAVES;
 
-                    assert_eq!(
+                    pretty_assertions::assert_eq!(
                         LLActionCounts {
-                            loaded: expected_num_loaded_nodes as u32,
-                            ..Default::default()
+                            load: expected_num_loaded_nodes as u32,
+                            ..LLActionCounts::ZERO
                         },
                         blockstore.get_and_reset_counts(),
                     );
@@ -579,10 +586,10 @@ macro_rules! instantiate_read_tests {
                     //      but the current implementation is inefficent because it first needs to load the num_bytes in to the cache
                     let expected_num_loaded_nodes = 33;
 
-                    assert_eq!(
+                    pretty_assertions::assert_eq!(
                         LLActionCounts {
-                            loaded: expected_num_loaded_nodes as u32,
-                            ..Default::default()
+                            load: expected_num_loaded_nodes as u32,
+                            ..LLActionCounts::ZERO
                         },
                         blockstore.get_and_reset_counts(),
                     );
@@ -639,6 +646,7 @@ mod try_read_bytes {
 mod read_all {
     use super::testutils::*;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn givenNumBytesAlreadyLoaded_readAll() {
@@ -656,8 +664,8 @@ mod read_all {
                 // We need to load the full tree except for the root node, which is already loaded in the `tree` instance.
                 assert_eq!(
                     LLActionCounts {
-                        loaded: NUM_NODES as u32 - 1,
-                        ..Default::default()
+                        load: NUM_NODES as u32 - 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -679,8 +687,8 @@ mod read_all {
                 // We need to load the full tree except for the root node, which is already loaded in the `tree` instance.
                 assert_eq!(
                     LLActionCounts {
-                        loaded: NUM_NODES as u32 - 1,
-                        ..Default::default()
+                        load: NUM_NODES as u32 - 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -694,6 +702,7 @@ mod read_all {
 mod write_bytes {
     use super::testutils::*;
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[tokio::test]
     async fn givenNumBytesAlreadyLoaded_whenWritingDoesntGrowTree_writePartOfOneLeaf() {
@@ -716,8 +725,8 @@ mod write_bytes {
                 // That means reading the leaf should load `DEPTH` nodes.
                 assert_eq!(
                     LLActionCounts {
-                        loaded: DEPTH as u32,
-                        ..Default::default()
+                        load: DEPTH as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -727,8 +736,8 @@ mod write_bytes {
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        stored: 1,
-                        ..Default::default()
+                        store: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -756,8 +765,8 @@ mod write_bytes {
                 let expected_loaded = DEPTH as u32;
                 assert_eq!(
                     LLActionCounts {
-                        loaded: expected_loaded,
-                        ..Default::default()
+                        load: expected_loaded,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -767,8 +776,8 @@ mod write_bytes {
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        stored: 1,
-                        ..Default::default()
+                        store: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -804,8 +813,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 1, // TODO Why do we need exists here?
-                        loaded: DEPTH as u32 - 1,
-                        ..Default::default()
+                        load: DEPTH as u32 - 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -815,8 +824,8 @@ mod write_bytes {
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        stored: 1,
-                        ..Default::default()
+                        store: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -850,8 +859,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 1, // TODO Why do we need exists here?
-                        loaded: expected_loaded,
-                        ..Default::default()
+                        load: expected_loaded,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -861,8 +870,8 @@ mod write_bytes {
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        stored: 1,
-                        ..Default::default()
+                        store: 1,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -907,8 +916,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: NUM_ACCESSED_LEAVES as u32 - 2, // TODO Why do we need exists here?
-                        loaded: expected_num_loaded_nodes as u32,
-                        ..Default::default()
+                        load: expected_num_loaded_nodes as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -918,8 +927,8 @@ mod write_bytes {
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        stored: NUM_ACCESSED_LEAVES as u32,
-                        ..Default::default()
+                        store: NUM_ACCESSED_LEAVES as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -962,8 +971,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: NUM_ACCESSED_LEAVES as u32 - 2, // TODO Why do we need exists here?
-                        loaded: expected_num_loaded_nodes as u32,
-                        ..Default::default()
+                        load: expected_num_loaded_nodes as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -973,8 +982,8 @@ mod write_bytes {
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
-                        stored: NUM_ACCESSED_LEAVES as u32,
-                        ..Default::default()
+                        store: NUM_ACCESSED_LEAVES as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1008,8 +1017,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
-                        loaded: DEPTH as u32,
-                        ..Default::default()
+                        load: DEPTH as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1022,8 +1031,8 @@ mod write_bytes {
                         as u32;
                 assert_eq!(
                     LLActionCounts {
-                        stored: expected_stored + 3, // TODO Why + 3 ?
-                        ..Default::default()
+                        store: expected_stored + 3, // TODO Why + 3 ?
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1054,8 +1063,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
-                        loaded: expected_loaded,
-                        ..Default::default()
+                        load: expected_loaded,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1068,8 +1077,8 @@ mod write_bytes {
                         as u32;
                 assert_eq!(
                     LLActionCounts {
-                        stored: expected_stored + 3, // TODO Why + 3 ?
-                        ..Default::default()
+                        store: expected_stored + 3, // TODO Why + 3 ?
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1107,8 +1116,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
-                        loaded: DEPTH as u32,
-                        ..Default::default()
+                        load: DEPTH as u32,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1121,8 +1130,8 @@ mod write_bytes {
                         as u32;
                 assert_eq!(
                     LLActionCounts {
-                        stored: expected_stored + 3, // TODO Why + 3 ?
-                        ..Default::default()
+                        store: expected_stored + 3, // TODO Why + 3 ?
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1158,8 +1167,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 84, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
-                        loaded: expected_loaded,
-                        ..Default::default()
+                        load: expected_loaded,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1172,8 +1181,8 @@ mod write_bytes {
                         as u32;
                 assert_eq!(
                     LLActionCounts {
-                        stored: expected_stored + 3, // TODO Why + 3 ?
-                        ..Default::default()
+                        store: expected_stored + 3, // TODO Why + 3 ?
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1214,8 +1223,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 103, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
-                        loaded: expected_loaded,
-                        ..Default::default()
+                        load: expected_loaded,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1229,8 +1238,8 @@ mod write_bytes {
                 ) as u32;
                 assert_eq!(
                     LLActionCounts {
-                        stored: expected_stored + 3, // TODO Why +3?
-                        ..Default::default()
+                        store: expected_stored + 3, // TODO Why +3?
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1268,8 +1277,8 @@ mod write_bytes {
                 assert_eq!(
                     LLActionCounts {
                         exists: 103, // TODO Why do we need these exist and can we calculate this number based on the tree structure?
-                        loaded: expected_loaded,
-                        ..Default::default()
+                        load: expected_loaded,
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
@@ -1283,8 +1292,8 @@ mod write_bytes {
                 ) as u32;
                 assert_eq!(
                     LLActionCounts {
-                        stored: expected_stored + 3, // TODO Why +3?
-                        ..Default::default()
+                        store: expected_stored + 3, // TODO Why +3?
+                        ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
                 );
