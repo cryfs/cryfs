@@ -3,4 +3,4 @@ pub use on_blocks::{
     BlobOnBlocks, BlobStoreOnBlocks, DataInnerNode, DataLeafNode, DataNode, DataNodeStore,
     DataTree, DataTreeStore, LoadNodeError,
 };
-mod shared_blob_store;
+mod shared;
