@@ -766,6 +766,7 @@ dependencies = [
  "cryfs-blockstore",
  "cryfs-utils",
  "cryfs-version",
+ "derive_more 2.0.1",
  "divrem",
  "futures",
  "iter-chunks",

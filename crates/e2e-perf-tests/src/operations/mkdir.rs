@@ -7,6 +7,7 @@ use crate::fixture::ActionCounts;
 use crate::rstest::FixtureFactory;
 use crate::rstest::FixtureType;
 use crate::rstest::{all_atime_behaviors, all_fixtures};
+use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
@@ -32,10 +33,15 @@ async fn notexisting_from_rootdir(
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                store: 2,  // Create new directory blob and add an entry for it to the root blob.
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_create: 1,
+                store_load: 1,
+                blob_resize: 1,
+                blob_read_all: 1,
+                blob_read: 1,
+                blob_write: 2,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -44,6 +50,11 @@ async fn notexisting_from_rootdir(
                 blob_data_mut: 4,
                 store_create: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                store: 2,  // Create new directory blob and add an entry for it to the root blob.
+                ..LLActionCounts::ZERO
             },
         }
     );
@@ -78,10 +89,15 @@ async fn existing_from_rootdir(
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 1, // TODO What are we loading here? The root dir should already be cached in the device.
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_load: 1,
+                store_create: 1,
+                store_remove_by_id: 1,
+                blob_read_all: 1,
+                blob_read: 1,
+                blob_write: 1,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -91,6 +107,11 @@ async fn existing_from_rootdir(
                 store_create: 1,
                 store_remove: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                load: 1, // TODO What are we loading here? The root dir should already be cached in the device.
+                ..LLActionCounts::ZERO
             },
         }
     );
@@ -125,11 +146,24 @@ async fn notexisting_from_nesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-                store: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_create: 1,
+                store_load: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 4, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 3,
+                },
+                blob_resize: 2,
+                blob_read_all: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 4, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 3,
+                },
+                blob_read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 4, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 3,
+                },
+                blob_write: 3,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -144,6 +178,12 @@ async fn notexisting_from_nesteddir(
                 blob_data_mut: 5,
                 store_create: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                load: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                store: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
+                ..LLActionCounts::ZERO
             },
         }
     );
@@ -187,11 +227,25 @@ async fn existing_from_nesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-                store: 1, // TODO What are we storing here? We didn't make any changes.
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_create: 1,
+                store_load: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 4, // TODO Why one more than Fusemt?
+                    FixtureType::Fusemt => 3,
+                },
+                store_remove_by_id: 1,
+                blob_resize: 1,
+                blob_read_all: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 4, // TODO Why one more than Fusemt?
+                    FixtureType::Fusemt => 3,
+                },
+                blob_read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 4, // TODO Why one more than Fusemt?
+                    FixtureType::Fusemt => 3,
+                },
+                blob_write: 2,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -207,6 +261,12 @@ async fn existing_from_nesteddir(
                 store_create: 1,
                 store_remove: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                load: 2, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                store: 1, // TODO What are we storing here? We didn't make any changes.
+                ..LLActionCounts::ZERO
             },
         }
     );
@@ -255,11 +315,24 @@ async fn notexisting_from_deeplynesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-                store: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_create: 1,
+                store_load: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                blob_resize: 2,
+                blob_read_all: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                blob_read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                blob_write: 3,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -274,6 +347,12 @@ async fn notexisting_from_deeplynesteddir(
                 blob_data_mut: 5,
                 store_create: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                load: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                store: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
+                ..LLActionCounts::ZERO
             },
         }
     );
@@ -331,11 +410,25 @@ async fn existing_from_deeplynesteddir(
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-                store: 1, // TODO What are we storing here? We didn't make any changes.
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                blob_resize: 1,
+                blob_read_all: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                blob_read: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                blob_write: 2,
+                store_create: 1,
+                store_load: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fusemt => 5,
+                },
+                store_remove_by_id: 1,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -351,6 +444,12 @@ async fn existing_from_deeplynesteddir(
                 store_create: 1,
                 store_remove: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1, // Check if a blob with the new blob id already exists before creating it.
+                load: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
+                store: 1, // TODO What are we storing here? We didn't make any changes.
+                ..LLActionCounts::ZERO
             },
         }
     );

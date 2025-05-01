@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use derive_more::{Add, AddAssign, Sum};
+
+#[derive(Debug, Add, AddAssign, Sum, Clone, Copy, PartialEq, Eq)]
 pub struct BlobStoreActionCounts {
     pub blob_num_bytes: u64,
     pub blob_resize: u64,

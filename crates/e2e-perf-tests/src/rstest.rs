@@ -1,4 +1,4 @@
-use cryfs_blobstore::BlobStoreOnBlocks;
+use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
 };
@@ -51,8 +51,10 @@ impl FixtureFactory for HLFixture {
     type Filesystem = ObjectBasedFsAdapter<
         CryDevice<
             AsyncDropArc<
-                BlobStoreOnBlocks<
-                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
                 >,
             >,
         >,
@@ -80,8 +82,10 @@ impl FixtureFactory for LLFixture {
     type Filesystem = ObjectBasedFsAdapterLL<
         CryDevice<
             AsyncDropArc<
-                BlobStoreOnBlocks<
-                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
                 >,
             >,
         >,

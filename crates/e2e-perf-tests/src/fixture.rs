@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::num::NonZeroU32;
 use tempdir::TempDir;
 
-use cryfs_blobstore::{BlobStore, BlobStoreOnBlocks};
+use cryfs_blobstore::{BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     ClientId, DynBlockStore, HLActionCounts, HLSharedBlockStore, HLTrackingBlockStore,
     InMemoryBlockStore, IntegrityConfig, LLActionCounts, LLSharedBlockStore, LLTrackingBlockStore,
@@ -28,8 +28,9 @@ const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
 
 #[derive(Debug, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
 pub struct ActionCounts {
-    pub low_level: LLActionCounts,
+    pub blobstore: BlobStoreActionCounts,
     pub high_level: HLActionCounts,
+    pub low_level: LLActionCounts,
 }
 
 pub struct FilesystemFixture<FS>
@@ -44,8 +45,10 @@ where
         SyncDrop<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
     blobstore: SyncDrop<
         AsyncDropArc<
-            BlobStoreOnBlocks<
-                HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+            TrackingBlobStore<
+                BlobStoreOnBlocks<
+                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                >,
             >,
         >,
     >,
@@ -128,23 +131,26 @@ where
             HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
         >,
     ) -> AsyncDropGuard<
-        BlobStoreOnBlocks<
-            HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+        TrackingBlobStore<
+            BlobStoreOnBlocks<
+                HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+            >,
         >,
     > {
-        let blobstore =
+        TrackingBlobStore::new(
             BlobStoreOnBlocks::new(HLSharedBlockStore::clone(hl_blockstore), config().blocksize)
                 .await
-                .unwrap();
-
-        blobstore
+                .unwrap(),
+        )
     }
 
     async fn make_device(
         blobstore: &AsyncDropGuard<
             AsyncDropArc<
-                BlobStoreOnBlocks<
-                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
                 >,
             >,
         >,
@@ -152,8 +158,10 @@ where
     ) -> AsyncDropGuard<
         CryDevice<
             AsyncDropArc<
-                BlobStoreOnBlocks<
-                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
                 >,
             >,
         >,
@@ -174,19 +182,22 @@ where
 
     pub fn totals(&self) -> ActionCounts {
         ActionCounts {
-            low_level: self.ll_blockstore.counts(),
+            blobstore: self.blobstore.counts(),
             high_level: self.hl_blockstore.counts(),
+            low_level: self.ll_blockstore.counts(),
         }
     }
 
     pub async fn run_operation(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
-        self.ll_blockstore.get_and_reset_counts();
+        self.blobstore.get_and_reset_counts();
         self.hl_blockstore.get_and_reset_counts();
+        self.ll_blockstore.get_and_reset_counts();
         operation(&self.filesystem).await;
         self.blobstore.clear_cache_slow().await.unwrap();
         ActionCounts {
-            low_level: self.ll_blockstore.get_and_reset_counts(),
+            blobstore: self.blobstore.get_and_reset_counts(),
             high_level: self.hl_blockstore.get_and_reset_counts(),
+            low_level: self.ll_blockstore.get_and_reset_counts(),
         }
     }
 }

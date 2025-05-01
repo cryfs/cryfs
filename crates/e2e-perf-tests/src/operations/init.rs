@@ -14,6 +14,8 @@ use cryfs_rustfs::AtimeUpdateBehavior;
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
+    use cryfs_blobstore::BlobStoreActionCounts;
+
     use crate::fixture::ActionCounts;
 
     let fixture = fixture_factory
@@ -28,11 +30,15 @@ async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateB
     assert_eq!(
         counts,
         ActionCounts {
-            low_level: LLActionCounts {
-                exists: 1,
-                store: 1,
-                block_size_from_physical_block_size: 1,
-                ..LLActionCounts::ZERO
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_try_create: 1,
+                store_load: 1,
+                blob_read_all: 1,
+                blob_read: 1,
+                blob_write: 1,
+                blob_flush: 1,
+                ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
@@ -43,6 +49,12 @@ async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateB
                 store_flush_block: 1,
                 store_block_size_from_physical_block_size: 1,
                 ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                exists: 1,
+                store: 1,
+                block_size_from_physical_block_size: 1,
+                ..LLActionCounts::ZERO
             },
         }
     );

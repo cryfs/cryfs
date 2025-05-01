@@ -1,4 +1,4 @@
-use cryfs_blobstore::BlobStoreOnBlocks;
+use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
 };
@@ -20,8 +20,12 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
         device: AsyncDropGuard<
             CryDevice<
                 AsyncDropArc<
-                    BlobStoreOnBlocks<
-                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    TrackingBlobStore<
+                        BlobStoreOnBlocks<
+                            HLSharedBlockStore<
+                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
+                            >,
+                        >,
                     >,
                 >,
             >,
@@ -39,8 +43,10 @@ impl FilesystemTestExt
     for ObjectBasedFsAdapterLL<
         CryDevice<
             AsyncDropArc<
-                BlobStoreOnBlocks<
-                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
                 >,
             >,
         >,
@@ -50,8 +56,12 @@ impl FilesystemTestExt
         device: AsyncDropGuard<
             CryDevice<
                 AsyncDropArc<
-                    BlobStoreOnBlocks<
-                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    TrackingBlobStore<
+                        BlobStoreOnBlocks<
+                            HLSharedBlockStore<
+                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
+                            >,
+                        >,
                     >,
                 >,
             >,
@@ -100,8 +110,10 @@ impl FilesystemTestExt
     for ObjectBasedFsAdapter<
         CryDevice<
             AsyncDropArc<
-                BlobStoreOnBlocks<
-                    HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
                 >,
             >,
         >,
@@ -111,8 +123,12 @@ impl FilesystemTestExt
         device: AsyncDropGuard<
             CryDevice<
                 AsyncDropArc<
-                    BlobStoreOnBlocks<
-                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    TrackingBlobStore<
+                        BlobStoreOnBlocks<
+                            HLSharedBlockStore<
+                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
+                            >,
+                        >,
                     >,
                 >,
             >,

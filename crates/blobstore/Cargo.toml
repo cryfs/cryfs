@@ -23,6 +23,7 @@ cryfs-version = { path = "../cryfs-version" }
 divrem.workspace = true
 futures.workspace = true
 thiserror.workspace = true
+derive_more.workspace = true
 
 [dev-dependencies]
 cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }

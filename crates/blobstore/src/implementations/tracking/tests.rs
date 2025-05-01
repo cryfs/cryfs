@@ -30,7 +30,7 @@ crate::instantiate_tests_for_blobstore!(TestFixture, (flavor = "multi_thread"));
 
 fn change_blob_id(id: BlobId) -> BlobId {
     let mut id = id.data().clone();
-    id[0] += 1;
+    id[0] = id[0].overflowing_add(1).0;
     BlobId::from_slice(&id).unwrap()
 }
 

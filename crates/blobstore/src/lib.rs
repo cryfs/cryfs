@@ -14,6 +14,8 @@ pub use implementations::{
     BlobOnBlocks, BlobStoreOnBlocks, DataInnerNode, DataLeafNode, DataNode, DataNodeStore,
     DataTree, DataTreeStore, LoadNodeError,
 };
+#[cfg(any(test, feature = "testutils"))]
+pub use implementations::{BlobStoreActionCounts, TrackingBlobStore};
 
 pub use cryfs_blockstore::RemoveResult;
 
