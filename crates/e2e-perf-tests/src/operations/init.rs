@@ -31,13 +31,12 @@ async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateB
         counts,
         ActionCounts {
             blobstore: BlobStoreActionCounts {
-                // TODO Check if these counts are what we'd expect
-                store_try_create: 1,
-                store_load: 1,
-                blob_read_all: 1,
-                blob_read: 1,
-                blob_write: 1,
-                blob_flush: 1,
+                store_try_create: 1, // create root dir blob
+                store_load: 1,       // load root dir blob for sanity checking the file system
+                blob_read_all: 1, // read content of root dir blob for sanity checking the file system
+                blob_read: 1, // read header of root dir blob for sanity checking the file system
+                blob_write: 1, // write to root dir blob. TODO Why don't we directly create it with the data?
+                blob_flush: 1, // flush root dir blob
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {

@@ -34,13 +34,12 @@ async fn notexisting_from_rootdir(
         counts,
         ActionCounts {
             blobstore: BlobStoreActionCounts {
-                // TODO Check if these counts are what we'd expect
-                store_create: 1,
-                store_load: 1,
-                blob_resize: 1,
-                blob_read_all: 1,
-                blob_read: 1,
-                blob_write: 2,
+                store_create: 1,  // create new dir blob
+                store_load: 1,    // load root dir blob
+                blob_resize: 1,   // add new entry to root dir blob
+                blob_read_all: 1, // deserialize root dir blob
+                blob_read: 1,     // read header of root dir blob
+                blob_write: 2,    // write to new dir blob + add hew entry to root dir blob
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -90,13 +89,12 @@ async fn existing_from_rootdir(
         counts,
         ActionCounts {
             blobstore: BlobStoreActionCounts {
-                // TODO Check if these counts are what we'd expect
-                store_load: 1,
-                store_create: 1,
-                store_remove_by_id: 1,
-                blob_read_all: 1,
-                blob_read: 1,
-                blob_write: 1,
+                store_load: 1,         // load root dir blob
+                store_create: 1,       // create new dir blob
+                store_remove_by_id: 1, // remove new dir blob after we notice that we can't add it to the root dir because it already exists
+                blob_read_all: 1,      // deserialize root dir blob
+                blob_read: 1,          // read header of root dir blob
+                blob_write: 1,         // write to new dir blob
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
