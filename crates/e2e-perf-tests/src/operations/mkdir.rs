@@ -283,21 +283,7 @@ async fn notexisting_from_deeplynesteddir(
     // First create the nested dir
     fixture
         .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1").unwrap())
-                .await
-                .unwrap();
-        })
-        .await;
-    fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2").unwrap())
-                .await
-                .unwrap();
-        })
-        .await;
-    fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
+            fs.mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
                 .unwrap();
         })
@@ -369,21 +355,7 @@ async fn existing_from_deeplynesteddir(
     // First create the nested dir
     fixture
         .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1").unwrap())
-                .await
-                .unwrap();
-        })
-        .await;
-    fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2").unwrap())
-                .await
-                .unwrap();
-        })
-        .await;
-    fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
+            fs.mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
                 .unwrap();
         })

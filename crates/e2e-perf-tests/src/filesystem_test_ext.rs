@@ -4,7 +4,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, FsError, FsResult, InodeNumber, Mode, PathComponent,
+    AbsolutePath, AbsolutePathBuf, FsError, FsResult, InodeNumber, Mode, PathComponent,
     high_level_api::AsyncFilesystem,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapter, ObjectBasedFsAdapterLL},
@@ -37,6 +37,14 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
     async fn init(&self) -> Result<(), FsError>;
     async fn destroy(&self);
     async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()>;
+    async fn mkdir_recursive(&self, path: &AbsolutePath) -> FsResult<()> {
+        let mut current_path = AbsolutePathBuf::root();
+        for component in path.iter() {
+            current_path = current_path.push(component);
+            self.mkdir(&current_path).await?;
+        }
+        Ok(())
+    }
     async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()>;
 }
 
