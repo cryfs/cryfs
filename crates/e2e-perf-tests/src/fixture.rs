@@ -188,7 +188,13 @@ where
         }
     }
 
-    pub async fn run_operation(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
+    pub async fn ops<R>(&self, operation: impl AsyncFnOnce(&FS) -> R) -> R {
+        let result = operation(&self.filesystem).await;
+        self.blobstore.clear_cache_slow().await.unwrap();
+        result
+    }
+
+    pub async fn count_ops(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
         self.blobstore.get_and_reset_counts();
         self.hl_blockstore.get_and_reset_counts();
         self.ll_blockstore.get_and_reset_counts();

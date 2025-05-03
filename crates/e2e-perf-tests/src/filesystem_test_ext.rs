@@ -34,18 +34,28 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
     where
         Self: Sized;
 
+    /// A handle to a given file system node. Can be an InodeNumber (for the fuser backend) or just the path of the node (for the fuse-mt backend).
+    type NodeHandle: Debug + Clone;
+
     async fn init(&self) -> Result<(), FsError>;
     async fn destroy(&self);
-    async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()>;
-    async fn mkdir_recursive(&self, path: &AbsolutePath) -> FsResult<()> {
-        let mut current_path = AbsolutePathBuf::root();
+    async fn mkdir(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<Self::NodeHandle>;
+    async fn mkdir_recursive(&self, path: &AbsolutePath) -> FsResult<Self::NodeHandle> {
+        let mut current_node = None;
         for component in path.iter() {
-            current_path = current_path.push(component);
-            self.mkdir(&current_path).await?;
+            current_node = Some(self.mkdir(current_node, &component).await?);
         }
-        Ok(())
+        Ok(current_node.unwrap())
     }
-    async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()>;
+    async fn create_and_open_file(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<Self::NodeHandle>;
 }
 
 async fn load_parent_inode_from_path<R>(
@@ -93,6 +103,8 @@ impl FilesystemTestExt
         >,
     >
 {
+    type NodeHandle = InodeNumber;
+
     async fn new(
         device: AsyncDropGuard<
             CryDevice<
@@ -119,39 +131,41 @@ impl FilesystemTestExt
         AsyncFilesystemLL::destroy(self).await;
     }
 
-    async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()> {
-        load_parent_inode_from_path(&self, path, async |parent_ino, name| {
-            AsyncFilesystemLL::mkdir(
-                self,
-                &request_info(),
-                parent_ino,
-                name,
-                Mode::default().add_dir_flag(),
-                0,
-            )
-            .await?;
-            Ok(())
-        })
-        .await?;
-        Ok(())
+    async fn mkdir(
+        &self,
+        parent: Option<InodeNumber>,
+        name: &PathComponent,
+    ) -> FsResult<InodeNumber> {
+        Ok(AsyncFilesystemLL::mkdir(
+            self,
+            &request_info(),
+            parent.unwrap_or(FUSE_ROOT_ID),
+            name,
+            Mode::default().add_dir_flag(),
+            0,
+        )
+        .await?
+        .ino
+        .handle)
     }
 
-    async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()> {
-        load_parent_inode_from_path(&self, path, async |parent_ino, name| {
-            AsyncFilesystemLL::create(
-                self,
-                &request_info(),
-                parent_ino,
-                name,
-                Mode::default().add_file_flag(),
-                0,
-                0,
-            )
-            .await?;
-            Ok(())
-        })
-        .await?;
-        Ok(())
+    async fn create_and_open_file(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<InodeNumber> {
+        Ok(AsyncFilesystemLL::create(
+            self,
+            &request_info(),
+            parent.unwrap_or(FUSE_ROOT_ID),
+            name,
+            Mode::default().add_file_flag(),
+            0,
+            0,
+        )
+        .await?
+        .ino
+        .handle)
     }
 }
 
@@ -168,6 +182,8 @@ impl FilesystemTestExt
         >,
     >
 {
+    type NodeHandle = AbsolutePathBuf;
+
     async fn new(
         device: AsyncDropGuard<
             CryDevice<
@@ -194,20 +210,30 @@ impl FilesystemTestExt
         AsyncFilesystem::destroy(self).await;
     }
 
-    async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()> {
-        AsyncFilesystem::mkdir(self, request_info(), path, Mode::default().add_dir_flag()).await?;
-        Ok(())
+    async fn mkdir(
+        &self,
+        parent: Option<AbsolutePathBuf>,
+        name: &PathComponent,
+    ) -> FsResult<AbsolutePathBuf> {
+        let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
+        AsyncFilesystem::mkdir(self, request_info(), &path, Mode::default().add_dir_flag()).await?;
+        Ok(path)
     }
 
-    async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()> {
+    async fn create_and_open_file(
+        &self,
+        parent: Option<AbsolutePathBuf>,
+        name: &PathComponent,
+    ) -> FsResult<AbsolutePathBuf> {
+        let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
         AsyncFilesystem::create(
             self,
             request_info(),
-            path,
+            &path,
             Mode::default().add_file_flag(),
             0,
         )
         .await?;
-        Ok(())
+        Ok(path)
     }
 }

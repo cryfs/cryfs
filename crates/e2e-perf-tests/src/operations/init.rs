@@ -3,9 +3,11 @@ use rstest::rstest;
 use rstest_reuse::apply;
 
 use crate::filesystem_test_ext::FilesystemTestExt as _;
+use crate::fixture::ActionCounts;
 use crate::rstest::FixtureFactory;
 use crate::rstest::all_atime_behaviors;
 use crate::rstest::all_fixtures;
+use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::{HLActionCounts, LLActionCounts};
 use cryfs_rustfs::AtimeUpdateBehavior;
 
@@ -14,19 +16,13 @@ use cryfs_rustfs::AtimeUpdateBehavior;
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    use cryfs_blobstore::BlobStoreActionCounts;
-
-    use crate::fixture::ActionCounts;
-
     let fixture = fixture_factory
         .create_uninitialized_filesystem(atime_behavior)
         .await;
 
     let mut counts = fixture.totals();
 
-    counts += fixture
-        .run_operation(async |fs| fs.init().await.unwrap())
-        .await;
+    counts += fixture.count_ops(async |fs| fs.init().await.unwrap()).await;
     assert_eq!(
         counts,
         ActionCounts {

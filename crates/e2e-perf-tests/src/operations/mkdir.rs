@@ -12,6 +12,7 @@ use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::AtimeUpdateBehavior;
+use cryfs_rustfs::PathComponent;
 
 #[apply(all_fixtures)]
 #[apply(all_atime_behaviors)]
@@ -24,8 +25,8 @@ async fn notexisting_from_rootdir(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     let counts = fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/notexisting").unwrap())
+        .count_ops(async |fs| {
+            fs.mkdir(None, PathComponent::try_from_str("notexisting").unwrap())
                 .await
                 .unwrap();
         })
@@ -71,16 +72,16 @@ async fn existing_from_rootdir(
 
     // First create it so that it already exists
     fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/existing").unwrap())
+        .ops(async |fs| {
+            fs.mkdir(None, PathComponent::try_from_str("existing").unwrap())
                 .await
                 .unwrap();
         })
         .await;
 
     let counts = fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/existing").unwrap())
+        .count_ops(async |fs| {
+            fs.mkdir(None, PathComponent::try_from_str("existing").unwrap())
                 .await
                 .unwrap_err();
         })
@@ -126,19 +127,22 @@ async fn notexisting_from_nesteddir(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
-    fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested").unwrap())
+    let parent = fixture
+        .ops(async |fs| {
+            fs.mkdir(None, PathComponent::try_from_str("nested").unwrap())
                 .await
-                .unwrap();
+                .unwrap()
         })
         .await;
 
     let counts = fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested/notexisting").unwrap())
-                .await
-                .unwrap();
+        .count_ops(async |fs| {
+            fs.mkdir(
+                Some(parent),
+                PathComponent::try_from_str("notexisting").unwrap(),
+            )
+            .await
+            .unwrap();
         })
         .await;
     assert_eq!(
@@ -147,32 +151,17 @@ async fn notexisting_from_nesteddir(
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
-                store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4, // TODO Why more than Fusemt?
-                    FixtureType::Fusemt => 3,
-                },
+                store_load: 3,
                 blob_resize: 2,
-                blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4, // TODO Why more than Fusemt?
-                    FixtureType::Fusemt => 3,
-                },
-                blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4, // TODO Why more than Fusemt?
-                    FixtureType::Fusemt => 3,
-                },
+                blob_read_all: 3,
+                blob_read: 3,
                 blob_write: 3,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 5, // TODO Why one more than Fusemt?
-                    FixtureType::Fusemt => 4,
-                },
-                blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 47, // TODO Why more than Fusemt?
-                    FixtureType::Fusemt => 38,
-                },
+                store_load: 4,
+                blob_data: 38,
                 blob_data_mut: 5,
                 store_create: 1,
                 ..HLActionCounts::ZERO
@@ -198,28 +187,35 @@ async fn existing_from_nesteddir(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
-    fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested").unwrap())
+    let parent = fixture
+        .ops(async |fs| {
+            fs.mkdir(None, PathComponent::try_from_str("nested").unwrap())
                 .await
-                .unwrap();
+                .unwrap()
         })
         .await;
 
     // Then create the dir so it's already existing
     fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested/existing").unwrap())
-                .await
-                .unwrap();
+        // TODO Combine with mkdir_recursive above
+        .ops(async |fs| {
+            fs.mkdir(
+                Some(parent.clone()),
+                PathComponent::try_from_str("existing").unwrap(),
+            )
+            .await
+            .unwrap()
         })
         .await;
 
     let counts = fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested/existing").unwrap())
-                .await
-                .unwrap_err();
+        .count_ops(async |fs| {
+            fs.mkdir(
+                Some(parent),
+                PathComponent::try_from_str("existing").unwrap(),
+            )
+            .await
+            .unwrap_err();
         })
         .await;
     assert_eq!(
@@ -229,17 +225,17 @@ async fn existing_from_nesteddir(
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4, // TODO Why one more than Fusemt?
+                    FixtureType::Fuser => 2,
                     FixtureType::Fusemt => 3,
                 },
                 store_remove_by_id: 1,
                 blob_resize: 1,
                 blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4, // TODO Why one more than Fusemt?
+                    FixtureType::Fuser => 2,
                     FixtureType::Fusemt => 3,
                 },
                 blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4, // TODO Why one more than Fusemt?
+                    FixtureType::Fuser => 2,
                     FixtureType::Fusemt => 3,
                 },
                 blob_write: 2,
@@ -248,11 +244,11 @@ async fn existing_from_nesteddir(
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 6, // TODO Why one more than Fusemt?
+                    FixtureType::Fuser => 4,
                     FixtureType::Fusemt => 5,
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 48, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 30,
                     FixtureType::Fusemt => 39,
                 },
                 blob_data_mut: 3,
@@ -281,19 +277,22 @@ async fn notexisting_from_deeplynesteddir(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
-    fixture
-        .run_operation(async |fs| {
+    let parent = fixture
+        .ops(async |fs| {
             fs.mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
-                .unwrap();
+                .unwrap()
         })
         .await;
 
     let counts = fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2/nested3/notexisting").unwrap())
-                .await
-                .unwrap();
+        .count_ops(async |fs| {
+            fs.mkdir(
+                Some(parent),
+                PathComponent::try_from_str("notexisting").unwrap(),
+            )
+            .await
+            .unwrap();
         })
         .await;
     assert_eq!(
@@ -303,16 +302,16 @@ async fn notexisting_from_deeplynesteddir(
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 3,
                     FixtureType::Fusemt => 5,
                 },
                 blob_resize: 2,
                 blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 3,
                     FixtureType::Fusemt => 5,
                 },
                 blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 3,
                     FixtureType::Fusemt => 5,
                 },
                 blob_write: 3,
@@ -321,11 +320,11 @@ async fn notexisting_from_deeplynesteddir(
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 9, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 4,
                     FixtureType::Fusemt => 6,
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 83, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 38,
                     FixtureType::Fusemt => 56,
                 },
                 blob_data_mut: 5,
@@ -333,9 +332,13 @@ async fn notexisting_from_deeplynesteddir(
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-                store: 3, // Create new directory blob and add an entry for it to the parent dir and update parent dir timestamps in the root blob.
+                // TODO Check if these counts are what we'd expect
+                exists: 1,
+                load: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 2,
+                    FixtureType::Fusemt => 4,
+                },
+                store: 3,
                 ..LLActionCounts::ZERO
             },
         }
@@ -350,31 +353,40 @@ async fn existing_from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
+    use cryfs_rustfs::PathComponent;
+
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir
-    fixture
-        .run_operation(async |fs| {
+    let parent = fixture
+        .ops(async |fs| {
             fs.mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
-                .unwrap();
+                .unwrap()
         })
         .await;
 
     // Then create the dir so it's already existing
     fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2/nested3/existing").unwrap())
-                .await
-                .unwrap();
+        // TODO Combine with mkdir_recursive above
+        .ops(async |fs| {
+            fs.mkdir(
+                Some(parent.clone()),
+                PathComponent::try_from_str("existing").unwrap(),
+            )
+            .await
+            .unwrap();
         })
         .await;
 
     let counts = fixture
-        .run_operation(async |fs| {
-            fs.mkdir(AbsolutePath::try_from_str("/nested1/nested2/nested3/existing").unwrap())
-                .await
-                .unwrap_err();
+        .count_ops(async |fs| {
+            fs.mkdir(
+                Some(parent),
+                PathComponent::try_from_str("existing").unwrap(),
+            )
+            .await
+            .unwrap_err();
         })
         .await;
     assert_eq!(
@@ -384,17 +396,17 @@ async fn existing_from_deeplynesteddir(
                 // TODO Check if these counts are what we'd expect
                 blob_resize: 1,
                 blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 2,
                     FixtureType::Fusemt => 5,
                 },
                 blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 2,
                     FixtureType::Fusemt => 5,
                 },
                 blob_write: 2,
                 store_create: 1,
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 8, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 2,
                     FixtureType::Fusemt => 5,
                 },
                 store_remove_by_id: 1,
@@ -403,11 +415,11 @@ async fn existing_from_deeplynesteddir(
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 10, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 4,
                     FixtureType::Fusemt => 7,
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 84, // TODO Why more than Fusemt?
+                    FixtureType::Fuser => 30,
                     FixtureType::Fusemt => 57,
                 },
                 blob_data_mut: 3,
@@ -416,9 +428,13 @@ async fn existing_from_deeplynesteddir(
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
-                exists: 1, // Check if a blob with the new blob id already exists before creating it.
-                load: 4, // TODO Shouldn't we only have to load one less? Root blob is already cached in the device.
-                store: 1, // TODO What are we storing here? We didn't make any changes.
+                // TODO Check if these counts are what we'd expect
+                exists: 1,
+                load: match fixture_factory.fixture_type() {
+                    FixtureType::Fuser => 2,
+                    FixtureType::Fusemt => 4,
+                },
+                store: 1,
                 ..LLActionCounts::ZERO
             },
         }
