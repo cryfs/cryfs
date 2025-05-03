@@ -4,7 +4,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, FsError, FsResult, Mode,
+    AbsolutePath, FsError, FsResult, InodeNumber, Mode, PathComponent,
     high_level_api::AsyncFilesystem,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapter, ObjectBasedFsAdapterLL},
@@ -37,6 +37,39 @@ pub trait FilesystemTestExt: AsyncDrop + Debug {
     async fn init(&self) -> Result<(), FsError>;
     async fn destroy(&self);
     async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()>;
+    async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()>;
+}
+
+async fn load_parent_inode_from_path<R>(
+    fs: &ObjectBasedFsAdapterLL<
+        CryDevice<
+            AsyncDropArc<
+                TrackingBlobStore<
+                    BlobStoreOnBlocks<
+                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
+                    >,
+                >,
+            >,
+        >,
+    >,
+    path: &AbsolutePath,
+    callback: impl AsyncFnOnce(InodeNumber, &PathComponent) -> Result<R, FsError>,
+) -> Result<R, FsError> {
+    let (parent_path, name) = path.split_last().unwrap();
+    let mut inos = vec![FUSE_ROOT_ID];
+    for component in parent_path.iter() {
+        let parent_ino = *inos.last().unwrap();
+        let child_ino = AsyncFilesystemLL::lookup(fs, &request_info(), parent_ino, component)
+            .await?
+            .ino
+            .handle;
+        inos.push(child_ino);
+    }
+    let result = callback(*inos.last().unwrap(), name).await?;
+    for ino in inos.iter().skip(1).rev() {
+        AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
+    }
+    Ok(result)
 }
 
 impl FilesystemTestExt
@@ -79,29 +112,37 @@ impl FilesystemTestExt
     }
 
     async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()> {
-        let (parent_path, name) = path.split_last().unwrap();
-        let mut inos = vec![FUSE_ROOT_ID];
-        for component in parent_path.iter() {
-            let parent_ino = *inos.last().unwrap();
-            let child_ino = AsyncFilesystemLL::lookup(self, &request_info(), parent_ino, component)
-                .await?
-                .ino
-                .handle;
-            inos.push(child_ino);
-        }
-        let parent_ino = *inos.last().unwrap();
-        AsyncFilesystemLL::mkdir(
-            self,
-            &request_info(),
-            parent_ino,
-            name,
-            Mode::default().add_dir_flag(),
-            0,
-        )
+        load_parent_inode_from_path(&self, path, async |parent_ino, name| {
+            AsyncFilesystemLL::mkdir(
+                self,
+                &request_info(),
+                parent_ino,
+                name,
+                Mode::default().add_dir_flag(),
+                0,
+            )
+            .await?;
+            Ok(())
+        })
         .await?;
-        for ino in inos.iter().skip(1).rev() {
-            AsyncFilesystemLL::forget(self, &request_info(), *ino, 1).await?;
-        }
+        Ok(())
+    }
+
+    async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()> {
+        load_parent_inode_from_path(&self, path, async |parent_ino, name| {
+            AsyncFilesystemLL::create(
+                self,
+                &request_info(),
+                parent_ino,
+                name,
+                Mode::default().add_file_flag(),
+                0,
+                0,
+            )
+            .await?;
+            Ok(())
+        })
+        .await?;
         Ok(())
     }
 }
@@ -147,6 +188,18 @@ impl FilesystemTestExt
 
     async fn mkdir(&self, path: &AbsolutePath) -> FsResult<()> {
         AsyncFilesystem::mkdir(self, request_info(), path, Mode::default().add_dir_flag()).await?;
+        Ok(())
+    }
+
+    async fn create_and_open_file(&self, path: &AbsolutePath) -> FsResult<()> {
+        AsyncFilesystem::create(
+            self,
+            request_info(),
+            path,
+            Mode::default().add_file_flag(),
+            0,
+        )
+        .await?;
         Ok(())
     }
 }
