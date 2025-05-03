@@ -18,6 +18,8 @@ cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
 cryfs-version = { path = "../cryfs-version" }
 cryfs-runner = { path = "../cryfs-runner" }
+async-trait.workspace = true
+anyhow.workspace = true
 byte-unit.workspace = true
 tempdir.workspace = true
 tokio.workspace = true

@@ -19,9 +19,9 @@ use cryfs_filesystem::{
 };
 use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::{AtimeUpdateBehavior, Gid, RequestInfo, Uid};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
+use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 
-use crate::filesystem_test_ext::FilesystemTestExt;
+use crate::filesystem_driver::FilesystemDriver;
 
 const BLOCKSIZE_BYTES: u64 = 4096;
 const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
@@ -35,7 +35,7 @@ pub struct ActionCounts {
 
 pub struct FilesystemFixture<FS>
 where
-    FS: FilesystemTestExt + Debug + AsyncDrop,
+    FS: FilesystemDriver,
 {
     // filesystem needs to be dropped before _local_state_tempdir, so it's declared first in the struct
     filesystem: SyncDrop<FS>,
@@ -58,7 +58,7 @@ where
 
 impl<FS> FilesystemFixture<FS>
 where
-    FS: FilesystemTestExt,
+    FS: FilesystemDriver,
 {
     pub async fn create_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
         let fixture = Self::create_uninitialized_filesystem(atime_behavior).await;
@@ -210,7 +210,7 @@ where
 
 impl<FS> Drop for FilesystemFixture<FS>
 where
-    FS: FilesystemTestExt,
+    FS: FilesystemDriver,
 {
     fn drop(&mut self) {
         futures::executor::block_on(self.filesystem.destroy());

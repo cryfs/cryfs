@@ -2,7 +2,7 @@ use pretty_assertions::assert_eq;
 use rstest::rstest;
 use rstest_reuse::apply;
 
-use crate::filesystem_test_ext::FilesystemTestExt as _;
+use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
 use crate::rstest::FixtureFactory;
 use crate::rstest::FixtureType;
@@ -353,8 +353,6 @@ async fn existing_from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    use cryfs_rustfs::PathComponent;
-
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create the nested dir

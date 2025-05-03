@@ -1,16 +1,10 @@
-use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
-use cryfs_blockstore::{
-    DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
-};
-use cryfs_filesystem::filesystem::CryDevice;
-use cryfs_rustfs::{
-    AtimeUpdateBehavior,
-    object_based_api::{ObjectBasedFsAdapter, ObjectBasedFsAdapterLL},
-};
-use cryfs_utils::async_drop::AsyncDropArc;
+use cryfs_rustfs::AtimeUpdateBehavior;
 use rstest_reuse::{self, *};
 
-use crate::{filesystem_test_ext::FilesystemTestExt, fixture::FilesystemFixture};
+use crate::{
+    filesystem_driver::{FilesystemDriver, FusemtFilesystemDriver, FuserFilesystemDriver},
+    fixture::FilesystemFixture,
+};
 
 #[template]
 pub fn all_atime_behaviors(
@@ -31,34 +25,25 @@ pub enum FixtureType {
 }
 
 pub trait FixtureFactory {
-    type Filesystem: FilesystemTestExt;
+    type Driver: FilesystemDriver;
 
     fn fixture_type(&self) -> FixtureType;
 
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Filesystem>;
+    ) -> FilesystemFixture<Self::Driver>;
 
     async fn create_uninitialized_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Filesystem>;
+    ) -> FilesystemFixture<Self::Driver>;
 }
 
 pub struct HLFixture;
 impl FixtureFactory for HLFixture {
-    type Filesystem = ObjectBasedFsAdapter<
-        CryDevice<
-            AsyncDropArc<
-                TrackingBlobStore<
-                    BlobStoreOnBlocks<
-                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
-                    >,
-                >,
-            >,
-        >,
-    >;
+    type Driver = FusemtFilesystemDriver;
+
     fn fixture_type(&self) -> FixtureType {
         FixtureType::Fusemt
     }
@@ -66,43 +51,34 @@ impl FixtureFactory for HLFixture {
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Filesystem> {
+    ) -> FilesystemFixture<Self::Driver> {
         FilesystemFixture::create_filesystem(atime_behavior).await
     }
     async fn create_uninitialized_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Filesystem> {
+    ) -> FilesystemFixture<Self::Driver> {
         FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
     }
 }
 
 pub struct LLFixture;
 impl FixtureFactory for LLFixture {
-    type Filesystem = ObjectBasedFsAdapterLL<
-        CryDevice<
-            AsyncDropArc<
-                TrackingBlobStore<
-                    BlobStoreOnBlocks<
-                        HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
-                    >,
-                >,
-            >,
-        >,
-    >;
+    type Driver = FuserFilesystemDriver;
+
     fn fixture_type(&self) -> FixtureType {
         FixtureType::Fuser
     }
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Filesystem> {
+    ) -> FilesystemFixture<Self::Driver> {
         FilesystemFixture::create_filesystem(atime_behavior).await
     }
     async fn create_uninitialized_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Filesystem> {
+    ) -> FilesystemFixture<Self::Driver> {
         FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
     }
 }

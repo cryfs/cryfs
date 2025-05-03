@@ -3,7 +3,7 @@
 
 #![cfg(test)]
 
-mod filesystem_test_ext;
+mod filesystem_driver;
 mod fixture;
 mod operations;
 mod rstest;
