@@ -91,7 +91,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         Ok(path)
     }
 
-    async fn create_and_open_file(
+    async fn create_file(
         &self,
         parent: Option<AbsolutePathBuf>,
         name: &PathComponent,

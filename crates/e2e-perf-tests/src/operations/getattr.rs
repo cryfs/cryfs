@@ -61,7 +61,7 @@ async fn getattr_file_in_rootdir(
     // First create a file so we have something to get attributes for
     let file = fixture
         .ops(async |fs| {
-            fs.create_and_open_file(None, PathComponent::try_from_str("testfile.txt").unwrap())
+            fs.create_file(None, PathComponent::try_from_str("testfile.txt").unwrap())
                 .await
                 .unwrap()
         })
@@ -205,7 +205,7 @@ async fn getattr_file_in_nesteddir(
     let file = fixture
         .ops(async |fs| {
             // TODO Combine with the ops() above
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(nested_dir.clone()),
                 PathComponent::try_from_str("testfile.txt").unwrap(),
             )
@@ -294,7 +294,7 @@ async fn getattr_file_in_deeplynesteddir(
     // Then create a file in that directory
     let file = fixture
         .ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(nested_dir.clone()),
                 PathComponent::try_from_str("testfile.txt").unwrap(),
             )

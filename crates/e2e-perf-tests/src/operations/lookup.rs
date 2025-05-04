@@ -27,7 +27,7 @@ async fn existing_from_rootdir(
     // First create a file so that it exists
     fixture
         .ops(async |fs| {
-            fs.create_and_open_file(None, PathComponent::try_from_str("existing.txt").unwrap())
+            fs.create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await
                 .unwrap()
         })
@@ -133,7 +133,7 @@ async fn existing_from_nesteddir(
     // Create a file inside the nested dir
     fixture
         .ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent.clone()),
                 PathComponent::try_from_str("existing.txt").unwrap(),
             )
@@ -320,7 +320,7 @@ async fn existing_from_deeplynesteddir(
     // Create a file inside the deeply nested dir
     fixture
         .ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent.clone()),
                 PathComponent::try_from_str("existing.txt").unwrap(),
             )

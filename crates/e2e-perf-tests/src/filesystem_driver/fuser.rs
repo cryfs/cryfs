@@ -167,7 +167,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         Ok(C::make_inode(parent, name, new_dir.ino.handle))
     }
 
-    async fn create_and_open_file(
+    async fn create_file(
         &self,
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,

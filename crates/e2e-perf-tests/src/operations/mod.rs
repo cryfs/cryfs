@@ -1,4 +1,4 @@
-mod create_and_open_file;
+mod create_file;
 mod getattr;
 mod init;
 mod lookup;

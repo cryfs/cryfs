@@ -49,7 +49,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         Ok(current_node.unwrap())
     }
 
-    async fn create_and_open_file(
+    async fn create_file(
         &self,
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,

@@ -26,7 +26,7 @@ async fn notexisting_from_rootdir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.create_and_open_file(None, PathComponent::try_from_str("newfile.txt").unwrap())
+            fs.create_file(None, PathComponent::try_from_str("newfile.txt").unwrap())
                 .await
                 .unwrap();
         })
@@ -76,7 +76,7 @@ async fn existing_from_rootdir(
     // First create it so that it already exists
     fixture
         .ops(async |fs| {
-            fs.create_and_open_file(None, PathComponent::try_from_str("existing.txt").unwrap())
+            fs.create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await
                 .unwrap();
         })
@@ -84,7 +84,7 @@ async fn existing_from_rootdir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.create_and_open_file(None, PathComponent::try_from_str("existing.txt").unwrap())
+            fs.create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await
                 .unwrap_err();
         })
@@ -146,7 +146,7 @@ async fn notexisting_from_nesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent),
                 PathComponent::try_from_str("newfile.txt").unwrap(),
             )
@@ -226,7 +226,7 @@ async fn existing_from_nesteddir(
     fixture
         .ops(async |fs| {
             // TODO Combine with ops above
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent.clone()),
                 PathComponent::try_from_str("existing.txt").unwrap(),
             )
@@ -237,7 +237,7 @@ async fn existing_from_nesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent),
                 PathComponent::try_from_str("existing.txt").unwrap(),
             )
@@ -323,7 +323,7 @@ async fn notexisting_from_deeplynesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent),
                 PathComponent::try_from_str("newfile.txt").unwrap(),
             )
@@ -411,7 +411,7 @@ async fn existing_from_deeplynesteddir(
     fixture
         .ops(async |fs| {
             // TODO Combine with ops above
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent.clone()),
                 PathComponent::try_from_str("existing.txt").unwrap(),
             )
@@ -422,7 +422,7 @@ async fn existing_from_deeplynesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.create_and_open_file(
+            fs.create_file(
                 Some(parent),
                 PathComponent::try_from_str("existing.txt").unwrap(),
             )
