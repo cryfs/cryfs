@@ -208,6 +208,10 @@ where
     }
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
+        // TODO lookup_child currently doesn't check if the node exists or not. It will always return a CryNode for the child.
+        //      This seems to work fine at the moment because any operation on the child would then fail. But it's probably better to be
+        //      safe and only return existing nodes.
+
         let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
 
         let node_info = NodeInfo::new(
@@ -504,6 +508,7 @@ where
             .await
     }
 
+    // TODO If/when we implement a ParallelAccessFsBlobStore, we probably need to make sure that there aren't any existing references to the removed blob before removing it. Or maybe delay the remove until they're gone. Same for the other remove functions.
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {

@@ -104,7 +104,7 @@ async fn notexisting_from_rootdir(
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                // TODO How can this work with zero loads? I thought we always flush the cache before/after the op?
+                // TODO The counts here are currently empty because lookup doesn't actually check if the node exists. We should change it so that it checks that.
                 ..LLActionCounts::ZERO
             },
         }
