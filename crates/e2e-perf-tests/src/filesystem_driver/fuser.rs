@@ -173,7 +173,8 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         name: &PathComponent,
     ) -> FsResult<Self::NodeHandle> {
         let new_file = C::load_inode(&parent, &*self.fs, async |parent_ino| {
-            self.fs
+            let open_file = self
+                .fs
                 .create(
                     &request_info(),
                     parent_ino,
@@ -182,10 +183,21 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     0,
                     0,
                 )
-                .await
+                .await?;
+            self.fs
+                .release(
+                    &request_info(),
+                    open_file.ino.handle,
+                    open_file.fh,
+                    0,
+                    None,
+                    false,
+                )
+                .await?;
+            Ok(open_file.ino)
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_file.ino.handle))
+        Ok(C::make_inode(parent, name, new_file.handle))
     }
 
     async fn lookup(
