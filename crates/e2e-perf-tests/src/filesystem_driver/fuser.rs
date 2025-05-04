@@ -187,6 +187,18 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         .await?;
         Ok(C::make_inode(parent, name, new_file.ino.handle))
     }
+
+    async fn lookup(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<Self::NodeHandle> {
+        let new_file = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+            self.fs.lookup(&request_info(), parent_ino, name).await
+        })
+        .await?;
+        Ok(C::make_inode(parent, name, new_file.ino.handle))
+    }
 }
 
 #[async_trait]

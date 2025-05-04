@@ -1,5 +1,6 @@
 mod create_and_open_file;
 mod init;
+mod lookup;
 mod mkdir;
 
 // TODO Test other operations

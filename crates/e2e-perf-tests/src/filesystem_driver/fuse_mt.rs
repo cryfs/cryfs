@@ -70,6 +70,15 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         self.fs.destroy().await;
     }
 
+    async fn lookup(
+        &self,
+        parent: Option<AbsolutePathBuf>,
+        name: &PathComponent,
+    ) -> FsResult<AbsolutePathBuf> {
+        // Fuse-mt doesn't really have a lookup operation, we can directly combine the path
+        Ok(parent.unwrap_or_else(AbsolutePathBuf::root).join(name))
+    }
+
     async fn mkdir(
         &self,
         parent: Option<AbsolutePathBuf>,

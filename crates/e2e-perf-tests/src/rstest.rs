@@ -118,3 +118,13 @@ pub fn all_fixtures(
     fixture_factory: impl FixtureFactory,
 ) {
 }
+
+#[template]
+pub fn all_fuser_fixtures(
+    #[values(
+        crate::rstest::LLFixtureWithInodeCache,
+        crate::rstest::LLFixtureWithoutInodeCache
+    )]
+    fixture_factory: impl FixtureFactory,
+) {
+}

@@ -54,4 +54,10 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,
     ) -> FsResult<Self::NodeHandle>;
+
+    async fn lookup(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<Self::NodeHandle>;
 }
