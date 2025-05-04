@@ -151,17 +151,32 @@ async fn notexisting_from_nesteddir(
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
-                store_load: 3,
+                store_load: match fixture_factory.fixture_type() {
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3,
+                },
                 blob_resize: 2,
-                blob_read_all: 3,
-                blob_read: 3,
+                blob_read_all: match fixture_factory.fixture_type() {
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3,
+                },
+                blob_read: match fixture_factory.fixture_type() {
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3,
+                },
                 blob_write: 3,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 4,
-                blob_data: 38,
+                store_load: match fixture_factory.fixture_type() {
+                    FixtureType::FuserWithoutInodeCache => 5, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 4,
+                },
+                blob_data: match fixture_factory.fixture_type() {
+                    FixtureType::FuserWithoutInodeCache => 47, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 38,
+                },
                 blob_data_mut: 5,
                 store_create: 1,
                 ..HLActionCounts::ZERO
@@ -225,18 +240,21 @@ async fn existing_from_nesteddir(
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
+                    FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 3,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 store_remove_by_id: 1,
                 blob_resize: 1,
                 blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
+                    FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 3,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
+                    FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 3,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_write: 2,
                 ..BlobStoreActionCounts::ZERO
@@ -244,12 +262,14 @@ async fn existing_from_nesteddir(
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4,
+                    FixtureType::FuserWithInodeCache => 4,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 6, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 30,
+                    FixtureType::FuserWithInodeCache => 30,
                     FixtureType::Fusemt => 39,
+                    FixtureType::FuserWithoutInodeCache => 48, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 3,
                 store_create: 1,
@@ -302,17 +322,20 @@ async fn notexisting_from_deeplynesteddir(
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 3,
+                    FixtureType::FuserWithInodeCache => 3,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_resize: 2,
                 blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 3,
+                    FixtureType::FuserWithInodeCache => 3,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 3,
+                    FixtureType::FuserWithInodeCache => 3,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_write: 3,
                 ..BlobStoreActionCounts::ZERO
@@ -320,12 +343,14 @@ async fn notexisting_from_deeplynesteddir(
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4,
+                    FixtureType::FuserWithInodeCache => 4,
                     FixtureType::Fusemt => 6,
+                    FixtureType::FuserWithoutInodeCache => 9, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 38,
+                    FixtureType::FuserWithInodeCache => 38,
                     FixtureType::Fusemt => 56,
+                    FixtureType::FuserWithoutInodeCache => 83, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 5,
                 store_create: 1,
@@ -335,8 +360,8 @@ async fn notexisting_from_deeplynesteddir(
                 // TODO Check if these counts are what we'd expect
                 exists: 1,
                 load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
-                    FixtureType::Fusemt => 4,
+                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt | FixtureType::FuserWithoutInodeCache => 4,
                 },
                 store: 3,
                 ..LLActionCounts::ZERO
@@ -394,18 +419,21 @@ async fn existing_from_deeplynesteddir(
                 // TODO Check if these counts are what we'd expect
                 blob_resize: 1,
                 blob_read_all: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
+                    FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_read: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
+                    FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_write: 2,
                 store_create: 1,
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
+                    FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
@@ -413,12 +441,14 @@ async fn existing_from_deeplynesteddir(
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 4,
+                    FixtureType::FuserWithInodeCache => 4,
                     FixtureType::Fusemt => 7,
+                    FixtureType::FuserWithoutInodeCache => 10, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 30,
+                    FixtureType::FuserWithInodeCache => 30,
                     FixtureType::Fusemt => 57,
+                    FixtureType::FuserWithoutInodeCache => 84, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 3,
                 store_create: 1,
@@ -429,8 +459,8 @@ async fn existing_from_deeplynesteddir(
                 // TODO Check if these counts are what we'd expect
                 exists: 1,
                 load: match fixture_factory.fixture_type() {
-                    FixtureType::Fuser => 2,
-                    FixtureType::Fusemt => 4,
+                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt | FixtureType::FuserWithoutInodeCache => 4,
                 },
                 store: 1,
                 ..LLActionCounts::ZERO

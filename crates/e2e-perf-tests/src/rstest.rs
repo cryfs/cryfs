@@ -2,7 +2,10 @@ use cryfs_rustfs::AtimeUpdateBehavior;
 use rstest_reuse::{self, *};
 
 use crate::{
-    filesystem_driver::{FilesystemDriver, FusemtFilesystemDriver, FuserFilesystemDriver},
+    filesystem_driver::{
+        FilesystemDriver, FusemtFilesystemDriver, FuserFilesystemDriver, WithInodeCache,
+        WithoutInodeCache,
+    },
     fixture::FilesystemFixture,
 };
 
@@ -20,7 +23,8 @@ pub fn all_atime_behaviors(
 }
 
 pub enum FixtureType {
-    Fuser,
+    FuserWithInodeCache,
+    FuserWithoutInodeCache,
     Fusemt,
 }
 
@@ -62,12 +66,33 @@ impl FixtureFactory for HLFixture {
     }
 }
 
-pub struct LLFixture;
-impl FixtureFactory for LLFixture {
-    type Driver = FuserFilesystemDriver;
+pub struct LLFixtureWithInodeCache;
+impl FixtureFactory for LLFixtureWithInodeCache {
+    type Driver = FuserFilesystemDriver<WithInodeCache>;
 
     fn fixture_type(&self) -> FixtureType {
-        FixtureType::Fuser
+        FixtureType::FuserWithInodeCache
+    }
+    async fn create_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Driver> {
+        FilesystemFixture::create_filesystem(atime_behavior).await
+    }
+    async fn create_uninitialized_filesystem(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<Self::Driver> {
+        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
+    }
+}
+
+pub struct LLFixtureWithoutInodeCache;
+impl FixtureFactory for LLFixtureWithoutInodeCache {
+    type Driver = FuserFilesystemDriver<WithoutInodeCache>;
+
+    fn fixture_type(&self) -> FixtureType {
+        FixtureType::FuserWithoutInodeCache
     }
     async fn create_filesystem(
         &self,
@@ -85,6 +110,11 @@ impl FixtureFactory for LLFixture {
 
 #[template]
 pub fn all_fixtures(
-    #[values(crate::rstest::HLFixture, crate::rstest::LLFixture)] fixture_factory: impl FixtureFactory,
+    #[values(
+        crate::rstest::HLFixture,
+        crate::rstest::LLFixtureWithInodeCache,
+        crate::rstest::LLFixtureWithoutInodeCache
+    )]
+    fixture_factory: impl FixtureFactory,
 ) {
 }
