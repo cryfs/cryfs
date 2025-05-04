@@ -57,6 +57,7 @@ async fn notexisting_from_rootdir(
             low_level: LLActionCounts {
                 exists: 1,
                 store: 2,
+                load: 1, // TODO What are we loading here? The root dir?
                 ..LLActionCounts::ZERO
             },
         }

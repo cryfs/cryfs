@@ -195,6 +195,7 @@ where
     }
 
     pub async fn count_ops(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
+        self.blobstore.clear_cache_slow().await.unwrap();
         self.blobstore.get_and_reset_counts();
         self.hl_blockstore.get_and_reset_counts();
         self.ll_blockstore.get_and_reset_counts();

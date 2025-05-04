@@ -54,6 +54,7 @@ async fn notexisting_from_rootdir(
             low_level: LLActionCounts {
                 exists: 1, // Check if a blob with the new blob id already exists before creating it.
                 store: 2,  // Create new directory blob and add an entry for it to the root blob.
+                load: 1,   // TODO What are we loading here? The root dir?
                 ..LLActionCounts::ZERO
             },
         }

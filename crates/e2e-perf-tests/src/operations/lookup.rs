@@ -104,7 +104,7 @@ async fn notexisting_from_rootdir(
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                // TODO The counts here are currently empty because lookup doesn't actually check if the node exists. We should change it so that it checks that.
+                load: 1, // TODO What are we loading here? The root dir?
                 ..LLActionCounts::ZERO
             },
         }
