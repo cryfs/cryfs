@@ -10,7 +10,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePathBuf, FsResult, InodeNumber, Mode, PathComponent,
+    AbsolutePathBuf, FsResult, InodeNumber, Mode, NodeAttrs, PathComponent,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -198,6 +198,16 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok(C::make_inode(parent, name, new_file.ino.handle))
+    }
+
+    async fn getattr(&self, node: Option<Self::NodeHandle>) -> FsResult<NodeAttrs> {
+        C::load_inode(&node, &*self.fs, async |ino| {
+            self.fs
+                .getattr(&request_info(), ino, None)
+                .await
+                .map(|attrs| attrs.attr)
+        })
+        .await
     }
 }
 

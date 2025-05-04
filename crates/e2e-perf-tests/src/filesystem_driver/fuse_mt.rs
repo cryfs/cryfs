@@ -10,8 +10,8 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePathBuf, FsResult, Mode, PathComponent, high_level_api::AsyncFilesystem as _,
-    object_based_api::ObjectBasedFsAdapter,
+    AbsolutePathBuf, FsResult, Mode, NodeAttrs, PathComponent,
+    high_level_api::AsyncFilesystem as _, object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
@@ -101,6 +101,17 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .create(request_info(), &path, Mode::default().add_file_flag(), 0)
             .await?;
         Ok(path)
+    }
+
+    async fn getattr(&self, node: Option<AbsolutePathBuf>) -> FsResult<NodeAttrs> {
+        self.fs
+            .getattr(
+                request_info(),
+                &node.unwrap_or_else(AbsolutePathBuf::root),
+                None,
+            )
+            .await
+            .map(|attr_response| attr_response.attrs)
     }
 }
 
