@@ -5,7 +5,9 @@ use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
 };
 use cryfs_filesystem::filesystem::CryDevice;
-use cryfs_rustfs::{AbsolutePath, FileHandle, FsError, FsResult, NodeAttrs, PathComponent};
+use cryfs_rustfs::{
+    AbsolutePath, AbsolutePathBuf, FileHandle, FsError, FsResult, NodeAttrs, PathComponent,
+};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 /// An interface abstracting over [AsyncFilesystem] and [AsyncFilesystemLL], offering common file system operations.
@@ -77,4 +79,6 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn getattr(&self, node: Option<Self::NodeHandle>) -> FsResult<NodeAttrs>;
 
     async fn fgetattr(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<NodeAttrs>;
+
+    async fn readlink(&self, node: Self::NodeHandle) -> FsResult<AbsolutePathBuf>;
 }

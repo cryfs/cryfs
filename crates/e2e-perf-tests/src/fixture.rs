@@ -23,7 +23,7 @@ use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use crate::filesystem_driver::FilesystemDriver;
 
-const BLOCKSIZE_BYTES: u64 = 4096;
+pub const BLOCKSIZE_BYTES: u64 = 1024;
 const MY_CLIENT_ID: NonZeroU32 = NonZeroU32::new(10).unwrap();
 
 #[derive(Debug, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]

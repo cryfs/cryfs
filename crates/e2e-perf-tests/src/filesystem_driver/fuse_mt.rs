@@ -155,6 +155,11 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .await
             .map(|attr_response| attr_response.attrs)
     }
+
+    async fn readlink(&self, node: Self::NodeHandle) -> FsResult<AbsolutePathBuf> {
+        let target = self.fs.readlink(request_info(), &node).await?;
+        Ok(AbsolutePathBuf::try_from_string(target).unwrap())
+    }
 }
 
 #[async_trait]
