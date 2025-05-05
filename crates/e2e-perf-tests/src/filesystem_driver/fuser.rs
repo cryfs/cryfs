@@ -10,7 +10,8 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FsResult, InodeNumber, Mode, NodeAttrs, PathComponent,
+    AbsolutePath, AbsolutePathBuf, FileHandle, FsResult, InodeNumber, Mode, NodeAttrs,
+    PathComponent,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -200,6 +201,31 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         Ok(C::make_inode(parent, name, new_file.handle))
     }
 
+    async fn create_and_open_file(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<(Self::NodeHandle, FileHandle)> {
+        let new_file = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+            Ok(self
+                .fs
+                .create(
+                    &request_info(),
+                    parent_ino,
+                    name,
+                    Mode::default().add_file_flag(),
+                    0,
+                    0,
+                )
+                .await?)
+        })
+        .await?;
+        Ok((
+            C::make_inode(parent, name, new_file.ino.handle),
+            new_file.fh,
+        ))
+    }
+
     async fn create_symlink(
         &self,
         parent: Option<Self::NodeHandle>,
@@ -231,6 +257,16 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         C::load_inode(&node, &*self.fs, async |ino| {
             self.fs
                 .getattr(&request_info(), ino, None)
+                .await
+                .map(|attrs| attrs.attr)
+        })
+        .await
+    }
+
+    async fn fgetattr(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<NodeAttrs> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .getattr(&request_info(), ino, Some(open_file))
                 .await
                 .map(|attrs| attrs.attr)
         })

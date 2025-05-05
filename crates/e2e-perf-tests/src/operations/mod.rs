@@ -1,4 +1,5 @@
 mod create_file;
+mod fgetattr;
 mod getattr;
 mod init;
 mod lookup;

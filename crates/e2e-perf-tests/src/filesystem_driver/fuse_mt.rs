@@ -10,7 +10,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FsResult, Mode, NodeAttrs, OpenFlags, PathComponent,
+    AbsolutePath, AbsolutePathBuf, FileHandle, FsResult, Mode, NodeAttrs, OpenFlags, PathComponent,
     high_level_api::AsyncFilesystem as _, object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
@@ -114,6 +114,19 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         Ok(path)
     }
 
+    async fn create_and_open_file(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+    ) -> FsResult<(Self::NodeHandle, FileHandle)> {
+        let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
+        let new_file = self
+            .fs
+            .create(request_info(), &path, Mode::default().add_file_flag(), 0)
+            .await?;
+        Ok((path, new_file.fh))
+    }
+
     async fn create_symlink(
         &self,
         parent: Option<Self::NodeHandle>,
@@ -132,6 +145,13 @@ impl FilesystemDriver for FusemtFilesystemDriver {
                 &node.unwrap_or_else(AbsolutePathBuf::root),
                 None,
             )
+            .await
+            .map(|attr_response| attr_response.attrs)
+    }
+
+    async fn fgetattr(&self, node: AbsolutePathBuf, open_file: FileHandle) -> FsResult<NodeAttrs> {
+        self.fs
+            .getattr(request_info(), &node, Some(open_file))
             .await
             .map(|attr_response| attr_response.attrs)
     }
