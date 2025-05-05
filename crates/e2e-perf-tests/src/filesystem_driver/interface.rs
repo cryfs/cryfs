@@ -55,6 +55,13 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         name: &PathComponent,
     ) -> FsResult<Self::NodeHandle>;
 
+    async fn create_symlink(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+        target: &AbsolutePath,
+    ) -> FsResult<Self::NodeHandle>;
+
     async fn lookup(
         &self,
         parent: Option<Self::NodeHandle>,

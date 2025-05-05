@@ -10,7 +10,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePathBuf, FsResult, InodeNumber, Mode, NodeAttrs, PathComponent,
+    AbsolutePath, AbsolutePathBuf, FsResult, InodeNumber, Mode, NodeAttrs, PathComponent,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -198,6 +198,21 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok(C::make_inode(parent, name, new_file.handle))
+    }
+
+    async fn create_symlink(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+        target: &AbsolutePath,
+    ) -> FsResult<Self::NodeHandle> {
+        let new_dir = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+            self.fs
+                .symlink(&request_info(), parent_ino, name, target)
+                .await
+        })
+        .await?;
+        Ok(C::make_inode(parent, name, new_dir.ino.handle))
     }
 
     async fn lookup(

@@ -10,7 +10,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePathBuf, FsResult, Mode, NodeAttrs, OpenFlags, PathComponent,
+    AbsolutePath, AbsolutePathBuf, FsResult, Mode, NodeAttrs, OpenFlags, PathComponent,
     high_level_api::AsyncFilesystem as _, object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
@@ -111,6 +111,17 @@ impl FilesystemDriver for FusemtFilesystemDriver {
                 false,
             )
             .await?;
+        Ok(path)
+    }
+
+    async fn create_symlink(
+        &self,
+        parent: Option<Self::NodeHandle>,
+        name: &PathComponent,
+        target: &AbsolutePath,
+    ) -> FsResult<Self::NodeHandle> {
+        let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
+        self.fs.symlink(request_info(), &path, target).await?;
         Ok(path)
     }
 
