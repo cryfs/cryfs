@@ -11,7 +11,7 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, InodeNumber, Mode, NodeAttrs,
-    OpenFlags, PathComponent,
+    OpenFlags, PathComponent, Statfs,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -297,6 +297,10 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok(open_file.fh)
+    }
+
+    async fn statfs(&self) -> FsResult<Statfs> {
+        self.fs.statfs(&request_info(), FUSE_ROOT_ID).await
     }
 }
 
