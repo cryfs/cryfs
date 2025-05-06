@@ -81,4 +81,6 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn fgetattr(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<NodeAttrs>;
 
     async fn readlink(&self, node: Self::NodeHandle) -> FsResult<AbsolutePathBuf>;
+
+    async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle>;
 }

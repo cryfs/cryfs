@@ -160,6 +160,11 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         let target = self.fs.readlink(request_info(), &node).await?;
         Ok(AbsolutePathBuf::try_from_string(target).unwrap())
     }
+
+    async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle> {
+        let open_file = self.fs.open(request_info(), &node, OpenFlags::Read).await?;
+        Ok(open_file.fh)
+    }
 }
 
 #[async_trait]
