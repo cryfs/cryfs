@@ -213,7 +213,6 @@ async fn existing_from_nesteddir(
 
     // Then create the dir so it's already existing
     fixture
-        // TODO Combine with mkdir_recursive above
         .ops(async |fs| {
             fs.mkdir(
                 Some(parent.clone()),
@@ -392,7 +391,6 @@ async fn existing_from_deeplynesteddir(
 
     // Then create the dir so it's already existing
     fixture
-        // TODO Combine with mkdir_recursive above
         .ops(async |fs| {
             fs.mkdir(
                 Some(parent.clone()),

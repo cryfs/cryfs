@@ -93,21 +93,15 @@ async fn getattr_file_in_nesteddir(
 ) {
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
-    // First create a nested directory
-    let nested_dir = fixture
-        .ops(async |fs| {
-            fs.mkdir(None, PathComponent::try_from_str("nested").unwrap())
-                .await
-                .unwrap()
-        })
-        .await;
-
-    // Then create a file in that directory
+    // First create a nested directory and a file in it
     let (file_ino, file_fh) = fixture
         .ops(async |fs| {
-            // TODO Combine with the ops() above
+            let parent = fs
+                .mkdir(None, PathComponent::try_from_str("nested").unwrap())
+                .await
+                .unwrap();
             fs.create_and_open_file(
-                Some(nested_dir.clone()),
+                Some(parent),
                 PathComponent::try_from_str("testfile.txt").unwrap(),
             )
             .await

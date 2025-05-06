@@ -95,19 +95,13 @@ async fn from_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: Atim
 async fn from_nesteddir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
-    // First create the nested dir
-    let parent = fixture
-        .ops(async |fs| {
-            fs.mkdir(None, PathComponent::try_from_str("nested").unwrap())
-                .await
-                .unwrap()
-        })
-        .await;
-
-    // Then create the symlink in the nested dir
+    // First create the nested dir and a symlink in it
     let symlink = fixture
         .ops(async |fs| {
-            // TODO Combine with ops() above
+            let parent = fs
+                .mkdir(None, PathComponent::try_from_str("nested").unwrap())
+                .await
+                .unwrap();
             fs.create_symlink(
                 Some(parent),
                 PathComponent::try_from_str("mysymlink").unwrap(),

@@ -226,7 +226,6 @@ async fn existing_from_nesteddir(
     // Then create the file so it's already existing
     fixture
         .ops(async |fs| {
-            // TODO Combine with ops above
             fs.create_file(
                 Some(parent.clone()),
                 PathComponent::try_from_str("existing.txt").unwrap(),
@@ -411,7 +410,6 @@ async fn existing_from_deeplynesteddir(
     // Then create the file so it's already existing
     fixture
         .ops(async |fs| {
-            // TODO Combine with ops above
             fs.create_file(
                 Some(parent.clone()),
                 PathComponent::try_from_str("existing.txt").unwrap(),
