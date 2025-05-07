@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
-use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl};
 use mockall::mock;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
@@ -14,8 +13,8 @@ use crate::{
         PathComponent, RequestInfo, Statfs, Uid,
     },
     low_level_api::{
-        AsyncFilesystemLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock, ReplyLseek,
-        ReplyOpen, ReplyWrite,
+        AsyncFilesystemLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory, ReplyDirectoryPlus,
+        ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
     },
 };
 
@@ -201,23 +200,23 @@ mock! {
             flags: i32,
         ) -> FsResult<ReplyOpen>;
 
-        async fn readdir(
+        async fn readdir<R: ReplyDirectory + Send + 'static>(
             &self,
             req: &RequestInfo,
             ino: InodeNumber,
             fh: FileHandle,
             offset: NumBytes,
-            reply: ReplyDirectory,
-        );
+            reply: &mut R,
+        ) -> FsResult<()> ;
 
-        async fn readdirplus(
+        async fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
             &self,
             req: &RequestInfo,
             ino: InodeNumber,
             fh: FileHandle,
             offset: NumBytes,
-            reply: ReplyDirectoryPlus,
-        );
+            reply: &mut R,
+        ) -> FsResult<()>;
 
         async fn releasedir(
             &self,
@@ -337,8 +336,7 @@ mock! {
             cmd: u32,
             in_data: &[u8],
             out_size: u32,
-            reply: ReplyIoctl,
-        );
+        ) -> FsResult<ReplyIoctl>;
 
         async fn fallocate(
             &self,
@@ -636,25 +634,25 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         self.deref().opendir(req, ino, flags).await
     }
 
-    async fn readdir(
+    async fn readdir<R: ReplyDirectory + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
-        reply: ReplyDirectory,
-    ) {
+        reply: &mut R,
+    ) -> FsResult<()> {
         self.deref().readdir(req, ino, fh, offset, reply).await
     }
 
-    async fn readdirplus(
+    async fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
-        reply: ReplyDirectoryPlus,
-    ) {
+        reply: &mut R,
+    ) -> FsResult<()> {
         self.deref().readdirplus(req, ino, fh, offset, reply).await
     }
 
@@ -811,10 +809,9 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         cmd: u32,
         in_data: &[u8],
         out_size: u32,
-        reply: ReplyIoctl,
-    ) {
+    ) -> FsResult<ReplyIoctl> {
         self.deref()
-            .ioctl(req, ino, fh, flags, cmd, in_data, out_size, reply)
+            .ioctl(req, ino, fh, flags, cmd, in_data, out_size)
             .await
     }
 

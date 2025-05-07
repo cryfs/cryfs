@@ -10,21 +10,23 @@ use tokio::sync::RwLock;
 
 use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
-use crate::common::{
-    Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
-    Mode, NodeKind, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
-};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
 use crate::low_level_api::{
-    AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyEntry, ReplyLock,
-    ReplyLseek, ReplyOpen, ReplyWrite,
+    AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectoryAddResult,
+    ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
+};
+use crate::{
+    common::{
+        Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
+        Mode, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+    },
+    low_level_api::{ReplyDirectory, ReplyDirectoryPlus},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     with_async_drop_2,
 };
-use fuser::{ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl};
 
 pub const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 
@@ -611,31 +613,20 @@ where
         })
     }
 
-    async fn readdir(
+    async fn readdir<R: ReplyDirectory + Send + 'static>(
         &self,
         _req: &RequestInfo,
         ino: InodeNumber,
         _fh: FileHandle,
         offset: NumBytes,
-        mut reply: ReplyDirectory,
-    ) {
-        match self.trigger_on_operation().await {
-            Ok(()) => (),
-            Err(err) => {
-                reply.error(err.system_error_code());
-                return;
-            }
-        }
+        reply: &mut R,
+    ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
 
         // TODO Allow readdir on fh instead of ino?
-        let node = match self.get_inode(ino).await {
-            Ok(node) => node,
-            Err(err) => {
-                reply.error(err.system_error_code());
-                return;
-            }
-        };
-        let result: FsResult<()> = with_async_drop_2!(node, {
+        let node = self.get_inode(ino).await?;
+
+        with_async_drop_2!(node, {
             let dir = node.as_dir().await?;
             let entries = dir.entries().await?;
             let offset = usize::try_from(u64::try_from(offset).unwrap()).unwrap(); // TODO No unwrap
@@ -660,46 +651,35 @@ where
             while let Some((offset, ino, entry)) = entries.next().await {
                 // offset+1 because fuser actually expects us to return the offset of the **next** entry
                 let offset = i64::try_from(offset).unwrap() + 1; // TODO No unwrap
-                let buffer_is_full = reply.add(
-                    ino.into(),
-                    offset,
-                    convert_node_kind(entry.kind),
-                    &entry.name,
-                );
-                if buffer_is_full {
-                    // TODO Can we cancel the stream if the buffer is full?
-
-                    // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
-                    break;
+                let buffer_is_full = reply.add(ino.into(), offset, entry.kind, &entry.name);
+                match buffer_is_full {
+                    ReplyDirectoryAddResult::Full => {
+                        // TODO Can we cancel the stream if the buffer is full?
+                        // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
+                        break;
+                    }
+                    ReplyDirectoryAddResult::NotFull => {
+                        // continue
+                    }
                 }
             }
 
             Ok(())
-        });
-        match result {
-            Ok(()) => reply.ok(),
-            Err(err) => reply.error(err.system_error_code()),
-        }
+        })
     }
 
-    async fn readdirplus(
+    async fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
-        reply: ReplyDirectoryPlus,
-    ) {
-        match self.trigger_on_operation().await {
-            Ok(()) => (),
-            Err(err) => {
-                reply.error(err.system_error_code());
-                return;
-            }
-        }
+        reply: &mut R,
+    ) -> FsResult<()> {
+        self.trigger_on_operation().await?;
 
         // TODO
-        reply.error(libc::ENOSYS)
+        Err(FsError::NotImplemented)
     }
 
     async fn releasedir(
@@ -906,18 +886,11 @@ where
         cmd: u32,
         in_data: &[u8],
         out_size: u32,
-        reply: ReplyIoctl,
-    ) {
-        match self.trigger_on_operation().await {
-            Ok(()) => (),
-            Err(err) => {
-                reply.error(err.system_error_code());
-                return;
-            }
-        }
+    ) -> FsResult<ReplyIoctl> {
+        self.trigger_on_operation().await?;
 
         // TODO
-        reply.error(libc::ENOSYS)
+        Err(FsError::NotImplemented)
     }
 
     async fn fallocate(
@@ -1041,13 +1014,5 @@ where
         self.inodes.write().await.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
         Ok(())
-    }
-}
-
-fn convert_node_kind(kind: NodeKind) -> fuser::FileType {
-    match kind {
-        NodeKind::File => fuser::FileType::RegularFile,
-        NodeKind::Dir => fuser::FileType::Directory,
-        NodeKind::Symlink => fuser::FileType::Symlink,
     }
 }

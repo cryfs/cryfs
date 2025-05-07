@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
-use crate::common::{
-    Callback, FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
-    NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+use crate::{
+    NodeKind,
+    common::{
+        Callback, FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
+        NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+    },
 };
-
-// TODO Remove asterisk import
-use fuser::*;
 
 // TODO Can we deduplicate some of these Reply types with the high level Response types? Also, unify naming. Reply+Response are one name too many.
 
@@ -72,6 +72,51 @@ pub struct ReplyLseek {
 pub struct ReplyXTimes {
     pub bkuptime: SystemTime,
     pub crtime: SystemTime,
+}
+
+#[derive(Clone)]
+pub struct ReplyIoctl {
+    pub result: i32,
+    // TOOD It'd be better to not force a clone of the bytes, but instead use a callback type similar to read() or readdir().
+    pub data: Box<[u8]>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ReplyDirectoryAddResult {
+    /// The buffer is full, no need to add more entries
+    Full,
+    /// The buffer is not full, more entries can be added
+    NotFull,
+}
+
+pub trait ReplyDirectory {
+    /// Add an entry to the directory reply buffer. Returns true if the buffer is full.
+    /// A transparent offset value can be provided for each entry. The kernel uses these
+    /// value to request the next entries in further readdir calls
+    #[must_use]
+    fn add(
+        &mut self,
+        ino: InodeNumber,
+        offset: i64,
+        kind: NodeKind,
+        name: &PathComponent,
+    ) -> ReplyDirectoryAddResult;
+}
+
+pub trait ReplyDirectoryPlus {
+    /// Add an entry to the directory reply buffer. Returns true if the buffer is full.
+    /// A transparent offset value can be provided for each entry. The kernel uses these
+    /// value to request the next entries in further readdir calls
+    #[must_use]
+    fn add(
+        &mut self,
+        ino: InodeNumber,
+        offset: i64,
+        name: &PathComponent,
+        ttl: &Duration,
+        attr: &NodeAttrs,
+        generation: u64,
+    ) -> ReplyDirectoryAddResult;
 }
 
 #[async_trait]
@@ -359,32 +404,32 @@ pub trait AsyncFilesystemLL {
     /// requested size. Send an empty buffer on end of stream. fh will contain the
     /// value set by the opendir method, or will be undefined if the opendir method
     /// didn't set any value.
-    async fn readdir(
+    async fn readdir<R: ReplyDirectory + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         // TODO In fuser, offset was i64. Why?
         offset: NumBytes,
-        // TODO We probably want to do this via a callback that takes an iterator
-        reply: ReplyDirectory,
-    );
+        // TODO Can we do this via a callback that takes an iterator
+        reply: &mut R,
+    ) -> FsResult<()>;
 
     /// Read directory.
     /// Send a buffer filled using buffer.fill(), with size not exceeding the
     /// requested size. Send an empty buffer on end of stream. fh will contain the
     /// value set by the opendir method, or will be undefined if the opendir method
     /// didn't set any value.
-    async fn readdirplus(
+    async fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         // TODO In fuser, offset was i64. Why?
         offset: NumBytes,
-        // TODO We probably want to do this via a callback that takes an iterator
-        reply: ReplyDirectoryPlus,
-    );
+        // TODO Can we do this via a callback that takes an iterator
+        reply: &mut R,
+    ) -> FsResult<()>;
 
     /// Release an open directory.
     /// For every opendir call there will be exactly one releasedir call. fh will
@@ -568,9 +613,7 @@ pub trait AsyncFilesystemLL {
         cmd: u32,
         in_data: &[u8],
         out_size: u32,
-        // TODO Return this instead of taking it as a parameter?
-        reply: ReplyIoctl,
-    );
+    ) -> FsResult<ReplyIoctl>;
 
     /// Preallocate or deallocate space to a file
     async fn fallocate(

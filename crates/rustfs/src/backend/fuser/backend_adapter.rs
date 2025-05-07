@@ -1,9 +1,9 @@
 #[cfg(target_os = "macos")]
 use fuser::ReplyXTimes;
 use fuser::{
-    Filesystem, KernelConfig, ReplyAttr, ReplyBmap, ReplyCreate, ReplyData, ReplyDirectory,
-    ReplyDirectoryPlus, ReplyEmpty, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen,
-    ReplyStatfs, ReplyWrite, ReplyXattr, Request, TimeOrNow,
+    Filesystem, KernelConfig, ReplyAttr, ReplyBmap, ReplyCreate, ReplyData, ReplyEmpty, ReplyEntry,
+    ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyStatfs, ReplyWrite, ReplyXattr, Request,
+    TimeOrNow,
 };
 use libc::c_int;
 use std::ffi::OsStr;
@@ -11,7 +11,7 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
 use crate::PathComponent;
@@ -19,7 +19,9 @@ use crate::common::{
     Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
     OpenFlags, PathComponentBuf, RequestInfo, Statfs, Uid,
 };
-use crate::low_level_api::{self, AsyncFilesystemLL};
+use crate::low_level_api::{
+    self, AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult, ReplyDirectoryPlus,
+};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO Fuse has a requirement that (inode, generation) tuples are unique throughout the lifetime of the filesystem, not just the lifetime of the mount.
@@ -344,6 +346,30 @@ where
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.bmap(reply.block);
+                }
+                Err(err) => {
+                    log::info!("{}...failed: {}", log_msg, err);
+                    fuser_reply.error(err.system_error_code())
+                }
+            }
+        });
+    }
+
+    fn run_async_reply_ioctl<F>(
+        &self,
+        log_msg: String,
+        fuser_reply: fuser::ReplyIoctl,
+        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+    ) where
+        F: Future<Output = FsResult<low_level_api::ReplyIoctl>> + Send,
+    {
+        let fs = Arc::clone(&self.fs);
+        self.runtime.spawn(async move {
+            log::info!("{}...", log_msg);
+            match func(fs).await {
+                Ok(reply) => {
+                    log::info!("{}...done", log_msg);
+                    fuser_reply.ioctl(reply.result, &reply.data);
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
@@ -837,7 +863,7 @@ where
         ino: u64,
         fh: u64,
         offset: i64,
-        reply: ReplyDirectory,
+        mut reply: fuser::ReplyDirectory,
     ) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
@@ -846,8 +872,21 @@ where
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
-                fs.read().await.readdir(&req, ino, fh, offset, reply).await;
-                Ok(())
+                let result = fs
+                    .read()
+                    .await
+                    .readdir(&req, ino, fh, offset, &mut reply)
+                    .await;
+                match result {
+                    Ok(()) => {
+                        reply.ok();
+                        Ok(())
+                    }
+                    Err(err) => {
+                        reply.error(err.system_error_code());
+                        Err(err)
+                    }
+                }
             },
         );
     }
@@ -858,7 +897,7 @@ where
         ino: u64,
         fh: u64,
         offset: i64,
-        reply: ReplyDirectoryPlus,
+        mut reply: fuser::ReplyDirectoryPlus,
     ) {
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
@@ -867,11 +906,21 @@ where
         self.run_async_no_reply(
             format!("readdirplus(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
-                fs.read()
+                let result = fs
+                    .read()
                     .await
-                    .readdirplus(&req, ino, fh, offset, reply)
+                    .readdirplus(&req, ino, fh, offset, &mut reply)
                     .await;
-                Ok(())
+                match result {
+                    Ok(()) => {
+                        reply.ok();
+                        Ok(())
+                    }
+                    Err(err) => {
+                        reply.error(err.system_error_code());
+                        Err(err)
+                    }
+                }
             },
         );
     }
@@ -1159,12 +1208,12 @@ where
         let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
         let in_data = in_data.to_owned();
-        self.run_async_no_reply(
+        self.run_async_reply_ioctl(
             format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data={in_data:?}, out_size={out_size:?})"),
+            reply,
             async move |fs| {
-                fs.read().await.ioctl(&req, ino, fh, flags, cmd, &in_data, out_size, reply)
-                    .await;
-                Ok(())
+                fs.read().await.ioctl(&req, ino, fh, flags, cmd, &in_data, out_size)
+                    .await
             },
         );
     }
@@ -1318,6 +1367,50 @@ where
         self.run_async_reply_xtimes(format!("getxtimes(ino={ino:?})"), reply, async move |fs| {
             fs.read().await.getxtimes(&req, ino).await
         });
+    }
+}
+
+impl ReplyDirectory for fuser::ReplyDirectory {
+    fn add(
+        &mut self,
+        ino: InodeNumber,
+        offset: i64,
+        kind: NodeKind,
+        name: &PathComponent,
+    ) -> ReplyDirectoryAddResult {
+        let kind = convert_node_kind(kind);
+        let result = fuser::ReplyDirectory::add(self, ino.into(), offset, kind, name.as_str());
+        match result {
+            true => ReplyDirectoryAddResult::Full,
+            false => ReplyDirectoryAddResult::NotFull,
+        }
+    }
+}
+
+impl ReplyDirectoryPlus for fuser::ReplyDirectoryPlus {
+    fn add(
+        &mut self,
+        ino: InodeNumber,
+        offset: i64,
+        name: &PathComponent,
+        ttl: &Duration,
+        attr: &NodeAttrs,
+        generation: u64,
+    ) -> ReplyDirectoryAddResult {
+        let attr = convert_node_attrs(*attr, ino);
+        let result = fuser::ReplyDirectoryPlus::add(
+            self,
+            ino.into(),
+            offset,
+            name.as_str(),
+            ttl,
+            &attr,
+            generation,
+        );
+        match result {
+            true => ReplyDirectoryAddResult::Full,
+            false => ReplyDirectoryAddResult::NotFull,
+        }
     }
 }
 
