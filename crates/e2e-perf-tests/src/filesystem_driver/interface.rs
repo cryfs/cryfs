@@ -6,7 +6,8 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FileHandle, FsError, FsResult, NodeAttrs, PathComponent, Statfs,
+    AbsolutePath, AbsolutePathBuf, FileHandle, FsError, FsResult, NodeAttrs, NodeKind,
+    PathComponent, PathComponentBuf, Statfs,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
@@ -85,4 +86,9 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle>;
 
     async fn statfs(&self) -> FsResult<Statfs>;
+
+    async fn readdir(
+        &self,
+        node: Option<Self::NodeHandle>,
+    ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>>;
 }

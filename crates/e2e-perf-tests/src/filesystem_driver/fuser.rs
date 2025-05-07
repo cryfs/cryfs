@@ -11,8 +11,8 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, InodeNumber, Mode, NodeAttrs,
-    OpenFlags, PathComponent, Statfs,
-    low_level_api::AsyncFilesystemLL,
+    NodeKind, OpenFlags, PathComponent, PathComponentBuf, Statfs,
+    low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
@@ -302,6 +302,23 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn statfs(&self) -> FsResult<Statfs> {
         self.fs.statfs(&request_info(), FUSE_ROOT_ID).await
     }
+
+    async fn readdir(
+        &self,
+        // TODO Instead of all these operations taking Option<NodeHandle>, would be nicer to just have a FilesystemDriver::rootdir() method that returns the root dir handle and then pass in the rootdir node handle
+        node: Option<Self::NodeHandle>,
+    ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>> {
+        let dir = C::load_inode(&node, &*self.fs, async |ino| {
+            let fh = self.fs.opendir(&request_info(), ino, 0).await?.fh;
+            let mut reply = ReplyDirectoryImpl::default();
+            self.fs
+                .readdir(&request_info(), ino, fh, 0, &mut reply)
+                .await?;
+            Ok(reply.entries)
+        })
+        .await?;
+        Ok(dir)
+    }
 }
 
 #[async_trait]
@@ -311,5 +328,23 @@ impl<C: FuserCacheBehavior> AsyncDrop for FuserFilesystemDriver<C> {
     async fn async_drop_impl(&mut self) -> Result<()> {
         self.fs.async_drop().await?;
         Ok(())
+    }
+}
+
+#[derive(Default)]
+struct ReplyDirectoryImpl {
+    entries: Vec<(PathComponentBuf, NodeKind)>,
+}
+
+impl ReplyDirectory for ReplyDirectoryImpl {
+    fn add(
+        &mut self,
+        _ino: InodeNumber,
+        _offset: i64,
+        kind: NodeKind,
+        name: &PathComponent,
+    ) -> ReplyDirectoryAddResult {
+        self.entries.push((name.to_owned(), kind));
+        ReplyDirectoryAddResult::NotFull
     }
 }
