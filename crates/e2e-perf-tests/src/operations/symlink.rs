@@ -4,7 +4,7 @@ use rstest_reuse::apply;
 
 use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
-use crate::fixture::BLOCKSIZE_BYTES;
+use crate::fixture::NUM_BYTES_FOR_THREE_LEVEL_TREE;
 use crate::rstest::FixtureFactory;
 use crate::rstest::FixtureType;
 use crate::rstest::{all_atime_behaviors, all_fixtures};
@@ -526,7 +526,7 @@ async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: Atime
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // Create a very long target path that spans multiple blocks
-    let long_target = "/very/long".repeat((2 * BLOCKSIZE_BYTES) as usize) + "/target/path";
+    let long_target = "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize) + "/target/path";
     let target = AbsolutePath::try_from_str(&long_target).unwrap();
 
     let counts = fixture
@@ -556,17 +556,17 @@ async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: Atime
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 24,
-                blob_data: 155,
-                blob_data_mut: 68,
-                store_create: 23,
+                store_load: 557,
+                blob_data: 2355,
+                blob_data_mut: 97,
+                store_create: 556,
                 store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                exists: 23,
-                store: 24,
+                exists: 556,
+                store: 557,
                 load: 1,
                 ..LLActionCounts::ZERO
             },
