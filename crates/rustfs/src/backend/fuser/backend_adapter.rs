@@ -868,7 +868,7 @@ where
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
-        let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
+        let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
@@ -902,7 +902,7 @@ where
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
         let fh = FileHandle::from(fh);
-        let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
+        let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdirplus(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {

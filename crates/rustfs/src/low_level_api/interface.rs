@@ -410,7 +410,7 @@ pub trait AsyncFilesystemLL {
         ino: InodeNumber,
         fh: FileHandle,
         // TODO In fuser, offset was i64. Why?
-        offset: NumBytes,
+        offset: u64,
         // TODO Can we do this via a callback that takes an iterator
         reply: &mut R,
     ) -> FsResult<()>;
@@ -426,7 +426,7 @@ pub trait AsyncFilesystemLL {
         ino: InodeNumber,
         fh: FileHandle,
         // TODO In fuser, offset was i64. Why?
-        offset: NumBytes,
+        offset: u64,
         // TODO Can we do this via a callback that takes an iterator
         reply: &mut R,
     ) -> FsResult<()>;

@@ -205,7 +205,7 @@ mock! {
             req: &RequestInfo,
             ino: InodeNumber,
             fh: FileHandle,
-            offset: NumBytes,
+            offset: u64,
             reply: &mut R,
         ) -> FsResult<()> ;
 
@@ -214,7 +214,7 @@ mock! {
             req: &RequestInfo,
             ino: InodeNumber,
             fh: FileHandle,
-            offset: NumBytes,
+            offset: u64,
             reply: &mut R,
         ) -> FsResult<()>;
 
@@ -639,7 +639,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        offset: NumBytes,
+        offset: u64,
         reply: &mut R,
     ) -> FsResult<()> {
         self.deref().readdir(req, ino, fh, offset, reply).await
@@ -650,7 +650,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        offset: NumBytes,
+        offset: u64,
         reply: &mut R,
     ) -> FsResult<()> {
         self.deref().readdirplus(req, ino, fh, offset, reply).await

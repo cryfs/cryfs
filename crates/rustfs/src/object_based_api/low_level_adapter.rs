@@ -618,7 +618,7 @@ where
         _req: &RequestInfo,
         ino: InodeNumber,
         _fh: FileHandle,
-        offset: NumBytes,
+        offset: u64,
         reply: &mut R,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
@@ -629,7 +629,7 @@ where
         with_async_drop_2!(node, {
             let dir = node.as_dir().await?;
             let entries = dir.entries().await?;
-            let offset = usize::try_from(u64::try_from(offset).unwrap()).unwrap(); // TODO No unwrap
+            let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
             let entries =
                 entries
                     .into_iter()
@@ -673,7 +673,7 @@ where
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        offset: NumBytes,
+        offset: u64,
         reply: &mut R,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
