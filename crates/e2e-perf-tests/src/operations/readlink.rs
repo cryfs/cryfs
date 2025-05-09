@@ -279,7 +279,8 @@ async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: Atime
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // Create a very long target path which is stored across multiple nodes
-    let long_target = "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize) + "/target/path";
+    let long_target =
+        "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize / 5) + "/target/path";
 
     // First create a symlink with the long target
     let symlink = fixture
@@ -329,19 +330,19 @@ async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: Atime
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_factory.fixture_type() {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 564,
-                    FixtureType::FuserWithoutInodeCache => 1126, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 118,
+                    FixtureType::FuserWithoutInodeCache => 234, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data: match fixture_factory.fixture_type() {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3478,
-                    FixtureType::FuserWithoutInodeCache => 6938, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 738,
+                    FixtureType::FuserWithoutInodeCache => 1458, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 } + 2 * expect_atime_update,
                 blob_data_mut: expect_atime_update,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: 557,
+                load: 113,
                 store: expect_atime_update,
                 ..LLActionCounts::ZERO
             },
