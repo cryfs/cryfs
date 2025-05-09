@@ -11,7 +11,7 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, InodeNumber, Mode, NodeAttrs,
-    NodeKind, OpenFlags, PathComponent, PathComponentBuf, Statfs,
+    NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs,
     low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -289,6 +289,20 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         Ok(AbsolutePathBuf::try_from_string(target).unwrap())
     }
 
+    async fn unlink(&self, parent: Option<Self::NodeHandle>, name: &PathComponent) -> FsResult<()> {
+        C::load_inode(&parent, &*self.fs, async |parent_ino| {
+            self.fs.unlink(&request_info(), parent_ino, name).await
+        })
+        .await
+    }
+
+    async fn rmdir(&self, parent: Option<Self::NodeHandle>, name: &PathComponent) -> FsResult<()> {
+        C::load_inode(&parent, &*self.fs, async |parent_ino| {
+            self.fs.rmdir(&request_info(), parent_ino, name).await
+        })
+        .await
+    }
+
     async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle> {
         let open_file = C::load_inode(&Some(node), &*self.fs, async |ino| {
             self.fs
@@ -297,6 +311,15 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok(open_file.fh)
+    }
+
+    async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .release(&request_info(), ino, open_file, 0, None, false)
+                .await
+        })
+        .await
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {
@@ -318,6 +341,24 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok(dir)
+    }
+
+    async fn write(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        offset: NumBytes,
+        data: Vec<u8>,
+    ) -> FsResult<()> {
+        let len = NumBytes::from(data.len() as u64);
+        let reply = C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .write(&request_info(), ino, open_file, offset, data, 0, 0, None)
+                .await
+        })
+        .await?;
+        assert_eq!(reply.written, len);
+        Ok(())
     }
 }
 

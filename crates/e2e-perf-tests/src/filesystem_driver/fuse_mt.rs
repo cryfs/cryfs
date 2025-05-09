@@ -10,8 +10,8 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FileHandle, FsResult, Mode, NodeAttrs, NodeKind, OpenFlags,
-    PathComponent, PathComponentBuf, Statfs, high_level_api::AsyncFilesystem as _,
+    AbsolutePath, AbsolutePathBuf, FileHandle, FsResult, Mode, NodeAttrs, NodeKind, NumBytes,
+    OpenFlags, PathComponent, PathComponentBuf, Statfs, high_level_api::AsyncFilesystem as _,
     object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
@@ -167,6 +167,12 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         Ok(open_file.fh)
     }
 
+    async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+        self.fs
+            .release(request_info(), &node, open_file, OpenFlags::Read, 0, false)
+            .await
+    }
+
     async fn statfs(&self) -> FsResult<Statfs> {
         self.fs.statfs(request_info(), AbsolutePath::root()).await
     }
@@ -182,6 +188,32 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .into_iter()
             .map(|entry| (entry.name, entry.kind))
             .collect())
+    }
+
+    async fn unlink(&self, parent: Option<Self::NodeHandle>, name: &PathComponent) -> FsResult<()> {
+        let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
+        self.fs.unlink(request_info(), &path).await
+    }
+
+    async fn rmdir(&self, parent: Option<Self::NodeHandle>, name: &PathComponent) -> FsResult<()> {
+        let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
+        self.fs.rmdir(request_info(), &path).await
+    }
+
+    async fn write(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        offset: NumBytes,
+        data: Vec<u8>,
+    ) -> FsResult<()> {
+        let len = NumBytes::from(data.len() as u64);
+        let written = self
+            .fs
+            .write(request_info(), &node, open_file, offset, data, 0)
+            .await?;
+        assert_eq!(written, len);
+        Ok(())
     }
 }
 
