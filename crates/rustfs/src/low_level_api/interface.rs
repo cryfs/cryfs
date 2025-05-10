@@ -33,7 +33,7 @@ pub struct ReplyOpen {
 
 #[derive(Clone, Copy)]
 pub struct ReplyWrite {
-    pub written: u32,
+    pub written: NumBytes,
 }
 
 #[derive(Clone, Copy)]

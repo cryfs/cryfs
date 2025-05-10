@@ -539,8 +539,7 @@ where
             .await?;
 
         Ok(ReplyWrite {
-            // TODO No unwrap
-            written: u32::try_from(len).unwrap(),
+            written: NumBytes::from(u64::try_from(len).unwrap()), // TODO No unwrap
         })
     }
 

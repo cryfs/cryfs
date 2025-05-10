@@ -233,7 +233,9 @@ where
             match func(fs).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
-                    fuser_reply.written(reply.written);
+                    // TODO No unwrap, probably introduce a u32 variant of NumBytes.
+                    let num_written = u32::try_from(u64::from(reply.written));
+                    fuser_reply.written(num_written.unwrap());
                 }
                 Err(err) => {
                     log::info!("{}...failed: {}", log_msg, err);
