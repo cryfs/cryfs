@@ -24,7 +24,7 @@ use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 use crate::filesystem_driver::FilesystemDriver;
 
 const NUM_CHILDREN_PER_INNER_NODE: u64 = 20;
-const BLOCKSIZE_BYTES: u64 = NUM_CHILDREN_PER_INNER_NODE * BLOCKID_LEN as u64;
+pub const BLOCKSIZE_BYTES: u64 = NUM_CHILDREN_PER_INNER_NODE * BLOCKID_LEN as u64;
 pub const NUM_BYTES_FOR_THREE_LEVEL_TREE: u64 =
     2 * NUM_CHILDREN_PER_INNER_NODE as u64 * BLOCKSIZE_BYTES;
 
