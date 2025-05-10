@@ -646,8 +646,6 @@ where
         self.node_info.concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
             let mut blob = self.load_blob().await?;
 
-            // TODO Check the entry is actually a file or symlink before removing it
-
             // First remove the entry, then flush that change, and only then remove the blob.
             // This is to make sure the file system doesn't end up in an invalid state
             // where the blob is removed but the entry is still there.
@@ -660,19 +658,26 @@ where
                     }
                     Ok(()) => {
                         let blob_id = entry.blob_id();
-                        let remove_result = self.blobstore.remove_by_id(blob_id).await;
-                        match remove_result {
-                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                                Err(FsError::CorruptedFilesystem {
-                                    message: format!(
-                                        "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
-                                    ),
-                                })
+                        match entry.entry_type() {
+                            EntryType::Dir => {
+                                Err(FsError::NodeIsADirectory)
                             }
-                            Err(err) => {
-                                log::error!("Error removing blob: {err:?}");
-                                Err(FsError::UnknownError)
+                            EntryType::File | EntryType::Symlink => {
+                                let remove_result = self.blobstore.remove_by_id(blob_id).await;
+                                match remove_result {
+                                    Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                                    Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                                        Err(FsError::CorruptedFilesystem {
+                                            message: format!(
+                                                "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
+                                            ),
+                                        })
+                                    }
+                                    Err(err) => {
+                                        log::error!("Error removing blob: {err:?}");
+                                        Err(FsError::UnknownError)
+                                    }
+                                }
                             }
                         }
                     }
