@@ -83,6 +83,7 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Da
 
     // TODO Can we make read_bytes and try_read_bytes take &self instead of &mut self?
     pub async fn read_bytes(&mut self, offset: u64, target: &mut [u8]) -> Result<()> {
+        // TODO If the offset is so far right that we can't possibly store that much data with the depth of the current root, there is no need to call num_bytes() here. Just return early. Same possibly for other operations?
         let num_bytes = self.num_bytes().await?;
         let target_len = u64::try_from(target.len()).unwrap();
         let read_end = offset.checked_add(target_len).ok_or_else(|| {
