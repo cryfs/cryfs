@@ -1,6 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use std::{fmt::Debug, marker::PhantomData};
+use std::{
+    fmt::Debug,
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use super::FilesystemDriver;
 use crate::fixture::request_info;
@@ -343,6 +347,39 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         Ok(dir)
     }
 
+    async fn read(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        offset: NumBytes,
+        size: NumBytes,
+    ) -> FsResult<Vec<u8>> {
+        let result = C::load_inode(&Some(node), &*self.fs, async |ino| {
+            let result = Arc::new(Mutex::new(None));
+            self.fs
+                .read(
+                    &request_info(),
+                    ino,
+                    open_file,
+                    offset,
+                    size,
+                    0,
+                    None,
+                    ReadCallbackImpl {
+                        data: Arc::clone(&result),
+                    },
+                )
+                .await;
+            Arc::try_unwrap(result)
+                .unwrap()
+                .into_inner()
+                .unwrap()
+                .unwrap()
+        })
+        .await?;
+        Ok(result)
+    }
+
     async fn write(
         &self,
         node: Self::NodeHandle,
@@ -387,5 +424,16 @@ impl ReplyDirectory for ReplyDirectoryImpl {
     ) -> ReplyDirectoryAddResult {
         self.entries.push((name.to_owned(), kind));
         ReplyDirectoryAddResult::NotFull
+    }
+}
+
+#[derive(Default)]
+struct ReadCallbackImpl {
+    data: Arc<Mutex<Option<FsResult<Vec<u8>>>>>,
+}
+
+impl<'a> Callback<FsResult<&'a [u8]>, ()> for ReadCallbackImpl {
+    fn call(self, result: FsResult<&'a [u8]>) {
+        *self.data.lock().unwrap() = Some(result.map(|data| data.to_vec()));
     }
 }

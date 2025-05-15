@@ -1,5 +1,6 @@
 use anyhow::Result;
-use std::fmt::Debug;
+use std::sync::Mutex;
+use std::{fmt::Debug, sync::Arc};
 
 use super::FilesystemDriver;
 use crate::fixture::request_info;
@@ -10,9 +11,9 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FileHandle, FsResult, Mode, NodeAttrs, NodeKind, NumBytes,
-    OpenFlags, PathComponent, PathComponentBuf, Statfs, high_level_api::AsyncFilesystem as _,
-    object_based_api::ObjectBasedFsAdapter,
+    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Mode, NodeAttrs, NodeKind,
+    NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs,
+    high_level_api::AsyncFilesystem as _, object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
@@ -200,6 +201,33 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         self.fs.rmdir(request_info(), &path).await
     }
 
+    async fn read(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        offset: NumBytes,
+        size: NumBytes,
+    ) -> FsResult<Vec<u8>> {
+        let data = Arc::new(Mutex::new(None));
+        self.fs
+            .read(
+                request_info(),
+                &node,
+                open_file,
+                offset,
+                size,
+                ReadCallbackImpl {
+                    data: Arc::clone(&data),
+                },
+            )
+            .await;
+        Arc::try_unwrap(data)
+            .unwrap()
+            .into_inner()
+            .unwrap()
+            .unwrap()
+    }
+
     async fn write(
         &self,
         node: Self::NodeHandle,
@@ -224,5 +252,16 @@ impl AsyncDrop for FusemtFilesystemDriver {
     async fn async_drop_impl(&mut self) -> Result<()> {
         self.fs.async_drop().await?;
         Ok(())
+    }
+}
+
+#[derive(Default)]
+struct ReadCallbackImpl {
+    data: Arc<Mutex<Option<FsResult<Vec<u8>>>>>,
+}
+
+impl<'a> Callback<FsResult<&'a [u8]>, ()> for ReadCallbackImpl {
+    fn call(self, result: FsResult<&'a [u8]>) {
+        *self.data.lock().unwrap() = Some(result.map(|data| data.to_vec()));
     }
 }

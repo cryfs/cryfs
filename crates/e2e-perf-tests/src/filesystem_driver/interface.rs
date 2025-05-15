@@ -98,6 +98,14 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         node: Option<Self::NodeHandle>,
     ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>>;
 
+    async fn read(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        offset: NumBytes,
+        size: NumBytes,
+    ) -> FsResult<Vec<u8>>;
+
     async fn write(
         &self,
         node: Self::NodeHandle,

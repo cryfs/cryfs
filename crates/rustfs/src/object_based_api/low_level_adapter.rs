@@ -496,7 +496,7 @@ where
     ) -> R
     where
         R: 'static,
-        C: Send + 'static + for<'a> Callback<FsResult<&'a [u8]>, R>,
+        C: Send + for<'a> Callback<FsResult<&'a [u8]>, R>,
     {
         match self.trigger_on_operation().await {
             Ok(()) => (),
