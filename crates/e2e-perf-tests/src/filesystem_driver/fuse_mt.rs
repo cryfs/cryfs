@@ -11,11 +11,12 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Mode, NodeAttrs, NodeKind,
-    NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs,
+    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Gid, Mode, NodeAttrs, NodeKind,
+    NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs, Uid,
     high_level_api::AsyncFilesystem as _, object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use std::time::SystemTime;
 
 pub struct FusemtFilesystemDriver {
     fs: AsyncDropGuard<
@@ -156,6 +157,84 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .getattr(request_info(), &node, Some(open_file))
             .await
             .map(|attr_response| attr_response.attrs)
+    }
+
+    async fn chmod(&self, node: Option<Self::NodeHandle>, mode: Mode) -> FsResult<()> {
+        let path = node.unwrap_or_else(AbsolutePathBuf::root);
+        self.fs.chmod(request_info(), &path, None, mode).await
+    }
+
+    async fn fchmod(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        mode: Mode,
+    ) -> FsResult<()> {
+        self.fs
+            .chmod(request_info(), &node, Some(open_file), mode)
+            .await
+    }
+
+    async fn chown(
+        &self,
+        node: Option<Self::NodeHandle>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()> {
+        let path = node.unwrap_or_else(AbsolutePathBuf::root);
+        self.fs.chown(request_info(), &path, None, uid, gid).await
+    }
+
+    async fn fchown(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()> {
+        self.fs
+            .chown(request_info(), &node, Some(open_file), uid, gid)
+            .await
+    }
+
+    async fn truncate(&self, node: Option<Self::NodeHandle>, size: NumBytes) -> FsResult<()> {
+        let path = node.unwrap_or_else(AbsolutePathBuf::root);
+        self.fs.truncate(request_info(), &path, None, size).await
+    }
+
+    async fn ftruncate(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        size: NumBytes,
+    ) -> FsResult<()> {
+        self.fs
+            .truncate(request_info(), &node, Some(open_file), size)
+            .await
+    }
+
+    async fn utimens(
+        &self,
+        node: Option<Self::NodeHandle>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()> {
+        let path = node.unwrap_or_else(AbsolutePathBuf::root);
+        self.fs
+            .utimens(request_info(), &path, None, atime, mtime)
+            .await
+    }
+
+    async fn futimens(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()> {
+        self.fs
+            .utimens(request_info(), &node, Some(open_file), atime, mtime)
+            .await
     }
 
     async fn readlink(&self, node: Self::NodeHandle) -> FsResult<AbsolutePathBuf> {

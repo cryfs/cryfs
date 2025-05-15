@@ -6,10 +6,11 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FileHandle, FsError, FsResult, NodeAttrs, NodeKind, NumBytes,
-    PathComponent, PathComponentBuf, Statfs,
+    AbsolutePath, AbsolutePathBuf, FileHandle, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
+    NumBytes, PathComponent, PathComponentBuf, Statfs, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use std::time::SystemTime;
 
 /// An interface abstracting over [AsyncFilesystem] and [AsyncFilesystemLL], offering common file system operations.
 pub trait FilesystemDriver: AsyncDrop + Debug {
@@ -84,6 +85,54 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn getattr(&self, node: Option<Self::NodeHandle>) -> FsResult<NodeAttrs>;
 
     async fn fgetattr(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<NodeAttrs>;
+
+    async fn chmod(&self, node: Option<Self::NodeHandle>, mode: Mode) -> FsResult<()>;
+
+    async fn fchmod(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        mode: Mode,
+    ) -> FsResult<()>;
+
+    async fn chown(
+        &self,
+        node: Option<Self::NodeHandle>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()>;
+
+    async fn fchown(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()>;
+
+    async fn truncate(&self, node: Option<Self::NodeHandle>, size: NumBytes) -> FsResult<()>;
+
+    async fn ftruncate(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        size: NumBytes,
+    ) -> FsResult<()>;
+
+    async fn utimens(
+        &self,
+        node: Option<Self::NodeHandle>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()>;
+
+    async fn futimens(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()>;
 
     async fn readlink(&self, node: Self::NodeHandle) -> FsResult<AbsolutePathBuf>;
 

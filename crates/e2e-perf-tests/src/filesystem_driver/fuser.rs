@@ -4,6 +4,7 @@ use std::{
     fmt::Debug,
     marker::PhantomData,
     sync::{Arc, Mutex},
+    time::SystemTime,
 };
 
 use super::FilesystemDriver;
@@ -14,8 +15,8 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, InodeNumber, Mode, NodeAttrs,
-    NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs,
+    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Gid, InodeNumber, Mode,
+    NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs, Uid,
     low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -273,6 +274,238 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 .getattr(&request_info(), ino, Some(open_file))
                 .await
                 .map(|attrs| attrs.attr)
+        })
+        .await
+    }
+
+    async fn chmod(&self, node: Option<Self::NodeHandle>, mode: Mode) -> FsResult<()> {
+        C::load_inode(&node, &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    Some(mode),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn fchmod(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        mode: Mode,
+    ) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    Some(mode),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(open_file),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn chown(
+        &self,
+        node: Option<Self::NodeHandle>,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()> {
+        C::load_inode(&node, &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    None,
+                    uid,
+                    gid,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn fchown(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        uid: Option<Uid>,
+        gid: Option<Gid>,
+    ) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    None,
+                    uid,
+                    gid,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(open_file),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn truncate(&self, node: Option<Self::NodeHandle>, size: NumBytes) -> FsResult<()> {
+        C::load_inode(&node, &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    None,
+                    None,
+                    None,
+                    Some(size),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn ftruncate(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        size: NumBytes,
+    ) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    None,
+                    None,
+                    None,
+                    Some(size),
+                    None,
+                    None,
+                    None,
+                    Some(open_file),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn utimens(
+        &self,
+        node: Option<Self::NodeHandle>,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()> {
+        C::load_inode(&node, &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    None,
+                    None,
+                    None,
+                    None,
+                    atime,
+                    mtime,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn futimens(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        atime: Option<SystemTime>,
+        mtime: Option<SystemTime>,
+    ) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .setattr(
+                    &request_info(),
+                    ino,
+                    None,
+                    None,
+                    None,
+                    None,
+                    atime,
+                    mtime,
+                    None,
+                    Some(open_file),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .await?;
+            Ok(())
         })
         .await
     }
