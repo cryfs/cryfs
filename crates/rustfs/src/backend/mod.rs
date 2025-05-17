@@ -5,4 +5,4 @@ pub mod fuse_mt;
 pub mod fuser;
 
 mod running_filesystem;
-pub use running_filesystem::RunningFilesystem;
+pub use running_filesystem::{BackgroundSession, RunningFilesystem};

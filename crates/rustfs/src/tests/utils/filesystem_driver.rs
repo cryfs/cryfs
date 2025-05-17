@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use crate::{AbsolutePathBuf, Mode};
 
+// TODO Unify this with [cryfs_e2e_tests:::FilesystemDriver]
+
 pub struct FilesystemDriver {
     path: AbsolutePathBuf,
 }

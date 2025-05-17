@@ -930,13 +930,17 @@ dependencies = [
  "cryfs-utils",
  "cryfs-version",
  "derive_more 2.0.1",
+ "fuser 0.13.0",
  "fuser 0.15.1",
  "futures",
+ "libc",
+ "nix",
  "pretty_assertions",
  "rstest",
  "rstest_reuse",
  "tempdir",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
