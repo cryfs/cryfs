@@ -128,3 +128,9 @@ pub fn all_fuser_fixtures(
     fixture_factory: impl FixtureFactory,
 ) {
 }
+
+#[template]
+pub fn all_fusemt_fixtures(
+    #[values(crate::rstest::HLFixture)] fixture_factory: impl FixtureFactory,
+) {
+}

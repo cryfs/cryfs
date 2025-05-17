@@ -322,6 +322,22 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         assert_eq!(written, len);
         Ok(())
     }
+
+    async fn rename(
+        &self,
+        old_parent: Option<Self::NodeHandle>,
+        old_name: &PathComponent,
+        new_parent: Option<Self::NodeHandle>,
+        new_name: &PathComponent,
+    ) -> FsResult<()> {
+        let old_path = old_parent
+            .unwrap_or_else(AbsolutePathBuf::root)
+            .join(old_name);
+        let new_path = new_parent
+            .unwrap_or_else(AbsolutePathBuf::root)
+            .join(new_name);
+        self.fs.rename(request_info(), &old_path, &new_path).await
+    }
 }
 
 #[async_trait]

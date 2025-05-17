@@ -142,6 +142,14 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
 
     async fn statfs(&self) -> FsResult<Statfs>;
 
+    async fn rename(
+        &self,
+        old_parent: Option<Self::NodeHandle>,
+        old_name: &PathComponent,
+        new_parent: Option<Self::NodeHandle>,
+        new_name: &PathComponent,
+    ) -> FsResult<()>;
+
     async fn readdir(
         &self,
         node: Option<Self::NodeHandle>,

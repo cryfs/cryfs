@@ -630,6 +630,31 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         assert_eq!(reply.written, len);
         Ok(())
     }
+
+    async fn rename(
+        &self,
+        old_parent: Option<Self::NodeHandle>,
+        old_name: &PathComponent,
+        new_parent: Option<Self::NodeHandle>,
+        new_name: &PathComponent,
+    ) -> FsResult<()> {
+        C::load_inode(&old_parent, &*self.fs, async |old_parent_ino| {
+            C::load_inode(&new_parent, &*self.fs, async |new_parent_ino| {
+                self.fs
+                    .rename(
+                        &request_info(),
+                        old_parent_ino,
+                        old_name,
+                        new_parent_ino,
+                        new_name,
+                        0, // flags - using 0 for default behavior
+                    )
+                    .await
+            })
+            .await
+        })
+        .await
+    }
 }
 
 #[async_trait]
