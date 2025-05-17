@@ -559,6 +559,27 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         .await
     }
 
+    async fn flush(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs.flush(&request_info(), ino, open_file, 0).await
+        })
+        .await
+    }
+
+    async fn fsync(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        datasync: bool,
+    ) -> FsResult<()> {
+        C::load_inode(&Some(node), &*self.fs, async |ino| {
+            self.fs
+                .fsync(&request_info(), ino, open_file, datasync)
+                .await
+        })
+        .await
+    }
+
     async fn statfs(&self) -> FsResult<Statfs> {
         self.fs.statfs(&request_info(), FUSE_ROOT_ID).await
     }

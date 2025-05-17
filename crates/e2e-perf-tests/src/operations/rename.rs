@@ -15,6 +15,8 @@ use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::PathComponent;
 
+// TODO Some rename operations in here run into deadlocks. Fix them.
+
 #[apply(all_fixtures)]
 #[apply(all_atime_behaviors)]
 #[rstest]

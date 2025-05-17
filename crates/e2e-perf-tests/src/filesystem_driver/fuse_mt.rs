@@ -338,6 +338,21 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .join(new_name);
         self.fs.rename(request_info(), &old_path, &new_path).await
     }
+
+    async fn flush(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+        self.fs.flush(request_info(), &node, open_file, 0).await
+    }
+
+    async fn fsync(
+        &self,
+        node: Self::NodeHandle,
+        open_file: FileHandle,
+        datasync: bool,
+    ) -> FsResult<()> {
+        self.fs
+            .fsync(request_info(), &node, open_file, datasync)
+            .await
+    }
 }
 
 #[async_trait]
