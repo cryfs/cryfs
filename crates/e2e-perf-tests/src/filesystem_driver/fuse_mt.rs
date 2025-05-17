@@ -249,9 +249,9 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         Ok(open_file.fh)
     }
 
-    async fn release(&self, node: Self::NodeHandle, open_file: &FileHandle) -> FsResult<()> {
+    async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
         self.fs
-            .release(request_info(), &node, *open_file, OpenFlags::Read, 0, false)
+            .release(request_info(), &node, open_file, OpenFlags::Read, 0, false)
             .await
     }
 
@@ -285,7 +285,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn read(
         &self,
         node: Self::NodeHandle,
-        open_file: &FileHandle,
+        open_file: &mut FileHandle,
         offset: NumBytes,
         size: NumBytes,
     ) -> FsResult<Vec<u8>> {
@@ -312,7 +312,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn write(
         &self,
         node: Self::NodeHandle,
-        open_file: &FileHandle,
+        open_file: &mut FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
     ) -> FsResult<()> {
@@ -341,14 +341,14 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         self.fs.rename(request_info(), &old_path, &new_path).await
     }
 
-    async fn flush(&self, node: Self::NodeHandle, open_file: &FileHandle) -> FsResult<()> {
+    async fn flush(&self, node: Self::NodeHandle, open_file: &mut FileHandle) -> FsResult<()> {
         self.fs.flush(request_info(), &node, *open_file, 0).await
     }
 
     async fn fsync(
         &self,
         node: Self::NodeHandle,
-        open_file: &FileHandle,
+        open_file: &mut FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
         self.fs

@@ -783,17 +783,17 @@ async fn unlink_large_file(
     // First create a large file to unlink
     fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("largefile.dat").unwrap())
                 .await
                 .unwrap();
 
             // Write a large amount of data to the file to ensure it spans multiple blocks
             let data = vec![0u8; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
-            fs.release(file, &fh).await.unwrap();
+            fs.release(file, fh).await.unwrap();
         })
         .await;
 

@@ -28,7 +28,7 @@ async fn small_write_to_empty_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file to write to
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
             fs.create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
@@ -40,7 +40,7 @@ async fn small_write_to_empty_file(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), &fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -105,14 +105,14 @@ async fn small_write_to_middle_of_small_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file, write some initial data
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * BLOCKSIZE_BYTES as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -123,7 +123,7 @@ async fn small_write_to_middle_of_small_file(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), &fh, NumBytes::from(BLOCKSIZE_BYTES), data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(BLOCKSIZE_BYTES), data)
                 .await
                 .unwrap();
         })
@@ -188,14 +188,14 @@ async fn small_write_beyond_end_of_small_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file, write some initial data
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * BLOCKSIZE_BYTES as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -206,9 +206,14 @@ async fn small_write_beyond_end_of_small_file(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), &fh, NumBytes::from(3 * BLOCKSIZE_BYTES), data)
-                .await
-                .unwrap();
+            fs.write(
+                file.clone(),
+                &mut fh,
+                NumBytes::from(3 * BLOCKSIZE_BYTES),
+                data,
+            )
+            .await
+            .unwrap();
         })
         .await;
 
@@ -273,14 +278,14 @@ async fn small_write_to_middle_of_large_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file, write some initial data
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -293,7 +298,7 @@ async fn small_write_to_middle_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                &fh,
+                &mut fh,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -361,14 +366,14 @@ async fn small_write_beyond_end_of_large_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file, write some initial data
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -381,7 +386,7 @@ async fn small_write_beyond_end_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                &fh,
+                &mut fh,
                 NumBytes::from(3 * NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -451,7 +456,7 @@ async fn large_write_to_empty_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file to write to
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
             fs.create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
@@ -462,7 +467,7 @@ async fn large_write_to_empty_file(
     let data = vec![b'A'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), &fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -529,14 +534,14 @@ async fn large_write_to_middle_of_large_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file, write some initial data
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 3 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -549,7 +554,7 @@ async fn large_write_to_middle_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                &fh,
+                &mut fh,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -619,14 +624,14 @@ async fn large_write_beyond_end_of_large_file(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create and open a file, write some initial data
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -639,7 +644,7 @@ async fn large_write_beyond_end_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                &fh,
+                &mut fh,
                 NumBytes::from(2 * NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -709,7 +714,7 @@ async fn write_to_file_in_nested_dir(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create a nested directory and file
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
             let parent = fs
                 .mkdir(None, PathComponent::try_from_str("nested").unwrap())
@@ -728,7 +733,7 @@ async fn write_to_file_in_nested_dir(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), &fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -796,7 +801,7 @@ async fn small_write_to_file_in_deeply_nested_dir(
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
     // First create a deeply nested directory and file
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
             let deeply_nested = fs
                 .mkdir_recursive(AbsolutePath::try_from_str("/deep/nested/dir").unwrap())
@@ -815,7 +820,7 @@ async fn small_write_to_file_in_deeply_nested_dir(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), &fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -882,14 +887,14 @@ async fn multiple_writes_to_same_file(
 ) {
     let fixture = fixture_factory.create_filesystem(atime_behavior).await;
 
-    let (file, fh) = fixture
+    let (file, mut fh) = fixture
         .ops(async |fs| {
-            let (file, fh) = fs
+            let (file, mut fh) = fs
                 .create_and_open_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &mut fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
             (file, fh)
@@ -902,7 +907,7 @@ async fn multiple_writes_to_same_file(
                 let data = vec![b'A'; 1];
                 fs.write(
                     file.clone(),
-                    &fh,
+                    &mut fh,
                     NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE + i),
                     data,
                 )

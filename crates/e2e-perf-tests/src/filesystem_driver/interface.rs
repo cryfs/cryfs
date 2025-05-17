@@ -145,7 +145,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
 
     async fn open(&self, node: Self::NodeHandle) -> FsResult<Self::FileHandle>;
 
-    async fn release(&self, node: Self::NodeHandle, open_file: &Self::FileHandle) -> FsResult<()>;
+    async fn release(&self, node: Self::NodeHandle, open_file: Self::FileHandle) -> FsResult<()>;
 
     async fn statfs(&self) -> FsResult<Statfs>;
 
@@ -165,7 +165,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn read(
         &self,
         node: Self::NodeHandle,
-        open_file: &Self::FileHandle,
+        open_file: &mut Self::FileHandle,
         offset: NumBytes,
         size: NumBytes,
     ) -> FsResult<Vec<u8>>;
@@ -173,17 +173,18 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn write(
         &self,
         node: Self::NodeHandle,
-        open_file: &Self::FileHandle,
+        open_file: &mut Self::FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
     ) -> FsResult<()>;
 
-    async fn flush(&self, node: Self::NodeHandle, open_file: &Self::FileHandle) -> FsResult<()>;
+    async fn flush(&self, node: Self::NodeHandle, open_file: &mut Self::FileHandle)
+    -> FsResult<()>;
 
     async fn fsync(
         &self,
         node: Self::NodeHandle,
-        open_file: &Self::FileHandle,
+        open_file: &mut Self::FileHandle,
         datasync: bool,
     ) -> FsResult<()>;
 }
