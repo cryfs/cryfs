@@ -233,7 +233,7 @@ impl<
 > EncryptedBlockStore<C, _B, B>
 {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
-        // TODO Is it better to move encryption/decryption to a dedicated threadpool instead of block_in_place?
+        // TODO block_in_place allows other tasks to run, but blocks concurrent jobs in the same task. We should probably use spawn_blocking instead, or move it to a dedicated threadpool. Same for decryption.
         let ciphertext = tokio::task::block_in_place(move || self.cipher.encrypt(plaintext))?;
         Ok(_prepend_header(ciphertext))
     }
