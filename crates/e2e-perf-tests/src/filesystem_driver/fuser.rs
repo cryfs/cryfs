@@ -124,6 +124,8 @@ impl<C: FuserCacheBehavior> Debug for FuserFilesystemDriver<C> {
 impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     type NodeHandle = C::NodeHandle;
 
+    type FileHandle = FileHandle;
+
     async fn new(
         device: AsyncDropGuard<
             CryDevice<
@@ -268,10 +270,14 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         .await
     }
 
-    async fn fgetattr(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<NodeAttrs> {
+    async fn fgetattr(
+        &self,
+        node: Self::NodeHandle,
+        open_file: &FileHandle,
+    ) -> FsResult<NodeAttrs> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
             self.fs
-                .getattr(&request_info(), ino, Some(open_file))
+                .getattr(&request_info(), ino, Some(*open_file))
                 .await
                 .map(|attrs| attrs.attr)
         })
@@ -306,7 +312,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn fchmod(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         mode: Mode,
     ) -> FsResult<()> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
@@ -321,7 +327,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     None,
                     None,
                     None,
-                    Some(open_file),
+                    Some(*open_file),
                     None,
                     None,
                     None,
@@ -366,7 +372,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn fchown(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
@@ -382,7 +388,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     None,
                     None,
                     None,
-                    Some(open_file),
+                    Some(*open_file),
                     None,
                     None,
                     None,
@@ -422,7 +428,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn ftruncate(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         size: NumBytes,
     ) -> FsResult<()> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
@@ -437,7 +443,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     None,
                     None,
                     None,
-                    Some(open_file),
+                    Some(*open_file),
                     None,
                     None,
                     None,
@@ -482,7 +488,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn futimens(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
@@ -498,7 +504,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     atime,
                     mtime,
                     None,
-                    Some(open_file),
+                    Some(*open_file),
                     None,
                     None,
                     None,
@@ -550,18 +556,18 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         Ok(open_file.fh)
     }
 
-    async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+    async fn release(&self, node: Self::NodeHandle, open_file: &FileHandle) -> FsResult<()> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
             self.fs
-                .release(&request_info(), ino, open_file, 0, None, false)
+                .release(&request_info(), ino, *open_file, 0, None, false)
                 .await
         })
         .await
     }
 
-    async fn flush(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+    async fn flush(&self, node: Self::NodeHandle, open_file: &FileHandle) -> FsResult<()> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
-            self.fs.flush(&request_info(), ino, open_file, 0).await
+            self.fs.flush(&request_info(), ino, *open_file, 0).await
         })
         .await
     }
@@ -569,12 +575,12 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn fsync(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
             self.fs
-                .fsync(&request_info(), ino, open_file, datasync)
+                .fsync(&request_info(), ino, *open_file, datasync)
                 .await
         })
         .await
@@ -604,7 +610,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn read(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         offset: NumBytes,
         size: NumBytes,
     ) -> FsResult<Vec<u8>> {
@@ -614,7 +620,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 .read(
                     &request_info(),
                     ino,
-                    open_file,
+                    *open_file,
                     offset,
                     size,
                     0,
@@ -637,14 +643,14 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn write(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
     ) -> FsResult<()> {
         let len = NumBytes::from(data.len() as u64);
         let reply = C::load_inode(&Some(node), &*self.fs, async |ino| {
             self.fs
-                .write(&request_info(), ino, open_file, offset, data, 0, 0, None)
+                .write(&request_info(), ino, *open_file, offset, data, 0, 0, None)
                 .await
         })
         .await?;

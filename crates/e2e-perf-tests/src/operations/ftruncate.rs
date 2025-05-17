@@ -38,7 +38,7 @@ async fn ftruncate_grow_empty_file_small(
     let counts = fixture
         .count_ops(async |fs| {
             // Grow by a small amount (1 byte)
-            fs.ftruncate(file.clone(), file_handle, NumBytes::from(1))
+            fs.ftruncate(file.clone(), &file_handle, NumBytes::from(1))
                 .await
                 .unwrap();
         })
@@ -115,7 +115,7 @@ async fn ftruncate_grow_empty_file_large(
         .count_ops(async |fs| {
             fs.ftruncate(
                 file.clone(),
-                file_handle,
+                &file_handle,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
             )
             .await
@@ -192,7 +192,7 @@ async fn ftruncate_shrink_file_small(
                 .unwrap();
             fs.ftruncate(
                 file.clone(),
-                handle,
+                &handle,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
             )
             .await
@@ -207,7 +207,7 @@ async fn ftruncate_shrink_file_small(
         .count_ops(async |fs| {
             fs.ftruncate(
                 file.clone(),
-                file_handle,
+                &file_handle,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE - 1),
             )
             .await
@@ -282,7 +282,7 @@ async fn ftruncate_shrink_file_large(
                 .unwrap();
             fs.ftruncate(
                 file.clone(),
-                handle,
+                &handle,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
             )
             .await
@@ -294,7 +294,7 @@ async fn ftruncate_shrink_file_large(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.ftruncate(file.clone(), file_handle, NumBytes::from(1))
+            fs.ftruncate(file.clone(), &file_handle, NumBytes::from(1))
                 .await
                 .unwrap();
         })
@@ -368,7 +368,7 @@ async fn ftruncate_grow_nonempty_file_small(
                 .create_and_open_file(None, PathComponent::try_from_str("testfile.txt").unwrap())
                 .await
                 .unwrap();
-            fs.ftruncate(file.clone(), handle, NumBytes::from(100))
+            fs.ftruncate(file.clone(), &handle, NumBytes::from(100))
                 .await
                 .unwrap();
 
@@ -379,7 +379,7 @@ async fn ftruncate_grow_nonempty_file_small(
     // Now grow it by a small amount (add 1 byte)
     let counts = fixture
         .count_ops(async |fs| {
-            fs.ftruncate(file.clone(), file_handle, NumBytes::from(101))
+            fs.ftruncate(file.clone(), &file_handle, NumBytes::from(101))
                 .await
                 .unwrap();
         })
@@ -450,7 +450,7 @@ async fn ftruncate_grow_nonempty_file_large(
                 .create_and_open_file(None, PathComponent::try_from_str("testfile.txt").unwrap())
                 .await
                 .unwrap();
-            fs.ftruncate(file.clone(), handle, NumBytes::from(100))
+            fs.ftruncate(file.clone(), &handle, NumBytes::from(100))
                 .await
                 .unwrap();
 
@@ -462,7 +462,7 @@ async fn ftruncate_grow_nonempty_file_large(
         .count_ops(async |fs| {
             fs.ftruncate(
                 file.clone(),
-                file_handle,
+                &file_handle,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
             )
             .await
@@ -541,7 +541,7 @@ async fn ftruncate_file_in_rootdir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.ftruncate(file.clone(), file_handle, NumBytes::from(1024))
+            fs.ftruncate(file.clone(), &file_handle, NumBytes::from(1024))
                 .await
                 .unwrap();
         })
@@ -629,7 +629,7 @@ async fn ftruncate_file_in_nesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.ftruncate(file.clone(), file_handle, NumBytes::from(1024))
+            fs.ftruncate(file.clone(), &file_handle, NumBytes::from(1024))
                 .await
                 .unwrap();
         })
@@ -721,7 +721,7 @@ async fn ftruncate_file_in_deeplynesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.ftruncate(file.clone(), file_handle, NumBytes::from(1024))
+            fs.ftruncate(file.clone(), &file_handle, NumBytes::from(1024))
                 .await
                 .unwrap();
         })

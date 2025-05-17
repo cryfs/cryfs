@@ -41,7 +41,7 @@ async fn unchanged_empty_file_in_rootdir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -109,7 +109,7 @@ async fn unchanged_file_with_data_in_rootdir(
                 .await
                 .unwrap();
             let data = vec![b'X'; 100];
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
             (file, fh)
@@ -118,7 +118,7 @@ async fn unchanged_file_with_data_in_rootdir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -186,7 +186,7 @@ async fn unchanged_large_file_in_rootdir(
                 .await
                 .unwrap();
             let data = vec![b'X'; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
             (file, fh)
@@ -195,7 +195,7 @@ async fn unchanged_large_file_in_rootdir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -270,7 +270,7 @@ async fn unchanged_file_in_nested_dir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -351,7 +351,7 @@ async fn unchanged_file_in_deeply_nested_dir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -430,7 +430,7 @@ async fn after_small_write_to_empty_file(
         .ops_noflush(async |fs| {
             // Perform small write without flushing
             let data = vec![b'A'; 1];
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -438,7 +438,7 @@ async fn after_small_write_to_empty_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -509,7 +509,7 @@ async fn after_small_write_to_middle_of_small_file(
 
             // Write initial data
             let initial_data = vec![b'X'; 2 * BLOCKSIZE_BYTES as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
             (file, fh)
@@ -520,7 +520,7 @@ async fn after_small_write_to_middle_of_small_file(
         .ops_noflush(async |fs| {
             // Write a small amount in the middle
             let data = vec![b'A'; 1];
-            fs.write(file.clone(), fh, NumBytes::from(BLOCKSIZE_BYTES), data)
+            fs.write(file.clone(), &fh, NumBytes::from(BLOCKSIZE_BYTES), data)
                 .await
                 .unwrap();
         })
@@ -528,7 +528,7 @@ async fn after_small_write_to_middle_of_small_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -598,7 +598,7 @@ async fn after_small_write_beyond_end_of_small_file(
 
             // Write initial data
             let initial_data = vec![b'X'; 2 * BLOCKSIZE_BYTES as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
             (file, fh)
@@ -609,7 +609,7 @@ async fn after_small_write_beyond_end_of_small_file(
         .ops_noflush(async |fs| {
             // Write a small amount beyond the end
             let data = vec![b'A'; 1];
-            fs.write(file.clone(), fh, NumBytes::from(3 * BLOCKSIZE_BYTES), data)
+            fs.write(file.clone(), &fh, NumBytes::from(3 * BLOCKSIZE_BYTES), data)
                 .await
                 .unwrap();
         })
@@ -617,7 +617,7 @@ async fn after_small_write_beyond_end_of_small_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -687,7 +687,7 @@ async fn after_small_write_to_middle_of_large_file(
 
             // Write initial large data
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
             (file, fh)
@@ -700,7 +700,7 @@ async fn after_small_write_to_middle_of_large_file(
             let data = vec![b'A'; 1];
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -711,7 +711,7 @@ async fn after_small_write_to_middle_of_large_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -781,7 +781,7 @@ async fn after_small_write_beyond_end_of_large_file(
 
             // Write initial large data
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
             (file, fh)
@@ -794,7 +794,7 @@ async fn after_small_write_beyond_end_of_large_file(
             let data = vec![b'A'; 1];
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(3 * NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -805,7 +805,7 @@ async fn after_small_write_beyond_end_of_large_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -881,7 +881,7 @@ async fn after_large_write_to_empty_file(
         .ops_noflush(async |fs| {
             // Perform small write without flushing
             let data = vec![b'A'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -889,7 +889,7 @@ async fn after_large_write_to_empty_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -959,7 +959,7 @@ async fn after_large_write_to_middle_of_large_file(
 
             // Write initial large data
             let initial_data = vec![b'X'; 3 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -973,7 +973,7 @@ async fn after_large_write_to_middle_of_large_file(
             let data = vec![b'A'; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -984,7 +984,7 @@ async fn after_large_write_to_middle_of_large_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -1054,7 +1054,7 @@ async fn after_large_write_beyond_end_of_large_file(
 
             // Write initial large data
             let initial_data = vec![b'X'; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -1068,7 +1068,7 @@ async fn after_large_write_beyond_end_of_large_file(
             let data = vec![b'A'; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(2 * NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -1079,7 +1079,7 @@ async fn after_large_write_beyond_end_of_large_file(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -1163,7 +1163,7 @@ async fn after_write_to_file_in_nested_dir(
         .ops_noflush(async |fs| {
             // Write to the file
             let data = vec![b'A'; 1];
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -1171,7 +1171,7 @@ async fn after_write_to_file_in_nested_dir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 
@@ -1256,7 +1256,7 @@ async fn after_small_write_to_file_in_deeply_nested_dir(
         .ops_noflush(async |fs| {
             // Write to the file
             let data = vec![b'A'; 1];
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -1264,7 +1264,7 @@ async fn after_small_write_to_file_in_deeply_nested_dir(
 
     let counts = fixture
         .count_ops_noflush(async |fs| {
-            fs.flush(file.clone(), fh).await.unwrap();
+            fs.flush(file.clone(), &fh).await.unwrap();
         })
         .await;
 

@@ -36,9 +36,13 @@ async fn fchmod_file_in_rootdir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.fchmod(file.clone(), file_handle, Mode::from(0o644).add_file_flag())
-                .await
-                .unwrap();
+            fs.fchmod(
+                file.clone(),
+                &file_handle,
+                Mode::from(0o644).add_file_flag(),
+            )
+            .await
+            .unwrap();
         })
         .await;
 
@@ -122,9 +126,13 @@ async fn fchmod_file_in_nesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.fchmod(file.clone(), file_handle, Mode::from(0o644).add_file_flag())
-                .await
-                .unwrap();
+            fs.fchmod(
+                file.clone(),
+                &file_handle,
+                Mode::from(0o644).add_file_flag(),
+            )
+            .await
+            .unwrap();
         })
         .await;
 
@@ -212,9 +220,13 @@ async fn fchmod_file_in_deeplynesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.fchmod(file.clone(), file_handle, Mode::from(0o644).add_file_flag())
-                .await
-                .unwrap();
+            fs.fchmod(
+                file.clone(),
+                &file_handle,
+                Mode::from(0o644).add_file_flag(),
+            )
+            .await
+            .unwrap();
         })
         .await;
 

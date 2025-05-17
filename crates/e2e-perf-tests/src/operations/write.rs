@@ -40,7 +40,7 @@ async fn small_write_to_empty_file(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -112,7 +112,7 @@ async fn small_write_to_middle_of_small_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * BLOCKSIZE_BYTES as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -123,7 +123,7 @@ async fn small_write_to_middle_of_small_file(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), fh, NumBytes::from(BLOCKSIZE_BYTES), data)
+            fs.write(file.clone(), &fh, NumBytes::from(BLOCKSIZE_BYTES), data)
                 .await
                 .unwrap();
         })
@@ -195,7 +195,7 @@ async fn small_write_beyond_end_of_small_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * BLOCKSIZE_BYTES as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -206,7 +206,7 @@ async fn small_write_beyond_end_of_small_file(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), fh, NumBytes::from(3 * BLOCKSIZE_BYTES), data)
+            fs.write(file.clone(), &fh, NumBytes::from(3 * BLOCKSIZE_BYTES), data)
                 .await
                 .unwrap();
         })
@@ -280,7 +280,7 @@ async fn small_write_to_middle_of_large_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -293,7 +293,7 @@ async fn small_write_to_middle_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -368,7 +368,7 @@ async fn small_write_beyond_end_of_large_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -381,7 +381,7 @@ async fn small_write_beyond_end_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(3 * NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -462,7 +462,7 @@ async fn large_write_to_empty_file(
     let data = vec![b'A'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -536,7 +536,7 @@ async fn large_write_to_middle_of_large_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 3 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -549,7 +549,7 @@ async fn large_write_to_middle_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -626,7 +626,7 @@ async fn large_write_beyond_end_of_large_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
 
@@ -639,7 +639,7 @@ async fn large_write_beyond_end_of_large_file(
         .count_ops(async |fs| {
             fs.write(
                 file.clone(),
-                fh,
+                &fh,
                 NumBytes::from(2 * NUM_BYTES_FOR_THREE_LEVEL_TREE),
                 data,
             )
@@ -728,7 +728,7 @@ async fn write_to_file_in_nested_dir(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -815,7 +815,7 @@ async fn small_write_to_file_in_deeply_nested_dir(
     let data = vec![b'A'; 1];
     let counts = fixture
         .count_ops(async |fs| {
-            fs.write(file.clone(), fh, NumBytes::from(0), data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), data)
                 .await
                 .unwrap();
         })
@@ -889,7 +889,7 @@ async fn multiple_writes_to_same_file(
                 .await
                 .unwrap();
             let initial_data = vec![b'X'; 2 * NUM_BYTES_FOR_THREE_LEVEL_TREE as usize];
-            fs.write(file.clone(), fh, NumBytes::from(0), initial_data)
+            fs.write(file.clone(), &fh, NumBytes::from(0), initial_data)
                 .await
                 .unwrap();
             (file, fh)
@@ -902,7 +902,7 @@ async fn multiple_writes_to_same_file(
                 let data = vec![b'A'; 1];
                 fs.write(
                     file.clone(),
-                    fh,
+                    &fh,
                     NumBytes::from(NUM_BYTES_FOR_THREE_LEVEL_TREE + i),
                     data,
                 )

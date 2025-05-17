@@ -35,7 +35,7 @@ async fn fgetattr_file_in_rootdir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.fgetattr(file_ino, file_fh).await.unwrap();
+            fs.fgetattr(file_ino, &file_fh).await.unwrap();
         })
         .await;
 
@@ -111,7 +111,7 @@ async fn getattr_file_in_nesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.fgetattr(file_ino, file_fh).await.unwrap();
+            fs.fgetattr(file_ino, &file_fh).await.unwrap();
         })
         .await;
 
@@ -195,7 +195,7 @@ async fn getattr_file_in_deeplynesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.fgetattr(file_ino, file_fh).await.unwrap();
+            fs.fgetattr(file_ino, &file_fh).await.unwrap();
         })
         .await;
 

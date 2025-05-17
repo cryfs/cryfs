@@ -39,7 +39,7 @@ async fn futimens_file_in_rootdir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.futimens(file.clone(), file_handle, Some(atime), Some(mtime))
+            fs.futimens(file.clone(), &file_handle, Some(atime), Some(mtime))
                 .await
                 .unwrap();
         })
@@ -125,7 +125,7 @@ async fn futimens_file_in_nesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.futimens(file.clone(), file_handle, Some(atime), Some(mtime))
+            fs.futimens(file.clone(), &file_handle, Some(atime), Some(mtime))
                 .await
                 .unwrap();
         })
@@ -215,7 +215,7 @@ async fn futimens_file_in_deeplynesteddir(
 
     let counts = fixture
         .count_ops(async |fs| {
-            fs.futimens(file.clone(), file_handle, Some(atime), Some(mtime))
+            fs.futimens(file.clone(), &file_handle, Some(atime), Some(mtime))
                 .await
                 .unwrap();
         })

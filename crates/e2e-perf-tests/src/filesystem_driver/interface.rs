@@ -6,8 +6,8 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FileHandle, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
-    NumBytes, PathComponent, PathComponentBuf, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
+    PathComponent, PathComponentBuf, Statfs, Uid,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use std::time::SystemTime;
@@ -34,6 +34,9 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
 
     /// A handle to a given file system node. Can be an InodeNumber (for the fuser backend) or just the path of the node (for the fuse-mt backend).
     type NodeHandle: Debug + Clone;
+
+    // A handle to an open file
+    type FileHandle;
 
     async fn init(&self) -> Result<(), FsError>;
 
@@ -63,7 +66,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         &self,
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,
-    ) -> FsResult<(Self::NodeHandle, FileHandle)>;
+    ) -> FsResult<(Self::NodeHandle, Self::FileHandle)>;
 
     async fn create_symlink(
         &self,
@@ -84,14 +87,18 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
 
     async fn getattr(&self, node: Option<Self::NodeHandle>) -> FsResult<NodeAttrs>;
 
-    async fn fgetattr(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<NodeAttrs>;
+    async fn fgetattr(
+        &self,
+        node: Self::NodeHandle,
+        open_file: &Self::FileHandle,
+    ) -> FsResult<NodeAttrs>;
 
     async fn chmod(&self, node: Option<Self::NodeHandle>, mode: Mode) -> FsResult<()>;
 
     async fn fchmod(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         mode: Mode,
     ) -> FsResult<()>;
 
@@ -105,7 +112,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn fchown(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()>;
@@ -115,7 +122,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn ftruncate(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         size: NumBytes,
     ) -> FsResult<()>;
 
@@ -129,16 +136,16 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn futimens(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()>;
 
     async fn readlink(&self, node: Self::NodeHandle) -> FsResult<AbsolutePathBuf>;
 
-    async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle>;
+    async fn open(&self, node: Self::NodeHandle) -> FsResult<Self::FileHandle>;
 
-    async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()>;
+    async fn release(&self, node: Self::NodeHandle, open_file: &Self::FileHandle) -> FsResult<()>;
 
     async fn statfs(&self) -> FsResult<Statfs>;
 
@@ -158,7 +165,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn read(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         offset: NumBytes,
         size: NumBytes,
     ) -> FsResult<Vec<u8>>;
@@ -166,17 +173,17 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
     async fn write(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
     ) -> FsResult<()>;
 
-    async fn flush(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()>;
+    async fn flush(&self, node: Self::NodeHandle, open_file: &Self::FileHandle) -> FsResult<()>;
 
     async fn fsync(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &Self::FileHandle,
         datasync: bool,
     ) -> FsResult<()>;
 }

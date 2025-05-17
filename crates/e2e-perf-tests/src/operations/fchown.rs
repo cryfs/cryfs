@@ -39,7 +39,7 @@ async fn fchown_file_in_rootdir(
         .count_ops(async |fs| {
             fs.fchown(
                 file.clone(),
-                file_handle,
+                &file_handle,
                 Some(Uid::from(1000)),
                 Some(Gid::from(1000)),
             )
@@ -130,7 +130,7 @@ async fn fchown_file_in_nesteddir(
         .count_ops(async |fs| {
             fs.fchown(
                 file.clone(),
-                file_handle,
+                &file_handle,
                 Some(Uid::from(1000)),
                 Some(Gid::from(1000)),
             )
@@ -225,7 +225,7 @@ async fn fchown_file_in_deeplynesteddir(
         .count_ops(async |fs| {
             fs.fchown(
                 file.clone(),
-                file_handle,
+                &file_handle,
                 Some(Uid::from(1000)),
                 Some(Gid::from(1000)),
             )

@@ -45,6 +45,8 @@ impl Debug for FusemtFilesystemDriver {
 impl FilesystemDriver for FusemtFilesystemDriver {
     type NodeHandle = AbsolutePathBuf;
 
+    type FileHandle = FileHandle;
+
     async fn new(
         device: AsyncDropGuard<
             CryDevice<
@@ -152,9 +154,9 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .map(|attr_response| attr_response.attrs)
     }
 
-    async fn fgetattr(&self, node: AbsolutePathBuf, open_file: FileHandle) -> FsResult<NodeAttrs> {
+    async fn fgetattr(&self, node: AbsolutePathBuf, open_file: &FileHandle) -> FsResult<NodeAttrs> {
         self.fs
-            .getattr(request_info(), &node, Some(open_file))
+            .getattr(request_info(), &node, Some(*open_file))
             .await
             .map(|attr_response| attr_response.attrs)
     }
@@ -167,11 +169,11 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn fchmod(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         mode: Mode,
     ) -> FsResult<()> {
         self.fs
-            .chmod(request_info(), &node, Some(open_file), mode)
+            .chmod(request_info(), &node, Some(*open_file), mode)
             .await
     }
 
@@ -188,12 +190,12 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn fchown(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
         self.fs
-            .chown(request_info(), &node, Some(open_file), uid, gid)
+            .chown(request_info(), &node, Some(*open_file), uid, gid)
             .await
     }
 
@@ -205,11 +207,11 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn ftruncate(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         size: NumBytes,
     ) -> FsResult<()> {
         self.fs
-            .truncate(request_info(), &node, Some(open_file), size)
+            .truncate(request_info(), &node, Some(*open_file), size)
             .await
     }
 
@@ -228,12 +230,12 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn futimens(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
         self.fs
-            .utimens(request_info(), &node, Some(open_file), atime, mtime)
+            .utimens(request_info(), &node, Some(*open_file), atime, mtime)
             .await
     }
 
@@ -247,9 +249,9 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         Ok(open_file.fh)
     }
 
-    async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+    async fn release(&self, node: Self::NodeHandle, open_file: &FileHandle) -> FsResult<()> {
         self.fs
-            .release(request_info(), &node, open_file, OpenFlags::Read, 0, false)
+            .release(request_info(), &node, *open_file, OpenFlags::Read, 0, false)
             .await
     }
 
@@ -283,7 +285,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn read(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         offset: NumBytes,
         size: NumBytes,
     ) -> FsResult<Vec<u8>> {
@@ -292,7 +294,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .read(
                 request_info(),
                 &node,
-                open_file,
+                *open_file,
                 offset,
                 size,
                 ReadCallbackImpl {
@@ -310,14 +312,14 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     async fn write(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         offset: NumBytes,
         data: Vec<u8>,
     ) -> FsResult<()> {
         let len = NumBytes::from(data.len() as u64);
         let written = self
             .fs
-            .write(request_info(), &node, open_file, offset, data, 0)
+            .write(request_info(), &node, *open_file, offset, data, 0)
             .await?;
         assert_eq!(written, len);
         Ok(())
@@ -339,18 +341,18 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         self.fs.rename(request_info(), &old_path, &new_path).await
     }
 
-    async fn flush(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
-        self.fs.flush(request_info(), &node, open_file, 0).await
+    async fn flush(&self, node: Self::NodeHandle, open_file: &FileHandle) -> FsResult<()> {
+        self.fs.flush(request_info(), &node, *open_file, 0).await
     }
 
     async fn fsync(
         &self,
         node: Self::NodeHandle,
-        open_file: FileHandle,
+        open_file: &FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
         self.fs
-            .fsync(request_info(), &node, open_file, datasync)
+            .fsync(request_info(), &node, *open_file, datasync)
             .await
     }
 }
