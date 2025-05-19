@@ -33,3 +33,13 @@ pretty_assertions.workspace = true
 tokio-util.workspace = true
 libc.workspace = true
 nix.workspace = true
+criterion = {workspace = true, features = ["async_tokio"]}
+crabtime.workspace = true
+
+[features]
+default = []
+benchmark = []  # Run benchmarks instead of counter unit tests
+
+[[bench]]
+name = "all_operations"
+harness = false

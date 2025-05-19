@@ -42,12 +42,12 @@ where
     FS: FilesystemDriver,
 {
     // filesystem needs to be dropped before _local_state_tempdir, so it's declared first in the struct
-    filesystem: SyncDrop<FS>,
+    pub filesystem: SyncDrop<FS>,
 
-    ll_blockstore: SyncDrop<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
-    hl_blockstore:
+    pub ll_blockstore: SyncDrop<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
+    pub hl_blockstore:
         SyncDrop<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
-    blobstore: SyncDrop<
+    pub blobstore: SyncDrop<
         AsyncDropArc<
             TrackingBlobStore<
                 BlobStoreOnBlocks<
@@ -192,6 +192,8 @@ where
             low_level: self.ll_blockstore.counts(),
         }
     }
+
+    // TODO Remove ops, ops_noflush, count_ops, and count_ops_noflush, now that we have the new `TestDriver` setup.
 
     pub async fn ops<R>(&self, operation: impl AsyncFnOnce(&FS) -> R) -> R {
         self.ops_noflush(async move |fs| {
