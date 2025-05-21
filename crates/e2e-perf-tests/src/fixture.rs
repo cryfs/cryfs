@@ -67,6 +67,7 @@ where
     pub async fn create_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
         let fixture = Self::create_uninitialized_filesystem(atime_behavior).await;
         fixture.filesystem.init().await.unwrap();
+        fixture.blobstore.clear_cache_slow().await.unwrap();
         fixture
     }
 
@@ -207,7 +208,6 @@ where
     }
 
     pub async fn count_ops(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
-        self.blobstore.clear_cache_slow().await.unwrap();
         self.count_ops_noflush(async move |fs| {
             let result = operation(fs).await;
             self.blobstore.clear_cache_slow().await.unwrap();
