@@ -72,19 +72,27 @@ fn perf_test(names: Vec<String>) {
         let name_str = format!("\"{}\"", name);
         crabtime::output! {
             fn bench_{{name}}(criterion: &mut criterion::Criterion) {
-                let atime_behavior = cryfs_rustfs::AtimeUpdateBehavior::Noatime; // TODO create different benches for different atime behaviors
                 let mut bench = criterion.benchmark_group({{name_str}});
-                {
-                    let test_driver = TestDriver::new(crate::rstest::MountingFuserFixture, atime_behavior);
+                use cryfs_rustfs::AtimeUpdateBehavior;
+                let atime_behaviors = [
+                    ("noatime", AtimeUpdateBehavior::Noatime),
+                    ("strictatime", AtimeUpdateBehavior::Strictatime),
+                    ("relatime", AtimeUpdateBehavior::Relatime),
+                    ("nodiratimerelatime", AtimeUpdateBehavior::NodiratimeRelatime),
+                    ("nodiratimestrictatime", AtimeUpdateBehavior::NodiratimeStrictatime),
+                ];
+                for (atime_name, atime_value) in atime_behaviors {
+                    // fuser
+                    let test_driver = TestDriver::new(crate::rstest::MountingFuserFixture, atime_value);
                     let test = {{name}}(test_driver);
-                    bench.bench_function("fuser", move |b| {
+                    bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
                         test.run_benchmark(b);
                     });
-                }
-                {
-                    let test_driver = TestDriver::new(crate::rstest::MountingFusemtFixture, atime_behavior);
+
+                    // fusemt
+                    let test_driver = TestDriver::new(crate::rstest::MountingFusemtFixture, atime_value);
                     let test = {{name}}(test_driver);
-                    bench.bench_function("fusemt", move |b| {
+                    bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
                         test.run_benchmark(b);
                     });
                 }
