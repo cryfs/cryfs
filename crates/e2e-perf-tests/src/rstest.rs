@@ -114,8 +114,7 @@ pub enum FixtureType {
     Fusemt,
 }
 
-// TODO FixtureFactory seems used for benchmarks as well, not just rstest. We should probably put it somewhere else?
-//      Or maybe the whole rstest setup doesn't make sense anymore since we kinda want the same duplication for benchmarks as well? Maybe custom write the duplication logic?
+// TODO Can we remove FixtureFactory? Not sure what purpose it adds on top of FilesystemFixture / FilesystemDriver
 
 pub trait FixtureFactory: 'static {
     type Driver: FilesystemDriver;
@@ -125,12 +124,16 @@ pub trait FixtureFactory: 'static {
     async fn create_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver>;
+    ) -> FilesystemFixture<Self::Driver> {
+        FilesystemFixture::create_filesystem(atime_behavior).await
+    }
 
     async fn create_uninitialized_filesystem(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver>;
+    ) -> FilesystemFixture<Self::Driver> {
+        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
+    }
 }
 
 pub struct HLFixture;
@@ -139,19 +142,6 @@ impl FixtureFactory for HLFixture {
 
     fn fixture_type(&self) -> FixtureType {
         FixtureType::Fusemt
-    }
-
-    async fn create_filesystem(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_filesystem(atime_behavior).await
-    }
-    async fn create_uninitialized_filesystem(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
     }
 }
 
@@ -162,18 +152,6 @@ impl FixtureFactory for LLFixtureWithInodeCache {
     fn fixture_type(&self) -> FixtureType {
         FixtureType::FuserWithInodeCache
     }
-    async fn create_filesystem(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_filesystem(atime_behavior).await
-    }
-    async fn create_uninitialized_filesystem(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
-    }
 }
 
 pub struct LLFixtureWithoutInodeCache;
@@ -182,18 +160,6 @@ impl FixtureFactory for LLFixtureWithoutInodeCache {
 
     fn fixture_type(&self) -> FixtureType {
         FixtureType::FuserWithoutInodeCache
-    }
-    async fn create_filesystem(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_filesystem(atime_behavior).await
-    }
-    async fn create_uninitialized_filesystem(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
     }
 }
 
