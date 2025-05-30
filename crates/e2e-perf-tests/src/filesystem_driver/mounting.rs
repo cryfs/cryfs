@@ -47,7 +47,7 @@ trait MountingBackend {
         mountdir: &Path,
     ) -> FsResult<RunningFilesystem<Self::Session>>;
 }
-struct FuserBackend;
+pub struct FuserBackend;
 impl MountingBackend for FuserBackend {
     type Session = fuser::BackgroundSession;
     async fn spawn_mount(
@@ -74,7 +74,7 @@ impl MountingBackend for FuserBackend {
             })
     }
 }
-struct FusemtBackend;
+pub struct FusemtBackend;
 impl MountingBackend for FusemtBackend {
     type Session = fuse_mt_fuser::BackgroundSession;
     async fn spawn_mount(
@@ -159,11 +159,12 @@ where
     B: MountingBackend,
 {
     fn real_path_for_node(&self, node: &Option<AbsolutePathBuf>) -> PathBuf {
-        let mut path = self.mountdir.path().to_owned();
+        // Casting to AbsolutePathBuf first because std::PathBuf::join can't append absolute paths to absolute paths, it replaces the path.
+        let mut path = AbsolutePathBuf::try_from(self.mountdir.path().to_owned()).unwrap();
         if let Some(node) = node {
-            path = path.join(node);
+            path = path.push_all(node);
         }
-        path
+        PathBuf::from(path.as_str())
     }
 
     fn real_path_and_node_from_parent_and_name(

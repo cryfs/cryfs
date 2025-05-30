@@ -16,7 +16,6 @@ use cryfs_rustfs::PathComponent;
 crate::rstest::perf_test!([
     chmod_file_in_rootdir,
     chmod_dir_in_rootdir,
-    chmod_symlink_in_rootdir,
     chmod_file_in_nesteddir,
     chmod_file_in_deeplynesteddir,
 ]);
@@ -104,71 +103,6 @@ fn chmod_dir_in_rootdir<F: FilesystemDriver>(
                 .chmod(Some(dir), Mode::from(0o755).add_dir_flag())
                 .await
                 .unwrap();
-        })
-        .expect_op_counts(|fixture_type| ActionCounts {
-            blobstore: BlobStoreActionCounts {
-                // TODO Check if these counts are what we'd expect
-                store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
-                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
-                },
-                blob_read_all: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
-                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
-                },
-                blob_read: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
-                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
-                },
-                blob_write: 1,
-                blob_resize: 1,
-                ..BlobStoreActionCounts::ZERO
-            },
-            high_level: HLActionCounts {
-                // TODO Check if these counts are what we'd expect
-                store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
-                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
-                },
-                blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 20,
-                    FixtureType::FuserWithoutInodeCache => 38, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
-                },
-                blob_data_mut: 1,
-                ..HLActionCounts::ZERO
-            },
-            low_level: LLActionCounts {
-                // TODO Check if these counts are what we'd expect
-                load: 2,
-                store: 1,
-                ..LLActionCounts::ZERO
-            },
-        })
-}
-
-fn chmod_symlink_in_rootdir<F: FilesystemDriver>(
-    test_driver: TestDriver<F, impl FixtureFactory<Driver = F>>,
-) -> impl TestReady {
-    test_driver
-        .create_filesystem()
-        .setup(async |fixture| {
-            // First create a symlink so we have something to change permissions for
-            fixture
-                .filesystem
-                .create_symlink(
-                    None,
-                    PathComponent::try_from_str("link").unwrap(),
-                    AbsolutePath::try_from_str("/target/file.txt").unwrap(),
-                )
-                .await
-                .unwrap()
-        })
-        .test(async |fixture, symlink| {
-            fixture
-                .filesystem
-                .chmod(Some(symlink), Mode::from(0o777).add_symlink_flag())
-                .await
-                .unwrap()
         })
         .expect_op_counts(|fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {

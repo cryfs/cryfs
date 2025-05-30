@@ -3,8 +3,8 @@ use rstest_reuse::{self, *};
 
 use crate::{
     filesystem_driver::{
-        FilesystemDriver, FusemtFilesystemDriver, FuserFilesystemDriver, WithInodeCache,
-        WithoutInodeCache,
+        FilesystemDriver, FusemtFilesystemDriver, FusemtMountingFilesystemDriver,
+        FuserFilesystemDriver, FuserMountingFilesystemDriver, WithInodeCache, WithoutInodeCache,
     },
     fixture::FilesystemFixture,
 };
@@ -72,14 +72,22 @@ fn perf_test(names: Vec<String>) {
         let name_str = format!("\"{}\"", name);
         crabtime::output! {
             fn bench_{{name}}(criterion: &mut criterion::Criterion) {
-                // TODO Benchmark should use Fuse{r,mt}MountingFilesystemDriver, and probably should also use a real on-disk blockstore
-                let fixture_factory = crate::rstest::LLFixtureWithInodeCache; // TODO create different benches for different fixture types
                 let atime_behavior = cryfs_rustfs::AtimeUpdateBehavior::Noatime; // TODO create different benches for different atime behaviors
-                let test_driver = TestDriver::new(fixture_factory, atime_behavior);
-                let test = {{name}}(test_driver);
-                criterion.bench_function({ { name_str } }, move |b| {
-                    test.run_benchmark(b);
-                });
+                let mut bench = criterion.benchmark_group({{name_str}});
+                {
+                    let test_driver = TestDriver::new(crate::rstest::MountingFuserFixture, atime_behavior);
+                    let test = {{name}}(test_driver);
+                    bench.bench_function("fuser", move |b| {
+                        test.run_benchmark(b);
+                    });
+                }
+                {
+                    let test_driver = TestDriver::new(crate::rstest::MountingFusemtFixture, atime_behavior);
+                    let test = {{name}}(test_driver);
+                    bench.bench_function("fusemt", move |b| {
+                        test.run_benchmark(b);
+                    });
+                }
             }
         }
     }
@@ -160,6 +168,26 @@ impl FixtureFactory for LLFixtureWithoutInodeCache {
 
     fn fixture_type(&self) -> FixtureType {
         FixtureType::FuserWithoutInodeCache
+    }
+}
+
+pub struct MountingFuserFixture;
+impl FixtureFactory for MountingFuserFixture {
+    type Driver = FuserMountingFilesystemDriver;
+
+    fn fixture_type(&self) -> FixtureType {
+        // Note: This fixture type here doesn't actually matter since we don't use [MountingFuserFixture] for operation counting, only for benchmarks. And only operation counting needs the fixture type.
+        FixtureType::FuserWithInodeCache
+    }
+}
+
+pub struct MountingFusemtFixture;
+impl FixtureFactory for MountingFusemtFixture {
+    type Driver = FusemtMountingFilesystemDriver;
+
+    fn fixture_type(&self) -> FixtureType {
+        // Note: This fixture type here doesn't actually matter since we don't use [MountingFusemtFixture] for operation counting, only for benchmarks. And only operation counting needs the fixture type.
+        FixtureType::Fusemt
     }
 }
 
