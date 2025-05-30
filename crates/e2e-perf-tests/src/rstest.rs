@@ -81,6 +81,7 @@ fn perf_test(names: Vec<String>) {
                     ("nodiratimerelatime", AtimeUpdateBehavior::NodiratimeRelatime),
                     ("nodiratimestrictatime", AtimeUpdateBehavior::NodiratimeStrictatime),
                 ];
+                // TODO Benchmarks should use an actual OnDiskBlockStore backed filesystem, not an in-memory one.
                 for (atime_name, atime_value) in atime_behaviors {
                     // fuser
                     let test_driver = TestDriver::new(crate::rstest::MountingFuserFixture, atime_value);
