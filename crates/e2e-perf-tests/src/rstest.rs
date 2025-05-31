@@ -52,7 +52,7 @@ fn perf_test(names: Vec<String>) {
                     fn {fixture_name}_{atime_name}() {{
                         let fixture_factory = {fixture_value};
                         let atime_behavior = {atime_value};
-                        let test_driver = TestDriver::new(cryfs_blockstore::InMemoryBlockStore::new, fixture_factory, atime_behavior);
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::InMemoryBlockStore::new, fixture_factory, atime_behavior);
                         let test = {name}(test_driver);
                         test.assert_op_counts();
                     }}
@@ -85,14 +85,14 @@ fn perf_test(names: Vec<String>) {
                 ];
                 for (atime_name, atime_value) in atime_behaviors {
                     // fuser
-                    let test_driver = TestDriver::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFuserFixture, atime_value);
+                    let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFuserFixture, atime_value);
                     let test = {{name}}(test_driver);
                     bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
                         test.run_benchmark(b);
                     });
 
                     // fusemt
-                    let test_driver = TestDriver::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
+                    let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
                     let test = {{name}}(test_driver);
                     bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
                         test.run_benchmark(b);

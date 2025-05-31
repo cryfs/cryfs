@@ -12,7 +12,23 @@ use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[must_use]
-pub struct TestDriver<B, CreateBlockstoreFn, FS, FF>
+pub trait TestDriver {
+    type B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync;
+    type FS: FilesystemDriver;
+
+    #[must_use]
+    fn create_filesystem(
+        self,
+    ) -> TestDriverWithFs<Self::B, Self::FS, impl AsyncFn() -> FilesystemFixture<Self::B, Self::FS>>;
+
+    #[must_use]
+    fn create_uninitialized_filesystem(
+        self,
+    ) -> TestDriverWithFs<Self::B, Self::FS, impl AsyncFn() -> FilesystemFixture<Self::B, Self::FS>>;
+}
+
+#[must_use]
+pub struct TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
 where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
@@ -24,7 +40,7 @@ where
     atime_behavior: AtimeUpdateBehavior,
 }
 
-impl<B, CreateBlockstoreFn, FS, FF> TestDriver<B, CreateBlockstoreFn, FS, FF>
+impl<B, CreateBlockstoreFn, FS, FF> TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
 where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
@@ -43,9 +59,20 @@ where
             atime_behavior,
         }
     }
+}
+
+impl<B, CreateBlockstoreFn, FS, FF> TestDriver for TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
+where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
+    FS: FilesystemDriver,
+    FF: FixtureFactory<Driver = FS>,
+{
+    type B = B;
+    type FS = FS;
 
     #[must_use]
-    pub fn create_filesystem(
+    fn create_filesystem(
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
@@ -60,7 +87,7 @@ where
     }
 
     #[must_use]
-    pub fn create_uninitialized_filesystem(
+    fn create_uninitialized_filesystem(
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();

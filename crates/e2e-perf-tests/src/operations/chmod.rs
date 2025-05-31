@@ -26,12 +26,7 @@ crate::rstest::perf_test!([
 
 // TODO Shorten test function definition, e.g. hide generic parameters, e.g. pass in a TestDriver trait?
 
-fn chmod_file_in_rootdir<
-    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
-    F: FilesystemDriver,
->(
-    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
-) -> impl TestReady {
+fn chmod_file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -93,12 +88,7 @@ fn chmod_file_in_rootdir<
         })
 }
 
-fn chmod_dir_in_rootdir<
-    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
-    F: FilesystemDriver,
->(
-    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
-) -> impl TestReady {
+fn chmod_dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -157,12 +147,7 @@ fn chmod_dir_in_rootdir<
         })
 }
 
-fn chmod_file_in_nesteddir<
-    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
-    F: FilesystemDriver,
->(
-    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
-) -> impl TestReady {
+fn chmod_file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -240,12 +225,7 @@ fn chmod_file_in_nesteddir<
         })
 }
 
-fn chmod_file_in_deeplynesteddir<
-    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
-    F: FilesystemDriver,
->(
-    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
-) -> impl TestReady {
+fn chmod_file_in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
