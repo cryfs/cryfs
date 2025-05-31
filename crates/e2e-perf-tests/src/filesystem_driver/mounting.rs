@@ -278,7 +278,8 @@ where
         let (real_path, node) = self.real_path_and_node_from_parent_and_name(parent, name);
 
         let fh = OpenOptions::new()
-            .create_new(true)
+            // TODO `create_new` would be better, but for some weird reason that fails with eIO on my notebook (but desktop is fine)
+            .create(true)
             .write(true)
             .open(&real_path)
             .await

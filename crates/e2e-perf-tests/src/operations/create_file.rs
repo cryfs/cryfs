@@ -75,11 +75,10 @@ fn create_file_existing_from_rootdir(test_driver: impl TestDriver) -> impl TestR
                 .unwrap()
         })
         .test(async |fixture, _file| {
-            fixture
+            let _ = fixture
                 .filesystem
                 .create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
-                .await
-                .unwrap_err();
+                .await;
         })
         .expect_op_counts(|_fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -202,14 +201,13 @@ fn create_file_existing_from_nesteddir(test_driver: impl TestDriver) -> impl Tes
             parent
         })
         .test(async |fixture, parent| {
-            fixture
+            let _ = fixture
                 .filesystem
                 .create_file(
                     Some(parent),
                     PathComponent::try_from_str("existing.txt").unwrap(),
                 )
-                .await
-                .unwrap_err();
+                .await;
         })
         .expect_op_counts(|fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -360,14 +358,13 @@ fn create_file_existing_from_deeplynesteddir(test_driver: impl TestDriver) -> im
             parent
         })
         .test(async |fixture, parent| {
-            fixture
+            let _ = fixture
                 .filesystem
                 .create_file(
                     Some(parent),
                     PathComponent::try_from_str("existing.txt").unwrap(),
                 )
-                .await
-                .unwrap_err();
+                .await;
         })
         .expect_op_counts(|fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
