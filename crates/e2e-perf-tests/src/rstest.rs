@@ -101,7 +101,7 @@ fn perf_test(names: Vec<String>) {
             }
         }
     }
-    crabtime::output_str!("criterion::criterion_group!(benches_chmod");
+    crabtime::output_str!("criterion::criterion_group!(benches");
     for name in &names {
         crabtime::output_str!(", bench_{name}");
     }
