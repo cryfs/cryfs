@@ -7,7 +7,9 @@ pub use interface::{
 
 mod implementations;
 #[cfg(any(test, feature = "testutils"))]
-pub use implementations::{ActionCounts, MockBlockStore, SharedBlockStore, TrackingBlockStore};
+pub use implementations::{
+    ActionCounts, MockBlockStore, SharedBlockStore, TempDirBlockStore, TrackingBlockStore,
+};
 pub use implementations::{
     AllowIntegrityViolations, ClientId, CompressingBlockStore, DynBlockStore, EncryptedBlockStore,
     InMemoryBlockStore, IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig,

@@ -36,3 +36,8 @@ pub use shared::SharedBlockStore;
 mod tracking;
 #[cfg(any(test, feature = "testutils"))]
 pub use tracking::{ActionCounts, TrackingBlockStore};
+
+#[cfg(any(test, feature = "testutils"))]
+mod tempdir;
+#[cfg(any(test, feature = "testutils"))]
+pub use tempdir::TempDirBlockStore;

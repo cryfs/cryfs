@@ -26,6 +26,7 @@ lockable.workspace = true
 log.workspace = true
 lzzzz.workspace = true
 mockall = { workspace = true, optional = true }
+tempdir = { workspace = true, optional = true }
 rand.workspace = true
 static_assertions.workspace = true
 sysinfo.workspace = true
@@ -52,4 +53,4 @@ pretty_assertions.workspace = true
 
 
 [features]
-testutils = ["mockall", "cryfs-utils/testutils"]
+testutils = ["mockall", "tempdir", "cryfs-utils/testutils"]

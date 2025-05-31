@@ -26,7 +26,7 @@ pub use high_level::{
 #[cfg(any(test, feature = "testutils"))]
 pub use low_level::{
     ActionCounts as LLActionCounts, MockBlockStore, SharedBlockStore as LLSharedBlockStore,
-    TrackingBlockStore as LLTrackingBlockStore,
+    TempDirBlockStore, TrackingBlockStore as LLTrackingBlockStore,
 };
 
 #[cfg(any(test, feature = "testutils"))]
