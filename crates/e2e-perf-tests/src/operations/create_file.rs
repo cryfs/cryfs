@@ -22,7 +22,9 @@ async fn notexisting_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let counts = fixture
         .count_ops(async |fs| {
@@ -72,7 +74,9 @@ async fn existing_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create it so that it already exists
     fixture
@@ -134,7 +138,9 @@ async fn notexisting_from_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested dir
     let parent = fixture
@@ -212,7 +218,9 @@ async fn existing_from_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested dir
     let parent = fixture
@@ -310,7 +318,9 @@ async fn notexisting_from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested dir
     let parent = fixture
@@ -396,7 +406,9 @@ async fn existing_from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested dir
     let parent = fixture

@@ -25,7 +25,9 @@ async fn rename_within_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file to rename
     fixture
@@ -87,7 +89,9 @@ async fn rename_from_rootdir_to_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file to rename and a destination directory
     let dest_dir = fixture
@@ -152,7 +156,9 @@ async fn rename_from_nesteddir_to_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a source directory with a file in it
     let source_dir = fixture
@@ -225,7 +231,9 @@ async fn rename_between_nested_dirs(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create source and destination directories
     let (source_dir, dest_dir) = fixture
@@ -341,7 +349,9 @@ async fn rename_within_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a nested directory
     let nested_dir = fixture
@@ -414,7 +424,9 @@ async fn rename_between_deeply_nested_dirs(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create deeply nested source and destination directories
     let (source_dir, dest_dir) = fixture
@@ -532,7 +544,9 @@ async fn rename_to_existing_target(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create source and destination files
     fixture
@@ -599,7 +613,9 @@ async fn rename_directory(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a directory to rename
     fixture
@@ -657,7 +673,9 @@ async fn rename_directory(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn rename_symlink(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a symlink to rename
     fixture
@@ -722,7 +740,9 @@ async fn rename_from_nested_to_deeply_nested(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a simple nested directory and a deeply nested directory
     let (nested_dir, deeply_nested_dir) = fixture
@@ -836,7 +856,9 @@ async fn rename_from_deeply_nested_to_nested(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a simple nested directory and a deeply nested directory
     let (nested_dir, deeply_nested_dir) = fixture

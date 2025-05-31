@@ -24,7 +24,9 @@ async fn existing_empty_dir_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create an empty directory to remove
     fixture
@@ -83,7 +85,9 @@ async fn not_existing_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let counts = fixture
         .count_ops(async |fs| {
@@ -126,7 +130,9 @@ async fn non_empty_directory_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a directory with a file in it
     fixture
@@ -182,7 +188,9 @@ async fn empty_dir_from_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested directory structure
     let parent = fixture
@@ -272,7 +280,9 @@ async fn non_empty_dir_from_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a nested directory with a non-empty subdirectory
     let parent = fixture
@@ -367,7 +377,9 @@ async fn not_existing_from_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a parent directory
     let parent = fixture
@@ -441,7 +453,9 @@ async fn empty_dir_from_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a deeply nested directory structure with an empty dir to remove
     let parent = fixture
@@ -534,7 +548,9 @@ async fn non_empty_dir_from_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a deeply nested directory with a non-empty directory
     let deeply_nested = fixture
@@ -632,7 +648,9 @@ async fn not_existing_from_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a deeply nested directory
     let deeply_nested = fixture
@@ -714,7 +732,9 @@ async fn try_rmdir_file_in_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file that we'll try to rmdir (which should fail)
     fixture
@@ -766,7 +786,9 @@ async fn try_rmdir_file_in_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a nested directory structure with a file
     let parent = fixture
@@ -853,7 +875,9 @@ async fn try_rmdir_file_in_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a deeply nested directory structure with a file
     let parent = fixture
@@ -943,7 +967,9 @@ async fn try_rmdir_symlink_in_root_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a symlink in the root directory that we'll try to rmdir (which should fail)
     fixture
@@ -999,7 +1025,9 @@ async fn try_rmdir_symlink_in_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a nested directory structure with a symlink
     let parent = fixture
@@ -1087,7 +1115,9 @@ async fn try_rmdir_symlink_in_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a deeply nested directory structure with a symlink
     let parent = fixture
@@ -1178,7 +1208,9 @@ async fn rmdir_large_directory(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a large directory
     let large_dir = fixture

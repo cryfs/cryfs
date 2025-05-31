@@ -7,8 +7,8 @@ use tempdir::TempDir;
 use cryfs_blobstore::{BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     BLOCKID_LEN, ClientId, DynBlockStore, HLActionCounts, HLSharedBlockStore, HLTrackingBlockStore,
-    InMemoryBlockStore, IntegrityConfig, LLActionCounts, LLSharedBlockStore, LLTrackingBlockStore,
-    LockingBlockStore,
+    InMemoryBlockStore, IntegrityConfig, LLActionCounts, LLBlockStore, LLSharedBlockStore,
+    LLTrackingBlockStore, LockingBlockStore, OptimizedBlockStoreWriter,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
@@ -19,7 +19,7 @@ use cryfs_filesystem::{
 };
 use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::{AtimeUpdateBehavior, Gid, RequestInfo, Uid};
-use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use crate::filesystem_driver::FilesystemDriver;
 
@@ -37,14 +37,15 @@ pub struct ActionCounts {
     pub low_level: LLActionCounts,
 }
 
-pub struct FilesystemFixture<FS>
+pub struct FilesystemFixture<B, FS>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
 {
     // filesystem needs to be dropped before _local_state_tempdir, so it's declared first in the struct
     pub filesystem: SyncDrop<FS>,
 
-    pub ll_blockstore: SyncDrop<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>>,
+    pub ll_blockstore: SyncDrop<LLSharedBlockStore<LLTrackingBlockStore<B>>>,
     pub hl_blockstore:
         SyncDrop<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
     pub blobstore: SyncDrop<
@@ -60,19 +61,26 @@ where
     _local_state_tempdir: TempDir,
 }
 
-impl<FS> FilesystemFixture<FS>
+impl<B, FS> FilesystemFixture<B, FS>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
 {
-    pub async fn create_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
-        let fixture = Self::create_uninitialized_filesystem(atime_behavior).await;
+    pub async fn create_filesystem(
+        blockstore: AsyncDropGuard<B>,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> Self {
+        let fixture = Self::create_uninitialized_filesystem(blockstore, atime_behavior).await;
         fixture.filesystem.init().await.unwrap();
         fixture.blobstore.clear_cache_slow().await.unwrap();
         fixture
     }
 
-    pub async fn create_uninitialized_filesystem(atime_behavior: AtimeUpdateBehavior) -> Self {
-        let ll_blockstore = Self::make_ll_blockstore().await;
+    pub async fn create_uninitialized_filesystem(
+        blockstore: AsyncDropGuard<B>,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> Self {
+        let ll_blockstore = Self::make_ll_blockstore(blockstore).await;
         let (local_state_tempdir, hl_blockstore) = Self::make_hl_blockstore(&ll_blockstore).await;
         let blobstore = Self::make_blobstore(&hl_blockstore).await;
 
@@ -90,18 +98,16 @@ where
         }
     }
 
-    async fn make_ll_blockstore()
-    -> AsyncDropGuard<LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>> {
-        let blockstore = InMemoryBlockStore::new();
+    async fn make_ll_blockstore(
+        blockstore: AsyncDropGuard<B>,
+    ) -> AsyncDropGuard<LLSharedBlockStore<LLTrackingBlockStore<B>>> {
         let blockstore = LLTrackingBlockStore::new(blockstore);
         let blockstore = LLSharedBlockStore::new(blockstore);
         blockstore
     }
 
     async fn make_hl_blockstore(
-        ll_blockstore: &AsyncDropGuard<
-            LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
-        >,
+        ll_blockstore: &AsyncDropGuard<LLSharedBlockStore<LLTrackingBlockStore<B>>>,
     ) -> (
         TempDir,
         AsyncDropGuard<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
@@ -232,8 +238,9 @@ where
     }
 }
 
-impl<FS> Drop for FilesystemFixture<FS>
+impl<B, FS> Drop for FilesystemFixture<B, FS>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
 {
     fn drop(&mut self) {

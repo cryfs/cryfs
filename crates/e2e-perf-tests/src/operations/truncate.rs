@@ -24,7 +24,9 @@ async fn truncate_grow_empty_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file so we have something to truncate
     let file = fixture
@@ -103,7 +105,9 @@ async fn truncate_grow_empty_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file so we have something to truncate
     let file = fixture
@@ -185,7 +189,9 @@ async fn truncate_shrink_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file with data
     let file = fixture
@@ -280,7 +286,9 @@ async fn truncate_shrink_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file with data
     let file = fixture
@@ -370,7 +378,9 @@ async fn truncate_grow_nonempty_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file with some data
     let file = fixture
@@ -455,7 +465,9 @@ async fn truncate_grow_nonempty_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file with some data
     let file = fixture
@@ -543,7 +555,9 @@ async fn truncate_file_in_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file so we have something to truncate
     let file = fixture
@@ -623,7 +637,9 @@ async fn truncate_file_in_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a nested directory and a file in it
     let file = fixture
@@ -713,7 +729,9 @@ async fn truncate_file_in_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a deeply nested directory
     let nested_dir = fixture
@@ -808,7 +826,9 @@ async fn truncate_dir_fails(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let dir = fixture
         .ops(async |fs| {
@@ -874,7 +894,9 @@ async fn truncate_symlink_fails(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let symlink = fixture
         .ops(async |fs| {

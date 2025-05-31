@@ -1,33 +1,44 @@
-use std::cell::RefCell;
-
-use cryfs_blobstore::BlobStore as _;
-use cryfs_rustfs::AtimeUpdateBehavior;
 use pretty_assertions::assert_eq;
+use std::cell::RefCell;
 
 use crate::{
     filesystem_driver::FilesystemDriver,
     fixture::{ActionCounts, FilesystemFixture},
     rstest::{FixtureFactory, FixtureType},
 };
+use cryfs_blobstore::BlobStore as _;
+use cryfs_blockstore::{LLBlockStore, OptimizedBlockStoreWriter};
+use cryfs_rustfs::AtimeUpdateBehavior;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[must_use]
-pub struct TestDriver<FS, FF>
+pub struct TestDriver<B, CreateBlockstoreFn, FS, FF>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
     FS: FilesystemDriver,
     FF: FixtureFactory<Driver = FS>,
 {
+    blockstore: CreateBlockstoreFn,
     fixture_factory: FF,
     atime_behavior: AtimeUpdateBehavior,
 }
 
-impl<FS, FF> TestDriver<FS, FF>
+impl<B, CreateBlockstoreFn, FS, FF> TestDriver<B, CreateBlockstoreFn, FS, FF>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
     FS: FilesystemDriver,
     FF: FixtureFactory<Driver = FS>,
 {
     #[must_use]
-    pub fn new(fixture_factory: FF, atime_behavior: AtimeUpdateBehavior) -> Self {
+    pub fn new(
+        blockstore: CreateBlockstoreFn,
+        fixture_factory: FF,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> Self {
         Self {
+            blockstore,
             fixture_factory,
             atime_behavior,
         }
@@ -36,12 +47,12 @@ where
     #[must_use]
     pub fn create_filesystem(
         self,
-    ) -> TestDriverWithFs<FS, impl AsyncFn() -> FilesystemFixture<FS>> {
+    ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
         TestDriverWithFs {
             filesystem: async move || {
                 self.fixture_factory
-                    .create_filesystem(self.atime_behavior)
+                    .create_filesystem((self.blockstore)(), self.atime_behavior)
                     .await
             },
             fixture_type,
@@ -51,12 +62,12 @@ where
     #[must_use]
     pub fn create_uninitialized_filesystem(
         self,
-    ) -> TestDriverWithFs<FS, impl AsyncFn() -> FilesystemFixture<FS>> {
+    ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
         TestDriverWithFs {
             filesystem: async move || {
                 self.fixture_factory
-                    .create_uninitialized_filesystem(self.atime_behavior)
+                    .create_uninitialized_filesystem((self.blockstore)(), self.atime_behavior)
                     .await
             },
             fixture_type,
@@ -65,32 +76,35 @@ where
 }
 
 #[must_use]
-pub struct TestDriverWithFs<FS, CreateFsFn>
+pub struct TestDriverWithFs<B, FS, CreateFsFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
 {
     filesystem: CreateFsFn,
     fixture_type: FixtureType,
 }
 
-impl<FS, CreateFsFn> TestDriverWithFs<FS, CreateFsFn>
+impl<B, FS, CreateFsFn> TestDriverWithFs<B, FS, CreateFsFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
 {
     #[must_use]
     pub fn setup<SetupFn, SetupResult>(
         self,
         setup_fn: SetupFn,
     ) -> TestDriverWithFsAndSetupOp<
+        B,
         FS,
         CreateFsFn,
-        impl AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
+        impl AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
         SetupResult,
     >
     where
-        SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
+        SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     {
         TestDriverWithFsAndSetupOp {
             fixture_type: self.fixture_type,
@@ -107,9 +121,9 @@ where
     pub fn setup_noflush<SetupFn, SetupResult>(
         self,
         setup_fn: SetupFn,
-    ) -> TestDriverWithFsAndSetupOp<FS, CreateFsFn, SetupFn, SetupResult>
+    ) -> TestDriverWithFsAndSetupOp<B, FS, CreateFsFn, SetupFn, SetupResult>
     where
-        SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
+        SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     {
         TestDriverWithFsAndSetupOp {
             fixture_type: self.fixture_type,
@@ -120,37 +134,40 @@ where
 }
 
 #[must_use]
-pub struct TestDriverWithFsAndSetupOp<FS, CreateFsFn, SetupFn, SetupResult>
+pub struct TestDriverWithFsAndSetupOp<B, FS, CreateFsFn, SetupFn, SetupResult>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
 {
     fixture_type: FixtureType,
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
 }
 
-impl<FS, CreateFsFn, SetupFn, SetupResult>
-    TestDriverWithFsAndSetupOp<FS, CreateFsFn, SetupFn, SetupResult>
+impl<B, FS, CreateFsFn, SetupFn, SetupResult>
+    TestDriverWithFsAndSetupOp<B, FS, CreateFsFn, SetupFn, SetupResult>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
 {
     #[must_use]
     pub fn test<TestFn>(
         self,
         test_fn: TestFn,
     ) -> TestDriverWithFsAndSetupOpAndTestOp<
+        B,
         FS,
         CreateFsFn,
         SetupFn,
         SetupResult,
-        impl AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+        impl AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
     >
     where
-        TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+        TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
     {
         self.test_noflush(async move |fs, setup_result| {
             let test_result = (test_fn)(fs, setup_result).await;
@@ -163,9 +180,9 @@ where
     pub fn test_noflush<TestFn>(
         self,
         test_fn: TestFn,
-    ) -> TestDriverWithFsAndSetupOpAndTestOp<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+    ) -> TestDriverWithFsAndSetupOpAndTestOp<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
     where
-        TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+        TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
     {
         TestDriverWithFsAndSetupOpAndTestOp {
             fixture_type: self.fixture_type,
@@ -177,12 +194,13 @@ where
 }
 
 #[must_use]
-pub struct TestDriverWithFsAndSetupOpAndTestOp<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+pub struct TestDriverWithFsAndSetupOpAndTestOp<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
-    TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
+    TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
     fixture_type: FixtureType,
     filesystem: CreateFsFn,
@@ -190,13 +208,14 @@ where
     test_fn: TestFn,
 }
 
-impl<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
-    TestDriverWithFsAndSetupOpAndTestOp<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+impl<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+    TestDriverWithFsAndSetupOpAndTestOp<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
-    TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
+    TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
     #[must_use]
     pub fn expect_op_counts(
@@ -222,12 +241,13 @@ pub trait TestReady {
 }
 
 #[must_use]
-pub struct TestReadyImpl<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+pub struct TestReadyImpl<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
-    TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
+    TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
@@ -235,13 +255,14 @@ where
     expected_op_counts: ActionCounts,
 }
 
-impl<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
-    TestReadyImpl<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+impl<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+    TestReadyImpl<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
-    TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
+    TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
     async fn _execute_test(&self) -> ActionCounts {
         let mut filesystem = (self.filesystem)().await;
@@ -269,13 +290,14 @@ where
     }
 }
 
-impl<FS, CreateFsFn, SetupFn, SetupResult, TestFn> TestReady
-    for TestReadyImpl<FS, CreateFsFn, SetupFn, SetupResult, TestFn>
+impl<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn> TestReady
+    for TestReadyImpl<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
 where
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
-    CreateFsFn: AsyncFn() -> FilesystemFixture<FS>,
-    SetupFn: AsyncFn(&mut FilesystemFixture<FS>) -> SetupResult,
-    TestFn: AsyncFn(&mut FilesystemFixture<FS>, SetupResult),
+    CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
+    SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
+    TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
     fn assert_op_counts(&self) {
         let expected = self.expected_op_counts;
@@ -293,7 +315,7 @@ where
                 RefCell::new(Some((filesystem, setup_result)))
             })
         };
-        let test_fn = |input: &mut RefCell<Option<(FilesystemFixture<FS>, SetupResult)>>| {
+        let test_fn = |input: &mut RefCell<Option<(FilesystemFixture<B, FS>, SetupResult)>>| {
             let (mut filesystem, setup_result) = input.replace(None).expect(
                 // The RefCell is a hack to make this FnMut (required by the criterion API) but we actually have a FnOnce.
                 "Tried to run benchmark function multiple times without re-running setup",

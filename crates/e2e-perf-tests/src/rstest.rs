@@ -1,4 +1,6 @@
+use cryfs_blockstore::{InMemoryBlockStore, LLBlockStore, OptimizedBlockStoreWriter};
 use cryfs_rustfs::AtimeUpdateBehavior;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use rstest_reuse::{self, *};
 
 use crate::{
@@ -50,7 +52,7 @@ fn perf_test(names: Vec<String>) {
                     fn {fixture_name}_{atime_name}() {{
                         let fixture_factory = {fixture_value};
                         let atime_behavior = {atime_value};
-                        let test_driver = TestDriver::new(fixture_factory, atime_behavior);
+                        let test_driver = TestDriver::new(cryfs_blockstore::InMemoryBlockStore::new, fixture_factory, atime_behavior);
                         let test = {name}(test_driver);
                         test.assert_op_counts();
                     }}
@@ -84,14 +86,22 @@ fn perf_test(names: Vec<String>) {
                 // TODO Benchmarks should use an actual OnDiskBlockStore backed filesystem, not an in-memory one.
                 for (atime_name, atime_value) in atime_behaviors {
                     // fuser
-                    let test_driver = TestDriver::new(crate::rstest::MountingFuserFixture, atime_value);
+                    // TODO use OnDiskBlockStore
+                    // let tempdir = tempdir::TempDir::new("cryfs-e2e-perf-test").unwrap();
+                    // let blockstore = || cryfs_blockstore::OnDiskBlockStore::new(tempdir.path().to_owned());
+                    let blockstore = || cryfs_blockstore::InMemoryBlockStore::new();
+                    let test_driver = TestDriver::new(blockstore, crate::rstest::MountingFuserFixture, atime_value);
                     let test = {{name}}(test_driver);
                     bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
                         test.run_benchmark(b);
                     });
 
                     // fusemt
-                    let test_driver = TestDriver::new(crate::rstest::MountingFusemtFixture, atime_value);
+                    // TODO use OnDiskBlockStore
+                    // let tempdir = tempdir::TempDir::new("cryfs-e2e-perf-test").unwrap();
+                    // let blockstore = || cryfs_blockstore::OnDiskBlockStore::new(tempdir.path().to_owned());
+                    let blockstore = || cryfs_blockstore::InMemoryBlockStore::new();
+                    let test_driver = TestDriver::new(blockstore, crate::rstest::MountingFusemtFixture, atime_value);
                     let test = {{name}}(test_driver);
                     bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
                         test.run_benchmark(b);
@@ -138,18 +148,44 @@ pub trait FixtureFactory: 'static {
 
     fn fixture_type(&self) -> FixtureType;
 
-    async fn create_filesystem(
+    async fn create_filesystem<B>(
         &self,
+        blockstore: AsyncDropGuard<B>,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_filesystem(atime_behavior).await
+    ) -> FilesystemFixture<B, Self::Driver>
+    where
+        B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    {
+        FilesystemFixture::create_filesystem(blockstore, atime_behavior).await
     }
 
-    async fn create_uninitialized_filesystem(
+    async fn create_uninitialized_filesystem<B>(
+        &self,
+        blockstore: AsyncDropGuard<B>,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<B, Self::Driver>
+    where
+        B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    {
+        FilesystemFixture::create_uninitialized_filesystem(blockstore, atime_behavior).await
+    }
+
+    // TODO Remove
+    async fn create_filesystem_deprecated(
         &self,
         atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<Self::Driver> {
-        FilesystemFixture::create_uninitialized_filesystem(atime_behavior).await
+    ) -> FilesystemFixture<InMemoryBlockStore, Self::Driver> {
+        self.create_filesystem(InMemoryBlockStore::new(), atime_behavior)
+            .await
+    }
+
+    // TODO Remove
+    async fn create_uninitialized_filesystem_deprecated(
+        &self,
+        atime_behavior: AtimeUpdateBehavior,
+    ) -> FilesystemFixture<InMemoryBlockStore, Self::Driver> {
+        self.create_uninitialized_filesystem(InMemoryBlockStore::new(), atime_behavior)
+            .await
     }
 }
 

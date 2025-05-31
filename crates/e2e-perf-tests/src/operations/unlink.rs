@@ -24,7 +24,9 @@ async fn file_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a file to unlink
     fixture
@@ -83,7 +85,9 @@ async fn symlink_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a symlink to unlink
     fixture
@@ -143,7 +147,9 @@ async fn file_not_existing(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let counts = fixture
         .count_ops(async |fs| {
@@ -189,7 +195,9 @@ async fn file_from_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested directory and file to unlink
     let parent = fixture
@@ -279,7 +287,9 @@ async fn symlink_from_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested directory and symlink to unlink
     let parent = fixture
@@ -367,7 +377,9 @@ async fn file_from_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a deeply nested directory structure with a file
     let parent = fixture
@@ -460,7 +472,9 @@ async fn symlink_from_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a deeply nested directory structure with a symlink
     let parent = fixture
@@ -551,7 +565,9 @@ async fn try_unlink_directory_in_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a directory that we'll try to unlink (which should fail)
     fixture
@@ -607,7 +623,9 @@ async fn try_unlink_directory_in_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a nested directory structure with a subdirectory
     let parent = fixture
@@ -691,7 +709,9 @@ async fn try_unlink_directory_in_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a deeply nested directory structure with a subdirectory
     let parent = fixture
@@ -778,7 +798,9 @@ async fn unlink_large_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a large file to unlink
     fixture
@@ -846,7 +868,9 @@ async fn unlink_large_symlink(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a very long target path which is stored across multiple nodes
     let long_target =

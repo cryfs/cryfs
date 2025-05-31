@@ -17,7 +17,7 @@ use cryfs_rustfs::AtimeUpdateBehavior;
 #[tokio::test(flavor = "multi_thread")]
 async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
-        .create_uninitialized_filesystem(atime_behavior)
+        .create_uninitialized_filesystem_deprecated(atime_behavior)
         .await;
 
     let mut counts = fixture.totals();

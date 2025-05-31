@@ -1,3 +1,7 @@
+use cryfs_blockstore::LLBlockStore;
+use cryfs_blockstore::OptimizedBlockStoreWriter;
+use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::AsyncDropGuard;
 use pretty_assertions::assert_eq;
 
 use crate::filesystem_driver::FilesystemDriver;
@@ -20,8 +24,13 @@ crate::rstest::perf_test!([
     chmod_file_in_deeplynesteddir,
 ]);
 
-fn chmod_file_in_rootdir<F: FilesystemDriver>(
-    test_driver: TestDriver<F, impl FixtureFactory<Driver = F>>,
+// TODO Shorten test function definition, e.g. hide generic parameters, e.g. pass in a TestDriver trait?
+
+fn chmod_file_in_rootdir<
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    F: FilesystemDriver,
+>(
+    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
 ) -> impl TestReady {
     test_driver
         .create_filesystem()
@@ -84,8 +93,11 @@ fn chmod_file_in_rootdir<F: FilesystemDriver>(
         })
 }
 
-fn chmod_dir_in_rootdir<F: FilesystemDriver>(
-    test_driver: TestDriver<F, impl FixtureFactory<Driver = F>>,
+fn chmod_dir_in_rootdir<
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    F: FilesystemDriver,
+>(
+    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
 ) -> impl TestReady {
     test_driver
         .create_filesystem()
@@ -145,8 +157,11 @@ fn chmod_dir_in_rootdir<F: FilesystemDriver>(
         })
 }
 
-fn chmod_file_in_nesteddir<F: FilesystemDriver>(
-    test_driver: TestDriver<F, impl FixtureFactory<Driver = F>>,
+fn chmod_file_in_nesteddir<
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    F: FilesystemDriver,
+>(
+    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
 ) -> impl TestReady {
     test_driver
         .create_filesystem()
@@ -225,8 +240,11 @@ fn chmod_file_in_nesteddir<F: FilesystemDriver>(
         })
 }
 
-fn chmod_file_in_deeplynesteddir<F: FilesystemDriver>(
-    test_driver: TestDriver<F, impl FixtureFactory<Driver = F>>,
+fn chmod_file_in_deeplynesteddir<
+    B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
+    F: FilesystemDriver,
+>(
+    test_driver: TestDriver<B, impl Fn() -> AsyncDropGuard<B>, F, impl FixtureFactory<Driver = F>>,
 ) -> impl TestReady {
     test_driver
         .create_filesystem()

@@ -27,7 +27,9 @@ async fn small_read_from_empty_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open an empty file to read from
     let (file, mut fh) = fixture
@@ -111,7 +113,9 @@ async fn small_read_from_middle_of_small_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write some initial data
     let (file, mut fh) = fixture
@@ -203,7 +207,9 @@ async fn small_read_beyond_end_of_small_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write some initial data
     let (file, mut fh) = fixture
@@ -302,7 +308,9 @@ async fn small_read_from_middle_of_large_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write a large amount of data
     let (file, mut fh) = fixture
@@ -398,7 +406,9 @@ async fn small_read_from_beyond_end_of_large_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write a large amount of data
     let (file, mut fh) = fixture
@@ -494,7 +504,9 @@ async fn large_read_from_empty_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open an empty file to read from
     let (file, mut fh) = fixture
@@ -583,7 +595,9 @@ async fn large_read_from_middle_of_large_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write a large amount of data
     let (file, mut fh) = fixture
@@ -680,7 +694,9 @@ async fn large_read_from_beyond_end_of_large_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write a large amount of data
     let (file, mut fh) = fixture
@@ -777,7 +793,9 @@ async fn read_from_file_in_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a nested directory and file with data
     let (file, mut fh) = fixture
@@ -881,7 +899,9 @@ async fn read_from_file_in_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create a deeply nested directory and file with data
     let (file, mut fh) = fixture
@@ -985,7 +1005,9 @@ async fn multiple_reads_from_same_file(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create and open a file, write a large amount of data
     let (file, mut fh) = fixture

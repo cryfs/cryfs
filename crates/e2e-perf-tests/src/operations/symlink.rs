@@ -23,7 +23,9 @@ async fn notexisting_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
     let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
     let counts = fixture
@@ -79,7 +81,9 @@ async fn existing_from_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
     let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
     // First create it so that it already exists
@@ -151,7 +155,9 @@ async fn notexisting_from_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
     let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
     // First create the nested dir
@@ -231,7 +237,9 @@ async fn existing_from_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
     let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
     // First create the nested dir
@@ -333,7 +341,9 @@ async fn notexisting_from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
     let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
     // First create the nested dir
@@ -421,7 +431,9 @@ async fn existing_from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
     let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
     // First create the nested dir
@@ -523,7 +535,9 @@ async fn existing_from_deeplynesteddir(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a very long target path that spans multiple blocks
     let long_target =

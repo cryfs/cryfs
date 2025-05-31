@@ -20,7 +20,9 @@ use cryfs_rustfs::PathComponent;
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn from_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let symlink = fixture
         .ops(async |fs| {
@@ -94,7 +96,9 @@ async fn from_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: Atim
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn from_nesteddir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the nested dir and a symlink in it
     let symlink = fixture
@@ -184,7 +188,9 @@ async fn from_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // First create the deeply nested dir
     let parent = fixture
@@ -276,7 +282,9 @@ async fn from_deeplynesteddir(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     // Create a very long target path which is stored across multiple nodes
     let long_target =

@@ -19,7 +19,9 @@ async fn empty_filesystem(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     let counts = fixture
         .count_ops(async |fs| {
@@ -55,7 +57,9 @@ async fn empty_filesystem(
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn with_content(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory.create_filesystem(atime_behavior).await;
+    let fixture = fixture_factory
+        .create_filesystem_deprecated(atime_behavior)
+        .await;
 
     fixture
         .ops(async |fs| {
