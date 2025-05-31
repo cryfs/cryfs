@@ -10,16 +10,19 @@ use crate::rstest::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 
-crate::rstest::perf_test!([
-    create_file_notexisting_from_rootdir,
-    create_file_existing_from_rootdir,
-    create_file_notexisting_from_nesteddir,
-    create_file_existing_from_nesteddir,
-    create_file_notexisting_from_deeplynesteddir,
-    create_file_existing_from_deeplynesteddir,
-]);
+crate::rstest::perf_test!(
+    create_file,
+    [
+        notexisting_from_rootdir,
+        existing_from_rootdir,
+        notexisting_from_nesteddir,
+        existing_from_nesteddir,
+        notexisting_from_deeplynesteddir,
+        existing_from_deeplynesteddir,
+    ]
+);
 
-fn create_file_notexisting_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn notexisting_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |_fixture| {
@@ -63,7 +66,7 @@ fn create_file_notexisting_from_rootdir(test_driver: impl TestDriver) -> impl Te
         })
 }
 
-fn create_file_existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -113,7 +116,7 @@ fn create_file_existing_from_rootdir(test_driver: impl TestDriver) -> impl TestR
         })
 }
 
-fn create_file_notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -180,7 +183,7 @@ fn create_file_notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl 
         })
 }
 
-fn create_file_existing_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn existing_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -263,7 +266,7 @@ fn create_file_existing_from_nesteddir(test_driver: impl TestDriver) -> impl Tes
         })
 }
 
-fn create_file_notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -337,7 +340,7 @@ fn create_file_notexisting_from_deeplynesteddir(test_driver: impl TestDriver) ->
         })
 }
 
-fn create_file_existing_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn existing_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {

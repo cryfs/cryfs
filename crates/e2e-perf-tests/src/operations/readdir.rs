@@ -20,10 +20,7 @@ use cryfs_rustfs::PathComponent;
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn readdir_empty_rootdir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn empty_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -63,7 +60,7 @@ async fn readdir_empty_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn readdir_rootdir_with_entries(
+async fn rootdir_with_entries(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -131,10 +128,7 @@ async fn readdir_rootdir_with_entries(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn readdir_nesteddir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn nesteddir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -236,7 +230,7 @@ async fn readdir_nesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn readdir_deeplynesteddir(
+async fn deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -344,7 +338,7 @@ async fn readdir_deeplynesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn readdir_large_directory(
+async fn large_directory(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {

@@ -20,7 +20,7 @@ use cryfs_rustfs::PathComponent;
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_grow_empty_file_small(
+async fn grow_empty_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -98,7 +98,7 @@ async fn ftruncate_grow_empty_file_small(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_grow_empty_file_large(
+async fn grow_empty_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -181,7 +181,7 @@ async fn ftruncate_grow_empty_file_large(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_shrink_file_small(
+async fn shrink_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -273,7 +273,7 @@ async fn ftruncate_shrink_file_small(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_shrink_file_large(
+async fn shrink_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -363,7 +363,7 @@ async fn ftruncate_shrink_file_large(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_grow_nonempty_file_small(
+async fn grow_nonempty_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -447,7 +447,7 @@ async fn ftruncate_grow_nonempty_file_small(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_grow_nonempty_file_large(
+async fn grow_nonempty_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -536,7 +536,7 @@ async fn ftruncate_grow_nonempty_file_large(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_file_in_rootdir(
+async fn file_in_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -615,7 +615,7 @@ async fn ftruncate_file_in_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_file_in_nesteddir(
+async fn file_in_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -708,7 +708,7 @@ async fn ftruncate_file_in_nesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn ftruncate_file_in_deeplynesteddir(
+async fn file_in_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {

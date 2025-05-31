@@ -20,7 +20,7 @@ use cryfs_rustfs::PathComponent;
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_grow_empty_file_small(
+async fn grow_empty_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -101,7 +101,7 @@ async fn truncate_grow_empty_file_small(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_grow_empty_file_large(
+async fn grow_empty_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -185,7 +185,7 @@ async fn truncate_grow_empty_file_large(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_shrink_file_small(
+async fn shrink_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -282,7 +282,7 @@ async fn truncate_shrink_file_small(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_shrink_file_large(
+async fn shrink_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -374,7 +374,7 @@ async fn truncate_shrink_file_large(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_grow_nonempty_file_small(
+async fn grow_nonempty_file_small(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -461,7 +461,7 @@ async fn truncate_grow_nonempty_file_small(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_grow_nonempty_file_large(
+async fn grow_nonempty_file_large(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -551,7 +551,7 @@ async fn truncate_grow_nonempty_file_large(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_file_in_rootdir(
+async fn file_in_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -633,7 +633,7 @@ async fn truncate_file_in_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_file_in_nesteddir(
+async fn file_in_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -725,7 +725,7 @@ async fn truncate_file_in_nesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_file_in_deeplynesteddir(
+async fn file_in_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -822,10 +822,7 @@ async fn truncate_file_in_deeplynesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_dir_fails(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn dir_fails(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -890,10 +887,7 @@ async fn truncate_dir_fails(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn truncate_symlink_fails(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn symlink_fails(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;

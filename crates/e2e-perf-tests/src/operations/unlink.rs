@@ -794,10 +794,7 @@ async fn try_unlink_directory_in_deeply_nested_dir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn unlink_large_file(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn large_file(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -864,10 +861,7 @@ async fn unlink_large_file(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn unlink_large_symlink(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn large_symlink(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;

@@ -10,16 +10,19 @@ use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::Mode;
 use cryfs_rustfs::PathComponent;
 
-crate::rstest::perf_test!([
-    chmod_file_in_rootdir,
-    chmod_dir_in_rootdir,
-    chmod_file_in_nesteddir,
-    chmod_file_in_deeplynesteddir,
-]);
+crate::rstest::perf_test!(
+    chmod,
+    [
+        file_in_rootdir,
+        dir_in_rootdir,
+        file_in_nesteddir,
+        file_in_deeplynesteddir,
+    ]
+);
 
 // TODO Shorten test function definition, e.g. hide generic parameters, e.g. pass in a TestDriver trait?
 
-fn chmod_file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -81,7 +84,7 @@ fn chmod_file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chmod_dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -140,7 +143,7 @@ fn chmod_dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chmod_file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -218,7 +221,7 @@ fn chmod_file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chmod_file_in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn file_in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {

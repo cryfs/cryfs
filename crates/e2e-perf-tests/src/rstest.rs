@@ -15,7 +15,7 @@ use crate::{
 
 #[cfg(not(feature = "benchmark"))]
 #[crabtime::function]
-fn perf_test(names: Vec<String>) {
+fn perf_test(group: String, names: Vec<String>) {
     let fixtures = [
         ("hl", "crate::rstest::HLFixture"),
         ("ll_cache", "crate::rstest::LLFixtureWithInodeCache"),
@@ -69,9 +69,9 @@ fn perf_test(names: Vec<String>) {
 
 #[cfg(feature = "benchmark")]
 #[crabtime::function]
-fn perf_test(names: Vec<String>) {
+fn perf_test(group: String, names: Vec<String>) {
     for name in &names {
-        let name_str = format!("\"{}\"", name);
+        let name_str = format!("\"{group}::{name}\"");
         crabtime::output! {
             fn bench_{{name}}(criterion: &mut criterion::Criterion) {
                 let mut bench = criterion.benchmark_group({{name_str}});

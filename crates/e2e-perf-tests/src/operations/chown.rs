@@ -11,15 +11,18 @@ use cryfs_rustfs::Gid;
 use cryfs_rustfs::PathComponent;
 use cryfs_rustfs::Uid;
 
-crate::rstest::perf_test!([
-    chown_file_in_rootdir,
-    chown_dir_in_rootdir,
-    chown_symlink_in_rootdir,
-    chown_file_in_nesteddir,
-    chown_file_in_deeplynesteddir,
-]);
+crate::rstest::perf_test!(
+    chown,
+    [
+        file_in_rootdir,
+        dir_in_rootdir,
+        symlink_in_rootdir,
+        file_in_nesteddir,
+        file_in_deeplynesteddir,
+    ]
+);
 
-fn chown_file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -82,7 +85,7 @@ fn chown_file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chown_dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -141,7 +144,7 @@ fn chown_dir_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chown_symlink_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+fn symlink_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -204,7 +207,7 @@ fn chown_symlink_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chown_file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {
@@ -283,7 +286,7 @@ fn chown_file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-fn chown_file_in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+fn file_in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
         .setup(async |fixture| {

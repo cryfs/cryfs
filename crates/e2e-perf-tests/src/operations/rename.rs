@@ -21,10 +21,7 @@ use cryfs_rustfs::PathComponent;
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_within_rootdir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn within_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -85,7 +82,7 @@ async fn rename_within_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_from_rootdir_to_nesteddir(
+async fn from_rootdir_to_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -152,7 +149,7 @@ async fn rename_from_rootdir_to_nesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_from_nesteddir_to_rootdir(
+async fn from_nesteddir_to_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -227,7 +224,7 @@ async fn rename_from_nesteddir_to_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_between_nested_dirs(
+async fn between_nested_dirs(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -345,7 +342,7 @@ async fn rename_between_nested_dirs(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_within_nested_dir(
+async fn within_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -420,7 +417,7 @@ async fn rename_within_nested_dir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_between_deeply_nested_dirs(
+async fn between_deeply_nested_dirs(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -540,7 +537,7 @@ async fn rename_between_deeply_nested_dirs(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_to_existing_target(
+async fn to_existing_target(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -609,10 +606,7 @@ async fn rename_to_existing_target(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_directory(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
+async fn directory(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -672,7 +666,7 @@ async fn rename_directory(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_symlink(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
+async fn symlink(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
     let fixture = fixture_factory
         .create_filesystem_deprecated(atime_behavior)
         .await;
@@ -736,7 +730,7 @@ async fn rename_symlink(fixture_factory: impl FixtureFactory, atime_behavior: At
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_from_nested_to_deeply_nested(
+async fn from_nested_to_deeply_nested(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -852,7 +846,7 @@ async fn rename_from_nested_to_deeply_nested(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn rename_from_deeply_nested_to_nested(
+async fn from_deeply_nested_to_nested(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {

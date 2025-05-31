@@ -19,7 +19,7 @@ use cryfs_rustfs::PathComponent;
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn fchmod_file_in_rootdir(
+async fn file_in_rootdir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -100,7 +100,7 @@ async fn fchmod_file_in_rootdir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn fchmod_file_in_nesteddir(
+async fn file_in_nesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
@@ -195,7 +195,7 @@ async fn fchmod_file_in_nesteddir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn fchmod_file_in_deeplynesteddir(
+async fn file_in_deeplynesteddir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
 ) {
