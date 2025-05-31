@@ -7,7 +7,4 @@ fn main() {
     );
 }
 #[cfg(feature = "benchmark")]
-criterion_main!(
-    dummy_benches,
-    cryfs_e2e_perf_tests::operations::chmod::benches_chmod
-);
+criterion_main!(cryfs_e2e_perf_tests::operations::chmod::benches_chmod);

@@ -83,25 +83,16 @@ fn perf_test(names: Vec<String>) {
                     ("nodiratimerelatime", AtimeUpdateBehavior::NodiratimeRelatime),
                     ("nodiratimestrictatime", AtimeUpdateBehavior::NodiratimeStrictatime),
                 ];
-                // TODO Benchmarks should use an actual OnDiskBlockStore backed filesystem, not an in-memory one.
                 for (atime_name, atime_value) in atime_behaviors {
                     // fuser
-                    // TODO use OnDiskBlockStore
-                    // let tempdir = tempdir::TempDir::new("cryfs-e2e-perf-test").unwrap();
-                    // let blockstore = || cryfs_blockstore::OnDiskBlockStore::new(tempdir.path().to_owned());
-                    let blockstore = || cryfs_blockstore::InMemoryBlockStore::new();
-                    let test_driver = TestDriver::new(blockstore, crate::rstest::MountingFuserFixture, atime_value);
+                    let test_driver = TestDriver::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFuserFixture, atime_value);
                     let test = {{name}}(test_driver);
                     bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
                         test.run_benchmark(b);
                     });
 
                     // fusemt
-                    // TODO use OnDiskBlockStore
-                    // let tempdir = tempdir::TempDir::new("cryfs-e2e-perf-test").unwrap();
-                    // let blockstore = || cryfs_blockstore::OnDiskBlockStore::new(tempdir.path().to_owned());
-                    let blockstore = || cryfs_blockstore::InMemoryBlockStore::new();
-                    let test_driver = TestDriver::new(blockstore, crate::rstest::MountingFusemtFixture, atime_value);
+                    let test_driver = TestDriver::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
                     let test = {{name}}(test_driver);
                     bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
                         test.run_benchmark(b);
