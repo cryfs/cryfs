@@ -10,4 +10,5 @@ fn main() {
 criterion_main!(
     cryfs_e2e_perf_tests::operations::chmod::benches,
     cryfs_e2e_perf_tests::operations::chown::benches,
+    cryfs_e2e_perf_tests::operations::create_file::benches,
 );
