@@ -1118,6 +1118,7 @@ where
         reply: ReplyCreate,
     ) {
         // TODO Assert that dir/symlink flags aren't set
+        // TODO How to handle O_TRUNC, O_EXCL flags? Will fuse do it for us?
         let req = RequestInfo::from(req);
         let parent_ino = InodeNumber::from(parent_ino);
         let name = name.to_owned();
