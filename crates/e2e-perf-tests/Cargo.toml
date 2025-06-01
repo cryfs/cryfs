@@ -1,45 +1,45 @@
 [package]
-name = "cryfs-e2e-perf-tests"
 authors.workspace = true
 edition.workspace = true
-rust-version.workspace = true
 homepage.workspace = true
-repository.workspace = true
 license.workspace = true
+name = "cryfs-e2e-perf-tests"
 readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-cryfs-filesystem = { path = "../cryfs-filesystem" }
-cryfs-rustfs = { path = "../rustfs", default-features=false, features = ["fuser", "fuse_mt"] }
-cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
-cryfs-utils = { path = "../utils" }
-cryfs-cli-utils = { path = "../cli-utils" }
-cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
-cryfs-version = { path = "../cryfs-version" }
-cryfs-runner = { path = "../cryfs-runner" }
-async-trait.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 byte-unit.workspace = true
-tempdir.workspace = true
-tokio.workspace = true
-fuser.workspace = true
-fuse_mt_fuser.workspace = true
-futures.workspace = true
-rstest.workspace = true
-rstest_reuse.workspace = true
+crabtime.workspace = true
+criterion = {workspace = true, features = ["async_tokio"]}
+cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
+cryfs-blockstore = {path = "../blockstore", features = ["testutils"]}
+cryfs-cli-utils = {path = "../cli-utils"}
+cryfs-filesystem = {path = "../cryfs-filesystem"}
+cryfs-runner = {path = "../cryfs-runner"}
+cryfs-rustfs = {path = "../rustfs", default-features = false, features = ["fuser", "fuse_mt"]}
+cryfs-utils = {path = "../utils"}
+cryfs-version = {path = "../cryfs-version"}
 derive_more.workspace = true
-pretty_assertions.workspace = true
-tokio-util.workspace = true
+fuse_mt_fuser.workspace = true
+fuser.workspace = true
+futures.workspace = true
 libc.workspace = true
 nix.workspace = true
-criterion = {workspace = true, features = ["async_tokio"]}
-crabtime.workspace = true
+pretty_assertions.workspace = true
+rstest.workspace = true
+rstest_reuse.workspace = true
+tempdir.workspace = true
+tokio-util.workspace = true
+tokio.workspace = true
 
 [features]
+benchmark = [] # Run benchmarks instead of counter unit tests
 default = []
-benchmark = []  # Run benchmarks instead of counter unit tests
 
 [[bench]]
-name = "all_operations"
 harness = false
+name = "all_operations"

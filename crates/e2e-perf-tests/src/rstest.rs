@@ -15,7 +15,11 @@ use crate::{
 
 #[cfg(not(feature = "benchmark"))]
 #[crabtime::function]
-fn perf_test(group: String, names: Vec<String>) {
+fn perf_test(_group: String, names: Vec<String>) {
+    // TODO Deduplicate normalize_identifier
+    fn normalize_identifier(name: String) -> String {
+        name.replace(|c: char| !c.is_alphanumeric(), "_")
+    }
     let fixtures = [
         ("hl", "crate::rstest::HLFixture"),
         ("ll_cache", "crate::rstest::LLFixtureWithInodeCache"),
@@ -38,9 +42,10 @@ fn perf_test(group: String, names: Vec<String>) {
         ),
     ];
     for name in names {
+        let name_str = normalize_identifier(name.clone());
         crabtime::output_str!(
             r#"
-            mod test_{name} {{
+            mod test_{name_str} {{
                 use super::*;
         "#
         );
@@ -73,11 +78,16 @@ fn perf_test(group: String, names: Vec<String>) {
 #[cfg(feature = "benchmark")]
 #[crabtime::function]
 fn perf_test(group: String, names: Vec<String>) {
+    // TODO Deduplicate normalize_identifier
+    fn normalize_identifier(name: String) -> String {
+        name.replace(|c: char| !c.is_alphanumeric(), "_")
+    }
     for name in &names {
-        let name_str = format!("\"{group}::{name}\"");
+        let name_str = normalize_identifier(name.to_owned());
+        let name_str_with_group = format!("\"{group}::{name_str}\"");
         crabtime::output! {
-            fn bench_{{name}}(criterion: &mut criterion::Criterion) {
-                let mut bench = criterion.benchmark_group({{name_str}});
+            fn bench_{{name_str}}(criterion: &mut criterion::Criterion) {
+                let mut bench = criterion.benchmark_group({{name_str_with_group}});
                 bench.sample_size(10);  // TODO Using a small sample size for now to speed up testing. Remove this later for real benchmarking!
                 use cryfs_rustfs::AtimeUpdateBehavior;
                 let atime_behaviors = [
@@ -105,9 +115,10 @@ fn perf_test(group: String, names: Vec<String>) {
             }
         }
     }
-    crabtime::output_str!("criterion::criterion_group!(benches");
-    for name in &names {
-        crabtime::output_str!(", bench_{name}");
+    crabtime::output_str!("criterion::criterion_group!(benches_{group}");
+    for name in names {
+        let name_str = normalize_identifier(name);
+        crabtime::output_str!(", bench_{name_str}");
     }
     crabtime::output_str!(");");
 }
