@@ -67,6 +67,9 @@ fn perf_test(group: String, names: Vec<String>) {
     }
 }
 
+// TODO Is it better for perf_test in benchmark mode to just output one bench function that contains all of the benchmarks? Currently, we create a separate function for each test.
+// TODO Test if macro_rules has better compile times here than crabtime.
+
 #[cfg(feature = "benchmark")]
 #[crabtime::function]
 fn perf_test(group: String, names: Vec<String>) {

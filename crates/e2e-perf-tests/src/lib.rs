@@ -7,4 +7,7 @@ pub mod operations;
 pub mod rstest;
 mod test_driver;
 
+// TODO Write README
+// TODO Improve behavior when "benchmarking" feature is on/off, e.g. fix unused code warnings.
+
 cryfs_version::assert_cargo_version_equals_git_version!();
