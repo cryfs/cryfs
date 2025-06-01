@@ -182,6 +182,30 @@ where
     SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
 {
     #[must_use]
+    pub fn setup_noflush<SetupFn2, SetupResult2>(
+        self,
+        setup_fn_2: SetupFn2,
+    ) -> TestDriverWithFsAndSetupOp<
+        B,
+        FS,
+        CreateFsFn,
+        impl AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult2,
+        SetupResult2,
+    >
+    where
+        SetupFn2: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult) -> SetupResult2,
+    {
+        TestDriverWithFsAndSetupOp {
+            fixture_type: self.fixture_type,
+            filesystem: self.filesystem,
+            setup_fn: async move |fixture| {
+                let setup_result = (self.setup_fn)(fixture).await;
+                setup_fn_2(fixture, setup_result).await
+            },
+        }
+    }
+
+    #[must_use]
     pub fn test<TestFn>(
         self,
         test_fn: TestFn,

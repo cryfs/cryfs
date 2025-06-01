@@ -78,6 +78,7 @@ fn perf_test(group: String, names: Vec<String>) {
         crabtime::output! {
             fn bench_{{name}}(criterion: &mut criterion::Criterion) {
                 let mut bench = criterion.benchmark_group({{name_str}});
+                bench.sample_size(10);  // TODO Using a small sample size for now to speed up testing. Remove this later for real benchmarking!
                 use cryfs_rustfs::AtimeUpdateBehavior;
                 let atime_behaviors = [
                     ("noatime", AtimeUpdateBehavior::Noatime),

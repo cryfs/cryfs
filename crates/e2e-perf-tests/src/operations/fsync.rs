@@ -1310,7 +1310,7 @@ async fn after_write_to_file_in_nested_dir(
 #[apply(all_atime_behaviors)]
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
-async fn after_small_write_to_file_in_deeply_nested_dir(
+async fn after_write_to_file_in_deeply_nested_dir(
     fixture_factory: impl FixtureFactory,
     atime_behavior: AtimeUpdateBehavior,
     #[values(true, false)] datasync: bool,
