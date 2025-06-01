@@ -20,8 +20,6 @@ crate::rstest::perf_test!(
     ]
 );
 
-// TODO Shorten test function definition, e.g. hide generic parameters, e.g. pass in a TestDriver trait?
-
 fn file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()

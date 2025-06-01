@@ -9,5 +9,7 @@ mod test_driver;
 
 // TODO Write README
 // TODO Improve behavior when "benchmarking" feature is on/off, e.g. fix unused code warnings.
+// TODO Fix all warnings
+// TODO Ensure CI is running tests and building the benchmarks (but probably doesn't need to run it)
 
 cryfs_version::assert_cargo_version_equals_git_version!();

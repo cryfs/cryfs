@@ -12,4 +12,6 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::chown::benches,
     cryfs_e2e_perf_tests::operations::create_file::benches,
     cryfs_e2e_perf_tests::operations::fchmod::benches,
+    cryfs_e2e_perf_tests::operations::fchown::benches,
+    cryfs_e2e_perf_tests::operations::fgetattr::benches,
 );
