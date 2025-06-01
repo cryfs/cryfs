@@ -63,6 +63,11 @@ impl Mode {
         self
     }
 
+    pub const fn remove_file_flag(mut self) -> Self {
+        self.0 &= !S_IFREG.0;
+        self
+    }
+
     pub const fn add_dir_flag(mut self) -> Self {
         self.0 |= S_IFDIR.0;
         self

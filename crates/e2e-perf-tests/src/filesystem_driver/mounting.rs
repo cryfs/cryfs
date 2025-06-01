@@ -403,8 +403,9 @@ where
     ) -> FsResult<()> {
         let raw_fd = open_file.as_raw_fd();
         asyncify(move || {
-            let mode = u32::from(mode);
-            nix::sys::stat::fchmod(raw_fd, nix::sys::stat::Mode::from_bits(mode).unwrap())
+            let mode = u32::from(mode.remove_file_flag());
+            let mode = nix::sys::stat::Mode::from_bits(mode).unwrap();
+            nix::sys::stat::fchmod(raw_fd, mode)
                 .map_err(|error| std::io::Error::from_raw_os_error(error as i32))
         })
         .await
