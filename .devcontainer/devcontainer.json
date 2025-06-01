@@ -18,7 +18,8 @@
 				"terminal.integrated.fontFamily": "'Hack Nerd Font Mono', monospace",
 			},
 			"extensions": [
-				"fill-labs.dependi"
+				"fill-labs.dependi",
+				"jjk.jjk"
 			]
 		}
 	}
