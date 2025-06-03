@@ -19,4 +19,5 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::fsync::benches_fsync_fullsync,
     cryfs_e2e_perf_tests::operations::ftruncate::benches_ftruncate,
     cryfs_e2e_perf_tests::operations::futimens::benches_futimens,
+    cryfs_e2e_perf_tests::operations::getattr::benches_getattr,
 );
