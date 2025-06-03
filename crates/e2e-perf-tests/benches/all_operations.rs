@@ -21,4 +21,5 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::futimens::benches_futimens,
     cryfs_e2e_perf_tests::operations::getattr::benches_getattr,
     cryfs_e2e_perf_tests::operations::init::benches_init,
+    cryfs_e2e_perf_tests::operations::lookup::benches_lookup,
 );

@@ -15,16 +15,18 @@ use crate::{
 
 #[cfg(not(feature = "benchmark"))]
 #[crabtime::function]
-fn perf_test(_group: String, names: Vec<String>) {
+fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8) {
     // TODO Deduplicate normalize_identifier
     fn normalize_identifier(name: String) -> String {
         name.replace(|c: char| !c.is_alphanumeric(), "_")
     }
-    let fixtures = [
-        ("hl", "crate::rstest::HLFixture"),
+    let mut fixtures = vec![
         ("ll_cache", "crate::rstest::LLFixtureWithInodeCache"),
         ("ll_nocache", "crate::rstest::LLFixtureWithoutInodeCache"),
     ];
+    if disable_fusemt == 0 {
+        fixtures.push(("hl", "crate::rstest::HLFixture"));
+    }
     let atime_behaviors = [
         ("noatime", "cryfs_rustfs::AtimeUpdateBehavior::Noatime"),
         (
@@ -49,7 +51,7 @@ fn perf_test(_group: String, names: Vec<String>) {
                 use super::*;
         "#
         );
-        for (fixture_name, fixture_value) in fixtures {
+        for (fixture_name, fixture_value) in &fixtures {
             for (atime_name, atime_value) in atime_behaviors {
                 crabtime::output_str!(
                     r#"
@@ -77,7 +79,7 @@ fn perf_test(_group: String, names: Vec<String>) {
 
 #[cfg(feature = "benchmark")]
 #[crabtime::function]
-fn perf_test(group: String, names: Vec<String>) {
+fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8) {
     // TODO Deduplicate normalize_identifier
     fn normalize_identifier(name: String) -> String {
         name.replace(|c: char| !c.is_alphanumeric(), "_")
@@ -106,11 +108,13 @@ fn perf_test(group: String, names: Vec<String>) {
                     });
 
                     // fusemt
-                    let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
-                    let test = {{name}}(test_driver);
-                    bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
-                        test.run_benchmark(b);
-                    });
+                    if disable_fusemt == 0 {
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
+                        let test = {{name}}(test_driver);
+                        bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
+                            test.run_benchmark(b);
+                        });
+                    }
                 }
             }
         }
@@ -123,7 +127,22 @@ fn perf_test(group: String, names: Vec<String>) {
     crabtime::output_str!(");");
 }
 
+macro_rules! perf_test {
+    ($group:ident, $tests:tt) => {
+        $crate::rstest::perf_test_!($group, $tests, 0);
+    };
+}
+
+/// Like [perf_test!], but only runs the fuser tests, not fuse-mt.
+macro_rules! perf_test_only_fuser {
+    ($group:ident, $tests:tt) => {
+        $crate::rstest::perf_test_!($group, $tests, 1);
+    };
+}
+
 pub(crate) use perf_test;
+pub(crate) use perf_test_;
+pub(crate) use perf_test_only_fuser;
 
 // TODO Remove the rstest templates here now that we have the `perf_test` macro
 
