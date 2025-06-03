@@ -1,31 +1,23 @@
-use pretty_assertions::assert_eq;
-use rstest::rstest;
-use rstest_reuse::apply;
-
-use crate::filesystem_driver::FilesystemDriver as _;
+use crate::filesystem_driver::FilesystemDriver;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureFactory;
-use crate::rstest::all_atime_behaviors;
-use crate::rstest::all_fixtures;
+use crate::test_driver::TestDriver;
+use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
-use cryfs_blockstore::{HLActionCounts, LLActionCounts};
-use cryfs_rustfs::AtimeUpdateBehavior;
+use cryfs_blockstore::HLActionCounts;
+use cryfs_blockstore::LLActionCounts;
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory
-        .create_uninitialized_filesystem_deprecated(atime_behavior)
-        .await;
+crate::rstest::perf_test!(init, [init,]);
 
-    let mut counts = fixture.totals();
-
-    counts += fixture.count_ops(async |fs| fs.init().await.unwrap()).await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+fn init(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_uninitialized_filesystem()
+        .setup(async |fixture| {
+            // No setup needed
+        })
+        .test_no_counter_reset(async |fixture, ()| {
+            fixture.filesystem.init().await.unwrap();
+        })
+        .expect_op_counts(|_fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 store_try_create: 1, // create root dir blob
                 store_load: 1,       // load root dir blob for sanity checking the file system
@@ -51,6 +43,5 @@ async fn init(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateB
                 block_size_from_physical_block_size: 1,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
