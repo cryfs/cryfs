@@ -191,6 +191,12 @@ where
         device
     }
 
+    pub fn reset_counts(&self) {
+        self.blobstore.get_and_reset_counts();
+        self.hl_blockstore.get_and_reset_counts();
+        self.ll_blockstore.get_and_reset_counts();
+    }
+
     pub fn totals(&self) -> ActionCounts {
         ActionCounts {
             blobstore: self.blobstore.counts(),

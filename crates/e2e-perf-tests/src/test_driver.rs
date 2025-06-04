@@ -228,7 +228,52 @@ where
     }
 
     #[must_use]
+    pub fn test_no_counter_reset<TestFn>(
+        self,
+        test_fn: TestFn,
+    ) -> TestDriverWithFsAndSetupOpAndTestOp<
+        B,
+        FS,
+        CreateFsFn,
+        SetupFn,
+        SetupResult,
+        impl AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
+    >
+    where
+        TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
+    {
+        self.test_noflush_no_counter_reset(async move |fs, setup_result| {
+            let test_result = (test_fn)(fs, setup_result).await;
+            fs.blobstore.clear_cache_slow().await.unwrap();
+            test_result
+        })
+    }
+
+    #[must_use]
     pub fn test_noflush<TestFn>(
+        self,
+        test_fn: TestFn,
+    ) -> TestDriverWithFsAndSetupOpAndTestOp<
+        B,
+        FS,
+        CreateFsFn,
+        SetupFn,
+        SetupResult,
+        impl AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
+    >
+    where
+        TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
+    {
+        self.test_noflush_no_counter_reset(
+            async move |fs: &mut FilesystemFixture<B, FS>, setup_result: SetupResult| {
+                fs.reset_counts();
+                (test_fn)(fs, setup_result).await
+            },
+        )
+    }
+
+    #[must_use]
+    pub fn test_noflush_no_counter_reset<TestFn>(
         self,
         test_fn: TestFn,
     ) -> TestDriverWithFsAndSetupOpAndTestOp<B, FS, CreateFsFn, SetupFn, SetupResult, TestFn>
@@ -319,15 +364,8 @@ where
         let mut filesystem = (self.filesystem)().await;
         let setup_result = (self.setup_fn)(&mut filesystem).await;
 
-        filesystem.blobstore.get_and_reset_counts();
-        filesystem.hl_blockstore.get_and_reset_counts();
-        filesystem.ll_blockstore.get_and_reset_counts();
         (self.test_fn)(&mut filesystem, setup_result).await;
-        let counts = ActionCounts {
-            blobstore: filesystem.blobstore.get_and_reset_counts(),
-            high_level: filesystem.hl_blockstore.get_and_reset_counts(),
-            low_level: filesystem.ll_blockstore.get_and_reset_counts(),
-        };
+        let counts = filesystem.totals();
 
         counts
     }
