@@ -15,15 +15,18 @@ use crate::{
 
 #[cfg(not(feature = "benchmark"))]
 #[crabtime::function]
-fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8) {
+fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fuser: u8) {
     // TODO Deduplicate normalize_identifier
     fn normalize_identifier(name: String) -> String {
         name.replace(|c: char| !c.is_alphanumeric(), "_")
     }
-    let mut fixtures = vec![
-        ("ll_cache", "crate::rstest::LLFixtureWithInodeCache"),
-        ("ll_nocache", "crate::rstest::LLFixtureWithoutInodeCache"),
-    ];
+    let mut fixtures = vec![];
+    if disable_fuser == 0 {
+        fixtures.extend([
+            ("ll_cache", "crate::rstest::LLFixtureWithInodeCache"),
+            ("ll_nocache", "crate::rstest::LLFixtureWithoutInodeCache"),
+        ]);
+    }
     if disable_fusemt == 0 {
         fixtures.push(("hl", "crate::rstest::HLFixture"));
     }
@@ -79,7 +82,7 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8) {
 
 #[cfg(feature = "benchmark")]
 #[crabtime::function]
-fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8) {
+fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fuser: u8) {
     // TODO Deduplicate normalize_identifier
     fn normalize_identifier(name: String) -> String {
         name.replace(|c: char| !c.is_alphanumeric(), "_")
@@ -101,11 +104,13 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8) {
                 ];
                 for (atime_name, atime_value) in atime_behaviors {
                     // fuser
-                    let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFuserFixture, atime_value);
-                    let test = {{name}}(test_driver);
-                    bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
-                        test.run_benchmark(b);
-                    });
+                    if {{disable_fuser}}== 0 {
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFuserFixture, atime_value);
+                        let test = {{name}}(test_driver);
+                        bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
+                            test.run_benchmark(b);
+                        });
+                    }
 
                     // fusemt
                     if {{disable_fusemt}} == 0 {
@@ -129,19 +134,27 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8) {
 
 macro_rules! perf_test {
     ($group:ident, $tests:tt) => {
-        $crate::rstest::perf_test_!($group, $tests, 0);
+        $crate::rstest::perf_test_!($group, $tests, 0, 0);
     };
 }
 
 /// Like [perf_test!], but only runs the fuser tests, not fuse-mt.
 macro_rules! perf_test_only_fuser {
     ($group:ident, $tests:tt) => {
-        $crate::rstest::perf_test_!($group, $tests, 1);
+        $crate::rstest::perf_test_!($group, $tests, 1, 0);
+    };
+}
+
+/// Like [perf_test!], but only runs the fuse-mt tests, not fuser.
+macro_rules! perf_test_only_fusemt {
+    ($group:ident, $tests:tt) => {
+        $crate::rstest::perf_test_!($group, $tests, 0, 1);
     };
 }
 
 pub(crate) use perf_test;
 pub(crate) use perf_test_;
+pub(crate) use perf_test_only_fusemt;
 pub(crate) use perf_test_only_fuser;
 
 // TODO Remove the rstest templates here now that we have the `perf_test` macro

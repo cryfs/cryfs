@@ -27,4 +27,6 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::read::benches_read,
     cryfs_e2e_perf_tests::operations::readdir::benches_readdir,
     cryfs_e2e_perf_tests::operations::readlink::benches_readlink,
+    cryfs_e2e_perf_tests::operations::rename::benches_rename,
+    cryfs_e2e_perf_tests::operations::rename::benches_rename_fusemt,
 );
