@@ -281,6 +281,7 @@ where
             // TODO `create_new` would be better, but for some weird reason that fails with eIO on my notebook (but desktop is fine)
             .create(true)
             .write(true)
+            .read(true)
             .open(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
@@ -670,12 +671,16 @@ where
             })?;
 
         let mut buf = vec![0; usize::try_from(u64::from(size)).unwrap()];
-        open_file
-            .read(&mut buf)
-            .await
-            .map_err(|error| FsError::InternalError {
-                error: error.into(),
-            })?;
+        let num_read_bytes =
+            open_file
+                .read(&mut buf)
+                .await
+                .map_err(|error| FsError::InternalError {
+                    error: error.into(),
+                })?;
+
+        assert!(num_read_bytes <= buf.len());
+        buf.truncate(num_read_bytes);
 
         Ok(buf)
     }

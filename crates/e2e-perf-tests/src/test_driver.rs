@@ -37,7 +37,7 @@ where
 {
     blockstore: CreateBlockstoreFn,
     fixture_factory: FF,
-    atime_behavior: AtimeUpdateBehavior,
+    atime_update_behavior: AtimeUpdateBehavior,
 }
 
 impl<B, CreateBlockstoreFn, FS, FF> TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
@@ -51,12 +51,12 @@ where
     pub fn new(
         blockstore: CreateBlockstoreFn,
         fixture_factory: FF,
-        atime_behavior: AtimeUpdateBehavior,
+        atime_update_behavior: AtimeUpdateBehavior,
     ) -> Self {
         Self {
             blockstore,
             fixture_factory,
-            atime_behavior,
+            atime_update_behavior,
         }
     }
 }
@@ -76,11 +76,11 @@ where
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
-        let atime_update_behavior = self.atime_behavior;
+        let atime_update_behavior = self.atime_update_behavior;
         TestDriverWithFs {
             filesystem: async move || {
                 self.fixture_factory
-                    .create_filesystem((self.blockstore)(), self.atime_behavior)
+                    .create_filesystem((self.blockstore)(), self.atime_update_behavior)
                     .await
             },
             fixture_type,
@@ -93,11 +93,14 @@ where
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
-        let atime_update_behavior = self.atime_behavior;
+        let atime_update_behavior = self.atime_update_behavior;
         TestDriverWithFs {
             filesystem: async move || {
                 self.fixture_factory
-                    .create_uninitialized_filesystem((self.blockstore)(), self.atime_behavior)
+                    .create_uninitialized_filesystem(
+                        (self.blockstore)(),
+                        self.atime_update_behavior,
+                    )
                     .await
             },
             fixture_type,
