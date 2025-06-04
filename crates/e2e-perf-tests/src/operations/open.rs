@@ -1,63 +1,47 @@
-use pretty_assertions::assert_eq;
-use rstest::rstest;
-use rstest_reuse::apply;
-
-use crate::filesystem_driver::FilesystemDriver as _;
+use crate::filesystem_driver::FilesystemDriver;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureFactory;
 use crate::rstest::FixtureType;
-use crate::rstest::{all_atime_behaviors, all_fixtures};
+use crate::test_driver::TestDriver;
+use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
-use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::PathComponent;
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn in_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
+crate::rstest::perf_test!(open, [in_rootdir, in_nesteddir, in_deeplynesteddir,]);
 
-    // First create a file so we have something to open
-    let file = fixture
-        .ops(async |fs| {
-            fs.create_file(None, PathComponent::try_from_str("testfile.txt").unwrap())
+fn in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async |fixture| {
+            fixture
+                .filesystem
+                .create_file(None, PathComponent::try_from_str("testfile.txt").unwrap())
                 .await
                 .unwrap()
         })
-        .await;
-
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.open(file).await.unwrap();
+        .test(async |fixture, file| {
+            fixture.filesystem.open(file).await.unwrap();
         })
-        .await;
-
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .expect_op_counts(|fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 1,
                     FixtureType::FuserWithoutInodeCache => 2, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt | FixtureType::FuserWithoutInodeCache => 1,
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 1,
                     FixtureType::FuserWithoutInodeCache => 2, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_num_bytes: match fixture_factory.fixture_type() {
+                blob_num_bytes: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::FuserWithoutInodeCache => 1, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
@@ -65,12 +49,12 @@ async fn in_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeU
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 1,
                     FixtureType::FuserWithoutInodeCache => 2, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 9,
                     FixtureType::FuserWithoutInodeCache => 16, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -79,69 +63,56 @@ async fn in_rootdir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeU
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: match fixture_factory.fixture_type() {
+                load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 1,
                     FixtureType::FuserWithoutInodeCache => 2, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn in_nesteddir(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-
-    // First create a nested directory with a file in it
-    let file = fixture
-        .ops(async |fs| {
-            let parent = fs
+fn in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async |fixture| {
+            let parent = fixture
+                .filesystem
                 .mkdir(None, PathComponent::try_from_str("nested").unwrap())
                 .await
                 .unwrap();
-            fs.create_file(
-                Some(parent),
-                PathComponent::try_from_str("testfile.txt").unwrap(),
-            )
-            .await
-            .unwrap()
+            fixture
+                .filesystem
+                .create_file(
+                    Some(parent),
+                    PathComponent::try_from_str("testfile.txt").unwrap(),
+                )
+                .await
+                .unwrap()
         })
-        .await;
-
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.open(file).await.unwrap();
+        .test(async |fixture, file| {
+            fixture.filesystem.open(file).await.unwrap();
         })
-        .await;
-
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .expect_op_counts(|fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 2,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 2,
                     FixtureType::FuserWithoutInodeCache => 3, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 2,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_num_bytes: match fixture_factory.fixture_type() {
+                blob_num_bytes: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::FuserWithoutInodeCache => 1, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
@@ -149,12 +120,12 @@ async fn in_nesteddir(fixture_factory: impl FixtureFactory, atime_behavior: Atim
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 2,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 18,
                     FixtureType::FuserWithoutInodeCache => 34, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -163,72 +134,56 @@ async fn in_nesteddir(fixture_factory: impl FixtureFactory, atime_behavior: Atim
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: match fixture_factory.fixture_type() {
+                load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 2,
                     FixtureType::FuserWithoutInodeCache => 3, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn in_deeplynesteddir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-
-    // First create a deeply nested directory with a file in it
-    let file = fixture
-        .ops(async |fs| {
-            let parent = fs
+fn in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async |fixture| {
+            let parent = fixture
+                .filesystem
                 .mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
                 .unwrap();
-            fs.create_file(
-                Some(parent),
-                PathComponent::try_from_str("testfile.txt").unwrap(),
-            )
-            .await
-            .unwrap()
+            fixture
+                .filesystem
+                .create_file(
+                    Some(parent),
+                    PathComponent::try_from_str("testfile.txt").unwrap(),
+                )
+                .await
+                .unwrap()
         })
-        .await;
-
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.open(file).await.unwrap();
+        .test(async |fixture, file| {
+            fixture.filesystem.open(file).await.unwrap();
         })
-        .await;
-
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .expect_op_counts(|fixture_type| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 7, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_num_bytes: match fixture_factory.fixture_type() {
+                blob_num_bytes: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::FuserWithoutInodeCache => 1, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
@@ -236,12 +191,12 @@ async fn in_deeplynesteddir(
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 36,
                     FixtureType::FuserWithoutInodeCache => 70, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -250,13 +205,12 @@ async fn in_deeplynesteddir(
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: match fixture_factory.fixture_type() {
+                load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 0, // If the inode is already cached, opening a file doesn't need to do any ops
                     FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 5, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
