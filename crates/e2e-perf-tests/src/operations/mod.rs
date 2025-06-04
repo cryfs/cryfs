@@ -30,3 +30,4 @@ pub mod write;
 //      Operations that should be affected: mkdir, create_file, symlink (they need to update the parent dir's timestamp in the grandparent dir), readdir, rename, rmdir, read, write, unlink, others? readdir and readlink do change based on atime somehow. But correctly?
 // TODO Test other operations: flush, fsync
 // TODO Go through all the operation counts in the tests and think about whether we can reduce the number of needed operations
+// TODO Would be nice to expand this crate to also test correctness of the operations, e.g. add a .expect_output() function to test driver in addition to .expect_op_count()

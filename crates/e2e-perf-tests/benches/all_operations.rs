@@ -25,4 +25,5 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::mkdir::benches_mkdir,
     cryfs_e2e_perf_tests::operations::open::benches_open,
     cryfs_e2e_perf_tests::operations::read::benches_read,
+    cryfs_e2e_perf_tests::operations::readdir::benches_readdir,
 );
