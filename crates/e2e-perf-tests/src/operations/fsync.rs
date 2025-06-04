@@ -78,7 +78,7 @@ fn unchanged_empty_file_in_rootdir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -154,7 +154,7 @@ fn unchanged_file_with_data_in_rootdir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -230,7 +230,7 @@ fn unchanged_large_file_in_rootdir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -304,7 +304,7 @@ fn unchanged_file_in_nested_dir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -381,7 +381,7 @@ fn unchanged_file_in_deeply_nested_dir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -461,7 +461,7 @@ fn after_small_write_to_empty_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -546,7 +546,7 @@ fn after_small_write_to_middle_of_small_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -636,7 +636,7 @@ fn after_small_write_beyond_end_of_small_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -726,7 +726,7 @@ fn after_small_write_to_middle_of_large_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -816,7 +816,7 @@ fn after_small_write_beyond_end_of_large_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -892,7 +892,7 @@ fn after_large_write_to_empty_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -983,7 +983,7 @@ fn after_large_write_to_middle_of_large_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -1074,7 +1074,7 @@ fn after_large_write_beyond_end_of_large_file<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -1159,7 +1159,7 @@ fn after_write_to_file_in_nested_dir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -1245,7 +1245,7 @@ fn after_write_to_file_in_deeply_nested_dir<const DATASYNC: bool>(
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| {
+        .expect_op_counts(|fixture_type, _atime_behavior| {
             let datasync = if DATASYNC { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {

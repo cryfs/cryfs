@@ -17,7 +17,7 @@ fn init(test_driver: impl TestDriver) -> impl TestReady {
         .test_no_counter_reset(async |fixture, ()| {
             fixture.filesystem.init().await.unwrap();
         })
-        .expect_op_counts(|_fixture_type| ActionCounts {
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 store_try_create: 1, // create root dir blob
                 store_load: 1,       // load root dir blob for sanity checking the file system

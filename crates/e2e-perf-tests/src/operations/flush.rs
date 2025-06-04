@@ -54,7 +54,7 @@ fn unchanged_empty_file_in_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -122,7 +122,7 @@ fn unchanged_file_with_data_in_rootdir(test_driver: impl TestDriver) -> impl Tes
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -190,7 +190,7 @@ fn unchanged_large_file_in_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -256,7 +256,7 @@ fn unchanged_file_in_nested_dir(test_driver: impl TestDriver) -> impl TestReady 
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -329,7 +329,7 @@ fn unchanged_file_in_deeply_nested_dir(test_driver: impl TestDriver) -> impl Tes
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -404,7 +404,7 @@ fn after_small_write_to_empty_file(test_driver: impl TestDriver) -> impl TestRea
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -486,7 +486,7 @@ fn after_small_write_to_middle_of_small_file(test_driver: impl TestDriver) -> im
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -573,7 +573,7 @@ fn after_small_write_beyond_end_of_small_file(test_driver: impl TestDriver) -> i
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -660,7 +660,7 @@ fn after_small_write_to_middle_of_large_file(test_driver: impl TestDriver) -> im
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -747,7 +747,7 @@ fn after_small_write_beyond_end_of_large_file(test_driver: impl TestDriver) -> i
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -819,7 +819,7 @@ fn after_large_write_to_empty_file(test_driver: impl TestDriver) -> impl TestRea
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -906,7 +906,7 @@ fn after_large_write_to_middle_of_large_file(test_driver: impl TestDriver) -> im
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -992,7 +992,7 @@ fn after_large_write_beyond_end_of_large_file(test_driver: impl TestDriver) -> i
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -1073,7 +1073,7 @@ fn after_write_to_file_in_nested_dir(test_driver: impl TestDriver) -> impl TestR
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -1155,7 +1155,7 @@ fn after_write_to_file_in_deeply_nested_dir(test_driver: impl TestDriver) -> imp
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {

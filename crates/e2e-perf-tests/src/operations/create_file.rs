@@ -35,7 +35,7 @@ fn notexisting_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|_fixture_type| ActionCounts {
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
@@ -83,7 +83,7 @@ fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await;
         })
-        .expect_op_counts(|_fixture_type| ActionCounts {
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: 1,
@@ -137,7 +137,7 @@ fn notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
@@ -212,7 +212,7 @@ fn existing_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
                 )
                 .await;
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
@@ -286,7 +286,7 @@ fn notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestRe
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
@@ -369,7 +369,7 @@ fn existing_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady
                 )
                 .await;
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 blob_resize: 1,

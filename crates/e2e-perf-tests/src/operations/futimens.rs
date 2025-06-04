@@ -40,7 +40,7 @@ fn file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -115,7 +115,7 @@ fn file_in_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
@@ -194,7 +194,7 @@ fn file_in_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {

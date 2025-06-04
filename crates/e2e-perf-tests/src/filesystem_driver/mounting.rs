@@ -544,12 +544,13 @@ where
     }
 
     async fn open(&self, node: Self::NodeHandle) -> FsResult<fs::File> {
+        let real_path = self.real_path_for_node(&Some(node));
         OpenOptions::new()
             .read(true)
             .write(true)
             .create(false)
             .truncate(false)
-            .open(&node)
+            .open(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
                 error: error.into(),

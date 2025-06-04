@@ -76,6 +76,7 @@ where
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
+        let atime_update_behavior = self.atime_behavior;
         TestDriverWithFs {
             filesystem: async move || {
                 self.fixture_factory
@@ -83,6 +84,7 @@ where
                     .await
             },
             fixture_type,
+            atime_update_behavior,
         }
     }
 
@@ -91,6 +93,7 @@ where
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
         let fixture_type = self.fixture_factory.fixture_type();
+        let atime_update_behavior = self.atime_behavior;
         TestDriverWithFs {
             filesystem: async move || {
                 self.fixture_factory
@@ -98,6 +101,7 @@ where
                     .await
             },
             fixture_type,
+            atime_update_behavior,
         }
     }
 }
@@ -111,6 +115,7 @@ where
 {
     filesystem: CreateFsFn,
     fixture_type: FixtureType,
+    atime_update_behavior: AtimeUpdateBehavior,
 }
 
 impl<B, FS, CreateFsFn> TestDriverWithFs<B, FS, CreateFsFn>
@@ -135,6 +140,7 @@ where
     {
         TestDriverWithFsAndSetupOp {
             fixture_type: self.fixture_type,
+            atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn: async move |fs| {
                 let setup_result = setup_fn(fs).await;
@@ -154,6 +160,7 @@ where
     {
         TestDriverWithFsAndSetupOp {
             fixture_type: self.fixture_type,
+            atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn,
         }
@@ -169,6 +176,7 @@ where
     SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
 {
     fixture_type: FixtureType,
+    atime_update_behavior: AtimeUpdateBehavior,
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
 }
@@ -197,6 +205,7 @@ where
     {
         TestDriverWithFsAndSetupOp {
             fixture_type: self.fixture_type,
+            atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn: async move |fixture| {
                 let setup_result = (self.setup_fn)(fixture).await;
@@ -282,6 +291,7 @@ where
     {
         TestDriverWithFsAndSetupOpAndTestOp {
             fixture_type: self.fixture_type,
+            atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn: self.setup_fn,
             test_fn,
@@ -299,6 +309,7 @@ where
     TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
     fixture_type: FixtureType,
+    atime_update_behavior: AtimeUpdateBehavior,
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
     test_fn: TestFn,
@@ -316,13 +327,13 @@ where
     #[must_use]
     pub fn expect_op_counts(
         self,
-        expected: impl FnOnce(FixtureType) -> ActionCounts,
+        expected: impl FnOnce(FixtureType, AtimeUpdateBehavior) -> ActionCounts,
     ) -> impl TestReady {
         TestReadyImpl {
             filesystem: self.filesystem,
             setup_fn: self.setup_fn,
             test_fn: self.test_fn,
-            expected_op_counts: expected(self.fixture_type),
+            expected_op_counts: expected(self.fixture_type, self.atime_update_behavior),
         }
     }
 }
