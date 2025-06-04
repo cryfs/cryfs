@@ -108,7 +108,7 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8) {
                     });
 
                     // fusemt
-                    if disable_fusemt == 0 {
+                    if {{disable_fusemt}} == 0 {
                         let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
                         let test = {{name}}(test_driver);
                         bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {

@@ -596,8 +596,8 @@ fn after_small_write_beyond_end_of_small_file(test_driver: impl TestDriver) -> i
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    // TODO Check if these counts are what we'd expect
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
