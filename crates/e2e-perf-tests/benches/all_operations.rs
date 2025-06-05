@@ -32,4 +32,5 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::rmdir::benches_rmdir,
     cryfs_e2e_perf_tests::operations::statfs::benches_statfs,
     cryfs_e2e_perf_tests::operations::symlink::benches_symlink,
+    cryfs_e2e_perf_tests::operations::truncate::benches_truncate,
 );
