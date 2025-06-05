@@ -35,4 +35,5 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::truncate::benches_truncate,
     cryfs_e2e_perf_tests::operations::unlink::benches_unlink,
     cryfs_e2e_perf_tests::operations::utimens::benches_utimens,
+    cryfs_e2e_perf_tests::operations::write::benches_write,
 );
