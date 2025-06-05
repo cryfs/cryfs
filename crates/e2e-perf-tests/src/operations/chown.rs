@@ -1,6 +1,6 @@
 use crate::filesystem_driver::FilesystemDriver;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
@@ -11,7 +11,7 @@ use cryfs_rustfs::Gid;
 use cryfs_rustfs::PathComponent;
 use cryfs_rustfs::Uid;
 
-crate::rstest::perf_test!(
+crate::perf_test_macro::perf_test!(
     chown,
     [
         file_in_rootdir,

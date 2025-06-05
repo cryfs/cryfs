@@ -13,12 +13,12 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fu
             (
                 "ll_cache",
                 "crate::filesystem_driver::FuserFilesystemDriver::<crate::filesystem_driver::WithInodeCache>",
-                "crate::rstest::FixtureType::FuserWithInodeCache",
+                "crate::perf_test_macro::FixtureType::FuserWithInodeCache",
             ),
             (
                 "ll_nocache",
                 "crate::filesystem_driver::FuserFilesystemDriver::<crate::filesystem_driver::WithoutInodeCache>",
-                "crate::rstest::FixtureType::FuserWithoutInodeCache",
+                "crate::perf_test_macro::FixtureType::FuserWithoutInodeCache",
             ),
         ]);
     }
@@ -26,7 +26,7 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fu
         fixtures.push((
             "hl",
             "crate::filesystem_driver::FusemtFilesystemDriver",
-            "crate::rstest::FixtureType::Fusemt",
+            "crate::perf_test_macro::FixtureType::Fusemt",
         ));
     }
     let atime_behaviors = [
@@ -106,7 +106,7 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fus
                     // fuser
                     if {{disable_fuser}}== 0 {
                         let filesystem_driver = std::marker::PhantomData::<crate::filesystem_driver::FuserMountingFilesystemDriver>;
-                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, filesystem_driver, crate::rstest::FixtureType::FuserWithInodeCache, atime_value);
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, filesystem_driver, crate::perf_test_macro::FixtureType::FuserWithInodeCache, atime_value);
                         let test = {{name}}(test_driver);
                         bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
                             test.run_benchmark(b);
@@ -116,7 +116,7 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fus
                     // fusemt
                     if {{disable_fusemt}} == 0 {
                         let filesystem_driver = std::marker::PhantomData::<crate::filesystem_driver::FusemtMountingFilesystemDriver>;
-                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, filesystem_driver, crate::rstest::FixtureType::Fusemt, atime_value);
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, filesystem_driver, crate::perf_test_macro::FixtureType::Fusemt, atime_value);
                         let test = {{name}}(test_driver);
                         bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
                             test.run_benchmark(b);
@@ -136,21 +136,21 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fus
 
 macro_rules! perf_test {
     ($group:ident, $tests:tt) => {
-        $crate::rstest::perf_test_!($group, $tests, 0, 0);
+        $crate::perf_test_macro::perf_test_!($group, $tests, 0, 0);
     };
 }
 
 /// Like [perf_test!], but only runs the fuser tests, not fuse-mt.
 macro_rules! perf_test_only_fuser {
     ($group:ident, $tests:tt) => {
-        $crate::rstest::perf_test_!($group, $tests, 1, 0);
+        $crate::perf_test_macro::perf_test_!($group, $tests, 1, 0);
     };
 }
 
 /// Like [perf_test!], but only runs the fuse-mt tests, not fuser.
 macro_rules! perf_test_only_fusemt {
     ($group:ident, $tests:tt) => {
-        $crate::rstest::perf_test_!($group, $tests, 0, 1);
+        $crate::perf_test_macro::perf_test_!($group, $tests, 0, 1);
     };
 }
 

@@ -4,7 +4,7 @@
 mod filesystem_driver;
 mod fixture;
 pub mod operations;
-pub mod rstest;
+pub mod perf_test_macro;
 mod test_driver;
 
 // TODO Write README

@@ -1,7 +1,7 @@
 use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
 use crate::fixture::NUM_BYTES_FOR_THREE_LEVEL_TREE;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::{TestDriver, TestReady};
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
@@ -9,7 +9,7 @@ use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::PathComponent;
 
-crate::rstest::perf_test!(
+crate::perf_test_macro::perf_test!(
     symlink,
     [
         notexisting_from_rootdir,

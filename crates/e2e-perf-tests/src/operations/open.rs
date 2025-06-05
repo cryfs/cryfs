@@ -1,6 +1,6 @@
 use crate::filesystem_driver::FilesystemDriver;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
@@ -9,7 +9,7 @@ use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::PathComponent;
 
-crate::rstest::perf_test!(open, [in_rootdir, in_nesteddir, in_deeplynesteddir,]);
+crate::perf_test_macro::perf_test!(open, [in_rootdir, in_nesteddir, in_deeplynesteddir,]);
 
 fn in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver

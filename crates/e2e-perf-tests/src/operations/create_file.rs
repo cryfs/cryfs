@@ -6,11 +6,11 @@ use cryfs_rustfs::PathComponent;
 
 use crate::filesystem_driver::FilesystemDriver;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 
-crate::rstest::perf_test!(
+crate::perf_test_macro::perf_test!(
     create_file,
     [
         notexisting_from_rootdir,

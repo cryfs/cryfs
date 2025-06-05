@@ -2,7 +2,7 @@ use pretty_assertions::assert_eq;
 
 use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
@@ -12,7 +12,7 @@ use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::PathComponent;
 use std::time::{Duration, SystemTime};
 
-crate::rstest::perf_test!(
+crate::perf_test_macro::perf_test!(
     futimens,
     [file_in_rootdir, file_in_nesteddir, file_in_deeplynesteddir]
 );

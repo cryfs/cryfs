@@ -2,7 +2,7 @@ use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
 use crate::fixture::BLOCKSIZE_BYTES;
 use crate::fixture::NUM_BYTES_FOR_THREE_LEVEL_TREE;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
@@ -15,7 +15,7 @@ use cryfs_rustfs::PathComponent;
 // TODO Some flush operations in here seem to load blocks in low_level, i.e. below the cache??? Why is that? If it's not loaded, shouldn't we just ignore it since it's already flushed? Also, generally, for a simple flush, there's a lot of operations going on in the high level stores.
 // TODO Some flush-after-write operations in here don't have a store in low level, that's weird. Shouldn't they need to store to flush the write?
 
-crate::rstest::perf_test!(
+crate::perf_test_macro::perf_test!(
     flush,
     [
         unchanged_empty_file_in_rootdir,

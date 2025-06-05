@@ -1,6 +1,6 @@
 use crate::filesystem_driver::FilesystemDriver;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
@@ -10,7 +10,7 @@ use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::PathComponent;
 
 // only run fuser tests since fuse-mt doesn't have a lookup operation
-crate::rstest::perf_test_only_fuser!(
+crate::perf_test_macro::perf_test_only_fuser!(
     lookup,
     [
         existing_from_rootdir,

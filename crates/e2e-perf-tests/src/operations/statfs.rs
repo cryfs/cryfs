@@ -5,7 +5,7 @@ use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
 
-crate::rstest::perf_test!(statfs, [empty_filesystem, with_content]);
+crate::perf_test_macro::perf_test!(statfs, [empty_filesystem, with_content]);
 
 fn empty_filesystem(test_driver: impl TestDriver) -> impl TestReady {
     test_driver

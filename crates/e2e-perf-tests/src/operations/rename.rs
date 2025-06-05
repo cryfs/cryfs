@@ -1,6 +1,6 @@
 use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
-use crate::rstest::FixtureType;
+use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
@@ -9,7 +9,7 @@ use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::PathComponent;
 
-crate::rstest::perf_test!(
+crate::perf_test_macro::perf_test!(
     rename,
     [
         within_rootdir,
@@ -24,7 +24,7 @@ crate::rstest::perf_test!(
 );
 
 // TODO Move these to the `perf_test!` above, but that currently deadlocks
-crate::rstest::perf_test_only_fusemt!(
+crate::perf_test_macro::perf_test_only_fusemt!(
     rename_fusemt,
     [
         from_rootdir_to_nesteddir,

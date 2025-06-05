@@ -6,7 +6,7 @@ use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
 
-crate::rstest::perf_test!(init, [init,]);
+crate::perf_test_macro::perf_test!(init, [init,]);
 
 fn init(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
