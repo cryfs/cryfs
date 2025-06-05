@@ -31,3 +31,5 @@ pub mod write;
 // TODO Test other operations: flush, fsync
 // TODO Go through all the operation counts in the tests and think about whether we can reduce the number of needed operations
 // TODO Would be nice to expand this crate to also test correctness of the operations, e.g. add a .expect_output() function to test driver in addition to .expect_op_count()
+// TODO Find cases where .setup() passes data to .test() that isn't actually used in the test function, and remove it.
+// TODO Find cases of magic strings (e.g. paths, filenames) that are repeated and put them into constants
