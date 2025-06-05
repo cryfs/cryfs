@@ -1,7 +1,6 @@
 use cryfs_blockstore::{InMemoryBlockStore, LLBlockStore, OptimizedBlockStoreWriter};
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
-use rstest_reuse::{self, *};
 
 use crate::{
     filesystem_driver::{
@@ -157,21 +156,6 @@ pub(crate) use perf_test_;
 pub(crate) use perf_test_only_fusemt;
 pub(crate) use perf_test_only_fuser;
 
-// TODO Remove the rstest templates here now that we have the `perf_test` macro
-
-#[template]
-pub fn all_atime_behaviors(
-    #[values(
-        AtimeUpdateBehavior::Noatime,
-        AtimeUpdateBehavior::Strictatime,
-        AtimeUpdateBehavior::Relatime,
-        AtimeUpdateBehavior::NodiratimeRelatime,
-        AtimeUpdateBehavior::NodiratimeStrictatime
-    )]
-    atime_behavior: AtimeUpdateBehavior,
-) {
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum FixtureType {
     FuserWithInodeCache,
@@ -272,31 +256,4 @@ impl FixtureFactory for MountingFusemtFixture {
         // Note: This fixture type here doesn't actually matter since we don't use [MountingFusemtFixture] for operation counting, only for benchmarks. And only operation counting needs the fixture type.
         FixtureType::Fusemt
     }
-}
-
-#[template]
-pub fn all_fixtures(
-    #[values(
-        crate::rstest::HLFixture,
-        crate::rstest::LLFixtureWithInodeCache,
-        crate::rstest::LLFixtureWithoutInodeCache
-    )]
-    fixture_factory: impl FixtureFactory,
-) {
-}
-
-#[template]
-pub fn all_fuser_fixtures(
-    #[values(
-        crate::rstest::LLFixtureWithInodeCache,
-        crate::rstest::LLFixtureWithoutInodeCache
-    )]
-    fixture_factory: impl FixtureFactory,
-) {
-}
-
-#[template]
-pub fn all_fusemt_fixtures(
-    #[values(crate::rstest::HLFixture)] fixture_factory: impl FixtureFactory,
-) {
 }

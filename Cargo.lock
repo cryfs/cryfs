@@ -958,8 +958,6 @@ dependencies = [
  "libc",
  "nix",
  "pretty_assertions",
- "rstest",
- "rstest_reuse",
  "tempdir",
  "tokio",
  "tokio-util",
