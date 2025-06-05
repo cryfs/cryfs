@@ -30,4 +30,5 @@ criterion_main!(
     cryfs_e2e_perf_tests::operations::rename::benches_rename,
     cryfs_e2e_perf_tests::operations::rename::benches_rename_fusemt,
     cryfs_e2e_perf_tests::operations::rmdir::benches_rmdir,
+    cryfs_e2e_perf_tests::operations::symlink::benches_symlink,
 );

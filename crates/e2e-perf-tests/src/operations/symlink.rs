@@ -1,47 +1,46 @@
-use pretty_assertions::assert_eq;
-use rstest::rstest;
-use rstest_reuse::apply;
-
 use crate::filesystem_driver::FilesystemDriver as _;
 use crate::fixture::ActionCounts;
 use crate::fixture::NUM_BYTES_FOR_THREE_LEVEL_TREE;
-use crate::rstest::FixtureFactory;
 use crate::rstest::FixtureType;
-use crate::rstest::{all_atime_behaviors, all_fixtures};
+use crate::test_driver::{TestDriver, TestReady};
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
 use cryfs_rustfs::AbsolutePath;
-use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::PathComponent;
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn notexisting_from_rootdir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-    let target = AbsolutePath::try_from_str("/target/path").unwrap();
+crate::rstest::perf_test!(
+    symlink,
+    [
+        notexisting_from_rootdir,
+        existing_from_rootdir,
+        notexisting_from_nesteddir,
+        existing_from_nesteddir,
+        notexisting_from_deeplynesteddir,
+        existing_from_deeplynesteddir,
+        long_target,
+    ]
+);
 
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                None,
-                PathComponent::try_from_str("symlink").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
+fn notexisting_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |_fixture| {
+            let target = AbsolutePath::try_from_str("/target/path").unwrap();
+            target
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, target| {
+            fixture
+                .filesystem
+                .create_symlink(
+                    None,
+                    PathComponent::try_from_str("symlink").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
+        })
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
@@ -69,51 +68,41 @@ async fn notexisting_from_rootdir(
                 load: 1,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn existing_from_rootdir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-    let target = AbsolutePath::try_from_str("/target/path").unwrap();
+fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |fixture| {
+            let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
-    // First create it so that it already exists
-    fixture
-        .ops(async |fs| {
-            fs.create_symlink(
-                None,
-                PathComponent::try_from_str("existing").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
-        })
-        .await;
+            // First create it so that it already exists
+            fixture
+                .filesystem
+                .create_symlink(
+                    None,
+                    PathComponent::try_from_str("existing").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
 
-    // Try creating it again with the same name
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                None,
-                PathComponent::try_from_str("existing").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap_err();
+            target
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, target| {
+            // Try creating it again with the same name
+            fixture
+                .filesystem
+                .create_symlink(
+                    None,
+                    PathComponent::try_from_str("existing").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap_err();
+        })
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: 1,
@@ -143,59 +132,49 @@ async fn existing_from_rootdir(
                 store: 1,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn notexisting_from_nesteddir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-    let target = AbsolutePath::try_from_str("/target/path").unwrap();
+fn notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |fixture| {
+            let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
-    // First create the nested dir
-    let parent = fixture
-        .ops(async |fs| {
-            fs.mkdir(None, PathComponent::try_from_str("nested").unwrap())
+            // First create the nested dir
+            let parent = fixture
+                .filesystem
+                .mkdir(None, PathComponent::try_from_str("nested").unwrap())
                 .await
-                .unwrap()
-        })
-        .await;
+                .unwrap();
 
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                Some(parent),
-                PathComponent::try_from_str("symlink").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
+            (target, parent)
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, (target, parent)| {
+            fixture
+                .filesystem
+                .create_symlink(
+                    Some(parent),
+                    PathComponent::try_from_str("symlink").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
+        })
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_resize: 2,
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 3,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
@@ -205,11 +184,11 @@ async fn notexisting_from_nesteddir(
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 4,
                     FixtureType::FuserWithoutInodeCache => 5, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 38,
                     FixtureType::FuserWithoutInodeCache => 47, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
@@ -225,76 +204,64 @@ async fn notexisting_from_nesteddir(
                 store: 3,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn existing_from_nesteddir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-    let target = AbsolutePath::try_from_str("/target/path").unwrap();
+fn existing_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |fixture| {
+            let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
-    // First create the nested dir
-    let parent = fixture
-        .ops(async |fs| {
-            fs.mkdir(None, PathComponent::try_from_str("nested").unwrap())
+            // First create the nested dir
+            let parent = fixture
+                .filesystem
+                .mkdir(None, PathComponent::try_from_str("nested").unwrap())
                 .await
-                .unwrap()
-        })
-        .await;
+                .unwrap();
 
-    // Then create the symlink so it's already existing
-    fixture
-        .ops(async |fs| {
-            fs.create_symlink(
-                Some(parent.clone()),
-                PathComponent::try_from_str("existing").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
-        })
-        .await;
+            // Then create the symlink so it's already existing
+            fixture
+                .filesystem
+                .create_symlink(
+                    Some(parent.clone()),
+                    PathComponent::try_from_str("existing").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
 
-    // Try creating it again with the same name
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                Some(parent),
-                PathComponent::try_from_str("existing").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap_err();
+            (target, parent)
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, (target, parent)| {
+            // Try creating it again with the same name
+            fixture
+                .filesystem
+                .create_symlink(
+                    Some(parent),
+                    PathComponent::try_from_str("existing").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap_err();
+        })
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 3,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 store_remove_by_id: 1,
                 blob_resize: 1,
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 3,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 3,
                     FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -305,12 +272,12 @@ async fn existing_from_nesteddir(
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 4,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 6, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache => 30,
                     FixtureType::Fusemt => 39,
                     FixtureType::FuserWithoutInodeCache => 48, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -329,61 +296,51 @@ async fn existing_from_nesteddir(
                 store: 2,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn notexisting_from_deeplynesteddir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-    let target = AbsolutePath::try_from_str("/target/path").unwrap();
+fn notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |fixture| {
+            let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
-    // First create the nested dir
-    let parent = fixture
-        .ops(async |fs| {
-            fs.mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
+            // First create the nested dir
+            let parent = fixture
+                .filesystem
+                .mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
-                .unwrap()
-        })
-        .await;
+                .unwrap();
 
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                Some(parent),
-                PathComponent::try_from_str("symlink").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
+            (target, parent)
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, (target, parent)| {
+            fixture
+                .filesystem
+                .create_symlink(
+                    Some(parent),
+                    PathComponent::try_from_str("symlink").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
+        })
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 3,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_resize: 2,
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache => 3,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache => 3,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -394,12 +351,12 @@ async fn notexisting_from_deeplynesteddir(
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 4,
                     FixtureType::Fusemt => 6,
                     FixtureType::FuserWithoutInodeCache => 9, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache => 38,
                     FixtureType::Fusemt => 56,
                     FixtureType::FuserWithoutInodeCache => 83, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -412,83 +369,71 @@ async fn notexisting_from_deeplynesteddir(
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 exists: 1,
-                load: match fixture_factory.fixture_type() {
+                load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt | FixtureType::FuserWithoutInodeCache => 4,
                 },
                 store: 3,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn existing_from_deeplynesteddir(
-    fixture_factory: impl FixtureFactory,
-    atime_behavior: AtimeUpdateBehavior,
-) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-    let target = AbsolutePath::try_from_str("/target/path").unwrap();
+fn existing_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |fixture| {
+            let target = AbsolutePath::try_from_str("/target/path").unwrap();
 
-    // First create the nested dir
-    let parent = fixture
-        .ops(async |fs| {
-            fs.mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
+            // First create the nested dir
+            let parent = fixture
+                .filesystem
+                .mkdir_recursive(AbsolutePath::try_from_str("/nested1/nested2/nested3").unwrap())
                 .await
-                .unwrap()
-        })
-        .await;
+                .unwrap();
 
-    // Then create the symlink so it's already existing
-    fixture
-        .ops(async |fs| {
-            fs.create_symlink(
-                Some(parent.clone()),
-                PathComponent::try_from_str("existing").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
-        })
-        .await;
+            // Then create the symlink so it's already existing
+            fixture
+                .filesystem
+                .create_symlink(
+                    Some(parent.clone()),
+                    PathComponent::try_from_str("existing").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
 
-    // Try creating it again with the same name
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                Some(parent),
-                PathComponent::try_from_str("existing").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap_err();
+            (target, parent)
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, (target, parent)| {
+            // Try creating it again with the same name
+            fixture
+                .filesystem
+                .create_symlink(
+                    Some(parent),
+                    PathComponent::try_from_str("existing").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap_err();
+        })
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 blob_resize: 1,
-                blob_read_all: match fixture_factory.fixture_type() {
+                blob_read_all: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_read: match fixture_factory.fixture_type() {
+                blob_read: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_write: 2,
                 store_create: 1,
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt => 5,
                     FixtureType::FuserWithoutInodeCache => 8, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -499,12 +444,12 @@ async fn existing_from_deeplynesteddir(
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: match fixture_factory.fixture_type() {
+                store_load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 4,
                     FixtureType::Fusemt => 7,
                     FixtureType::FuserWithoutInodeCache => 10, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data: match fixture_factory.fixture_type() {
+                blob_data: match fixture_type {
                     FixtureType::FuserWithInodeCache => 30,
                     FixtureType::Fusemt => 57,
                     FixtureType::FuserWithoutInodeCache => 84, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
@@ -518,7 +463,7 @@ async fn existing_from_deeplynesteddir(
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 exists: 1,
-                load: match fixture_factory.fixture_type() {
+                load: match fixture_type {
                     FixtureType::FuserWithInodeCache => 2,
                     FixtureType::Fusemt | FixtureType::FuserWithoutInodeCache => 4,
                 },
@@ -526,38 +471,31 @@ async fn existing_from_deeplynesteddir(
                 remove: 1,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
 
-#[apply(all_fixtures)]
-#[apply(all_atime_behaviors)]
-#[rstest]
-#[tokio::test(flavor = "multi_thread")]
-async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: AtimeUpdateBehavior) {
-    let fixture = fixture_factory
-        .create_filesystem_deprecated(atime_behavior)
-        .await;
-
-    // Create a very long target path that spans multiple blocks
-    let long_target =
-        "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize / 5) + "/target/path";
-    let target = AbsolutePath::try_from_str(&long_target).unwrap();
-
-    let counts = fixture
-        .count_ops(async |fs| {
-            fs.create_symlink(
-                None,
-                PathComponent::try_from_str("longlink").unwrap(),
-                &target,
-            )
-            .await
-            .unwrap();
+fn long_target(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async move |_fixture| {
+            // no setup needed
         })
-        .await;
-    assert_eq!(
-        counts,
-        ActionCounts {
+        .test(async move |fixture, ()| {
+            // Create a very long target path that spans multiple blocks
+            let long_target =
+                "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize / 5) + "/target/path";
+            let target = AbsolutePath::try_from_str(&long_target).unwrap();
+            fixture
+                .filesystem
+                .create_symlink(
+                    None,
+                    PathComponent::try_from_str("longlink").unwrap(),
+                    &target,
+                )
+                .await
+                .unwrap();
+        })
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_create: 1,
@@ -585,6 +523,5 @@ async fn long_target(fixture_factory: impl FixtureFactory, atime_behavior: Atime
                 load: 1,
                 ..LLActionCounts::ZERO
             },
-        }
-    );
+        })
 }
