@@ -1,15 +1,3 @@
-use cryfs_blockstore::{InMemoryBlockStore, LLBlockStore, OptimizedBlockStoreWriter};
-use cryfs_rustfs::AtimeUpdateBehavior;
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
-
-use crate::{
-    filesystem_driver::{
-        FilesystemDriver, FusemtFilesystemDriver, FusemtMountingFilesystemDriver,
-        FuserFilesystemDriver, FuserMountingFilesystemDriver, WithInodeCache, WithoutInodeCache,
-    },
-    fixture::FilesystemFixture,
-};
-
 // TODO If rust stabilizes custom test frameworks, we can make `perf_test` a per-test macro instead of taking multiple macro names listing all tests in a file. See https://bheisler.github.io/criterion.rs/book/user_guide/custom_test_framework.html
 
 #[cfg(not(feature = "benchmark"))]
@@ -22,12 +10,24 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fu
     let mut fixtures = vec![];
     if disable_fuser == 0 {
         fixtures.extend([
-            ("ll_cache", "crate::rstest::LLFixtureWithInodeCache"),
-            ("ll_nocache", "crate::rstest::LLFixtureWithoutInodeCache"),
+            (
+                "ll_cache",
+                "crate::filesystem_driver::FuserFilesystemDriver::<crate::filesystem_driver::WithInodeCache>",
+                "crate::rstest::FixtureType::FuserWithInodeCache",
+            ),
+            (
+                "ll_nocache",
+                "crate::filesystem_driver::FuserFilesystemDriver::<crate::filesystem_driver::WithoutInodeCache>",
+                "crate::rstest::FixtureType::FuserWithoutInodeCache",
+            ),
         ]);
     }
     if disable_fusemt == 0 {
-        fixtures.push(("hl", "crate::rstest::HLFixture"));
+        fixtures.push((
+            "hl",
+            "crate::filesystem_driver::FusemtFilesystemDriver",
+            "crate::rstest::FixtureType::Fusemt",
+        ));
     }
     let atime_behaviors = [
         ("noatime", "cryfs_rustfs::AtimeUpdateBehavior::Noatime"),
@@ -53,15 +53,16 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fu
                 use super::*;
         "#
         );
-        for (fixture_name, fixture_value) in &fixtures {
+        for (fixture_name, filesystem_driver, fixture_type) in &fixtures {
             for (atime_name, atime_value) in atime_behaviors {
                 crabtime::output_str!(
                     r#"
                     #[test]
                     fn {fixture_name}_{atime_name}() {{
-                        let fixture_factory = {fixture_value};
+                        let filesystem_driver = std::marker::PhantomData::<{filesystem_driver}>;
+                        let fixture_type = {fixture_type};
                         let atime_behavior = {atime_value};
-                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::InMemoryBlockStore::new, fixture_factory, atime_behavior);
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::InMemoryBlockStore::new, filesystem_driver, fixture_type, atime_behavior);
                         let test = {name}(test_driver);
                         test.assert_op_counts();
                     }}
@@ -104,7 +105,8 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fus
                 for (atime_name, atime_value) in atime_behaviors {
                     // fuser
                     if {{disable_fuser}}== 0 {
-                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFuserFixture, atime_value);
+                        let filesystem_driver = std::marker::PhantomData::<crate::filesystem_driver::FuserMountingFilesystemDriver>;
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, filesystem_driver, crate::rstest::FixtureType::FuserWithInodeCache, atime_value);
                         let test = {{name}}(test_driver);
                         bench.bench_function(&format!("fuser:{atime_name}"), move |b| {
                             test.run_benchmark(b);
@@ -113,7 +115,8 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fus
 
                     // fusemt
                     if {{disable_fusemt}} == 0 {
-                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, crate::rstest::MountingFusemtFixture, atime_value);
+                        let filesystem_driver = std::marker::PhantomData::<crate::filesystem_driver::FusemtMountingFilesystemDriver>;
+                        let test_driver = crate::test_driver::TestDriverImpl::new(cryfs_blockstore::TempDirBlockStore::new, filesystem_driver, crate::rstest::FixtureType::Fusemt, atime_value);
                         let test = {{name}}(test_driver);
                         bench.bench_function(&format!("fusemt:{atime_name}"), move |b| {
                             test.run_benchmark(b);
@@ -161,99 +164,4 @@ pub enum FixtureType {
     FuserWithInodeCache,
     FuserWithoutInodeCache,
     Fusemt,
-}
-
-// TODO Can we remove FixtureFactory? Not sure what purpose it adds on top of FilesystemFixture / FilesystemDriver
-
-pub trait FixtureFactory: 'static {
-    type Driver: FilesystemDriver;
-
-    fn fixture_type(&self) -> FixtureType;
-
-    async fn create_filesystem<B>(
-        &self,
-        blockstore: AsyncDropGuard<B>,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<B, Self::Driver>
-    where
-        B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
-    {
-        FilesystemFixture::create_filesystem(blockstore, atime_behavior).await
-    }
-
-    async fn create_uninitialized_filesystem<B>(
-        &self,
-        blockstore: AsyncDropGuard<B>,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<B, Self::Driver>
-    where
-        B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
-    {
-        FilesystemFixture::create_uninitialized_filesystem(blockstore, atime_behavior).await
-    }
-
-    // TODO Remove
-    async fn create_filesystem_deprecated(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<InMemoryBlockStore, Self::Driver> {
-        self.create_filesystem(InMemoryBlockStore::new(), atime_behavior)
-            .await
-    }
-
-    // TODO Remove
-    async fn create_uninitialized_filesystem_deprecated(
-        &self,
-        atime_behavior: AtimeUpdateBehavior,
-    ) -> FilesystemFixture<InMemoryBlockStore, Self::Driver> {
-        self.create_uninitialized_filesystem(InMemoryBlockStore::new(), atime_behavior)
-            .await
-    }
-}
-
-pub struct HLFixture;
-impl FixtureFactory for HLFixture {
-    type Driver = FusemtFilesystemDriver;
-
-    fn fixture_type(&self) -> FixtureType {
-        FixtureType::Fusemt
-    }
-}
-
-pub struct LLFixtureWithInodeCache;
-impl FixtureFactory for LLFixtureWithInodeCache {
-    type Driver = FuserFilesystemDriver<WithInodeCache>;
-
-    fn fixture_type(&self) -> FixtureType {
-        FixtureType::FuserWithInodeCache
-    }
-}
-
-pub struct LLFixtureWithoutInodeCache;
-impl FixtureFactory for LLFixtureWithoutInodeCache {
-    type Driver = FuserFilesystemDriver<WithoutInodeCache>;
-
-    fn fixture_type(&self) -> FixtureType {
-        FixtureType::FuserWithoutInodeCache
-    }
-}
-
-pub struct MountingFuserFixture;
-impl FixtureFactory for MountingFuserFixture {
-    type Driver = FuserMountingFilesystemDriver;
-
-    fn fixture_type(&self) -> FixtureType {
-        // Note: This fixture type here doesn't actually matter since we don't use [MountingFuserFixture] for operation counting, only for benchmarks. And only operation counting needs the fixture type.
-        FixtureType::FuserWithInodeCache
-    }
-}
-
-pub struct MountingFusemtFixture;
-impl FixtureFactory for MountingFusemtFixture {
-    type Driver = FusemtMountingFilesystemDriver;
-
-    fn fixture_type(&self) -> FixtureType {
-        // Note: This fixture type here doesn't actually matter since we don't use [MountingFusemtFixture] for operation counting, only for benchmarks. And only operation counting needs the fixture type.
-        FixtureType::Fusemt
-    }
 }

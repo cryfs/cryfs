@@ -1,10 +1,11 @@
 use pretty_assertions::assert_eq;
 use std::cell::RefCell;
+use std::marker::PhantomData;
 
 use crate::{
     filesystem_driver::FilesystemDriver,
     fixture::{ActionCounts, FilesystemFixture},
-    rstest::{FixtureFactory, FixtureType},
+    rstest::FixtureType,
 };
 use cryfs_blobstore::BlobStore as _;
 use cryfs_blockstore::{LLBlockStore, OptimizedBlockStoreWriter};
@@ -28,45 +29,45 @@ pub trait TestDriver {
 }
 
 #[must_use]
-pub struct TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
+pub struct TestDriverImpl<B, CreateBlockstoreFn, FS>
 where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
     FS: FilesystemDriver,
-    FF: FixtureFactory<Driver = FS>,
 {
     blockstore: CreateBlockstoreFn,
-    fixture_factory: FF,
     atime_update_behavior: AtimeUpdateBehavior,
+    _fsdriver: PhantomData<FS>,
+    fixture_type: FixtureType,
 }
 
-impl<B, CreateBlockstoreFn, FS, FF> TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
+impl<B, CreateBlockstoreFn, FS> TestDriverImpl<B, CreateBlockstoreFn, FS>
 where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
     FS: FilesystemDriver,
-    FF: FixtureFactory<Driver = FS>,
 {
     #[must_use]
     pub fn new(
         blockstore: CreateBlockstoreFn,
-        fixture_factory: FF,
+        _fsdriver: PhantomData<FS>,
+        fixture_type: FixtureType,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> Self {
         Self {
             blockstore,
-            fixture_factory,
             atime_update_behavior,
+            _fsdriver: PhantomData,
+            fixture_type,
         }
     }
 }
 
-impl<B, CreateBlockstoreFn, FS, FF> TestDriver for TestDriverImpl<B, CreateBlockstoreFn, FS, FF>
+impl<B, CreateBlockstoreFn, FS> TestDriver for TestDriverImpl<B, CreateBlockstoreFn, FS>
 where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     CreateBlockstoreFn: Fn() -> AsyncDropGuard<B>,
     FS: FilesystemDriver,
-    FF: FixtureFactory<Driver = FS>,
 {
     type B = B;
     type FS = FS;
@@ -75,13 +76,15 @@ where
     fn create_filesystem(
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
-        let fixture_type = self.fixture_factory.fixture_type();
+        let fixture_type = self.fixture_type;
         let atime_update_behavior = self.atime_update_behavior;
         TestDriverWithFs {
             filesystem: async move || {
-                self.fixture_factory
-                    .create_filesystem((self.blockstore)(), self.atime_update_behavior)
-                    .await
+                FilesystemFixture::<B, FS>::create_filesystem(
+                    (self.blockstore)(),
+                    self.atime_update_behavior,
+                )
+                .await
             },
             fixture_type,
             atime_update_behavior,
@@ -92,16 +95,15 @@ where
     fn create_uninitialized_filesystem(
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
-        let fixture_type = self.fixture_factory.fixture_type();
+        let fixture_type = self.fixture_type;
         let atime_update_behavior = self.atime_update_behavior;
         TestDriverWithFs {
             filesystem: async move || {
-                self.fixture_factory
-                    .create_uninitialized_filesystem(
-                        (self.blockstore)(),
-                        self.atime_update_behavior,
-                    )
-                    .await
+                FilesystemFixture::<B, FS>::create_uninitialized_filesystem(
+                    (self.blockstore)(),
+                    self.atime_update_behavior,
+                )
+                .await
             },
             fixture_type,
             atime_update_behavior,
