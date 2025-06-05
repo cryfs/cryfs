@@ -5,7 +5,7 @@ use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::PathComponent;
 
 use crate::filesystem_driver::FilesystemDriver;
-use crate::fixture::ActionCounts;
+use crate::filesystem_fixture::ActionCounts;
 use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;

@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::{fmt::Debug, sync::Arc};
 
 use super::FilesystemDriver;
-use crate::fixture::request_info;
+use crate::filesystem_fixture::request_info;
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{

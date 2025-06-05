@@ -2,7 +2,7 @@
 //! This is meant to ensure that we don't accidentally run more operations than necessary and don't regress performance over time.
 
 mod filesystem_driver;
-mod fixture;
+mod filesystem_fixture;
 pub mod operations;
 pub mod perf_test_macro;
 mod test_driver;

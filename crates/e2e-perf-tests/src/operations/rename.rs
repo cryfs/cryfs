@@ -1,5 +1,5 @@
 use crate::filesystem_driver::FilesystemDriver as _;
-use crate::fixture::ActionCounts;
+use crate::filesystem_fixture::ActionCounts;
 use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;

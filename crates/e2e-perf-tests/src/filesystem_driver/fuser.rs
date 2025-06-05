@@ -8,7 +8,7 @@ use std::{
 };
 
 use super::FilesystemDriver;
-use crate::fixture::request_info;
+use crate::filesystem_fixture::request_info;
 use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,

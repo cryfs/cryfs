@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use crate::{
     filesystem_driver::FilesystemDriver,
-    fixture::{ActionCounts, FilesystemFixture},
+    filesystem_fixture::{ActionCounts, FilesystemFixture},
     perf_test_macro::FixtureType,
 };
 use cryfs_blobstore::BlobStore as _;

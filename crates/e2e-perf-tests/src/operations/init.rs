@@ -1,5 +1,5 @@
 use crate::filesystem_driver::FilesystemDriver;
-use crate::fixture::ActionCounts;
+use crate::filesystem_fixture::ActionCounts;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;

@@ -1,6 +1,6 @@
 use crate::filesystem_driver::FilesystemDriver as _;
-use crate::fixture::ActionCounts;
-use crate::fixture::NUM_BYTES_FOR_THREE_LEVEL_TREE;
+use crate::filesystem_fixture::ActionCounts;
+use crate::filesystem_fixture::NUM_BYTES_FOR_THREE_LEVEL_TREE;
 use crate::perf_test_macro::FixtureType;
 use crate::test_driver::TestDriver;
 use crate::test_driver::TestReady;
