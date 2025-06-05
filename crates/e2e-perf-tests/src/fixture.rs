@@ -204,44 +204,6 @@ where
             low_level: self.ll_blockstore.counts(),
         }
     }
-
-    // TODO Remove ops, ops_noflush, count_ops, and count_ops_noflush, now that we have the new `TestDriver` setup.
-
-    pub async fn ops<R>(&self, operation: impl AsyncFnOnce(&FS) -> R) -> R {
-        self.ops_noflush(async move |fs| {
-            let result = operation(fs).await;
-            self.blobstore.clear_cache_slow().await.unwrap();
-            result
-        })
-        .await
-    }
-
-    pub async fn ops_noflush<R>(&self, operation: impl AsyncFnOnce(&FS) -> R) -> R {
-        let result = operation(&self.filesystem).await;
-        result
-    }
-
-    pub async fn count_ops(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
-        self.count_ops_noflush(async move |fs| {
-            let result = operation(fs).await;
-            self.blobstore.clear_cache_slow().await.unwrap();
-            result
-        })
-        .await
-    }
-
-    /// Same as [count_ops], but doesn't clear the cache after the operation.
-    pub async fn count_ops_noflush(&self, operation: impl AsyncFnOnce(&FS)) -> ActionCounts {
-        self.blobstore.get_and_reset_counts();
-        self.hl_blockstore.get_and_reset_counts();
-        self.ll_blockstore.get_and_reset_counts();
-        operation(&self.filesystem).await;
-        ActionCounts {
-            blobstore: self.blobstore.get_and_reset_counts(),
-            high_level: self.hl_blockstore.get_and_reset_counts(),
-            low_level: self.ll_blockstore.get_and_reset_counts(),
-        }
-    }
 }
 
 impl<B, FS> Drop for FilesystemFixture<B, FS>
