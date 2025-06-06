@@ -74,7 +74,7 @@ impl BlockStoreReader for BlockStoreAdapter {
         ))
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {

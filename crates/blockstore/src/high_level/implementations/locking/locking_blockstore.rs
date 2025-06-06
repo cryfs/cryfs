@@ -193,12 +193,12 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
         base_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         let base_store = self.base_store.as_ref().expect("Already destructed");
-        base_store.block_size_from_physical_block_size(block_size)
+        base_store.usable_block_size_from_physical_block_size(block_size)
     }
 
     // TODO Make sure we have tests that have some blocks in the cache and some in the base store

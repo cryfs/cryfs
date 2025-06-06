@@ -24,7 +24,7 @@ pub struct ActionCounts {
     pub load: u32,
     pub num_blocks: u32,
     pub estimate_num_free_bytes: u32,
-    pub block_size_from_physical_block_size: u32,
+    pub usable_block_size_from_physical_block_size: u32,
     pub all_blocks: u32,
     pub remove: u32,
     pub try_create: u32,
@@ -37,7 +37,7 @@ impl ActionCounts {
         load: 0,
         num_blocks: 0,
         estimate_num_free_bytes: 0,
-        block_size_from_physical_block_size: 0,
+        usable_block_size_from_physical_block_size: 0,
         all_blocks: 0,
         remove: 0,
         try_create: 0,
@@ -95,16 +95,16 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         self.counts
             .lock()
             .unwrap()
-            .block_size_from_physical_block_size += 1;
+            .usable_block_size_from_physical_block_size += 1;
         self.underlying_store
-            .block_size_from_physical_block_size(block_size)
+            .usable_block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -197,7 +197,7 @@ mod tests {
                 load: 0,
                 num_blocks: 0,
                 estimate_num_free_bytes: 0,
-                block_size_from_physical_block_size: 0,
+                usable_block_size_from_physical_block_size: 0,
                 all_blocks: 0,
                 remove: 0,
                 try_create: 0,
@@ -495,7 +495,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
+    async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
         let expected_overhead = Byte::from_u64(0);
@@ -503,13 +503,13 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
-                .block_size_from_physical_block_size(expected_overhead)
+                .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             Byte::from_u64(20),
             store
-                .block_size_from_physical_block_size(
+                .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
                 .unwrap()
@@ -569,24 +569,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn block_size_from_physical_block_size_increases_counter() {
+    async fn usable_block_size_from_physical_block_size_increases_counter() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
 
-        // Call block_size_from_physical_block_size multiple times
+        // Call usable_block_size_from_physical_block_size multiple times
         store
-            .block_size_from_physical_block_size(Byte::from_u64(1024))
+            .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
             .unwrap();
         store
-            .block_size_from_physical_block_size(Byte::from_u64(2048))
+            .usable_block_size_from_physical_block_size(Byte::from_u64(2048))
             .unwrap();
         store
-            .block_size_from_physical_block_size(Byte::from_u64(4096))
+            .usable_block_size_from_physical_block_size(Byte::from_u64(4096))
             .unwrap();
 
         assert_eq!(
             ActionCounts {
-                block_size_from_physical_block_size: 3,
+                usable_block_size_from_physical_block_size: 3,
                 ..ActionCounts::ZERO
             },
             store.counts()
@@ -671,7 +671,7 @@ mod tests {
 
         for _ in 0..3 {
             let _ = store
-                .block_size_from_physical_block_size(Byte::from_u64(1024))
+                .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
                 .unwrap();
         }
 
@@ -689,7 +689,7 @@ mod tests {
                 load: 14,
                 num_blocks: 2,
                 estimate_num_free_bytes: 4,
-                block_size_from_physical_block_size: 3,
+                usable_block_size_from_physical_block_size: 3,
                 all_blocks: 2,
             },
             store.get_and_reset_counts(),

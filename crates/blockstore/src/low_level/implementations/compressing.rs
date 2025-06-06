@@ -65,14 +65,14 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         self.underlying_block_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         //We probably have more since we're compressing, but we don't know exactly how much.
         //The best we can do is ignore the compression step here.
         self.underlying_block_store
-            .block_size_from_physical_block_size(block_size)
+            .usable_block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -183,7 +183,7 @@ mod generic_tests {
     instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
+    async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
         let expected_overhead = Byte::from_u64(0);
@@ -191,13 +191,13 @@ mod generic_tests {
         assert_eq!(
             0u64,
             store
-                .block_size_from_physical_block_size(expected_overhead)
+                .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             20u64,
             store
-                .block_size_from_physical_block_size(
+                .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
                 .unwrap()

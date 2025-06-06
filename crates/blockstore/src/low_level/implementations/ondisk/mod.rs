@@ -87,7 +87,7 @@ impl BlockStoreReader for OnDiskBlockStore {
         sysinfo::get_available_disk_space(&self.basedir).map(Byte::from_u64)
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
@@ -400,7 +400,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
+    async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
         let expected_overhead = Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64);
@@ -408,20 +408,20 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
-                .block_size_from_physical_block_size(expected_overhead)
+                .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             Byte::from_u64(20),
             store
-                .block_size_from_physical_block_size(
+                .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
                 .unwrap()
         );
         assert!(
             store
-                .block_size_from_physical_block_size(Byte::from_u64(0))
+                .usable_block_size_from_physical_block_size(Byte::from_u64(0))
                 .is_err()
         );
 
@@ -450,7 +450,7 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
-                .block_size_from_physical_block_size(_get_block_file_size(
+                .usable_block_size_from_physical_block_size(_get_block_file_size(
                     fixture.basedir.path(),
                     &blockid(0)
                 ))
@@ -461,7 +461,7 @@ mod tests {
         assert_eq!(
             Byte::from_u64(500),
             store
-                .block_size_from_physical_block_size(_get_block_file_size(
+                .usable_block_size_from_physical_block_size(_get_block_file_size(
                     fixture.basedir.path(),
                     &blockid(1)
                 ))

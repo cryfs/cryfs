@@ -62,12 +62,12 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         self.underlying_store
-            .block_size_from_physical_block_size(block_size)
+            .usable_block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -152,7 +152,7 @@ mod tests {
     instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
 
     #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
+    async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
         let mut store = fixture.store().await;
         let expected_overhead = Byte::from_u64(0);
@@ -160,13 +160,13 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
-                .block_size_from_physical_block_size(expected_overhead)
+                .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             Byte::from_u64(20),
             store
-                .block_size_from_physical_block_size(
+                .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20u64)).unwrap()
                 )
                 .unwrap()

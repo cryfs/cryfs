@@ -218,25 +218,25 @@ async fn test_whenCallingCreate_butExistsReturnsError_thenReturnsError() {
 }
 
 #[tokio::test]
-async fn test_block_size_from_physical_block_size() {
+async fn test_usable_block_size_from_physical_block_size() {
     let expected_overhead = Byte::from_u64(234354);
 
     let mut underlying_store = make_mock_block_store();
     underlying_store
-        .expect_block_size_from_physical_block_size()
+        .expect_usable_block_size_from_physical_block_size()
         .returning(move |x| Ok(x.subtract(expected_overhead).unwrap()));
     let mut store = LockingBlockStore::new(underlying_store);
 
     assert_eq!(
         Byte::from_u64(0),
         store
-            .block_size_from_physical_block_size(expected_overhead)
+            .usable_block_size_from_physical_block_size(expected_overhead)
             .unwrap()
     );
     assert_eq!(
         Byte::from_u64(500),
         store
-            .block_size_from_physical_block_size(
+            .usable_block_size_from_physical_block_size(
                 Byte::from_u64(500).add(expected_overhead).unwrap()
             )
             .unwrap()

@@ -87,16 +87,16 @@ where
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         self.counts
             .lock()
             .unwrap()
-            .store_block_size_from_physical_block_size += 1;
+            .store_usable_block_size_from_physical_block_size += 1;
         self.underlying_store
-            .block_size_from_physical_block_size(block_size)
+            .usable_block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

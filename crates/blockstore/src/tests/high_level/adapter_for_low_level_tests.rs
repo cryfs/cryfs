@@ -59,11 +59,12 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
         self.0.estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
-        self.0.block_size_from_physical_block_size(block_size)
+        self.0
+            .usable_block_size_from_physical_block_size(block_size)
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

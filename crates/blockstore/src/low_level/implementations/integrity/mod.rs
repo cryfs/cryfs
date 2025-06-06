@@ -191,13 +191,13 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     }
 
     // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store.
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         physical_block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
         let block_size = self
             .underlying_block_store
-            .block_size_from_physical_block_size(physical_block_size)?;
+            .usable_block_size_from_physical_block_size(physical_block_size)?;
         block_size.subtract(Byte::from_u64(u64::try_from(HEADER_SIZE_BYTES).unwrap()))
             .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {HEADER_SIZE_BYTES}.")))
     }
@@ -592,7 +592,7 @@ mod generic_tests {
     }
 
     #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
+    async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::<false, false>::new();
         let mut store = fixture.store().await;
         let expected_overhead = Byte::from_u64(HEADER_SIZE_BYTES as u64);
@@ -600,20 +600,20 @@ mod generic_tests {
         assert_eq!(
             0u64,
             store
-                .block_size_from_physical_block_size(expected_overhead)
+                .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             20u64,
             store
-                .block_size_from_physical_block_size(
+                .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
                 .unwrap()
         );
         assert!(
             store
-                .block_size_from_physical_block_size(Byte::from_u64(0))
+                .usable_block_size_from_physical_block_size(Byte::from_u64(0))
                 .is_err()
         );
 

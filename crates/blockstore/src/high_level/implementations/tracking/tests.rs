@@ -59,7 +59,7 @@ async fn counters_start_at_zero() {
             store_remove: 0,
             store_num_blocks: 0,
             store_estimate_num_free_bytes: 0,
-            store_block_size_from_physical_block_size: 0,
+            store_usable_block_size_from_physical_block_size: 0,
             store_all_blocks: 0,
             store_create: 0,
             store_flush_block: 0,
@@ -436,23 +436,23 @@ async fn estimate_num_free_bytes_increases_counter() {
 }
 
 #[tokio::test]
-async fn block_size_from_physical_block_size_increases_counter() {
+async fn usable_block_size_from_physical_block_size_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
     let mut store = fixture.store().await;
 
     store
-        .block_size_from_physical_block_size(Byte::from_u64(1024))
+        .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
         .unwrap();
     store
-        .block_size_from_physical_block_size(Byte::from_u64(2048))
+        .usable_block_size_from_physical_block_size(Byte::from_u64(2048))
         .unwrap();
     store
-        .block_size_from_physical_block_size(Byte::from_u64(4096))
+        .usable_block_size_from_physical_block_size(Byte::from_u64(4096))
         .unwrap();
 
     assert_eq!(
         ActionCounts {
-            store_block_size_from_physical_block_size: 3,
+            store_usable_block_size_from_physical_block_size: 3,
             ..ActionCounts::ZERO
         },
         store.counts()
@@ -551,10 +551,10 @@ async fn get_and_reset_totals_works() {
         store.estimate_num_free_bytes().unwrap();
     }
 
-    // Call block_size_from_physical_block_size multiple times
+    // Call usable_block_size_from_physical_block_size multiple times
     for _ in 0..4 {
         store
-            .block_size_from_physical_block_size(Byte::from_u64(1024))
+            .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
             .unwrap();
     }
 
@@ -588,7 +588,7 @@ async fn get_and_reset_totals_works() {
             store_remove: 2,
             store_num_blocks: 3,
             store_estimate_num_free_bytes: 2,
-            store_block_size_from_physical_block_size: 4,
+            store_usable_block_size_from_physical_block_size: 4,
             store_all_blocks: 3,
             store_flush_block: 2,
             blob_resize: 2,

@@ -21,7 +21,7 @@ mock! {
         fn load<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<Option<Data>>> where 'a: 'r, 'b: 'r;
         fn num_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<u64>> where 'a: 'r;
         fn estimate_num_free_bytes(&self) -> Result<Byte>;
-        fn block_size_from_physical_block_size(&self, block_size: Byte) -> Result<Byte, InvalidBlockSizeError>;
+        fn usable_block_size_from_physical_block_size(&self, block_size: Byte) -> Result<Byte, InvalidBlockSizeError>;
 
         fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<BoxStream<'static, Result<BlockId>>>> where 'a: 'r;
     }
@@ -104,14 +104,14 @@ mod tests {
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store
-            .expect_block_size_from_physical_block_size()
+            .expect_usable_block_size_from_physical_block_size()
             .returning(move |block_size| {
                 let _underlying_store = Arc::clone(&_underlying_store);
                 let r = _underlying_store
                     .blocking_lock()
                     .as_ref()
                     .expect("Already destructed")
-                    .block_size_from_physical_block_size(block_size);
+                    .usable_block_size_from_physical_block_size(block_size);
                 r
             });
 

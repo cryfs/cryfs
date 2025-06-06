@@ -389,7 +389,7 @@ mod create_tree {
                     LLActionCounts {
                         exists: 1,
                         store: 1,
-                        block_size_from_physical_block_size: 1,
+                        usable_block_size_from_physical_block_size: 1,
                         ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),
@@ -416,7 +416,7 @@ mod try_create_tree {
                     LLActionCounts {
                         exists: 1,
                         store: 1,
-                        block_size_from_physical_block_size: 1,
+                        usable_block_size_from_physical_block_size: 1,
                         ..LLActionCounts::ZERO
                     },
                     blockstore.get_and_reset_counts(),

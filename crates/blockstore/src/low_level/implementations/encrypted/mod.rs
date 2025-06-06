@@ -98,7 +98,7 @@ impl<
             .estimate_num_free_bytes()
     }
 
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         physical_block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
@@ -106,7 +106,7 @@ impl<
             .underlying_block_store
             .deref()
             .borrow()
-            .block_size_from_physical_block_size(physical_block_size)?;
+            .usable_block_size_from_physical_block_size(physical_block_size)?;
         let ciphertext_size = block_size.subtract(Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64))
             .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))?;
         ciphertext_size
@@ -339,8 +339,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_block_size_from_physical_block_size() {
-        async fn _test_block_size_from_physical_block_size<C: 'static + CipherDef + Send + Sync>() {
+    async fn test_usable_block_size_from_physical_block_size() {
+        async fn _test_usable_block_size_from_physical_block_size<
+            C: 'static + CipherDef + Send + Sync,
+        >() {
             let mut fixture = TestFixture::<C>::new();
             let mut store = fixture.store().await;
             let expected_overhead = Byte::from_u64(
@@ -352,29 +354,29 @@ mod tests {
             assert_eq!(
                 0u64,
                 store
-                    .block_size_from_physical_block_size(expected_overhead)
+                    .usable_block_size_from_physical_block_size(expected_overhead)
                     .unwrap()
             );
             assert_eq!(
                 20u64,
                 store
-                    .block_size_from_physical_block_size(
+                    .usable_block_size_from_physical_block_size(
                         expected_overhead.add(Byte::from_u64(20)).unwrap()
                     )
                     .unwrap()
             );
             assert!(
                 store
-                    .block_size_from_physical_block_size(Byte::from_u64(0))
+                    .usable_block_size_from_physical_block_size(Byte::from_u64(0))
                     .is_err()
             );
 
             store.async_drop().await.unwrap();
         }
 
-        _test_block_size_from_physical_block_size::<Aes256Gcm>().await;
-        _test_block_size_from_physical_block_size::<Aes128Gcm>().await;
-        _test_block_size_from_physical_block_size::<XChaCha20Poly1305>().await;
+        _test_usable_block_size_from_physical_block_size::<Aes256Gcm>().await;
+        _test_usable_block_size_from_physical_block_size::<Aes128Gcm>().await;
+        _test_usable_block_size_from_physical_block_size::<XChaCha20Poly1305>().await;
     }
 
     async fn _store(

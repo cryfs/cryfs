@@ -61,7 +61,8 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
         block_store: &B,
         physical_block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
-        let block_size = block_store.block_size_from_physical_block_size(physical_block_size)?;
+        let block_size =
+            block_store.usable_block_size_from_physical_block_size(physical_block_size)?;
 
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size =
@@ -293,7 +294,7 @@ mod tests {
         async fn calculation_throws_error() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |_| Err(InvalidBlockSizeError::new(format!("some error"))));
             assert_eq!(
@@ -337,7 +338,7 @@ mod tests {
                 .times(1)
                 .returning(move || Box::pin(async { Ok(()) }));
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| {
                     v.subtract(Byte::from_u64(10))
@@ -1499,7 +1500,7 @@ mod tests {
         async fn no_space_left() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore
@@ -1519,7 +1520,7 @@ mod tests {
         async fn almost_enough_space_for_one_block() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore
@@ -1539,7 +1540,7 @@ mod tests {
         async fn just_enough_space_for_one_block() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore
@@ -1559,7 +1560,7 @@ mod tests {
         async fn enough_space_for_100_blocks() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore
@@ -1584,7 +1585,7 @@ mod tests {
         async fn calculation_is_based_on_physical_block_size_not_block_size() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v.divide(10).unwrap()));
             blockstore
@@ -1609,7 +1610,7 @@ mod tests {
         async fn calculation_throws_error() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore
@@ -1641,7 +1642,7 @@ mod tests {
         async fn test() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v.divide(10).unwrap()));
             let mut nodestore = DataNodeStore::new(
@@ -1679,7 +1680,7 @@ mod tests {
         async fn empty() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore.expect_all_blocks().returning(|| {
@@ -1713,7 +1714,7 @@ mod tests {
 
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_block_size_from_physical_block_size()
+                .expect_usable_block_size_from_physical_block_size()
                 .times(1)
                 .returning(move |v| Ok(v));
             blockstore.expect_all_blocks().returning(|| {

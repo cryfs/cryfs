@@ -30,7 +30,7 @@ pub trait BlockStore {
     // we don't give any guarantees for whether they're counted or not.
     async fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<Byte>;
-    fn block_size_from_physical_block_size(
+    fn usable_block_size_from_physical_block_size(
         &self,
         block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError>;
