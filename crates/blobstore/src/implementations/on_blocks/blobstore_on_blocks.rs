@@ -17,10 +17,10 @@ pub struct BlobStoreOnBlocks<B: BlockStore<Block: Send + Sync> + AsyncDrop + Deb
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobStoreOnBlocks<B> {
     pub async fn new(
         blockstore: AsyncDropGuard<B>,
-        block_size: Byte,
+        physical_block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
-            tree_store: DataTreeStore::new(blockstore, block_size).await?,
+            tree_store: DataTreeStore::new(blockstore, physical_block_size).await?,
         }))
     }
 

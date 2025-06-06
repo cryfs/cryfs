@@ -6,8 +6,8 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use super::{ActionCounts, tracking_block::TrackingBlock};
-use crate::BlockStore;
-use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
+use crate::{BlockStore, Overhead};
+use crate::{BlockId, RemoveResult, TryCreateResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::data::Data;
 
@@ -87,16 +87,9 @@ where
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        self.counts
-            .lock()
-            .unwrap()
-            .store_usable_block_size_from_physical_block_size += 1;
-        self.underlying_store
-            .usable_block_size_from_physical_block_size(block_size)
+    fn overhead(&self) -> Overhead {
+        self.counts.lock().unwrap().store_overhead += 1;
+        self.underlying_store.overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

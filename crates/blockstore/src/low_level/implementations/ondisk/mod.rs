@@ -8,9 +8,8 @@ use std::path::{Path, PathBuf};
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
 
-use crate::low_level::InvalidBlockSizeError;
 use crate::{
-    BLOCKID_LEN, BlockId,
+    BLOCKID_LEN, BlockId, Overhead,
     low_level::{
         BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
@@ -87,12 +86,8 @@ impl BlockStoreReader for OnDiskBlockStore {
         sysinfo::get_available_disk_space(&self.basedir).map(Byte::from_u64)
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        block_size.subtract(Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64))
-            .ok_or_else(|| InvalidBlockSizeError::new(format!("Physical block size of {block_size} is too small to store the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))
+    fn overhead(&self) -> Overhead {
+        Overhead::new(Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -408,12 +403,14 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             Byte::from_u64(20),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
@@ -421,6 +418,7 @@ mod tests {
         );
         assert!(
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(Byte::from_u64(0))
                 .is_err()
         );
@@ -450,6 +448,7 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(_get_block_file_size(
                     fixture.basedir.path(),
                     &blockid(0)
@@ -461,6 +460,7 @@ mod tests {
         assert_eq!(
             Byte::from_u64(500),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(_get_block_file_size(
                     fixture.basedir.path(),
                     &blockid(1)

@@ -7,9 +7,8 @@ use std::fmt::{self, Debug};
 use std::sync::RwLock;
 use sysinfo::System;
 
-use crate::low_level::InvalidBlockSizeError;
 use crate::{
-    BlockId, RemoveResult, TryCreateResult,
+    BlockId, Overhead, RemoveResult, TryCreateResult,
     low_level::{
         BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
@@ -65,11 +64,8 @@ impl BlockStoreReader for InMemoryBlockStore {
         Ok(Byte::from_u64(sys.available_memory()))
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        Ok(block_size)
+    fn overhead(&self) -> Overhead {
+        Overhead::new(Byte::from_u64(0))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -189,12 +185,14 @@ mod tests {
         assert_eq!(
             0u64,
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             20u64,
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )

@@ -5,6 +5,7 @@
 //! for [LockingBlockStore], and then uses [super::low_level] to run the common low level
 //! tests on [LockingBlockStore] as well. On top of that, we add some tests that are specific to [LockingBlockStore].
 
+use byte_unit::Byte;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
@@ -53,6 +54,10 @@ macro_rules! instantiate_highlevel_blockstore_specific_tests {
         $crate::_instantiate_highlevel_blockstore_specific_tests!(@module overwrite, $target, $tokio_test_args,
             test_whenOverwritingWhileLoaded_thenBlocks,
             test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites,
+        );
+        $crate::_instantiate_highlevel_blockstore_specific_tests!(@module usable_block_size_from_physical_block_size, $target, $tokio_test_args,
+            test_usableToPhysicalToUsable,
+            test_physicalToUsableToPhysical,
         );
 
         // TODO Test Block::block_id()
@@ -445,4 +450,46 @@ pub mod overwrite {
     }
 
     // TODO Test other locking behaviors, i.e. loading while loaded, removing while loaded, ...
+}
+
+pub mod usable_block_size_from_physical_block_size {
+    use super::*;
+
+    pub async fn test_physicalToUsableToPhysical(mut f: impl HLFixture) {
+        let mut store = f.store().await;
+
+        let physical = Byte::from_u64(100);
+        let usable = store
+            .overhead()
+            .usable_block_size_from_physical_block_size(physical)
+            .unwrap();
+        assert!(physical >= usable);
+        assert_eq!(
+            physical,
+            store
+                .overhead()
+                .physical_block_size_from_usable_block_size(usable)
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    pub async fn test_usableToPhysicalToUsable(mut f: impl HLFixture) {
+        let mut store = f.store().await;
+
+        let usable = Byte::from_u64(100);
+        let physical = store
+            .overhead()
+            .physical_block_size_from_usable_block_size(usable);
+        assert!(physical >= usable);
+        assert_eq!(
+            usable,
+            store
+                .overhead()
+                .usable_block_size_from_physical_block_size(physical)
+                .unwrap()
+        );
+
+        store.async_drop().await.unwrap();
+    }
 }

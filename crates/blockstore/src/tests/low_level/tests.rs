@@ -2,6 +2,7 @@
 
 //! This module contains common test cases for the low level [BlockStore](crate::BlockStore) API
 
+use byte_unit::Byte;
 use futures::stream::TryStreamExt;
 use std::ops::Deref;
 
@@ -72,9 +73,12 @@ macro_rules! instantiate_lowlevel_blockstore_specific_tests {
             test_givenNonEmptyBlockStore_whenCallingExistsOnNonExistingBlock_thenReturnsFalse,
             test_givenNonEmptyBlockStore_whenCallingExistsOnExistingBlock_thenReturnsTrue,
         );
+        $crate::_instantiate_lowlevel_blockstore_specific_tests!(@module overhead, $target, $tokio_test_args,
+            test_physicalToUsableToPhysical,
+            test_usableToPhysicalToUsable,
+        );
 
         // TODO Test estimate_num_free_bytes
-        // TODO Test block_size_from_physical_block_size
         // TODO Test OptimizedBlockStoreWriter
     };
 }
@@ -929,6 +933,48 @@ pub mod exists {
         f.yield_fixture(&store).await;
         assert!(store.exists(&blockid(0)).await.unwrap());
         f.yield_fixture(&store).await;
+
+        store.async_drop().await.unwrap();
+    }
+}
+
+pub mod overhead {
+    use super::*;
+
+    pub async fn test_physicalToUsableToPhysical(mut f: impl LLFixture) {
+        let mut store = f.store().await;
+
+        let physical = Byte::from_u64(100_000);
+        let usable = store
+            .overhead()
+            .usable_block_size_from_physical_block_size(physical)
+            .unwrap();
+        assert!(physical >= usable);
+        assert_eq!(
+            physical,
+            store
+                .overhead()
+                .physical_block_size_from_usable_block_size(usable)
+        );
+
+        store.async_drop().await.unwrap();
+    }
+
+    pub async fn test_usableToPhysicalToUsable(mut f: impl LLFixture) {
+        let mut store = f.store().await;
+
+        let usable = Byte::from_u64(100_000);
+        let physical = store
+            .overhead()
+            .physical_block_size_from_usable_block_size(usable);
+        assert!(physical >= usable);
+        assert_eq!(
+            usable,
+            store
+                .overhead()
+                .usable_block_size_from_physical_block_size(physical)
+                .unwrap()
+        );
 
         store.async_drop().await.unwrap();
     }

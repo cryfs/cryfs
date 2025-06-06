@@ -6,8 +6,8 @@ use std::fmt::{self, Debug};
 
 use crate::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::{
-    BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError,
-    LLBlockStore, RemoveResult, TryCreateResult,
+    BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore, Overhead,
+    RemoveResult, TryCreateResult,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -78,11 +78,8 @@ where
             .ok_or_else(|| anyhow!("overflow"))
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        Ok(block_size)
+    fn overhead(&self) -> Overhead {
+        Overhead::new(Byte::from_u64(0))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

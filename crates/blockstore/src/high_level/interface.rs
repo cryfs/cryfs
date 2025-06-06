@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 
-use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
+use crate::{BlockId, Overhead, RemoveResult, TryCreateResult};
 use cryfs_utils::data::Data;
 
 // TODO Now that we have the interface, go through downstream code and see where we can replace direct use of LockingBlockStore with the BlockStore trait.
@@ -30,10 +30,7 @@ pub trait BlockStore {
     // we don't give any guarantees for whether they're counted or not.
     async fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<Byte>;
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError>;
+    fn overhead(&self) -> Overhead;
 
     // Note: for any blocks that are created or removed while the returned stream is running,
     // we don't give any guarantees for whether they'll be part of the stream or not.

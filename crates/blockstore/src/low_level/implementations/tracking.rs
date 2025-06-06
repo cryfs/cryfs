@@ -7,11 +7,8 @@ use std::fmt::Debug;
 use std::sync::Mutex;
 
 use crate::{
-    BlockId, RemoveResult, TryCreateResult,
-    low_level::{
-        BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError, LLBlockStore,
-        OptimizedBlockStoreWriter,
-    },
+    BlockId, Overhead, RemoveResult, TryCreateResult,
+    low_level::{BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -24,7 +21,7 @@ pub struct ActionCounts {
     pub load: u32,
     pub num_blocks: u32,
     pub estimate_num_free_bytes: u32,
-    pub usable_block_size_from_physical_block_size: u32,
+    pub overhead: u32,
     pub all_blocks: u32,
     pub remove: u32,
     pub try_create: u32,
@@ -37,7 +34,7 @@ impl ActionCounts {
         load: 0,
         num_blocks: 0,
         estimate_num_free_bytes: 0,
-        usable_block_size_from_physical_block_size: 0,
+        overhead: 0,
         all_blocks: 0,
         remove: 0,
         try_create: 0,
@@ -95,16 +92,9 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        self.counts
-            .lock()
-            .unwrap()
-            .usable_block_size_from_physical_block_size += 1;
-        self.underlying_store
-            .usable_block_size_from_physical_block_size(block_size)
+    fn overhead(&self) -> Overhead {
+        self.counts.lock().unwrap().overhead += 1;
+        self.underlying_store.overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -197,7 +187,7 @@ mod tests {
                 load: 0,
                 num_blocks: 0,
                 estimate_num_free_bytes: 0,
-                usable_block_size_from_physical_block_size: 0,
+                overhead: 0,
                 all_blocks: 0,
                 remove: 0,
                 try_create: 0,
@@ -503,12 +493,14 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             Byte::from_u64(20),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
@@ -575,18 +567,21 @@ mod tests {
 
         // Call usable_block_size_from_physical_block_size multiple times
         store
+            .overhead()
             .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
             .unwrap();
         store
+            .overhead()
             .usable_block_size_from_physical_block_size(Byte::from_u64(2048))
             .unwrap();
         store
+            .overhead()
             .usable_block_size_from_physical_block_size(Byte::from_u64(4096))
             .unwrap();
 
         assert_eq!(
             ActionCounts {
-                usable_block_size_from_physical_block_size: 3,
+                overhead: 3,
                 ..ActionCounts::ZERO
             },
             store.counts()
@@ -671,6 +666,7 @@ mod tests {
 
         for _ in 0..3 {
             let _ = store
+                .overhead()
                 .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
                 .unwrap();
         }
@@ -689,7 +685,7 @@ mod tests {
                 load: 14,
                 num_blocks: 2,
                 estimate_num_free_bytes: 4,
-                usable_block_size_from_physical_block_size: 3,
+                overhead: 3,
                 all_blocks: 2,
             },
             store.get_and_reset_counts(),

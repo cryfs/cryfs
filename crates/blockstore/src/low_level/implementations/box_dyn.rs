@@ -4,11 +4,8 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 
 use crate::{
-    BlockId, RemoveResult, TryCreateResult,
-    low_level::{
-        InvalidBlockSizeError,
-        interface::{BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore},
-    },
+    BlockId, Overhead, RemoveResult, TryCreateResult,
+    low_level::interface::{BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore},
 };
 use cryfs_utils::async_drop::AsyncDrop;
 use cryfs_utils::data::Data;
@@ -37,11 +34,8 @@ impl BlockStoreReader for DynBlockStore {
         (*self.0).estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        (*self.0).usable_block_size_from_physical_block_size(block_size)
+    fn overhead(&self) -> Overhead {
+        (*self.0).overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

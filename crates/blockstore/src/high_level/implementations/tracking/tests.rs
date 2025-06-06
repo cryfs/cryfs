@@ -59,7 +59,7 @@ async fn counters_start_at_zero() {
             store_remove: 0,
             store_num_blocks: 0,
             store_estimate_num_free_bytes: 0,
-            store_usable_block_size_from_physical_block_size: 0,
+            store_overhead: 0,
             store_all_blocks: 0,
             store_create: 0,
             store_flush_block: 0,
@@ -441,18 +441,21 @@ async fn usable_block_size_from_physical_block_size_increases_counter() {
     let mut store = fixture.store().await;
 
     store
+        .overhead()
         .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
         .unwrap();
     store
+        .overhead()
         .usable_block_size_from_physical_block_size(Byte::from_u64(2048))
         .unwrap();
     store
+        .overhead()
         .usable_block_size_from_physical_block_size(Byte::from_u64(4096))
         .unwrap();
 
     assert_eq!(
         ActionCounts {
-            store_usable_block_size_from_physical_block_size: 3,
+            store_overhead: 3,
             ..ActionCounts::ZERO
         },
         store.counts()
@@ -554,8 +557,16 @@ async fn get_and_reset_totals_works() {
     // Call usable_block_size_from_physical_block_size multiple times
     for _ in 0..4 {
         store
+            .overhead()
             .usable_block_size_from_physical_block_size(Byte::from_u64(1024))
             .unwrap();
+    }
+
+    // Call physical_block_size_from_usable_block_size
+    for _ in 0..2 {
+        let _ = store
+            .overhead()
+            .physical_block_size_from_usable_block_size(Byte::from_u64(1024));
     }
 
     // Call all_blocks multiple times
@@ -588,7 +599,7 @@ async fn get_and_reset_totals_works() {
             store_remove: 2,
             store_num_blocks: 3,
             store_estimate_num_free_bytes: 2,
-            store_usable_block_size_from_physical_block_size: 4,
+            store_overhead: 6,
             store_all_blocks: 3,
             store_flush_block: 2,
             blob_resize: 2,

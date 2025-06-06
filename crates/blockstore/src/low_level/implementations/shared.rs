@@ -6,11 +6,8 @@ use std::fmt::Debug;
 use std::ops::Deref;
 
 use crate::{
-    BlockId, RemoveResult, TryCreateResult,
-    low_level::{
-        BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError, LLBlockStore,
-        OptimizedBlockStoreWriter,
-    },
+    BlockId, Overhead, RemoveResult, TryCreateResult,
+    low_level::{BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
@@ -62,12 +59,8 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        self.underlying_store
-            .usable_block_size_from_physical_block_size(block_size)
+    fn overhead(&self) -> Overhead {
+        self.underlying_store.overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -160,12 +153,14 @@ mod tests {
         assert_eq!(
             Byte::from_u64(0),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             Byte::from_u64(20),
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20u64)).unwrap()
                 )

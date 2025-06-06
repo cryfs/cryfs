@@ -5,10 +5,8 @@ use mockall::mock;
 use std::fmt::{self, Debug};
 
 use crate::{
-    BlockId,
-    low_level::{
-        BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
-    },
+    BlockId, Overhead,
+    low_level::{BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore},
     utils::{RemoveResult, TryCreateResult},
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data};
@@ -21,7 +19,7 @@ mock! {
         fn load<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<Option<Data>>> where 'a: 'r, 'b: 'r;
         fn num_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<u64>> where 'a: 'r;
         fn estimate_num_free_bytes(&self) -> Result<Byte>;
-        fn usable_block_size_from_physical_block_size(&self, block_size: Byte) -> Result<Byte, InvalidBlockSizeError>;
+        fn overhead(&self) -> Overhead;
 
         fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<BoxStream<'static, Result<BlockId>>>> where 'a: 'r;
     }
@@ -103,17 +101,17 @@ mod tests {
             });
 
         let _underlying_store = Arc::clone(&underlying_store);
-        mock_store
-            .expect_usable_block_size_from_physical_block_size()
-            .returning(move |block_size| {
-                let _underlying_store = Arc::clone(&_underlying_store);
-                let r = _underlying_store
-                    .blocking_lock()
+        mock_store.expect_overhead().returning(move || {
+            let _underlying_store = Arc::clone(&_underlying_store);
+            let r = tokio::task::block_in_place(|| {
+                let _underlying_store = _underlying_store.blocking_lock();
+                _underlying_store
                     .as_ref()
                     .expect("Already destructed")
-                    .usable_block_size_from_physical_block_size(block_size);
-                r
+                    .overhead()
             });
+            r
+        });
 
         let _underlying_store = Arc::clone(&underlying_store);
         mock_store.expect_all_blocks().returning(move || {

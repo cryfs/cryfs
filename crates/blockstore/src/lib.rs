@@ -14,9 +14,12 @@ pub use low_level::{
     AllowIntegrityViolations, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, ClientId,
     CompressingBlockStore, DynBlockStore, EncryptedBlockStore, InMemoryBlockStore,
     IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig, IntegrityViolationError,
-    InvalidBlockSizeError, LLBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore,
-    OptimizedBlockStoreWriter, ReadOnlyBlockStore,
+    LLBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore, OptimizedBlockStoreWriter,
+    ReadOnlyBlockStore,
 };
+
+mod overhead;
+pub use overhead::{InvalidBlockSizeError, Overhead};
 
 #[cfg(any(test, feature = "testutils"))]
 pub use high_level::{

@@ -11,8 +11,8 @@ use std::sync::{
 
 use super::*;
 use crate::{
-    BlockId, InMemoryBlockStore, high_level::interface::BlockStore as _, low_level::MockBlockStore,
-    tests::high_level::HLFixture,
+    BlockId, InMemoryBlockStore, Overhead, high_level::interface::BlockStore as _,
+    low_level::MockBlockStore, tests::high_level::HLFixture,
 };
 use crate::{instantiate_blockstore_tests_for_highlevel_blockstore, tests::utils::data};
 use cryfs_utils::async_drop::AsyncDropGuard;
@@ -218,29 +218,16 @@ async fn test_whenCallingCreate_butExistsReturnsError_thenReturnsError() {
 }
 
 #[tokio::test]
-async fn test_usable_block_size_from_physical_block_size() {
-    let expected_overhead = Byte::from_u64(234354);
+async fn test_overhead() {
+    let expected_overhead = Overhead::new(Byte::from_u64(234354));
 
     let mut underlying_store = make_mock_block_store();
     underlying_store
-        .expect_usable_block_size_from_physical_block_size()
-        .returning(move |x| Ok(x.subtract(expected_overhead).unwrap()));
+        .expect_overhead()
+        .returning(move || expected_overhead);
     let mut store = LockingBlockStore::new(underlying_store);
 
-    assert_eq!(
-        Byte::from_u64(0),
-        store
-            .usable_block_size_from_physical_block_size(expected_overhead)
-            .unwrap()
-    );
-    assert_eq!(
-        Byte::from_u64(500),
-        store
-            .usable_block_size_from_physical_block_size(
-                Byte::from_u64(500).add(expected_overhead).unwrap()
-            )
-            .unwrap()
-    );
+    assert_eq!(expected_overhead, store.overhead());
 
     store.async_drop().await.unwrap();
 }

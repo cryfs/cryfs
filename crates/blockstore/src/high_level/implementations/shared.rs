@@ -8,7 +8,7 @@ use std::ops::Deref;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use cryfs_utils::data::Data;
 
-use crate::{BlockId, BlockStore, InvalidBlockSizeError, RemoveResult, TryCreateResult};
+use crate::{BlockId, BlockStore, Overhead, RemoveResult, TryCreateResult};
 
 #[derive(Debug)]
 pub struct SharedBlockStore<B>
@@ -73,12 +73,8 @@ where
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        self.underlying_store
-            .usable_block_size_from_physical_block_size(block_size)
+    fn overhead(&self) -> Overhead {
+        self.underlying_store.overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

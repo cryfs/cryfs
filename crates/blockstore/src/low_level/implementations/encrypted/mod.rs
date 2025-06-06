@@ -7,9 +7,8 @@ use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::ops::Deref;
 
-use crate::low_level::interface::InvalidBlockSizeError;
 use crate::{
-    BlockId,
+    BlockId, Overhead,
     low_level::{
         BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
         interface::block_data::IBlockData,
@@ -98,26 +97,13 @@ impl<
             .estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        physical_block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        let block_size = self
-            .underlying_block_store
-            .deref()
-            .borrow()
-            .usable_block_size_from_physical_block_size(physical_block_size)?;
-        let ciphertext_size = block_size.subtract(Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64))
-            .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {}.", FORMAT_VERSION_HEADER.len())))?;
-        ciphertext_size
-            .subtract(Byte::from_u64(
-                (C::CIPHERTEXT_OVERHEAD_PREFIX + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64,
+    fn overhead(&self) -> Overhead {
+        self.underlying_block_store.deref().borrow().overhead()
+            + Overhead::new(Byte::from_u64(
+                (FORMAT_VERSION_HEADER.len()
+                    + C::CIPHERTEXT_OVERHEAD_PREFIX
+                    + C::CIPHERTEXT_OVERHEAD_SUFFIX) as u64,
             ))
-            .ok_or_else(|| {
-                InvalidBlockSizeError::new(format!(
-                    "Block size of {block_size} (physical: {physical_block_size}) is too small."
-                ))
-            })
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -351,15 +337,18 @@ mod tests {
                     + C::CIPHERTEXT_OVERHEAD_SUFFIX as u64,
             );
 
+            // usable_block_size_from_physical_block_size
             assert_eq!(
                 0u64,
                 store
+                    .overhead()
                     .usable_block_size_from_physical_block_size(expected_overhead)
                     .unwrap()
             );
             assert_eq!(
                 20u64,
                 store
+                    .overhead()
                     .usable_block_size_from_physical_block_size(
                         expected_overhead.add(Byte::from_u64(20)).unwrap()
                     )
@@ -367,8 +356,23 @@ mod tests {
             );
             assert!(
                 store
+                    .overhead()
                     .usable_block_size_from_physical_block_size(Byte::from_u64(0))
                     .is_err()
+            );
+
+            // physical_block_size_from_usable_block_size
+            assert_eq!(
+                expected_overhead,
+                store
+                    .overhead()
+                    .physical_block_size_from_usable_block_size(Byte::from_u64(0))
+            );
+            assert_eq!(
+                Byte::from_u64(20).add(expected_overhead).unwrap(),
+                store
+                    .overhead()
+                    .physical_block_size_from_usable_block_size(Byte::from_u64(20))
             );
 
             store.async_drop().await.unwrap();

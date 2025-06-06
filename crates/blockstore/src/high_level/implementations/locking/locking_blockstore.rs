@@ -11,7 +11,7 @@ use futures::{StreamExt, TryStreamExt as _, future, stream};
 
 use crate::high_level::Block as _;
 use crate::high_level::interface::BlockStore;
-use crate::{BlockId, InvalidBlockSizeError, RemoveResult, TryCreateResult};
+use crate::{BlockId, Overhead, RemoveResult, TryCreateResult};
 
 use super::LockingBlock;
 use super::cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheEntryState};
@@ -193,12 +193,9 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
         base_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
+    fn overhead(&self) -> Overhead {
         let base_store = self.base_store.as_ref().expect("Already destructed");
-        base_store.usable_block_size_from_physical_block_size(block_size)
+        base_store.overhead()
     }
 
     // TODO Make sure we have tests that have some blocks in the cache and some in the base store

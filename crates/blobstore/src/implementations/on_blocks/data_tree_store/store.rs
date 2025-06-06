@@ -31,10 +31,10 @@ pub struct DataTreeStore<B: BlockStore + AsyncDrop + Debug + Send + Sync> {
 impl<B: BlockStore + AsyncDrop + Debug + Send + Sync> DataTreeStore<B> {
     pub async fn new(
         block_store: AsyncDropGuard<B>,
-        block_size: Byte,
+        physical_block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
-            node_store: DataNodeStore::new(block_store, block_size).await?,
+            node_store: DataNodeStore::new(block_store, physical_block_size).await?,
         }))
     }
 }
@@ -151,7 +151,7 @@ mod tests {
     use super::super::testutils::*;
     use super::*;
     use anyhow::anyhow;
-    use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore, MockBlockStore};
+    use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore, MockBlockStore, Overhead};
 
     fn make_mock_block_store() -> AsyncDropGuard<MockBlockStore> {
         let mut blockstore = AsyncDropGuard::new(MockBlockStore::new());
@@ -163,8 +163,6 @@ mod tests {
     }
 
     mod new {
-        use cryfs_blockstore::InvalidBlockSizeError;
-
         use super::*;
 
         #[tokio::test]
@@ -196,11 +194,11 @@ mod tests {
         async fn calculation_throws_error() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |_| Err(InvalidBlockSizeError::new(format!("some error"))));
+                .returning(move || Overhead::new(Byte::from_u64(100_000)));
             assert_eq!(
-                "Invalid block size: some error",
+                "Invalid block size: Physical block size 32768 is smaller than overhead 100000",
                 DataTreeStore::new(
                     LockingBlockStore::new(blockstore),
                     Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap()
@@ -654,9 +652,9 @@ mod tests {
         async fn no_space_left() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(|| Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(0)));
@@ -674,9 +672,9 @@ mod tests {
         async fn almost_enough_space_for_one_block() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(|| Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(99)));
@@ -694,9 +692,9 @@ mod tests {
         async fn just_enough_space_for_one_block() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(|| Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(100)));
@@ -714,9 +712,9 @@ mod tests {
         async fn enough_space_for_100_blocks() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(|| Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
@@ -739,9 +737,9 @@ mod tests {
         async fn calculation_is_based_on_physical_block_size_not_block_size() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v.divide(10).unwrap()));
+                .returning(|| Overhead::new(Byte::from_u64(15 * 1024)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
@@ -764,9 +762,9 @@ mod tests {
         async fn calculation_throws_error() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(|| Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Err(anyhow!("some error")));
@@ -796,9 +794,9 @@ mod tests {
         async fn test() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v.divide(10).unwrap()));
+                .returning(|| Overhead::new(Byte::from_u64(100)));
             let mut treestore = DataTreeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024 * 10),
@@ -808,7 +806,7 @@ mod tests {
 
             assert_eq!(
                 super::super::super::super::data_node_store::NodeLayout {
-                    block_size: Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
+                    block_size: Byte::from_u64(32 * 1024 * 10 - 100),
                 }
                 .max_bytes_per_leaf() as u64,
                 treestore.virtual_block_size_bytes().as_u64()

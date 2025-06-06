@@ -6,11 +6,8 @@ use std::fmt::Debug;
 use tempdir::TempDir;
 
 use crate::{
-    BlockId, RemoveResult, TryCreateResult,
-    low_level::{
-        BlockStoreDeleter, BlockStoreReader, InvalidBlockSizeError, LLBlockStore,
-        OptimizedBlockStoreWriter,
-    },
+    BlockId, Overhead, RemoveResult, TryCreateResult,
+    low_level::{BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -58,12 +55,8 @@ impl BlockStoreReader for TempDirBlockStore {
         self.underlying_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        self.underlying_store
-            .usable_block_size_from_physical_block_size(block_size)
+    fn overhead(&self) -> Overhead {
+        self.underlying_store.overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {

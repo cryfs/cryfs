@@ -15,10 +15,10 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 use crate::{
-    BLOCKID_LEN, BlockId,
+    BLOCKID_LEN, BlockId, Overhead,
     low_level::{
         BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
-        interface::{InvalidBlockSizeError, block_data::IBlockData},
+        interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
 };
@@ -190,16 +190,10 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         self.underlying_block_store.estimate_num_free_bytes()
     }
 
-    // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store.
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        physical_block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        let block_size = self
-            .underlying_block_store
-            .usable_block_size_from_physical_block_size(physical_block_size)?;
-        block_size.subtract(Byte::from_u64(u64::try_from(HEADER_SIZE_BYTES).unwrap()))
-            .ok_or_else(|| InvalidBlockSizeError::new(format!("Block size of {block_size} (physical: {physical_block_size}) is too small to hold even the FORMAT_VERSION_HEADER. Must be at least {HEADER_SIZE_BYTES}.")))
+    // TODO Test this by creating a blockstore based on an underlying block store (or on disk) and comparing the physical size. Same for encrypted block store or other stores with overhead.
+    fn overhead(&self) -> Overhead {
+        self.underlying_block_store.overhead()
+            + Overhead::new(Byte::from_u64(u64::try_from(HEADER_SIZE_BYTES).unwrap()))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -600,12 +594,14 @@ mod generic_tests {
         assert_eq!(
             0u64,
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             20u64,
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )
@@ -613,6 +609,7 @@ mod generic_tests {
         );
         assert!(
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(Byte::from_u64(0))
                 .is_err()
         );

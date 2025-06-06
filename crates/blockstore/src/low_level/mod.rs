@@ -1,8 +1,7 @@
 #[macro_use]
 mod interface;
 pub use interface::{
-    BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
-    OptimizedBlockStoreWriter,
+    BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore, OptimizedBlockStoreWriter,
 };
 
 mod implementations;

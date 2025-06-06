@@ -61,8 +61,9 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
         block_store: &B,
         physical_block_size: Byte,
     ) -> Result<Byte, InvalidBlockSizeError> {
-        let block_size =
-            block_store.usable_block_size_from_physical_block_size(physical_block_size)?;
+        let block_size = block_store
+            .overhead()
+            .usable_block_size_from_physical_block_size(physical_block_size)?;
 
         // Min block size: enough for header and for inner nodes to have at least two children and form a tree.
         let min_block_size =
@@ -263,6 +264,8 @@ mod tests {
     }
 
     mod new {
+        use cryfs_blockstore::Overhead;
+
         use super::*;
 
         #[tokio::test]
@@ -294,11 +297,11 @@ mod tests {
         async fn calculation_throws_error() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |_| Err(InvalidBlockSizeError::new(format!("some error"))));
+                .returning(|| Overhead::new(Byte::from_u64(100_000)));
             assert_eq!(
-                "Invalid block size: some error",
+                "Invalid block size: Physical block size 32768 is smaller than overhead 100000",
                 DataNodeStore::new(
                     LockingBlockStore::new(blockstore),
                     Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
@@ -311,6 +314,8 @@ mod tests {
     }
 
     mod layout {
+        use cryfs_blockstore::Overhead;
+
         use super::*;
 
         #[tokio::test]
@@ -338,12 +343,9 @@ mod tests {
                 .times(1)
                 .returning(move || Box::pin(async { Ok(()) }));
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| {
-                    v.subtract(Byte::from_u64(10))
-                        .ok_or_else(|| InvalidBlockSizeError::new(format!("overflow")))
-                });
+                .returning(|| Overhead::new(Byte::from_u64(10)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(0)));
@@ -1494,15 +1496,17 @@ mod tests {
     }
 
     mod estimate_space_for_num_blocks_left {
+        use cryfs_blockstore::Overhead;
+
         use super::*;
 
         #[tokio::test]
         async fn no_space_left() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(0)));
@@ -1520,9 +1524,9 @@ mod tests {
         async fn almost_enough_space_for_one_block() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(99)));
@@ -1540,9 +1544,9 @@ mod tests {
         async fn just_enough_space_for_one_block() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(100)));
@@ -1560,9 +1564,9 @@ mod tests {
         async fn enough_space_for_100_blocks() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
@@ -1585,9 +1589,9 @@ mod tests {
         async fn calculation_is_based_on_physical_block_size_not_block_size() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v.divide(10).unwrap()));
+                .returning(|| Overhead::new(Byte::from_u64(15 * 1024)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
@@ -1610,9 +1614,9 @@ mod tests {
         async fn calculation_throws_error() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Err(anyhow!("some error")));
@@ -1636,15 +1640,17 @@ mod tests {
     }
 
     mod virtual_block_size_bytes {
+        use cryfs_blockstore::Overhead;
+
         use super::*;
 
         #[tokio::test]
         async fn test() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v.divide(10).unwrap()));
+                .returning(|| Overhead::new(Byte::from_u64(100)));
             let mut nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024 * 10),
@@ -1653,7 +1659,7 @@ mod tests {
             .unwrap();
 
             assert_eq!(
-                32 * 1024 - node::data::OFFSET as u64,
+                32 * 1024 * 10 - 100 - node::data::OFFSET as u64,
                 nodestore.virtual_block_size_bytes().as_u64()
             );
 
@@ -1662,6 +1668,8 @@ mod tests {
     }
 
     mod all_nodes {
+        use cryfs_blockstore::Overhead;
+
         use super::*;
 
         async fn call_all_nodes(
@@ -1680,9 +1688,9 @@ mod tests {
         async fn empty() {
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore.expect_all_blocks().returning(|| {
                 Box::pin(async {
                     let stream: BoxStream<'static, Result<BlockId>> =
@@ -1714,9 +1722,9 @@ mod tests {
 
             let mut blockstore = make_mock_block_store();
             blockstore
-                .expect_usable_block_size_from_physical_block_size()
+                .expect_overhead()
                 .times(1)
-                .returning(move |v| Ok(v));
+                .returning(move || Overhead::new(Byte::from_u64(0)));
             blockstore.expect_all_blocks().returning(|| {
                 Box::pin(async {
                     let stream: BoxStream<'static, Result<BlockId>> =

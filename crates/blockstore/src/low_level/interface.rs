@@ -1,27 +1,15 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
-use derive_more::{Display, Error};
 use futures::stream::BoxStream;
 use std::any::Any;
 use std::fmt::Debug;
 
 use crate::{
-    BlockId,
+    BlockId, Overhead,
     utils::{RemoveResult, TryCreateResult},
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data};
-
-#[derive(Error, Display, Debug)]
-#[display("Invalid block size: {message}")]
-pub struct InvalidBlockSizeError {
-    message: String,
-}
-impl InvalidBlockSizeError {
-    pub fn new(message: String) -> Self {
-        Self { message: message }
-    }
-}
 
 #[async_trait]
 pub trait BlockStoreReader {
@@ -30,10 +18,7 @@ pub trait BlockStoreReader {
     async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
     async fn num_blocks(&self) -> Result<u64>;
     fn estimate_num_free_bytes(&self) -> Result<Byte>;
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError>;
+    fn overhead(&self) -> Overhead;
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>>;
 }

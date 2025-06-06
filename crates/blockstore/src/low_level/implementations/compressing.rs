@@ -5,9 +5,9 @@ use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
 use crate::{
-    BlockId,
+    BlockId, Overhead,
     low_level::{
-        BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InvalidBlockSizeError, LLBlockStore,
+        BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, LLBlockStore,
         OptimizedBlockStoreWriter, interface::block_data::IBlockData,
     },
     utils::{RemoveResult, TryCreateResult},
@@ -65,14 +65,10 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
         self.underlying_block_store.estimate_num_free_bytes()
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        //We probably have more since we're compressing, but we don't know exactly how much.
+    fn overhead(&self) -> Overhead {
+        //We probably have negative overhead since we're compressing, but we don't know exactly how much.
         //The best we can do is ignore the compression step here.
-        self.underlying_block_store
-            .usable_block_size_from_physical_block_size(block_size)
+        self.underlying_block_store.overhead()
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
@@ -191,12 +187,14 @@ mod generic_tests {
         assert_eq!(
             0u64,
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(expected_overhead)
                 .unwrap()
         );
         assert_eq!(
             20u64,
             store
+                .overhead()
                 .usable_block_size_from_physical_block_size(
                     expected_overhead.add(Byte::from_u64(20)).unwrap()
                 )

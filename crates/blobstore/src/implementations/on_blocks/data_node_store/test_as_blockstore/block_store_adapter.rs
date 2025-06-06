@@ -8,7 +8,7 @@ use std::fmt::{self, Debug};
 use super::super::{DataLeafNode, DataNode, DataNodeStore, layout::node};
 use cryfs_blockstore::{
     BlockId, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, InMemoryBlockStore,
-    InvalidBlockSizeError, LLBlockStore, LockingBlockStore, RemoveResult, TryCreateResult,
+    LLBlockStore, LockingBlockStore, Overhead, RemoveResult, TryCreateResult,
     tests::low_level::LLFixture,
 };
 use cryfs_utils::{
@@ -74,13 +74,8 @@ impl BlockStoreReader for BlockStoreAdapter {
         ))
     }
 
-    fn usable_block_size_from_physical_block_size(
-        &self,
-        block_size: Byte,
-    ) -> Result<Byte, InvalidBlockSizeError> {
-        block_size
-            .subtract(Byte::from_u64(node::data::OFFSET as u64))
-            .ok_or_else(|| InvalidBlockSizeError::new(format!("Out of bounds")))
+    fn overhead(&self) -> Overhead {
+        Overhead::new(Byte::from_u64(node::data::OFFSET as u64))
     }
 
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
