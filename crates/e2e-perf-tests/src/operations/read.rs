@@ -599,19 +599,19 @@ fn large_read_from_middle_of_large_file(test_driver: impl TestDriver) -> impl Te
                 high_level: HLActionCounts {
                     // TODO Check if these counts are what we'd expect
                     store_load: match fixture_type {
-                        FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 63,
-                        FixtureType::FuserWithoutInodeCache => 69, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                        FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 31,
+                        FixtureType::FuserWithoutInodeCache => 37, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                     },
                     blob_data: match fixture_type {
-                        FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 398,
-                        FixtureType::FuserWithoutInodeCache => 442, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                        FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 204,
+                        FixtureType::FuserWithoutInodeCache => 248, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                     } + 2 * expect_atime_update,
                     blob_data_mut: expect_atime_update,
                     ..HLActionCounts::ZERO
                 },
                 low_level: LLActionCounts {
                     // TODO Check if these counts are what we'd expect
-                    load: 63,
+                    load: 31,
                     store: expect_atime_update,
                     ..LLActionCounts::ZERO
                 },

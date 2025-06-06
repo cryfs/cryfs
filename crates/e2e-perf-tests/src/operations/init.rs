@@ -34,13 +34,13 @@ fn init(test_driver: impl TestDriver) -> impl TestReady {
                 blob_data_mut: 2,
                 store_try_create: 1,
                 store_flush_block: 1,
-                store_overhead: 1,
+                store_overhead: 2,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 exists: 1,
                 store: 1,
-                overhead: 1,
+                overhead: 3,
                 ..LLActionCounts::ZERO
             },
         })

@@ -703,18 +703,18 @@ fn large_file(test_driver: impl TestDriver) -> impl TestReady {
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 6,
-                blob_data: 45,
+                store_load: 5,
+                blob_data: 38,
                 blob_data_mut: 1,
-                store_remove: 5,
-                store_remove_by_id: 52,
+                store_remove: 4,
+                store_remove_by_id: 22,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: 6,
+                load: 5,
                 store: 1,
-                remove: 57,
+                remove: 26,
                 ..LLActionCounts::ZERO
             },
         })
@@ -758,18 +758,18 @@ fn large_symlink(test_driver: impl TestDriver) -> impl TestReady {
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 6,
-                blob_data: 45,
+                store_load: 5,
+                blob_data: 38,
                 blob_data_mut: 1,
-                store_remove: 5,
-                store_remove_by_id: 52,
+                store_remove: 4,
+                store_remove_by_id: 22,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: 6,
+                load: 5,
                 store: 1,
-                remove: 57,
+                remove: 26,
                 ..LLActionCounts::ZERO
             },
         })

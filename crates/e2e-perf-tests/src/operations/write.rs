@@ -380,22 +380,22 @@ fn small_write_beyond_end_of_large_file(test_driver: impl TestDriver) -> impl Te
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 63,
-                    FixtureType::FuserWithoutInodeCache => 69, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 32,
+                    FixtureType::FuserWithoutInodeCache => 38, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                store_create: 55,
+                store_create: 24,
                 blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 301,
-                    FixtureType::FuserWithoutInodeCache => 345, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 176,
+                    FixtureType::FuserWithoutInodeCache => 220, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 17,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                exists: 55,
+                exists: 24,
                 load: 6,
-                store: 59,
+                store: 28,
                 ..LLActionCounts::ZERO
             },
         })
@@ -446,22 +446,22 @@ fn large_write_to_empty_file(test_driver: impl TestDriver) -> impl TestReady {
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 113,
-                    FixtureType::FuserWithoutInodeCache => 115, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 50,
+                    FixtureType::FuserWithoutInodeCache => 52, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                store_create: 111,
+                store_create: 48,
                 blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 524,
-                    FixtureType::FuserWithoutInodeCache => 540, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 254,
+                    FixtureType::FuserWithoutInodeCache => 270, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data_mut: 65,
+                blob_data_mut: 41,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                exists: 111,
+                exists: 48,
                 load: 2,
-                store: 113,
+                store: 50,
                 ..LLActionCounts::ZERO
             },
         })
@@ -525,22 +525,22 @@ fn large_write_to_middle_of_large_file(test_driver: impl TestDriver) -> impl Tes
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 12,
-                    FixtureType::FuserWithoutInodeCache => 18, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 11,
+                    FixtureType::FuserWithoutInodeCache => 17, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                store_overwrite: 51,
+                store_overwrite: 20,
                 blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 143,
-                    FixtureType::FuserWithoutInodeCache => 187, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 104,
+                    FixtureType::FuserWithoutInodeCache => 148, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 3,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                exists: 51,
-                load: 12,
-                store: 54,
+                exists: 20,
+                load: 11,
+                store: 23,
                 ..LLActionCounts::ZERO
             },
         })
@@ -604,22 +604,22 @@ fn large_write_beyond_end_of_large_file(test_driver: impl TestDriver) -> impl Te
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 118,
-                    FixtureType::FuserWithoutInodeCache => 124, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 55,
+                    FixtureType::FuserWithoutInodeCache => 61, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                store_create: 110,
+                store_create: 47,
                 blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 544,
-                    FixtureType::FuserWithoutInodeCache => 588, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 280,
+                    FixtureType::FuserWithoutInodeCache => 324, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
-                blob_data_mut: 47,
+                blob_data_mut: 32,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                exists: 110,
+                exists: 47,
                 load: 6,
-                store: 114,
+                store: 51,
                 ..LLActionCounts::ZERO
             },
         })

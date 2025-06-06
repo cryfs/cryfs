@@ -6,9 +6,10 @@ use tempdir::TempDir;
 
 use cryfs_blobstore::{BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
-    BLOCKID_LEN, ClientId, DynBlockStore, HLActionCounts, HLSharedBlockStore, HLTrackingBlockStore,
-    InMemoryBlockStore, IntegrityConfig, LLActionCounts, LLBlockStore, LLSharedBlockStore,
-    LLTrackingBlockStore, LockingBlockStore, OptimizedBlockStoreWriter,
+    BLOCKID_LEN, BlockStore as _, BlockStoreReader as _, ClientId, DynBlockStore, HLActionCounts,
+    HLSharedBlockStore, HLTrackingBlockStore, InMemoryBlockStore, IntegrityConfig, LLActionCounts,
+    LLBlockStore, LLSharedBlockStore, LLTrackingBlockStore, LockingBlockStore,
+    OptimizedBlockStoreWriter, Overhead,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
@@ -23,7 +24,7 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop}
 
 use crate::filesystem_driver::FilesystemDriver;
 
-const NUM_CHILDREN_PER_INNER_NODE: u64 = 20;
+const NUM_CHILDREN_PER_INNER_NODE: u64 = 10;
 pub const BLOCKSIZE_BYTES: u64 = NUM_CHILDREN_PER_INNER_NODE * BLOCKID_LEN as u64;
 pub const NUM_BYTES_FOR_THREE_LEVEL_TREE: u64 =
     2 * NUM_CHILDREN_PER_INNER_NODE as u64 * BLOCKSIZE_BYTES;
@@ -81,11 +82,21 @@ where
         atime_behavior: AtimeUpdateBehavior,
     ) -> Self {
         let ll_blockstore = Self::make_ll_blockstore(blockstore).await;
-        let (local_state_tempdir, hl_blockstore) = Self::make_hl_blockstore(&ll_blockstore).await;
-        let blobstore = Self::make_blobstore(&hl_blockstore).await;
+        let overhead = ll_blockstore.overhead() + Overhead::new(Byte::from_u64(64));
+        let config = config(
+            overhead.physical_block_size_from_usable_block_size(Byte::from_u64(BLOCKSIZE_BYTES)),
+        );
+        let (local_state_tempdir, hl_blockstore) =
+            Self::make_hl_blockstore(&ll_blockstore, &config).await;
+        assert_eq!(
+            overhead,
+            hl_blockstore.overhead(),
+            "If this fails, we need to change the overhead definiton above. Unfortunately, we couldn't just ask the blockstore for its overhead because we need to know the overhead to construct the config before constructing the blockstore."
+        );
+        let blobstore = Self::make_blobstore(&hl_blockstore, &config).await;
 
         let blobstore = AsyncDropArc::new(blobstore);
-        let device = Self::make_device(&blobstore, atime_behavior).await;
+        let device = Self::make_device(&blobstore, &config, atime_behavior).await;
 
         let filesystem = FS::new(device).await;
 
@@ -108,6 +119,7 @@ where
 
     async fn make_hl_blockstore(
         ll_blockstore: &AsyncDropGuard<LLSharedBlockStore<LLTrackingBlockStore<B>>>,
+        config: &CryConfig,
     ) -> (
         TempDir,
         AsyncDropGuard<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
@@ -116,7 +128,7 @@ where
 
         let locking_blockstore = setup_blockstore_stack_dyn(
             LLSharedBlockStore::clone(&ll_blockstore),
-            &config(),
+            config,
             ClientId { id: MY_CLIENT_ID },
             &LocalStateDir::new(local_state_tempdir.path().to_owned()),
             IntegrityConfig {
@@ -141,6 +153,7 @@ where
         hl_blockstore: &AsyncDropGuard<
             HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
         >,
+        config: &CryConfig,
     ) -> AsyncDropGuard<
         TrackingBlobStore<
             BlobStoreOnBlocks<
@@ -149,7 +162,7 @@ where
         >,
     > {
         TrackingBlobStore::new(
-            BlobStoreOnBlocks::new(HLSharedBlockStore::clone(hl_blockstore), config().blocksize)
+            BlobStoreOnBlocks::new(HLSharedBlockStore::clone(hl_blockstore), config.blocksize)
                 .await
                 .unwrap(),
         )
@@ -165,6 +178,7 @@ where
                 >,
             >,
         >,
+        config: &CryConfig,
         atime_behavior: AtimeUpdateBehavior,
     ) -> AsyncDropGuard<
         CryDevice<
@@ -181,7 +195,7 @@ where
 
         let device = make_device(
             blobstore,
-            &config(),
+            config,
             CreateOrLoad::CreateNewFilesystem,
             atime_behavior,
         )
@@ -216,7 +230,7 @@ where
     }
 }
 
-fn config() -> CryConfig {
+fn config(blocksize: Byte) -> CryConfig {
     CryConfig {
         root_blob: "4a7a231be5055939468cb4a17087053e".to_string(),
         enc_key: "4e4f500b608039d5385f9f977f785288522c7f2f7e1af18a1974dce9c454720e".to_string(),
@@ -224,7 +238,7 @@ fn config() -> CryConfig {
         format_version: FILESYSTEM_FORMAT_VERSION.to_string(),
         created_with_version: CRYFS_VERSION.to_string(),
         last_opened_with_version: CRYFS_VERSION.to_string(),
-        blocksize: Byte::from(BLOCKSIZE_BYTES),
+        blocksize,
         filesystem_id: FilesystemId::from_hex("8de43828c75c9bb10cac251eaf4ad9bd").unwrap(),
         exclusive_client_id: Some(MY_CLIENT_ID.get()),
     }

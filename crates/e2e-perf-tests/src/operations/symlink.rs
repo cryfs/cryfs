@@ -483,7 +483,7 @@ fn long_target(test_driver: impl TestDriver) -> impl TestReady {
         .test(async move |fixture, ()| {
             // Create a very long target path that spans multiple blocks
             let long_target =
-                "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize / 5) + "/target/path";
+                "/very/long".repeat(NUM_BYTES_FOR_THREE_LEVEL_TREE as usize / 10) + "/target/path";
             let target = AbsolutePath::try_from_str(&long_target).unwrap();
             fixture
                 .filesystem
@@ -509,17 +509,17 @@ fn long_target(test_driver: impl TestDriver) -> impl TestReady {
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 113,
-                blob_data: 522,
-                blob_data_mut: 66,
-                store_create: 112,
+                store_load: 27,
+                blob_data: 154,
+                blob_data_mut: 36,
+                store_create: 26,
                 store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                exists: 112,
-                store: 113,
+                exists: 26,
+                store: 27,
                 load: 1,
                 ..LLActionCounts::ZERO
             },
