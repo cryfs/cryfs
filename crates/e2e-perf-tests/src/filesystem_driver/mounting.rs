@@ -222,11 +222,17 @@ where
 
     async fn destroy(&self) {
         let mut fs = self.fs.lock().unwrap();
-        let MaybeMounted::Mounted { fs } = std::mem::replace(&mut *fs, MaybeMounted::Invalid)
+        let MaybeMounted::Mounted {
+            fs: running_filesystem,
+        } = std::mem::replace(&mut *fs, MaybeMounted::Invalid)
         else {
             panic!("Filesystem is not mounted");
         };
-        fs.unmount_join();
+        tokio::task::spawn_blocking(move || {
+            running_filesystem.unmount_join();
+        })
+        .await
+        .unwrap();
     }
 
     async fn mkdir(
