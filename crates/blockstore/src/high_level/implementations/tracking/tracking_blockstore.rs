@@ -6,8 +6,8 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use super::{ActionCounts, tracking_block::TrackingBlock};
-use crate::{BlockStore, Overhead};
 use crate::{BlockId, RemoveResult, TryCreateResult};
+use crate::{BlockStore, Overhead};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::data::Data;
 
