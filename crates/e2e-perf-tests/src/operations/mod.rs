@@ -34,3 +34,5 @@ pub mod write;
 // TODO Would be nice to expand this crate to also test correctness of the operations, e.g. add a .expect_output() function to test driver in addition to .expect_op_count()
 // TODO Find cases where .setup() passes data to .test() that isn't actually used in the test function, and remove it.
 // TODO Find cases of magic strings (e.g. paths, filenames) that are repeated and put them into constants
+// TODO For benchmarks, it might make sense to increase the block size to real world block sizes (e.g. 16kb or 32kb)
+// TODO The benchmarks, e.g. `cargo bench --features benchmarking symlink` sometimes seem to get stuck (deadlock?) but always in the first benchmark to be executed, if that passes, then later benchmarks in the same run are fine. Maybe deadlock in setup code?
