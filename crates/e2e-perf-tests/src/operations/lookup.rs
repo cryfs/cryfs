@@ -31,16 +31,16 @@ fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .filesystem
                 .create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await
-                .unwrap()
+                .unwrap();
         })
-        .test(async |fixture, file| {
+        .test(async |fixture, ()| {
             fixture
                 .filesystem
                 .lookup(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: 2,
@@ -66,7 +66,7 @@ fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
 fn notexisting_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
-        .setup(async |fixture| {
+        .setup(async |_fixture| {
             // No setup needed for non-existing file
         })
         .test(async |fixture, ()| {
@@ -79,7 +79,7 @@ fn notexisting_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap_err();
         })
-        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: 1,

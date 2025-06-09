@@ -28,7 +28,7 @@ use cryfs_rustfs::{
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use std::os::unix::io::AsRawFd;
 
-trait MountingBackend {
+pub trait MountingBackend {
     type Session: BackgroundSession + Send + 'static;
     async fn spawn_mount(
         device: AsyncDropGuard<

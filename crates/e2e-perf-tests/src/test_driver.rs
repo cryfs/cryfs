@@ -1,4 +1,6 @@
+#[cfg(not(feature = "benchmark"))]
 use pretty_assertions::assert_eq;
+#[cfg(feature = "benchmark")]
 use std::cell::RefCell;
 use std::marker::PhantomData;
 
@@ -38,6 +40,7 @@ where
     blockstore: CreateBlockstoreFn,
     atime_update_behavior: AtimeUpdateBehavior,
     _fsdriver: PhantomData<FS>,
+    #[cfg(not(feature = "benchmark"))]
     fixture_type: FixtureType,
 }
 
@@ -51,13 +54,14 @@ where
     pub fn new(
         blockstore: CreateBlockstoreFn,
         _fsdriver: PhantomData<FS>,
-        fixture_type: FixtureType,
+        #[allow(unused_variables)] fixture_type: FixtureType,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> Self {
         Self {
             blockstore,
             atime_update_behavior,
             _fsdriver: PhantomData,
+            #[cfg(not(feature = "benchmark"))]
             fixture_type,
         }
     }
@@ -72,30 +76,33 @@ where
     type B = B;
     type FS = FS;
 
-    #[must_use]
     fn create_filesystem(
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
+        #[cfg(not(feature = "benchmark"))]
         let fixture_type = self.fixture_type;
         let atime_update_behavior = self.atime_update_behavior;
         TestDriverWithFs {
             filesystem: async move || {
                 FilesystemFixture::<B, FS>::create_filesystem(
                     (self.blockstore)(),
-                    self.atime_update_behavior,
+                    atime_update_behavior,
                 )
                 .await
             },
+            #[cfg(not(feature = "benchmark"))]
             fixture_type,
+            #[cfg(not(feature = "benchmark"))]
             atime_update_behavior,
         }
     }
 
-    #[must_use]
     fn create_uninitialized_filesystem(
         self,
     ) -> TestDriverWithFs<B, FS, impl AsyncFn() -> FilesystemFixture<B, FS>> {
+        #[cfg(not(feature = "benchmark"))]
         let fixture_type = self.fixture_type;
+        #[cfg(not(feature = "benchmark"))]
         let atime_update_behavior = self.atime_update_behavior;
         TestDriverWithFs {
             filesystem: async move || {
@@ -105,7 +112,9 @@ where
                 )
                 .await
             },
+            #[cfg(not(feature = "benchmark"))]
             fixture_type,
+            #[cfg(not(feature = "benchmark"))]
             atime_update_behavior,
         }
     }
@@ -119,7 +128,9 @@ where
     CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
 {
     filesystem: CreateFsFn,
+    #[cfg(not(feature = "benchmark"))]
     fixture_type: FixtureType,
+    #[cfg(not(feature = "benchmark"))]
     atime_update_behavior: AtimeUpdateBehavior,
 }
 
@@ -143,16 +154,11 @@ where
     where
         SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     {
-        TestDriverWithFsAndSetupOp {
-            fixture_type: self.fixture_type,
-            atime_update_behavior: self.atime_update_behavior,
-            filesystem: self.filesystem,
-            setup_fn: async move |fs| {
-                let setup_result = setup_fn(fs).await;
-                fs.blobstore.clear_cache_slow().await.unwrap();
-                setup_result
-            },
-        }
+        self.setup_noflush(async move |fs| {
+            let setup_result = setup_fn(fs).await;
+            fs.blobstore.clear_cache_slow().await.unwrap();
+            setup_result
+        })
     }
 
     #[must_use]
@@ -164,7 +170,9 @@ where
         SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     {
         TestDriverWithFsAndSetupOp {
+            #[cfg(not(feature = "benchmark"))]
             fixture_type: self.fixture_type,
+            #[cfg(not(feature = "benchmark"))]
             atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn,
@@ -180,7 +188,9 @@ where
     CreateFsFn: AsyncFn() -> FilesystemFixture<B, FS>,
     SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
 {
+    #[cfg(not(feature = "benchmark"))]
     fixture_type: FixtureType,
+    #[cfg(not(feature = "benchmark"))]
     atime_update_behavior: AtimeUpdateBehavior,
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
@@ -209,7 +219,9 @@ where
         SetupFn2: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult) -> SetupResult2,
     {
         TestDriverWithFsAndSetupOp {
+            #[cfg(not(feature = "benchmark"))]
             fixture_type: self.fixture_type,
+            #[cfg(not(feature = "benchmark"))]
             atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn: async move |fixture| {
@@ -295,7 +307,9 @@ where
         TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
     {
         TestDriverWithFsAndSetupOpAndTestOp {
+            #[cfg(not(feature = "benchmark"))]
             fixture_type: self.fixture_type,
+            #[cfg(not(feature = "benchmark"))]
             atime_update_behavior: self.atime_update_behavior,
             filesystem: self.filesystem,
             setup_fn: self.setup_fn,
@@ -313,7 +327,9 @@ where
     SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
+    #[cfg(not(feature = "benchmark"))]
     fixture_type: FixtureType,
+    #[cfg(not(feature = "benchmark"))]
     atime_update_behavior: AtimeUpdateBehavior,
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
@@ -332,12 +348,16 @@ where
     #[must_use]
     pub fn expect_op_counts(
         self,
-        expected: impl FnOnce(FixtureType, AtimeUpdateBehavior) -> ActionCounts,
+        #[allow(unused_variables)] expected: impl FnOnce(
+            FixtureType,
+            AtimeUpdateBehavior,
+        ) -> ActionCounts,
     ) -> impl TestReady {
         TestReadyImpl {
             filesystem: self.filesystem,
             setup_fn: self.setup_fn,
             test_fn: self.test_fn,
+            #[cfg(not(feature = "benchmark"))]
             expected_op_counts: expected(self.fixture_type, self.atime_update_behavior),
         }
     }
@@ -346,6 +366,7 @@ where
 #[must_use]
 pub trait TestReady {
     /// Run the test and assert that the operation counts match the expected values.
+    #[cfg(not(feature = "benchmark"))]
     fn assert_op_counts(&self);
 
     #[cfg(feature = "benchmark")]
@@ -364,6 +385,7 @@ where
     filesystem: CreateFsFn,
     setup_fn: SetupFn,
     test_fn: TestFn,
+    #[cfg(not(feature = "benchmark"))]
     expected_op_counts: ActionCounts,
 }
 
@@ -376,6 +398,7 @@ where
     SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
+    #[cfg(not(feature = "benchmark"))]
     async fn _execute_test(&self) -> ActionCounts {
         let mut filesystem = (self.filesystem)().await;
         let setup_result = (self.setup_fn)(&mut filesystem).await;
@@ -404,6 +427,7 @@ where
     SetupFn: AsyncFn(&mut FilesystemFixture<B, FS>) -> SetupResult,
     TestFn: AsyncFn(&mut FilesystemFixture<B, FS>, SetupResult),
 {
+    #[cfg(not(feature = "benchmark"))]
     fn assert_op_counts(&self) {
         let expected = self.expected_op_counts;
         let actual = Self::_new_runtime().block_on(async { self._execute_test().await });

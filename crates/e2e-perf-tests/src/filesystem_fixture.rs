@@ -7,9 +7,9 @@ use tempdir::TempDir;
 use cryfs_blobstore::{BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     BLOCKID_LEN, BlockStore as _, BlockStoreReader as _, ClientId, DynBlockStore, HLActionCounts,
-    HLSharedBlockStore, HLTrackingBlockStore, InMemoryBlockStore, IntegrityConfig, LLActionCounts,
-    LLBlockStore, LLSharedBlockStore, LLTrackingBlockStore, LockingBlockStore,
-    OptimizedBlockStoreWriter, Overhead,
+    HLSharedBlockStore, HLTrackingBlockStore, IntegrityConfig, LLActionCounts, LLBlockStore,
+    LLSharedBlockStore, LLTrackingBlockStore, LockingBlockStore, OptimizedBlockStoreWriter,
+    Overhead,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
@@ -19,7 +19,9 @@ use cryfs_filesystem::{
     localstate::LocalStateDir,
 };
 use cryfs_runner::{CreateOrLoad, make_device};
-use cryfs_rustfs::{AtimeUpdateBehavior, Gid, RequestInfo, Uid};
+use cryfs_rustfs::AtimeUpdateBehavior;
+#[cfg(not(feature = "benchmark"))]
+use cryfs_rustfs::{Gid, RequestInfo, Uid};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use crate::filesystem_driver::FilesystemDriver;
@@ -211,6 +213,7 @@ where
         self.ll_blockstore.get_and_reset_counts();
     }
 
+    #[cfg(not(feature = "benchmark"))]
     pub fn totals(&self) -> ActionCounts {
         ActionCounts {
             blobstore: self.blobstore.counts(),
@@ -244,6 +247,7 @@ fn config(blocksize: Byte) -> CryConfig {
     }
 }
 
+#[cfg(not(feature = "benchmark"))]
 pub fn request_info() -> RequestInfo {
     RequestInfo {
         unique: 0,

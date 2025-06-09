@@ -1,5 +1,3 @@
-use pretty_assertions::assert_eq;
-
 use crate::filesystem_driver::FilesystemDriver as _;
 use crate::filesystem_fixture::ActionCounts;
 use crate::perf_test_macro::FixtureType;

@@ -11,7 +11,7 @@ crate::perf_test_macro::perf_test!(init, [init,]);
 fn init(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_uninitialized_filesystem()
-        .setup(async |fixture| {
+        .setup(async |_fixture| {
             // No setup needed
         })
         .test_no_counter_reset(async |fixture, ()| {

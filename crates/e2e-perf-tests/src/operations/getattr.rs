@@ -24,7 +24,7 @@ crate::perf_test_macro::perf_test!(
 fn rootdir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
-        .setup(async |fixture| {
+        .setup(async |_fixture| {
             // No setup needed for root directory
         })
         .test(async |fixture, ()| {
