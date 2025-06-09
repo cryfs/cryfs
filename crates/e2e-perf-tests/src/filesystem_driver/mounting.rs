@@ -712,6 +712,17 @@ where
                 error: error.into(),
             })?;
 
+        // Flush write, otherwise fuse doesn't actually send the write operation to the file system.
+        // Note: This causes the *write* operation to be sent to the file system.
+        // This does not trigger the *flush* fuse operation.
+        // The *flush* fuse operation is different from this and is called when the file is closed.
+        open_file
+            .flush()
+            .await
+            .map_err(|error| FsError::InternalError {
+                error: error.into(),
+            })?;
+
         Ok(())
     }
 
