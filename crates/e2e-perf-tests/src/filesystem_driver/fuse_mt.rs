@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::{fmt::Debug, sync::Arc};
 
 use super::FilesystemDriver;
-use crate::filesystem_fixture::request_info;
+use super::common::request_info;
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
@@ -18,6 +18,7 @@ use cryfs_rustfs::{
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use std::time::SystemTime;
 
+/// A [FilesystemDriver] implementation using the high-level Api from [rustfs], i.e. [ObjectBasedFsAdapter].
 pub struct FusemtFilesystemDriver {
     fs: AsyncDropGuard<
         ObjectBasedFsAdapter<

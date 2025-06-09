@@ -1,6 +1,8 @@
 mod interface;
 pub use interface::FilesystemDriver;
 
+mod common;
+
 #[cfg(not(feature = "benchmark"))]
 mod fuser;
 #[cfg(not(feature = "benchmark"))]

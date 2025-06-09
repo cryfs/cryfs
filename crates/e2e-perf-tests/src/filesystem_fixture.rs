@@ -20,8 +20,6 @@ use cryfs_filesystem::{
 };
 use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::AtimeUpdateBehavior;
-#[cfg(not(feature = "benchmark"))]
-use cryfs_rustfs::{Gid, RequestInfo, Uid};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use crate::filesystem_driver::FilesystemDriver;
@@ -40,6 +38,8 @@ pub struct ActionCounts {
     pub low_level: LLActionCounts,
 }
 
+/// A [FilesystemFixture] sets up the whole blockstore/blobstore stack for a CryFS filesystem,
+/// and does so in a way that allows us to track operation counts (i.e. it inserts [TrackingBlobStore] and similar).
 pub struct FilesystemFixture<B, FS>
 where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
@@ -69,6 +69,7 @@ where
     B: LLBlockStore + OptimizedBlockStoreWriter + AsyncDrop + Send + Sync,
     FS: FilesystemDriver,
 {
+    /// Create a new CryFS filesystem, and call `init()` to initialize it.
     pub async fn create_filesystem(
         blockstore: AsyncDropGuard<B>,
         atime_behavior: AtimeUpdateBehavior,
@@ -79,6 +80,8 @@ where
         fixture
     }
 
+    /// Create a new CryFS filesystem, but omit the `init()` call to it.
+    /// This is useful for tests testing `init()` itself.
     pub async fn create_uninitialized_filesystem(
         blockstore: AsyncDropGuard<B>,
         atime_behavior: AtimeUpdateBehavior,
@@ -244,15 +247,5 @@ fn config(blocksize: Byte) -> CryConfig {
         blocksize,
         filesystem_id: FilesystemId::from_hex("8de43828c75c9bb10cac251eaf4ad9bd").unwrap(),
         exclusive_client_id: Some(MY_CLIENT_ID.get()),
-    }
-}
-
-#[cfg(not(feature = "benchmark"))]
-pub fn request_info() -> RequestInfo {
-    RequestInfo {
-        unique: 0,
-        uid: Uid::from(0),
-        gid: Gid::from(0),
-        pid: 0,
     }
 }

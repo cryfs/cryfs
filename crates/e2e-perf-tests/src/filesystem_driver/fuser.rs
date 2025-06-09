@@ -8,7 +8,7 @@ use std::{
 };
 
 use super::FilesystemDriver;
-use crate::filesystem_fixture::request_info;
+use super::common::request_info;
 use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
@@ -96,6 +96,8 @@ impl FuserCacheBehavior for WithoutInodeCache {
     }
 }
 
+/// A [FilesystemDriver] implementation using the low-level Api from [rustfs], i.e. [ObjectBasedFsAdapterLL].
+/// Its caching behavior can be configured using [FuserCacheBehavior].
 pub struct FuserFilesystemDriver<C: FuserCacheBehavior> {
     fs: AsyncDropGuard<
         ObjectBasedFsAdapterLL<

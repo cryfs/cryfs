@@ -1,5 +1,6 @@
 // TODO If rust stabilizes custom test frameworks, we can make `perf_test` a per-test macro instead of taking multiple macro names listing all tests in a file. See https://bheisler.github.io/criterion.rs/book/user_guide/custom_test_framework.html
 
+/// Macro that instantiates all performance counter test cases (similar to rstest duplication)
 #[cfg(not(feature = "benchmark"))]
 #[crabtime::function]
 fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fuser: u8) {
@@ -80,6 +81,7 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fu
 // TODO Is it better for perf_test in benchmark mode to just output one bench function that contains all of the benchmarks? Currently, we create a separate function for each test.
 // TODO Test if macro_rules has better compile times here than crabtime.
 
+/// Macro that instantiates all benchmarks (similar to rstest duplication)
 #[cfg(feature = "benchmark")]
 #[crabtime::function]
 fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fuser: u8) {
@@ -134,6 +136,13 @@ fn perf_test_(group: String, names: Vec<String>, disable_fusemt: u8, disable_fus
     crabtime::output_str!(");");
 }
 
+/// The [perf_test!] should be invoked for each test, and it will instantiate
+/// the test as a counter test (if run in `cargo test`) or as a benchmark
+/// (if run in `cargo bench --features benchmark`).
+///
+/// It will also duplicate the test for different cases, e.g. fuser vs fuse-mt,
+/// different atime behaviors, similar to how rstest duplication with #[values()]
+/// or #[case] would do it.
 macro_rules! perf_test {
     ($group:ident, $tests:tt) => {
         $crate::perf_test_macro::perf_test_!($group, $tests, 0, 0);

@@ -24,7 +24,7 @@
 //! - implemented on top of a [TempDirBlockStore] (i.e. blocks are stored on the real file system)
 //! - executed by mounting CryFS using [fuse] or [fuse_mt] and executing filesystem operations through real OS syscalls
 //!
-//! A lot of the code in thi s crate is annotated by either
+//! A lot of the code in this crate is annotated by either
 //! - #[cfg(feature = "benchmark")]      // Code only necessary for benchmarks
 //! - #[cfg(not(feature = "benchmark"))] // Code only necessary for perf tests
 
@@ -36,8 +36,6 @@ pub mod operations;
 pub mod perf_test_macro;
 mod test_driver;
 
-// TODO Ensure CI is running tests and building the benchmarks (but probably doesn't need to run it)
-// TODO Add doc comments to test driver, filesystem fixture, filesystem driver, ...
 // TODO For some reason, pressing CTRL+C during a benchmark run exits the program but keeps benchmarks running in the background? What's going on there?
 
 cryfs_version::assert_cargo_version_equals_git_version!();
