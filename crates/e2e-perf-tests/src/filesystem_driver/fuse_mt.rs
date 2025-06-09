@@ -250,6 +250,8 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     }
 
     async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
+        // The fuse sequence for releasing a file in fuse is: first flush, then release
+        self.fs.flush(request_info(), &node, open_file, 0).await?;
         self.fs
             .release(request_info(), &node, open_file, OpenFlags::Read, 0, false)
             .await
@@ -339,10 +341,6 @@ impl FilesystemDriver for FusemtFilesystemDriver {
             .unwrap_or_else(AbsolutePathBuf::root)
             .join(new_name);
         self.fs.rename(request_info(), &old_path, &new_path).await
-    }
-
-    async fn flush(&self, node: Self::NodeHandle, open_file: &mut FileHandle) -> FsResult<()> {
-        self.fs.flush(request_info(), &node, *open_file, 0).await
     }
 
     async fn fsync(

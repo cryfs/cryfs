@@ -558,16 +558,11 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
 
     async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
         C::load_inode(&Some(node), &*self.fs, async |ino| {
+            // The fuse sequence for releasing a file in fuse is: first flush, then release
+            self.fs.flush(&request_info(), ino, open_file, 0).await?;
             self.fs
                 .release(&request_info(), ino, open_file, 0, None, false)
                 .await
-        })
-        .await
-    }
-
-    async fn flush(&self, node: Self::NodeHandle, open_file: &mut FileHandle) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
-            self.fs.flush(&request_info(), ino, *open_file, 0).await
         })
         .await
     }

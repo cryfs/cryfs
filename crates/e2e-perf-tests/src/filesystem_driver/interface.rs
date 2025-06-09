@@ -178,9 +178,6 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         data: Vec<u8>,
     ) -> FsResult<()>;
 
-    async fn flush(&self, node: Self::NodeHandle, open_file: &mut Self::FileHandle)
-    -> FsResult<()>;
-
     async fn fsync(
         &self,
         node: Self::NodeHandle,

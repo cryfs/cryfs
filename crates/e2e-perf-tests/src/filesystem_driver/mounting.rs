@@ -564,7 +564,17 @@ where
             })
     }
 
-    async fn release(&self, _node: Self::NodeHandle, open_file: fs::File) -> FsResult<()> {
+    async fn release(&self, _node: Self::NodeHandle, mut open_file: fs::File) -> FsResult<()> {
+        // First flush any potentially pending operations to the file system
+        // (note: this is not the *fuse* flush operation, it just flushes any pending writes)
+        open_file
+            .flush()
+            .await
+            .map_err(|error| FsError::InternalError {
+                error: error.into(),
+            })?;
+
+        // Then close (this will trigger the *fuse* flush operation and then release)
         std::mem::drop(open_file);
         Ok(())
     }
@@ -723,18 +733,6 @@ where
                 error: error.into(),
             })?;
 
-        Ok(())
-    }
-
-    async fn flush(&self, _node: Self::NodeHandle, open_file: &mut fs::File) -> FsResult<()> {
-        // Technically, fuse `flush` is closing the file, and flushing the stream isn't really the same thing.
-        // But since we only use this for performance tests, we can probably keep it this way.
-        open_file
-            .flush()
-            .await
-            .map_err(|error| FsError::InternalError {
-                error: error.into(),
-            })?;
         Ok(())
     }
 

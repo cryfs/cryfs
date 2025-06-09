@@ -12,11 +12,11 @@ use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::NumBytes;
 use cryfs_rustfs::PathComponent;
 
-// TODO Some flush operations in here seem to load blocks in low_level, i.e. below the cache??? Why is that? If it's not loaded, shouldn't we just ignore it since it's already flushed? Also, generally, for a simple flush, there's a lot of operations going on in the high level stores.
-// TODO Some flush-after-write operations in here don't have a store in low level, that's weird. Shouldn't they need to store to flush the write?
+// TODO Some release operations in here seem to load blocks in low_level, i.e. below the cache??? Why is that? If it's not loaded, shouldn't we just ignore it since it's already flushed? Also, generally, for a simple flush, there's a lot of operations going on in the high level stores.
+// TODO Some release-after-write operations in here don't have a store in low level, that's weird. Shouldn't they need to store to flush the write?
 
 crate::perf_test_macro::perf_test!(
-    flush,
+    release,
     [
         unchanged_empty_file_in_rootdir,
         unchanged_file_with_data_in_rootdir,
@@ -47,12 +47,8 @@ fn unchanged_empty_file_in_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 .await
                 .unwrap()
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -115,12 +111,8 @@ fn unchanged_file_with_data_in_rootdir(test_driver: impl TestDriver) -> impl Tes
                 .unwrap();
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -183,12 +175,8 @@ fn unchanged_large_file_in_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 .unwrap();
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -249,12 +237,8 @@ fn unchanged_file_in_nested_dir(test_driver: impl TestDriver) -> impl TestReady 
                 .await
                 .unwrap()
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -322,12 +306,8 @@ fn unchanged_file_in_deeply_nested_dir(test_driver: impl TestDriver) -> impl Tes
                 .unwrap();
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -397,12 +377,8 @@ fn after_small_write_to_empty_file(test_driver: impl TestDriver) -> impl TestRea
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -479,12 +455,8 @@ fn after_small_write_to_middle_of_small_file(test_driver: impl TestDriver) -> im
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -566,12 +538,8 @@ fn after_small_write_beyond_end_of_small_file(test_driver: impl TestDriver) -> i
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -653,12 +621,8 @@ fn after_small_write_to_middle_of_large_file(test_driver: impl TestDriver) -> im
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -740,12 +704,8 @@ fn after_small_write_beyond_end_of_large_file(test_driver: impl TestDriver) -> i
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -812,12 +772,8 @@ fn after_large_write_to_empty_file(test_driver: impl TestDriver) -> impl TestRea
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -899,12 +855,8 @@ fn after_large_write_to_middle_of_large_file(test_driver: impl TestDriver) -> im
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -985,12 +937,8 @@ fn after_large_write_beyond_end_of_large_file(test_driver: impl TestDriver) -> i
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -1066,12 +1014,8 @@ fn after_write_to_file_in_nested_dir(test_driver: impl TestDriver) -> impl TestR
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
@@ -1148,12 +1092,8 @@ fn after_write_to_file_in_deeply_nested_dir(test_driver: impl TestDriver) -> imp
 
             (file, fh)
         })
-        .test_noflush(async |fixture, (file, mut fh)| {
-            fixture
-                .filesystem
-                .flush(file.clone(), &mut fh)
-                .await
-                .unwrap();
+        .test_noflush(async |fixture, (file, fh)| {
+            fixture.filesystem.release(file, fh).await.unwrap();
         })
         .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
