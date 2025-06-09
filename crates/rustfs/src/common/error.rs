@@ -77,6 +77,9 @@ pub enum FsError {
 
     #[error("The extended attributes don't fit into the buffer provided")]
     XattrBufferTooSmall,
+
+    #[error("File system is already terminated, cannot execute operation")]
+    FilesystemDestroyed,
 }
 
 impl FsError {
@@ -103,6 +106,7 @@ impl FsError {
             FsError::InternalError { .. } => libc::EIO,
             FsError::CannotMoveDirectoryIntoSubdirectoryOfItself => libc::EINVAL,
             FsError::XattrBufferTooSmall => libc::ERANGE,
+            FsError::FilesystemDestroyed => libc::EIO,
         }
     }
 }

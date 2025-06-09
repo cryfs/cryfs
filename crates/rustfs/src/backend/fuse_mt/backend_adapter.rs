@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::SystemTime;
+use tokio::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::common::{
     AbsolutePath, AbsolutePathBuf, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, Mode,
@@ -84,6 +85,36 @@ where
             }
         })
     }
+
+    async fn fs(&self) -> FsResult<RwLockReadGuard<'_, AsyncDropGuard<Fs>>> {
+        let fs = self.fs.read().await;
+        if fs.is_dropped() {
+            // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
+            // a file held open and closed after the file system is already unmounted.
+            // We can't really handle it well or honor those operations,
+            // but at least we can avoid a panic.
+            log::error!(
+                "Received a file system operation after destroy() terminated the file system"
+            );
+            return Err(FsError::FilesystemDestroyed);
+        }
+        Ok(fs)
+    }
+
+    async fn fs_mut(&self) -> FsResult<RwLockWriteGuard<'_, AsyncDropGuard<Fs>>> {
+        let fs = self.fs.write().await;
+        if fs.is_dropped() {
+            // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
+            // a file held open and closed after the file system is already unmounted.
+            // We can't really handle it well or honor those operations,
+            // but at least we can avoid a panic.
+            log::error!(
+                "Received a file system operation after destroy() terminated the file system"
+            );
+            return Err(FsError::FilesystemDestroyed);
+        }
+        Ok(fs)
+    }
 }
 
 impl<Fs> FilesystemMT for BackendAdapter<Fs>
@@ -92,7 +123,7 @@ where
 {
     fn init(&self, req: RequestInfo) -> ResultEmpty {
         self.run_async(&format!("init"), async move || {
-            let fs = self.fs.read().await;
+            let fs = self.fs().await?;
             fs.init(req.into()).await?;
             Ok(())
         })
@@ -100,7 +131,7 @@ where
 
     fn destroy(&self) {
         self.run_async(&format!("destroy"), async move || {
-            let mut fs = self.fs.write().await;
+            let mut fs = self.fs_mut().await?;
             fs.destroy().await;
             fs.async_drop().await?;
             Ok(())
@@ -114,9 +145,8 @@ where
         self.run_async(&format!("getattr {path:?}"), async move || {
             let path = parse_absolute_path(path)?;
             let response = self
-                .fs
-                .read()
-                .await
+                .fs()
+                .await?
                 .getattr(req.into(), path, fh.into_fh())
                 .await?;
             Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -126,9 +156,8 @@ where
     fn chmod(&self, req: RequestInfo, path: &Path, fh: Option<u64>, mode: u32) -> ResultEmpty {
         self.run_async(&format!("chmod({path:?}, mode={mode})"), async move || {
             let path = parse_absolute_path(path)?;
-            self.fs
-                .read()
-                .await
+            self.fs()
+                .await?
                 .chmod(req.into(), path, fh.into_fh(), Mode::from(mode))
                 .await
         })
@@ -146,9 +175,8 @@ where
             &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
             async move || {
                 let path = parse_absolute_path(path)?;
-                self.fs
-                    .read()
-                    .await
+                self.fs()
+                    .await?
                     .chown(
                         req.into(),
                         path,
@@ -164,9 +192,8 @@ where
     fn truncate(&self, req: RequestInfo, path: &Path, fh: Option<u64>, size: u64) -> ResultEmpty {
         self.run_async(&format!("truncate({path:?}, {size})"), async move || {
             let path = parse_absolute_path(path)?;
-            self.fs
-                .read()
-                .await
+            self.fs()
+                .await?
                 .truncate(req.into(), path, fh.into_fh(), NumBytes::from(size))
                 .await
         })
@@ -184,9 +211,8 @@ where
             &format!("utimens({path:?}, fh={fh:?}, atime={atime:?}, mtime={mtime:?})"),
             async move || {
                 let path = parse_absolute_path(path)?;
-                self.fs
-                    .read()
-                    .await
+                self.fs()
+                    .await?
                     .utimens(req.into(), path, fh.into_fh(), atime, mtime)
                     .await
             },
@@ -206,14 +232,14 @@ where
     ) -> ResultEmpty {
         self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), async move ||{
             let path = parse_absolute_path(path)?;
-            self.fs.read().await.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags).await
+            self.fs().await?.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags).await
         })
     }
 
     fn readlink(&self, req: RequestInfo, path: &Path) -> ResultData {
         self.run_async(&format!("readlink({path:?})"), async move || {
             let path = parse_absolute_path(path)?;
-            let target = self.fs.read().await.readlink(req.into(), path).await?;
+            let target = self.fs().await?.readlink(req.into(), path).await?;
             Ok(target.into_bytes())
         })
     }
@@ -231,9 +257,8 @@ where
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
-                    .fs
-                    .read()
-                    .await
+                    .fs()
+                    .await?
                     .mknod(req.into(), &path, Mode::from(mode), rdev)
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -250,7 +275,7 @@ where
             &format!("mkdir({parent:?}, name={name:?}, mode={mode:?})"),
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
-                let response = self.fs.read().await.mkdir(req.into(), &path, mode).await?;
+                let response = self.fs().await?.mkdir(req.into(), &path, mode).await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
         )
@@ -261,7 +286,7 @@ where
             &format!("unlink({parent:?}, name={name:?})"),
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
-                self.fs.read().await.unlink(req.into(), &path).await
+                self.fs().await?.unlink(req.into(), &path).await
             },
         )
     }
@@ -271,7 +296,7 @@ where
             &format!("rmdir({parent:?}, name={name:?})"),
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
-                self.fs.read().await.rmdir(req.into(), &path).await
+                self.fs().await?.rmdir(req.into(), &path).await
             },
         )
     }
@@ -287,12 +312,7 @@ where
                     log::error!("Symlink target is not utf-8");
                     FsError::InvalidPath
                 })?;
-                let response = self
-                    .fs
-                    .read()
-                    .await
-                    .symlink(req.into(), &path, target)
-                    .await?;
+                let response = self.fs().await?.symlink(req.into(), &path, target).await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
             },
         )
@@ -313,7 +333,7 @@ where
             async move || {
                 let oldpath = parse_absolute_path_with_last_component(oldparent, oldname)?;
                 let newpath = parse_absolute_path_with_last_component(newparent, newname)?;
-                self.fs.read().await.rename(
+                self.fs().await?.rename(
                     req.into(),
                     &oldpath,
                     &newpath,
@@ -335,9 +355,8 @@ where
                 let oldpath = parse_absolute_path(oldpath)?;
                 let newpath = parse_absolute_path_with_last_component(newparent, newname)?;
                 let response = self
-                    .fs
-                    .read()
-                    .await
+                    .fs()
+                    .await?
                     .link(req.into(), &oldpath, &newpath)
                     .await?;
                 Ok((response.ttl, convert_node_attrs(response.attrs)))
@@ -351,9 +370,8 @@ where
         self.run_async(&format!("open({path:?}, flags={flags})"), async move || {
             let path = parse_absolute_path(path)?;
             let response = self
-                .fs
-                .read()
-                .await
+                .fs()
+                .await?
                 .open(req.into(), path, parse_openflags(flags))
                 .await?;
             // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
@@ -379,19 +397,21 @@ where
                 Err(err) => callback(Err(err.system_error_code())),
                 Ok(path) => {
                     let mut result = None;
-                    self.fs
-                        .read()
-                        .await
-                        .read(
-                            req.into(),
-                            path,
-                            FileHandle::from(fh),
-                            NumBytes::from(offset),
-                            NumBytes::from(u64::from(size)),
-                            DataCallback::new(log_msg, callback, &mut result),
-                        )
-                        .await;
-                    result.expect("callback not called")
+                    match self.fs().await {
+                        Err(err) => callback(Err(err.system_error_code())),
+                        Ok(fs) => {
+                            fs.read(
+                                req.into(),
+                                path,
+                                FileHandle::from(fh),
+                                NumBytes::from(offset),
+                                NumBytes::from(u64::from(size)),
+                                DataCallback::new(log_msg, callback, &mut result),
+                            )
+                            .await;
+                            result.expect("callback not called")
+                        }
+                    }
                 }
             }
         })
@@ -414,9 +434,8 @@ where
             async move || {
                 let path = parse_absolute_path(path)?;
                 let response = self
-                    .fs
-                    .read()
-                    .await
+                    .fs()
+                    .await?
                     .write(
                         req.into(),
                         path,
@@ -435,9 +454,8 @@ where
     fn flush(&self, req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
         self.run_async(&format!("flush({path:?}, fh={fh})"), async move || {
             let path = parse_absolute_path(path)?;
-            self.fs
-                .read()
-                .await
+            self.fs()
+                .await?
                 .flush(req.into(), path, FileHandle::from(fh), lock_owner)
                 .await
         })
@@ -460,9 +478,8 @@ where
             ),
             async move || {
                 let path = parse_absolute_path(path)?;
-                self.fs
-                    .read()
-                    .await
+                self.fs()
+                    .await?
                     .release(
                         req.into(),
                         path,
@@ -481,9 +498,8 @@ where
             &format!("fsync({path:?}, fh={fh}, datasync={datasync})"),
             async move || {
                 let path = parse_absolute_path(path)?;
-                self.fs
-                    .read()
-                    .await
+                self.fs()
+                    .await?
                     .fsync(req.into(), path, FileHandle::from(fh), datasync)
                     .await
             },
@@ -495,12 +511,7 @@ where
             &format!("opendir({path:?}, flags={flags})"),
             async move || {
                 let path = parse_absolute_path(path)?;
-                let response = self
-                    .fs
-                    .read()
-                    .await
-                    .opendir(req.into(), path, flags)
-                    .await?;
+                let response = self.fs().await?.opendir(req.into(), path, flags).await?;
                 Ok((response.fh.into(), response.flags))
             },
         )
@@ -510,9 +521,8 @@ where
         self.run_async(&format!("readdir({path:?}, fh={fh})"), async move || {
             let path = parse_absolute_path(path)?;
             let entries = self
-                .fs
-                .read()
-                .await
+                .fs()
+                .await?
                 .readdir(req.into(), path, FileHandle::from(fh))
                 .await?;
             Ok(convert_dir_entries(entries))
@@ -524,9 +534,8 @@ where
             &format!("releasedir({path:?}, fh={fh}, flags={flags})"),
             async move || {
                 let path = parse_absolute_path(path)?;
-                self.fs
-                    .read()
-                    .await
+                self.fs()
+                    .await?
                     .releasedir(req.into(), path, FileHandle::from(fh), flags)
                     .await
             },
@@ -538,9 +547,8 @@ where
             &format!("fsyncdir({path:?}, fh={fh}, datasync={datasync})"),
             async move || {
                 let path = parse_absolute_path(path)?;
-                self.fs
-                    .read()
-                    .await
+                self.fs()
+                    .await?
                     .fsyncdir(req.into(), path, FileHandle::from(fh), datasync)
                     .await
             },
@@ -550,7 +558,7 @@ where
     fn statfs(&self, req: RequestInfo, path: &Path) -> ResultStatfs {
         self.run_async(&format!("statfs({path:?})"), async move || {
             let path = parse_absolute_path(path)?;
-            let response = self.fs.read().await.statfs(req.into(), path).await?;
+            let response = self.fs().await?.statfs(req.into(), path).await?;
             Ok(convert_statfs(response))
         })
     }
@@ -572,7 +580,7 @@ where
             async move || {
                 let path = parse_absolute_path(path)?;
                 let name = parse_xattr_name(name)?;
-                self.fs.read().await.setxattr(
+                self.fs().await?.setxattr(
                     req.into(),
                     path,
                     name,
@@ -593,19 +601,13 @@ where
                 let name = parse_xattr_name(name)?;
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
                 if 0 == size {
-                    let response = self
-                        .fs
-                        .read()
-                        .await
-                        .getxattr_numbytes(req, path, &name)
-                        .await?;
+                    let response = self.fs().await?.getxattr_numbytes(req, path, &name).await?;
                     // TODO No unwrap
                     Ok(Xattr::Size(u32::try_from(u64::from(response)).unwrap()))
                 } else {
                     let response = self
-                        .fs
-                        .read()
-                        .await
+                        .fs()
+                        .await?
                         .getxattr_data(req, path, &name, NumBytes::from(u64::from(size)))
                         .await?;
                     Ok(Xattr::Data(response))
@@ -622,14 +624,13 @@ where
                 let path = parse_absolute_path(path)?;
                 // fuse_mt wants us to return Xattr::Size if the `size` parameter is zero, and the data otherwise.
                 if 0 == size {
-                    let response = self.fs.read().await.listxattr_numbytes(req, path).await?;
+                    let response = self.fs().await?.listxattr_numbytes(req, path).await?;
                     // TODO No unwrap
                     Ok(Xattr::Size(u32::try_from(u64::from(response)).unwrap()))
                 } else {
                     let response = self
-                        .fs
-                        .read()
-                        .await
+                        .fs()
+                        .await?
                         .listxattr_data(req, path, NumBytes::from(u64::from(size)))
                         .await?;
                     Ok(Xattr::Data(response))
@@ -644,11 +645,7 @@ where
             async move || {
                 let path = parse_absolute_path(path)?;
                 let name = parse_xattr_name(name)?;
-                self.fs
-                    .read()
-                    .await
-                    .removexattr(req.into(), path, name)
-                    .await
+                self.fs().await?.removexattr(req.into(), path, name).await
             },
         )
     }
@@ -656,7 +653,7 @@ where
     fn access(&self, req: RequestInfo, path: &Path, mask: u32) -> ResultEmpty {
         self.run_async(&format!("access({path:?}, mask={mask})"), async move || {
             let path = parse_absolute_path(path)?;
-            self.fs.read().await.access(req.into(), path, mask).await
+            self.fs().await?.access(req.into(), path, mask).await
         })
     }
 
@@ -676,9 +673,8 @@ where
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
-                    .fs
-                    .read()
-                    .await
+                    .fs()
+                    .await?
                     .create(req.into(), &path, mode, flags)
                     .await?;
                 // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
@@ -721,7 +717,7 @@ where
 {
     fn drop(&mut self) {
         // TODO
-        // if !self.fs.read().await.is_dropped() {
+        // if !self.fs.read().is_dropped() {
         //     safe_panic!("BackendAdapter dropped without calling destroy() first");
         // }
     }
