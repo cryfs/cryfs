@@ -12,7 +12,7 @@ use std::future::Future;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tokio::sync::RwLock;
+use tokio::sync::{OwnedRwLockReadGuard, RwLock, RwLockWriteGuard};
 
 use crate::PathComponent;
 use crate::common::{
@@ -71,6 +71,49 @@ where
         Arc::clone(&self.fs)
     }
 
+    async fn call_with_fs<F, R>(
+        fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+    ) -> FsResult<R>
+    where
+        F: Future<Output = FsResult<R>> + Send,
+    {
+        let fs = Self::fs_read(fs).await?;
+        func(fs).await
+    }
+
+    async fn fs_read(
+        fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
+    ) -> FsResult<OwnedRwLockReadGuard<AsyncDropGuard<Fs>>> {
+        let fs = RwLock::read_owned(fs).await;
+        if fs.is_dropped() {
+            // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
+            // a file held open and closed after the file system is already unmounted.
+            // We can't really handle it well or honor those operations,
+            // but at least we can avoid a panic.
+            log::error!(
+                "Received a file system operation after destroy() terminated the file system"
+            );
+            return Err(FsError::FilesystemDestroyed);
+        }
+        Ok(fs)
+    }
+
+    async fn fs_write(&self) -> FsResult<RwLockWriteGuard<'_, AsyncDropGuard<Fs>>> {
+        let fs = self.fs.write().await;
+        if fs.is_dropped() {
+            // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
+            // a file held open and closed after the file system is already unmounted.
+            // We can't really handle it well or honor those operations,
+            // but at least we can avoid a panic.
+            log::error!(
+                "Received a file system operation after destroy() terminated the file system"
+            );
+            return Err(FsError::FilesystemDestroyed);
+        }
+        Ok(fs)
+    }
+
     fn run_blocking<R>(
         runtime: &tokio::runtime::Handle,
         log_msg: &str,
@@ -98,14 +141,14 @@ where
     fn run_async_no_reply<F>(
         &self,
         log_msg: String,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<()>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(()) => {
                     log::info!("{}...done", log_msg);
                 }
@@ -120,14 +163,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyEmpty,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<()>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(()) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.ok();
@@ -144,14 +187,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyEntry,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyEntry>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.entry(
@@ -172,14 +215,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyAttr,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyAttr>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.attr(&reply.ttl, &convert_node_attrs(reply.attr, reply.ino));
@@ -196,14 +239,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyOpen,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyOpen>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     let flags = convert_openflags(reply.flags);
@@ -223,14 +266,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyWrite,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyWrite>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     // TODO No unwrap, probably introduce a u32 variant of NumBytes.
@@ -249,14 +292,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyStatfs,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<Statfs>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     let blocks = reply.num_total_blocks;
@@ -283,14 +326,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyCreate,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyCreate>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.created(
@@ -313,14 +356,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyLock,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyLock>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.locked(reply.start.into(), reply.end.into(), reply.typ, reply.pid);
@@ -337,14 +380,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyBmap,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyBmap>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.bmap(reply.block);
@@ -361,14 +404,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyIoctl,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyIoctl>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.ioctl(reply.result, &reply.data);
@@ -385,14 +428,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyLseek,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyLseek>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     let offset: u64 = reply.offset.into();
@@ -413,14 +456,14 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyXTimes,
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyXTimes>> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            match func(fs).await {
+            match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{}...done", log_msg);
                     fuser_reply.xtimes(reply.bkuptime, reply.crtime);
@@ -438,14 +481,19 @@ where
         log_msg: String,
         reply: fuser::ReplyData,
         // TODO If we could do `for <Callback: FnOnce> impl ...`, we wouldn't need the DataCallback class
-        func: impl Send + 'static + FnOnce(Arc<RwLock<AsyncDropGuard<Fs>>>, DataCallback) -> F,
+        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>, DataCallback) -> F,
     ) where
         F: Future<Output = ()> + Send,
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
             log::info!("{}...", log_msg);
-            func(fs, DataCallback { reply, log_msg }).await;
+            let callback = DataCallback { reply, log_msg };
+            let func = async move || match Self::fs_read(fs).await {
+                Ok(fs) => func(fs, callback).await,
+                Err(err) => callback.error(err),
+            };
+            func().await;
         });
     }
 }
@@ -458,13 +506,13 @@ where
         // TODO Allow a way to set KernelConfig? Or should we make choices in rustfs? The fuse-mt crate chose to hide it.
 
         Self::run_blocking(&self.runtime, &format!("init"), async || {
-            self.fs.write().await.init(&RequestInfo::from(req)).await
+            self.fs_write().await?.init(&RequestInfo::from(req)).await
         })
     }
 
     fn destroy(&mut self) {
         Self::run_blocking(&self.runtime, &format!("destroy"), async || {
-            let mut fs = self.fs.write().await;
+            let mut fs = self.fs_write().await?;
             fs.destroy().await;
             fs.async_drop().await.unwrap();
             Ok(())
@@ -490,7 +538,7 @@ where
             reply,
             async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.lookup(&req, parent_ino, &name).await
+                fs.lookup(&req, parent_ino, &name).await
             },
         );
     }
@@ -499,7 +547,7 @@ where
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
         self.run_async_no_reply(format!("forget(ino={ino:?})"), async move |fs| {
-            fs.read().await.forget(&req, ino, nlookup).await
+            fs.forget(&req, ino, nlookup).await
         });
     }
 
@@ -515,7 +563,7 @@ where
         self.run_async_reply_attr(
             format!("getattr(ino={ino:?}, fh={fh:?})"),
             reply,
-            async move |fs| fs.read().await.getattr(&req, ino, fh).await,
+            async move |fs| fs.getattr(&req, ino, fh).await,
         );
     }
 
@@ -550,7 +598,7 @@ where
             format!("setattr(ino={ino:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
             reply,
             async move |fs| {
-                fs.read().await.setattr(&req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags).await
+                fs.setattr(&req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags).await
             });
     }
 
@@ -560,7 +608,7 @@ where
         self.run_async_reply_data(
             format!("readlink(ino={ino:?})"),
             reply,
-            async move |fs, callback| fs.read().await.readlink(&req, ino, callback).await,
+            async move |fs, callback| fs.readlink(&req, ino, callback).await,
         );
     }
 
@@ -583,7 +631,7 @@ where
             reply,
             async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.mknod(&req, parent_ino, &name, mode, umask, rdev).await
+                fs.mknod(&req, parent_ino, &name, mode, umask, rdev).await
             },
         );
     }
@@ -609,10 +657,7 @@ where
             reply,
             async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read()
-                    .await
-                    .mkdir(&req, parent_ino, &name, mode, umask)
-                    .await
+                fs.mkdir(&req, parent_ino, &name, mode, umask).await
             },
         );
     }
@@ -626,7 +671,7 @@ where
             reply,
             async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.unlink(&req, parent_ino, &name).await
+                fs.unlink(&req, parent_ino, &name).await
             },
         );
     }
@@ -640,7 +685,7 @@ where
             reply,
             async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.rmdir(&req, parent_ino, &name).await
+                fs.rmdir(&req, parent_ino, &name).await
             },
         );
     }
@@ -666,10 +711,7 @@ where
                     .into_os_string()
                     .into_string()
                     .map_err(|err| FsError::InvalidPath)?;
-                fs.read()
-                    .await
-                    .symlink(&req, parent_ino, &name, &link)
-                    .await
+                fs.symlink(&req, parent_ino, &name, &link).await
             },
         );
     }
@@ -696,7 +738,7 @@ where
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.rename(&req, parent_ino, &name, newparent, &newname, flags)
+                fs.rename(&req, parent_ino, &name, newparent, &newname, flags)
                     .await
             },
         );
@@ -720,7 +762,7 @@ where
             async move |fs| {
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.link(&req, ino, newparent, &newname).await
+                fs.link(&req, ino, newparent, &newname).await
             },
         );
     }
@@ -732,7 +774,7 @@ where
         self.run_async_reply_open(
             format!("open(ino={ino:?}, flags={flags:?})"),
             reply,
-            async move |fs| fs.read().await.open(&req, ino, flags).await,
+            async move |fs| fs.open(&req, ino, flags).await,
         );
     }
 
@@ -756,7 +798,7 @@ where
             format!("read(ino={ino:?}, fh={fh:?}, offset={offset:?}, size={size:?}, flags={flags:?}, lock_owner={lock_owner:?})"),
             reply,
             async move |fs, callback| {
-                fs.read().await.read(
+                fs.read(
                     &req,
                     ino,
                     fh,
@@ -792,7 +834,7 @@ where
             format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, size={size:?}, write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})", size=data.len()),
             reply,
             async move |fs| {
-                fs.read().await.write(
+                fs.write(
                     &req,
                     ino,
                     fh,
@@ -814,7 +856,7 @@ where
         self.run_async_reply_empty(
             format!("flush(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?})"),
             reply,
-            async move |fs| fs.read().await.flush(&req, ino, fh, lock_owner).await,
+            async move |fs| fs.flush(&req, ino, fh, lock_owner).await,
         );
     }
 
@@ -834,7 +876,7 @@ where
         self.run_async_reply_empty(
             format!("release(ino={ino:?}, fh={fh:?}, flags={flags:?}, lock_owner={lock_owner:?}, flush={flush:?})"),
             reply,
-            async move |fs| { fs.read().await.release(&req, ino, fh, flags, lock_owner, flush).await },
+            async move |fs| { fs.release(&req, ino, fh, flags, lock_owner, flush).await },
         );
     }
 
@@ -845,7 +887,7 @@ where
         self.run_async_reply_empty(
             format!("fsync(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
             reply,
-            async move |fs| fs.read().await.fsync(&req, ino, fh, datasync).await,
+            async move |fs| fs.fsync(&req, ino, fh, datasync).await,
         );
     }
 
@@ -855,7 +897,7 @@ where
         self.run_async_reply_open(
             format!("opendir(ino={ino:?}, flags={flags:?})"),
             reply,
-            async move |fs| fs.read().await.opendir(&req, ino, flags).await,
+            async move |fs| fs.opendir(&req, ino, flags).await,
         );
     }
 
@@ -874,11 +916,7 @@ where
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
-                let result = fs
-                    .read()
-                    .await
-                    .readdir(&req, ino, fh, offset, &mut reply)
-                    .await;
+                let result = fs.readdir(&req, ino, fh, offset, &mut reply).await;
                 match result {
                     Ok(()) => {
                         reply.ok();
@@ -908,11 +946,7 @@ where
         self.run_async_no_reply(
             format!("readdirplus(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
-                let result = fs
-                    .read()
-                    .await
-                    .readdirplus(&req, ino, fh, offset, &mut reply)
-                    .await;
+                let result = fs.readdirplus(&req, ino, fh, offset, &mut reply).await;
                 match result {
                     Ok(()) => {
                         reply.ok();
@@ -934,7 +968,7 @@ where
         self.run_async_reply_empty(
             format!("releasedir(ino={ino:?}, fh={fh:?}, flags={flags:?})"),
             reply,
-            async move |fs| fs.read().await.releasedir(&req, ino, fh, flags).await,
+            async move |fs| fs.releasedir(&req, ino, fh, flags).await,
         );
     }
 
@@ -952,7 +986,7 @@ where
         self.run_async_reply_empty(
             format!("fsyncdir(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
             reply,
-            async move |fs| fs.read().await.fsyncdir(&req, ino, fh, datasync).await,
+            async move |fs| fs.fsyncdir(&req, ino, fh, datasync).await,
         );
     }
 
@@ -960,7 +994,7 @@ where
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
         self.run_async_reply_statfs(format!("statfs(ino={ino:?})"), reply, async move |fs| {
-            fs.read().await.statfs(&req, ino).await
+            fs.statfs(&req, ino).await
         });
     }
 
@@ -985,7 +1019,7 @@ where
             async move |fs| {
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.setxattr(&req, ino, &name, &value, flags, position)
+                fs.setxattr(&req, ino, &name, &value, flags, position)
                     .await
             },
         );
@@ -1014,7 +1048,7 @@ where
             format!("getxattr(ino={ino:?}, name={name:?}, size={size:?})"),
             async move |fs| {
                 if NumBytes::from(0) == size {
-                    let response = fs.read().await.getxattr_numbytes(&req, ino, &name).await;
+                    let response = fs.getxattr_numbytes(&req, ino, &name).await;
                     match response {
                         Ok(response) => {
                             reply.size(u64::from(response).try_into().unwrap());
@@ -1026,7 +1060,7 @@ where
                         }
                     }
                 } else {
-                    let response = fs.read().await.getxattr_data(&req, ino, &name, size).await;
+                    let response = fs.getxattr_data(&req, ino, &name, size).await;
                     match response {
                         Ok(response) => {
                             reply.data(&response);
@@ -1050,7 +1084,7 @@ where
             format!("listxattr(ino={ino:?}, size={size:?})"),
             async move |fs| {
                 if NumBytes::from(0) == size {
-                    let response = fs.read().await.listxattr_numbytes(&req, ino).await;
+                    let response = fs.listxattr_numbytes(&req, ino).await;
                     match response {
                         Ok(response) => {
                             reply.size(u64::from(response).try_into().unwrap());
@@ -1063,8 +1097,6 @@ where
                     }
                 } else {
                     let response = fs
-                        .read()
-                        .await
                         .listxattr_data(&req, ino, NumBytes::from(u64::from(size)))
                         .await;
                     match response {
@@ -1090,9 +1122,10 @@ where
             format!("removexattr(ino={ino:?}, name={name:?})"),
             reply,
             async move |fs| {
+                // TODO Here (and in other operations), it would be better to do error handling of path conversion or similar things before we lock the file system unnecessarily.
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.removexattr(&req, ino, &name).await
+                fs.removexattr(&req, ino, &name).await
             },
         );
     }
@@ -1103,7 +1136,7 @@ where
         self.run_async_reply_empty(
             format!("access(ino={ino:?}, mask={mask:?})"),
             reply,
-            async move |fs| fs.read().await.access(&req, ino, mask).await,
+            async move |fs| fs.access(&req, ino, mask).await,
         );
     }
 
@@ -1128,7 +1161,7 @@ where
             reply,
             async move |fs| {
                 let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.create(&req, parent_ino, &name, mode, umask, flags)
+                fs.create(&req, parent_ino, &name, mode, umask, flags)
                     .await
             },
         );
@@ -1153,7 +1186,7 @@ where
             format!("getlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?})"),
             reply,
             async move |fs| {
-                fs.read().await.getlk(&req, ino, fh, lock_owner, start, end, typ, pid)
+                fs.getlk(&req, ino, fh, lock_owner, start, end, typ, pid)
                     .await
             },
         );
@@ -1179,7 +1212,7 @@ where
             format!("setlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?}, sleep={sleep:?})"),
             reply,
             async move |fs| {
-                fs.read().await.setlk(&req, ino, fh, lock_owner, start, end, typ, pid, sleep)
+                fs.setlk(&req, ino, fh, lock_owner, start, end, typ, pid, sleep)
                     .await
             },
         );
@@ -1192,7 +1225,7 @@ where
         self.run_async_reply_bmap(
             format!("bmap(ino={ino:?}, blocksize={blocksize:?}, idx={idx:?})"),
             reply,
-            async move |fs| fs.read().await.bmap(&req, ino, blocksize, idx).await,
+            async move |fs| fs.bmap(&req, ino, blocksize, idx).await,
         );
     }
 
@@ -1215,7 +1248,7 @@ where
             format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data={in_data:?}, out_size={out_size:?})"),
             reply,
             async move |fs| {
-                fs.read().await.ioctl(&req, ino, fh, flags, cmd, &in_data, out_size)
+                fs.ioctl(&req, ino, fh, flags, cmd, &in_data, out_size)
                     .await
             },
         );
@@ -1243,7 +1276,7 @@ where
             format!("fallocate(ino={ino:?}, fh={fh:?}, offset={offset:?}, length={length:?}, mode={mode:?})"),
             reply,
             async move |fs| {
-                fs.read().await.fallocate(&req, ino, fh, offset, length, mode)
+                fs.fallocate(&req, ino, fh, offset, length, mode)
                     .await
             },
         );
@@ -1265,7 +1298,7 @@ where
         self.run_async_reply_lseek(
             format!("lseek(ino={ino:?}, fh={fh:?}, offset={offset:?}, whence={whence:?})"),
             reply,
-            async move |fs| fs.read().await.lseek(&req, ino, fh, offset, whence).await,
+            async move |fs| fs.lseek(&req, ino, fh, offset, whence).await,
         );
     }
 
@@ -1294,7 +1327,7 @@ where
             format!("copy_file_range(ino_in={ino_in:?}, fh_in={fh_in:?}, offset_in={offset_in:?}, ino_out={ino_out:?}, fh_out={fh_out:?}, offset_out={offset_out:?}, len={len:?}, flags={flags:?})"),
             reply,
             async move |fs| {
-                fs.read().await.copy_file_range(
+                fs.copy_file_range(
                     &req,
                     ino_in,
                     fh_in,
@@ -1323,7 +1356,7 @@ where
                     .to_os_string()
                     .into_string()
                     .map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.setvolname(&req, &name).await
+                fs.setvolname(&req, &name).await
             },
         );
     }
@@ -1355,7 +1388,7 @@ where
                 // TODO InvalidPath is the wrong error here
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| FsError::InvalidPath)?;
-                fs.read().await.exchange(&req, parent_ino, &name, newparent_ino, &newname, options)
+                fs.exchange(&req, parent_ino, &name, newparent_ino, &newname, options)
                     .await
             },
         );
@@ -1368,7 +1401,7 @@ where
         let req = RequestInfo::from(req);
         let ino = InodeNumber::from(ino);
         self.run_async_reply_xtimes(format!("getxtimes(ino={ino:?})"), reply, async move |fs| {
-            fs.read().await.getxtimes(&req, ino).await
+            fs.getxtimes(&req, ino).await
         });
     }
 }
@@ -1515,6 +1548,13 @@ struct DataCallback {
     reply: fuser::ReplyData,
 }
 
+impl DataCallback {
+    fn error(self, err: FsError) {
+        log::info!("{}...failed: {}", self.log_msg, err);
+        self.reply.error(err.system_error_code());
+    }
+}
+
 impl<'a> Callback<FsResult<&'a [u8]>, ()> for DataCallback {
     fn call(self, data: FsResult<&'a [u8]>) {
         match data {
@@ -1522,10 +1562,7 @@ impl<'a> Callback<FsResult<&'a [u8]>, ()> for DataCallback {
                 log::info!("{}...done", self.log_msg);
                 self.reply.data(data);
             }
-            Err(err) => {
-                log::info!("{}...failed: {}", self.log_msg, err);
-                self.reply.error(err.system_error_code());
-            }
+            Err(err) => self.error(err),
         }
     }
 }
