@@ -75,9 +75,9 @@ fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .filesystem
                 .create_file(None, PathComponent::try_from_str("existing.txt").unwrap())
                 .await
-                .unwrap()
+                .unwrap();
         })
-        .test(async |fixture, _file| {
+        .test(async |fixture, ()| {
             let _ = fixture
                 .filesystem
                 .create_file(None, PathComponent::try_from_str("existing.txt").unwrap())

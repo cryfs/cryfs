@@ -70,9 +70,9 @@ fn existing_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .filesystem
                 .mkdir(None, PathComponent::try_from_str("existing").unwrap())
                 .await
-                .unwrap()
+                .unwrap();
         })
-        .test(async |fixture, _dir| {
+        .test(async |fixture, ()| {
             fixture
                 .filesystem
                 .mkdir(None, PathComponent::try_from_str("existing").unwrap())

@@ -42,9 +42,9 @@ fn existing_empty_dir_from_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 .filesystem
                 .mkdir(None, PathComponent::try_from_str("emptydir").unwrap())
                 .await
-                .unwrap()
+                .unwrap();
         })
-        .test(async |fixture, _dir| {
+        .test(async |fixture, ()| {
             fixture
                 .filesystem
                 .rmdir(None, PathComponent::try_from_str("emptydir").unwrap())
@@ -635,9 +635,9 @@ fn try_rmdir_file_in_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 .filesystem
                 .create_file(None, PathComponent::try_from_str("file.txt").unwrap())
                 .await
-                .unwrap()
+                .unwrap();
         })
-        .test(async |fixture, _file| {
+        .test(async |fixture, ()| {
             fixture
                 .filesystem
                 .rmdir(None, PathComponent::try_from_str("file.txt").unwrap())
