@@ -1,6 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::join;
+#[cfg(any(test, feature = "testutils"))]
+use futures::{Stream, StreamExt};
 use lockable::{Lockable, LockableLruCache};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -144,16 +146,32 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_all_blocks(&self) -> Result<()> {
-        use futures::StreamExt;
         let cache = self.cache.as_ref().expect("Object is already destructed");
-        let to_prune = cache
-            .lock_all_entries()
+        let to_prune = cache.lock_all_entries().await;
+        Self::_prune_blocks_stream(Arc::clone(cache), to_prune).await
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    async fn _prune_blocks_stream(
+        cache: Arc<BlockCacheImpl<B>>,
+        to_prune: impl Stream<
+            Item = <LockableLruCache<BlockId, BlockCacheEntry<B>> as Lockable<
+                BlockId,
+                BlockCacheEntry<B>,
+            >>::OwnedGuard,
+        >,
+    ) -> Result<()> {
+        // It's important that we immediately call `Self::_prune_block` on each guard, freeing the lock again without
+        // waiting for other locks, instad of collect()ing all guards into a Vec first or something like that, otherwise
+        // we'd have a deadlock because we wait for all locks to be locked, but lock them in an arbitrary order.
+        to_prune
+            .map(async |guard| Self::_prune_block(&cache, guard).await)
+            .buffer_unordered(10) // TODO What's a good buffer size? This code is just used in tests, infinity should be ok?
+            .collect::<Vec<Result<()>>>()
             .await
-            // TODO Is this possible by directly processing the stream and not collecting into a Vec?
-            .collect::<Vec<_>>()
-            .await
-            .into_iter();
-        Self::_prune_blocks(Arc::clone(cache), to_prune).await
+            .into_iter()
+            .collect::<Result<Vec<()>>>()?;
+        Ok(())
     }
 
     async fn _prune_blocks(
