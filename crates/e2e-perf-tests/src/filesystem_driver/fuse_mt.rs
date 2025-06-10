@@ -1,4 +1,5 @@
 use anyhow::Result;
+use cryfs_rustfs::DirEntryOrReference;
 use std::sync::Mutex;
 use std::{fmt::Debug, sync::Arc};
 
@@ -262,16 +263,17 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         self.fs.statfs(request_info(), AbsolutePath::root()).await
     }
 
-    async fn readdir(
-        &self,
-        node: Option<Self::NodeHandle>,
-    ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>> {
+    async fn readdir(&self, node: Option<Self::NodeHandle>) -> FsResult<Vec<(String, NodeKind)>> {
         let node = node.unwrap_or_else(AbsolutePathBuf::root);
         let fh = self.fs.opendir(request_info(), &node, 0).await?.fh;
         let entries = self.fs.readdir(request_info(), &node, fh).await?;
         Ok(entries
             .into_iter()
-            .map(|entry| (entry.name, entry.kind))
+            .map(|entry| match entry {
+                DirEntryOrReference::Entry(entry) => (entry.name.to_string(), entry.kind),
+                DirEntryOrReference::SelfReference => (".".to_string(), NodeKind::Dir),
+                DirEntryOrReference::ParentReference => ("..".to_string(), NodeKind::Dir),
+            })
             .collect())
     }
 

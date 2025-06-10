@@ -157,10 +157,7 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
         new_name: &PathComponent,
     ) -> FsResult<()>;
 
-    async fn readdir(
-        &self,
-        node: Option<Self::NodeHandle>,
-    ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>>;
+    async fn readdir(&self, node: Option<Self::NodeHandle>) -> FsResult<Vec<(String, NodeKind)>>;
 
     async fn read(
         &self,

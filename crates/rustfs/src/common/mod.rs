@@ -1,5 +1,5 @@
 mod dir_entry;
-pub use dir_entry::DirEntry;
+pub use dir_entry::{DirEntry, DirEntryOrReference};
 
 mod error;
 pub use error::{FsError, FsResult};

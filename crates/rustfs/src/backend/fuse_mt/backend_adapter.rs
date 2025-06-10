@@ -11,8 +11,8 @@ use std::time::SystemTime;
 use tokio::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, Mode,
-    NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    AbsolutePath, AbsolutePathBuf, Callback, DirEntryOrReference, FileHandle, FsError, FsResult,
+    Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
 };
 use crate::high_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -520,12 +520,10 @@ where
     fn readdir(&self, req: RequestInfo, path: &Path, fh: u64) -> ResultReaddir {
         self.run_async(&format!("readdir({path:?}, fh={fh})"), async move || {
             let path = parse_absolute_path(path)?;
-            let entries = self
-                .fs()
-                .await?
-                .readdir(req.into(), path, FileHandle::from(fh))
-                .await?;
-            Ok(convert_dir_entries(entries))
+            let fs = self.fs().await?;
+            let entries = fs.readdir(req.into(), path, FileHandle::from(fh)).await?;
+            let entries = convert_dir_entries(entries).collect::<Vec<_>>();
+            Ok(entries)
         })
     }
 
@@ -738,14 +736,23 @@ fn convert_permission_bits(mode: Mode) -> u16 {
     perm_bits as u16
 }
 
-fn convert_dir_entries(entries: Vec<DirEntry>) -> Vec<fuse_mt::DirectoryEntry> {
-    entries
-        .into_iter()
-        .map(|entry| fuse_mt::DirectoryEntry {
+fn convert_dir_entries(
+    entries: impl Iterator<Item = DirEntryOrReference>,
+) -> impl Iterator<Item = fuse_mt::DirectoryEntry> {
+    entries.map(|entry| match entry {
+        DirEntryOrReference::Entry(entry) => fuse_mt::DirectoryEntry {
             name: std::ffi::OsString::from(String::from(entry.name)),
             kind: convert_node_kind(entry.kind),
-        })
-        .collect()
+        },
+        DirEntryOrReference::SelfReference => fuse_mt::DirectoryEntry {
+            name: std::ffi::OsString::from(".".to_string()),
+            kind: fuse_mt::FileType::Directory,
+        },
+        DirEntryOrReference::ParentReference => fuse_mt::DirectoryEntry {
+            name: std::ffi::OsString::from("..".to_string()),
+            kind: fuse_mt::FileType::Directory,
+        },
+    })
 }
 
 fn parse_absolute_path(path: &Path) -> FsResult<&AbsolutePath> {

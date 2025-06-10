@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, Callback, DirEntry, FileHandle, FsError, FsResult, Gid, Mode, NumBytes,
-    OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntry, DirEntryOrReference, FileHandle, FsError, FsResult, Gid,
+    Mode, NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
@@ -561,7 +561,7 @@ where
         _req: RequestInfo,
         path: &AbsolutePath,
         _fh: FileHandle,
-    ) -> FsResult<Vec<DirEntry>> {
+    ) -> FsResult<impl Iterator<Item = DirEntryOrReference>> {
         self.trigger_on_operation().await?;
 
         let fs = self.fs.read().unwrap();
@@ -569,7 +569,15 @@ where
         with_async_drop_2!(dir, {
             let dir = dir.as_dir().await?;
             let entries = dir.entries().await?;
-            Ok(entries)
+            let parent_entries = [
+                DirEntryOrReference::SelfReference,
+                DirEntryOrReference::ParentReference,
+            ];
+            let all_entries = parent_entries
+                .into_iter()
+                .chain(entries.into_iter().map(DirEntryOrReference::Entry));
+
+            Ok(all_entries)
         })
     }
 

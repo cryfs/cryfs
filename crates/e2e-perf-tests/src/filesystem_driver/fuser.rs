@@ -591,7 +591,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         &self,
         // TODO Instead of all these operations taking Option<NodeHandle>, would be nicer to just have a FilesystemDriver::rootdir() method that returns the root dir handle and then pass in the rootdir node handle
         node: Option<Self::NodeHandle>,
-    ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>> {
+    ) -> FsResult<Vec<(String, NodeKind)>> {
         let dir = C::load_inode(&node, &*self.fs, async |ino| {
             let fh = self.fs.opendir(&request_info(), ino, 0).await?.fh;
             let mut reply = ReplyDirectoryImpl::default();
@@ -693,7 +693,7 @@ impl<C: FuserCacheBehavior> AsyncDrop for FuserFilesystemDriver<C> {
 
 #[derive(Default)]
 struct ReplyDirectoryImpl {
-    entries: Vec<(PathComponentBuf, NodeKind)>,
+    entries: Vec<(String, NodeKind)>,
 }
 
 impl ReplyDirectory for ReplyDirectoryImpl {
@@ -704,7 +704,7 @@ impl ReplyDirectory for ReplyDirectoryImpl {
         kind: NodeKind,
         name: &PathComponent,
     ) -> ReplyDirectoryAddResult {
-        self.entries.push((name.to_owned(), kind));
+        self.entries.push((name.to_string(), kind));
         ReplyDirectoryAddResult::NotFull
     }
 }

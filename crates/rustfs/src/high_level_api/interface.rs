@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    AbsolutePath, Callback, DirEntry, FileHandle, FsResult, Gid, Mode, NodeAttrs, NumBytes,
-    OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntry, DirEntryOrReference, FileHandle, FsResult, Gid, Mode,
+    NodeAttrs, NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -339,7 +339,7 @@ pub trait AsyncFilesystem {
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
-    ) -> FsResult<Vec<DirEntry>>;
+    ) -> FsResult<impl Iterator<Item = DirEntryOrReference>>;
 
     /// Close an open directory.
     ///

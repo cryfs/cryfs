@@ -24,6 +24,8 @@ use crate::low_level_api::{
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
+// TODO Check if any of the APIs in the high or low level interface would benefit from replacing Vec<> with impl Iterator
+
 // TODO Fuse has a requirement that (inode, generation) tuples are unique throughout the lifetime of the filesystem, not just the lifetime of the mount.
 //      See https://github.com/libfuse/libfuse/blob/d92bf83c152ff88c2d92bd852752d4c326004400/include/fuse_lowlevel.h#L69-L81 and https://github.com/wfraser/fuse-mt/issues/19
 //      This means currently, CryFS can't be used over NFS. We should fix this.
@@ -916,6 +918,7 @@ where
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
+                // TODO We need to add '.' and '..' here. The fuse-mt backend is already doing it.
                 let result = fs.readdir(&req, ino, fh, offset, &mut reply).await;
                 match result {
                     Ok(()) => {

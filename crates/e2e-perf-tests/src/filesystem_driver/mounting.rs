@@ -622,10 +622,7 @@ where
         Ok(())
     }
 
-    async fn readdir(
-        &self,
-        node: Option<Self::NodeHandle>,
-    ) -> FsResult<Vec<(PathComponentBuf, NodeKind)>> {
+    async fn readdir(&self, node: Option<Self::NodeHandle>) -> FsResult<Vec<(String, NodeKind)>> {
         let real_path = self.real_path_for_node(&node);
 
         let mut entries =
@@ -644,13 +641,7 @@ where
                     error: error.into(),
                 })?
         {
-            let path_component = PathComponentBuf::try_from_string(
-                entry
-                    .file_name()
-                    .into_string()
-                    .map_err(|_| FsError::InvalidPath)?,
-            )
-            .map_err(|_| FsError::InvalidPath)?;
+            let path_component = entry.file_name().into_string().unwrap();
             let kind = entry
                 .file_type()
                 .await
