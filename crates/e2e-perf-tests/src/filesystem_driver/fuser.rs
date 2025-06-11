@@ -16,7 +16,7 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Gid, InodeNumber, Mode,
-    NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, PathComponentBuf, Statfs, Uid,
+    NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
     low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
