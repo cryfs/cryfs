@@ -918,7 +918,6 @@ where
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
-                // TODO We need to add '.' and '..' here. The fuse-mt backend is already doing it.
                 let result = fs.readdir(&req, ino, fh, offset, &mut reply).await;
                 match result {
                     Ok(()) => {
@@ -1410,6 +1409,14 @@ where
 }
 
 impl ReplyDirectory for fuser::ReplyDirectory {
+    fn add_self_reference(&mut self, ino: InodeNumber, offset: i64) -> ReplyDirectoryAddResult {
+        _reply_directory_add(self, ino, offset, fuser::FileType::Directory, ".")
+    }
+
+    fn add_parent_reference(&mut self, ino: InodeNumber, offset: i64) -> ReplyDirectoryAddResult {
+        _reply_directory_add(self, ino, offset, fuser::FileType::Directory, "..")
+    }
+
     fn add(
         &mut self,
         ino: InodeNumber,
@@ -1417,12 +1424,21 @@ impl ReplyDirectory for fuser::ReplyDirectory {
         kind: NodeKind,
         name: &PathComponent,
     ) -> ReplyDirectoryAddResult {
-        let kind = convert_node_kind(kind);
-        let result = fuser::ReplyDirectory::add(self, ino.into(), offset, kind, name.as_str());
-        match result {
-            true => ReplyDirectoryAddResult::Full,
-            false => ReplyDirectoryAddResult::NotFull,
-        }
+        _reply_directory_add(self, ino, offset, convert_node_kind(kind), name.as_str())
+    }
+}
+
+fn _reply_directory_add(
+    reply: &mut fuser::ReplyDirectory,
+    ino: InodeNumber,
+    offset: i64,
+    kind: fuser::FileType,
+    name: impl AsRef<OsStr>,
+) -> ReplyDirectoryAddResult {
+    let result = fuser::ReplyDirectory::add(reply, ino.into(), offset, kind, name);
+    match result {
+        true => ReplyDirectoryAddResult::Full,
+        false => ReplyDirectoryAddResult::NotFull,
     }
 }
 

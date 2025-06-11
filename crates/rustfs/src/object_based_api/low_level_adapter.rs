@@ -16,6 +16,7 @@ use crate::low_level_api::{
     AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectoryAddResult,
     ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
 };
+use crate::{NodeKind, PathComponentBuf, common::DirEntry};
 use crate::{
     common::{
         Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
@@ -36,6 +37,52 @@ const TTL_GETATTR: Duration = Duration::from_secs(1);
 const TTL_CREATE: Duration = Duration::from_secs(1);
 const TTL_SYMLINK: Duration = Duration::from_secs(1);
 
+mod inode_info {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct InodeInfo<Fs>
+    where
+        Fs: Device + Debug,
+    {
+        node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
+        parent_inode: InodeNumber,
+    }
+
+    impl<Fs> InodeInfo<Fs>
+    where
+        Fs: Device + Debug,
+    {
+        pub fn new(
+            node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
+            parent_inode: InodeNumber,
+        ) -> AsyncDropGuard<Self> {
+            AsyncDropGuard::new(Self { node, parent_inode })
+        }
+
+        pub fn parent_inode(&self) -> InodeNumber {
+            self.parent_inode
+        }
+
+        pub fn node(&self) -> AsyncDropGuard<AsyncDropArc<Fs::Node>> {
+            AsyncDropArc::clone(&self.node)
+        }
+    }
+
+    #[async_trait]
+    impl<Fs> AsyncDrop for InodeInfo<Fs>
+    where
+        Fs: Device + Debug,
+    {
+        type Error = FsError;
+        async fn async_drop_impl(&mut self) -> FsResult<()> {
+            self.node.async_drop().await?;
+            Ok(())
+        }
+    }
+}
+use inode_info::InodeInfo;
+
 // TODO Can we share more code with [super::high_level_adapter::ObjectBasedFsAdapter]?
 pub struct ObjectBasedFsAdapterLL<Fs>
 where
@@ -48,7 +95,7 @@ where
     fs: Arc<RwLock<AsyncDropGuard<MaybeInitializedFs<Fs>>>>,
 
     // TODO Do we need Arc for inodes?
-    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, AsyncDropArc<Fs::Node>>>>>,
+    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>>,
 
     open_files: AsyncDropGuard<OpenFileList<Fs::OpenFile>>,
 }
@@ -89,12 +136,12 @@ where
         Ok(())
     }
 
-    // TODO &self instead of `fs`, `inodes`
+    // TODO Does this need to return an Arc::clone of the inode or can we just return a reference?
     /// This function allows file system operations to abstract over whether a requested inode number is the root node or whether it is looked up from the inode table `inodes`.
-    async fn get_inode(
+    async fn get_inode_and_parent_ino(
         &self,
         ino: InodeNumber,
-    ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
+    ) -> FsResult<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, Option<InodeNumber>)> {
         // TODO Once async closures are stable, we can - instead of returning an AsyncDropArc - take a callback parameter and pass &Fs::Node to it.
         //      That would simplify all the call sites (e.g. don't require them to call async_drop on the returned value anymore).
         //      See https://stackoverflow.com/questions/76625378/async-closure-holding-reference-over-await-point
@@ -102,13 +149,19 @@ where
             let fs = self.fs.read().await;
             let fs = fs.get();
             let node: <Fs as Device>::Dir<'_> = fs.rootdir().await?;
-            Ok(AsyncDropArc::new(node.as_node()))
+            Ok((AsyncDropArc::new(node.as_node()), None))
         } else {
             let inodes = self.inodes.read().await;
-            Ok(AsyncDropArc::clone(
-                inodes.get(ino).expect("Error: Inode number unassigned"),
-            ))
+            let inode = inodes.get(ino).expect("Error: Inode number unassigned");
+            Ok((inode.node(), Some(inode.parent_inode())))
         }
+    }
+
+    async fn get_inode(
+        &self,
+        ino: InodeNumber,
+    ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
+        Ok(self.get_inode_and_parent_ino(ino).await?.0)
     }
 
     async fn add_inode(
@@ -117,7 +170,11 @@ where
         node: AsyncDropGuard<Fs::Node>,
         name: &PathComponent,
     ) -> HandleWithGeneration<InodeNumber> {
-        let child_ino = self.inodes.write().await.add(AsyncDropArc::new(node));
+        let child_ino = self
+            .inodes
+            .write()
+            .await
+            .add(InodeInfo::new(AsyncDropArc::new(node), parent_ino));
         log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
         child_ino
     }
@@ -623,28 +680,54 @@ where
         self.trigger_on_operation().await?;
 
         // TODO Allow readdir on fh instead of ino?
-        let node = self.get_inode(ino).await?;
+        let (node, parent_ino) = self.get_inode_and_parent_ino(ino).await?;
 
         with_async_drop_2!(node, {
+            let parent_ino = parent_ino.unwrap_or(FUSE_ROOT_ID); // root is parent of itself
             let dir = node.as_dir().await?;
+            // TODO Instead of loading all entries and then possibly only returning some because the buffer gets full, try to only load the necessary ones? But concurrently somehow?
             let entries = dir.entries().await?;
             let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
-            let entries =
-                entries
-                    .into_iter()
-                    .enumerate()
-                    .skip(offset)
-                    .map(async |(offset, entry)| {
-                        let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
 
-                        // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
-                        //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
-                        //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
-                        //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
-                        //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
-                        let child_ino = self.add_inode(ino, child, &entry.name).await;
-                        (offset, child_ino.handle, entry)
-                    });
+            if offset == 0 {
+                match reply.add_self_reference(ino, 0) {
+                    ReplyDirectoryAddResult::Full => {
+                        return Ok(());
+                    }
+                    ReplyDirectoryAddResult::NotFull => {
+                        // continue
+                    }
+                }
+            }
+
+            if offset <= 1 {
+                match reply.add_parent_reference(parent_ino, 1) {
+                    ReplyDirectoryAddResult::Full => {
+                        return Ok(());
+                    }
+                    ReplyDirectoryAddResult::NotFull => {
+                        // continue
+                    }
+                }
+            }
+
+            // TODO Add tests for the offset calculations including '.' and '..' here
+            let entries = entries
+                .into_iter()
+                .enumerate()
+                .skip(offset.saturating_sub(2)) // skip 2 less because those offset indices are for '.' and '..'
+                .map(async |(offset, entry)| {
+                    let offset = offset + 2; // offset + 2 because of '.' and '..'
+                    let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
+
+                    // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
+                    //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
+                    //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
+                    //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
+                    //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
+                    let child_ino = self.add_inode(ino, child, &entry.name).await;
+                    (offset, child_ino.handle, entry)
+                });
             // TODO Does this need to be FuturesOrdered or can we reply them without order?
             let mut entries: FuturesOrdered<_> = entries.collect();
             while let Some((offset, ino, entry)) = entries.next().await {

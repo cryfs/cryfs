@@ -90,7 +90,17 @@ pub enum ReplyDirectoryAddResult {
 }
 
 pub trait ReplyDirectory {
-    /// Add an entry to the directory reply buffer. Returns true if the buffer is full.
+    // TODO Come up with a better way to handle '.' and '..', enforcing correct usage of offsets and full buffers in the API.
+
+    /// Add the '.' entry to the directory reply buffer. Returns whether the buffer is full.
+    #[must_use]
+    fn add_self_reference(&mut self, ino: InodeNumber, offset: i64) -> ReplyDirectoryAddResult;
+
+    /// Add the '..' entry to the directory reply buffer. Returns whether the buffer is full.
+    #[must_use]
+    fn add_parent_reference(&mut self, ino: InodeNumber, offset: i64) -> ReplyDirectoryAddResult;
+
+    /// Add an entry to the directory reply buffer. Returns whether the buffer is full.
     /// A transparent offset value can be provided for each entry. The kernel uses these
     /// value to request the next entries in further readdir calls
     #[must_use]
@@ -104,7 +114,7 @@ pub trait ReplyDirectory {
 }
 
 pub trait ReplyDirectoryPlus {
-    /// Add an entry to the directory reply buffer. Returns true if the buffer is full.
+    /// Add an entry to the directory reply buffer. Returns whether the buffer is full.
     /// A transparent offset value can be provided for each entry. The kernel uses these
     /// value to request the next entries in further readdir calls
     #[must_use]

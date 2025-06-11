@@ -697,6 +697,16 @@ struct ReplyDirectoryImpl {
 }
 
 impl ReplyDirectory for ReplyDirectoryImpl {
+    fn add_self_reference(&mut self, _ino: InodeNumber, _offset: i64) -> ReplyDirectoryAddResult {
+        self.entries.push((".".to_string(), NodeKind::Dir));
+        ReplyDirectoryAddResult::NotFull
+    }
+
+    fn add_parent_reference(&mut self, _ino: InodeNumber, _offset: i64) -> ReplyDirectoryAddResult {
+        self.entries.push(("..".to_string(), NodeKind::Dir));
+        ReplyDirectoryAddResult::NotFull
+    }
+
     fn add(
         &mut self,
         _ino: InodeNumber,
