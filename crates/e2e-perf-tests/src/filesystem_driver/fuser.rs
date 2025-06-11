@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use futures::try_join;
 use std::{
     fmt::Debug,
     marker::PhantomData,
@@ -29,6 +30,12 @@ pub trait FuserCacheBehavior: Send + Sync {
         fs: &impl AsyncFilesystemLL,
         callback: impl AsyncFnOnce(InodeNumber) -> FsResult<R>,
     ) -> FsResult<R>;
+    async fn load_inodes<R>(
+        node1: &Option<Self::NodeHandle>,
+        node2: &Option<Self::NodeHandle>,
+        fs: &impl AsyncFilesystemLL,
+        callback: impl AsyncFnOnce(InodeNumber, InodeNumber) -> FsResult<R>,
+    ) -> FsResult<R>;
     fn make_inode(
         parent: Option<Self::NodeHandle>,
         child_name: &PathComponent,
@@ -49,6 +56,16 @@ impl FuserCacheBehavior for WithInodeCache {
         let inode = node.unwrap_or(FUSE_ROOT_ID);
         callback(inode).await
     }
+    async fn load_inodes<R>(
+        node1: &Option<Self::NodeHandle>,
+        node2: &Option<Self::NodeHandle>,
+        _fs: &impl AsyncFilesystemLL,
+        callback: impl AsyncFnOnce(InodeNumber, InodeNumber) -> FsResult<R>,
+    ) -> FsResult<R> {
+        let ino1 = node1.unwrap_or(FUSE_ROOT_ID);
+        let ino2 = node2.unwrap_or(FUSE_ROOT_ID);
+        callback(ino1, ino2).await
+    }
     fn make_inode(
         _parent: Option<InodeNumber>,
         _child_name: &PathComponent,
@@ -60,17 +77,15 @@ impl FuserCacheBehavior for WithInodeCache {
 /// This is a version of the [FuserFilesystemDriver] that doesn't cache inodes, i.e. it simulates operation counts for the scenario where a filesystem operation
 /// is run on a path that wasn't loaded into the inode cache yet. This means the operation has to load the whole path from the root dir to the node being operated on.
 pub struct WithoutInodeCache;
-impl FuserCacheBehavior for WithoutInodeCache {
-    type NodeHandle = AbsolutePathBuf;
-    async fn load_inode<R>(
-        path: &Option<AbsolutePathBuf>,
+impl WithoutInodeCache {
+    /// Lookup every node on the path from the relative root to the given node
+    async fn load_inodes_on_path(
+        relative_root: InodeNumber,
+        path: impl Iterator<Item = &PathComponent>,
         fs: &impl AsyncFilesystemLL,
-        callback: impl AsyncFnOnce(InodeNumber) -> FsResult<R>,
-    ) -> FsResult<R> {
-        let path = path.clone().unwrap_or_else(AbsolutePathBuf::root);
-        // Lookup every node on the path from the root to the given node
-        let mut inos = vec![FUSE_ROOT_ID];
-        for component in path.iter() {
+    ) -> FsResult<Vec<InodeNumber>> {
+        let mut inos = vec![relative_root];
+        for component in path {
             let parent_ino = *inos.last().unwrap();
             let child_ino = fs
                 .lookup(&request_info(), parent_ino, component)
@@ -79,11 +94,69 @@ impl FuserCacheBehavior for WithoutInodeCache {
                 .handle;
             inos.push(child_ino);
         }
-        let result = callback(*inos.last().unwrap()).await?;
+        Ok(inos)
+    }
+}
+impl FuserCacheBehavior for WithoutInodeCache {
+    type NodeHandle = AbsolutePathBuf;
+    async fn load_inode<R>(
+        path: &Option<AbsolutePathBuf>,
+        fs: &impl AsyncFilesystemLL,
+        callback: impl AsyncFnOnce(InodeNumber) -> FsResult<R>,
+    ) -> FsResult<R> {
+        let path = path.clone().unwrap_or_else(AbsolutePathBuf::root);
+        let inos = Self::load_inodes_on_path(FUSE_ROOT_ID, path.iter(), fs).await?;
+
+        let result = callback(*inos.last().unwrap()).await;
+
         for ino in inos.iter().skip(1).rev() {
             AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
         }
-        Ok(result)
+
+        result
+    }
+    async fn load_inodes<R>(
+        path1: &Option<AbsolutePathBuf>,
+        path2: &Option<AbsolutePathBuf>,
+        fs: &impl AsyncFilesystemLL,
+        callback: impl AsyncFnOnce(InodeNumber, InodeNumber) -> FsResult<R>,
+    ) -> FsResult<R> {
+        let path1 = path1.clone().unwrap_or_else(AbsolutePathBuf::root);
+        let path1 = path1.into_iter();
+        let path2 = path2.clone().unwrap_or_else(AbsolutePathBuf::root);
+        let path2 = path2.into_iter();
+        let (common, relative1, relative2) = _split_common(path1, path2);
+
+        let common_inodes = Self::load_inodes_on_path(FUSE_ROOT_ID, common.into_iter(), fs).await?;
+        let (inodes1, inodes2) = try_join!(
+            Self::load_inodes_on_path(*common_inodes.last().unwrap(), relative1, fs),
+            Self::load_inodes_on_path(*common_inodes.last().unwrap(), relative2, fs),
+        )?;
+
+        let result = callback(*inodes1.last().unwrap(), *inodes2.last().unwrap()).await;
+
+        let cleanup1 = async {
+            for ino in inodes1.iter().skip(1).rev() {
+                AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
+            }
+            Ok(())
+        };
+        let cleanup2 = async {
+            for ino in inodes2.iter().skip(1).rev() {
+                AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
+            }
+            Ok(())
+        };
+        let cleanup_common = async {
+            for ino in common_inodes.iter().skip(1).rev() {
+                AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
+            }
+            Ok(())
+        };
+        try_join!(cleanup1, cleanup2)?;
+        cleanup_common.await?;
+
+        result
     }
     fn make_inode(
         parent: Option<AbsolutePathBuf>,
@@ -94,6 +167,26 @@ impl FuserCacheBehavior for WithoutInodeCache {
             .unwrap_or_else(AbsolutePathBuf::root)
             .join(child_name)
     }
+}
+
+/// Takes two iterators, returns common elements in the prefix in a Vector, and the remaining elements of both iterators as two separate iterators.
+fn _split_common<T: PartialEq + Eq, I1: Iterator<Item = T>, I2: Iterator<Item = T>>(
+    iter1: I1,
+    iter2: I2,
+) -> (Vec<T>, impl Iterator<Item = T>, impl Iterator<Item = T>) {
+    let mut common = Vec::new();
+    let mut iter1 = iter1.peekable();
+    let mut iter2 = iter2.peekable();
+
+    while iter1.peek() == iter2.peek() && iter1.peek().is_some() {
+        let Some(item) = iter1.next() else {
+            unreachable!();
+        };
+        iter2.next();
+        common.push(item);
+    }
+
+    (common, iter1, iter2)
 }
 
 /// A [FilesystemDriver] implementation using the low-level Api from [rustfs], i.e. [ObjectBasedFsAdapterLL].
@@ -662,8 +755,15 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         new_parent: Option<Self::NodeHandle>,
         new_name: &PathComponent,
     ) -> FsResult<()> {
-        C::load_inode(&old_parent, &*self.fs, async |old_parent_ino| {
-            C::load_inode(&new_parent, &*self.fs, async |new_parent_ino| {
+        // Use [C::load_inodes] instead of [C::load_inode], because it loads the common ancestors only once.
+        // Also, if both paths are identical, calling [Self::load_inode] twice may give them different
+        // inode numbers, which is wrong since the fuser rename operation compares inode numbers to decide
+        // if a file is moved between or within directories.
+        C::load_inodes(
+            &old_parent,
+            &new_parent,
+            &*self.fs,
+            async |old_parent_ino, new_parent_ino| {
                 self.fs
                     .rename(
                         &request_info(),
@@ -674,9 +774,8 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                         0, // flags - using 0 for default behavior
                     )
                     .await
-            })
-            .await
-        })
+            },
+        )
         .await
     }
 }

@@ -14,6 +14,7 @@ crate::perf_test_macro::perf_test!(
     [
         within_rootdir,
         between_nested_dirs,
+        within_nested_dir,
         between_deeply_nested_dirs,
         to_existing_target,
         directory,
@@ -26,11 +27,7 @@ crate::perf_test_macro::perf_test!(
 // TODO Move these to the `perf_test!` above, but that currently deadlocks
 crate::perf_test_macro::perf_test_only_fusemt!(
     rename_fusemt,
-    [
-        from_rootdir_to_nesteddir,
-        from_nesteddir_to_rootdir,
-        within_nested_dir,
-    ]
+    [from_rootdir_to_nesteddir, from_nesteddir_to_rootdir,]
 );
 
 fn within_rootdir(test_driver: impl TestDriver) -> impl TestReady {
@@ -307,7 +304,6 @@ fn between_nested_dirs(test_driver: impl TestDriver) -> impl TestReady {
         })
 }
 
-// TODO Use #[apply(all_fixtures)] but that currently deadlocks
 fn within_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
     test_driver
         .create_filesystem()
@@ -343,27 +339,55 @@ fn within_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 .await
                 .unwrap();
         })
-        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 2,
-                blob_read_all: 2,
-                blob_read: 2,
-                blob_write: 1,
-                blob_resize: 1,
+                store_load: match fixture_type {
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt?
+                },
+                blob_read_all: match fixture_type {
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt?
+                },
+                blob_read: match fixture_type {
+                    FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 2,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt?
+                },
+                blob_write: match fixture_type {
+                    FixtureType::FuserWithoutInodeCache | FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt => 1, // TODO Why less than fuser with cache?
+                },
+                blob_resize: match fixture_type {
+                    FixtureType::FuserWithoutInodeCache | FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt => 1, // TODO Why less than fuser with cache?
+                },
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                store_load: 2,
-                blob_data: 21,
-                blob_data_mut: 2,
+                store_load: match fixture_type {
+                    FixtureType::Fusemt | FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithoutInodeCache => 4, // TODO Why more than fusemt?
+                },
+                blob_data: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 23,
+                    FixtureType::FuserWithoutInodeCache => 41, // TODO Why more than fusemt?
+                    FixtureType::Fusemt => 21, // TODO Why less than fuser with cache?
+                },
+                blob_data_mut: match fixture_type {
+                    FixtureType::FuserWithoutInodeCache | FixtureType::FuserWithInodeCache => 3,
+                    FixtureType::Fusemt => 2, // TODO Why less than fuser with/without cache?
+                },
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 load: 2,
-                store: 1,
+                store: match fixture_type {
+                    FixtureType::FuserWithoutInodeCache | FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt => 1, // TODO Why less than fuser with/without cache?
+                },
                 ..LLActionCounts::ZERO
             },
         })

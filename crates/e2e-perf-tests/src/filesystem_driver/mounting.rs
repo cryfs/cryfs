@@ -22,7 +22,7 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
-    PathComponent, PathComponentBuf, Statfs, Uid,
+    PathComponent, Statfs, Uid,
     backend::{BackgroundSession, RunningFilesystem},
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
