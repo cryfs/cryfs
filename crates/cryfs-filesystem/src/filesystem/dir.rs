@@ -538,6 +538,7 @@ where
                             Ok(entry) => match self_blob.flush().await {
                                 Err(err) => {
                                     log::error!("Error flushing blob: {err:?}");
+                                    child_blob.async_drop().await?;
                                     Err(FsError::UnknownError)
                                 }
                                 Ok(()) => {
