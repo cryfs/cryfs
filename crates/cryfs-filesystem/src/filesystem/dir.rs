@@ -50,10 +50,23 @@ where
         }
     }
 
-    async fn load_blob(&self) -> Result<AsyncDropGuard<DirBlob<'a, B>>, FsError> {
-        let blob = self.node_info.load_blob(self.blobstore).await?;
+    async fn load_blob(&self) -> Result<AsyncDropGuard<FsBlob<'a, B>>, FsError> {
+        self.node_info.load_blob(self.blobstore).await
+    }
+
+    fn blob_as_dir<'b>(blob: &'b FsBlob<'a, B>) -> Result<&'b DirBlob<'a, B>, FsError> {
+        blob.as_dir().map_err(|err| {
+            let blob_id = blob.blob_id();
+            FsError::CorruptedFilesystem {
+                // TODO Add to message what it actually is
+                message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", blob_id),
+            }
+        })
+    }
+
+    fn blob_as_dir_mut<'b>(blob: &'b mut FsBlob<'a, B>) -> Result<&'b mut DirBlob<'a, B>, FsError> {
         let blob_id = blob.blob_id();
-        FsBlob::into_dir(blob).await.map_err(|err| {
+        blob.as_dir_mut().map_err(|err| {
             FsError::CorruptedFilesystem {
                 // TODO Add to message what it actually is
                 message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", blob_id),
@@ -72,12 +85,15 @@ where
             })?;
         let blob_id = blob.blob_id();
 
+        let blob_dir = Self::blob_as_dir_mut(&mut *blob)
+            .expect("We just created this as a dir blob but now it isn't");
+
         // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
         // This way, we make sure the filesystem stays consistent even if it crashes mid way.
         // Dropping by itself isn't enough to flush because it may go into a cache.
         // TODO Check if this is necessary or if create_dir_blob already flushes. Or maybe we should still keep this here but make sure
         // it is a no-op if a blob is not dirty.
-        blob.flush().await.map_err(|err| {
+        blob_dir.flush().await.map_err(|err| {
             log::error!("Error flushing blob: {err:?}");
             FsError::UnknownError
         })?;
@@ -229,14 +245,14 @@ where
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
                 let mut blob = self.load_blob().await?;
-                let result = blob
-                    .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
-                        // TODO Don't allow overwriting nonempty directories, but allow overwriting files and symlinks and empty directories
-                        self.on_rename_overwrites_destination(*blob_id).await
-                    })
-                    .await;
-                blob.async_drop().await?;
-                result
+                with_async_drop_2!(blob, {
+                    Self::blob_as_dir_mut(&mut *blob)?
+                        .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
+                            // TODO Don't allow overwriting nonempty directories, but allow overwriting files and symlinks and empty directories
+                            self.on_rename_overwrites_destination(*blob_id).await
+                        })
+                        .await
+                })
             })
             .await
     }
@@ -257,7 +273,26 @@ where
         // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
         let (mut source_parent, mut dest_parent) =
             flatten_async_drop(source_parent, dest_parent).await?;
-        let entry = match source_parent.entry_by_name(oldname) {
+
+        let source_parent_dir = match Self::blob_as_dir_mut(&mut *source_parent) {
+            Ok(dir) => dir,
+            Err(err) => {
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                return Err(err);
+            }
+        };
+
+        let dest_parent_dir = match Self::blob_as_dir_mut(&mut *dest_parent) {
+            Ok(dir) => dir,
+            Err(err) => {
+                source_parent.async_drop().await?;
+                dest_parent.async_drop().await?;
+                return Err(err);
+            }
+        };
+
+        let entry = match source_parent_dir.entry_by_name(oldname) {
             Some(entry) => entry,
             None => {
                 // TODO Drop concurrently and drop latter even if first one fails
@@ -306,7 +341,7 @@ where
         };
 
         let mut existing_dir_check = || {
-            if let Some(existing_dest_entry) = dest_parent.entry_by_name_mut(newname) {
+            if let Some(existing_dest_entry) = dest_parent_dir.entry_by_name_mut(newname) {
                 if existing_dest_entry.entry_type() == EntryType::Dir {
                     let self_blob = self_blob.as_dir()
                         .map_err(|_| FsError::CorruptedFilesystem { message: format!("Blob {self_blob_id:?} is not a directory but its entry in its parent directory says it is") })?;
@@ -328,7 +363,7 @@ where
             }
         }
 
-        let res = source_parent.remove_entry_by_name(oldname);
+        let res = source_parent_dir.remove_entry_by_name(oldname);
         let entry = match res {
             Ok(entry) => entry,
             Err(err) => {
@@ -340,7 +375,7 @@ where
                 return Err(FsError::UnknownError);
             }
         };
-        let res = dest_parent
+        let res = dest_parent_dir
             .add_or_overwrite_entry(
                 newname.to_owned(),
                 *entry.blob_id(),
@@ -414,6 +449,7 @@ where
                 let blob = self.load_blob().await?;
                 with_async_drop(blob, |blob| {
                     future::ready((move || {
+                        let blob = Self::blob_as_dir(blob)?;
                         let result = blob
                             .entries()
                             .map(|entry| cryfs_rustfs::DirEntry {
@@ -460,6 +496,8 @@ where
                 let name = name.to_owned();
                 with_async_drop_2!(blob, {
                     let new_dir_blob_id = new_dir_blob_id?;
+
+                    let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                     let atime = SystemTime::now();
                     let mtime = atime;
@@ -513,20 +551,28 @@ where
             .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
                 let mut self_blob = self.load_blob().await?;
                 with_async_drop_2!(self_blob, {
+                    let self_blob = Self::blob_as_dir_mut(&mut *self_blob)?;
                     let child_entry = self_blob.entry_by_name(name).ok_or_else(|| FsError::NodeDoesNotExist)?;
                     if child_entry.entry_type() != EntryType::Dir {
                         Err(FsError::NodeIsNotADirectory)?;
                     }
                     let child_id = child_entry.blob_id();
-                    let child_blob = self.blobstore.load(child_id).await.map_err(|_| FsError::NodeDoesNotExist)?.ok_or_else(|| FsError::NodeDoesNotExist)?;
-                    let mut child_blob = FsBlob::into_dir(child_blob).await.map_err(|err| {
+                    let mut child_blob = self.blobstore.load(child_id).await.map_err(|_| FsError::NodeDoesNotExist)?.ok_or_else(|| FsError::NodeDoesNotExist)?;
+
+                    let child_blob_dir = match Self::blob_as_dir(&child_blob).map_err(|err| {
                         FsError::CorruptedFilesystem {
                             // TODO Add to message what it actually is
                             message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", child_id),
                         }
-                    })?;
+                    }) {
+                        Ok(dir) => dir,
+                        Err(err) => {
+                            child_blob.async_drop().await?;
+                            return Err(err);
+                        }
+                    };
 
-                    let result = if child_blob.entries().len() > 0 {
+                    let result = if child_blob_dir.entries().len() > 0 {
                         child_blob.async_drop().await?;
                         Err(FsError::CannotRemoveNonEmptyDirectory)
                     } else {
@@ -543,7 +589,7 @@ where
                                 }
                                 Ok(()) => {
                                     assert_eq!(*entry.blob_id(), child_blob.blob_id());
-                                    let remove_result = DirBlob::remove(child_blob).await;
+                                    let remove_result = FsBlob::remove(child_blob).await;
                                     match remove_result {
                                         Ok(()) => Ok(()),
                                         Err(err) => {
@@ -594,6 +640,8 @@ where
                 let name = name.to_owned();
                 with_async_drop_2!(blob, {
                     let new_symlink_blob_id = new_symlink_blob_id?;
+
+                    let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                     let atime = SystemTime::now();
                     let mtime = atime;
@@ -646,47 +694,46 @@ where
         self.node_info.concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
             let mut blob = self.load_blob().await?;
 
-            // First remove the entry, then flush that change, and only then remove the blob.
-            // This is to make sure the file system doesn't end up in an invalid state
-            // where the blob is removed but the entry is still there.
-            let result = match blob.remove_entry_by_name(name) {
-                Err(err) => Err(err),
-                Ok(entry) => match blob.flush().await {
-                    Err(err) => {
-                        log::error!("Error flushing blob: {err:?}");
-                        Err(FsError::UnknownError)
-                    }
-                    Ok(()) => {
-                        let blob_id = entry.blob_id();
-                        match entry.entry_type() {
-                            EntryType::Dir => {
-                                Err(FsError::NodeIsADirectory)
-                            }
-                            EntryType::File | EntryType::Symlink => {
-                                let remove_result = self.blobstore.remove_by_id(blob_id).await;
-                                match remove_result {
-                                    Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                                    Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
-                                        Err(FsError::CorruptedFilesystem {
-                                            message: format!(
-                                                "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
-                                            ),
-                                        })
-                                    }
-                                    Err(err) => {
-                                        log::error!("Error removing blob: {err:?}");
-                                        Err(FsError::UnknownError)
+            with_async_drop_2!(blob, {
+                let blob = Self::blob_as_dir_mut(&mut *blob)?;
+                // First remove the entry, then flush that change, and only then remove the blob.
+                // This is to make sure the file system doesn't end up in an invalid state
+                // where the blob is removed but the entry is still there.
+                match blob.remove_entry_by_name(name) {
+                    Err(err) => Err(err),
+                    Ok(entry) => match blob.flush().await {
+                        Err(err) => {
+                            log::error!("Error flushing blob: {err:?}");
+                            Err(FsError::UnknownError)
+                        }
+                        Ok(()) => {
+                            let blob_id = entry.blob_id();
+                            match entry.entry_type() {
+                                EntryType::Dir => {
+                                    Err(FsError::NodeIsADirectory)
+                                }
+                                EntryType::File | EntryType::Symlink => {
+                                    let remove_result = self.blobstore.remove_by_id(blob_id).await;
+                                    match remove_result {
+                                        Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                                        Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                                            Err(FsError::CorruptedFilesystem {
+                                                message: format!(
+                                                    "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
+                                                ),
+                                            })
+                                        }
+                                        Err(err) => {
+                                            log::error!("Error removing blob: {err:?}");
+                                            Err(FsError::UnknownError)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                },
-            };
-
-            blob.async_drop().await?;
-
-            result
+                    },
+                }
+            })
         }).await
     }
 
@@ -720,6 +767,8 @@ where
 
                 with_async_drop_2!(blob, {
                     let new_file_blob_id = new_file_blob_id?;
+
+                    let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                     let atime = SystemTime::now();
                     let mtime = atime;

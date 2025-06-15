@@ -10,7 +10,10 @@ use super::{
 };
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{FsError, FsResult, object_based_api::Symlink};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    with_async_drop_2,
+};
 
 pub struct CrySymlink<'a, B>
 where
@@ -37,10 +40,15 @@ where
         }
     }
 
-    async fn load_blob(&self) -> FsResult<SymlinkBlob<'a, B>> {
-        let blob = self.node_info.load_blob(&self.blobstore).await?;
+    async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>> {
+        self.node_info.load_blob(&self.blobstore).await
+    }
+
+    fn blob_as_symlink_mut<'b>(
+        blob: &'b mut FsBlob<'a, B>,
+    ) -> Result<&'b mut SymlinkBlob<'a, B>, FsError> {
         let blob_id = blob.blob_id();
-        FsBlob::into_symlink(blob).await.map_err(|err| {
+        blob.as_symlink_mut().map_err(|err| {
             FsError::CorruptedFilesystem {
                 // TODO Add to message what it actually is
                 message: format!("Blob {:?} is listed as a symlink in its parent directory but is actually not a symlink: {err:?}", blob_id),
@@ -68,12 +76,16 @@ where
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
                 let mut blob = self.load_blob().await?;
-                blob.target().await.map_err(|err| {
-                    FsError::CorruptedFilesystem {
-                        // TODO Add to message what it actually is
-                        message: format!("Unparseable symlink blob: {err:?}"),
-                    }
-                })
+                with_async_drop_2!(blob, {
+                    let blob = Self::blob_as_symlink_mut(&mut blob)?;
+                    let target = blob.target().await.map_err(|err| {
+                        FsError::CorruptedFilesystem {
+                            // TODO Add to message what it actually is
+                            message: format!("Unparseable symlink blob: {err:?}"),
+                        }
+                    });
+                    Ok(target)
+                })?
             })
             .await
     }

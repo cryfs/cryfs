@@ -50,8 +50,10 @@ where
     pub async fn create_dir_blob<'a>(
         &'a self,
         parent: &BlobId,
-    ) -> Result<AsyncDropGuard<fsblob::DirBlob<'a, B>>> {
-        DirBlob::create_blob(&*self.blobstore, parent).await
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<'a, B>>> {
+        Ok(AsyncDropGuard::new(FsBlob::Directory(
+            DirBlob::create_blob(&*self.blobstore, parent).await?,
+        )))
     }
 
     pub async fn create_symlink_blob<'a>(

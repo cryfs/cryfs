@@ -12,7 +12,7 @@ use cryfs_check::{
     MaybeBlobInfoAsSeenByLookingAtBlob, MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
     NodeReferencedMultipleTimesError, WrongParentPointerError,
 };
-use cryfs_filesystem::filesystem::fsblobstore::{BlobType, FsBlob};
+use cryfs_filesystem::filesystem::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;
@@ -66,15 +66,11 @@ fn make_large_dir<'a>(
         fs_fixture
             .update_fsblobstore(move |fsblobstore| {
                 Box::pin(async move {
-                    let parent = FsBlob::into_dir(
-                        fsblobstore
-                            .load(&parent_info.blob_id)
-                            .await
-                            .unwrap()
-                            .unwrap(),
-                    )
-                    .await
-                    .unwrap();
+                    let parent = fsblobstore
+                        .load(&parent_info.blob_id)
+                        .await
+                        .unwrap()
+                        .unwrap();
                     let mut parent = CreatedDirBlob::new(parent, parent_info.referenced_as.path);
                     let mut dir =
                         entry_helpers::create_large_dir(fsblobstore, &mut *parent, "dirname").await;

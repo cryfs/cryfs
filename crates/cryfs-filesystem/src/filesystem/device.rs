@@ -4,6 +4,7 @@ use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::object_based_api::Dir as _;
+use cryfs_utils::with_async_drop_2;
 use futures::join;
 use maybe_owned::MaybeOwned;
 use std::sync::Arc;
@@ -354,42 +355,48 @@ where
 
         let parents = self.load_two_blobs(source_parent, dest_parent).await?;
         match parents {
-            LoadTwoBlobsResult::AreSameBlob { blob } => {
-                let mut parent = FsBlob::into_dir(blob)
-                    .await
-                    .map_err(|_| FsError::NodeIsNotADirectory)?;
-                // TODO Don't allow overriding a non-empty directory
-                parent
-                    .rename_entry_by_name(source_name, dest_name.to_owned(), on_overwritten)
-                    .await?;
-                parent.async_drop().await?;
-                Ok(())
+            LoadTwoBlobsResult::AreSameBlob { mut blob } => {
+                with_async_drop_2!(blob, {
+                    let parent = blob
+                        .as_dir_mut()
+                        .map_err(|_| FsError::NodeIsNotADirectory)?;
+                    // TODO Don't allow overriding a non-empty directory
+                    parent
+                        .rename_entry_by_name(source_name, dest_name.to_owned(), on_overwritten)
+                        .await?;
+                    Ok(())
+                })
             }
             LoadTwoBlobsResult::AreDifferentBlobs {
-                blob1: source_parent_blob,
-                blob2: dest_parent_blob,
+                blob1: mut source_parent_blob,
+                blob2: mut dest_parent_blob,
             } => {
-                let (source_parent, dest_parent) = join!(
-                    FsBlob::into_dir(source_parent_blob),
-                    FsBlob::into_dir(dest_parent_blob),
-                );
-                let source_parent = source_parent.map_err(|err| {
-                    // TODO No map_err but instead have into_dir return the right error
-                    FsError::NodeIsNotADirectory
-                });
-                let dest_parent = dest_parent.map_err(|err| {
-                    // TODO No map_err but instead have into_dir return the right error
-                    FsError::NodeIsNotADirectory
-                });
                 // TODO Use with_async_drop! for source_parent, dest_parent, self_blob
-                let (mut source_parent, mut dest_parent) =
-                    flatten_async_drop(source_parent, dest_parent).await?;
+                let source_parent = match source_parent_blob.as_dir_mut() {
+                    Ok(source_parent) => source_parent,
+                    Err(_) => {
+                        // TODO Drop concurrently and drop latter even if first one fails
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
+                        return Err(FsError::NodeIsNotADirectory);
+                    }
+                };
+                let dest_parent = match dest_parent_blob.as_dir_mut() {
+                    Ok(dest_parent) => dest_parent,
+                    Err(_) => {
+                        // TODO Drop concurrently and drop latter even if first one fails
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
+                        return Err(FsError::NodeIsNotADirectory);
+                    }
+                };
+
                 let entry = match source_parent.entry_by_name(source_name) {
                     Some(entry) => entry,
                     None => {
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         return Err(FsError::NodeDoesNotExist);
                     }
                 };
@@ -401,14 +408,14 @@ where
                     Ok(Some(self_blob)) => self_blob,
                     Ok(None) => {
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         return Err(FsError::NodeDoesNotExist);
                     }
                     Err(err) => {
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         log::error!("Error loading blob: {:?}", err);
                         return Err(FsError::UnknownError);
                     }
@@ -430,8 +437,8 @@ where
                     Ok(()) => (),
                     Err(err) => {
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         self_blob.async_drop().await?;
                         return Err(err);
                     }
@@ -442,8 +449,8 @@ where
                     Ok(entry) => entry,
                     Err(err) => {
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         log::error!("Error in add_or_overwrite_entry: {err:?}");
                         return Err(FsError::UnknownError);
                     }
@@ -466,8 +473,8 @@ where
                     Err(err) => {
                         // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         log::error!("Error in add_or_overwrite_entry: {err:?}");
                         return Err(FsError::UnknownError);
                     }
@@ -479,16 +486,16 @@ where
                     Err(err) => {
                         // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
                         // TODO Drop concurrently and drop latter even if first one fails
-                        source_parent.async_drop().await?;
-                        dest_parent.async_drop().await?;
+                        source_parent_blob.async_drop().await?;
+                        dest_parent_blob.async_drop().await?;
                         log::error!("Error setting parent: {err:?}");
                         return Err(FsError::UnknownError);
                     }
                 }
                 // TODO Drop concurrently and drop latter even if first one fails
                 self_blob.async_drop().await?;
-                source_parent.async_drop().await?;
-                dest_parent.async_drop().await?;
+                source_parent_blob.async_drop().await?;
+                dest_parent_blob.async_drop().await?;
                 Ok(())
 
                 // TODO We need to update timestamps of the parent directories in the grandparent blobs. We already do it in Dir::move_child_to, which is used by low_level_adapter, but this function is used by high_level_adapter and here we don't do it yet.

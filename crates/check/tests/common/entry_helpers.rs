@@ -24,7 +24,10 @@ use cryfs_filesystem::{
     utils::fs_types::{Gid, Mode, Uid},
 };
 use cryfs_rustfs::{AbsolutePathBuf, FsError};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    with_async_drop_2,
+};
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
@@ -35,7 +38,7 @@ where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
-    blob: AsyncDropGuard<DirBlob<'a, B>>,
+    blob: AsyncDropGuard<FsBlob<'a, B>>,
     path: AbsolutePathBuf,
 }
 
@@ -44,18 +47,27 @@ where
     B: BlobStore + Debug + 'static,
     for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
 {
-    pub fn new(
-        blob: AsyncDropGuard<DirBlob<'a, B>>,
-        path: AbsolutePathBuf,
-    ) -> AsyncDropGuard<Self> {
+    pub fn new(blob: AsyncDropGuard<FsBlob<'a, B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { blob, path })
     }
 
-    pub fn blob(&mut self) -> &mut DirBlob<'a, B> {
+    pub fn blob(&mut self) -> &mut FsBlob<'a, B> {
         &mut self.blob
     }
 
-    pub fn into_blob(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DirBlob<'a, B>> {
+    pub fn dir_blob(&self) -> &DirBlob<'a, B> {
+        self.blob
+            .as_dir()
+            .expect("We just created this dir blob and now it is a different type")
+    }
+
+    pub fn dir_blob_mut(&mut self) -> &mut DirBlob<'a, B> {
+        self.blob
+            .as_dir_mut()
+            .expect("We just created this dir blob and now it is a different type")
+    }
+
+    pub fn into_blob(this: AsyncDropGuard<Self>) -> AsyncDropGuard<FsBlob<'a, B>> {
         this.unsafe_into_inner_dont_drop().blob
     }
 }
@@ -167,16 +179,14 @@ pub fn large_symlink_target() -> String {
         .join("/")
 }
 
-pub async fn load_dir_blob<'b, B>(
+pub async fn load_blob<'b, B>(
     fsblobstore: &'b FsBlobStore<B>,
     blob_id: &BlobId,
-) -> AsyncDropGuard<DirBlob<'b, B>>
+) -> AsyncDropGuard<FsBlob<'b, B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
-    FsBlob::into_dir(fsblobstore.load(blob_id).await.unwrap().unwrap())
-        .await
-        .unwrap()
+    fsblobstore.load(blob_id).await.unwrap().unwrap()
 }
 
 pub async fn create_empty_dir<'a, 'b, 'c, B>(
@@ -187,11 +197,12 @@ pub async fn create_empty_dir<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
+    let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
-        .create_dir_blob(&parent.blob.blob_id())
+        .create_dir_blob(&parent_dir.blob_id())
         .await
         .unwrap();
-    add_dir_entry(&mut parent.blob, name, new_entry.blob_id());
+    add_dir_entry(&mut parent_dir, name, new_entry.blob_id());
     CreatedDirBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
@@ -220,11 +231,12 @@ pub async fn create_empty_file<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
+    let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
-        .create_file_blob(&parent.blob.blob_id())
+        .create_file_blob(&parent_dir.blob_id())
         .await
         .unwrap();
-    add_file_entry(&mut parent.blob, name, new_entry.blob_id());
+    add_file_entry(&mut parent_dir, name, new_entry.blob_id());
     CreatedFileBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
@@ -254,11 +266,12 @@ pub async fn create_symlink<'a, 'b, 'c, B>(
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
 {
+    let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
-        .create_symlink_blob(&parent.blob.blob_id(), target)
+        .create_symlink_blob(&parent_dir.blob_id(), target)
         .await
         .unwrap();
-    add_symlink_entry(&mut parent.blob, name, new_entry.blob_id());
+    add_symlink_entry(&mut parent_dir, name, new_entry.blob_id());
     CreatedSymlinkBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
@@ -348,7 +361,7 @@ pub async fn add_entries_to_make_dir_large<B>(
         .await;
     }
     assert!(
-        dir.blob.num_nodes().await.unwrap() > 1_000,
+        dir.dir_blob_mut().num_nodes().await.unwrap() > 1_000,
         "If this fails, we need to create even more entries to make the directory large enough."
     );
 }
@@ -838,17 +851,20 @@ where
     Box::pin(
         async move {
             let blob = fsblobstore.load(&dir_blob_id).await.unwrap().unwrap();
-            let mut blob = FsBlob::into_dir(blob).await.unwrap();
-            let children = blob
-                .entries()
-                .map(|entry| *entry.blob_id())
-                .collect::<Vec<_>>();
-            let dir_children = blob
-                .entries()
-                .filter(|entry| entry.mode().has_dir_flag())
-                .map(|entry| *entry.blob_id())
-                .collect::<Vec<_>>();
-            blob.async_drop().await.unwrap();
+            let (children, dir_children) = with_async_drop_2!(blob, {
+                let blob = blob.as_dir().expect("Expected a directory blob");
+                let children = blob
+                    .entries()
+                    .map(|entry| *entry.blob_id())
+                    .collect::<Vec<_>>();
+                let dir_children = blob
+                    .entries()
+                    .filter(|entry| entry.mode().has_dir_flag())
+                    .map(|entry| *entry.blob_id())
+                    .collect::<Vec<_>>();
+                Ok::<_, anyhow::Error>((children, dir_children))
+            })
+            .unwrap();
             let recursive_streams = dir_children
                 .into_iter()
                 .map(|child_id| get_descendants_if_dir_blob(fsblobstore, child_id))
@@ -873,28 +889,32 @@ where
     Box::pin(
         async move {
             let blob = fsblobstore.load(&maybe_dir_blob_id).await.unwrap().unwrap();
-            if let Ok(mut blob) = FsBlob::into_dir(blob).await {
-                let children = blob
-                    .entries()
-                    .map(|entry| *entry.blob_id())
-                    .collect::<Vec<_>>();
-                let dir_children = blob
-                    .entries()
-                    .filter(|entry| entry.mode().has_dir_flag())
-                    .map(|entry| *entry.blob_id())
-                    .collect::<Vec<_>>();
-                blob.async_drop().await.unwrap();
-                let recursive_streams = dir_children
-                    .into_iter()
-                    .map(|child_id| get_descendants_if_dir_blob(fsblobstore, child_id))
-                    .collect::<Vec<_>>();
-                let recursive_children = stream::select_all(recursive_streams);
-                stream::iter(children.into_iter())
-                    .chain(recursive_children)
-                    .boxed()
-            } else {
-                stream::empty().boxed()
-            }
+            with_async_drop_2!(blob, {
+                if let Ok(blob) = blob.as_dir() {
+                    let children = blob
+                        .entries()
+                        .map(|entry| *entry.blob_id())
+                        .collect::<Vec<_>>();
+                    let dir_children = blob
+                        .entries()
+                        .filter(|entry| entry.mode().has_dir_flag())
+                        .map(|entry| *entry.blob_id())
+                        .collect::<Vec<_>>();
+                    let recursive_streams = dir_children
+                        .into_iter()
+                        .map(|child_id| get_descendants_if_dir_blob(fsblobstore, child_id))
+                        .collect::<Vec<_>>();
+                    let recursive_children = stream::select_all(recursive_streams);
+                    Ok::<_, anyhow::Error>(
+                        stream::iter(children.into_iter())
+                            .chain(recursive_children)
+                            .boxed(),
+                    )
+                } else {
+                    Ok::<_, anyhow::Error>(stream::empty().boxed())
+                }
+            })
+            .unwrap()
         }
         .flatten_stream(),
     )

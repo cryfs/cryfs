@@ -9,7 +9,7 @@ use std::time::SystemTime;
 use cryfs_blobstore::BlobId;
 use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeUnreferencedError};
 use cryfs_filesystem::{
-    filesystem::fsblobstore::DirBlob,
+    filesystem::fsblobstore::FsBlob,
     utils::fs_types::{Gid, Uid},
 };
 use cryfs_rustfs::AbsolutePathBuf;
@@ -107,7 +107,8 @@ fn make_large_dir_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut dir_blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let mut blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let dir_blob = blob.as_dir_mut().unwrap();
                     for i in 0..400 {
                         dir_blob
                             .add_entry_symlink(
@@ -127,7 +128,7 @@ fn make_large_dir_blob(
                     let blob_id = dir_blob.blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            DirBlob::into_raw(dir_blob)
+                            FsBlob::into_raw(blob)
                                 .await
                                 .unwrap()
                                 .into_data_tree()
@@ -161,13 +162,13 @@ fn make_dir_blob_with_children(
                     )
                     .await;
                     assert!(
-                        dir_blob.blob().num_nodes().await.unwrap() > 1_000,
+                        dir_blob.dir_blob_mut().num_nodes().await.unwrap() > 1_000,
                         "If this fails, we need to make the data larger so it uses enough nodes."
                     );
                     let blob_id = dir_blob.blob().blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            DirBlob::into_raw(CreatedDirBlob::into_blob(dir_blob))
+                            FsBlob::into_raw(CreatedDirBlob::into_blob(dir_blob))
                                 .await
                                 .unwrap()
                                 .into_data_tree()

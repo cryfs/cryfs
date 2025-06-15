@@ -11,10 +11,11 @@ use cryfs_rustfs::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     data::Data,
+    with_async_drop_2,
 };
 
 use super::node_info::{LoadParentBlobResult, NodeInfo};
-use crate::filesystem::fsblobstore::{FileBlob, FsBlobStore};
+use crate::filesystem::fsblobstore::{FileBlob, FsBlob, FsBlobStore};
 
 // TODO Make sure we don't keep a lock on the file blob, or keep the lock in an Arc that is shared between all File, Node and OpenFile instances of the same file
 
@@ -42,19 +43,39 @@ where
         })
     }
 
-    async fn load_blob<'a>(&self) -> FsResult<FileBlob<'_, B>> {
-        self.node_info.load_file_blob(&self.blobstore).await
+    async fn load_blob<'a>(&self) -> FsResult<AsyncDropGuard<FsBlob<'_, B>>> {
+        self.node_info.load_blob(&self.blobstore).await
+    }
+
+    pub fn as_file_mut<'a, 's>(blob: &'s mut FsBlob<'a, B>) -> FsResult<&'s mut FileBlob<'a, B>>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    {
+        let blob_id = blob.blob_id();
+        blob.as_file_mut().map_err(|err| {
+            FsError::CorruptedFilesystem {
+                // TODO Add to message what it actually is
+                message: format!("Blob {:?} is listed as a file in its parent directory but is actually not a file: {err:?}", blob_id),
+            }
+        })
     }
 
     async fn flush_file_contents(&self) -> FsResult<()> {
         let mut blob = self.load_blob().await?;
-        // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
-        blob.flush().await.map_err(|err| {
-            log::error!("Failed to fsync blob: {err:?}");
-            FsError::UnknownError
-        })?;
+        with_async_drop_2!(blob, {
+            let file = Self::as_file_mut(&mut blob).map_err(|err| {
+                log::error!("Failed to cast blob to FileBlob: {err:?}");
+                FsError::UnknownError
+            })?;
+            // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
+            file.flush().await.map_err(|err| {
+                log::error!("Failed to fsync blob: {err:?}");
+                FsError::UnknownError
+            })?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     async fn flush_metadata(&self) -> FsResult<()> {
@@ -64,41 +85,55 @@ where
             }
             LoadParentBlobResult::IsNotRootDir {
                 mut parent_blob, ..
-            } => {
+            } => with_async_drop_2!(parent_blob, {
+                let parent_blob = parent_blob
+                    .as_dir_mut()
+                    .expect("Parent blob should be loaded here");
                 // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
                 parent_blob.flush().await.map_err(|err| {
                     log::error!("Failed to fsync parent blob: {err:?}");
                     FsError::UnknownError
-                })?;
-                parent_blob.async_drop().await?;
-            }
+                })
+            })?,
         }
         Ok(())
     }
 
     async fn _read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {
         let mut blob = self.load_blob().await?;
-        // TODO Is it better to have try_read return a Data object instead of a &mut [u8]? Or should we instead make OpenFile::read() take a &mut [u8]?
-        //      The current way of mapping between the two ways of doing it in here is probably not optimal.
-        let mut data: Data = vec![0; u64::from(size) as usize].into();
-        // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
-        let num_read_bytes = blob
-            .try_read(&mut data, offset.into())
-            .await
-            .map_err(|err| {
-                log::error!("Failed to read from blob: {err:?}");
+        with_async_drop_2!(blob, {
+            let file = Self::as_file_mut(&mut blob).map_err(|err| {
+                log::error!("Failed to cast blob to FileBlob: {err:?}");
                 FsError::UnknownError
             })?;
-        data.shrink_to_subregion(..num_read_bytes);
-        Ok(data)
+            // TODO Is it better to have try_read return a Data object instead of a &mut [u8]? Or should we instead make OpenFile::read() take a &mut [u8]?
+            //      The current way of mapping between the two ways of doing it in here is probably not optimal.
+            let mut data: Data = vec![0; u64::from(size) as usize].into();
+            // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
+            let num_read_bytes = file
+                .try_read(&mut data, offset.into())
+                .await
+                .map_err(|err| {
+                    log::error!("Failed to read from blob: {err:?}");
+                    FsError::UnknownError
+                })?;
+            data.shrink_to_subregion(..num_read_bytes);
+            Ok(data)
+        })
     }
 
     async fn _write(&self, offset: NumBytes, data: Data) -> FsResult<()> {
         let mut blob = self.load_blob().await?;
-        // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
-        blob.write(&data, offset.into()).await.map_err(|err| {
-            log::error!("Failed to write to blob: {err:?}");
-            FsError::UnknownError
+        with_async_drop_2!(blob, {
+            let file = Self::as_file_mut(&mut blob).map_err(|err| {
+                log::error!("Failed to cast blob to FileBlob: {err:?}");
+                FsError::UnknownError
+            })?;
+            // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
+            file.write(&data, offset.into()).await.map_err(|err| {
+                log::error!("Failed to write to blob: {err:?}");
+                FsError::UnknownError
+            })
         })
     }
 }

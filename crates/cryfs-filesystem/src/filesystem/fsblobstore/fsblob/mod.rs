@@ -94,35 +94,18 @@ where
         }
     }
 
-    pub async fn into_file(mut this: AsyncDropGuard<Self>) -> Result<FileBlob<'a, B>> {
-        if !matches!(*this, Self::File(_)) {
-            this.async_drop().await?;
-            bail!("FsBlob is not a file");
+    pub fn as_file(&self) -> Result<&'_ FileBlob<'a, B>> {
+        match self {
+            Self::File(blob) => Ok(blob),
+            _ => bail!("FsBlob is not a file"),
         }
-        // No need to call async_drop since we were a file
-        let this = this.unsafe_into_inner_dont_drop();
-
-        let Self::File(blob) = this else {
-            panic!("Can't happen since we checked above that this is a file");
-        };
-        Ok(blob)
     }
 
-    pub async fn into_dir(
-        mut this: AsyncDropGuard<Self>,
-    ) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
-        if !matches!(*this, Self::Directory(_)) {
-            this.async_drop().await?;
-            // TODO These should probably return FsError instead of anyhow
-            bail!("FsBlob is not a directory");
+    pub fn as_file_mut(&mut self) -> Result<&'_ mut FileBlob<'a, B>> {
+        match self {
+            Self::File(blob) => Ok(blob),
+            _ => bail!("FsBlob is not a file"),
         }
-        // No need to call async_drop since we are going to return an AsyncDropGuard
-        let this = this.unsafe_into_inner_dont_drop();
-
-        let Self::Directory(blob) = this else {
-            panic!("Can't happen since we checked above that this is a directory");
-        };
-        Ok(blob)
     }
 
     pub fn as_dir(&self) -> Result<&'_ DirBlob<'a, B>> {
@@ -132,18 +115,18 @@ where
         }
     }
 
-    pub async fn into_symlink(mut this: AsyncDropGuard<Self>) -> Result<SymlinkBlob<'a, B>> {
-        if !matches!(*this, Self::Symlink(_)) {
-            this.async_drop().await?;
-            bail!("FsBlob is not a symlink");
+    pub fn as_dir_mut(&mut self) -> Result<&'_ mut DirBlob<'a, B>> {
+        match self {
+            Self::Directory(blob) => Ok(blob),
+            _ => bail!("FsBlob is not a directory"),
         }
-        // No need to call async_drop since we were a file
-        let this = this.unsafe_into_inner_dont_drop();
+    }
 
-        let Self::Symlink(blob) = this else {
-            panic!("Can't happen since we checked above that this is a symlink");
-        };
-        Ok(blob)
+    pub fn as_symlink_mut(&mut self) -> Result<&'_ mut SymlinkBlob<'a, B>> {
+        match self {
+            Self::Symlink(blob) => Ok(blob),
+            _ => bail!("FsBlob is not a symlink"),
+        }
     }
 
     pub async fn lstat_size(&mut self) -> Result<u64> {
@@ -159,6 +142,15 @@ where
             Self::File(blob) => blob.all_blocks(),
             Self::Directory(blob) => blob.all_blocks(),
             Self::Symlink(blob) => blob.all_blocks(),
+        }
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn into_raw(this: AsyncDropGuard<Self>) -> Result<B::ConcreteBlob<'a>> {
+        match this.unsafe_into_inner_dont_drop() {
+            Self::File(blob) => Ok(blob.into_raw()),
+            Self::Directory(blob) => DirBlob::into_raw(blob).await,
+            Self::Symlink(blob) => Ok(blob.into_raw()),
         }
     }
 }

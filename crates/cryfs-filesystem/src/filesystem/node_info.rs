@@ -1,4 +1,4 @@
-use nix::unistd::Uid;
+use cryfs_utils::with_async_drop_2;
 use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::join;
@@ -76,7 +76,7 @@ where
         root_blob: BlobId,
     },
     IsNotRootDir {
-        parent_blob: AsyncDropGuard<DirBlob<'b, B>>,
+        parent_blob: AsyncDropGuard<FsBlob<'b, B>>,
         name: &'a PathComponent,
         blob_details: &'a BlobDetails,
     },
@@ -110,12 +110,12 @@ impl NodeInfo {
     async fn _load_parent_blob<'a, B>(
         blobstore: &'a FsBlobStore<B>,
         parent_blob_id: &BlobId,
-    ) -> FsResult<AsyncDropGuard<DirBlob<'a, B>>>
+    ) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
-        let parent_blob = blobstore
+        blobstore
             .load(parent_blob_id)
             .await
             .map_err(|err| {
@@ -127,10 +127,7 @@ impl NodeInfo {
                 FsError::CorruptedFilesystem {
                     message: format!("Didn't find parent blob {:?}", parent_blob_id),
                 }
-            })?;
-        FsBlob::into_dir(parent_blob)
-            .await
-            .map_err(|_err| FsError::NodeIsNotADirectory)
+            })
     }
 
     pub async fn load_parent_blob<'a, 'b, B>(
@@ -161,10 +158,20 @@ impl NodeInfo {
                 let parent_blob_id = ancestors.last().unwrap();
 
                 let mut parent_blob = Self::_load_parent_blob(blobstore, parent_blob_id).await?;
+                let parent_blob_dir = match parent_blob
+                    .as_dir()
+                    .map_err(|_| FsError::NodeIsNotADirectory)
+                {
+                    Ok(parent_blob) => parent_blob,
+                    Err(err) => {
+                        parent_blob.async_drop().await?;
+                        return Err(err);
+                    }
+                };
 
                 // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
                 let blob_details = blob_details
-                    .get_or_try_init(async || get_blob_details(&mut parent_blob, name))
+                    .get_or_try_init(async || get_blob_details(parent_blob_dir, name))
                     .await;
                 let blob_details = match blob_details {
                     Ok(blob_details) => Ok(blob_details),
@@ -272,11 +279,14 @@ impl NodeInfo {
 
                 Ok(*blob_details
                     .get_or_try_init(async || {
-                        let mut parent_blob =
+                        let parent_blob =
                             Self::_load_parent_blob(blobstore, parent_blob_id).await?;
-                        let blob_details = get_blob_details(&mut parent_blob, name);
-                        parent_blob.async_drop().await?;
-                        blob_details
+                        with_async_drop_2!(parent_blob, {
+                            let mut parent_blob = parent_blob
+                                .as_dir()
+                                .map_err(|_| FsError::NodeIsNotADirectory)?;
+                            get_blob_details(&mut parent_blob, name)
+                        })
                     })
                     .await?)
             }
@@ -307,20 +317,16 @@ impl NodeInfo {
             })
     }
 
-    pub async fn load_file_blob<'a, B>(
-        &self,
-        blobstore: &'a FsBlobStore<B>,
-    ) -> Result<FileBlob<'a, B>, FsError>
+    pub fn as_file_mut<'a, 's, B>(blob: &'s mut FsBlob<'a, B>) -> FsResult<&'s mut FileBlob<'a, B>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
-        let blob = self.load_blob(blobstore).await?;
         let blob_id = blob.blob_id();
-        FsBlob::into_file(blob).await.map_err(|err| {
+        blob.as_file_mut().map_err(|err| {
             FsError::CorruptedFilesystem {
                 // TODO Add to message what it actually is
-                message: format!("Blob {:?} is listed as a directory in its parent directory but is actually not a directory: {err:?}", blob_id),
+                message: format!("Blob {:?} is listed as a file in its parent directory but is actually not a file: {err:?}", blob_id),
             }
         })
     }
@@ -363,7 +369,7 @@ impl NodeInfo {
                         .add_user_write_flag()
                         .add_user_exec_flag(),
                     // TODO Windows doesn't have Uid/Gid, so we need to put something else here
-                    uid: cryfs_rustfs::Uid::from(Uid::current().as_raw()),
+                    uid: cryfs_rustfs::Uid::from(nix::unistd::Uid::current().as_raw()),
                     gid: cryfs_rustfs::Gid::from(nix::unistd::Gid::current().as_raw()),
                     num_bytes: cryfs_rustfs::NumBytes::from(DIR_LSTAT_SIZE),
                     // Setting num_blocks to none means it'll be automatically calculated for us
@@ -374,21 +380,17 @@ impl NodeInfo {
                 })
             }
             LoadParentBlobResult::IsNotRootDir {
-                name,
-                mut parent_blob,
-                ..
-            } => {
-                let result = (async || {
-                    let lstat_size = self.load_lstat_size(blobstore).await?;
-                    let entry = parent_blob
-                        .entry_by_name(name)
-                        .ok_or_else(|| FsError::NodeDoesNotExist)?;
-                    Ok(dir_entry_to_node_attrs(entry, lstat_size))
-                })()
-                .await;
-                parent_blob.async_drop().await?;
-                result
-            }
+                name, parent_blob, ..
+            } => with_async_drop_2!(parent_blob, {
+                let parent_blob_dir = parent_blob
+                    .as_dir()
+                    .map_err(|_| FsError::NodeIsNotADirectory)?;
+                let lstat_size = self.load_lstat_size(blobstore).await?;
+                let entry = parent_blob_dir
+                    .entry_by_name(name)
+                    .ok_or_else(|| FsError::NodeDoesNotExist)?;
+                Ok(dir_entry_to_node_attrs(entry, lstat_size))
+            }),
         }
     }
 
@@ -423,7 +425,10 @@ impl NodeInfo {
                 name,
                 mut parent_blob,
                 ..
-            } => {
+            } => with_async_drop_2!(parent_blob, {
+                let parent_blob = parent_blob
+                    .as_dir_mut()
+                    .map_err(|_| FsError::NodeIsNotADirectory)?;
                 // TODO No Mode/Uid/Gid conversion
                 let mode = mode.map(|mode| fs_types::Mode::from(u32::from(mode)));
                 let uid = uid.map(|uid| fs_types::Uid::from(u32::from(uid)));
@@ -437,9 +442,8 @@ impl NodeInfo {
                 if size.is_some() {
                     parent_blob.update_modification_timestamp_by_name(name)?;
                 }
-                parent_blob.async_drop().await?;
                 result
-            }
+            }),
         }
     }
 
@@ -452,10 +456,13 @@ impl NodeInfo {
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
     {
-        let mut blob = self.load_file_blob(blobstore).await?;
-        blob.resize(new_size.into()).await.map_err(|err| {
-            log::error!("Error resizing file blob: {err:?}");
-            FsError::UnknownError
+        let mut blob = self.load_blob(blobstore).await?;
+        with_async_drop_2!(blob, {
+            let file = Self::as_file_mut(&mut blob)?;
+            file.resize(new_size.into()).await.map_err(|err| {
+                log::error!("Error resizing file blob: {err:?}");
+                FsError::UnknownError
+            })
         })
     }
 
@@ -544,10 +551,13 @@ impl NodeInfo {
                 name: _,
                 mut parent_blob,
                 blob_details,
-            } => {
-                update_fn(&mut parent_blob, &blob_details.blob_id)?;
-                parent_blob.async_drop().await?;
-            }
+            } => with_async_drop_2!(parent_blob, {
+                let parent_blob = parent_blob
+                    .as_dir_mut()
+                    .map_err(|_| FsError::NodeIsNotADirectory)?;
+                update_fn(parent_blob, &blob_details.blob_id)?;
+                Ok(())
+            })?,
         }
 
         Ok(())
