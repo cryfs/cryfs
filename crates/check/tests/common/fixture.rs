@@ -73,7 +73,10 @@ impl FilesystemFixture {
         fsblobstore
             .create_root_dir_blob(&self.root_blob_id)
             .await
-            .expect("Failed to create rootdir blob");
+            .expect("Failed to create rootdir blob")
+            .async_drop()
+            .await
+            .unwrap();
         fsblobstore.async_drop().await.unwrap();
     }
 
