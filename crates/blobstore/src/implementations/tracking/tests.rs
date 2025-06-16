@@ -65,7 +65,6 @@ mod counter_tests {
                 store_try_create: 0,
                 store_load: 0,
                 store_remove_by_id: 0,
-                store_load_block_depth: 0,
                 store_num_nodes: 0,
                 store_estimate_space_for_num_blocks_left: 0,
                 store_virtual_block_size_bytes: 0,
@@ -245,38 +244,6 @@ mod counter_tests {
         assert_eq!(
             BlobStoreActionCounts {
                 store_virtual_block_size_bytes: 2,
-                ..BlobStoreActionCounts::ZERO
-            },
-            counts
-        );
-
-        store.async_drop().await.unwrap();
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn store_load_block_depth_increases_counter() {
-        let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
-
-        let blob = store.create().await.unwrap();
-        let id = blob.id();
-        drop(blob);
-
-        // Call load_block_depth
-        store.load_block_depth(id.to_root_block_id()).await.unwrap();
-
-        // And once for nonexisting blob
-        let nonexistent_id = change_blob_id(id);
-        store
-            .load_block_depth(&nonexistent_id.to_root_block_id())
-            .await
-            .unwrap();
-
-        let counts = store.counts();
-        assert_eq!(
-            BlobStoreActionCounts {
-                store_create: 1,
-                store_load_block_depth: 2,
                 ..BlobStoreActionCounts::ZERO
             },
             counts

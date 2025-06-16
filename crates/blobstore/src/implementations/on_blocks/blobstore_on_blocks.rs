@@ -78,10 +78,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
         self.tree_store.virtual_block_size_bytes()
     }
 
-    async fn load_block_depth(&self, id: &cryfs_blockstore::BlockId) -> Result<Option<u8>> {
-        self.tree_store.load_block_depth(id).await
-    }
-
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()> {
         self.tree_store.clear_cache_slow().await

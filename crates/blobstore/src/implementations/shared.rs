@@ -4,7 +4,7 @@ use byte_unit::Byte;
 use std::{fmt::Debug, ops::Deref};
 
 use crate::{BlobId, interface::BlobStore};
-use cryfs_blockstore::{BlockId, RemoveResult};
+use cryfs_blockstore::RemoveResult;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
 
 #[async_trait]
@@ -40,10 +40,6 @@ impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<
 
     fn virtual_block_size_bytes(&self) -> Byte {
         self.deref().virtual_block_size_bytes()
-    }
-
-    async fn load_block_depth(&self, id: &BlockId) -> Result<Option<u8>> {
-        self.deref().load_block_depth(id).await
     }
 
     #[cfg(any(test, feature = "testutils"))]

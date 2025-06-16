@@ -7,7 +7,6 @@ use std::sync::{Arc, Mutex};
 use super::BlobStoreActionCounts;
 use super::tracking_blob::TrackingBlob;
 use crate::{BlobId, BlobStore, RemoveResult};
-use cryfs_blockstore::BlockId;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[derive(Debug)]
@@ -92,11 +91,6 @@ where
     fn virtual_block_size_bytes(&self) -> Byte {
         self.counts.lock().unwrap().store_virtual_block_size_bytes += 1;
         self.underlying_store.virtual_block_size_bytes()
-    }
-
-    async fn load_block_depth(&self, id: &BlockId) -> Result<Option<u8>> {
-        self.counts.lock().unwrap().store_load_block_depth += 1;
-        self.underlying_store.load_block_depth(id).await
     }
 
     #[cfg(any(test, feature = "testutils"))]
