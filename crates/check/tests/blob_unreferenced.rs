@@ -42,11 +42,9 @@ fn make_single_node_file_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let blob_id = fsblobstore
-                        .create_file_blob(&parent_id())
-                        .await
-                        .unwrap()
-                        .blob_id();
+                    let mut blob = fsblobstore.create_file_blob(&parent_id()).await.unwrap();
+                    let blob_id = blob.blob_id();
+                    blob.async_drop().await.unwrap();
                     (blob_id, NodeInfoAsSeenByLookingAtNode::LeafNode)
                 })
             })
@@ -61,7 +59,8 @@ fn make_large_file_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut file = fsblobstore.create_file_blob(&parent_id()).await.unwrap();
+                    let mut blob = fsblobstore.create_file_blob(&parent_id()).await.unwrap();
+                    let file = blob.as_file_mut().unwrap();
                     file.write(&data(common::entry_helpers::LARGE_FILE_SIZE, 0), 0)
                         .await
                         .unwrap();
@@ -72,7 +71,12 @@ fn make_large_file_blob(
                     let blob_id = file.blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            file.into_raw().into_data_tree().into_root_node().depth(),
+                            FsBlob::into_raw(blob)
+                                .await
+                                .unwrap()
+                                .into_data_tree()
+                                .into_root_node()
+                                .depth(),
                         )
                         .unwrap(),
                     };
@@ -191,11 +195,12 @@ fn make_single_node_symlink_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let blob_id = fsblobstore
+                    let mut blob = fsblobstore
                         .create_symlink_blob(&parent_id(), "target")
                         .await
-                        .unwrap()
-                        .blob_id();
+                        .unwrap();
+                    let blob_id = blob.blob_id();
+                    blob.async_drop().await.unwrap();
                     (blob_id, NodeInfoAsSeenByLookingAtNode::LeafNode)
                 })
             })
@@ -210,13 +215,14 @@ fn make_large_symlink_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut symlink = fsblobstore
+                    let mut blob = fsblobstore
                         .create_symlink_blob(
                             &parent_id(),
                             &common::entry_helpers::large_symlink_target(),
                         )
                         .await
                         .unwrap();
+                    let mut symlink = blob.as_symlink_mut().unwrap();
                     assert!(
                         symlink.num_nodes().await.unwrap() > 1_000,
                         "If this fails, we need to make the data larger so it uses enough nodes."
@@ -224,7 +230,12 @@ fn make_large_symlink_blob(
                     let blob_id = symlink.blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            symlink.into_raw().into_data_tree().into_root_node().depth(),
+                            FsBlob::into_raw(blob)
+                                .await
+                                .unwrap()
+                                .into_data_tree()
+                                .into_root_node()
+                                .depth(),
                         )
                         .unwrap(),
                     };

@@ -122,6 +122,13 @@ where
         }
     }
 
+    pub fn as_symlink(&self) -> Result<&'_ SymlinkBlob<'a, B>> {
+        match self {
+            Self::Symlink(blob) => Ok(blob),
+            _ => bail!("FsBlob is not a symlink"),
+        }
+    }
+
     pub fn as_symlink_mut(&mut self) -> Result<&'_ mut SymlinkBlob<'a, B>> {
         match self {
             Self::Symlink(blob) => Ok(blob),

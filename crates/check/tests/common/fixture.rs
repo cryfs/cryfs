@@ -232,10 +232,12 @@ impl FilesystemFixture {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
                 with_async_drop_2!(parent, {
-                    let result =
+                    let mut file =
                         super::entry_helpers::create_empty_file(blobstore, &mut parent, &name)
                             .await;
-                    Ok::<_, anyhow::Error>((&result).into())
+                    let result = (&*file).into();
+                    file.async_drop().await.unwrap();
+                    Ok::<_, anyhow::Error>(result)
                 })
                 .unwrap()
             })
@@ -289,14 +291,16 @@ impl FilesystemFixture {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent_blob = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
                 with_async_drop_2!(parent_blob, {
-                    let result = super::entry_helpers::create_symlink(
+                    let mut symlink = super::entry_helpers::create_symlink(
                         blobstore,
                         &mut parent_blob,
                         &name,
                         &target,
                     )
                     .await;
-                    Ok::<_, anyhow::Error>((&result).into())
+                    let result = (&*symlink).into();
+                    symlink.async_drop().await.unwrap();
+                    Ok::<_, anyhow::Error>(result)
                 })
                 .unwrap()
             })

@@ -111,19 +111,24 @@ where
                 log::error!("Error creating file blob: {err:?}");
                 FsError::UnknownError
             })?;
-        let blob_id = blob.blob_id();
+        with_async_drop_2!(blob, {
+            let blob_id = blob.blob_id();
+            let file = blob
+                .as_file_mut()
+                .expect("We just created this as a file blob but now it isn't");
 
-        // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
-        // This way, we make sure the filesystem stays consistent even if it crashes mid way.
-        // Dropping by itself isn't enough to flush because it may go into a cache.
-        // TODO Check if this is necessary or if create_dir_blob already flushes. Or maybe we should still keep this here but make sure
-        // it is a no-op if a blob is not dirty.
-        blob.flush().await.map_err(|err| {
-            log::error!("Error flushing blob: {err:?}");
-            FsError::UnknownError
-        })?;
+            // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
+            // This way, we make sure the filesystem stays consistent even if it crashes mid way.
+            // Dropping by itself isn't enough to flush because it may go into a cache.
+            // TODO Check if this is necessary or if create_dir_blob already flushes. Or maybe we should still keep this here but make sure
+            // it is a no-op if a blob is not dirty.
+            file.flush().await.map_err(|err| {
+                log::error!("Error flushing blob: {err:?}");
+                FsError::UnknownError
+            })?;
 
-        Ok(blob_id)
+            Ok(blob_id)
+        })
     }
 
     async fn create_symlink_blob(&self, target: &str, parent: &BlobId) -> Result<BlobId, FsError> {
@@ -135,19 +140,24 @@ where
                 log::error!("Error creating symlink blob: {err:?}");
                 FsError::UnknownError
             })?;
-        let blob_id = blob.blob_id();
+        with_async_drop_2!(blob, {
+            let blob_id = blob.blob_id();
+            let symlink = blob
+                .as_symlink_mut()
+                .expect("We just created this as a symlink blob but now it isn't");
 
-        // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
-        // This way, we make sure the filesystem stays consistent even if it crashes mid way.
-        // Dropping by itself isn't enough to flush because it may go into a cache.
-        // TODO Check if this is necessary or if create_dir_blob already flushes. Or maybe we should still keep this here but make sure
-        // it is a no-op if a blob is not dirty.
-        blob.flush().await.map_err(|err| {
-            log::error!("Error flushing blob: {err:?}");
-            FsError::UnknownError
-        })?;
+            // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
+            // This way, we make sure the filesystem stays consistent even if it crashes mid way.
+            // Dropping by itself isn't enough to flush because it may go into a cache.
+            // TODO Check if this is necessary or if create_dir_blob already flushes. Or maybe we should still keep this here but make sure
+            // it is a no-op if a blob is not dirty.
+            symlink.flush().await.map_err(|err| {
+                log::error!("Error flushing blob: {err:?}");
+                FsError::UnknownError
+            })?;
 
-        Ok(blob_id)
+            Ok(blob_id)
+        })
     }
 
     async fn on_rename_overwrites_destination(

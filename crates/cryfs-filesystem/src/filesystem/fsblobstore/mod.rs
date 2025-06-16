@@ -43,8 +43,10 @@ where
     pub async fn create_file_blob<'a>(
         &'a self,
         parent: &BlobId,
-    ) -> Result<fsblob::FileBlob<'a, B>> {
-        FileBlob::create_blob(&*self.blobstore, parent).await
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<'a, B>>> {
+        Ok(AsyncDropGuard::new(FsBlob::File(
+            FileBlob::create_blob(&*self.blobstore, parent).await?,
+        )))
     }
 
     pub async fn create_dir_blob<'a>(
@@ -60,8 +62,10 @@ where
         &'a self,
         parent: &BlobId,
         target: &str,
-    ) -> Result<fsblob::SymlinkBlob<'a, B>> {
-        SymlinkBlob::create_blob(&*self.blobstore, parent, target).await
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<'a, B>>> {
+        Ok(AsyncDropGuard::new(FsBlob::Symlink(
+            SymlinkBlob::create_blob(&*self.blobstore, parent, target).await?,
+        )))
     }
 
     pub async fn load<'a>(
