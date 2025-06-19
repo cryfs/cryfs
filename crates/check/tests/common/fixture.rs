@@ -437,6 +437,7 @@ impl FilesystemFixture {
                 blob.read(&mut format_version, 0).await.unwrap();
                 format_version[1] = format_version[1].overflowing_add(1).0;
                 blob.write(&format_version, 0).await.unwrap();
+                blob.async_drop().await.unwrap();
             })
         })
         .await;
@@ -448,6 +449,7 @@ impl FilesystemFixture {
                 let mut blob = blobstore.load(&blob_id).await.unwrap().unwrap();
                 // The third byte is for the blob type (dir/file/symlink). Set it to an invalid value.
                 blob.write(&[10u8], 2).await.unwrap();
+                blob.async_drop().await.unwrap();
             })
         })
         .await;

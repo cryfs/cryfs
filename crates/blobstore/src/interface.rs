@@ -5,14 +5,17 @@ use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use cryfs_blockstore::{BLOCKID_LEN, BlockId};
-use cryfs_utils::data::Data;
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    data::Data,
+};
 
 use crate::{BlobId, RemoveResult};
 
 pub const BLOBID_LEN: usize = BLOCKID_LEN;
 
 #[async_trait]
-pub trait Blob: Sized + Debug {
+pub trait Blob: Sized + Debug + AsyncDrop {
     fn id(&self) -> BlobId;
     // TODO Can we make size take &self instead of &mut self? Same for other read-only functions?
     async fn num_bytes(&mut self) -> Result<u64>;
@@ -28,7 +31,7 @@ pub trait Blob: Sized + Debug {
     // TODO `num_nodes` and `all_blocks` is a leaky abstraction because it gives away that we use blocks. Remove these.
     async fn num_nodes(&mut self) -> Result<u64>;
 
-    async fn remove(self) -> Result<()>;
+    async fn remove(this: AsyncDropGuard<Self>) -> Result<()>;
 
     fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>>;
 }
@@ -36,13 +39,11 @@ pub trait Blob: Sized + Debug {
 #[async_trait]
 pub trait BlobStore {
     // TODO Remove Send+Sync bound
-    type ConcreteBlob<'a>: Blob + Debug + Send + Sync
-    where
-        Self: 'a;
+    type ConcreteBlob: Blob + Debug + Send + Sync;
 
-    async fn create(&self) -> Result<Self::ConcreteBlob<'_>>;
-    async fn try_create(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>>;
-    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>>;
+    async fn create(&self) -> Result<AsyncDropGuard<Self::ConcreteBlob>>;
+    async fn try_create(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>>;
+    async fn load(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>>;
     async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
     async fn num_nodes(&self) -> Result<u64>;
     fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;

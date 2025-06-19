@@ -22,7 +22,7 @@ pub struct FsBlobStore<B>
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<B>,
 }
@@ -30,7 +30,7 @@ where
 impl<B> FsBlobStore<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(blobstore: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { blobstore })
@@ -43,7 +43,7 @@ where
     pub async fn create_file_blob<'a>(
         &'a self,
         parent: &BlobId,
-    ) -> Result<AsyncDropGuard<fsblob::FsBlob<'a, B>>> {
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
         Ok(AsyncDropGuard::new(FsBlob::File(
             FileBlob::create_blob(&*self.blobstore, parent).await?,
         )))
@@ -52,7 +52,7 @@ where
     pub async fn create_dir_blob<'a>(
         &'a self,
         parent: &BlobId,
-    ) -> Result<AsyncDropGuard<fsblob::FsBlob<'a, B>>> {
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
         Ok(AsyncDropGuard::new(FsBlob::Directory(
             DirBlob::create_blob(&*self.blobstore, parent).await?,
         )))
@@ -62,16 +62,13 @@ where
         &'a self,
         parent: &BlobId,
         target: &str,
-    ) -> Result<AsyncDropGuard<fsblob::FsBlob<'a, B>>> {
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
         Ok(AsyncDropGuard::new(FsBlob::Symlink(
             SymlinkBlob::create_blob(&*self.blobstore, parent, target).await?,
         )))
     }
 
-    pub async fn load<'a>(
-        &'a self,
-        blob_id: &BlobId,
-    ) -> Result<Option<AsyncDropGuard<FsBlob<'a, B>>>> {
+    pub async fn load<'a>(&'a self, blob_id: &BlobId) -> Result<Option<AsyncDropGuard<FsBlob<B>>>> {
         if let Some(blob) = self.blobstore.load(blob_id).await? {
             Ok(Some(FsBlob::parse(blob).await?))
         } else {
@@ -110,7 +107,7 @@ where
 impl<B> AsyncDrop for FsBlobStore<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 

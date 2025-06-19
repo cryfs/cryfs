@@ -425,6 +425,7 @@ mod num_bytes_and_num_nodes {
                     let mut tree = store.create_tree().await.unwrap();
                     assert_eq!(0, tree.num_bytes().await.unwrap());
                     assert_eq!(1, tree.num_nodes().await.unwrap());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -550,8 +551,9 @@ mod root_node_id {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await
@@ -564,9 +566,17 @@ mod root_node_id {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    store.try_create_tree(root_id).await.unwrap().unwrap();
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    store
+                        .try_create_tree(root_id)
+                        .await
+                        .unwrap()
+                        .unwrap()
+                        .async_drop()
+                        .await
+                        .unwrap();
+                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await
@@ -584,6 +594,7 @@ mod root_node_id {
                         .await
                         .unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await
@@ -600,10 +611,12 @@ mod root_node_id {
                     tree.resize_num_bytes(store.logical_block_size_bytes().as_u64() * 100)
                         .await
                         .unwrap();
+                    tree.async_drop().await.unwrap();
                     std::mem::drop(tree);
 
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await

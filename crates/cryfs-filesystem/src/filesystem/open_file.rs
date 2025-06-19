@@ -22,7 +22,7 @@ use crate::filesystem::fsblobstore::{FileBlob, FsBlob, FsBlobStore};
 pub struct CryOpenFile<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     node_info: Arc<NodeInfo>,
@@ -31,7 +31,7 @@ where
 impl<B> CryOpenFile<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -43,14 +43,14 @@ where
         })
     }
 
-    async fn load_blob<'a>(&self) -> FsResult<AsyncDropGuard<FsBlob<'_, B>>> {
+    async fn load_blob<'a>(&self) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 
-    pub fn as_file_mut<'a, 's>(blob: &'s mut FsBlob<'a, B>) -> FsResult<&'s mut FileBlob<'a, B>>
+    pub fn as_file_mut<'a, 's>(blob: &'s mut FsBlob<B>) -> FsResult<&'s mut FileBlob<B>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let blob_id = blob.blob_id();
         blob.as_file_mut().map_err(|err| {
@@ -141,7 +141,7 @@ where
 impl<B> Debug for CryOpenFile<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CryOpenFile")
@@ -154,7 +154,7 @@ where
 impl<B> OpenFile for CryOpenFile<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         self.node_info.getattr(&self.blobstore).await
@@ -232,7 +232,7 @@ where
 impl<B> AsyncDrop for CryOpenFile<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 

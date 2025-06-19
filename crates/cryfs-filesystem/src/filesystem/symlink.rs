@@ -18,7 +18,7 @@ use cryfs_utils::{
 pub struct CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Do we need to store blobstore + node_info here or can we just store the target directly?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -28,7 +28,7 @@ where
 impl<'a, B> CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -40,13 +40,11 @@ where
         }
     }
 
-    async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>> {
+    async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 
-    fn blob_as_symlink_mut<'b>(
-        blob: &'b mut FsBlob<'a, B>,
-    ) -> Result<&'b mut SymlinkBlob<'a, B>, FsError> {
+    fn blob_as_symlink_mut<'b>(blob: &'b mut FsBlob<B>) -> Result<&'b mut SymlinkBlob<B>, FsError> {
         let blob_id = blob.blob_id();
         blob.as_symlink_mut().map_err(|err| {
             FsError::CorruptedFilesystem {
@@ -61,7 +59,7 @@ where
 impl<'a, B> Symlink for CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Device = CryDevice<B>;
 

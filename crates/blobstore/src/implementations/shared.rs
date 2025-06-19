@@ -5,24 +5,21 @@ use std::{fmt::Debug, ops::Deref};
 
 use crate::{BlobId, interface::BlobStore};
 use cryfs_blockstore::RemoveResult;
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 #[async_trait]
 impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<B> {
-    type ConcreteBlob<'a>
-        = B::ConcreteBlob<'a>
-    where
-        Self: 'a;
+    type ConcreteBlob = B::ConcreteBlob;
 
-    async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
+    async fn create(&self) -> Result<AsyncDropGuard<Self::ConcreteBlob>> {
         self.deref().create().await
     }
 
-    async fn try_create(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+    async fn try_create(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
         self.deref().try_create(id).await
     }
 
-    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+    async fn load(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
         self.deref().load(id).await
     }
 

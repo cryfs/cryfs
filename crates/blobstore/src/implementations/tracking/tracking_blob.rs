@@ -8,32 +8,35 @@ use super::BlobStoreActionCounts;
 use crate::BlobStore;
 use crate::{Blob, BlobId};
 use cryfs_blockstore::BlockId;
-use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::data::Data;
 
 #[derive(Debug)]
-pub struct TrackingBlob<'a, B>
+pub struct TrackingBlob<B>
 where
     B: BlobStore + AsyncDrop + Debug + 'static,
 {
-    blob: B::ConcreteBlob<'a>,
+    blob: AsyncDropGuard<B::ConcreteBlob>,
     counts: Arc<Mutex<BlobStoreActionCounts>>,
 }
 
-impl<'a, B> TrackingBlob<'a, B>
+impl<B> TrackingBlob<B>
 where
     B: BlobStore + AsyncDrop + Debug + 'static,
 {
-    pub fn new(blob: B::ConcreteBlob<'a>, counts: &Arc<Mutex<BlobStoreActionCounts>>) -> Self {
-        Self {
+    pub fn new(
+        blob: AsyncDropGuard<B::ConcreteBlob>,
+        counts: &Arc<Mutex<BlobStoreActionCounts>>,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             blob,
             counts: Arc::clone(counts),
-        }
+        })
     }
 }
 
 #[async_trait]
-impl<'a, B> Blob for TrackingBlob<'a, B>
+impl<B> Blob for TrackingBlob<B>
 where
     B: BlobStore + AsyncDrop + Debug + 'static,
 {
@@ -81,13 +84,24 @@ where
         self.blob.num_nodes().await
     }
 
-    async fn remove(self) -> Result<()> {
-        self.counts.lock().unwrap().blob_remove += 1;
-        self.blob.remove().await
+    async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
+        this.counts.lock().unwrap().blob_remove += 1;
+        B::ConcreteBlob::remove(this.unsafe_into_inner_dont_drop().blob).await
     }
 
     fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         self.counts.lock().unwrap().blob_all_blocks += 1;
         self.blob.all_blocks()
+    }
+}
+
+#[async_trait]
+impl<B> AsyncDrop for TrackingBlob<B>
+where
+    B: BlobStore + AsyncDrop + Debug + 'static,
+{
+    type Error = <B::ConcreteBlob as AsyncDrop>::Error;
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.blob.async_drop().await
     }
 }

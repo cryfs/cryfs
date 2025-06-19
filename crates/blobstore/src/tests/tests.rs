@@ -52,7 +52,6 @@ pub mod load {
             .await
             .unwrap();
         assert!(loaded.is_none());
-
         drop(loaded);
         store.async_drop().await.unwrap();
     }
@@ -64,6 +63,10 @@ pub mod load {
 
         store
             .try_create(&BlobId::from_hex("AB0DC45269804AC6B1CF95391895DDF1").unwrap())
+            .await
+            .unwrap()
+            .unwrap()
+            .async_drop()
             .await
             .unwrap();
 

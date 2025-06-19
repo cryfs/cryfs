@@ -6,37 +6,38 @@ use std::fmt::Debug;
 use super::data_tree_store::DataTree;
 use crate::{Blob, BlobId};
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_utils::{async_drop::AsyncDrop, data::Data};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    data::Data,
+};
 
 #[derive(Debug)]
-pub struct BlobOnBlocks<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
+pub struct BlobOnBlocks<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
     // Always Some unless during destruction
-    tree: Option<DataTree<'a, B>>,
+    tree: AsyncDropGuard<DataTree<B>>,
 }
 
-impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobOnBlocks<'a, B> {
-    pub(super) fn new(tree: DataTree<'a, B>) -> Self {
-        Self { tree: Some(tree) }
+impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobOnBlocks<B> {
+    pub(super) fn new(tree: AsyncDropGuard<DataTree<B>>) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { tree })
     }
 
-    fn _tree(&self) -> &DataTree<'a, B> {
-        self.tree.as_ref().expect("BlobOnBlocks.tree is None")
+    fn _tree(&self) -> &DataTree<B> {
+        &*self.tree
     }
 
-    fn _tree_mut(&mut self) -> &mut DataTree<'a, B> {
-        self.tree.as_mut().expect("BlobOnBlocks.tree is None")
+    fn _tree_mut(&mut self) -> &mut DataTree<B> {
+        &mut *self.tree
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub fn into_data_tree(self) -> DataTree<'a, B> {
-        self.tree.expect("BlobOnBlocks.tree is none")
+    pub fn into_data_tree(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataTree<B>> {
+        this.unsafe_into_inner_dont_drop().tree
     }
 }
 
 #[async_trait]
-impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Blob
-    for BlobOnBlocks<'a, B>
-{
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Blob for BlobOnBlocks<B> {
     fn id(&self) -> BlobId {
         BlobId {
             root: *self._tree().root_node_id(),
@@ -75,13 +76,25 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Bl
         self._tree_mut().num_nodes().await
     }
 
-    async fn remove(mut self) -> Result<()> {
-        let tree = self.tree.take().expect("BlobOnBlocks.tree is None");
+    async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
+        let tree = this.unsafe_into_inner_dont_drop().tree;
         DataTree::remove(tree).await
         // no call to async_drop needed since we moved out of this
     }
 
     fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
         self._tree().all_blocks()
+    }
+}
+
+#[async_trait]
+impl<B> AsyncDrop for BlobOnBlocks<B>
+where
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+{
+    type Error = <B as AsyncDrop>::Error;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.tree.async_drop().await
     }
 }

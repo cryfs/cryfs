@@ -47,24 +47,21 @@ impl<B> BlobStore for TrackingBlobStore<B>
 where
     B: BlobStore + AsyncDrop + Debug + Send + Sync + 'static,
 {
-    type ConcreteBlob<'a>
-        = TrackingBlob<'a, B>
-    where
-        Self: 'a;
+    type ConcreteBlob = TrackingBlob<B>;
 
-    async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
+    async fn create(&self) -> Result<AsyncDropGuard<Self::ConcreteBlob>> {
         self.counts.lock().unwrap().store_create += 1;
         let blob = self.underlying_store.create().await?;
         Ok(TrackingBlob::new(blob, &self.counts))
     }
 
-    async fn try_create(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+    async fn try_create(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
         self.counts.lock().unwrap().store_try_create += 1;
         let maybe_blob = self.underlying_store.try_create(id).await?;
         Ok(maybe_blob.map(|b| TrackingBlob::new(b, &self.counts)))
     }
 
-    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+    async fn load(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
         self.counts.lock().unwrap().store_load += 1;
         let maybe_blob = self.underlying_store.load(id).await?;
         Ok(maybe_blob.map(|b| TrackingBlob::new(b, &self.counts)))

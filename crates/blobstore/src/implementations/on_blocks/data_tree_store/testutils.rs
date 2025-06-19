@@ -1,4 +1,5 @@
 use byte_unit::Byte;
+use cryfs_utils::async_drop::AsyncDropGuard;
 #[cfg(feature = "slow-tests-any")]
 use divrem::DivCeil;
 use futures::future::BoxFuture;
@@ -35,11 +36,13 @@ impl TreeFixture {
         tree.write_bytes(data(num_bytes, data_seed).as_ref(), 0)
             .await
             .unwrap();
-        TreeFixture {
+        let result = TreeFixture {
             root_id: *tree.root_node_id(),
             data_seed,
             num_bytes,
-        }
+        };
+        tree.async_drop().await.unwrap();
+        result
     }
 
     pub async fn create_tree_with_data_and_id<
@@ -54,11 +57,13 @@ impl TreeFixture {
         tree.write_bytes(data(num_bytes, data_seed).as_ref(), 0)
             .await
             .unwrap();
-        TreeFixture {
+        let result = TreeFixture {
             root_id: *tree.root_node_id(),
             data_seed,
             num_bytes,
-        }
+        };
+        tree.async_drop().await.unwrap();
+        result
     }
 
     pub async fn assert_data_is_still_intact<
@@ -71,6 +76,7 @@ impl TreeFixture {
         assert_eq!(self.num_bytes as u64, tree.num_bytes().await.unwrap());
         let mut target = vec![0; self.num_bytes];
         tree.read_bytes(0, target.as_mut()).await.unwrap();
+        tree.async_drop().await.unwrap();
         assert_eq!(data(self.num_bytes, self.data_seed).as_ref(), &target);
     }
 }
@@ -85,8 +91,19 @@ pub async fn create_one_leaf_tree<
     B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
 >(
     store: &DataTreeStore<B>,
-) -> DataTree<B> {
+) -> AsyncDropGuard<DataTree<B>> {
     store.create_tree().await.unwrap()
+}
+
+pub async fn create_one_leaf_tree_return_id<
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+>(
+    store: &DataTreeStore<B>,
+) -> BlockId {
+    let mut tree = create_one_leaf_tree(store).await;
+    let id = *tree.root_node_id();
+    tree.async_drop().await.unwrap();
+    id
 }
 
 pub async fn create_multi_leaf_tree<
@@ -94,12 +111,24 @@ pub async fn create_multi_leaf_tree<
 >(
     store: &DataTreeStore<B>,
     num_leaves: u64,
-) -> DataTree<B> {
+) -> AsyncDropGuard<DataTree<B>> {
     let mut tree = store.create_tree().await.unwrap();
     tree.resize_num_bytes(num_leaves * store.logical_block_size_bytes().as_u64())
         .await
         .unwrap();
     tree
+}
+
+pub async fn create_multi_leaf_tree_return_id<
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+>(
+    store: &DataTreeStore<B>,
+    num_leaves: u64,
+) -> BlockId {
+    let mut tree = create_multi_leaf_tree(store, num_leaves).await;
+    let id = *tree.root_node_id();
+    tree.async_drop().await.unwrap();
+    id
 }
 
 #[cfg(feature = "slow-tests-any")]

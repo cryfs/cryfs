@@ -1,4 +1,7 @@
 use anyhow::Result;
+use async_trait::async_trait;
+use cryfs_rustfs::FsError;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
@@ -6,25 +9,30 @@ use super::{base_blob::BaseBlob, layout::BlobType};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
 
-pub struct FileBlob<'a, B>
+pub struct FileBlob<B>
 where
-    B: BlobStore + Debug + 'a,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    blob: BaseBlob<'a, B>,
+    blob: AsyncDropGuard<BaseBlob<B>>,
 }
 
-impl<'a, B> FileBlob<'a, B>
+impl<B> FileBlob<B>
 where
-    B: BlobStore + Debug + 'a,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub(super) fn new(blob: BaseBlob<'a, B>) -> Self {
-        Self { blob }
+    pub(super) fn new(blob: AsyncDropGuard<BaseBlob<B>>) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self { blob })
     }
 
-    pub async fn create_blob(blobstore: &'a B, parent: &BlobId) -> Result<FileBlob<'a, B>> {
-        Ok(Self {
+    pub async fn create_blob(
+        blobstore: &B,
+        parent: &BlobId,
+    ) -> Result<AsyncDropGuard<FileBlob<B>>> {
+        Ok(AsyncDropGuard::new(Self {
             blob: BaseBlob::create(blobstore, BlobType::File, parent, &[]).await?,
-        })
+        }))
     }
 
     pub fn blob_id(&self) -> BlobId {
@@ -59,8 +67,8 @@ where
         self.blob.set_parent(new_parent).await
     }
 
-    pub async fn remove(self) -> Result<()> {
-        self.blob.remove().await
+    pub async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
+        BaseBlob::remove(this.unsafe_into_inner_dont_drop().blob).await
     }
 
     pub async fn lstat_size(&mut self) -> Result<u64> {
@@ -78,20 +86,40 @@ where
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub fn into_raw(self) -> B::ConcreteBlob<'a> {
-        self.blob.into_raw()
+    pub fn into_raw(this: AsyncDropGuard<Self>) -> AsyncDropGuard<B::ConcreteBlob> {
+        BaseBlob::into_raw(this.unsafe_into_inner_dont_drop().blob)
     }
 }
 
-impl<'a, B> Debug for FileBlob<'a, B>
+impl<B> Debug for FileBlob<B>
 where
-    B: BlobStore + Debug + 'a,
-    <B as BlobStore>::ConcreteBlob<'a>: Send,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+    <B as BlobStore>::ConcreteBlob: Send,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FileBlob")
             .field("blob_id", &self.blob_id())
             .field("parent", &self.parent())
             .finish()
+    }
+}
+
+#[async_trait]
+impl<B> AsyncDrop for FileBlob<B>
+where
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+{
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.blob
+            .async_drop()
+            .await
+            .map_err(|err| FsError::InternalError {
+                error: err.context("Error in FileBlob::async_drop_impl"),
+            })?;
+        Ok(())
     }
 }

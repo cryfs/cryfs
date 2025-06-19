@@ -182,6 +182,7 @@ pub async fn make_device<B>(
 ) -> Result<AsyncDropGuard<CryDevice<B>>, CliError>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    B::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let root_blob_id = BlobId::from_hex(&config.root_blob);
     let root_blob_id = match root_blob_id {

@@ -1,11 +1,11 @@
 use anyhow::{Result, bail};
 use async_trait::async_trait;
+use cryfs_rustfs::{FsError, FsResult};
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
-use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 mod layout;
@@ -26,31 +26,39 @@ pub use symlink_blob::SymlinkBlob;
 mod dir_entries;
 pub use dir_entries::{DirEntry, EntryType};
 
+// TODO Now that FileBlob, DirBlob and SymlinkBlob are only ever returned as references,
+//      we can probably store BaseBlob directly in here and just have FileBlob, DirBlob and SymlinkBlob
+//      store a reference to BaseBlob instead of owning BaseBlob.
+
 #[derive(Debug)]
-pub enum FsBlob<'a, B>
+pub enum FsBlob<B>
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    File(FileBlob<'a, B>),
-    Directory(AsyncDropGuard<DirBlob<'a, B>>),
-    Symlink(SymlinkBlob<'a, B>),
+    File(AsyncDropGuard<FileBlob<B>>),
+    Directory(AsyncDropGuard<DirBlob<B>>),
+    Symlink(AsyncDropGuard<SymlinkBlob<B>>),
 }
 
-impl<'a, B> FsBlob<'a, B>
+impl<B> FsBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub async fn parse(blob: B::ConcreteBlob<'a>) -> Result<AsyncDropGuard<FsBlob<'a, B>>> {
-        let blob = BaseBlob::parse(blob).await?;
-        match blob.blob_type()? {
-            BlobType::Dir => Ok(AsyncDropGuard::new(Self::Directory(
+    pub async fn parse(blob: AsyncDropGuard<B::ConcreteBlob>) -> Result<AsyncDropGuard<FsBlob<B>>> {
+        let mut blob = BaseBlob::parse(blob).await?;
+        match blob.blob_type() {
+            Ok(BlobType::Dir) => Ok(AsyncDropGuard::new(Self::Directory(
                 DirBlob::new(blob).await?,
             ))),
-            BlobType::File => Ok(AsyncDropGuard::new(Self::File(FileBlob::new(blob)))),
-            BlobType::Symlink => Ok(AsyncDropGuard::new(Self::Symlink(SymlinkBlob::new(blob)))),
+            Ok(BlobType::File) => Ok(AsyncDropGuard::new(Self::File(FileBlob::new(blob)))),
+            Ok(BlobType::Symlink) => Ok(AsyncDropGuard::new(Self::Symlink(SymlinkBlob::new(blob)))),
+            Err(e) => {
+                blob.async_drop().await?;
+                Err(e)
+            }
         }
     }
 
@@ -80,9 +88,9 @@ where
 
     pub async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
         match this.unsafe_into_inner_dont_drop() {
-            Self::File(blob) => blob.remove().await,
+            Self::File(blob) => FileBlob::remove(blob).await,
             Self::Directory(blob) => DirBlob::remove(blob).await,
-            Self::Symlink(blob) => blob.remove().await,
+            Self::Symlink(blob) => SymlinkBlob::remove(blob).await,
         }
     }
 
@@ -94,42 +102,42 @@ where
         }
     }
 
-    pub fn as_file(&self) -> Result<&'_ FileBlob<'a, B>> {
+    pub fn as_file(&self) -> Result<&'_ FileBlob<B>> {
         match self {
             Self::File(blob) => Ok(blob),
             _ => bail!("FsBlob is not a file"),
         }
     }
 
-    pub fn as_file_mut(&mut self) -> Result<&'_ mut FileBlob<'a, B>> {
+    pub fn as_file_mut(&mut self) -> Result<&'_ mut FileBlob<B>> {
         match self {
             Self::File(blob) => Ok(blob),
             _ => bail!("FsBlob is not a file"),
         }
     }
 
-    pub fn as_dir(&self) -> Result<&'_ DirBlob<'a, B>> {
+    pub fn as_dir(&self) -> Result<&'_ DirBlob<B>> {
         match self {
             Self::Directory(blob) => Ok(blob),
             _ => bail!("FsBlob is not a directory"),
         }
     }
 
-    pub fn as_dir_mut(&mut self) -> Result<&'_ mut DirBlob<'a, B>> {
+    pub fn as_dir_mut(&mut self) -> Result<&'_ mut DirBlob<B>> {
         match self {
             Self::Directory(blob) => Ok(blob),
             _ => bail!("FsBlob is not a directory"),
         }
     }
 
-    pub fn as_symlink(&self) -> Result<&'_ SymlinkBlob<'a, B>> {
+    pub fn as_symlink(&self) -> Result<&'_ SymlinkBlob<B>> {
         match self {
             Self::Symlink(blob) => Ok(blob),
             _ => bail!("FsBlob is not a symlink"),
         }
     }
 
-    pub fn as_symlink_mut(&mut self) -> Result<&'_ mut SymlinkBlob<'a, B>> {
+    pub fn as_symlink_mut(&mut self) -> Result<&'_ mut SymlinkBlob<B>> {
         match self {
             Self::Symlink(blob) => Ok(blob),
             _ => bail!("FsBlob is not a symlink"),
@@ -153,30 +161,34 @@ where
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub async fn into_raw(this: AsyncDropGuard<Self>) -> Result<B::ConcreteBlob<'a>> {
+    pub async fn into_raw(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B::ConcreteBlob>> {
         match this.unsafe_into_inner_dont_drop() {
-            Self::File(blob) => Ok(blob.into_raw()),
+            Self::File(blob) => Ok(FileBlob::into_raw(blob)),
             Self::Directory(blob) => DirBlob::into_raw(blob).await,
-            Self::Symlink(blob) => Ok(blob.into_raw()),
+            Self::Symlink(blob) => Ok(SymlinkBlob::into_raw(blob)),
         }
     }
 }
 
 #[async_trait]
-impl<'a, B> AsyncDrop for FsBlob<'a, B>
+impl<B> AsyncDrop for FsBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    B::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> FsResult<()> {
         match &mut self {
-            Self::File(_blob) => { /* do nothing */ }
+            Self::File(blob) => {
+                blob.async_drop().await?;
+            }
             Self::Directory(blob) => {
                 blob.async_drop().await?;
             }
-            Self::Symlink(_blob) => { /* do nothing */ }
+            Self::Symlink(blob) => {
+                blob.async_drop().await?;
+            }
         }
         Ok(())
     }

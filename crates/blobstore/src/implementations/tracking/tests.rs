@@ -38,7 +38,8 @@ mod counter_tests {
     use super::*;
 
     use crate::{
-        Blob as _, BlobId, BlobStore as _, implementations::tracking::BlobStoreActionCounts,
+        Blob as _, BlobId, BlobStore as _,
+        implementations::tracking::{BlobStoreActionCounts, tracking_blob::TrackingBlob},
     };
     use cryfs_blockstore::RemoveResult;
     use futures::StreamExt as _;
@@ -80,8 +81,8 @@ mod counter_tests {
         let mut fixture = super::TestFixture::new();
         let mut store = fixture.store().await;
 
-        store.create().await.unwrap();
-        store.create().await.unwrap();
+        store.create().await.unwrap().async_drop().await.unwrap();
+        store.create().await.unwrap().async_drop().await.unwrap();
 
         let counts = store.counts();
         assert_eq!(
@@ -105,7 +106,7 @@ mod counter_tests {
         // Try to create with that ID (should succeed)
         let blob = store.try_create(&id).await.unwrap();
         assert!(blob.is_some());
-        std::mem::drop(blob);
+        blob.unwrap().async_drop().await.unwrap();
 
         // Try again with same ID (should fail)
         let blob = store.try_create(&id).await.unwrap();
@@ -128,12 +129,27 @@ mod counter_tests {
         let mut fixture = super::TestFixture::new();
         let mut store = fixture.store().await;
 
-        let blob = store.create().await.unwrap();
+        let mut blob = store.create().await.unwrap();
         let id = blob.id();
+        blob.async_drop().await.unwrap();
         drop(blob);
 
-        store.load(&id).await.unwrap().unwrap();
-        store.load(&id).await.unwrap().unwrap();
+        store
+            .load(&id)
+            .await
+            .unwrap()
+            .unwrap()
+            .async_drop()
+            .await
+            .unwrap();
+        store
+            .load(&id)
+            .await
+            .unwrap()
+            .unwrap()
+            .async_drop()
+            .await
+            .unwrap();
 
         // Try loading a non-existent blob
         let nonexistent_id = change_blob_id(id);
@@ -157,8 +173,9 @@ mod counter_tests {
         let mut fixture = super::TestFixture::new();
         let mut store = fixture.store().await;
 
-        let blob = store.create().await.unwrap();
+        let mut blob = store.create().await.unwrap();
         let id = blob.id();
+        blob.async_drop().await.unwrap();
         drop(blob);
 
         assert_eq!(
@@ -271,6 +288,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -294,6 +312,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -317,6 +336,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -344,6 +364,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -371,6 +392,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -395,6 +417,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -419,6 +442,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -442,6 +466,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -452,7 +477,7 @@ mod counter_tests {
         let mut store = fixture.store().await;
 
         let blob = store.create().await.unwrap();
-        blob.remove().await.unwrap();
+        TrackingBlob::remove(blob).await.unwrap();
 
         let counts = store.counts();
         assert_eq!(
@@ -472,7 +497,7 @@ mod counter_tests {
         let mut fixture = super::TestFixture::new();
         let mut store = fixture.store().await;
 
-        let blob = store.create().await.unwrap();
+        let mut blob = store.create().await.unwrap();
         let stream = blob.all_blocks().unwrap();
         // Use the stream to make sure it's properly executed
         let _ = stream.collect::<Vec<_>>().await;
@@ -490,6 +515,7 @@ mod counter_tests {
             counts
         );
 
+        blob.async_drop().await.unwrap();
         drop(blob);
         store.async_drop().await.unwrap();
     }
@@ -500,8 +526,9 @@ mod counter_tests {
         let mut store = fixture.store().await;
 
         // Perform operations to increase counters
-        let blob = store.create().await.unwrap();
+        let mut blob = store.create().await.unwrap();
         let _ = blob.all_blocks().unwrap();
+        blob.async_drop().await.unwrap();
         drop(blob);
 
         // Check counts were increased

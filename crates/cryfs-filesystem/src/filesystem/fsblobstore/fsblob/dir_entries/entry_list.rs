@@ -1,14 +1,14 @@
 use anyhow::Result;
+use cryfs_utils::async_drop::AsyncDrop;
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::time::SystemTime;
 
-use super::super::FsError;
 use super::super::base_blob::BaseBlob;
 use super::entry::{DirEntry, EntryType};
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{AtimeUpdateBehavior, FsResult, PathComponent, PathComponentBuf};
+use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, PathComponent, PathComponentBuf};
 
 #[derive(Debug)]
 pub struct DirEntryList {
@@ -113,9 +113,11 @@ impl DirEntryList {
         }
     }
 
-    pub async fn deserialize<'a, B: BlobStore + Debug + 'a>(
-        blob: &mut BaseBlob<'a, B>,
-    ) -> Result<Self> {
+    pub async fn deserialize<B>(blob: &mut BaseBlob<B>) -> Result<Self>
+    where
+        B: BlobStore + Debug,
+        B::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+    {
         // TODO Stream this into a BufReader instead of reading everything up front? But is that actually better?
         let data = blob.read_all_data().await?;
         let len = data.len() as u64;
@@ -134,10 +136,11 @@ impl DirEntryList {
         })
     }
 
-    pub async fn serialize_if_dirty<'a, B: BlobStore + Debug + 'a>(
-        &mut self,
-        blob: &mut BaseBlob<'a, B>,
-    ) -> Result<()> {
+    pub async fn serialize_if_dirty<B>(&mut self, blob: &mut BaseBlob<B>) -> Result<()>
+    where
+        B: BlobStore + Debug,
+        B::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+    {
         if self.dirty {
             // TODO Stream this into a BufWriter instead of writing everything at the end? But is that actually better?
             let mut writer = Cursor::new(Vec::new());

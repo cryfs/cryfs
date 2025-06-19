@@ -20,9 +20,13 @@ use crate::{
     },
 };
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_utils::{async_drop::AsyncDrop, data::Data, stream::for_each_unordered};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    data::Data,
+    stream::for_each_unordered,
+};
 
-pub struct DataTree<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
+pub struct DataTree<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
     // The lock on the root node also ensures that there never are two [DataTree] instances for the same tree
     // &mut self in all the methods makes sure we don't run into race conditions where
     // one task modifies a tree we're currently trying to read somewhere else.
@@ -31,26 +35,29 @@ pub struct DataTree<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + 
 
     // root_node is always some except in the middle of computations
     root_node: Option<DataNode<B>>,
-    node_store: &'a DataNodeStore<B>,
+    node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
 
     // TODO Think through all operations and whether they can change data that is cached in num_bytes_cache. Update cache if necessary.
     //      num_bytes_cache caches a bit differently than the C++ cache did.
     num_bytes_cache: SizeCache,
 }
 
-impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTree<'a, B> {
-    pub fn new(root_node: DataNode<B>, node_store: &'a DataNodeStore<B>) -> Self {
-        Self {
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTree<B> {
+    pub fn new(
+        root_node: DataNode<B>,
+        node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             root_node: Some(root_node),
             node_store,
             num_bytes_cache: SizeCache::SizeUnknown,
-        }
+        })
     }
 
     pub async fn num_bytes(&mut self) -> Result<u64> {
         self.num_bytes_cache
             .get_or_calculate_num_bytes(
-                self.node_store,
+                &*self.node_store,
                 self.root_node.as_ref().expect("DataTree.root_node is None"),
             )
             .await
@@ -60,7 +67,7 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Da
         let root_node = self.root_node.as_ref().expect("DataTree.root_node is None");
         let mut num_nodes_current_level = self
             .num_bytes_cache
-            .get_or_calculate_num_leaves(self.node_store, root_node)
+            .get_or_calculate_num_leaves(&*self.node_store, root_node)
             .await?
             .get();
         let mut total_num_nodes = num_nodes_current_level;
@@ -358,7 +365,7 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Da
                 new_num_leaves.get() - 1,
                 new_num_leaves.get(),
                 &Callbacks {
-                    node_store: self.node_store,
+                    node_store: &*self.node_store,
                     new_last_leaf_size,
                     new_num_leaves,
                 },
@@ -371,9 +378,10 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Da
         Ok(())
     }
 
-    pub async fn remove(mut self) -> Result<()> {
-        let root_node = self.root_node.take().expect("DataTree.root_node is None");
-        Self::_remove_subtree(self.node_store, root_node).await?;
+    pub async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
+        let root_node = this.root_node.take().expect("DataTree.root_node is None");
+        Self::_remove_subtree(&*this.node_store, root_node).await?;
+        this.async_drop().await.unwrap(); // TODO No unwrap
         Ok(())
     }
 
@@ -392,7 +400,7 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Da
         }
 
         traversal::traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
-            self.node_store,
+            &*self.node_store,
             root_node,
             begin_index,
             end_index,
@@ -694,8 +702,10 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Da
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub fn into_root_node(self) -> DataNode<B> {
-        self.root_node.expect("DataTree.RootNode is none")
+    pub async fn into_root_node(this: AsyncDropGuard<Self>) -> DataNode<B> {
+        let mut this = this.unsafe_into_inner_dont_drop();
+        this.node_store.async_drop().await.unwrap(); // TODO No unwrap
+        this.root_node.expect("DataTree.RootNode is none")
     }
 }
 
@@ -713,11 +723,20 @@ trait TraversalByByteIndicesCallbacks<B: BlockStore + AsyncDrop + Debug + Send +
     fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data;
 }
 
-impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Debug
-    for DataTree<'a, B>
-{
+impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Debug for DataTree<B> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "DataTree")
+    }
+}
+
+#[async_trait]
+impl<B> AsyncDrop for DataTree<B>
+where
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+{
+    type Error = <B as AsyncDrop>::Error;
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.node_store.async_drop().await
     }
 }
 

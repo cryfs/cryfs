@@ -28,7 +28,7 @@ use cryfs_utils::{
 pub struct CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Here and in others, can we just store &FsBlobStore instead of &AsyncDropGuard?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -38,7 +38,7 @@ where
 impl<'a, B> CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -50,11 +50,11 @@ where
         }
     }
 
-    async fn load_blob(&self) -> Result<AsyncDropGuard<FsBlob<'a, B>>, FsError> {
+    async fn load_blob(&self) -> Result<AsyncDropGuard<FsBlob<B>>, FsError> {
         self.node_info.load_blob(self.blobstore).await
     }
 
-    fn blob_as_dir<'b>(blob: &'b FsBlob<'a, B>) -> Result<&'b DirBlob<'a, B>, FsError> {
+    fn blob_as_dir<'b>(blob: &'b FsBlob<B>) -> Result<&'b DirBlob<B>, FsError> {
         blob.as_dir().map_err(|err| {
             let blob_id = blob.blob_id();
             FsError::CorruptedFilesystem {
@@ -64,7 +64,7 @@ where
         })
     }
 
-    fn blob_as_dir_mut<'b>(blob: &'b mut FsBlob<'a, B>) -> Result<&'b mut DirBlob<'a, B>, FsError> {
+    fn blob_as_dir_mut<'b>(blob: &'b mut FsBlob<B>) -> Result<&'b mut DirBlob<B>, FsError> {
         let blob_id = blob.blob_id();
         blob.as_dir_mut().map_err(|err| {
             FsError::CorruptedFilesystem {
@@ -222,7 +222,7 @@ where
 impl<'a, B> Dir for CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Device = CryDevice<B>;
 

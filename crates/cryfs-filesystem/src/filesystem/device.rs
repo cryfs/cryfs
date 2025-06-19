@@ -15,7 +15,7 @@ use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     AbsolutePath, FsError, FsResult, PathComponent, Statfs, object_based_api::Device,
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
@@ -26,7 +26,7 @@ use crate::filesystem::fsblobstore::{BlobType, EntryType, FsBlob, FsBlobStore};
 pub struct CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     root_blob_id: BlobId,
@@ -40,7 +40,7 @@ where
 impl<B> CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn load_filesystem(
         blobstore: AsyncDropGuard<B>,
@@ -85,7 +85,7 @@ where
     async fn load_blob(
         &self,
         path: impl IntoIterator<Item = &PathComponent>,
-    ) -> FsResult<AsyncDropGuard<FsBlob<'_, B>>> {
+    ) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
         let mut root_blob = self
             .blobstore
             .load(&self.root_blob_id)
@@ -115,9 +115,9 @@ where
 
     async fn load_blob_from_relative_path_owned<'a, 'b>(
         &'a self,
-        anchor: AsyncDropGuard<FsBlob<'a, B>>,
+        anchor: AsyncDropGuard<FsBlob<B>>,
         relative_path: impl Iterator<Item = &PathComponent>,
-    ) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>> {
+    ) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
         match self
             .load_blob_from_relative_path(MaybeOwned::Owned(anchor), relative_path)
             .await?
@@ -133,9 +133,9 @@ where
     // If `anchor` is owned or `relative_path` is non-empty, the returned blob will be owned.
     async fn load_blob_from_relative_path<'a, 'b>(
         &'a self,
-        anchor: MaybeOwned<'b, AsyncDropGuard<FsBlob<'a, B>>>,
+        anchor: MaybeOwned<'b, AsyncDropGuard<FsBlob<B>>>,
         relative_path: impl Iterator<Item = &PathComponent>,
-    ) -> FsResult<MaybeOwned<'b, AsyncDropGuard<FsBlob<'a, B>>>> {
+    ) -> FsResult<MaybeOwned<'b, AsyncDropGuard<FsBlob<B>>>> {
         let mut current_blob = anchor;
 
         for path_component in relative_path {
@@ -189,7 +189,7 @@ where
         &'a self,
         path1: &AbsolutePath,
         path2: &AbsolutePath,
-    ) -> FsResult<LoadTwoBlobsResult<'a, B>> {
+    ) -> FsResult<LoadTwoBlobsResult<B>> {
         let num_shared_path_components = path1
             .iter()
             .zip(path2.iter())
@@ -276,7 +276,7 @@ where
 impl<B> Debug for CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CryDevice")
@@ -289,7 +289,7 @@ where
 impl<B> Device for CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Node = CryNode<B>;
     type Dir<'a> = CryDir<'a, B>;
@@ -536,7 +536,7 @@ where
 impl<B> AsyncDrop for CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 
@@ -546,16 +546,16 @@ where
 }
 
 #[must_use = "Contains AsyncDropGuard, async_drop must be called"]
-enum LoadTwoBlobsResult<'a, B>
+enum LoadTwoBlobsResult<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     AreSameBlob {
-        blob: AsyncDropGuard<FsBlob<'a, B>>,
+        blob: AsyncDropGuard<FsBlob<B>>,
     },
     AreDifferentBlobs {
-        blob1: AsyncDropGuard<FsBlob<'a, B>>,
-        blob2: AsyncDropGuard<FsBlob<'a, B>>,
+        blob1: AsyncDropGuard<FsBlob<B>>,
+        blob2: AsyncDropGuard<FsBlob<B>>,
     },
 }

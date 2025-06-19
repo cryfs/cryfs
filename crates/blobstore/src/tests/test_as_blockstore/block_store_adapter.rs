@@ -46,18 +46,23 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
 {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
-        Ok(self
-            .underlying_store
-            .load(&BlobId { root: *id })
-            .await?
-            .is_some())
+        let loaded = self.underlying_store.load(&BlobId { root: *id }).await?;
+        match loaded {
+            Some(mut blob) => {
+                blob.async_drop().await.unwrap();
+                Ok(true)
+            }
+            None => Ok(false),
+        }
     }
 
     async fn load(&self, id: &BlockId) -> Result<Option<Data>> {
         let blob_id = BlobId { root: *id };
-        let loaded = self.underlying_store.load(&blob_id);
-        if let Some(mut blob) = loaded.await? {
-            Ok(Some(blob.read_all().await?))
+        let loaded = self.underlying_store.load(&blob_id).await?;
+        if let Some(mut blob) = loaded {
+            let result = Ok(Some(blob.read_all().await?));
+            blob.async_drop().await.unwrap();
+            result
         } else {
             Ok(None)
         }
@@ -120,6 +125,7 @@ where
         };
         blob.resize(data.len() as u64).await?;
         blob.write(data, 0).await?;
+        blob.async_drop().await.unwrap();
         Ok(TryCreateResult::SuccessfullyCreated)
     }
 
@@ -137,6 +143,7 @@ where
             blob.resize(data.len() as u64).await?;
         }
         blob.write(data, 0).await?;
+        blob.async_drop().await.unwrap();
         Ok(())
     }
 }

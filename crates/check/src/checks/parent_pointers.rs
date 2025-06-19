@@ -2,7 +2,7 @@ use itertools::Itertools;
 use std::fmt::Debug;
 
 use cryfs_blobstore::BlobId;
-use cryfs_blockstore::{BlockStore, LLBlockStore};
+use cryfs_blockstore::BlockStore;
 use cryfs_filesystem::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_utils::{async_drop::AsyncDrop, peekable::PeekableExt};
 
@@ -65,12 +65,16 @@ impl CheckParentPointers {
 }
 
 impl FilesystemCheck for CheckParentPointers {
-    fn process_reachable_blob<'a, 'b>(
+    fn process_reachable_blob<'a>(
         &mut self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -114,12 +118,16 @@ impl FilesystemCheck for CheckParentPointers {
         Ok(())
     }
 
-    fn process_reachable_blob_again<'a, 'b>(
+    fn process_reachable_blob_again<'a>(
         &mut self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -130,7 +138,12 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_reachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         _referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
@@ -141,7 +154,12 @@ impl FilesystemCheck for CheckParentPointers {
     fn process_unreachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
     ) -> Result<(), CheckError> {
         // do nothing

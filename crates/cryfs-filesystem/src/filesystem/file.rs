@@ -11,7 +11,7 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 pub struct CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     node_info: Arc<NodeInfo>,
@@ -20,7 +20,7 @@ where
 impl<'a, B> CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -37,7 +37,7 @@ where
 impl<'a, B> File for CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Device = CryDevice<B>;
 
@@ -55,7 +55,7 @@ where
 impl<'a, B> Debug for CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CryFile")

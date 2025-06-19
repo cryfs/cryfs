@@ -1,4 +1,5 @@
 use anyhow::{Result, ensure};
+use async_trait::async_trait;
 use binary_layout::Field;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -6,41 +7,56 @@ use std::fmt::Debug;
 use super::layout::{self, FORMAT_VERSION_HEADER};
 use cryfs_blobstore::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
-use cryfs_utils::data::Data;
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    data::Data,
+};
 
-pub struct BaseBlob<'a, B>
+pub struct BaseBlob<B>
 where
-    B: BlobStore + Debug + 'a,
+    B: BlobStore + Debug,
+    B::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
-    blob: B::ConcreteBlob<'a>,
+    blob: AsyncDropGuard<B::ConcreteBlob>,
     header_cache: layout::fsblob_header::View<Data>,
 }
 
-impl<'a, B> BaseBlob<'a, B>
+impl<B> BaseBlob<B>
 where
-    B: BlobStore + Debug + 'a,
+    B: BlobStore + Debug,
+    B::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
-    pub async fn parse(mut blob: B::ConcreteBlob<'a>) -> Result<BaseBlob<'a, B>> {
+    pub async fn parse(
+        mut blob: AsyncDropGuard<B::ConcreteBlob>,
+    ) -> Result<AsyncDropGuard<BaseBlob<B>>> {
         // TODO No need to zero-initialize
         let mut header = vec![0; layout::fsblob_header::SIZE.unwrap()];
-        blob.read(&mut header, 0).await?;
+        match blob.read(&mut header, 0).await {
+            Ok(()) => (),
+            Err(e) => {
+                blob.async_drop().await.unwrap(); //TODO no unwrap
+                return Err(e);
+            }
+        }
         let header_cache = layout::fsblob_header::View::new(header.into());
-        ensure!(
-            header_cache.format_version_header().read() == FORMAT_VERSION_HEADER,
-            "Loaded FsBlob with format version {} but current version is {}",
-            header_cache.format_version_header().read(),
-            FORMAT_VERSION_HEADER
-        );
-        Ok(Self { blob, header_cache })
+        if header_cache.format_version_header().read() != FORMAT_VERSION_HEADER {
+            blob.async_drop().await.unwrap(); //TODO no unwrap
+            anyhow::bail!(
+                "Loaded FsBlob with format version {} but current version is {}",
+                header_cache.format_version_header().read(),
+                FORMAT_VERSION_HEADER
+            );
+        }
+        Ok(AsyncDropGuard::new(Self { blob, header_cache }))
     }
 
     pub async fn try_create_with_id(
         blob_id: &BlobId,
-        blobstore: &'a B,
+        blobstore: &B,
         blob_type: layout::BlobType,
         parent: &BlobId,
         data: &[u8],
-    ) -> Result<Option<<B as BlobStore>::ConcreteBlob<'a>>> {
+    ) -> Result<Option<AsyncDropGuard<<B as BlobStore>::ConcreteBlob>>> {
         let blob_data = create_data_for_new_blob(blob_type, parent, data);
 
         // TODO Directly creating the blob with the data would probably be faster
@@ -48,16 +64,22 @@ where
         let Some(mut blob) = blobstore.try_create(blob_id).await? else {
             return Ok(None);
         };
-        blob.write(&blob_data, 0).await?;
+        match blob.write(&blob_data, 0).await {
+            Ok(()) => (),
+            Err(e) => {
+                blob.async_drop().await.unwrap(); //TODO no unwrap
+                return Err(e);
+            }
+        }
         Ok(Some(blob))
     }
 
     pub async fn create(
-        blobstore: &'a B,
+        blobstore: &B,
         blob_type: layout::BlobType,
         parent: &BlobId,
         data: &[u8],
-    ) -> Result<BaseBlob<'a, B>> {
+    ) -> Result<AsyncDropGuard<BaseBlob<B>>> {
         let blob_data = create_data_for_new_blob(blob_type, parent, data);
 
         // TODO Directly creating the blob with the data would probably be faster
@@ -68,10 +90,10 @@ where
         let mut header_cache = blob_data;
         header_cache.shrink_to_subregion(..layout::fsblob_header::SIZE.unwrap());
 
-        Ok(Self {
+        Ok(AsyncDropGuard::new(Self {
             blob,
             header_cache: layout::fsblob_header::View::new(header_cache),
-        })
+        }))
     }
 
     pub fn blob_id(&self) -> BlobId {
@@ -139,8 +161,8 @@ where
         self.blob.flush().await
     }
 
-    pub async fn remove(self) -> Result<()> {
-        self.blob.remove().await
+    pub async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
+        B::ConcreteBlob::remove(this.unsafe_into_inner_dont_drop().blob).await
     }
 
     pub fn all_blocks(&self) -> Result<BoxStream<'_, Result<BlockId>>> {
@@ -153,8 +175,35 @@ where
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub fn into_raw(self) -> B::ConcreteBlob<'a> {
-        self.blob
+    pub fn into_raw(this: AsyncDropGuard<Self>) -> AsyncDropGuard<B::ConcreteBlob> {
+        this.unsafe_into_inner_dont_drop().blob
+    }
+}
+
+impl<B> Debug for BaseBlob<B>
+where
+    B: BlobStore + Debug,
+    B::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BaseBlob")
+            .field("blob_id", &self.blob_id())
+            .field("blob_type", &self.blob_type())
+            .field("parent", &self.parent())
+            .finish()
+    }
+}
+
+#[async_trait]
+impl<B> AsyncDrop for BaseBlob<B>
+where
+    B: BlobStore + Debug,
+    B::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
+{
+    type Error = <B::ConcreteBlob as AsyncDrop>::Error;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        self.blob.async_drop().await
     }
 }
 

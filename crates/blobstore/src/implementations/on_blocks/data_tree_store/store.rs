@@ -14,7 +14,7 @@ use crate::{
 };
 use cryfs_blockstore::{BlockId, BlockStore, InvalidBlockSizeError};
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     data::Data,
 };
 
@@ -25,7 +25,7 @@ use super::{
 
 #[derive(Debug)]
 pub struct DataTreeStore<B: BlockStore + AsyncDrop + Debug + Send + Sync> {
-    node_store: AsyncDropGuard<DataNodeStore<B>>,
+    node_store: AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>>,
 }
 
 impl<B: BlockStore + AsyncDrop + Debug + Send + Sync> DataTreeStore<B> {
@@ -34,34 +34,47 @@ impl<B: BlockStore + AsyncDrop + Debug + Send + Sync> DataTreeStore<B> {
         physical_block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         Ok(AsyncDropGuard::new(Self {
-            node_store: DataNodeStore::new(block_store, physical_block_size).await?,
+            node_store: AsyncDropArc::new(
+                DataNodeStore::new(block_store, physical_block_size).await?,
+            ),
         }))
     }
 }
 
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTreeStore<B> {
-    pub async fn load_tree(&self, root_node_id: BlockId) -> Result<Option<DataTree<'_, B>>> {
+    pub async fn load_tree(
+        &self,
+        root_node_id: BlockId,
+    ) -> Result<Option<AsyncDropGuard<DataTree<B>>>> {
         Ok(self
             .node_store
             .load(root_node_id)
             .await?
-            .map(|root_node| DataTree::new(root_node, &self.node_store)))
+            .map(|root_node| DataTree::new(root_node, AsyncDropArc::clone(&self.node_store))))
     }
 
-    pub async fn create_tree(&self) -> Result<DataTree<'_, B>> {
+    pub async fn create_tree(&self) -> Result<AsyncDropGuard<DataTree<B>>> {
         let new_leaf = self
             .node_store
             .create_new_leaf_node(&Data::from(vec![]))
             .await?;
-        Ok(DataTree::new(new_leaf.upcast(), &self.node_store))
+        Ok(DataTree::new(
+            new_leaf.upcast(),
+            AsyncDropArc::clone(&self.node_store),
+        ))
     }
 
-    pub async fn try_create_tree(&self, id: BlockId) -> Result<Option<DataTree<'_, B>>> {
+    pub async fn try_create_tree(
+        &self,
+        id: BlockId,
+    ) -> Result<Option<AsyncDropGuard<DataTree<B>>>> {
         let new_leaf = self
             .node_store
             .try_create_new_leaf_node(id, &Data::from(vec![]))
             .await?;
-        Ok(new_leaf.map(|new_leaf| DataTree::new(new_leaf.upcast(), &self.node_store)))
+        Ok(new_leaf.map(|new_leaf| {
+            DataTree::new(new_leaf.upcast(), AsyncDropArc::clone(&self.node_store))
+        }))
     }
 
     pub async fn remove_tree_by_id(&self, root_node_id: BlockId) -> Result<RemoveResult> {
@@ -91,7 +104,9 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         Ok(self.node_store.load(*id).await?.map(|node| node.depth()))
     }
 
-    pub fn into_inner_node_store(this: AsyncDropGuard<Self>) -> AsyncDropGuard<DataNodeStore<B>> {
+    pub fn into_inner_node_store(
+        this: AsyncDropGuard<Self>,
+    ) -> AsyncDropGuard<AsyncDropArc<DataNodeStore<B>>> {
         this.unsafe_into_inner_dont_drop().node_store
     }
 
@@ -231,9 +246,15 @@ mod tests {
         async fn existing_one_leaf_node() {
             with_treestore(|store| {
                 Box::pin(async move {
-                    let root_id = *store.create_tree().await.unwrap().root_node_id();
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let root_id = {
+                        let mut created = store.create_tree().await.unwrap();
+                        let root_id = *created.root_node_id();
+                        created.async_drop().await.unwrap();
+                        root_id
+                    };
+                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -248,10 +269,13 @@ mod tests {
                         tree.resize_num_bytes(10 * PHYSICAL_BLOCK_SIZE.as_u64())
                             .await
                             .unwrap();
-                        *tree.root_node_id()
+                        let root_id = *tree.root_node_id();
+                        tree.async_drop().await.unwrap();
+                        root_id
                     };
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -265,9 +289,15 @@ mod tests {
         async fn loadable_after_creation() {
             with_treestore(|store| {
                 Box::pin(async move {
-                    let root_id = *store.create_tree().await.unwrap().root_node_id();
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let root_id = {
+                        let mut created = store.create_tree().await.unwrap();
+                        let root_id = *created.root_node_id();
+                        created.async_drop().await.unwrap();
+                        root_id
+                    };
+                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -288,6 +318,7 @@ mod tests {
                         panic!("Expected inner node");
                     };
                     assert_eq!(0, node.num_bytes());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -302,17 +333,13 @@ mod tests {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
-                    assert_eq!(
-                        root_id,
-                        *store
-                            .try_create_tree(root_id)
-                            .await
-                            .unwrap()
-                            .unwrap()
-                            .root_node_id()
-                    );
-                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
+
+                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -334,6 +361,8 @@ mod tests {
                         panic!("Expected inner node");
                     };
                     assert_eq!(0, node.num_bytes());
+
+                    tree.async_drop().await.unwrap();
                 })
             })
             .await;
@@ -344,15 +373,10 @@ mod tests {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
-                    assert_eq!(
-                        root_id,
-                        *store
-                            .try_create_tree(root_id)
-                            .await
-                            .unwrap()
-                            .unwrap()
-                            .root_node_id()
-                    );
+                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    assert_eq!(root_id, *tree.root_node_id());
+                    tree.async_drop().await.unwrap();
+
                     assert!(store.try_create_tree(root_id).await.unwrap().is_none());
                 })
             })
@@ -386,8 +410,10 @@ mod tests {
          {
             with_treestore(move |store| {
                 Box::pin(async move {
-                    let root_id = *create_one_leaf_tree(&store).await.root_node_id();
-                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+                    let root_id = create_one_leaf_tree_return_id(&store).await;
+                    let tree = store.load_tree(root_id).await.unwrap();
+                    assert!(tree.is_some());
+                    tree.unwrap().async_drop().await.unwrap();
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
@@ -405,10 +431,10 @@ mod tests {
             with_treestore(move |store| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
-                    let root_id = *create_multi_leaf_tree(&store, NUM_LEAVES)
-                        .await
-                        .root_node_id();
-                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+                    let root_id = create_multi_leaf_tree_return_id(&store, NUM_LEAVES).await;
+                    let tree = store.load_tree(root_id).await.unwrap();
+                    assert!(tree.is_some());
+                    tree.unwrap().async_drop().await.unwrap();
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
@@ -426,9 +452,7 @@ mod tests {
             with_treestore_and_nodestore(move |treestore, nodestore| {
                 Box::pin(async move {
                     const NUM_LEAVES: u64 = 10;
-                    let root_id = *create_multi_leaf_tree(&treestore, NUM_LEAVES)
-                        .await
-                        .root_node_id();
+                    let root_id = create_multi_leaf_tree_return_id(&treestore, NUM_LEAVES).await;
                     treestore.clear_cache_slow().await.unwrap();
                     assert_eq!(NUM_LEAVES + 3, nodestore.num_nodes().await.unwrap());
 
@@ -480,8 +504,10 @@ mod tests {
                         0,
                     )
                     .await;
-                    let root_id = *create_one_leaf_tree(&store).await.root_node_id();
-                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+                    let root_id = create_one_leaf_tree_return_id(&store).await;
+                    let tree = store.load_tree(root_id).await.unwrap();
+                    assert!(tree.is_some());
+                    tree.unwrap().async_drop().await.unwrap();
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
@@ -507,10 +533,10 @@ mod tests {
                     )
                     .await;
 
-                    let root_id = *create_multi_leaf_tree(&store, NUM_LEAVES)
-                        .await
-                        .root_node_id();
-                    assert!(store.load_tree(root_id).await.unwrap().is_some());
+                    let root_id = create_multi_leaf_tree_return_id(&store, NUM_LEAVES).await;
+                    let tree = store.load_tree(root_id).await.unwrap();
+                    assert!(tree.is_some());
+                    tree.unwrap().async_drop().await.unwrap();
 
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,
@@ -537,9 +563,7 @@ mod tests {
                     )
                     .await;
 
-                    let root_id = *create_multi_leaf_tree(&treestore, NUM_LEAVES)
-                        .await
-                        .root_node_id();
+                    let root_id = create_multi_leaf_tree_return_id(&treestore, NUM_LEAVES).await;
                     treestore.clear_cache_slow().await.unwrap();
                     assert_eq!(2 * NUM_LEAVES + 6, nodestore.num_nodes().await.unwrap());
 
@@ -569,9 +593,7 @@ mod tests {
                     )
                     .await;
 
-                    let root_id = *create_multi_leaf_tree(&treestore, NUM_LEAVES)
-                        .await
-                        .root_node_id();
+                    let root_id = create_multi_leaf_tree_return_id(&treestore, NUM_LEAVES).await;
                     treestore.clear_cache_slow().await.unwrap();
                     assert_eq!(2 * NUM_LEAVES + 6, nodestore.num_nodes().await.unwrap());
 
@@ -607,9 +629,9 @@ mod tests {
             with_treestore(move |store| {
                 Box::pin(async move {
                     assert_eq!(0, store.num_nodes().await.unwrap());
-                    create_one_leaf_tree(&store).await;
+                    create_one_leaf_tree_return_id(&store).await;
                     assert_eq!(1, store.num_nodes().await.unwrap());
-                    create_multi_leaf_tree(&store, 10).await;
+                    create_multi_leaf_tree_return_id(&store, 10).await;
                     assert_eq!(14, store.num_nodes().await.unwrap());
                 })
             })
@@ -620,9 +642,9 @@ mod tests {
         async fn after_removing_trees() {
             with_treestore(move |store| {
                 Box::pin(async move {
-                    let tree1 = *create_multi_leaf_tree(&store, 10).await.root_node_id();
-                    let tree2 = *create_one_leaf_tree(&store).await.root_node_id();
-                    let tree3 = *create_multi_leaf_tree(&store, 20).await.root_node_id();
+                    let tree1 = create_multi_leaf_tree_return_id(&store, 10).await;
+                    let tree2 = create_one_leaf_tree_return_id(&store).await;
+                    let tree3 = create_multi_leaf_tree_return_id(&store, 20).await;
                     assert_eq!(38, store.num_nodes().await.unwrap());
                     assert_eq!(
                         RemoveResult::SuccessfullyRemoved,

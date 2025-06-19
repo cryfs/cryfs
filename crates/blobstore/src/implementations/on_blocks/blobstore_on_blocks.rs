@@ -37,16 +37,13 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobStore
     for BlobStoreOnBlocks<B>
 {
-    type ConcreteBlob<'a>
-        = BlobOnBlocks<'a, B>
-    where
-        B: 'a;
+    type ConcreteBlob = BlobOnBlocks<B>;
 
-    async fn create(&self) -> Result<Self::ConcreteBlob<'_>> {
+    async fn create(&self) -> Result<AsyncDropGuard<Self::ConcreteBlob>> {
         Ok(BlobOnBlocks::new(self.tree_store.create_tree().await?))
     }
 
-    async fn try_create(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+    async fn try_create(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
         Ok(self
             .tree_store
             .try_create_tree(id.root)
@@ -54,7 +51,7 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
             .map(|tree| BlobOnBlocks::new(tree)))
     }
 
-    async fn load(&self, id: &BlobId) -> Result<Option<Self::ConcreteBlob<'_>>> {
+    async fn load(&self, id: &BlobId) -> Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
         Ok(self
             .tree_store
             .load_tree(id.root)

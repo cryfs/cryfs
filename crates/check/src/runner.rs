@@ -168,13 +168,18 @@ where
 }
 
 async fn check_all_unreachable_nodes<B>(
-    nodestore: &AsyncDropGuard<DataNodeStore<B>>,
+    nodestore: &DataNodeStore<B>,
     unreachable_nodes: &HashSet<BlockId>,
     checks: &AllChecks,
     pb: impl Progress,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync + 'static,
+    B: BlockStore<Block: Send + Sync>
+        + AsyncDrop<Error = anyhow::Error>
+        + Debug
+        + Send
+        + Sync
+        + 'static,
 {
     stream::iter(unreachable_nodes.iter())
         .map(async |&node_id| {
@@ -425,11 +430,11 @@ where
     }
 }
 
-async fn check_all_reachable_children_blobs<'a, 'b, 'c, 'd, 'e, 'f, B>(
+async fn check_all_reachable_children_blobs<'a, 'b, 'd, 'e, 'f, B>(
     blobstore: &'a AsyncDropGuard<FsBlobStore<BlobStoreOnBlocks<B>>>,
     all_nodes: &'b HashSet<BlockId>,
     already_processed_blobs: Arc<ProcessedItems<BlobId, (BlobReference, SeenBlobInfo)>>,
-    blob: &FsBlob<'c, BlobStoreOnBlocks<B>>,
+    blob: &FsBlob<BlobStoreOnBlocks<B>>,
     path_of_blob: AbsolutePathBuf,
     checks: &'d AllChecks,
     task_spawner: TaskSpawner<'f>,
@@ -511,7 +516,12 @@ async fn check_all_nodes_of_reachable_blobs<B>(
     pb: impl Progress,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync + 'static,
+    B: BlockStore<Block: Send + Sync>
+        + AsyncDrop<Error = anyhow::Error>
+        + Debug
+        + Send
+        + Sync
+        + 'static,
 {
     task_queue::run_to_completion(MAX_CONCURRENCY, async move |task_spawner| {
         for (blob_id, referenced_as) in all_blobs {
@@ -554,7 +564,12 @@ async fn check_all_nodes_of_reachable_blob<'a, 'b, 'c, 'd, 'f, B>(
     pb: impl Progress + 'd,
 ) -> Result<(), CheckError>
 where
-    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync + 'static,
+    B: BlockStore<Block: Send + Sync>
+        + AsyncDrop<Error = anyhow::Error>
+        + Debug
+        + Send
+        + Sync
+        + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
@@ -693,7 +708,12 @@ fn check_all_children_of_reachable_blob_node<'a, 'b, 'c, 'd, 'f, B>(
     task_spawner: TaskSpawner<'f, CheckError>,
     pb: impl Progress + 'd,
 ) where
-    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync + 'static,
+    B: BlockStore<Block: Send + Sync>
+        + AsyncDrop<Error = anyhow::Error>
+        + Debug
+        + Send
+        + Sync
+        + 'static,
     'a: 'f,
     'b: 'f,
     'c: 'f,
@@ -836,11 +856,11 @@ impl SeenBlobInfo {
     }
 }
 
-fn blob_content_summary<'a, B>(blob: &FsBlob<'a, B>) -> SeenBlobInfo
+fn blob_content_summary<B>(blob: &FsBlob<B>) -> SeenBlobInfo
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     match blob {
         FsBlob::File(_) => SeenBlobInfo::File {

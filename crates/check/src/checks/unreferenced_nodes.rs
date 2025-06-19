@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::num::NonZeroU8;
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
-use cryfs_blockstore::{BlockId, BlockStore, LLBlockStore};
+use cryfs_blockstore::{BlockId, BlockStore};
 use cryfs_filesystem::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_rustfs::AbsolutePath;
 use cryfs_utils::async_drop::AsyncDrop;
@@ -54,7 +54,12 @@ impl UnreferencedNodesReferenceChecker {
     pub fn process_node(
         &mut self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
@@ -69,7 +74,12 @@ impl UnreferencedNodesReferenceChecker {
     fn process_readable_node(
         &mut self,
         node: &DataNode<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         expected_node_info: Option<NodeAndBlobReferenceFromReachableBlob>,
     ) -> Result<(), CheckError> {
@@ -161,7 +171,12 @@ impl UnreferencedNodesReferenceChecker {
         &mut self,
         blob: &FsBlob<
             BlobStoreOnBlocks<
-                impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+                impl BlockStore<Block: Send + Sync>
+                + AsyncDrop<Error = anyhow::Error>
+                + Send
+                + Sync
+                + Debug
+                + 'static,
             >,
         >,
         path: &AbsolutePath,
@@ -289,7 +304,12 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_reachable_node<'a>(
         &mut self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
@@ -301,19 +321,28 @@ impl FilesystemCheck for CheckUnreferencedNodes {
     fn process_unreachable_node<'a>(
         &mut self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
     ) -> Result<(), CheckError> {
         self.unreachable_nodes_checker.process_node(node, None)?;
         Ok(())
     }
 
-    fn process_reachable_blob<'a, 'b>(
+    fn process_reachable_blob<'a>(
         &mut self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -329,12 +358,16 @@ impl FilesystemCheck for CheckUnreferencedNodes {
         Ok(())
     }
 
-    fn process_reachable_blob_again<'a, 'b>(
+    fn process_reachable_blob_again<'a>(
         &mut self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {

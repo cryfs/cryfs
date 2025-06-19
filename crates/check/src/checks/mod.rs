@@ -33,18 +33,28 @@ use crate::node_info::{BlobReference, NodeAndBlobReferenceFromReachableBlob};
 
 #[derive(Debug, Derivative)]
 #[derivative(Clone(bound = ""), Copy(bound = ""))]
-pub enum BlobToProcess<'a, 'b, B>
+pub enum BlobToProcess<'a, B>
 where
-    B: BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+    B: BlockStore<Block: Send + Sync>
+        + AsyncDrop<Error = anyhow::Error>
+        + Send
+        + Sync
+        + Debug
+        + 'static,
 {
-    Readable(&'a FsBlob<'b, BlobStoreOnBlocks<B>>),
+    Readable(&'a FsBlob<BlobStoreOnBlocks<B>>),
     Unreadable(BlobId),
 }
 
 #[derive(Debug)]
 pub enum NodeToProcess<B>
 where
-    B: BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+    B: BlockStore<Block: Send + Sync>
+        + AsyncDrop<Error = anyhow::Error>
+        + Send
+        + Sync
+        + Debug
+        + 'static,
 {
     Readable(DataNode<B>),
     Unreadable(BlockId),
@@ -57,24 +67,32 @@ where
 /// At the end, it will call `finalize` to get a list of all the errors found.
 pub trait FilesystemCheck {
     /// Called for each blob that is reachable from the root of the file system via its directory structure.
-    fn process_reachable_blob<'a, 'b>(
+    fn process_reachable_blob<'a>(
         &mut self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError>;
 
     /// Like [Self::process_reachable_blob], but this is called whenever a blob is referenced **for the second or later time**,
     /// i.e. there are multiple references to it in the file system.
-    fn process_reachable_blob_again<'a, 'b>(
+    fn process_reachable_blob_again<'a>(
         &mut self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError>;
@@ -83,7 +101,12 @@ pub trait FilesystemCheck {
     fn process_reachable_node(
         &mut self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         expected_node_info: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError>;
@@ -92,7 +115,12 @@ pub trait FilesystemCheck {
     fn process_unreachable_node<'a>(
         &mut self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
     ) -> Result<(), CheckError>;
 
@@ -131,12 +159,16 @@ impl AllChecks {
         }
     }
 
-    pub fn process_reachable_blob<'a, 'b>(
+    pub fn process_reachable_blob<'a>(
         &self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -156,12 +188,16 @@ impl AllChecks {
         Ok(())
     }
 
-    pub fn process_reachable_blob_again<'a, 'b>(
+    pub fn process_reachable_blob_again<'a>(
         &self,
         blob: BlobToProcess<
             'a,
-            'b,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -183,7 +219,12 @@ impl AllChecks {
     pub fn process_reachable_node<'a>(
         &self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
@@ -205,7 +246,12 @@ impl AllChecks {
     pub fn process_unreachable_node<'a>(
         &self,
         node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
     ) -> Result<(), CheckError> {
         self.check_unreachable_nodes

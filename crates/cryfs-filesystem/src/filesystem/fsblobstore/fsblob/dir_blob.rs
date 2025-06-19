@@ -10,7 +10,10 @@ use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{Blob, BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, PathComponent, PathComponentBuf};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    with_async_drop_2,
+};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
 
@@ -27,38 +30,37 @@ pub const MODE_NEW_SYMLINK: Mode = Mode::zero()
     .add_other_write_flag()
     .add_other_exec_flag();
 
-pub struct DirBlob<'a, B>
+pub struct DirBlob<B>
 where
-    B: BlobStore + Debug + 'a,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    blob: BaseBlob<'a, B>,
+    blob: AsyncDropGuard<BaseBlob<B>>,
     entries: DirEntryList,
 }
 
-impl<'a, B> DirBlob<'a, B>
+impl<B> DirBlob<B>
 where
-    B: BlobStore + Debug + 'a,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Some of the functions in here (and possibly in other blobs) were only needed for the cxx.rs bindings. Check which ones we can delete now since we're rust only.
 
-    pub(super) async fn new(mut blob: BaseBlob<'a, B>) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
+    pub(super) async fn new(
+        mut blob: AsyncDropGuard<BaseBlob<B>>,
+    ) -> Result<AsyncDropGuard<DirBlob<B>>> {
         let entries = DirEntryList::deserialize(&mut blob).await?;
         Ok(AsyncDropGuard::new(Self { blob, entries }))
     }
 
-    pub async fn create_blob(
-        blobstore: &'a B,
-        parent: &BlobId,
-    ) -> Result<AsyncDropGuard<DirBlob<'a, B>>> {
+    pub async fn create_blob(blobstore: &B, parent: &BlobId) -> Result<AsyncDropGuard<DirBlob<B>>> {
         Ok(AsyncDropGuard::new(Self {
             blob: BaseBlob::create(blobstore, BlobType::Dir, parent, &[]).await?,
             entries: DirEntryList::empty(),
         }))
     }
 
-    pub async fn create_root_dir_blob(blobstore: &'a B, root_blob_id: &BlobId) -> Result<()> {
+    pub async fn create_root_dir_blob(blobstore: &B, root_blob_id: &BlobId) -> Result<()> {
         let mut blob = BaseBlob::try_create_with_id(
             root_blob_id,
             blobstore,
@@ -68,7 +70,10 @@ where
         )
         .await?
         .ok_or_else(|| anyhow!("Root blob {:?} already exists", root_blob_id))?;
-        blob.flush().await?; // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
+        with_async_drop_2!(blob, {
+            blob.flush().await // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
+        })
+        .unwrap(); // TODO no unwrap
         Ok(())
     }
 
@@ -266,7 +271,7 @@ where
     pub async fn remove(this: AsyncDropGuard<Self>) -> Result<()> {
         // No need to async_drop because that'd only serialize it
         // but we're removing the blob anyhow.
-        this.unsafe_into_inner_dont_drop().blob.remove().await
+        BaseBlob::remove(this.unsafe_into_inner_dont_drop().blob).await
     }
 
     pub fn lstat_size(&self) -> u64 {
@@ -285,17 +290,19 @@ where
     }
 
     #[cfg(any(test, feature = "testutils"))]
-    pub async fn into_raw(mut this: AsyncDropGuard<Self>) -> Result<B::ConcreteBlob<'a>> {
+    pub async fn into_raw(
+        mut this: AsyncDropGuard<Self>,
+    ) -> Result<AsyncDropGuard<B::ConcreteBlob>> {
         this.flush().await?;
         let this = this.unsafe_into_inner_dont_drop();
-        Ok(this.blob.into_raw())
+        Ok(BaseBlob::into_raw(this.blob))
     }
 }
 
-impl<'a, B> Debug for DirBlob<'a, B>
+impl<B> Debug for DirBlob<B>
 where
-    B: BlobStore + Debug + 'a,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DirBlob")
@@ -307,10 +314,10 @@ where
 }
 
 #[async_trait]
-impl<'a, B> AsyncDrop for DirBlob<'a, B>
+impl<B> AsyncDrop for DirBlob<B>
 where
-    B: BlobStore + Debug + 'a,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    B: BlobStore + Debug,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 
@@ -318,6 +325,13 @@ where
         self.flush().await.map_err(|err| FsError::InternalError {
             // TODO Instead of map_err, have flush return FsError
             error: err.context("Error in DirBlob::async_drop_impl"),
-        })
+        })?;
+        self.blob
+            .async_drop()
+            .await
+            .map_err(|err| FsError::InternalError {
+                error: err.context("Error in DirBlob::async_drop_impl"),
+            })?;
+        Ok(())
     }
 }

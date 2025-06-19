@@ -17,7 +17,7 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 pub struct CryNode<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
 
@@ -31,9 +31,9 @@ where
 impl<B> CryNode<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    pub async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<'_, B>>> {
+    pub async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 
@@ -53,7 +53,7 @@ where
 impl<B> CryNode<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
@@ -78,7 +78,7 @@ impl<B> Node for CryNode<B>
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Device = CryDevice<B>;
 
@@ -135,7 +135,7 @@ where
 impl<B> Debug for CryNode<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CryNode")
@@ -148,7 +148,7 @@ where
 impl<B> AsyncDrop for CryNode<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'a> <B as BlobStore>::ConcreteBlob<'a>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 

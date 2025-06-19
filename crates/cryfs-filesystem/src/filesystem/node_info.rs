@@ -67,16 +67,16 @@ pub enum NodeInfo {
     },
 }
 
-pub enum LoadParentBlobResult<'a, 'b, B>
+pub enum LoadParentBlobResult<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'c> <B as BlobStore>::ConcreteBlob<'c>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     IsRootDir {
         root_blob: BlobId,
     },
     IsNotRootDir {
-        parent_blob: AsyncDropGuard<FsBlob<'b, B>>,
+        parent_blob: AsyncDropGuard<FsBlob<B>>,
         name: &'a PathComponent,
         blob_details: &'a BlobDetails,
     },
@@ -107,13 +107,13 @@ impl NodeInfo {
         }
     }
 
-    async fn _load_parent_blob<'a, B>(
-        blobstore: &'a FsBlobStore<B>,
+    async fn _load_parent_blob<B>(
+        blobstore: &FsBlobStore<B>,
         parent_blob_id: &BlobId,
-    ) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>>
+    ) -> FsResult<AsyncDropGuard<FsBlob<B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         blobstore
             .load(parent_blob_id)
@@ -133,10 +133,10 @@ impl NodeInfo {
     pub async fn load_parent_blob<'a, 'b, B>(
         &'a self,
         blobstore: &'b FsBlobStore<B>,
-    ) -> FsResult<LoadParentBlobResult<'a, 'b, B>>
+    ) -> FsResult<LoadParentBlobResult<'a, B>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'c> <B as BlobStore>::ConcreteBlob<'c>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         match self {
             Self::IsRootDir {
@@ -193,7 +193,7 @@ impl NodeInfo {
     pub async fn blob_id<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobId>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         self.blob_details(blobstore)
             .await
@@ -218,7 +218,7 @@ impl NodeInfo {
     pub async fn ancestors_and_self<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         // TODO Both self.blob_id and self.ancestors() match over Self::{IsRootDir/IsNotRootDir}, can we combine that into just one branch?
         let self_blob_id = self.blob_id(&blobstore).await?;
@@ -235,7 +235,7 @@ impl NodeInfo {
     pub async fn ancestors_and_self<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         // In this case, we just return the self blob id since ancestor checks are disabled
         // for move operations.
@@ -245,7 +245,7 @@ impl NodeInfo {
     pub async fn node_type<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobType>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         self.blob_details(blobstore)
             .await
@@ -255,7 +255,7 @@ impl NodeInfo {
     pub async fn blob_details<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobDetails>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         match self {
             Self::IsRootDir {
@@ -293,13 +293,13 @@ impl NodeInfo {
         }
     }
 
-    pub async fn load_blob<'a, B>(
+    pub async fn load_blob<B>(
         &self,
-        blobstore: &'a FsBlobStore<B>,
-    ) -> FsResult<AsyncDropGuard<FsBlob<'a, B>>>
+        blobstore: &FsBlobStore<B>,
+    ) -> FsResult<AsyncDropGuard<FsBlob<B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let blob_id = self.blob_details(blobstore).await?.blob_id;
         blobstore
@@ -317,10 +317,10 @@ impl NodeInfo {
             })
     }
 
-    pub fn as_file_mut<'a, 's, B>(blob: &'s mut FsBlob<'a, B>) -> FsResult<&'s mut FileBlob<'a, B>>
+    pub fn as_file_mut<'s, B>(blob: &'s mut FsBlob<B>) -> FsResult<&'s mut FileBlob<B>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let blob_id = blob.blob_id();
         blob.as_file_mut().map_err(|err| {
@@ -334,7 +334,7 @@ impl NodeInfo {
     async fn load_lstat_size<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NumBytes>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let mut blob = self.load_blob(blobstore).await?;
         let result = match blob.lstat_size().await {
@@ -352,7 +352,7 @@ impl NodeInfo {
     pub async fn getattr<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NodeAttrs>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         match self.load_parent_blob(blobstore).await? {
             LoadParentBlobResult::IsRootDir { .. } => {
@@ -407,7 +407,7 @@ impl NodeInfo {
     ) -> FsResult<NodeAttrs>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         // TODO Or is setting ctime allowed? What would it mean?
         assert!(ctime.is_none(), "Cannot set ctime via setattr");
@@ -454,7 +454,7 @@ impl NodeInfo {
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let mut blob = self.load_blob(blobstore).await?;
         with_async_drop_2!(blob, {
@@ -473,7 +473,7 @@ impl NodeInfo {
     ) -> FsResult<F>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let (update_result, fn_result) = join!(
             self.maybe_update_access_timestamp_in_parent(blobstore, self.atime_update_behavior()),
@@ -490,7 +490,7 @@ impl NodeInfo {
     ) -> FsResult<F>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let (update_result, fn_result) = join!(
             self.update_modification_timestamp_in_parent(blobstore),
@@ -507,7 +507,7 @@ impl NodeInfo {
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         self._update_in_parent(blobstore, |parent, blob_id| {
             parent.maybe_update_access_timestamp_of_entry(blob_id, atime_update_behavior)
@@ -521,7 +521,7 @@ impl NodeInfo {
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         self._update_in_parent(blobstore, |parent, blob_id| {
             parent.update_modification_timestamp_of_entry(blob_id)
@@ -536,7 +536,7 @@ impl NodeInfo {
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         // TODO Ideally we'd do this without loading the parent blob (we've already loaded it right before to be able to load the actual blob),
         //      but if not possible, the least we can do is remember the current atime in BlobDetails on the first load before calling into here,
@@ -577,14 +577,11 @@ impl NodeInfo {
     }
 }
 
-fn get_blob_details<'a, B>(
-    parent_blob: &DirBlob<'a, B>,
-    name: &PathComponent,
-) -> FsResult<BlobDetails>
+fn get_blob_details<B>(parent_blob: &DirBlob<B>, name: &PathComponent) -> FsResult<BlobDetails>
 where
     // TODO Do we really need B: 'static ?
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send + Sync,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     let entry = parent_blob
         .entry_by_name(name)

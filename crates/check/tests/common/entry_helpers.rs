@@ -33,50 +33,50 @@ use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 pub const LARGE_FILE_SIZE: usize = 24 * 1024;
 
 #[derive(Debug)]
-pub struct CreatedDirBlob<'a, B>
+pub struct CreatedDirBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    blob: AsyncDropGuard<FsBlob<'a, B>>,
+    blob: AsyncDropGuard<FsBlob<B>>,
     path: AbsolutePathBuf,
 }
 
-impl<'a, B> CreatedDirBlob<'a, B>
+impl<B> CreatedDirBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub fn new(blob: AsyncDropGuard<FsBlob<'a, B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
+    pub fn new(blob: AsyncDropGuard<FsBlob<B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { blob, path })
     }
 
-    pub fn blob(&mut self) -> &mut FsBlob<'a, B> {
+    pub fn blob(&mut self) -> &mut FsBlob<B> {
         &mut self.blob
     }
 
-    pub fn dir_blob(&self) -> &DirBlob<'a, B> {
+    pub fn dir_blob(&self) -> &DirBlob<B> {
         self.blob
             .as_dir()
             .expect("We just created this dir blob and now it is a different type")
     }
 
-    pub fn dir_blob_mut(&mut self) -> &mut DirBlob<'a, B> {
+    pub fn dir_blob_mut(&mut self) -> &mut DirBlob<B> {
         self.blob
             .as_dir_mut()
             .expect("We just created this dir blob and now it is a different type")
     }
 
-    pub fn into_blob(this: AsyncDropGuard<Self>) -> AsyncDropGuard<FsBlob<'a, B>> {
+    pub fn into_blob(this: AsyncDropGuard<Self>) -> AsyncDropGuard<FsBlob<B>> {
         this.unsafe_into_inner_dont_drop().blob
     }
 }
 
 #[async_trait]
-impl<'a, B> AsyncDrop for CreatedDirBlob<'a, B>
+impl<B> AsyncDrop for CreatedDirBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 
@@ -85,12 +85,12 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedDirBlob<'a, B>> for BlobReferenceWithId
+impl<B> From<&CreatedDirBlob<B>> for BlobReferenceWithId
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    fn from(blob: &CreatedDirBlob<'a, B>) -> Self {
+    fn from(blob: &CreatedDirBlob<B>) -> Self {
         Self {
             blob_id: blob.blob.blob_id(),
             referenced_as: BlobReference {
@@ -103,43 +103,43 @@ where
 }
 
 #[derive(Debug)]
-pub struct CreatedFileBlob<'a, B>
+pub struct CreatedFileBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    blob: AsyncDropGuard<FsBlob<'a, B>>,
+    blob: AsyncDropGuard<FsBlob<B>>,
     path: AbsolutePathBuf,
 }
 
-impl<'a, B> CreatedFileBlob<'a, B>
+impl<B> CreatedFileBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub fn new(blob: AsyncDropGuard<FsBlob<'a, B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
+    pub fn new(blob: AsyncDropGuard<FsBlob<B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { blob, path })
     }
 
-    pub fn file_blob(&self) -> &FileBlob<'a, B> {
+    pub fn file_blob(&self) -> &FileBlob<B> {
         self.blob
             .as_file()
             .expect("We just created this file blob and now it is a different type")
     }
 
-    pub fn file_blob_mut(&mut self) -> &mut FileBlob<'a, B> {
+    pub fn file_blob_mut(&mut self) -> &mut FileBlob<B> {
         self.blob
             .as_file_mut()
             .expect("We just created this file blob and now it is a different type")
     }
 }
 
-impl<'a, B> From<&CreatedFileBlob<'a, B>> for BlobReferenceWithId
+impl<B> From<&CreatedFileBlob<B>> for BlobReferenceWithId
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    fn from(blob: &CreatedFileBlob<'a, B>) -> Self {
+    fn from(blob: &CreatedFileBlob<B>) -> Self {
         Self {
             blob_id: blob.blob.blob_id(),
             referenced_as: BlobReference {
@@ -152,10 +152,10 @@ where
 }
 
 #[async_trait]
-impl<'a, B> AsyncDrop for CreatedFileBlob<'a, B>
+impl<B> AsyncDrop for CreatedFileBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 
@@ -165,31 +165,31 @@ where
 }
 
 #[derive(Debug)]
-pub struct CreatedSymlinkBlob<'a, B>
+pub struct CreatedSymlinkBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    blob: AsyncDropGuard<FsBlob<'a, B>>,
+    blob: AsyncDropGuard<FsBlob<B>>,
     path: AbsolutePathBuf,
 }
 
-impl<'a, B> CreatedSymlinkBlob<'a, B>
+impl<B> CreatedSymlinkBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub fn new(blob: AsyncDropGuard<FsBlob<'a, B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
+    pub fn new(blob: AsyncDropGuard<FsBlob<B>>, path: AbsolutePathBuf) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { blob, path })
     }
 
-    pub fn symlink_blob(&self) -> &SymlinkBlob<'a, B> {
+    pub fn symlink_blob(&self) -> &SymlinkBlob<B> {
         self.blob
             .as_symlink()
             .expect("We just created this symlink blob and now it is a different type")
     }
 
-    pub fn symlink_blob_mut(&mut self) -> &mut SymlinkBlob<'a, B> {
+    pub fn symlink_blob_mut(&mut self) -> &mut SymlinkBlob<B> {
         self.blob
             .as_symlink_mut()
             .expect("We just created this symlink blob and now it is a different type")
@@ -197,10 +197,10 @@ where
 }
 
 #[async_trait]
-impl<'a, B> AsyncDrop for CreatedSymlinkBlob<'a, B>
+impl<B> AsyncDrop for CreatedSymlinkBlob<B>
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
 
@@ -209,12 +209,12 @@ where
     }
 }
 
-impl<'a, B> From<&CreatedSymlinkBlob<'a, B>> for BlobReferenceWithId
+impl<B> From<&CreatedSymlinkBlob<B>> for BlobReferenceWithId
 where
     B: BlobStore + Debug + 'static,
-    for<'b> <B as BlobStore>::ConcreteBlob<'b>: Send,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    fn from(blob: &CreatedSymlinkBlob<'a, B>) -> Self {
+    fn from(blob: &CreatedSymlinkBlob<B>) -> Self {
         Self {
             blob_id: blob.blob.blob_id(),
             referenced_as: BlobReference {
@@ -232,23 +232,25 @@ pub fn large_symlink_target() -> String {
         .join("/")
 }
 
-pub async fn load_blob<'b, B>(
-    fsblobstore: &'b FsBlobStore<B>,
+pub async fn load_blob<B>(
+    fsblobstore: &FsBlobStore<B>,
     blob_id: &BlobId,
-) -> AsyncDropGuard<FsBlob<'b, B>>
+) -> AsyncDropGuard<FsBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     fsblobstore.load(blob_id).await.unwrap().unwrap()
 }
 
-pub async fn create_empty_dir<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_empty_dir<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
-) -> AsyncDropGuard<CreatedDirBlob<'b, B>>
+) -> AsyncDropGuard<CreatedDirBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
@@ -259,9 +261,10 @@ where
     CreatedDirBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
-pub fn add_dir_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
+pub fn add_dir_entry<B>(parent: &mut DirBlob<B>, name: &str, blob_id: BlobId)
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + 'static,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     parent
         .add_entry_dir(
@@ -276,13 +279,14 @@ where
         .unwrap();
 }
 
-pub async fn create_empty_file<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_empty_file<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
-) -> AsyncDropGuard<CreatedFileBlob<'b, B>>
+) -> AsyncDropGuard<CreatedFileBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
@@ -293,9 +297,10 @@ where
     CreatedFileBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
-pub fn add_file_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
+pub fn add_file_entry<B>(parent: &mut DirBlob<B>, name: &str, blob_id: BlobId)
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + 'static,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     parent
         .add_entry_file(
@@ -310,14 +315,15 @@ where
         .unwrap();
 }
 
-pub async fn create_symlink<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_symlink<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
     target: &str,
-) -> AsyncDropGuard<CreatedSymlinkBlob<'b, B>>
+) -> AsyncDropGuard<CreatedSymlinkBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
@@ -328,9 +334,10 @@ where
     CreatedSymlinkBlob::new(new_entry, parent.path.join(name.try_into().unwrap()))
 }
 
-pub fn add_symlink_entry<'a, 'c, B>(parent: &'a mut DirBlob<'c, B>, name: &str, blob_id: BlobId)
+pub fn add_symlink_entry<B>(parent: &mut DirBlob<B>, name: &str, blob_id: BlobId)
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + 'static,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     parent
         .add_entry_symlink(
@@ -344,13 +351,14 @@ where
         .unwrap();
 }
 
-pub async fn create_large_file<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_large_file<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
-) -> AsyncDropGuard<CreatedFileBlob<'b, B>>
+) -> AsyncDropGuard<CreatedFileBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut blob = create_empty_file(fsblobstore, parent, name).await;
     let file = blob.file_blob_mut();
@@ -364,13 +372,14 @@ where
     blob
 }
 
-pub async fn create_large_symlink<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_large_symlink<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
-) -> AsyncDropGuard<CreatedSymlinkBlob<'b, B>>
+) -> AsyncDropGuard<CreatedSymlinkBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let target = large_symlink_target();
     let mut blob = create_symlink(fsblobstore, parent, name, &target).await;
@@ -382,13 +391,14 @@ where
     blob
 }
 
-pub async fn create_large_dir<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_large_dir<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
-) -> AsyncDropGuard<CreatedDirBlob<'b, B>>
+) -> AsyncDropGuard<CreatedDirBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut dir = create_empty_dir(fsblobstore, parent, name).await;
     add_entries_to_make_dir_large(fsblobstore, &mut dir).await;
@@ -397,9 +407,10 @@ where
 
 pub async fn add_entries_to_make_dir_large<B>(
     fsblobstore: &FsBlobStore<B>,
-    dir: &mut CreatedDirBlob<'_, B>,
+    dir: &mut CreatedDirBlob<B>,
 ) where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     for i in 0..125 {
         create_empty_dir(fsblobstore, dir, &format!("dir{i}"))
@@ -429,14 +440,15 @@ pub async fn add_entries_to_make_dir_large<B>(
     );
 }
 
-pub async fn create_large_dir_with_large_entries<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    parent: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_large_dir_with_large_entries<B>(
+    fsblobstore: &FsBlobStore<B>,
+    parent: &mut CreatedDirBlob<B>,
     name: &str,
     levels: usize,
-) -> AsyncDropGuard<CreatedDirBlob<'b, B>>
+) -> AsyncDropGuard<CreatedDirBlob<B>>
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut dir = create_large_dir(fsblobstore, parent, name).await;
 
@@ -497,12 +509,13 @@ pub struct SomeBlobs {
     pub empty_symlink: BlobReferenceWithId,
 }
 
-pub async fn create_some_blobs<'a, 'b, 'c, B>(
-    fsblobstore: &'b FsBlobStore<B>,
-    root: &'a mut CreatedDirBlob<'c, B>,
+pub async fn create_some_blobs<B>(
+    fsblobstore: &FsBlobStore<B>,
+    root: &mut CreatedDirBlob<B>,
 ) -> SomeBlobs
 where
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     let mut dir1 = create_empty_dir(fsblobstore, root, "somedir1").await;
     let mut dir2 = create_empty_dir(fsblobstore, root, "somedir2").await;
@@ -927,6 +940,7 @@ pub fn get_descendants_of_dir_blob<'a, 'r, B>(
 where
     'a: 'r,
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     Box::pin(
         async move {
@@ -965,6 +979,7 @@ pub fn get_descendants_if_dir_blob<'a, 'r, B>(
 where
     'a: 'r,
     B: BlobStore + Debug + AsyncDrop<Error = anyhow::Error> + Send + Sync,
+    <B as BlobStore>::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
     Box::pin(
         async move {

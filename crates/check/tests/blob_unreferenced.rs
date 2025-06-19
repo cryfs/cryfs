@@ -6,7 +6,7 @@ use std::iter;
 use std::num::NonZeroU8;
 use std::time::SystemTime;
 
-use cryfs_blobstore::BlobId;
+use cryfs_blobstore::{BlobId, BlobOnBlocks, DataTree};
 use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeUnreferencedError};
 use cryfs_filesystem::{
     filesystem::fsblobstore::FsBlob,
@@ -71,12 +71,11 @@ fn make_large_file_blob(
                     let blob_id = file.blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            FsBlob::into_raw(blob)
-                                .await
-                                .unwrap()
-                                .into_data_tree()
-                                .into_root_node()
-                                .depth(),
+                            DataTree::into_root_node(BlobOnBlocks::into_data_tree(
+                                FsBlob::into_raw(blob).await.unwrap(),
+                            ))
+                            .await
+                            .depth(),
                         )
                         .unwrap(),
                     };
@@ -132,12 +131,11 @@ fn make_large_dir_blob(
                     let blob_id = dir_blob.blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            FsBlob::into_raw(blob)
-                                .await
-                                .unwrap()
-                                .into_data_tree()
-                                .into_root_node()
-                                .depth(),
+                            DataTree::into_root_node(BlobOnBlocks::into_data_tree(
+                                FsBlob::into_raw(blob).await.unwrap(),
+                            ))
+                            .await
+                            .depth(),
                         )
                         .unwrap(),
                     };
@@ -172,12 +170,13 @@ fn make_dir_blob_with_children(
                     let blob_id = dir_blob.blob().blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            FsBlob::into_raw(CreatedDirBlob::into_blob(dir_blob))
-                                .await
-                                .unwrap()
-                                .into_data_tree()
-                                .into_root_node()
-                                .depth(),
+                            DataTree::into_root_node(BlobOnBlocks::into_data_tree(
+                                FsBlob::into_raw(CreatedDirBlob::into_blob(dir_blob))
+                                    .await
+                                    .unwrap(),
+                            ))
+                            .await
+                            .depth(),
                         )
                         .unwrap(),
                     };
@@ -230,12 +229,11 @@ fn make_large_symlink_blob(
                     let blob_id = symlink.blob_id();
                     let node_info = NodeInfoAsSeenByLookingAtNode::InnerNode {
                         depth: NonZeroU8::new(
-                            FsBlob::into_raw(blob)
-                                .await
-                                .unwrap()
-                                .into_data_tree()
-                                .into_root_node()
-                                .depth(),
+                            DataTree::into_root_node(BlobOnBlocks::into_data_tree(
+                                FsBlob::into_raw(blob).await.unwrap(),
+                            ))
+                            .await
+                            .depth(),
                         )
                         .unwrap(),
                     };
