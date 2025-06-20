@@ -60,7 +60,10 @@ where
         }))
     }
 
-    pub async fn create_root_dir_blob(blobstore: &B, root_blob_id: &BlobId) -> Result<()> {
+    pub async fn create_root_dir_blob(
+        blobstore: &B,
+        root_blob_id: &BlobId,
+    ) -> Result<AsyncDropGuard<DirBlob<B>>> {
         let mut blob = BaseBlob::try_create_with_id(
             root_blob_id,
             blobstore,
@@ -70,11 +73,11 @@ where
         )
         .await?
         .ok_or_else(|| anyhow!("Root blob {:?} already exists", root_blob_id))?;
-        with_async_drop_2!(blob, {
-            blob.flush().await // Don't cache, but directly write the root blob (this causes it to fail early if the base directory is not accessible)
-        })
-        .unwrap(); // TODO no unwrap
-        Ok(())
+        blob.flush().await?; // Don't cache, but directly write the root blob (this    causes it to fail early if the base directory is not accessible)
+        Ok(AsyncDropGuard::new(Self {
+            blob,
+            entries: DirEntryList::empty(),
+        }))
     }
 
     // TODO DoubleEndedIterator + FusedIterator

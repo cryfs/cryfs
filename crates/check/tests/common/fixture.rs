@@ -71,13 +71,11 @@ impl FilesystemFixture {
 
     async fn create_root_dir_blob(&self) {
         let mut fsblobstore = self.make_fsblobstore().await;
-        fsblobstore
+        let mut blob = fsblobstore
             .create_root_dir_blob(&self.root_blob_id)
             .await
-            .expect("Failed to create rootdir blob")
-            .async_drop()
-            .await
-            .unwrap();
+            .expect("Failed to create rootdir blob");
+        blob.async_drop().await.unwrap();
         fsblobstore.async_drop().await.unwrap();
     }
 

@@ -1,11 +1,13 @@
 use cryfs_utils::with_async_drop_2;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::time::SystemTime;
 use tokio::join;
 use tokio::sync::OnceCell;
 
 use super::fsblobstore::{DIR_LSTAT_SIZE, DirBlob, DirEntry, EntryType, FileBlob, FsBlob};
-use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
+use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use crate::filesystem::fsblobstore::BlobType;
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
@@ -21,6 +23,9 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 //      unnecessary, because I think fuser already implements this check? But need to verify that they do, and
 //      even if they do, maybe it's better to check ourselves as well and not fully trust fuser because it could
 //      break file system consistency when broken?
+
+// TODO Now that we have ConcurrentFsBlobStore, it's safe to have each NodeInfo store a reference to its parent.
+//      We should do that instead of looking up parent blobs again when operations need it.
 
 #[derive(Debug, Clone, Copy)]
 pub struct BlobDetails {
@@ -67,19 +72,19 @@ pub enum NodeInfo {
     },
 }
 
-pub enum LoadParentBlobResult<'a, B>
+#[allow(async_fn_in_trait)]
+pub trait CallbackWithParentBlob<B, R>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    IsRootDir {
-        root_blob: BlobId,
-    },
-    IsNotRootDir {
-        parent_blob: AsyncDropGuard<FsBlob<B>>,
-        name: &'a PathComponent,
-        blob_details: &'a BlobDetails,
-    },
+    async fn on_is_rootdir(self, root_blob: BlobId) -> FsResult<R>;
+    async fn on_is_not_rootdir<'a, 'b, 'c>(
+        self,
+        parent_blob: &'a mut DirBlob<B>,
+        name: &'b PathComponent,
+        blob_details: &'c BlobDetails,
+    ) -> FsResult<R>;
 }
 
 impl NodeInfo {
@@ -107,10 +112,10 @@ impl NodeInfo {
         }
     }
 
-    async fn _load_parent_blob<B>(
-        blobstore: &FsBlobStore<B>,
+    async fn _load_parent_blob<'a, B>(
+        blobstore: &'a ConcurrentFsBlobStore<B>,
         parent_blob_id: &BlobId,
-    ) -> FsResult<AsyncDropGuard<FsBlob<B>>>
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<'a, B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -130,10 +135,11 @@ impl NodeInfo {
             })
     }
 
-    pub async fn load_parent_blob<'a, 'b, B>(
+    pub async fn with_parent_blob<'a, 'b, 'c, B, R>(
         &'a self,
-        blobstore: &'b FsBlobStore<B>,
-    ) -> FsResult<LoadParentBlobResult<'a, B>>
+        blobstore: &'b ConcurrentFsBlobStore<B>,
+        callback: impl CallbackWithParentBlob<B, R>,
+    ) -> FsResult<R>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -142,9 +148,7 @@ impl NodeInfo {
             Self::IsRootDir {
                 root_blob_id,
                 atime_update_behavior: _,
-            } => Ok(LoadParentBlobResult::IsRootDir {
-                root_blob: *root_blob_id,
-            }),
+            } => callback.on_is_rootdir(*root_blob_id).await,
             Self::IsNotRootDir {
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
@@ -158,39 +162,29 @@ impl NodeInfo {
                 let parent_blob_id = ancestors.last().unwrap();
 
                 let mut parent_blob = Self::_load_parent_blob(blobstore, parent_blob_id).await?;
-                let parent_blob_dir = match parent_blob
-                    .as_dir()
-                    .map_err(|_| FsError::NodeIsNotADirectory)
-                {
-                    Ok(parent_blob) => parent_blob,
-                    Err(err) => {
-                        parent_blob.async_drop().await?;
-                        return Err(err);
-                    }
-                };
+                let result = parent_blob
+                    .with_lock(async |parent_blob| {
+                        let parent_blob_dir = parent_blob
+                            .as_dir_mut()
+                            .map_err(|_| FsError::NodeIsNotADirectory)?;
 
-                // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
-                let blob_details = blob_details
-                    .get_or_try_init(async || get_blob_details(parent_blob_dir, name))
+                        // Also store any information we have into self.blob_details so we don't have to load the parent blob again if blob_details get queried later
+                        let blob_details = blob_details
+                            .get_or_try_init(async || get_blob_details(parent_blob_dir, name))
+                            .await?;
+
+                        callback
+                            .on_is_not_rootdir(parent_blob_dir, name, blob_details)
+                            .await
+                    })
                     .await;
-                let blob_details = match blob_details {
-                    Ok(blob_details) => Ok(blob_details),
-                    Err(err) => {
-                        parent_blob.async_drop().await?;
-                        Err(err)
-                    }
-                }?;
-
-                Ok(LoadParentBlobResult::IsNotRootDir {
-                    parent_blob,
-                    name,
-                    blob_details,
-                })
+                parent_blob.async_drop().await?;
+                result
             }
         }
     }
 
-    pub async fn blob_id<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobId>
+    pub async fn blob_id<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<BlobId>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -215,7 +209,10 @@ impl NodeInfo {
     }
 
     #[cfg(feature = "ancestor_checks_on_move")]
-    pub async fn ancestors_and_self<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain>
+    pub async fn ancestors_and_self<B>(
+        &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
+    ) -> FsResult<AncestorChain>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -242,7 +239,7 @@ impl NodeInfo {
         Ok(AncestorChain::new(self.blob_id(&blobstore).await?))
     }
 
-    pub async fn node_type<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobType>
+    pub async fn node_type<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<BlobType>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -252,7 +249,10 @@ impl NodeInfo {
             .map(|blob_details| blob_details.blob_type)
     }
 
-    pub async fn blob_details<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<BlobDetails>
+    pub async fn blob_details<B>(
+        &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
+    ) -> FsResult<BlobDetails>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -282,10 +282,14 @@ impl NodeInfo {
                         let parent_blob =
                             Self::_load_parent_blob(blobstore, parent_blob_id).await?;
                         with_async_drop_2!(parent_blob, {
-                            let mut parent_blob = parent_blob
-                                .as_dir()
-                                .map_err(|_| FsError::NodeIsNotADirectory)?;
-                            get_blob_details(&mut parent_blob, name)
+                            parent_blob
+                                .with_lock(async |parent_blob| {
+                                    let parent_blob = parent_blob
+                                        .as_dir()
+                                        .map_err(|_| FsError::NodeIsNotADirectory)?;
+                                    get_blob_details(parent_blob, name)
+                                })
+                                .await
                         })
                     })
                     .await?)
@@ -293,10 +297,10 @@ impl NodeInfo {
         }
     }
 
-    pub async fn load_blob<B>(
+    pub async fn load_blob<'a, B>(
         &self,
-        blobstore: &FsBlobStore<B>,
-    ) -> FsResult<AsyncDropGuard<FsBlob<B>>>
+        blobstore: &'a ConcurrentFsBlobStore<B>,
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<'a, B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -331,13 +335,14 @@ impl NodeInfo {
         })
     }
 
-    async fn load_lstat_size<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NumBytes>
+    async fn load_lstat_size<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NumBytes>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
         let mut blob = self.load_blob(blobstore).await?;
-        let result = match blob.lstat_size().await {
+        let lstat_size = blob.with_lock(async |blob| blob.lstat_size().await).await;
+        let result = match lstat_size {
             // TODO Return NumBytes from blob.lstat_size() instead of converting it here
             Ok(size) => Ok(NumBytes::from(size)),
             Err(err) => {
@@ -349,13 +354,25 @@ impl NodeInfo {
         result
     }
 
-    pub async fn getattr<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<NodeAttrs>
+    pub async fn getattr<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NodeAttrs>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
-        match self.load_parent_blob(blobstore).await? {
-            LoadParentBlobResult::IsRootDir { .. } => {
+        struct Callback<'d, 'e, B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            this: &'d NodeInfo,
+            blobstore: &'e ConcurrentFsBlobStore<B>,
+        }
+        impl<'d, 'e, B> CallbackWithParentBlob<B, NodeAttrs> for Callback<'d, 'e, B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            async fn on_is_rootdir(self, _root_blob: BlobId) -> FsResult<NodeAttrs> {
                 // We're the root dir
                 // TODO What should we do here?
                 let now = SystemTime::now();
@@ -379,24 +396,35 @@ impl NodeInfo {
                     ctime: now,
                 })
             }
-            LoadParentBlobResult::IsNotRootDir {
-                name, parent_blob, ..
-            } => with_async_drop_2!(parent_blob, {
-                let parent_blob_dir = parent_blob
-                    .as_dir()
-                    .map_err(|_| FsError::NodeIsNotADirectory)?;
-                let lstat_size = self.load_lstat_size(blobstore).await?;
-                let entry = parent_blob_dir
+
+            async fn on_is_not_rootdir<'a, 'b, 'c>(
+                self,
+                parent_blob: &'a mut DirBlob<B>,
+                name: &'b PathComponent,
+                _blob_details: &'c BlobDetails,
+            ) -> FsResult<NodeAttrs> {
+                let lstat_size = self.this.load_lstat_size(self.blobstore).await?;
+                let entry = parent_blob
                     .entry_by_name(name)
                     .ok_or_else(|| FsError::NodeDoesNotExist)?;
-                Ok(dir_entry_to_node_attrs(entry, lstat_size))
-            }),
+                let r = Ok(dir_entry_to_node_attrs(entry, lstat_size));
+                r
+            }
         }
+
+        self.with_parent_blob(
+            blobstore,
+            Callback {
+                blobstore,
+                this: self,
+            },
+        )
+        .await
     }
 
     pub async fn setattr<B>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
         mode: Option<Mode>,
         uid: Option<cryfs_rustfs::Uid>,
         gid: Option<cryfs_rustfs::Gid>,
@@ -415,60 +443,94 @@ impl NodeInfo {
         if let Some(size) = size {
             self.truncate_file(blobstore, size).await?;
         }
-        match self.load_parent_blob(blobstore).await? {
-            LoadParentBlobResult::IsRootDir { .. } => {
+        struct Callback<'d, 'e, B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            this: &'d NodeInfo,
+            blobstore: &'e ConcurrentFsBlobStore<B>,
+            mode: Option<Mode>,
+            uid: Option<cryfs_rustfs::Uid>,
+            gid: Option<cryfs_rustfs::Gid>,
+            atime: Option<SystemTime>,
+            mtime: Option<SystemTime>,
+            size: Option<NumBytes>,
+        }
+        impl<'d, 'e, B> CallbackWithParentBlob<B, NodeAttrs> for Callback<'d, 'e, B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            async fn on_is_rootdir(self, _root_blob: BlobId) -> FsResult<NodeAttrs> {
                 // We're the root dir
                 // TODO What should we do here?
                 Err(FsError::InvalidOperation)
             }
-            LoadParentBlobResult::IsNotRootDir {
-                name,
-                mut parent_blob,
-                ..
-            } => with_async_drop_2!(parent_blob, {
-                let parent_blob = parent_blob
-                    .as_dir_mut()
-                    .map_err(|_| FsError::NodeIsNotADirectory)?;
+
+            async fn on_is_not_rootdir<'a, 'b, 'c>(
+                self,
+                parent_blob: &'a mut DirBlob<B>,
+                name: &'b PathComponent,
+                _blob_details: &'c BlobDetails,
+            ) -> FsResult<NodeAttrs> {
                 // TODO No Mode/Uid/Gid conversion
-                let mode = mode.map(|mode| fs_types::Mode::from(u32::from(mode)));
-                let uid = uid.map(|uid| fs_types::Uid::from(u32::from(uid)));
-                let gid = gid.map(|gid| fs_types::Gid::from(u32::from(gid)));
-                let lstat_size = self.load_lstat_size(blobstore).await?;
+                let mode = self.mode.map(|mode| fs_types::Mode::from(u32::from(mode)));
+                let uid = self.uid.map(|uid| fs_types::Uid::from(u32::from(uid)));
+                let gid = self.gid.map(|gid| fs_types::Gid::from(u32::from(gid)));
+                let lstat_size = self.this.load_lstat_size(self.blobstore).await?;
                 // TODO Don't look up the entry by name twice when we have attrs and size.is_some(). Looking it up once should be enough.
                 let result = parent_blob
-                    .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime)
+                    .set_attr_of_entry_by_name(name, mode, uid, gid, self.atime, self.mtime)
                     .map(|result| dir_entry_to_node_attrs(result, lstat_size));
                 // Even if other fields are `None` (i.e. we don't run chmod, chown, utime), we still need to update the mtime in a truncate operation
-                if size.is_some() {
+                if self.size.is_some() {
                     parent_blob.update_modification_timestamp_by_name(name)?;
                 }
                 result
-            }),
+            }
         }
+        self.with_parent_blob(
+            blobstore,
+            Callback {
+                this: self,
+                blobstore,
+                mode,
+                uid,
+                gid,
+                atime,
+                mtime,
+                size,
+            },
+        )
+        .await
     }
 
     pub async fn truncate_file<B>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
         new_size: NumBytes,
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
-        let mut blob = self.load_blob(blobstore).await?;
+        let blob = self.load_blob(blobstore).await?;
         with_async_drop_2!(blob, {
-            let file = Self::as_file_mut(&mut blob)?;
-            file.resize(new_size.into()).await.map_err(|err| {
-                log::error!("Error resizing file blob: {err:?}");
-                FsError::UnknownError
+            blob.with_lock(async |mut blob| {
+                let file = Self::as_file_mut(&mut blob)?;
+                file.resize(new_size.into()).await.map_err(|err| {
+                    log::error!("Error resizing file blob: {err:?}");
+                    FsError::UnknownError
+                })
             })
+            .await
         })
     }
 
     pub async fn concurrently_maybe_update_access_timestamp_in_parent<B, F>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
         concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
     ) -> FsResult<F>
     where
@@ -485,7 +547,7 @@ impl NodeInfo {
 
     pub async fn concurrently_update_modification_timestamp_in_parent<B, F>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
         concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
     ) -> FsResult<F>
     where
@@ -502,7 +564,7 @@ impl NodeInfo {
 
     pub async fn maybe_update_access_timestamp_in_parent<B>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> FsResult<()>
     where
@@ -517,7 +579,7 @@ impl NodeInfo {
 
     pub async fn update_modification_timestamp_in_parent<B>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
     ) -> FsResult<()>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -531,7 +593,7 @@ impl NodeInfo {
 
     async fn _update_in_parent<B>(
         &self,
-        blobstore: &FsBlobStore<B>,
+        blobstore: &ConcurrentFsBlobStore<B>,
         update_fn: impl FnOnce(&mut DirBlob<B>, &BlobId) -> FsResult<()>,
     ) -> FsResult<()>
     where
@@ -542,24 +604,45 @@ impl NodeInfo {
         //      but if not possible, the least we can do is remember the current atime in BlobDetails on the first load before calling into here,
         //      and decide if we need to update the timestamp based on that before loading the parent blob. Avoiding a load when it doesn't need to be updated.
         //      Or at the very least, short circuit noatime to not load the parent blob.
-        let parent = self.load_parent_blob(blobstore).await?;
-        match parent {
-            LoadParentBlobResult::IsRootDir { .. } => {
-                //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
-            }
-            LoadParentBlobResult::IsNotRootDir {
-                name: _,
-                mut parent_blob,
-                blob_details,
-            } => with_async_drop_2!(parent_blob, {
-                let parent_blob = parent_blob
-                    .as_dir_mut()
-                    .map_err(|_| FsError::NodeIsNotADirectory)?;
-                update_fn(parent_blob, &blob_details.blob_id)?;
-                Ok(())
-            })?,
-        }
 
+        struct Callback<B, F>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+            F: FnOnce(&mut DirBlob<B>, &BlobId) -> FsResult<()>,
+        {
+            update_fn: F,
+            _phantom: PhantomData<B>,
+        }
+        impl<B, F> CallbackWithParentBlob<B, ()> for Callback<B, F>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+            F: FnOnce(&mut DirBlob<B>, &BlobId) -> FsResult<()>,
+        {
+            async fn on_is_rootdir(self, _root_blob: BlobId) -> FsResult<()> {
+                // We're the root dir
+                //TODO Instead of doing nothing when we're the root directory, handle timestamps in the root dir correctly (and delete isRootDir() function)
+                Ok(())
+            }
+
+            async fn on_is_not_rootdir<'a, 'b, 'c>(
+                self,
+                parent_blob: &'a mut DirBlob<B>,
+                _name: &'b PathComponent,
+                blob_details: &'c BlobDetails,
+            ) -> FsResult<()> {
+                (self.update_fn)(parent_blob, &blob_details.blob_id)
+            }
+        }
+        self.with_parent_blob(
+            blobstore,
+            Callback {
+                update_fn,
+                _phantom: PhantomData,
+            },
+        )
+        .await?;
         Ok(())
     }
 

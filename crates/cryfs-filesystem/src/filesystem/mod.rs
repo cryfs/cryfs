@@ -1,4 +1,5 @@
 // TODO Make private
+pub mod concurrentfsblobstore;
 pub mod fsblobstore;
 
 mod device;

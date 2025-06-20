@@ -1,10 +1,11 @@
 use async_trait::async_trait;
+use cryfs_rustfs::PathComponent;
 use futures::join;
-use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::SystemTime;
+use std::{fmt::Debug, marker::PhantomData};
 
-use cryfs_blobstore::BlobStore;
+use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
     FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::OpenFile,
 };
@@ -14,8 +15,13 @@ use cryfs_utils::{
     with_async_drop_2,
 };
 
-use super::node_info::{LoadParentBlobResult, NodeInfo};
-use crate::filesystem::fsblobstore::{FileBlob, FsBlob, FsBlobStore};
+use super::node_info::NodeInfo;
+use crate::filesystem::fsblobstore::DirBlob;
+use crate::filesystem::node_info::{BlobDetails, CallbackWithParentBlob};
+use crate::filesystem::{
+    concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore},
+    fsblobstore::{FileBlob, FsBlob},
+};
 
 // TODO Make sure we don't keep a lock on the file blob, or keep the lock in an Arc that is shared between all File, Node and OpenFile instances of the same file
 
@@ -24,7 +30,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
     node_info: Arc<NodeInfo>,
 }
 
@@ -34,7 +40,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
         node_info: Arc<NodeInfo>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
@@ -43,7 +49,7 @@ where
         })
     }
 
-    async fn load_blob<'a>(&self) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
+    async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 
@@ -62,78 +68,109 @@ where
     }
 
     async fn flush_file_contents(&self) -> FsResult<()> {
-        let mut blob = self.load_blob().await?;
+        let blob = self.load_blob().await?;
         with_async_drop_2!(blob, {
-            let file = Self::as_file_mut(&mut blob).map_err(|err| {
-                log::error!("Failed to cast blob to FileBlob: {err:?}");
-                FsError::UnknownError
-            })?;
-            // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
-            file.flush().await.map_err(|err| {
-                log::error!("Failed to fsync blob: {err:?}");
-                FsError::UnknownError
-            })?;
+            blob.with_lock(async |mut blob| {
+                let file = Self::as_file_mut(&mut blob).map_err(|err| {
+                    log::error!("Failed to cast blob to FileBlob: {err:?}");
+                    FsError::UnknownError
+                })?;
+                // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
+                file.flush().await.map_err(|err| {
+                    log::error!("Failed to fsync blob: {err:?}");
+                    FsError::UnknownError
+                })?;
 
-            Ok(())
+                Ok(())
+            })
+            .await
         })
     }
 
     async fn flush_metadata(&self) -> FsResult<()> {
-        match self.node_info.load_parent_blob(&self.blobstore).await? {
-            LoadParentBlobResult::IsRootDir { .. } => {
+        struct Callback<B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            _phantom: PhantomData<B>,
+        }
+        impl<B> CallbackWithParentBlob<B, ()> for Callback<B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            async fn on_is_rootdir(self, _root_blob: BlobId) -> FsResult<()> {
                 panic!("A file can't be the root dir");
             }
-            LoadParentBlobResult::IsNotRootDir {
-                mut parent_blob, ..
-            } => with_async_drop_2!(parent_blob, {
-                let parent_blob = parent_blob
-                    .as_dir_mut()
-                    .expect("Parent blob should be loaded here");
+
+            async fn on_is_not_rootdir<'a, 'b, 'c>(
+                self,
+                parent_blob: &'a mut DirBlob<B>,
+                _name: &'b PathComponent,
+                _blob_details: &'c BlobDetails,
+            ) -> FsResult<()> {
                 // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
                 parent_blob.flush().await.map_err(|err| {
                     log::error!("Failed to fsync parent blob: {err:?}");
                     FsError::UnknownError
-                })
-            })?,
+                })?;
+                Ok(())
+            }
         }
+        self.node_info
+            .with_parent_blob(
+                &self.blobstore,
+                Callback {
+                    _phantom: PhantomData,
+                },
+            )
+            .await?;
+
         Ok(())
     }
 
     async fn _read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {
-        let mut blob = self.load_blob().await?;
+        let blob = self.load_blob().await?;
         with_async_drop_2!(blob, {
-            let file = Self::as_file_mut(&mut blob).map_err(|err| {
-                log::error!("Failed to cast blob to FileBlob: {err:?}");
-                FsError::UnknownError
-            })?;
-            // TODO Is it better to have try_read return a Data object instead of a &mut [u8]? Or should we instead make OpenFile::read() take a &mut [u8]?
-            //      The current way of mapping between the two ways of doing it in here is probably not optimal.
-            let mut data: Data = vec![0; u64::from(size) as usize].into();
-            // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
-            let num_read_bytes = file
-                .try_read(&mut data, offset.into())
-                .await
-                .map_err(|err| {
-                    log::error!("Failed to read from blob: {err:?}");
+            blob.with_lock(async |mut blob| {
+                let file = Self::as_file_mut(&mut blob).map_err(|err| {
+                    log::error!("Failed to cast blob to FileBlob: {err:?}");
                     FsError::UnknownError
                 })?;
-            data.shrink_to_subregion(..num_read_bytes);
-            Ok(data)
+                // TODO Is it better to have try_read return a Data object instead of a &mut [u8]? Or should we instead make OpenFile::read() take a &mut [u8]?
+                //      The current way of mapping between the two ways of doing it in here is probably not optimal.
+                let mut data: Data = vec![0; u64::from(size) as usize].into();
+                // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
+                let num_read_bytes =
+                    file.try_read(&mut data, offset.into())
+                        .await
+                        .map_err(|err| {
+                            log::error!("Failed to read from blob: {err:?}");
+                            FsError::UnknownError
+                        })?;
+                data.shrink_to_subregion(..num_read_bytes);
+                Ok(data)
+            })
+            .await
         })
     }
 
     async fn _write(&self, offset: NumBytes, data: Data) -> FsResult<()> {
-        let mut blob = self.load_blob().await?;
+        let blob = self.load_blob().await?;
         with_async_drop_2!(blob, {
-            let file = Self::as_file_mut(&mut blob).map_err(|err| {
-                log::error!("Failed to cast blob to FileBlob: {err:?}");
-                FsError::UnknownError
-            })?;
-            // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
-            file.write(&data, offset.into()).await.map_err(|err| {
-                log::error!("Failed to write to blob: {err:?}");
-                FsError::UnknownError
+            blob.with_lock(async |mut blob| {
+                let file = Self::as_file_mut(&mut blob).map_err(|err| {
+                    log::error!("Failed to cast blob to FileBlob: {err:?}");
+                    FsError::UnknownError
+                })?;
+                // TODO Push down the NumBytes type and use it in blobstore/blockstore interfaces?
+                file.write(&data, offset.into()).await.map_err(|err| {
+                    log::error!("Failed to write to blob: {err:?}");
+                    FsError::UnknownError
+                })
             })
+            .await
         })
     }
 }

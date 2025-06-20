@@ -2,9 +2,11 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+
 use super::{
     device::CryDevice,
-    fsblobstore::{FsBlob, FsBlobStore, SymlinkBlob},
+    fsblobstore::{FsBlob, SymlinkBlob},
     node::CryNode,
     node_info::NodeInfo,
 };
@@ -21,7 +23,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Do we need to store blobstore + node_info here or can we just store the target directly?
-    blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
     node_info: Arc<NodeInfo>,
 }
 
@@ -31,7 +33,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
         node_info: Arc<NodeInfo>,
     ) -> Self {
         Self {
@@ -40,7 +42,7 @@ where
         }
     }
 
-    async fn load_blob(&self) -> FsResult<AsyncDropGuard<FsBlob<B>>> {
+    async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 
@@ -73,16 +75,19 @@ where
     async fn target(&self) -> FsResult<String> {
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
-                let mut blob = self.load_blob().await?;
+                let blob = self.load_blob().await?;
                 with_async_drop_2!(blob, {
-                    let blob = Self::blob_as_symlink_mut(&mut blob)?;
-                    let target = blob.target().await.map_err(|err| {
-                        FsError::CorruptedFilesystem {
-                            // TODO Add to message what it actually is
-                            message: format!("Unparseable symlink blob: {err:?}"),
-                        }
-                    });
-                    Ok(target)
+                    blob.with_lock(async |mut blob| {
+                        let blob = Self::blob_as_symlink_mut(&mut blob)?;
+                        let target = blob.target().await.map_err(|err| {
+                            FsError::CorruptedFilesystem {
+                                // TODO Add to message what it actually is
+                                message: format!("Unparseable symlink blob: {err:?}"),
+                            }
+                        });
+                        Ok(target)
+                    })
+                    .await
                 })?
             })
             .await

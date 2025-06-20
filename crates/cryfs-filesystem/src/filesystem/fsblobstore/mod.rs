@@ -36,8 +36,13 @@ where
         AsyncDropGuard::new(Self { blobstore })
     }
 
-    pub async fn create_root_dir_blob(&self, root_blob_id: &BlobId) -> Result<()> {
-        DirBlob::create_root_dir_blob(&*self.blobstore, root_blob_id).await
+    pub async fn create_root_dir_blob(
+        &self,
+        root_blob_id: &BlobId,
+    ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
+        Ok(AsyncDropGuard::new(FsBlob::Directory(
+            DirBlob::create_root_dir_blob(&*self.blobstore, root_blob_id).await?,
+        )))
     }
 
     pub async fn create_file_blob<'a>(

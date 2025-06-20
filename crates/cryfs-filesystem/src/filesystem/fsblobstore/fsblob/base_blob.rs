@@ -56,7 +56,7 @@ where
         blob_type: layout::BlobType,
         parent: &BlobId,
         data: &[u8],
-    ) -> Result<Option<AsyncDropGuard<<B as BlobStore>::ConcreteBlob>>> {
+    ) -> Result<Option<AsyncDropGuard<BaseBlob<B>>>> {
         let blob_data = create_data_for_new_blob(blob_type, parent, data);
 
         // TODO Directly creating the blob with the data would probably be faster
@@ -71,7 +71,10 @@ where
                 return Err(e);
             }
         }
-        Ok(Some(blob))
+        Ok(Some(AsyncDropGuard::new(Self {
+            blob,
+            header_cache: layout::fsblob_header::View::new(blob_data),
+        })))
     }
 
     pub async fn create(

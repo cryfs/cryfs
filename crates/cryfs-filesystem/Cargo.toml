@@ -1,12 +1,12 @@
 [package]
-name = "cryfs-filesystem"
 authors.workspace = true
 edition.workspace = true
-rust-version.workspace = true
 homepage.workspace = true
-repository.workspace = true
 license.workspace = true
+name = "cryfs-filesystem"
 readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
@@ -15,13 +15,14 @@ async-trait.workspace = true
 atomic-time.workspace = true
 binary-layout.workspace = true
 binrw.workspace = true
-byte-unit = { workspace = true, features = ["serde"] }
-cryfs-blobstore = { path = "../blobstore" }
-cryfs-blockstore = { path = "../blockstore" }
-cryfs-rustfs = { path = "../rustfs", default-features=false }
-cryfs-utils = { path = "../utils" }
-cryfs-version = { path = "../cryfs-version" }
+byte-unit = {workspace = true, features = ["serde"]}
+cryfs-blobstore = {path = "../blobstore"}
+cryfs-blockstore = {path = "../blockstore"}
+cryfs-rustfs = {path = "../rustfs", default-features = false}
+cryfs-utils = {path = "../utils"}
+cryfs-version = {path = "../cryfs-version"}
 derive_more.workspace = true
+derive-where.workspace = true
 futures.workspace = true
 hex.workspace = true
 indicatif.workspace = true
@@ -32,19 +33,19 @@ log.workspace = true
 maybe-owned.workspace = true
 nix = {workspace = true, features = ["user"] }
 rand.workspace = true
-serde = { workspace = true, features = ["derive"] }
+serde = {workspace = true, features = ["derive"]}
 serde_json.workspace = true
-serde_with = { workspace = true, features = ["hex"] }
+serde_with = {workspace = true, features = ["hex"]}
 thiserror.workspace = true
-tokio = { workspace = true, features = ["sync"] }
+tokio = {workspace = true, features = ["sync"]}
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
-cryfs-blobstore = { path = "../blobstore", features = ["testutils"] }
+cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
+tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
 # TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
-lockable = { workspace = true, features = ["slow_assertions"] }
+lockable = {workspace = true, features = ["slow_assertions"]}
 
 [features]
+ancestor_checks_on_move = []
 default = ["ancestor_checks_on_move"]
 testutils = ["cryfs-blobstore/testutils"]
-ancestor_checks_on_move = []

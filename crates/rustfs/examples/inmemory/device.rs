@@ -98,56 +98,63 @@ impl Device for InMemoryDevice {
         Ok(self.rootdir._node())
     }
 
-    async fn rename(&self, from_path: &AbsolutePath, to_path: &AbsolutePath) -> FsResult<()> {
-        // TODO Go through CryNode assertions (C++) and check if we should do them here too,
-        //      - moving a directory into a subdirectory of itself
-        //      - overwriting a directory with a non-directory
-        //      - overwriten a non-empty dir (special case: making a directory into its own ancestor)
-        // TODO No unwrap
-        let Some((new_parent_path, new_name)) = to_path.split_last() else {
-            log::error!("Tried to rename '{from_path}' to the root directory");
-            return Err(FsError::InvalidOperation);
-        };
-        let Some((old_parent_path, old_name)) = from_path.split_last() else {
-            log::error!("Tried to rename the root directory to {to_path}");
-            return Err(FsError::InvalidOperation);
-        };
-        let new_parent = self.rootdir.load_node(new_parent_path)?;
-        with_async_drop_2!(new_parent, {
-            let new_parent = new_parent.as_dir().await?;
-            if old_parent_path == new_parent_path {
-                // We're just renaming it within one directory
-                new_parent.rename(old_name, new_name)
-            } else {
-                let source_parent = self.rootdir.load_node(old_parent_path)?;
-                with_async_drop_2!(source_parent, {
-                    let source_parent = source_parent.as_dir().await?;
-                    // We're moving it to another directory
-                    let (mut source_inode, mut target_inode) =
-                        lock_in_ptr_order(&source_parent.inode(), &new_parent.inode());
-                    let source_entries = source_inode.entries_mut();
-                    let target_entries = target_inode.entries_mut();
-                    if target_entries.contains_key(new_name) {
-                        // TODO Some forms of overwriting are actually ok, we don't need to block them all
-                        Err(FsError::NodeAlreadyExists)
-                    } else {
-                        let old_entry = match source_entries.remove(old_name) {
-                            Some(node) => node,
-                            None => {
-                                return Err(FsError::NodeDoesNotExist);
-                            }
-                        };
-                        // TODO Use try_insert once stable
-                        let insert_result = target_entries.insert(new_name.to_owned(), old_entry);
-                        assert!(
-                            insert_result.is_none(),
-                            "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail."
-                        );
-                        Ok(())
-                    }
-                })
-            }
-        })
+    fn rename(
+        &self,
+        from_path: &AbsolutePath,
+        to_path: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<()>> {
+        async move {
+            // TODO Go through CryNode assertions (C++) and check if we should do them here too,
+            //      - moving a directory into a subdirectory of itself
+            //      - overwriting a directory with a non-directory
+            //      - overwriten a non-empty dir (special case: making a directory into its own ancestor)
+            // TODO No unwrap
+            let Some((new_parent_path, new_name)) = to_path.split_last() else {
+                log::error!("Tried to rename '{from_path}' to the root directory");
+                return Err(FsError::InvalidOperation);
+            };
+            let Some((old_parent_path, old_name)) = from_path.split_last() else {
+                log::error!("Tried to rename the root directory to {to_path}");
+                return Err(FsError::InvalidOperation);
+            };
+            let new_parent = self.rootdir.load_node(new_parent_path)?;
+            with_async_drop_2!(new_parent, {
+                let new_parent = new_parent.as_dir().await?;
+                if old_parent_path == new_parent_path {
+                    // We're just renaming it within one directory
+                    new_parent.rename(old_name, new_name)
+                } else {
+                    let source_parent = self.rootdir.load_node(old_parent_path)?;
+                    with_async_drop_2!(source_parent, {
+                        let source_parent = source_parent.as_dir().await?;
+                        // We're moving it to another directory
+                        let (mut source_inode, mut target_inode) =
+                            lock_in_ptr_order(&source_parent.inode(), &new_parent.inode());
+                        let source_entries = source_inode.entries_mut();
+                        let target_entries = target_inode.entries_mut();
+                        if target_entries.contains_key(new_name) {
+                            // TODO Some forms of overwriting are actually ok, we don't need to block them all
+                            Err(FsError::NodeAlreadyExists)
+                        } else {
+                            let old_entry = match source_entries.remove(old_name) {
+                                Some(node) => node,
+                                None => {
+                                    return Err(FsError::NodeDoesNotExist);
+                                }
+                            };
+                            // TODO Use try_insert once stable
+                            let insert_result =
+                                target_entries.insert(new_name.to_owned(), old_entry);
+                            assert!(
+                                insert_result.is_none(),
+                                "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail."
+                            );
+                            Ok(())
+                        }
+                    })
+                }
+            })
+        }
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {

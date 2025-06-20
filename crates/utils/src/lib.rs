@@ -8,6 +8,7 @@ pub mod concurrent_task;
 pub mod containers;
 pub mod crypto;
 pub mod data;
+pub mod event;
 pub mod mutex;
 mod panic;
 pub mod path;

@@ -25,6 +25,23 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
             v: this.v.as_ref().map(Arc::clone),
         })
     }
+
+    pub fn strong_count(this: &AsyncDropGuard<Self>) -> usize {
+        Arc::strong_count(this.v.as_ref().expect("Already dropped"))
+    }
+
+    pub fn try_unwrap(
+        this: AsyncDropGuard<Self>,
+    ) -> Result<AsyncDropGuard<T>, AsyncDropGuard<Self>> {
+        let v = this
+            .unsafe_into_inner_dont_drop()
+            .v
+            .expect("Already dropped");
+        match Arc::try_unwrap(v) {
+            Ok(v) => Ok(v),
+            Err(v) => Err(AsyncDropGuard::new(Self { v: Some(v) })),
+        }
+    }
 }
 
 #[async_trait]

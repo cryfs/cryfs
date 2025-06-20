@@ -40,6 +40,7 @@ daemonize = "^0.5.0"
 derivative = "^2.2.0"
 derive_more = { version = "^2.0.1", features = ["full"] }
 dialoguer = "^0.12.0"
+derive-where = "^1.5.0"
 dirs = "^6.0.0"
 divrem = "^1.0.0"
 env_logger = "^0.11.8"

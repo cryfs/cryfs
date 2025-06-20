@@ -30,7 +30,12 @@ impl FilesystemCheck for CheckBlobsReadable {
         &mut self,
         blob: BlobToProcess<
             'a,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop<Error=anyhow::Error> + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -53,7 +58,12 @@ impl FilesystemCheck for CheckBlobsReadable {
         &mut self,
         blob: BlobToProcess<
             'a,
-            impl BlockStore<Block: Send + Sync> + AsyncDrop<Error=anyhow::Error> + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         referenced_as: &BlobReference,
     ) -> Result<(), CheckError> {
@@ -63,7 +73,12 @@ impl FilesystemCheck for CheckBlobsReadable {
     fn process_reachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop<Error=anyhow::Error> + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
         _referenced_as: &NodeAndBlobReferenceFromReachableBlob,
     ) -> Result<(), CheckError> {
@@ -74,7 +89,12 @@ impl FilesystemCheck for CheckBlobsReadable {
     fn process_unreachable_node<'a>(
         &mut self,
         _node: &NodeToProcess<
-            impl BlockStore<Block: Send + Sync> + AsyncDrop<Error=anyhow::Error> + Send + Sync + Debug + 'static,
+            impl BlockStore<Block: Send + Sync>
+            + AsyncDrop<Error = anyhow::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         >,
     ) -> Result<(), CheckError> {
         // do nothing

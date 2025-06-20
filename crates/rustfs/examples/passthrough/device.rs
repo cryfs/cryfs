@@ -57,13 +57,19 @@ impl Device for PassthroughDevice {
         Ok(PassthroughNode::new(path))
     }
 
-    async fn rename(&self, from_path: &AbsolutePath, to_path: &AbsolutePath) -> FsResult<()> {
-        // TODO Build AbsolutePathBuf::join(&self, &AbsolutePath) and join_all, which can be more efficient because clone+push likely causes two reallocations.
-        //      Then grep the codebase for the clone().push{_all} pattern and replate it
-        let old_path = self.basedir.clone().push_all(from_path);
-        let new_path = self.basedir.clone().push_all(to_path);
-        tokio::fs::rename(old_path, new_path).await.map_error()?;
-        Ok(())
+    fn rename(
+        &self,
+        from_path: &AbsolutePath,
+        to_path: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<()>> {
+        async move {
+            // TODO Build AbsolutePathBuf::join(&self, &AbsolutePath) and join_all, which can be more efficient because clone+push likely causes two reallocations.
+            //      Then grep the codebase for the clone().push{_all} pattern and replate it
+            let old_path = self.basedir.clone().push_all(from_path);
+            let new_path = self.basedir.clone().push_all(to_path);
+            tokio::fs::rename(old_path, new_path).await.map_error()?;
+            Ok(())
+        }
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {

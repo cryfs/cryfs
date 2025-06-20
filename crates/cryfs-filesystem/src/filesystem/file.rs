@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use super::fsblobstore::FsBlobStore;
+use crate::filesystem::concurrentfsblobstore::ConcurrentFsBlobStore;
+
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{FsResult, OpenFlags, object_based_api::File};
@@ -13,7 +14,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
     node_info: Arc<NodeInfo>,
 }
 
@@ -23,7 +24,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: &'a AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
         node_info: Arc<NodeInfo>,
     ) -> Self {
         Self {

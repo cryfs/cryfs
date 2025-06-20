@@ -1,0 +1,154 @@
+use anyhow::Result;
+use async_trait::async_trait;
+use byte_unit::Byte;
+use cryfs_rustfs::FsError;
+use std::fmt::Debug;
+
+use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    with_async_drop_2,
+};
+
+use crate::filesystem::{
+    concurrentfsblobstore::{ConcurrentFsBlob, loaded_blobs::RequestRemovalResult},
+    fsblobstore::FsBlobStore,
+};
+
+use super::loaded_blobs::LoadedBlobs;
+
+#[derive(Debug)]
+pub struct ConcurrentFsBlobStore<B>
+where
+    // TODO Do we really need B: 'static ?
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+{
+    blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+
+    loaded_blobs: AsyncDropGuard<LoadedBlobs<B>>,
+}
+
+impl<B> ConcurrentFsBlobStore<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+{
+    pub fn new(blobstore: AsyncDropGuard<FsBlobStore<B>>) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
+            blobstore: AsyncDropArc::new(blobstore),
+            loaded_blobs: LoadedBlobs::new(),
+        })
+    }
+
+    pub async fn create_root_dir_blob(&self, root_blob_id: &BlobId) -> Result<()> {
+        let root_blob_id = *root_blob_id;
+        let blobstore = AsyncDropArc::clone(&self.blobstore);
+        self.loaded_blobs
+            .try_insert_with_id(root_blob_id, async move || {
+                with_async_drop_2!(blobstore, {
+                    blobstore.create_root_dir_blob(&root_blob_id).await
+                })
+            })
+            .await
+    }
+
+    pub async fn create_file_blob(
+        &self,
+        parent: &BlobId,
+    ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+        let blob = self.blobstore.create_file_blob(parent).await?;
+        let inserted = self.loaded_blobs.insert_with_new_id(blob);
+        Ok(ConcurrentFsBlob::new(inserted))
+    }
+
+    pub async fn create_dir_blob(
+        &self,
+        parent: &BlobId,
+    ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+        let blob = self.blobstore.create_dir_blob(parent).await?;
+        let inserted = self.loaded_blobs.insert_with_new_id(blob);
+        Ok(ConcurrentFsBlob::new(inserted))
+    }
+
+    pub async fn create_symlink_blob(
+        &self,
+        parent: &BlobId,
+        target: &str,
+    ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+        let blob = self.blobstore.create_symlink_blob(parent, target).await?;
+        let inserted = self.loaded_blobs.insert_with_new_id(blob);
+        Ok(ConcurrentFsBlob::new(inserted))
+    }
+
+    pub async fn load(
+        &self,
+        blob_id: &BlobId,
+    ) -> Result<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>> {
+        let blob_id = *blob_id;
+        let blobstore = AsyncDropArc::clone(&self.blobstore);
+        let loaded_blob = self
+            .loaded_blobs
+            .get_loaded_or_insert_loading(blob_id, blobstore, async move |blobstore| {
+                with_async_drop_2!(blobstore, { blobstore.load(&blob_id).await })
+            })
+            .await?;
+        Ok(loaded_blob.map(ConcurrentFsBlob::new))
+    }
+
+    pub async fn num_blocks(&self) -> Result<u64> {
+        self.blobstore.num_blocks().await
+    }
+
+    pub fn estimate_space_for_num_blocks_left(&self) -> Result<u64> {
+        self.blobstore.estimate_space_for_num_blocks_left()
+    }
+
+    // logical means "space we can use" as opposed to "space it takes on the disk" (i.e. logical is without headers, checksums, ...)
+    pub fn logical_block_size_bytes(&self) -> Byte {
+        self.blobstore.logical_block_size_bytes()
+    }
+
+    pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult> {
+        loop {
+            match self.loaded_blobs.request_removal(*id) {
+                RequestRemovalResult::RemovalRequested { on_removed } => {
+                    // Wait until the blob is removed
+                    on_removed.wait().await; // TODO Is this actually successfully removed? What if it fails? Can we somehow forward this? Maybe using a Shared future instead of an Event?
+                    return Ok(RemoveResult::SuccessfullyRemoved);
+                }
+                RequestRemovalResult::NotLoaded => {
+                    // Blob is not loaded, so we can remove it directly
+                    return self.blobstore.remove_by_id(id).await;
+                }
+                RequestRemovalResult::Dropping { future } => {
+                    // Blob is currently dropping, let's wait until that is done and then retry
+                    future.await;
+                    continue;
+                }
+            }
+        }
+    }
+}
+
+#[async_trait]
+impl<B> AsyncDrop for ConcurrentFsBlobStore<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+{
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        // First drop all loaded blobs
+        self.loaded_blobs
+            .async_drop()
+            .await
+            .map_err(|error| FsError::InternalError { error })?;
+
+        // Then drop the underlying blobstore
+        self.blobstore.async_drop().await?;
+
+        Ok(())
+    }
+}
