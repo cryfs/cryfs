@@ -2,7 +2,7 @@ use anyhow::Result;
 use byte_unit::Byte;
 use dialoguer::{Confirm, Select, console::style, theme::ColorfulTheme};
 use once_cell::unsync::OnceCell;
-use std::path::Path;
+use std::{fmt::Display, path::Path};
 
 use cryfs_filesystem::config::Console;
 use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
@@ -209,7 +209,7 @@ fn ask_multiple_choice<S, T>(
     default: usize,
 ) -> Result<T>
 where
-    S: ToString,
+    S: ToString + Display,
 {
     let (options_str, options_t): (Vec<_>, Vec<_>) = options.unzip();
 
