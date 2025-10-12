@@ -20,7 +20,7 @@ use crate::config::FILESYSTEM_FORMAT_VERSION;
 pub const CRYFS_VERSION: VersionInfo<'static, 'static, &'static str> =
     crate::version::CRYFS_VERSION;
 const MIN_SUPPORTED_FORMAT_VERSION: Version<&'static str> =
-    konst::unwrap_ctx!(Version::parse_const("0.10"));
+    konst::result::unwrap!(Version::parse_const("0.10"));
 const MAX_SUPPORTED_FORMAT_VERSION: Version<&'static str> = FILESYSTEM_FORMAT_VERSION;
 
 #[derive(Error, Debug)]

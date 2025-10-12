@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fmt::{self, Debug, Display, Formatter};
+use std::num::ParseIntError;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Version<P>
@@ -126,8 +127,8 @@ impl<'a> Version<&'a str> {
     }
 
     // TODO Merge this with [Self::parse] once const support is good enough
-    pub const fn parse_const(version: &'a str) -> Result<Self, konst::primitive::ParseIntError> {
-        use konst::{primitive::parse_u32, string};
+    pub const fn parse_const(version: &'a str) -> Result<Self, ParseIntError> {
+        use konst::string;
         let (major_minor_patch, prerelease) = match string::split_once(version, '-') {
             Some((major_minor_patch, prerelease)) => (major_minor_patch, Some(prerelease)),
             None => (version, None),
@@ -141,7 +142,11 @@ impl<'a> Version<&'a str> {
             None => (minor_patch, "0"),
         };
 
-        match (parse_u32(major), parse_u32(minor), parse_u32(patch)) {
+        match (
+            u32::from_str_radix(major, 10),
+            u32::from_str_radix(minor, 10),
+            u32::from_str_radix(patch, 10),
+        ) {
             (Ok(major), Ok(minor), Ok(patch)) => Ok(Self {
                 major,
                 minor,
@@ -274,7 +279,7 @@ mod tests {
 
         #[test]
         fn major_minor_patch_prerelease() {
-            const VERSION: Result<Version<&'static str>, konst::primitive::ParseIntError> =
+            const VERSION: Result<Version<&'static str>, ParseIntError> =
                 Version::parse_const("1.2.3-alpha");
             assert_eq!(
                 Ok(Version {
@@ -289,7 +294,7 @@ mod tests {
 
         #[test]
         fn major_minor_patch() {
-            const VERSION: Result<Version<&'static str>, konst::primitive::ParseIntError> =
+            const VERSION: Result<Version<&'static str>, ParseIntError> =
                 Version::parse_const("1.2.3");
             assert_eq!(
                 Ok(Version {
@@ -304,7 +309,7 @@ mod tests {
 
         #[test]
         fn major_minor() {
-            const VERSION: Result<Version<&'static str>, konst::primitive::ParseIntError> =
+            const VERSION: Result<Version<&'static str>, ParseIntError> =
                 Version::parse_const("1.2");
             assert_eq!(
                 Ok(Version {
@@ -319,8 +324,7 @@ mod tests {
 
         #[test]
         fn major() {
-            const VERSION: Result<Version<&'static str>, konst::primitive::ParseIntError> =
-                Version::parse_const("1");
+            const VERSION: Result<Version<&'static str>, ParseIntError> = Version::parse_const("1");
             assert_eq!(
                 Ok(Version {
                     major: 1,

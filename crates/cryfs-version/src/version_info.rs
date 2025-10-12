@@ -23,7 +23,7 @@ impl<'a, 'b, 'c> VersionInfo<'b, 'c, &'a str> {
         if let Some(gitinfo) = gitinfo {
             match gitinfo.tag_info {
                 Some(tag_info) => {
-                    let git_version = konst::unwrap_ctx!(Version::parse_const(tag_info.tag));
+                    let git_version = konst::result::unwrap!(Version::parse_const(tag_info.tag));
                     if !version.eq_const(&git_version) {
                         panic!(
                             "Version mismatch: The version in the git tag does not match the version in Cargo.toml"

@@ -7,7 +7,7 @@ use cryfs_version::Version;
 use super::filesystem_id::FilesystemId;
 
 pub const FILESYSTEM_FORMAT_VERSION: Version<&'static str> =
-    konst::unwrap_ctx!(Version::parse_const("0.10"));
+    konst::result::unwrap!(Version::parse_const("0.10"));
 
 /// Configuration for a CryFS file system. This is stored in the cryfs.config file.
 /// Note that the `Serialize`, `Deserialize` implementations here are **not** used to (de)serialize the config file. That happens in [super::serialization]

@@ -5,7 +5,7 @@ const OUR_CRATE_PATH: &str = env!("CARGO_MANIFEST_DIR");
 const OUR_GITVERSION: Option<Version<&'static str>> = match cryfs_version::GITINFO {
     None => None,
     Some(gitinfo) => match gitinfo.tag_info {
-        Some(tag_info) => Some(konst::unwrap_ctx!(Version::parse_const(tag_info.tag))),
+        Some(tag_info) => Some(konst::result::unwrap!(Version::parse_const(tag_info.tag))),
         None => None,
     },
 };
