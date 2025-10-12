@@ -1,6 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use nix::sys::{stat::UtimensatFlags, time::TimeSpec};
+use nix::{
+    fcntl::AT_FDCWD,
+    sys::{stat::UtimensatFlags, time::TimeSpec},
+};
 use std::{
     io::SeekFrom,
     os::unix::fs::{MetadataExt, PermissionsExt},
@@ -76,7 +79,7 @@ impl MountingBackend for FuserBackend {
 }
 pub struct FusemtBackend;
 impl MountingBackend for FusemtBackend {
-    type Session = fuse_mt_fuser::BackgroundSession;
+    type Session = fuser::BackgroundSession;
     async fn spawn_mount(
         device: AsyncDropGuard<
             CryDevice<
@@ -408,11 +411,12 @@ where
         open_file: &fs::File,
         mode: Mode,
     ) -> FsResult<()> {
-        let raw_fd = open_file.as_raw_fd();
+        let open_file = open_file.try_clone().await.unwrap();
+
         asyncify(move || {
             let mode = u32::from(mode.remove_file_flag());
             let mode = nix::sys::stat::Mode::from_bits(mode).unwrap();
-            nix::sys::stat::fchmod(raw_fd, mode)
+            nix::sys::stat::fchmod(open_file, mode)
                 .map_err(|error| std::io::Error::from_raw_os_error(error as i32))
         })
         .await
@@ -500,7 +504,7 @@ where
 
         asyncify(move || {
             nix::sys::stat::utimensat(
-                None,
+                AT_FDCWD,
                 &real_path,
                 &atime,
                 &mtime,
@@ -523,7 +527,7 @@ where
     ) -> FsResult<()> {
         let atime = atime.map(to_timespec).unwrap_or(TimeSpec::UTIME_OMIT);
         let mtime = mtime.map(to_timespec).unwrap_or(TimeSpec::UTIME_OMIT);
-        let open_file = open_file.as_raw_fd();
+        let open_file = open_file.try_clone().await.unwrap();
 
         asyncify(move || {
             nix::sys::stat::futimens(open_file, &atime, &mtime)

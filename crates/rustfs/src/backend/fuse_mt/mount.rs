@@ -1,5 +1,5 @@
 use fuse_mt::FuseMT;
-use fuse_mt_fuser::MountOption;
+use fuser::MountOption;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::path::Path;
@@ -54,7 +54,7 @@ where
     let fs = FuseMT::new(backend, num_threads());
 
     // TODO Fuse args (e.g. filesystem name)
-    let session = fuse_mt_fuser::spawn_mount2(fs, mountpoint, mount_options);
+    let session = fuser::spawn_mount2(fs, mountpoint, mount_options);
     let session = match session {
         Ok(session) => {
             std::mem::drop(backend_internal_arc);

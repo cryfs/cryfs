@@ -74,10 +74,12 @@ mod tests {
     use super::super::http_client::FakeHttpClient;
     use super::*;
 
-    const OLDER_VERSION: Version<&'static str> = konst::unwrap_ctx!(Version::parse_const("0.11.0"));
+    const OLDER_VERSION: Version<&'static str> =
+        konst::result::unwrap!(Version::parse_const("0.11.0"));
     const CURRENT_VERSION: Version<&'static str> =
-        konst::unwrap_ctx!(Version::parse_const("1.0.0"));
-    const NEWER_VERSION: Version<&'static str> = konst::unwrap_ctx!(Version::parse_const("1.0.1"));
+        konst::result::unwrap!(Version::parse_const("1.0.0"));
+    const NEWER_VERSION: Version<&'static str> =
+        konst::result::unwrap!(Version::parse_const("1.0.1"));
 
     #[test]
     fn http_error() {

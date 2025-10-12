@@ -5,6 +5,7 @@ use cryfs_rustfs::{
     object_based_api::{Dir, Node},
 };
 use cryfs_utils::async_drop::AsyncDropGuard;
+use nix::fcntl::{AT_FDCWD, AtFlags};
 use std::os::unix::fs::OpenOptionsExt;
 
 use super::device::PassthroughDevice;
@@ -143,11 +144,11 @@ impl Dir for PassthroughDir {
                 // TODO Make this platform independent
                 std::os::unix::fs::symlink(&target, &path_clone).map_error()?;
                 nix::unistd::fchownat(
-                    None,
+                    AT_FDCWD,
                     path_clone.as_str(),
                     Some(nix::unistd::Uid::from_raw(uid.into())),
                     Some(nix::unistd::Gid::from_raw(gid.into())),
-                    nix::unistd::FchownatFlags::NoFollowSymlink,
+                    AtFlags::AT_SYMLINK_NOFOLLOW,
                 )
                 .map_error()?;
                 Ok(())
@@ -190,11 +191,11 @@ impl Dir for PassthroughDir {
                 // TODO Can we compute the Metadata without asking the underlying file system? We just created the file after all.
                 let metadata = open_file.metadata().map_error()?;
                 nix::unistd::fchownat(
-                    None,
+                    AT_FDCWD,
                     path.as_str(),
                     Some(nix::unistd::Uid::from_raw(uid.into())),
                     Some(nix::unistd::Gid::from_raw(gid.into())),
-                    nix::unistd::FchownatFlags::NoFollowSymlink,
+                    AtFlags::AT_SYMLINK_NOFOLLOW,
                 )
                 .map_error()?;
                 Ok((

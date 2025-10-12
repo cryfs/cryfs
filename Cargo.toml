@@ -46,7 +46,6 @@ envtestkit = "^1.1.2"
 errno = "^0.3.11"
 escargot = "^0.5.14"
 fuse_mt = "^0.6.1"
-fuse_mt_fuser = { package = "fuser", version = "^0.16.0" }
 fuser = "^0.16"
 futures = "^0.3.31"
 generic-array = "^1.3"

@@ -24,11 +24,10 @@ cryfs-rustfs = {path = "../rustfs", default-features = false, features = ["fuser
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 derive_more.workspace = true
-fuse_mt_fuser.workspace = true
 fuser.workspace = true
 futures.workspace = true
 libc.workspace = true
-nix.workspace = true
+nix = {workspace = true, features = ["fs"] }
 pretty_assertions.workspace = true
 tempdir.workspace = true
 tokio-util.workspace = true

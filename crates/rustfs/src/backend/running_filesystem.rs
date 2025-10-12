@@ -9,8 +9,8 @@ pub trait BackgroundSession {
     fn is_finished(&self) -> bool;
 }
 
-#[cfg(feature = "fuse_mt")]
-impl BackgroundSession for fuse_mt_fuser::BackgroundSession {
+#[cfg(all(feature = "fuse_mt", not(feature = "fuser")))]
+impl BackgroundSession for fuser::BackgroundSession {
     fn join(self) {
         self.join();
     }

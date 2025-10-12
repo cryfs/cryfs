@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use nix::fcntl::{AT_FDCWD, AtFlags};
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
@@ -40,11 +41,11 @@ impl PassthroughNode {
             .spawn_blocking(move || {
                 // TODO Make this platform independent
                 nix::unistd::fchownat(
-                    None,
+                    AT_FDCWD,
                     path.as_str(),
                     uid,
                     gid,
-                    nix::unistd::FchownatFlags::NoFollowSymlink,
+                    AtFlags::AT_SYMLINK_NOFOLLOW,
                 )
                 .map_error()?;
                 Ok(())
@@ -95,7 +96,7 @@ impl PassthroughNode {
                     }
                 };
                 nix::sys::stat::utimensat(
-                    None,
+                    AT_FDCWD,
                     path.as_str(),
                     &convert_timespec(atime),
                     &convert_timespec(mtime),

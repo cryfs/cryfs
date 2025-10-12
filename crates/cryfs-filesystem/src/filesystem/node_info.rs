@@ -1,3 +1,4 @@
+use nix::unistd::Uid;
 use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::join;
@@ -8,8 +9,8 @@ use crate::filesystem::fsblobstore::{BlobType, FsBlobStore};
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{
-    AtimeUpdateBehavior, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, PathComponent,
-    PathComponentBuf, Uid,
+    AtimeUpdateBehavior, FsError, FsResult, Mode, NodeAttrs, NumBytes, PathComponent,
+    PathComponentBuf,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
@@ -362,7 +363,7 @@ impl NodeInfo {
                         .add_user_write_flag()
                         .add_user_exec_flag(),
                     // TODO Windows doesn't have Uid/Gid, so we need to put something else here
-                    uid: cryfs_rustfs::Uid::from(nix::unistd::Uid::current().as_raw()),
+                    uid: cryfs_rustfs::Uid::from(Uid::current().as_raw()),
                     gid: cryfs_rustfs::Gid::from(nix::unistd::Gid::current().as_raw()),
                     num_bytes: cryfs_rustfs::NumBytes::from(DIR_LSTAT_SIZE),
                     // Setting num_blocks to none means it'll be automatically calculated for us
@@ -395,8 +396,8 @@ impl NodeInfo {
         &self,
         blobstore: &FsBlobStore<B>,
         mode: Option<Mode>,
-        uid: Option<Uid>,
-        gid: Option<Gid>,
+        uid: Option<cryfs_rustfs::Uid>,
+        gid: Option<cryfs_rustfs::Gid>,
         size: Option<NumBytes>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,

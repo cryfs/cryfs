@@ -38,7 +38,7 @@ impl PassthroughOpenFile {
 
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
-                nix::unistd::fchown(open_file.as_fd().as_raw_fd(), uid, gid).map_error()?;
+                nix::unistd::fchown(open_file.as_fd(), uid, gid).map_error()?;
                 Ok(())
             })
             .await
@@ -86,7 +86,7 @@ impl PassthroughOpenFile {
                     }
                 };
                 nix::sys::stat::futimens(
-                    open_file.as_raw_fd(),
+                    open_file,
                     &convert_timespec(atime),
                     &convert_timespec(mtime),
                 )

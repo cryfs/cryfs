@@ -19,7 +19,6 @@ fuse_mt = { workspace = true, optional = true }
 #      7.31 is the newest supported by fuser as of time of writing and was introduced in
 #      Linux Kernel 5.2, see https://github.com/torvalds/linux/blob/v5.2/include/uapi/linux/fuse.h .
 #      But probably make this configurable in the future.
-fuse_mt_fuser = { workspace = true, optional = true, features = ["abi-7-31"] }
 fuser = { workspace = true, optional = true, features = ["abi-7-31"] }
 futures.workspace = true
 libc.workspace = true
@@ -43,7 +42,7 @@ users.workspace = true
 
 [features]
 default = ["fuser"]
-fuse_mt = ["dep:fuse_mt", "dep:fuse_mt_fuser"]
+fuse_mt = ["dep:fuse_mt"]
 fuser = ["dep:fuser"]
 
 [[example]]

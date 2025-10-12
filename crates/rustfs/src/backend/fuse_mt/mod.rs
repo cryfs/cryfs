@@ -3,7 +3,7 @@
 mod backend_adapter;
 
 mod mount;
-pub use fuse_mt_fuser::MountOption;
+pub use fuser::MountOption;
 pub use mount::{mount, spawn_mount};
 
-pub type RunningFilesystem = super::RunningFilesystem<fuse_mt_fuser::BackgroundSession>;
+pub type RunningFilesystem = super::RunningFilesystem<fuser::BackgroundSession>;
