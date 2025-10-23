@@ -18,8 +18,6 @@ impl PasswordBasedKDF for ScryptScrypt {
             kdf_parameters.log_n(),
             kdf_parameters.r(),
             kdf_parameters.p(),
-            // scrypt::Params::len is an ignored field so shouldn't really matter what we give it
-            scrypt::Params::RECOMMENDED_LEN,
         )
         .expect("Invalid scrypt parameters");
         EncryptionKey::new(key_size, |key_data| {

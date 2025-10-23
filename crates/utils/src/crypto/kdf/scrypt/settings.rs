@@ -56,7 +56,7 @@ mod tests {
         settings: ScryptSettings,
     ) {
         let params = ScryptParams::generate(&settings).unwrap();
-        scrypt::Params::new(params.log_n(), params.r(), params.p(), 32)
+        scrypt::Params::new(params.log_n(), params.r(), params.p())
             .expect("Invalid scrypt parameters");
     }
 }
