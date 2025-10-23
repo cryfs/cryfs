@@ -34,6 +34,7 @@ konst.workspace = true
 log.workspace = true
 once_cell.workspace = true
 tokio.workspace = true
+console-subscriber = {workspace = true, optional = true}
 
 
 [dev-dependencies]
@@ -46,3 +47,4 @@ rstest.workspace = true
 [features]
 default = ["check_for_updates"]
 check_for_updates = ["cryfs-cli-utils/check_for_updates"]
+tokio_console = ["dep:console-subscriber"]

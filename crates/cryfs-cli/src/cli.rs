@@ -104,6 +104,10 @@ impl Application for Cli {
             Mounter::run_in_background().map_cli_error(CliErrorKind::UnspecifiedError)?
         };
 
+        // Note: tokio-console requires running with `RUSTFLAGS="--cfg tokio_unstable" cargo build`, see https://github.com/tokio-rs/console
+        #[cfg(feature = "tokio_console")]
+        console_subscriber::init();
+
         // Initialize the tokio runtime in the parent process.
         // If we're mounting in background, then the child process creates its own separate runtime.
         // If we're mounting in foreground, the runtime created here will be used to mount the file system.
