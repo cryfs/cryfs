@@ -1,3 +1,8 @@
+/// Scrypt memory usage (from reading code at https://github.com/RustCrypto/password-hashes/blob/master/scrypt/src/lib.rs):
+/// * single threaded
+///   128 * r * (p + n + 1)
+/// * multi threaded
+///   128 * r * p * (n + 2)
 #[derive(Debug, Clone, Copy)]
 pub struct ScryptSettings {
     pub log_n: u8,
@@ -7,28 +12,32 @@ pub struct ScryptSettings {
 }
 
 impl ScryptSettings {
+    /// Memory usage: 32GB multi-threaded, 16GB single-threaded (see formula in comment above)
     pub const PARANOID: Self = Self {
         log_n: 24,
         r: 8,
-        p: 1,
+        p: 2,
         salt_len: 32,
     };
 
+    /// Memory usage: 8GB multi-threaded, 1GB single-threaded (see formula in comment above)
     pub const DEFAULT: Self = Self {
-        log_n: 22,
+        log_n: 20,
         r: 8,
-        p: 1,
+        p: 8,
         salt_len: 32,
     };
 
+    /// Memory usage: 2GB multi-threaded, 500MB single threaded (see formula in comment above)
     pub const LOW_MEMORY: Self = Self {
-        log_n: 22,
-        r: 2,
+        log_n: 20,
+        r: 4,
         p: 4,
         salt_len: 32,
     };
 
-    // #[cfg(test)]
+    /// Memory usage: 256kB multi-threaded, 128kB single-threaded (see formula in comment above)
+    // TODO#[cfg(test)]
     pub const TEST: Self = Self {
         log_n: 10,
         r: 1,
