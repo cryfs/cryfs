@@ -74,8 +74,8 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
         self.tree_store.estimate_space_for_num_blocks_left()
     }
 
-    fn virtual_block_size_bytes(&self) -> Byte {
-        self.tree_store.virtual_block_size_bytes()
+    fn logical_block_size_bytes(&self) -> Byte {
+        self.tree_store.logical_block_size_bytes()
     }
 
     #[cfg(any(test, feature = "testutils"))]

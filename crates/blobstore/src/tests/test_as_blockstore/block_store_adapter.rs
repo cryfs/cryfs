@@ -70,7 +70,7 @@ where
 
     fn estimate_num_free_bytes(&self) -> Result<Byte> {
         self.underlying_store
-            .virtual_block_size_bytes()
+            .logical_block_size_bytes()
             .multiply(
                 usize::try_from(self.underlying_store.estimate_space_for_num_blocks_left()?)
                     .unwrap(),

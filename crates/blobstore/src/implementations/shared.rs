@@ -38,8 +38,8 @@ impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<
         self.deref().estimate_space_for_num_blocks_left()
     }
 
-    fn virtual_block_size_bytes(&self) -> Byte {
-        self.deref().virtual_block_size_bytes()
+    fn logical_block_size_bytes(&self) -> Byte {
+        self.deref().logical_block_size_bytes()
     }
 
     #[cfg(any(test, feature = "testutils"))]

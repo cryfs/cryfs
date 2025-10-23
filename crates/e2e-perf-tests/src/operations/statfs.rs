@@ -20,7 +20,7 @@ fn empty_filesystem(test_driver: impl TestDriver) -> impl TestReady {
             blobstore: BlobStoreActionCounts {
                 store_num_nodes: 1,
                 store_estimate_space_for_num_blocks_left: 1,
-                store_virtual_block_size_bytes: 1,
+                store_logical_block_size_bytes: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -74,7 +74,7 @@ fn with_content(test_driver: impl TestDriver) -> impl TestReady {
             blobstore: BlobStoreActionCounts {
                 store_num_nodes: 1,
                 store_estimate_space_for_num_blocks_left: 1,
-                store_virtual_block_size_bytes: 1,
+                store_logical_block_size_bytes: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {

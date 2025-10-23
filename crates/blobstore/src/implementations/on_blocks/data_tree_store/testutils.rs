@@ -96,7 +96,7 @@ pub async fn create_multi_leaf_tree<
     num_leaves: u64,
 ) -> DataTree<B> {
     let mut tree = store.create_tree().await.unwrap();
-    tree.resize_num_bytes(num_leaves * store.virtual_block_size_bytes().as_u64())
+    tree.resize_num_bytes(num_leaves * store.logical_block_size_bytes().as_u64())
         .await
         .unwrap();
     tree

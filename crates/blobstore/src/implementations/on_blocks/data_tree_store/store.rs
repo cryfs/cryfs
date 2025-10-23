@@ -82,8 +82,8 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         self.node_store.estimate_space_for_num_blocks_left()
     }
 
-    pub fn virtual_block_size_bytes(&self) -> Byte {
-        self.node_store.virtual_block_size_bytes()
+    pub fn logical_block_size_bytes(&self) -> Byte {
+        self.node_store.logical_block_size_bytes()
     }
 
     // TODO Test
@@ -450,7 +450,7 @@ mod tests {
                     let _other_tree = TreeFixture::create_tree_with_data_and_id(
                         &store,
                         BlockId::from_hex("41e331a31c3c1c1ebd4949087674b8dc").unwrap(),
-                        10 * store.virtual_block_size_bytes().as_u64() as usize,
+                        10 * store.logical_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -476,7 +476,7 @@ mod tests {
                 Box::pin(async move {
                     let _other_tree = TreeFixture::create_tree_with_data(
                         &store,
-                        10 * store.virtual_block_size_bytes().as_u64() as usize,
+                        10 * store.logical_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -502,7 +502,7 @@ mod tests {
 
                     let _other_tree = TreeFixture::create_tree_with_data(
                         &store,
-                        NUM_LEAVES as usize * store.virtual_block_size_bytes().as_u64() as usize,
+                        NUM_LEAVES as usize * store.logical_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -532,7 +532,7 @@ mod tests {
                     let _other_tree = TreeFixture::create_tree_with_data(
                         &treestore,
                         NUM_LEAVES as usize
-                            * treestore.virtual_block_size_bytes().as_u64() as usize,
+                            * treestore.logical_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -564,7 +564,7 @@ mod tests {
                     let other_tree = TreeFixture::create_tree_with_data(
                         &treestore,
                         NUM_LEAVES as usize
-                            * treestore.virtual_block_size_bytes().as_u64() as usize,
+                            * treestore.logical_block_size_bytes().as_u64() as usize,
                         0,
                     )
                     .await;
@@ -787,7 +787,7 @@ mod tests {
         }
     }
 
-    mod virtual_block_size_bytes {
+    mod logical_block_size_bytes {
         use super::*;
 
         #[tokio::test]
@@ -809,7 +809,7 @@ mod tests {
                     block_size: Byte::from_u64(32 * 1024 * 10 - 100),
                 }
                 .max_bytes_per_leaf() as u64,
-                treestore.virtual_block_size_bytes().as_u64()
+                treestore.logical_block_size_bytes().as_u64()
             );
 
             treestore.async_drop().await.unwrap();

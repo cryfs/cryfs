@@ -67,7 +67,7 @@ mod counter_tests {
                 store_remove_by_id: 0,
                 store_num_nodes: 0,
                 store_estimate_space_for_num_blocks_left: 0,
-                store_virtual_block_size_bytes: 0,
+                store_logical_block_size_bytes: 0,
             },
             store.counts()
         );
@@ -233,17 +233,17 @@ mod counter_tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn store_virtual_block_size_increases_counter() {
+    async fn store_logical_block_size_increases_counter() {
         let mut fixture = super::TestFixture::new();
         let mut store = fixture.store().await;
 
-        store.virtual_block_size_bytes();
-        store.virtual_block_size_bytes();
+        store.logical_block_size_bytes();
+        store.logical_block_size_bytes();
 
         let counts = store.counts();
         assert_eq!(
             BlobStoreActionCounts {
-                store_virtual_block_size_bytes: 2,
+                store_logical_block_size_bytes: 2,
                 ..BlobStoreActionCounts::ZERO
             },
             counts

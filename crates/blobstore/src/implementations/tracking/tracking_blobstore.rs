@@ -88,9 +88,9 @@ where
         self.underlying_store.estimate_space_for_num_blocks_left()
     }
 
-    fn virtual_block_size_bytes(&self) -> Byte {
-        self.counts.lock().unwrap().store_virtual_block_size_bytes += 1;
-        self.underlying_store.virtual_block_size_bytes()
+    fn logical_block_size_bytes(&self) -> Byte {
+        self.counts.lock().unwrap().store_logical_block_size_bytes += 1;
+        self.underlying_store.logical_block_size_bytes()
     }
 
     #[cfg(any(test, feature = "testutils"))]

@@ -81,9 +81,9 @@ where
         self.blobstore.estimate_space_for_num_blocks_left()
     }
 
-    // virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
-    pub fn virtual_block_size_bytes(&self) -> Byte {
-        self.blobstore.virtual_block_size_bytes()
+    // logical means "space we can use" as opposed to "space it takes on the disk" (i.e. logical is without headers, checksums, ...)
+    pub fn logical_block_size_bytes(&self) -> Byte {
+        self.blobstore.logical_block_size_bytes()
     }
 
     pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult> {

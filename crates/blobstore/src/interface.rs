@@ -46,8 +46,8 @@ pub trait BlobStore {
     async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult>;
     async fn num_nodes(&self) -> Result<u64>;
     fn estimate_space_for_num_blocks_left(&self) -> Result<u64>;
-    // virtual means "space we can use" as opposed to "space it takes on the disk" (i.e. virtual is without headers, checksums, ...)
-    fn virtual_block_size_bytes(&self) -> Byte;
+    // logical means "space we can use" as opposed to "space it takes on the disk" (i.e. logical is without headers, checksums, ...)
+    fn logical_block_size_bytes(&self) -> Byte;
 
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()>;

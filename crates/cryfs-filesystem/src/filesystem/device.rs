@@ -511,7 +511,7 @@ where
         let num_total_blocks = num_used_blocks + num_free_blocks;
         //TODO Maybe we shouold increase max_filename_length?
         let max_filename_length = 255; // We theoretically support unlimited file name length, but this is default for many Linux file systems, so probably also makes sense for CryFS.
-        let blocksize = self.blobstore.virtual_block_size_bytes();
+        let blocksize = self.blobstore.logical_block_size_bytes();
 
         Ok(Statfs {
             max_filename_length,

@@ -217,7 +217,7 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
         )
     }
 
-    pub fn virtual_block_size_bytes(&self) -> Byte {
+    pub fn logical_block_size_bytes(&self) -> Byte {
         Byte::from_u64(u64::from(self.layout.max_bytes_per_leaf()))
     }
 
@@ -1639,7 +1639,7 @@ mod tests {
         }
     }
 
-    mod virtual_block_size_bytes {
+    mod logical_block_size_bytes {
         use cryfs_blockstore::Overhead;
 
         use super::*;
@@ -1660,7 +1660,7 @@ mod tests {
 
             assert_eq!(
                 32 * 1024 * 10 - 100 - node::data::OFFSET as u64,
-                nodestore.virtual_block_size_bytes().as_u64()
+                nodestore.logical_block_size_bytes().as_u64()
             );
 
             nodestore.async_drop().await.unwrap();

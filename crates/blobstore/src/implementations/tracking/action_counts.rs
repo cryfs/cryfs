@@ -18,7 +18,7 @@ pub struct BlobStoreActionCounts {
     pub store_remove_by_id: u32,
     pub store_num_nodes: u32,
     pub store_estimate_space_for_num_blocks_left: u32,
-    pub store_virtual_block_size_bytes: u32,
+    pub store_logical_block_size_bytes: u32,
 }
 
 impl BlobStoreActionCounts {
@@ -39,6 +39,6 @@ impl BlobStoreActionCounts {
         store_remove_by_id: 0,
         store_num_nodes: 0,
         store_estimate_space_for_num_blocks_left: 0,
-        store_virtual_block_size_bytes: 0,
+        store_logical_block_size_bytes: 0,
     };
 }
