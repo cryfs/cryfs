@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use futures::future::BoxFuture;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::ops::Deref;
@@ -7,13 +8,12 @@ use std::sync::Arc;
 use super::{AsyncDrop, AsyncDropGuard};
 
 #[derive(Debug)]
-// TODO Why do we need Send + Sync? std::sync::Arc doesn't seem to need it
-pub struct AsyncDropArc<T: AsyncDrop + Debug + Sync + Send> {
+pub struct AsyncDropArc<T: AsyncDrop + Debug + Send> {
     // Always Some except during destruction
     v: Option<Arc<AsyncDropGuard<T>>>,
 }
 
-impl<T: AsyncDrop + Debug + Sync + Send> AsyncDropArc<T> {
+impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
     pub fn new(v: AsyncDropGuard<T>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             v: Some(Arc::new(v)),
@@ -28,26 +28,33 @@ impl<T: AsyncDrop + Debug + Sync + Send> AsyncDropArc<T> {
 }
 
 #[async_trait]
-impl<T: AsyncDrop + Debug + Sync + Send> AsyncDrop for AsyncDropArc<T> {
+impl<T: AsyncDrop + Debug + Send> AsyncDrop for AsyncDropArc<T> {
     type Error = T::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    fn async_drop_impl<'s, 'async_trait>(
+        &'s mut self,
+    ) -> BoxFuture<'async_trait, Result<(), Self::Error>>
+    where
+        's: 'async_trait,
+        Self: 'async_trait,
+    {
         let v = self.v.take().expect("Already destructed");
         if let Ok(mut v) = Arc::try_unwrap(v) {
-            v.async_drop().await?;
+            Box::pin(async move { v.async_drop().await })
+        } else {
+            Box::pin(async { Ok(()) })
         }
-        Ok(())
     }
 }
 
-impl<T: AsyncDrop + Debug + Sync + Send> Deref for AsyncDropArc<T> {
+impl<T: AsyncDrop + Debug + Send> Deref for AsyncDropArc<T> {
     type Target = T;
     fn deref(&self) -> &T {
         self.v.as_ref().expect("Already destructed").deref()
     }
 }
 
-impl<T: AsyncDrop + Debug + Sync + Send> Borrow<T> for AsyncDropArc<T> {
+impl<T: AsyncDrop + Debug + Send> Borrow<T> for AsyncDropArc<T> {
     fn borrow(&self) -> &T {
         Borrow::<AsyncDropGuard<T>>::borrow(Borrow::<Arc<AsyncDropGuard<T>>>::borrow(
             self.v.as_ref().expect("Already destructed"),
