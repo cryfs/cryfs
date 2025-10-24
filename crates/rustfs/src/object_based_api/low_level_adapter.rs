@@ -148,8 +148,8 @@ where
         if ino == FUSE_ROOT_ID {
             let fs = self.fs.read().await;
             let fs = fs.get();
-            let node: <Fs as Device>::Dir<'_> = fs.rootdir().await?;
-            Ok((AsyncDropArc::new(node.as_node()), None))
+            let node = Dir::into_node(fs.rootdir().await?);
+            Ok((AsyncDropArc::new(node), None))
         } else {
             let inodes = self.inodes.read().await;
             let inode = inodes.get(ino).expect("Error: Inode number unassigned");
@@ -214,7 +214,10 @@ where
                 .as_dir()
                 .await
                 .expect("Error: Inode number is not a directory");
-            parent_node_dir.lookup_child(&name).await
+            with_async_drop_2!(parent_node_dir, {
+                // TODO Can we avoid the async_drop here by using something like parent_node_dir.into_lookup_child() ?
+                parent_node_dir.lookup_child(&name).await
+            })
         })?;
 
         // TODO async_drop parent_node concurrently with the child.getattr() call below.
@@ -342,13 +345,13 @@ where
             Err(err) => return callback.call(Err(err)),
         };
         let target = match inode.as_symlink().await {
-            Ok(inode_symlink) => {
+            Ok(inode_symlink) => with_async_drop_2!(inode_symlink, {
                 let target = inode_symlink.target();
                 match target.await {
                     Ok(target) => Ok(target),
                     Err(err) => Err(err),
                 }
-            }
+            }),
             Err(err) => Err(err),
         };
         let target = match target {
@@ -392,10 +395,14 @@ where
         let parent = self.get_inode(parent_ino).await?;
         let (attr, child) = with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            let (attrs, child) = parent_dir
-                .create_child_dir(&name, mode, req.uid, req.gid)
-                .await?;
-            Ok((attrs, child.as_node()))
+
+            // TODO Can we avoid the async_drop here by using something like dir.into_create_child_dir() ?
+            with_async_drop_2!(parent_dir, {
+                let (attrs, child) = parent_dir
+                    .create_child_dir(&name, mode, req.uid, req.gid)
+                    .await?;
+                Ok((attrs, Dir::into_node(child)))
+            })
         })?;
         // TODO Are we supposed to add the inode to our inode list here?
         let ino = self.add_inode(parent_ino, child, name).await;
@@ -417,7 +424,9 @@ where
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            parent_dir.remove_child_file_or_symlink(&name).await?;
+            with_async_drop_2!(parent_dir, {
+                parent_dir.remove_child_file_or_symlink(&name).await
+            })?;
             Ok(())
         })
     }
@@ -433,7 +442,7 @@ where
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            parent_dir.remove_child_dir(&name).await?;
+            with_async_drop_2!(parent_dir, { parent_dir.remove_child_dir(&name).await })?;
             Ok(())
         })
     }
@@ -452,10 +461,13 @@ where
         let parent = self.get_inode(parent_ino).await?;
         let (attrs, child) = with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            let (attrs, child) = parent_dir
-                .create_child_symlink(&name, link, req.uid, req.gid)
-                .await?;
-            Ok((attrs, child.as_node()))
+            // TODO Can we avoid the async_drop here by using something like dir.into_create_child_symlink()?
+            with_async_drop_2!(parent_dir, {
+                let (attrs, child) = parent_dir
+                    .create_child_symlink(&name, link, req.uid, req.gid)
+                    .await?;
+                Ok((attrs, Symlink::into_node(child)))
+            })
         })?;
         // TODO Are we supposed to add the inode to our inode list here?
         let ino = self.add_inode(parent_ino, child, name).await;
@@ -483,7 +495,9 @@ where
             let shared_parent = self.get_inode(oldparent_ino).await?;
             with_async_drop_2!(shared_parent, {
                 let parent_dir = shared_parent.as_dir().await?;
-                parent_dir.rename_child(&oldname, &newname).await?;
+                with_async_drop_2!(parent_dir, {
+                    parent_dir.rename_child(&oldname, &newname).await
+                })?;
                 Ok(())
             })
         } else {
@@ -492,10 +506,12 @@ where
             let (mut oldparent, mut newparent) = flatten_async_drop(oldparent, newparent).await?;
             let result = (async || {
                 let oldparent_dir = oldparent.as_dir().await?;
-                let newparent_dir = newparent.as_dir().await?;
-                oldparent_dir
-                    .move_child_to(oldname, newparent_dir, newname)
-                    .await
+                with_async_drop_2!(oldparent_dir, {
+                    let newparent_dir = newparent.as_dir().await?;
+                    oldparent_dir
+                        .move_child_to(oldname, newparent_dir, newname)
+                        .await
+                })
             })()
             .await;
             // TODO Drop concurrently and drop latter even if first one fails
@@ -529,7 +545,7 @@ where
         let inode = self.get_inode(ino).await?;
         with_async_drop_2!(inode, {
             let file = inode.as_file().await?;
-            let open_file = file.open(flags);
+            let open_file = File::into_open(file, flags);
             let open_file = open_file.await?;
             let fh = self.open_files.add(open_file);
             Ok(ReplyOpen {
@@ -685,68 +701,70 @@ where
         with_async_drop_2!(node, {
             let parent_ino = parent_ino.unwrap_or(FUSE_ROOT_ID); // root is parent of itself
             let dir = node.as_dir().await?;
-            // TODO Instead of loading all entries and then possibly only returning some because the buffer gets full, try to only load the necessary ones? But concurrently somehow?
-            let entries = dir.entries().await?;
-            let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
+            with_async_drop_2!(dir, {
+                // TODO Instead of loading all entries and then possibly only returning some because the buffer gets full, try to only load the necessary ones? But concurrently somehow?
+                let entries = dir.entries().await?;
+                let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
 
-            if offset == 0 {
-                match reply.add_self_reference(ino, 0) {
-                    ReplyDirectoryAddResult::Full => {
-                        return Ok(());
-                    }
-                    ReplyDirectoryAddResult::NotFull => {
-                        // continue
+                if offset == 0 {
+                    match reply.add_self_reference(ino, 0) {
+                        ReplyDirectoryAddResult::Full => {
+                            return Ok(());
+                        }
+                        ReplyDirectoryAddResult::NotFull => {
+                            // continue
+                        }
                     }
                 }
-            }
 
-            if offset <= 1 {
-                match reply.add_parent_reference(parent_ino, 1) {
-                    ReplyDirectoryAddResult::Full => {
-                        return Ok(());
-                    }
-                    ReplyDirectoryAddResult::NotFull => {
-                        // continue
-                    }
-                }
-            }
-
-            // TODO Add tests for the offset calculations including '.' and '..' here
-            let entries = entries
-                .into_iter()
-                .enumerate()
-                .skip(offset.saturating_sub(2)) // skip 2 less because those offset indices are for '.' and '..'
-                .map(async |(offset, entry)| {
-                    let offset = offset + 2; // offset + 2 because of '.' and '..'
-                    let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
-
-                    // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
-                    //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
-                    //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
-                    //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
-                    //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
-                    let child_ino = self.add_inode(ino, child, &entry.name).await;
-                    (offset, child_ino.handle, entry)
-                });
-            // TODO Does this need to be FuturesOrdered or can we reply them without order?
-            let mut entries: FuturesOrdered<_> = entries.collect();
-            while let Some((offset, ino, entry)) = entries.next().await {
-                // offset+1 because fuser actually expects us to return the offset of the **next** entry
-                let offset = i64::try_from(offset).unwrap() + 1; // TODO No unwrap
-                let buffer_is_full = reply.add(ino.into(), offset, entry.kind, &entry.name);
-                match buffer_is_full {
-                    ReplyDirectoryAddResult::Full => {
-                        // TODO Can we cancel the stream if the buffer is full?
-                        // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
-                        break;
-                    }
-                    ReplyDirectoryAddResult::NotFull => {
-                        // continue
+                if offset <= 1 {
+                    match reply.add_parent_reference(parent_ino, 1) {
+                        ReplyDirectoryAddResult::Full => {
+                            return Ok(());
+                        }
+                        ReplyDirectoryAddResult::NotFull => {
+                            // continue
+                        }
                     }
                 }
-            }
 
-            Ok(())
+                // TODO Add tests for the offset calculations including '.' and '..' here
+                let entries = entries
+                    .into_iter()
+                    .enumerate()
+                    .skip(offset.saturating_sub(2)) // skip 2 less because those offset indices are for '.' and '..'
+                    .map(async |(offset, entry)| {
+                        let offset = offset + 2; // offset + 2 because of '.' and '..'
+                        let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
+
+                        // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
+                        //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
+                        //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
+                        //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
+                        //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
+                        let child_ino = self.add_inode(ino, child, &entry.name).await;
+                        (offset, child_ino.handle, entry)
+                    });
+                // TODO Does this need to be FuturesOrdered or can we reply them without order?
+                let mut entries: FuturesOrdered<_> = entries.collect();
+                while let Some((offset, ino, entry)) = entries.next().await {
+                    // offset+1 because fuser actually expects us to return the offset of the **next** entry
+                    let offset = i64::try_from(offset).unwrap() + 1; // TODO No unwrap
+                    let buffer_is_full = reply.add(ino.into(), offset, entry.kind, &entry.name);
+                    match buffer_is_full {
+                        ReplyDirectoryAddResult::Full => {
+                            // TODO Can we cancel the stream if the buffer is full?
+                            // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
+                            break;
+                        }
+                        ReplyDirectoryAddResult::NotFull => {
+                            // continue
+                        }
+                    }
+                }
+
+                Ok(())
+            })
         })
     }
 
@@ -890,9 +908,12 @@ where
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            let (attr, child_node, open_file) = parent_dir
-                .create_and_open_file(&name, mode, req.uid, req.gid)
-                .await?;
+            // TODO Can we avoid the async_drop here by using something like dir.into_create_and_open_file() ?
+            let (attr, child_node, open_file) = with_async_drop_2!(parent_dir, {
+                parent_dir
+                    .create_and_open_file(&name, mode, req.uid, req.gid)
+                    .await
+            })?;
 
             // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode. If not, we probably don't need to return the child_node from create_and_open_file.
             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619

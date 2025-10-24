@@ -25,7 +25,7 @@ where
     // and those instances change the `NodeInfo` (e.g. load its cache), that loaded cache transfers to
     // the [CryNode] instance as well. This is important because [cryfs_rustfs] keeps the [CryNode]
     // instance in its `inode_table` and potentially reuses it.
-    node_info: Arc<NodeInfo>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
 }
 
 impl<B> CryNode<B>
@@ -57,14 +57,14 @@ where
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: NodeInfo,
+        node_info: AsyncDropGuard<NodeInfo>,
     ) -> AsyncDropGuard<Self> {
-        Self::new_internal(blobstore, Arc::new(node_info))
+        Self::new_internal(blobstore, AsyncDropArc::new(node_info))
     }
 
     pub(super) fn new_internal(
         blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: Arc<NodeInfo>,
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,
@@ -82,28 +82,34 @@ where
 {
     type Device = CryDevice<B>;
 
-    async fn as_dir<'a>(&'a self) -> FsResult<CryDir<'a, B>> {
+    async fn as_dir<'a>(&'a self) -> FsResult<AsyncDropGuard<CryDir<'a, B>>> {
         if self.node_info.node_type(&self.blobstore).await? == BlobType::Dir {
-            Ok(CryDir::new(&self.blobstore, Arc::clone(&self.node_info)))
+            Ok(CryDir::new(
+                &self.blobstore,
+                AsyncDropArc::clone(&self.node_info),
+            ))
         } else {
             Err(FsError::NodeIsNotADirectory)
         }
     }
 
-    async fn as_symlink<'a>(&'a self) -> FsResult<CrySymlink<'a, B>> {
+    async fn as_symlink<'a>(&'a self) -> FsResult<AsyncDropGuard<CrySymlink<'a, B>>> {
         if self.node_info.node_type(&self.blobstore).await? == BlobType::Symlink {
             Ok(CrySymlink::new(
                 &self.blobstore,
-                Arc::clone(&self.node_info),
+                AsyncDropArc::clone(&self.node_info),
             ))
         } else {
             Err(FsError::NodeIsNotASymlink)
         }
     }
 
-    async fn as_file<'a>(&'a self) -> FsResult<CryFile<'a, B>> {
+    async fn as_file<'a>(&'a self) -> FsResult<AsyncDropGuard<CryFile<'a, B>>> {
         match self.node_info.node_type(&self.blobstore).await? {
-            BlobType::File => Ok(CryFile::new(&self.blobstore, Arc::clone(&self.node_info))),
+            BlobType::File => Ok(CryFile::new(
+                &self.blobstore,
+                AsyncDropArc::clone(&self.node_info),
+            )),
             BlobType::Symlink => {
                 // TODO What's the right error here?
                 Err(FsError::UnknownError)
@@ -153,6 +159,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        self.node_info.async_drop().await?;
         self.blobstore.async_drop().await
     }
 }

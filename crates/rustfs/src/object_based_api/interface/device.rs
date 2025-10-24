@@ -4,20 +4,27 @@ use std::fmt::Debug;
 use super::dir::Dir;
 use super::node::Node;
 use crate::common::{AbsolutePath, FsError, FsResult, Statfs};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    with_async_drop_2,
+};
 
 // TODO We only call this `Device` because that's the historical name from the c++ Cryfs version. We should probably rename this to `Filesystem`.
 #[async_trait]
 pub trait Device {
     // TODO Do we need those Send bounds on Node and Dir?
     type Node: super::Node<Device = Self> + AsyncDrop<Error = FsError> + Debug + Send + Sync;
-    type Dir<'a>: super::Dir<Device = Self> + Send + Sync
+    type Dir<'a>: super::Dir<Device = Self> + AsyncDrop<Error = FsError> + Debug + Send + Sync
     where
         Self: 'a;
-    type Symlink<'a>: super::Symlink<Device = Self> + Send
+    type Symlink<'a>: super::Symlink<Device = Self>
+        + AsyncDrop<Error = FsError>
+        + Debug
+        + Send
+        + Sync
     where
         Self: 'a;
-    type File<'a>: super::File<Device = Self>
+    type File<'a>: super::File<Device = Self> + AsyncDrop<Error = FsError> + Debug
     where
         Self: 'a;
     type OpenFile: super::OpenFile + AsyncDrop<Error = FsError>;
@@ -34,7 +41,7 @@ pub trait Device {
         Ok(())
     }
 
-    async fn rootdir(&self) -> FsResult<Self::Dir<'_>>;
+    async fn rootdir(&self) -> FsResult<AsyncDropGuard<Self::Dir<'_>>>;
 
     // TODO We can probably remove `rename`. It's only called from the fuse-mt backend and fuser uses CryDir::{rename_child,move_child_to} instead. We can probably make fuse-mt use those too.
     fn rename(&self, from: &AbsolutePath, to: &AbsolutePath) -> impl Future<Output = FsResult<()>>;
@@ -48,11 +55,8 @@ pub trait Device {
         // TODO Why is Self: 'static needed?
         Self: 'static,
     {
-        let rootdir = self
-            .rootdir()
-            .await?
-            // TODO Can we do this without first converting `rootdir` to `Node` by calling `.as_node()`, and then immediately calling `.as_dir()` in the loop below?
-            .as_node();
+        // TODO Can we do this without first converting `rootdir` to `Node` by calling `.as_node()`, and then immediately calling `.as_dir()` in the loop below?
+        let rootdir = Dir::into_node(self.rootdir().await?);
 
         match path.split_last() {
             None => {
@@ -68,8 +72,11 @@ pub trait Device {
                         let dir = dir.await;
                         match dir {
                             Ok(dir) => {
-                                let child = dir.lookup_child(component);
-                                child.await
+                                // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
+                                with_async_drop_2!(dir, {
+                                    let child = dir.lookup_child(component);
+                                    child.await
+                                })
                             }
                             Err(err) => Err(err),
                         }
@@ -82,8 +89,11 @@ pub trait Device {
                     let dir = dir.await;
                     match dir {
                         Ok(dir) => {
-                            let child = dir.lookup_child(node_name);
-                            child.await
+                            // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
+                            with_async_drop_2!(dir, {
+                                let child = dir.lookup_child(node_name);
+                                child.await
+                            })
                         }
                         Err(err) => Err(err),
                     }

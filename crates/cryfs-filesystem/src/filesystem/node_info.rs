@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use cryfs_utils::with_async_drop_2;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -93,13 +94,16 @@ pub struct NodeInfo {
 }
 
 impl NodeInfo {
-    pub fn new_rootdir(root_blob_id: BlobId, atime_update_behavior: AtimeUpdateBehavior) -> Self {
-        Self {
+    pub fn new_rootdir(
+        root_blob_id: BlobId,
+        atime_update_behavior: AtimeUpdateBehavior,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsRootDir {
                 root_blob_id,
                 atime_update_behavior,
             },
-        }
+        })
     }
 
     pub fn new(
@@ -107,8 +111,8 @@ impl NodeInfo {
         #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
         name: PathComponentBuf,
         atime_update_behavior: AtimeUpdateBehavior,
-    ) -> Self {
-        Self {
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
@@ -118,7 +122,7 @@ impl NodeInfo {
                 blob_details: OnceCell::default(),
                 atime_update_behavior,
             },
-        }
+        })
     }
 
     pub fn new_with_blob_details(
@@ -127,8 +131,8 @@ impl NodeInfo {
         name: PathComponentBuf,
         blob_details: BlobDetails,
         atime_update_behavior: AtimeUpdateBehavior,
-    ) -> Self {
-        Self {
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
@@ -138,7 +142,7 @@ impl NodeInfo {
                 blob_details: OnceCell::new_with(Some(blob_details)),
                 atime_update_behavior,
             },
-        }
+        })
     }
 
     async fn _load_parent_blob<B>(
@@ -686,6 +690,16 @@ impl NodeInfo {
                 ..
             } => *atime_update_behavior,
         }
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for NodeInfo {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        // Nothing to do
+        Ok(())
     }
 }
 

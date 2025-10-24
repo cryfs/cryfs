@@ -136,8 +136,12 @@ impl InMemoryFileRef {
 impl File for InMemoryFileRef {
     type Device = InMemoryDevice;
 
-    async fn open(&self, openflags: OpenFlags) -> FsResult<AsyncDropGuard<InMemoryOpenFileRef>> {
-        Ok(self.open_sync(openflags))
+    async fn into_open(
+        this: AsyncDropGuard<Self>,
+        openflags: OpenFlags,
+    ) -> FsResult<AsyncDropGuard<InMemoryOpenFileRef>> {
+        let this = this.unsafe_into_inner_dont_drop();
+        Ok(this.open_sync(openflags))
     }
 }
 

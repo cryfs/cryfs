@@ -45,9 +45,9 @@ impl Device for PassthroughDevice {
     type File<'a> = PassthroughFile;
     type OpenFile = PassthroughOpenFile;
 
-    async fn rootdir(&self) -> FsResult<PassthroughDir> {
+    async fn rootdir(&self) -> FsResult<AsyncDropGuard<PassthroughDir>> {
         let path = self.apply_basedir(AbsolutePath::root());
-        Ok(PassthroughDir::new(path))
+        Ok(AsyncDropGuard::new(PassthroughDir::new(path)))
     }
 
     async fn lookup(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>> {

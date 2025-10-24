@@ -115,19 +115,21 @@ impl PassthroughNode {
 impl Node for PassthroughNode {
     type Device = PassthroughDevice;
 
-    async fn as_file(&self) -> FsResult<PassthroughFile> {
+    async fn as_file(&self) -> FsResult<AsyncDropGuard<PassthroughFile>> {
         // TODO Fail if it's the wrong type
-        Ok(PassthroughFile::new(self.path.clone()))
+        Ok(AsyncDropGuard::new(PassthroughFile::new(self.path.clone())))
     }
 
-    async fn as_dir(&self) -> FsResult<PassthroughDir> {
+    async fn as_dir(&self) -> FsResult<AsyncDropGuard<PassthroughDir>> {
         // TODO Fail if it's the wrong type
-        Ok(PassthroughDir::new(self.path.clone()))
+        Ok(AsyncDropGuard::new(PassthroughDir::new(self.path.clone())))
     }
 
-    async fn as_symlink(&self) -> FsResult<PassthroughSymlink> {
+    async fn as_symlink(&self) -> FsResult<AsyncDropGuard<PassthroughSymlink>> {
         // TODO Fail if it's the wrong type
-        Ok(PassthroughSymlink::new(self.path.clone()))
+        Ok(AsyncDropGuard::new(PassthroughSymlink::new(
+            self.path.clone(),
+        )))
     }
 
     async fn getattr(&self) -> FsResult<NodeAttrs> {

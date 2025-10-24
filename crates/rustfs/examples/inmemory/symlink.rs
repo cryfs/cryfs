@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use cryfs_rustfs::FsError;
 use cryfs_rustfs::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Symlink};
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
@@ -116,8 +117,10 @@ impl InMemorySymlinkRef {
 impl Symlink for InMemorySymlinkRef {
     type Device = super::InMemoryDevice;
 
-    fn as_node(&self) -> AsyncDropGuard<InMemoryNodeRef> {
-        AsyncDropGuard::new(InMemoryNodeRef::Symlink(self.clone_ref()))
+    fn into_node(this: AsyncDropGuard<Self>) -> AsyncDropGuard<InMemoryNodeRef> {
+        AsyncDropGuard::new(InMemoryNodeRef::Symlink(
+            this.unsafe_into_inner_dont_drop().clone_ref(),
+        ))
     }
 
     async fn target(&self) -> FsResult<String> {
@@ -128,5 +131,15 @@ impl Symlink for InMemorySymlinkRef {
 impl Debug for InMemorySymlinkRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InMemorySymlinkRef").finish()
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for InMemorySymlinkRef {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
+        Ok(())
     }
 }

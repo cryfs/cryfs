@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::sync::Arc;
 
 use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
 
@@ -17,6 +16,7 @@ use cryfs_utils::{
     with_async_drop_2,
 };
 
+#[derive(Debug)]
 pub struct CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -24,7 +24,7 @@ where
 {
     // TODO Do we need to store blobstore + node_info here or can we just store the target directly?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-    node_info: Arc<NodeInfo>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
 }
 
 impl<'a, B> CrySymlink<'a, B>
@@ -34,12 +34,12 @@ where
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: Arc<NodeInfo>,
-    ) -> Self {
-        Self {
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+    ) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self {
             blobstore,
             node_info,
-        }
+        })
     }
 
     async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
@@ -65,11 +65,9 @@ where
 {
     type Device = CryDevice<B>;
 
-    fn as_node(&self) -> AsyncDropGuard<CryNode<B>> {
-        CryNode::new_internal(
-            AsyncDropArc::clone(&self.blobstore),
-            Arc::clone(&self.node_info),
-        )
+    fn into_node(this: AsyncDropGuard<Self>) -> AsyncDropGuard<CryNode<B>> {
+        let this = this.unsafe_into_inner_dont_drop();
+        CryNode::new_internal(AsyncDropArc::clone(&this.blobstore), this.node_info)
     }
 
     async fn target(&self) -> FsResult<String> {
@@ -91,5 +89,18 @@ where
                 })?
             })
             .await
+    }
+}
+
+#[async_trait]
+impl<'a, B> AsyncDrop for CrySymlink<'a, B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> FsResult<()> {
+        self.node_info.async_drop().await
     }
 }

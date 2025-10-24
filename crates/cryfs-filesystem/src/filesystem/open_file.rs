@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::PathComponent;
 use futures::join;
-use std::sync::Arc;
 use std::time::SystemTime;
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -31,7 +30,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-    node_info: Arc<NodeInfo>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
 }
 
 impl<B> CryOpenFile<B>
@@ -41,7 +40,7 @@ where
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: Arc<NodeInfo>,
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,
@@ -274,6 +273,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        self.node_info.async_drop().await?;
         self.blobstore.async_drop().await
     }
 }

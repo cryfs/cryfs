@@ -4,7 +4,7 @@ use cryfs_rustfs::{
     Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::OpenFile,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
-use std::os::fd::{AsFd, AsRawFd};
+use std::os::fd::AsFd;
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 

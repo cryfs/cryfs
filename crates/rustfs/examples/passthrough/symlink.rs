@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{AbsolutePathBuf, FsError, FsResult, object_based_api::Symlink};
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::device::PassthroughDevice;
 use super::errors::IoResultExt;
 use super::node::PassthroughNode;
 
+#[derive(Debug)]
 pub struct PassthroughSymlink {
     path: AbsolutePathBuf,
 }
@@ -20,8 +21,8 @@ impl PassthroughSymlink {
 impl Symlink for PassthroughSymlink {
     type Device = PassthroughDevice;
 
-    fn as_node(&self) -> AsyncDropGuard<PassthroughNode> {
-        PassthroughNode::new(self.path.clone())
+    fn into_node(this: AsyncDropGuard<Self>) -> AsyncDropGuard<PassthroughNode> {
+        PassthroughNode::new(this.unsafe_into_inner_dont_drop().path.clone())
     }
 
     async fn target(&self) -> FsResult<String> {
@@ -35,5 +36,15 @@ impl Symlink for PassthroughSymlink {
             })?
             .to_owned();
         Ok(target)
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for PassthroughSymlink {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
+        Ok(())
     }
 }

@@ -3,6 +3,8 @@ use cryfs_rustfs::{
     DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags,
     PathComponent, PathComponentBuf, Uid, object_based_api::Dir,
 };
+use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::with_async_drop_2;
 use cryfs_utils::{async_drop::AsyncDropGuard, mutex::lock_in_ptr_order};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
@@ -165,8 +167,10 @@ impl InMemoryDirRef {
 impl Dir for InMemoryDirRef {
     type Device = InMemoryDevice;
 
-    fn as_node(&self) -> AsyncDropGuard<InMemoryNodeRef> {
-        AsyncDropGuard::new(InMemoryNodeRef::Dir(self.clone_ref()))
+    fn into_node(this: AsyncDropGuard<Self>) -> AsyncDropGuard<InMemoryNodeRef> {
+        AsyncDropGuard::new(InMemoryNodeRef::Dir(
+            this.unsafe_into_inner_dont_drop().clone_ref(),
+        ))
     }
 
     async fn lookup_child(
@@ -184,32 +188,34 @@ impl Dir for InMemoryDirRef {
     async fn move_child_to(
         &self,
         oldname: &PathComponent,
-        newparent: Self,
+        newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
     ) -> FsResult<()> {
-        // We're moving it to another directory
-        let (mut source_inode, mut target_inode) =
-            lock_in_ptr_order(&self.inode(), &newparent.inode());
-        let source_entries = source_inode.entries_mut();
-        let target_entries = target_inode.entries_mut();
-        if target_entries.contains_key(newname) {
-            // TODO Some forms of overwriting are actually ok, we don't need to block them all
-            Err(FsError::NodeAlreadyExists)
-        } else {
-            let old_entry = match source_entries.remove(oldname) {
-                Some(node) => node,
-                None => {
-                    return Err(FsError::NodeDoesNotExist);
-                }
-            };
-            // TODO Use try_insert once stable
-            let insert_result = target_entries.insert(newname.to_owned(), old_entry);
-            assert!(
-                insert_result.is_none(),
-                "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail."
-            );
-            Ok(())
-        }
+        with_async_drop_2!(newparent, {
+            // We're moving it to another directory
+            let (mut source_inode, mut target_inode) =
+                lock_in_ptr_order(&self.inode(), &newparent.inode());
+            let source_entries = source_inode.entries_mut();
+            let target_entries = target_inode.entries_mut();
+            if target_entries.contains_key(newname) {
+                // TODO Some forms of overwriting are actually ok, we don't need to block them all
+                Err(FsError::NodeAlreadyExists)
+            } else {
+                let old_entry = match source_entries.remove(oldname) {
+                    Some(node) => node,
+                    None => {
+                        return Err(FsError::NodeDoesNotExist);
+                    }
+                };
+                // TODO Use try_insert once stable
+                let insert_result = target_entries.insert(newname.to_owned(), old_entry);
+                assert!(
+                    insert_result.is_none(),
+                    "We checked above that `new_name` doesn't exist in the map. Inserting it shouldn't fail."
+                );
+                Ok(())
+            }
+        })
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
@@ -234,7 +240,7 @@ impl Dir for InMemoryDirRef {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, InMemoryDirRef)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<InMemoryDirRef>)> {
         let mut inode = self.inode.lock().unwrap();
         let dir = InMemoryDirRef::new(mode, uid, gid);
         let metadata = dir.metadata();
@@ -247,7 +253,7 @@ impl Dir for InMemoryDirRef {
                 entry.insert(InMemoryNodeRef::Dir(dir.clone_ref()));
             }
         }
-        Ok((metadata, dir))
+        Ok((metadata, AsyncDropGuard::new(dir)))
     }
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
@@ -273,7 +279,7 @@ impl Dir for InMemoryDirRef {
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, InMemorySymlinkRef)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<InMemorySymlinkRef>)> {
         let mut inode = self.inode.lock().unwrap();
         let symlink = InMemorySymlinkRef::new(target.to_owned(), uid, gid);
         let metadata = symlink.metadata();
@@ -286,7 +292,7 @@ impl Dir for InMemoryDirRef {
                 entry.insert(InMemoryNodeRef::Symlink(symlink.clone_ref()));
             }
         }
-        Ok((metadata, symlink))
+        Ok((metadata, AsyncDropGuard::new(symlink)))
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
@@ -335,5 +341,15 @@ impl Dir for InMemoryDirRef {
 impl Debug for InMemoryDirRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InMemoryDirRef").finish()
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for InMemoryDirRef {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
+        Ok(())
     }
 }

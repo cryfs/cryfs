@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use cryfs_utils::async_drop::AsyncDropGuard;
 use std::time::SystemTime;
 
 use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
@@ -7,9 +8,11 @@ use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
 pub trait Node {
     type Device: super::Device;
 
-    async fn as_file(&self) -> FsResult<<Self::Device as super::Device>::File<'_>>;
-    async fn as_dir(&self) -> FsResult<<Self::Device as super::Device>::Dir<'_>>;
-    async fn as_symlink(&self) -> FsResult<<Self::Device as super::Device>::Symlink<'_>>;
+    async fn as_file(&self) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::File<'_>>>;
+    async fn as_dir(&self) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Dir<'_>>>;
+    async fn as_symlink(
+        &self,
+    ) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Symlink<'_>>>;
 
     async fn getattr(&self) -> FsResult<NodeAttrs>;
     async fn setattr(

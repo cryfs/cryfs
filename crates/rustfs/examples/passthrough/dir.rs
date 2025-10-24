@@ -4,7 +4,10 @@ use cryfs_rustfs::{
     Uid,
     object_based_api::{Dir, Node},
 };
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    with_async_drop_2,
+};
 use nix::fcntl::{AT_FDCWD, AtFlags};
 use std::os::unix::fs::OpenOptionsExt;
 
@@ -15,6 +18,7 @@ use super::openfile::PassthroughOpenFile;
 use super::symlink::PassthroughSymlink;
 use super::utils::convert_metadata;
 
+#[derive(Debug)]
 pub struct PassthroughDir {
     path: AbsolutePathBuf,
 }
@@ -29,8 +33,8 @@ impl PassthroughDir {
 impl Dir for PassthroughDir {
     type Device = PassthroughDevice;
 
-    fn as_node(&self) -> AsyncDropGuard<PassthroughNode> {
-        PassthroughNode::new(self.path.clone())
+    fn into_node(this: AsyncDropGuard<Self>) -> AsyncDropGuard<PassthroughNode> {
+        PassthroughNode::new(this.unsafe_into_inner_dont_drop().path.clone())
     }
 
     async fn lookup_child(
@@ -52,12 +56,14 @@ impl Dir for PassthroughDir {
     async fn move_child_to(
         &self,
         oldname: &PathComponent,
-        newparent: Self,
+        newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
     ) -> FsResult<()> {
-        let old_path = self.path.clone().push(oldname);
-        let new_path = newparent.path.clone().push(newname);
-        tokio::fs::rename(old_path, new_path).await.map_error()
+        with_async_drop_2!(newparent, {
+            let old_path = self.path.clone().push(oldname);
+            let new_path = newparent.path.clone().push(newname);
+            tokio::fs::rename(old_path, new_path).await.map_error()
+        })
     }
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
@@ -99,7 +105,7 @@ impl Dir for PassthroughDir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, PassthroughDir)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<PassthroughDir>)> {
         let path = self.path.clone().push(name);
         let path_clone = path.clone();
         let _: () = tokio::runtime::Handle::current()
@@ -120,7 +126,7 @@ impl Dir for PassthroughDir {
         let node = PassthroughDir::new(path.clone());
         // TODO Return value directly without another call but make sure it returns the same value
         let attrs = PassthroughNode::new(path).getattr().await?;
-        Ok((attrs, node))
+        Ok((attrs, AsyncDropGuard::new(node)))
     }
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
@@ -135,7 +141,7 @@ impl Dir for PassthroughDir {
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, PassthroughSymlink)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<PassthroughSymlink>)> {
         let path = self.path.clone().push(name);
         let path_clone = path.clone();
         let target = target.to_owned();
@@ -214,4 +220,14 @@ fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
     // Most systems seems ot use u32 for [mode_t], but MacOS seems to use u16.
     let mode = mode_t::try_from(mode).unwrap();
     Mode::from_bits(mode.into()).unwrap()
+}
+
+#[async_trait]
+impl AsyncDrop for PassthroughDir {
+    type Error = FsError;
+
+    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+        // Nothing to do
+        Ok(())
+    }
 }

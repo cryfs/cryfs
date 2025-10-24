@@ -4,6 +4,7 @@ use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::object_based_api::Dir as _;
+use cryfs_utils::with_async_drop_2;
 use futures::join;
 use maybe_owned::MaybeOwned;
 use std::sync::Arc;
@@ -78,8 +79,10 @@ where
     pub async fn sanity_check(&self) -> Result<()> {
         // Make sure we can load the root dir and load its children
         let rootdir = self.rootdir().await.context("Didn't find root blob")?;
-        rootdir.entries().await.context("Couldn't load root blob")?;
-        Ok(())
+        with_async_drop_2!(rootdir, {
+            rootdir.entries().await.context("Couldn't load root blob")?;
+            Ok(())
+        })
     }
 
     async fn load_blob(
@@ -309,9 +312,9 @@ where
         Ok(())
     }
 
-    async fn rootdir(&self) -> FsResult<Self::Dir<'_>> {
+    async fn rootdir(&self) -> FsResult<AsyncDropGuard<Self::Dir<'_>>> {
         let node_info = NodeInfo::new_rootdir(self.root_blob_id, self.atime_update_behavior);
-        Ok(CryDir::new(&self.blobstore, Arc::new(node_info)))
+        Ok(CryDir::new(&self.blobstore, AsyncDropArc::new(node_info)))
     }
 
     // TODO For some reason, async_trait doesn't work for `rename` and trying to do `async fn rename` fails, but the error message says that it's

@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use cryfs_rustfs::{
     FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
 };
-use cryfs_utils::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::InMemoryDevice;
 use super::dir::InMemoryDirRef;
@@ -35,9 +35,9 @@ impl InMemoryNodeRef {
 impl Node for InMemoryNodeRef {
     type Device = InMemoryDevice;
 
-    async fn as_file(&self) -> FsResult<InMemoryFileRef> {
+    async fn as_file(&self) -> FsResult<AsyncDropGuard<InMemoryFileRef>> {
         match self {
-            InMemoryNodeRef::File(file) => Ok(file.clone_ref()),
+            InMemoryNodeRef::File(file) => Ok(AsyncDropGuard::new(file.clone_ref())),
             InMemoryNodeRef::Dir(_) => Err(FsError::NodeIsADirectory),
             InMemoryNodeRef::Symlink(_) => {
                 // TODO What's the right error here?
@@ -46,16 +46,16 @@ impl Node for InMemoryNodeRef {
         }
     }
 
-    async fn as_dir(&self) -> FsResult<InMemoryDirRef> {
+    async fn as_dir(&self) -> FsResult<AsyncDropGuard<InMemoryDirRef>> {
         match self {
-            InMemoryNodeRef::Dir(dir) => Ok(dir.clone_ref()),
+            InMemoryNodeRef::Dir(dir) => Ok(AsyncDropGuard::new(dir.clone_ref())),
             _ => Err(FsError::NodeIsNotADirectory),
         }
     }
 
-    async fn as_symlink(&self) -> FsResult<InMemorySymlinkRef> {
+    async fn as_symlink(&self) -> FsResult<AsyncDropGuard<InMemorySymlinkRef>> {
         match self {
-            InMemoryNodeRef::Symlink(symlink) => Ok(symlink.clone_ref()),
+            InMemoryNodeRef::Symlink(symlink) => Ok(AsyncDropGuard::new(symlink.clone_ref())),
             _ => Err(FsError::NodeIsNotASymlink),
         }
     }

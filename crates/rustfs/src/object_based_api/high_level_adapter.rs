@@ -256,7 +256,7 @@ where
         let link = fs.get().lookup(path).await?;
         with_async_drop_2!(link, {
             let link = link.as_symlink().await?;
-            link.target().await
+            with_async_drop_2!(link, { link.target().await })
         })
     }
 
@@ -291,12 +291,17 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (new_dir_attrs, _) = parent_dir
-                .create_child_dir(&name, mode, req.uid, req.gid)
-                .await?;
-            Ok(AttrResponse {
-                ttl: TTL_MKDIR,
-                attrs: new_dir_attrs,
+            with_async_drop_2!(parent_dir, {
+                // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_child_dir() ?
+                // TODO No need to return the child dir object to just immediately async_drop it
+                let (new_dir_attrs, mut new_dir) = parent_dir
+                    .create_child_dir(&name, mode, req.uid, req.gid)
+                    .await?;
+                new_dir.async_drop().await?;
+                Ok(AttrResponse {
+                    ttl: TTL_MKDIR,
+                    attrs: new_dir_attrs,
+                })
             })
         })
     }
@@ -313,7 +318,9 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            parent_dir.remove_child_file_or_symlink(&name).await?;
+            with_async_drop_2!(parent_dir, {
+                parent_dir.remove_child_file_or_symlink(&name).await
+            })?;
             Ok(())
         })
     }
@@ -330,7 +337,7 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            parent_dir.remove_child_dir(&name).await?;
+            with_async_drop_2!(parent_dir, { parent_dir.remove_child_dir(&name).await })?;
             Ok(())
         })
     }
@@ -353,12 +360,17 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (new_symlink_attrs, _symlink) = parent_dir
-                .create_child_symlink(&name, target, req.uid, req.gid)
-                .await?;
-            Ok(AttrResponse {
-                ttl: TTL_SYMLINK,
-                attrs: new_symlink_attrs,
+            with_async_drop_2!(parent_dir, {
+                // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_child_symlink() ?
+                // TODO No need to return the symlink object to just immediately async_drop it
+                let (new_symlink_attrs, mut symlink) = parent_dir
+                    .create_child_symlink(&name, target, req.uid, req.gid)
+                    .await?;
+                symlink.async_drop().await?;
+                Ok(AttrResponse {
+                    ttl: TTL_SYMLINK,
+                    attrs: new_symlink_attrs,
+                })
             })
         })
     }
@@ -409,7 +421,7 @@ where
         let file = fs.get().lookup(path).await?;
         with_async_drop_2!(file, {
             let file = file.as_file().await?;
-            let result = match file.open(flags).await {
+            let result = match File::into_open(file, flags).await {
                 Err(err) => Err(err),
                 Ok(open_file) => {
                     let fh = self.open_files.add(open_file);
@@ -568,7 +580,7 @@ where
         let dir = fs.get().lookup(path).await?;
         with_async_drop_2!(dir, {
             let dir = dir.as_dir().await?;
-            let entries = dir.entries().await?;
+            let entries = with_async_drop_2!(dir, { dir.entries().await })?;
             let parent_entries = [
                 DirEntryOrReference::SelfReference,
                 DirEntryOrReference::ParentReference,
@@ -712,9 +724,13 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (file_attrs, mut node, open_file) = parent_dir
-                .create_and_open_file(&name, mode, req.uid, req.gid)
-                .await?;
+            let (file_attrs, mut node, open_file) = with_async_drop_2!(parent_dir, {
+                // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_and_open_file() ?
+                // TODO No need to return the node just to immediately async_drop it below
+                parent_dir
+                    .create_and_open_file(&name, mode, req.uid, req.gid)
+                    .await
+            })?;
             node.async_drop().await?;
             let fh = self.open_files.add(open_file);
             Ok(CreateResponse {

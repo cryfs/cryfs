@@ -1,13 +1,16 @@
 use async_trait::async_trait;
+use std::fmt::Debug;
 
 use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, PathComponent, Uid};
-use cryfs_utils::async_drop::AsyncDropGuard;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[async_trait]
-pub trait Dir {
+pub trait Dir: AsyncDrop + Debug + Sized {
     type Device: super::Device;
 
-    fn as_node(&self) -> AsyncDropGuard<<Self::Device as super::Device>::Node>;
+    fn into_node(
+        this: AsyncDropGuard<Self>,
+    ) -> AsyncDropGuard<<Self::Device as super::Device>::Node>;
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>>;
 
@@ -24,7 +27,7 @@ pub trait Dir {
     async fn move_child_to(
         &self,
         oldname: &PathComponent,
-        newparent: Self,
+        newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
     ) -> FsResult<()>;
 
@@ -34,7 +37,10 @@ pub trait Dir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::Dir<'_>)>;
+    ) -> FsResult<(
+        NodeAttrs,
+        AsyncDropGuard<<Self::Device as super::Device>::Dir<'_>>,
+    )>;
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()>;
 
@@ -45,7 +51,10 @@ pub trait Dir {
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(NodeAttrs, <Self::Device as super::Device>::Symlink<'_>)>;
+    ) -> FsResult<(
+        NodeAttrs,
+        AsyncDropGuard<<Self::Device as super::Device>::Symlink<'_>>,
+    )>;
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()>;
 
