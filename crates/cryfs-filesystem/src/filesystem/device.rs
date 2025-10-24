@@ -142,17 +142,14 @@ where
         let mut current_blob = anchor;
 
         for path_component in relative_path {
-            let entry = current_blob
+            let blob_id = current_blob
                 .with_lock(async |blob| {
                     let dir_blob = blob.as_dir().map_err(|_err| FsError::NodeIsNotADirectory)?;
-                    let entry = dir_blob.entry_by_name(path_component).map_or(
+                    dir_blob.entry_by_name(path_component).map_or(
                         // TODO This error mapping is weird. Probably better to have as_dir return the right error type.
                         Err(FsError::NodeDoesNotExist),
-                        |entry| Ok(entry.clone()),
-                    )?;
-
-                    let blob_id = *entry.blob_id();
-                    Ok(blob_id)
+                        |entry| Ok(*entry.blob_id()),
+                    )
                 })
                 .await;
 
@@ -162,10 +159,10 @@ where
                 // current_blob is borrowed. No need to drop it
             }
 
-            let entry = entry?;
+            let blob_id = blob_id?;
             current_blob = MaybeOwned::from(
                 self.blobstore
-                    .load(&entry)
+                    .load(&blob_id)
                     .await
                     .map_err(|err| {
                         log::error!("Failed to load blob: {err:?}");

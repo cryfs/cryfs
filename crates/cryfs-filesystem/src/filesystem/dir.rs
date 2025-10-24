@@ -553,13 +553,13 @@ where
                 with_async_drop_2!(blob, {
                     let new_dir_blob_id = new_dir_blob_id?;
 
-                    blob.with_lock(async |blob| {
+                    let atime = SystemTime::now();
+                    let mtime = atime;
+
+                    let attrs: FsResult<NodeAttrs> = blob.with_lock(async |blob| {
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
-                        let atime = SystemTime::now();
-                        let mtime = atime;
-
-                        let add_result = blob.add_entry_dir(
+                        blob.add_entry_dir(
                             name.clone(),
                             new_dir_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
@@ -568,15 +568,10 @@ where
                             fs_types::Gid::from(u32::from(gid)),
                             atime,
                             mtime,
-                        );
-                        if let Err(err) = add_result {
-                            log::error!("Error adding dir entry: {err:?}");
-                            self.remove_just_created_blob(new_dir_blob_id).await;
-                            return Err(FsError::UnknownError);
-                        }
+                        )?;
 
                         // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
-                        let attrs = NodeAttrs {
+                        Ok(NodeAttrs {
                             nlink: 1,
                             mode,
                             uid,
@@ -587,18 +582,25 @@ where
                             atime,
                             mtime,
                             ctime: mtime,
-                        };
-                        let node = CryDir::new(
-                            &self.blobstore,
-                            AsyncDropArc::new(NodeInfo::new(
-                                ancestors_and_self.ancestors_and_self(),
-                                name,
-                                self.node_info.atime_update_behavior(),
-                            )),
-                        );
-                        Ok((attrs, node))
-                    })
-                    .await
+                        })
+                    }).await;
+                    let attrs = match attrs {
+                        Ok(attrs) => attrs,
+                        Err(err) => {
+                            log::error!("Error adding dir entry: {err:?}");
+                            self.remove_just_created_blob(new_dir_blob_id).await;
+                            return Err(FsError::UnknownError);
+                        }
+                    };
+                    let node = CryDir::new(
+                        &self.blobstore,
+                        AsyncDropArc::new(NodeInfo::new(
+                            ancestors_and_self.ancestors_and_self(),
+                            name,
+                            self.node_info.atime_update_behavior(),
+                        )),
+                    );
+                    Ok((attrs, node))
                 })
             })
             .await
@@ -717,13 +719,13 @@ where
                 with_async_drop_2!(blob, {
                     let new_symlink_blob_id = new_symlink_blob_id?;
 
-                    blob.with_lock(async |blob| {
+                    let atime = SystemTime::now();
+                    let mtime = atime;
+
+                    let attrs: FsResult<NodeAttrs> = blob.with_lock(async |blob| {
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
-                        let atime = SystemTime::now();
-                        let mtime = atime;
-
-                        let result = blob.add_entry_symlink(
+                        blob.add_entry_symlink(
                             name.clone(),
                             new_symlink_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
@@ -731,25 +733,10 @@ where
                             fs_types::Gid::from(u32::from(gid)),
                             atime,
                             mtime,
-                        );
-
-                        if let Err(err) = result {
-                            log::error!("Error adding dir entry: {err:?}");
-                            self.remove_just_created_blob(new_symlink_blob_id).await;
-                            return Err(FsError::UnknownError);
-                        }
-
-                        let node = CrySymlink::new(
-                            &self.blobstore,
-                            AsyncDropArc::new(NodeInfo::new(
-                                ancestors_and_self.ancestors_and_self(),
-                                name,
-                                self.node_info.atime_update_behavior(),
-                            )),
-                        );
+                        )?;
 
                         // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-                        let attrs = NodeAttrs {
+                        Ok(NodeAttrs {
                             nlink: 1,
                             // TODO Don't convert mode but unify both classes
                             mode: cryfs_rustfs::Mode::from(u32::from(MODE_NEW_SYMLINK)),
@@ -760,10 +747,27 @@ where
                             atime,
                             mtime,
                             ctime: mtime,
-                        };
-                        Ok((attrs, node))
+                        })
+                        
                     })
-                    .await
+                    .await;
+                    let attrs = match attrs {
+                        Ok(attrs) => attrs,
+                        Err(err) => {
+                            log::error!("Error adding dir entry: {err:?}");
+                            self.remove_just_created_blob(new_symlink_blob_id).await;
+                            return Err(FsError::UnknownError);
+                        }
+                    };
+                    let node = CrySymlink::new(
+                        &self.blobstore,
+                        AsyncDropArc::new(NodeInfo::new(
+                            ancestors_and_self.ancestors_and_self(),
+                            name,
+                            self.node_info.atime_update_behavior(),
+                        )),
+                    );
+                    Ok((attrs, node))
                 })
             })
             .await
@@ -845,13 +849,13 @@ where
                 with_async_drop_2!(blob, {
                     let new_file_blob_id = new_file_blob_id?;
 
-                    blob.with_lock(async |blob| {
+                    let atime = SystemTime::now();
+                    let mtime = atime;
+
+                    let attrs: FsResult<NodeAttrs> = blob.with_lock(async |blob| {
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
-                        let atime = SystemTime::now();
-                        let mtime = atime;
-
-                        let result = blob.add_entry_file(
+                        blob.add_entry_file(
                             name.to_owned(),
                             new_file_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
@@ -860,15 +864,10 @@ where
                             fs_types::Gid::from(u32::from(gid)),
                             atime,
                             mtime,
-                        );
-                        if let Err(err) = result {
-                            log::error!("Error adding dir entry: {err:?}");
-                            self.remove_just_created_blob(new_file_blob_id).await;
-                            return Err(FsError::UnknownError);
-                        }
+                        )?;
 
                         // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
-                        let attrs = NodeAttrs {
+                        Ok(NodeAttrs {
                             nlink: 1,
                             mode,
                             uid,
@@ -878,32 +877,39 @@ where
                             atime,
                             mtime,
                             ctime: mtime,
-                        };
-
-                        let node_info = AsyncDropArc::new(NodeInfo::new_with_blob_details(
-                            #[cfg(not(feature = "ancestor_checks_on_move"))]
-                            ancestors_and_self.ancestors_and_self(),
-                            #[cfg(feature = "ancestor_checks_on_move")]
-                            ancestors_and_self.ancestors_and_self(),
-
-                            name.to_owned(),
-                            BlobDetails {
-                                blob_id: new_file_blob_id,
-                                blob_type: BlobType::File,
-                            },
-                            self.node_info.atime_update_behavior(),
-                        ));
-
-                        let node = CryNode::new_internal(
-                            AsyncDropArc::clone(self.blobstore),
-                            AsyncDropArc::clone(&node_info),
-                        );
-                        let open_file =
-                            CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
-
-                        Ok((attrs, node, open_file))
+                        })
                     })
-                    .await
+                    .await;
+                    let attrs = match attrs {
+                        Ok(attrs) => attrs,
+                        Err(err) => {
+                            log::error!("Error adding dir entry: {err:?}");
+                            self.remove_just_created_blob(new_file_blob_id).await;
+                            return Err(FsError::UnknownError);
+                        }
+                    };
+                    let node_info = AsyncDropArc::new(NodeInfo::new_with_blob_details(
+                        #[cfg(not(feature = "ancestor_checks_on_move"))]
+                        ancestors_and_self.ancestors_and_self(),
+                        #[cfg(feature = "ancestor_checks_on_move")]
+                        ancestors_and_self.ancestors_and_self(),
+
+                        name.to_owned(),
+                        BlobDetails {
+                            blob_id: new_file_blob_id,
+                            blob_type: BlobType::File,
+                        },
+                        self.node_info.atime_update_behavior(),
+                    ));
+
+                    let node = CryNode::new_internal(
+                        AsyncDropArc::clone(self.blobstore),
+                        AsyncDropArc::clone(&node_info),
+                    );
+                    let open_file =
+                        CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
+
+                    Ok((attrs, node, open_file))
                 })
             })
             .await
