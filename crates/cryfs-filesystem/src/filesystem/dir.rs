@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::NumBytes;
-use futures::{join};
+use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
@@ -32,7 +32,7 @@ where
 {
     // TODO Here and in others, can we just store &FsBlobStore instead of &AsyncDropGuard?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
 impl<'a, B> CryDir<'a, B>
@@ -42,7 +42,7 @@ where
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,
@@ -260,10 +260,7 @@ where
 
     fn into_node(this: AsyncDropGuard<Self>) -> AsyncDropGuard<CryNode<B>> {
         let this = this.unsafe_into_inner_dont_drop();
-        CryNode::new_internal(
-            AsyncDropArc::clone(&this.blobstore),
-            this.node_info,
-        )
+        CryNode::new_internal(AsyncDropArc::clone(&this.blobstore), this.node_info)
     }
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
@@ -273,7 +270,11 @@ where
 
         let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
 
+        // TODO We shouldn't have to reload the self blob here, that's weird
+        let self_blob = self.load_blob().await?;
+
         let node_info = NodeInfo::new(
+            self_blob,
             ancestors_and_self.ancestors_and_self(),
             name.to_owned(),
             self.node_info.atime_update_behavior(),
@@ -558,7 +559,7 @@ where
                 let self_blob_id = ancestors_and_self.self_blob_id();
                 let (blob, new_dir_blob_id) =
                     join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
-                let blob = match blob {
+                let mut blob = match blob {
                     Ok(blob) => blob,
                     Err(err) => {
                         log::error!("Error loading blob: {err:?}");
@@ -570,13 +571,19 @@ where
                 };
                 // TODO Is this possible without to_owned()?
                 let name = name.to_owned();
-                with_async_drop_2!(blob, {
-                    let new_dir_blob_id = new_dir_blob_id?;
+                let new_dir_blob_id = match new_dir_blob_id {
+                    Ok(new_dir_blob_id) => new_dir_blob_id,
+                    Err(err) => {
+                        blob.async_drop().await?;
+                        return Err(err);
+                    }
+                };
 
-                    let atime = SystemTime::now();
-                    let mtime = atime;
+                let atime = SystemTime::now();
+                let mtime = atime;
 
-                    let attrs: FsResult<NodeAttrs> = blob.with_lock(async |blob| {
+                let attrs: FsResult<NodeAttrs> = blob
+                    .with_lock(async |blob| {
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                         blob.add_entry_dir(
@@ -603,25 +610,27 @@ where
                             mtime,
                             ctime: mtime,
                         })
-                    }).await;
-                    let attrs = match attrs {
-                        Ok(attrs) => attrs,
-                        Err(err) => {
-                            log::error!("Error adding dir entry: {err:?}");
-                            self.remove_just_created_blob(new_dir_blob_id).await;
-                            return Err(FsError::UnknownError);
-                        }
-                    };
-                    let node = CryDir::new(
-                        &self.blobstore,
-                        AsyncDropArc::new(NodeInfo::new(
-                            ancestors_and_self.ancestors_and_self(),
-                            name,
-                            self.node_info.atime_update_behavior(),
-                        )),
-                    );
-                    Ok((attrs, node))
-                })
+                    })
+                    .await;
+                let attrs = match attrs {
+                    Ok(attrs) => attrs,
+                    Err(err) => {
+                        log::error!("Error adding dir entry: {err:?}");
+                        self.remove_just_created_blob(new_dir_blob_id).await;
+                        blob.async_drop().await?;
+                        return Err(FsError::UnknownError);
+                    }
+                };
+                let node = CryDir::new(
+                    &self.blobstore,
+                    AsyncDropArc::new(NodeInfo::new(
+                        blob,
+                        ancestors_and_self.ancestors_and_self(),
+                        name,
+                        self.node_info.atime_update_behavior(),
+                    )),
+                );
+                Ok((attrs, node))
             })
             .await
     }
@@ -724,7 +733,7 @@ where
                     self.load_blob(),
                     self.create_symlink_blob(target, &self_blob_id),
                 );
-                let blob = match blob {
+                let mut blob = match blob {
                     Ok(blob) => blob,
                     Err(err) => {
                         log::error!("Error loading blob: {err:?}");
@@ -736,13 +745,20 @@ where
                 };
                 // TODO Is this possible without to_owned()?
                 let name = name.to_owned();
-                with_async_drop_2!(blob, {
-                    let new_symlink_blob_id = new_symlink_blob_id?;
+                let new_symlink_blob_id = match new_symlink_blob_id {
+                    Ok(id) => id,
+                    Err(err) => {
+                        log::error!("Error creating symlink blob: {err:?}");
+                        blob.async_drop().await?;
+                        return Err(err);
+                    }
+                };
 
-                    let atime = SystemTime::now();
-                    let mtime = atime;
+                let atime = SystemTime::now();
+                let mtime = atime;
 
-                    let attrs: FsResult<NodeAttrs> = blob.with_lock(async |blob| {
+                let attrs: FsResult<NodeAttrs> = blob
+                    .with_lock(async |blob| {
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                         blob.add_entry_symlink(
@@ -768,27 +784,27 @@ where
                             mtime,
                             ctime: mtime,
                         })
-                        
                     })
                     .await;
-                    let attrs = match attrs {
-                        Ok(attrs) => attrs,
-                        Err(err) => {
-                            log::error!("Error adding dir entry: {err:?}");
-                            self.remove_just_created_blob(new_symlink_blob_id).await;
-                            return Err(FsError::UnknownError);
-                        }
-                    };
-                    let node = CrySymlink::new(
-                        &self.blobstore,
-                        AsyncDropArc::new(NodeInfo::new(
-                            ancestors_and_self.ancestors_and_self(),
-                            name,
-                            self.node_info.atime_update_behavior(),
-                        )),
-                    );
-                    Ok((attrs, node))
-                })
+                let attrs = match attrs {
+                    Ok(attrs) => attrs,
+                    Err(err) => {
+                        log::error!("Error adding dir entry: {err:?}");
+                        self.remove_just_created_blob(new_symlink_blob_id).await;
+                        blob.async_drop().await?;
+                        return Err(FsError::UnknownError);
+                    }
+                };
+                let node = CrySymlink::new(
+                    &self.blobstore,
+                    AsyncDropArc::new(NodeInfo::new(
+                        blob,
+                        ancestors_and_self.ancestors_and_self(),
+                        name,
+                        self.node_info.atime_update_behavior(),
+                    )),
+                );
+                Ok((attrs, node))
             })
             .await
     }
@@ -855,7 +871,7 @@ where
                 let self_blob_id = ancestors_and_self.self_blob_id();
                 let (blob, new_file_blob_id) =
                     join!(self.load_blob(), self.create_file_blob(&self_blob_id),);
-                let blob = match blob {
+                let mut blob = match blob {
                     Ok(blob) => blob,
                     Err(err) => {
                         log::error!("Error loading blob: {err:?}");
@@ -866,13 +882,19 @@ where
                     }
                 };
 
-                with_async_drop_2!(blob, {
-                    let new_file_blob_id = new_file_blob_id?;
+                let new_file_blob_id = match new_file_blob_id {
+                    Ok(id) => id,
+                    Err(err) => {
+                        blob.async_drop().await?;
+                        return Err(err);
+                    }
+                };
 
-                    let atime = SystemTime::now();
-                    let mtime = atime;
+                let atime = SystemTime::now();
+                let mtime = atime;
 
-                    let attrs: FsResult<NodeAttrs> = blob.with_lock(async |blob| {
+                let attrs: FsResult<NodeAttrs> = blob
+                    .with_lock(async |blob| {
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                         blob.add_entry_file(
@@ -900,37 +922,36 @@ where
                         })
                     })
                     .await;
-                    let attrs = match attrs {
-                        Ok(attrs) => attrs,
-                        Err(err) => {
-                            log::error!("Error adding dir entry: {err:?}");
-                            self.remove_just_created_blob(new_file_blob_id).await;
-                            return Err(FsError::UnknownError);
-                        }
-                    };
-                    let node_info = AsyncDropArc::new(NodeInfo::new_with_blob_details(
-                        #[cfg(not(feature = "ancestor_checks_on_move"))]
-                        ancestors_and_self.ancestors_and_self(),
-                        #[cfg(feature = "ancestor_checks_on_move")]
-                        ancestors_and_self.ancestors_and_self(),
+                let attrs = match attrs {
+                    Ok(attrs) => attrs,
+                    Err(err) => {
+                        log::error!("Error adding dir entry: {err:?}");
+                        self.remove_just_created_blob(new_file_blob_id).await;
+                        blob.async_drop().await?;
+                        return Err(FsError::UnknownError);
+                    }
+                };
+                let node_info = AsyncDropArc::new(NodeInfo::new_with_blob_details(
+                    blob,
+                    #[cfg(not(feature = "ancestor_checks_on_move"))]
+                    ancestors_and_self.ancestors_and_self(),
+                    #[cfg(feature = "ancestor_checks_on_move")]
+                    ancestors_and_self.ancestors_and_self(),
+                    name.to_owned(),
+                    BlobDetails {
+                        blob_id: new_file_blob_id,
+                        blob_type: BlobType::File,
+                    },
+                    self.node_info.atime_update_behavior(),
+                ));
 
-                        name.to_owned(),
-                        BlobDetails {
-                            blob_id: new_file_blob_id,
-                            blob_type: BlobType::File,
-                        },
-                        self.node_info.atime_update_behavior(),
-                    ));
+                let node = CryNode::new_internal(
+                    AsyncDropArc::clone(self.blobstore),
+                    AsyncDropArc::clone(&node_info),
+                );
+                let open_file = CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
 
-                    let node = CryNode::new_internal(
-                        AsyncDropArc::clone(self.blobstore),
-                        AsyncDropArc::clone(&node_info),
-                    );
-                    let open_file =
-                        CryOpenFile::new(AsyncDropArc::clone(self.blobstore), node_info);
-
-                    Ok((attrs, node, open_file))
-                })
+                Ok((attrs, node, open_file))
             })
             .await
     }
@@ -952,7 +973,8 @@ where
 impl<'a, B> AsyncDrop for CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>, {
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
     type Error = FsError;
     async fn async_drop_impl(&mut self) -> Result<(), FsError> {
         self.node_info.async_drop().await

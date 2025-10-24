@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use cryfs_utils::with_async_drop_2;
 use futures::join;
 use std::fmt::Debug;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 use super::CryDevice;
@@ -27,7 +26,7 @@ where
     // and those instances change the `NodeInfo` (e.g. load its cache), that loaded cache transfers to
     // the [CryNode] instance as well. This is important because [cryfs_rustfs] keeps the [CryNode]
     // instance in its `inode_table` and potentially reuses it.
-    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
 impl<B> CryNode<B>
@@ -59,14 +58,14 @@ where
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: AsyncDropGuard<NodeInfo>,
+        node_info: AsyncDropGuard<NodeInfo<B>>,
     ) -> AsyncDropGuard<Self> {
         Self::new_internal(blobstore, AsyncDropArc::new(node_info))
     }
 
     pub(super) fn new_internal(
         blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,

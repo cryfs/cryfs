@@ -24,7 +24,7 @@ where
 {
     // TODO Do we need to store blobstore + node_info here or can we just store the target directly?
     blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
 impl<'a, B> CrySymlink<'a, B>
@@ -34,7 +34,7 @@ where
 {
     pub fn new(
         blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,

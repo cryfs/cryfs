@@ -35,7 +35,11 @@ pub struct BlobDetails {
 }
 
 #[derive(Debug)]
-enum NodeInfoImpl {
+enum NodeInfoImpl<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
     IsRootDir {
         root_blob_id: BlobId,
 
@@ -43,8 +47,10 @@ enum NodeInfoImpl {
         atime_update_behavior: AtimeUpdateBehavior,
     },
     IsNotRootDir {
+        parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
+
         #[cfg(not(feature = "ancestor_checks_on_move"))]
-        parent_blob_id: BlobId,
+        parent_blob_id: BlobId, // TODO Remove now that we have `self.parent_blob`
         /// ancestors.first() is the root blob id, ancestors.last() is the immediate parent of this node.
         #[cfg(feature = "ancestor_checks_on_move")]
         ancestors: Box<[BlobId]>,
@@ -89,11 +95,19 @@ where
 }
 
 #[derive(Debug)]
-pub struct NodeInfo {
-    inner: NodeInfoImpl,
+pub struct NodeInfo<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    inner: NodeInfoImpl<B>,
 }
 
-impl NodeInfo {
+impl<B> NodeInfo<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
     pub fn new_rootdir(
         root_blob_id: BlobId,
         atime_update_behavior: AtimeUpdateBehavior,
@@ -107,6 +121,7 @@ impl NodeInfo {
     }
 
     pub fn new(
+        parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
         #[cfg(not(feature = "ancestor_checks_on_move"))] parent_blob_id: BlobId,
         #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
         name: PathComponentBuf,
@@ -114,6 +129,7 @@ impl NodeInfo {
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
+                parent_blob,
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
                 #[cfg(feature = "ancestor_checks_on_move")]
@@ -126,6 +142,7 @@ impl NodeInfo {
     }
 
     pub fn new_with_blob_details(
+        parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
         #[cfg(not(feature = "ancestor_checks_on_move"))] parent_blob_id: BlobId,
         #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
         name: PathComponentBuf,
@@ -134,6 +151,7 @@ impl NodeInfo {
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
+                parent_blob,
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
                 #[cfg(feature = "ancestor_checks_on_move")]
@@ -145,14 +163,11 @@ impl NodeInfo {
         })
     }
 
-    async fn _load_parent_blob<B>(
+    // TODO Remove
+    async fn _load_parent_blob(
         blobstore: &ConcurrentFsBlobStore<B>,
         parent_blob_id: &BlobId,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         blobstore
             .load(parent_blob_id)
             .await
@@ -168,21 +183,18 @@ impl NodeInfo {
             })
     }
 
-    pub async fn with_parent_blob<'a, 'b, 'c, B, R>(
+    pub async fn with_parent_blob<'a, 'b, 'c, R>(
         &'a self,
         blobstore: &'b ConcurrentFsBlobStore<B>,
         callback: impl CallbackWithParentBlob<B, R>,
-    ) -> FsResult<R>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<R> {
         match &self.inner {
             NodeInfoImpl::IsRootDir {
                 root_blob_id,
                 atime_update_behavior: _,
             } => callback.on_is_rootdir(*root_blob_id).await,
             NodeInfoImpl::IsNotRootDir {
+                parent_blob: _, // TODO Use this instead
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
                 #[cfg(feature = "ancestor_checks_on_move")]
@@ -217,11 +229,7 @@ impl NodeInfo {
         }
     }
 
-    pub async fn blob_id<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<BlobId>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    pub async fn blob_id(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<BlobId> {
         self.blob_details(blobstore)
             .await
             .map(|blob_details| blob_details.blob_id)
@@ -242,14 +250,10 @@ impl NodeInfo {
     }
 
     #[cfg(feature = "ancestor_checks_on_move")]
-    pub async fn ancestors_and_self<B>(
+    pub async fn ancestors_and_self(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
-    ) -> FsResult<AncestorChain>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<AncestorChain> {
         // TODO Both self.blob_id and self.ancestors() match over Self::{IsRootDir/IsNotRootDir}, can we combine that into just one branch?
         let self_blob_id = self.blob_id(&blobstore).await?;
         let ancestors_and_self = self
@@ -262,34 +266,22 @@ impl NodeInfo {
     }
 
     #[cfg(not(feature = "ancestor_checks_on_move"))]
-    pub async fn ancestors_and_self<B>(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    pub async fn ancestors_and_self(&self, blobstore: &FsBlobStore<B>) -> FsResult<AncestorChain> {
         // In this case, we just return the self blob id since ancestor checks are disabled
         // for move operations.
         Ok(AncestorChain::new(self.blob_id(&blobstore).await?))
     }
 
-    pub async fn node_type<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<BlobType>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    pub async fn node_type(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<BlobType> {
         self.blob_details(blobstore)
             .await
             .map(|blob_details| blob_details.blob_type)
     }
 
-    pub async fn blob_details<B>(
+    pub async fn blob_details(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
-    ) -> FsResult<BlobDetails>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<BlobDetails> {
         match &self.inner {
             NodeInfoImpl::IsRootDir {
                 root_blob_id,
@@ -299,6 +291,7 @@ impl NodeInfo {
                 blob_type: BlobType::Dir,
             }),
             NodeInfoImpl::IsNotRootDir {
+                parent_blob: _, // TODO Use this
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
                 #[cfg(feature = "ancestor_checks_on_move")]
@@ -330,14 +323,10 @@ impl NodeInfo {
         }
     }
 
-    pub async fn load_blob<B>(
+    pub async fn load_blob(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         let blob_id = self.blob_details(blobstore).await?.blob_id;
         blobstore
             .load(&blob_id)
@@ -354,11 +343,7 @@ impl NodeInfo {
             })
     }
 
-    pub fn as_file_mut<'s, B>(blob: &'s mut FsBlob<B>) -> FsResult<&'s mut FileBlob<B>>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    pub fn as_file_mut<'s>(blob: &'s mut FsBlob<B>) -> FsResult<&'s mut FileBlob<B>> {
         let blob_id = blob.blob_id();
         blob.as_file_mut().map_err(|err| {
             FsError::CorruptedFilesystem {
@@ -368,11 +353,7 @@ impl NodeInfo {
         })
     }
 
-    async fn load_lstat_size<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NumBytes>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    async fn load_lstat_size(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NumBytes> {
         let mut blob = self.load_blob(blobstore).await?;
         let lstat_size = blob.with_lock(async |blob| blob.lstat_size().await).await;
         let result = match lstat_size {
@@ -387,17 +368,13 @@ impl NodeInfo {
         result
     }
 
-    pub async fn getattr<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NodeAttrs>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    pub async fn getattr(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NodeAttrs> {
         struct Callback<'d, 'e, B>
         where
             B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
             <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
         {
-            this: &'d NodeInfo,
+            this: &'d NodeInfo<B>,
             blobstore: &'e ConcurrentFsBlobStore<B>,
         }
         impl<'d, 'e, B> CallbackWithParentBlob<B, NodeAttrs> for Callback<'d, 'e, B>
@@ -455,7 +432,7 @@ impl NodeInfo {
         .await
     }
 
-    pub async fn setattr<B>(
+    pub async fn setattr(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
         mode: Option<Mode>,
@@ -465,11 +442,7 @@ impl NodeInfo {
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
         ctime: Option<SystemTime>,
-    ) -> FsResult<NodeAttrs>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<NodeAttrs> {
         // TODO Or is setting ctime allowed? What would it mean?
         assert!(ctime.is_none(), "Cannot set ctime via setattr");
         // TODO Improve concurrency
@@ -481,7 +454,7 @@ impl NodeInfo {
             B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
             <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
         {
-            this: &'d NodeInfo,
+            this: &'d NodeInfo<B>,
             blobstore: &'e ConcurrentFsBlobStore<B>,
             mode: Option<Mode>,
             uid: Option<cryfs_rustfs::Uid>,
@@ -539,15 +512,11 @@ impl NodeInfo {
         .await
     }
 
-    pub async fn truncate_file<B>(
+    pub async fn truncate_file(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
         new_size: NumBytes,
-    ) -> FsResult<()>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<()> {
         let blob = self.load_blob(blobstore).await?;
         with_async_drop_2!(blob, {
             blob.with_lock(async |mut blob| {
@@ -561,15 +530,11 @@ impl NodeInfo {
         })
     }
 
-    pub async fn concurrently_maybe_update_access_timestamp_in_parent<B, F>(
+    pub async fn concurrently_maybe_update_access_timestamp_in_parent<F>(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
         concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
-    ) -> FsResult<F>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<F> {
         let (update_result, fn_result) = join!(
             self.maybe_update_access_timestamp_in_parent(blobstore, self.atime_update_behavior()),
             concurrent_fn(),
@@ -578,15 +543,11 @@ impl NodeInfo {
         fn_result
     }
 
-    pub async fn concurrently_update_modification_timestamp_in_parent<B, F>(
+    pub async fn concurrently_update_modification_timestamp_in_parent<F>(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
         concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
-    ) -> FsResult<F>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<F> {
         let (update_result, fn_result) = join!(
             self.update_modification_timestamp_in_parent(blobstore),
             concurrent_fn(),
@@ -595,44 +556,32 @@ impl NodeInfo {
         fn_result
     }
 
-    pub async fn maybe_update_access_timestamp_in_parent<B>(
+    pub async fn maybe_update_access_timestamp_in_parent(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
         atime_update_behavior: AtimeUpdateBehavior,
-    ) -> FsResult<()>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<()> {
         self._update_in_parent(blobstore, |parent, blob_id| {
             parent.maybe_update_access_timestamp_of_entry(blob_id, atime_update_behavior)
         })
         .await
     }
 
-    pub async fn update_modification_timestamp_in_parent<B>(
+    pub async fn update_modification_timestamp_in_parent(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
-    ) -> FsResult<()>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<()> {
         self._update_in_parent(blobstore, |parent, blob_id| {
             parent.update_modification_timestamp_of_entry(blob_id)
         })
         .await
     }
 
-    async fn _update_in_parent<B>(
+    async fn _update_in_parent(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
         update_fn: impl FnOnce(&mut DirBlob<B>, &BlobId) -> FsResult<()>,
-    ) -> FsResult<()>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    ) -> FsResult<()> {
         // TODO Ideally we'd do this without loading the parent blob (we've already loaded it right before to be able to load the actual blob),
         //      but if not possible, the least we can do is remember the current atime in BlobDetails on the first load before calling into here,
         //      and decide if we need to update the timestamp based on that before loading the parent blob. Avoiding a load when it doesn't need to be updated.
@@ -692,11 +641,7 @@ impl NodeInfo {
         }
     }
 
-    pub async fn flush_metadata<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<()>
-    where
-        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-    {
+    pub async fn flush_metadata(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<()> {
         struct Callback<B>
         where
             B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -740,11 +685,20 @@ impl NodeInfo {
 }
 
 #[async_trait]
-impl AsyncDrop for NodeInfo {
+impl<B> AsyncDrop for NodeInfo<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        // Nothing to do
+        match &mut self.inner {
+            NodeInfoImpl::IsRootDir { .. } => (),
+            NodeInfoImpl::IsNotRootDir { parent_blob, .. } => {
+                parent_blob.async_drop().await?;
+            }
+        }
         Ok(())
     }
 }

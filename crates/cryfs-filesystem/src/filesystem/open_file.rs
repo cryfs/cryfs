@@ -30,7 +30,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+    node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
 impl<B> CryOpenFile<B>
@@ -40,7 +40,7 @@ where
 {
     pub fn new(
         blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
-        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo>>,
+        node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore,
