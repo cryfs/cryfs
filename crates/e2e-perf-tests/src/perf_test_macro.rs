@@ -60,6 +60,7 @@ fn perf_test_(_group: String, names: Vec<String>, disable_fusemt: u8, disable_fu
                     r#"
                     #[test]
                     fn {fixture_name}_{atime_name}() {{
+                        crate::env_logger::init();
                         let filesystem_driver = std::marker::PhantomData::<{filesystem_driver}>;
                         let fixture_type = {fixture_type};
                         let atime_behavior = {atime_value};
