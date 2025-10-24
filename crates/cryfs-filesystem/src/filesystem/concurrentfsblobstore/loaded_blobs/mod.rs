@@ -66,7 +66,7 @@ where
     }
 
     pub async fn try_insert_with_id<F>(
-        &self,
+        this: &AsyncDropGuard<AsyncDropArc<Self>>,
         blob_id: BlobId,
         loading_fn: impl FnOnce() -> F + Send + 'static,
     ) -> Result<(), anyhow::Error>
@@ -74,7 +74,7 @@ where
         F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>>> + Send,
     {
         let loading_future = {
-            let mut blobs = self.blobs.lock().unwrap();
+            let mut blobs = this.blobs.lock().unwrap();
             match blobs.entry(blob_id) {
                 Entry::Occupied(_) => Err(anyhow::anyhow!(
                     "Blob with id {} is already loaded",
@@ -85,7 +85,7 @@ where
                         let loaded_blob = loading_fn().await?;
                         Ok(Some(loaded_blob))
                     };
-                    let mut loading_future = self.make_loading_future(blob_id, loading_future);
+                    let mut loading_future = this.make_loading_future(blob_id, loading_future);
                     let loading_result = loading_future.add_waiter();
                     entry.insert(BlobState::Loading(loading_future));
                     Ok(loading_result)
@@ -102,7 +102,7 @@ where
                 //      BUT: We need to be careful. The current code assumes that any unfulfilled waiter will eventually
                 //      (increment the refcount and then on decrement) call [Self::unload]. If we don't increment the refcount here,
                 //      we need to ensure we still call [Self::unload] to check if we need to drop the blob.
-                self._finalize_waiter(blob_id).async_drop().await?;
+                Self::_finalize_waiter(this, blob_id).async_drop().await?;
                 Ok(())
             }
             LoadingResult::NotFound => {
@@ -121,13 +121,13 @@ where
     /// This id also must not be used in any other calls before this completes.
     /// Only after this function call returns are we set up to deal with concurrent accesses.
     pub fn insert_with_new_id(
-        &self,
+        this: &AsyncDropGuard<AsyncDropArc<Self>>,
         blob: AsyncDropGuard<FsBlob<B>>,
-    ) -> AsyncDropGuard<LoadedBlobGuard<'_, B>> {
+    ) -> AsyncDropGuard<LoadedBlobGuard<B>> {
         let blob_id = blob.blob_id();
 
         // We now have the newly assigned blob id and are fully loaded. Insert it into the map.
-        let mut blobs = self.blobs.lock().unwrap();
+        let mut blobs = this.blobs.lock().unwrap();
         let loaded = BlobStateLoaded::new(
             blob, 0, None, // No unfulfilled waiters, we just created it
         );
@@ -141,15 +141,15 @@ where
             }
         }
 
-        LoadedBlobGuard::new(self, blob_id, loaded_blob)
+        LoadedBlobGuard::new(AsyncDropArc::clone(this), blob_id, loaded_blob)
     }
 
     pub async fn get_loaded_or_insert_loading<F>(
-        &self,
+        this: &AsyncDropGuard<AsyncDropArc<Self>>,
         blob_id: BlobId,
         blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
         mut loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>) -> F + Send,
-    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<'_, B>>>, anyhow::Error>
+    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error>
     where
         F: Future<Output = Result<Option<AsyncDropGuard<FsBlob<B>>>>> + Send + 'static,
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -157,21 +157,25 @@ where
     {
         with_async_drop_2!(blobstore, {
             loop {
-                let blob_state = self._clone_or_create_blob_state(blob_id, &blobstore, loading_fn);
-                // Now the lock on `self.blobs` is released, so we can await the loading future without blocking other operations.
+                let blob_state = this._clone_or_create_blob_state(blob_id, &blobstore, loading_fn);
+                // Now the lock on `this.blobs` is released, so we can await the loading future without blocking other operations.
 
                 match blob_state {
                     CloneOrCreateBlobStateResult::Loaded { blob } => {
                         // Oh, the blob is already loaded! We can just return it
                         // Returning means we shift the responsibility to call async_drop on the [AsyncDropArc] to our caller.
-                        return Ok(Some(LoadedBlobGuard::new(self, blob_id, blob)));
+                        return Ok(Some(LoadedBlobGuard::new(
+                            AsyncDropArc::clone(this),
+                            blob_id,
+                            blob,
+                        )));
                     }
                     CloneOrCreateBlobStateResult::Loading { loading_result } => {
                         let loading_result = loading_result.await;
                         return match loading_result {
                             LoadingResult::Loaded => {
                                 // The blob was successfully loaded, we can get the result from the map
-                                Ok(Some(self._finalize_waiter(blob_id)))
+                                Ok(Some(Self::_finalize_waiter(this, blob_id)))
                             }
                             LoadingResult::NotFound => Ok(None),
                             LoadingResult::Error(err) => Err(anyhow::anyhow!(
@@ -206,9 +210,12 @@ where
         })
     }
 
-    fn _finalize_waiter(&self, blob_id: BlobId) -> AsyncDropGuard<LoadedBlobGuard<B>> {
+    fn _finalize_waiter(
+        this: &AsyncDropGuard<AsyncDropArc<Self>>,
+        blob_id: BlobId,
+    ) -> AsyncDropGuard<LoadedBlobGuard<B>> {
         // This is not a race condition with dropping because we are an "unfulfilled waiter", i.e. the blob cannot be dropped until we decrease the count below.
-        let mut blobs = self.blobs.lock().unwrap();
+        let mut blobs = this.blobs.lock().unwrap();
         let Some(state) = blobs.get_mut(&blob_id) else {
             panic!("Blob with id {} was not found in the map", blob_id);
         };
@@ -216,7 +223,7 @@ where
             panic!("Blob with id {} is not in loaded state", blob_id);
         };
         LoadedBlobGuard::new(
-            self,
+            AsyncDropArc::clone(this),
             blob_id,
             // [Self::_clone_or_create_blob_state] added a waiter, so we need to decrement num_unfulfilled_waiters.
             loaded.get_blob_and_decrease_num_unfulfilled_waiters(),

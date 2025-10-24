@@ -112,10 +112,10 @@ impl NodeInfo {
         }
     }
 
-    async fn _load_parent_blob<'a, B>(
-        blobstore: &'a ConcurrentFsBlobStore<B>,
+    async fn _load_parent_blob<B>(
+        blobstore: &ConcurrentFsBlobStore<B>,
         parent_blob_id: &BlobId,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<'a, B>>>
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
@@ -297,10 +297,10 @@ impl NodeInfo {
         }
     }
 
-    pub async fn load_blob<'a, B>(
+    pub async fn load_blob<B>(
         &self,
-        blobstore: &'a ConcurrentFsBlobStore<B>,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<'a, B>>>
+        blobstore: &ConcurrentFsBlobStore<B>,
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>>
     where
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,

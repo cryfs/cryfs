@@ -25,8 +25,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
-
-    loaded_blobs: AsyncDropGuard<LoadedBlobs<B>>,
+    loaded_blobs: AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
 }
 
 impl<B> ConcurrentFsBlobStore<B>
@@ -37,20 +36,19 @@ where
     pub fn new(blobstore: AsyncDropGuard<FsBlobStore<B>>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blobstore: AsyncDropArc::new(blobstore),
-            loaded_blobs: LoadedBlobs::new(),
+            loaded_blobs: AsyncDropArc::new(LoadedBlobs::new()),
         })
     }
 
     pub async fn create_root_dir_blob(&self, root_blob_id: &BlobId) -> Result<()> {
         let root_blob_id = *root_blob_id;
         let blobstore = AsyncDropArc::clone(&self.blobstore);
-        self.loaded_blobs
-            .try_insert_with_id(root_blob_id, async move || {
-                with_async_drop_2!(blobstore, {
-                    blobstore.create_root_dir_blob(&root_blob_id).await
-                })
+        LoadedBlobs::try_insert_with_id(&self.loaded_blobs, root_blob_id, async move || {
+            with_async_drop_2!(blobstore, {
+                blobstore.create_root_dir_blob(&root_blob_id).await
             })
-            .await
+        })
+        .await
     }
 
     pub async fn create_file_blob(
@@ -58,7 +56,7 @@ where
         parent: &BlobId,
     ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         let blob = self.blobstore.create_file_blob(parent).await?;
-        let inserted = self.loaded_blobs.insert_with_new_id(blob);
+        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
         Ok(ConcurrentFsBlob::new(inserted))
     }
 
@@ -67,7 +65,7 @@ where
         parent: &BlobId,
     ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         let blob = self.blobstore.create_dir_blob(parent).await?;
-        let inserted = self.loaded_blobs.insert_with_new_id(blob);
+        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
         Ok(ConcurrentFsBlob::new(inserted))
     }
 
@@ -77,7 +75,7 @@ where
         target: &str,
     ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         let blob = self.blobstore.create_symlink_blob(parent, target).await?;
-        let inserted = self.loaded_blobs.insert_with_new_id(blob);
+        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
         Ok(ConcurrentFsBlob::new(inserted))
     }
 
@@ -87,12 +85,15 @@ where
     ) -> Result<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>> {
         let blob_id = *blob_id;
         let blobstore = AsyncDropArc::clone(&self.blobstore);
-        let loaded_blob = self
-            .loaded_blobs
-            .get_loaded_or_insert_loading(blob_id, blobstore, async move |blobstore| {
+        let loaded_blob = LoadedBlobs::get_loaded_or_insert_loading(
+            &self.loaded_blobs,
+            blob_id,
+            blobstore,
+            async move |blobstore| {
                 with_async_drop_2!(blobstore, { blobstore.load(&blob_id).await })
-            })
-            .await?;
+            },
+        )
+        .await?;
         Ok(loaded_blob.map(ConcurrentFsBlob::new))
     }
 

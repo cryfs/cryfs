@@ -4,7 +4,6 @@ use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::object_based_api::Dir as _;
-use cryfs_utils::with_async_drop_2;
 use futures::join;
 use maybe_owned::MaybeOwned;
 use std::sync::Arc;
@@ -114,11 +113,11 @@ where
             .await
     }
 
-    async fn load_blob_from_relative_path_owned<'a, 'b>(
-        &'a self,
-        anchor: AsyncDropGuard<ConcurrentFsBlob<'a, B>>,
+    async fn load_blob_from_relative_path_owned(
+        &self,
+        anchor: AsyncDropGuard<ConcurrentFsBlob<B>>,
         relative_path: impl Iterator<Item = &PathComponent>,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<'a, B>>> {
+    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         match self
             .load_blob_from_relative_path(MaybeOwned::Owned(anchor), relative_path)
             .await?
@@ -132,11 +131,11 @@ where
 
     // If `anchor` is borrowed and `relative_path` is empty, the returned blob will be borrowed.
     // If `anchor` is owned or `relative_path` is non-empty, the returned blob will be owned.
-    async fn load_blob_from_relative_path<'a, 'b>(
-        &'a self,
-        anchor: MaybeOwned<'b, AsyncDropGuard<ConcurrentFsBlob<'a, B>>>,
+    async fn load_blob_from_relative_path<'b>(
+        &self,
+        anchor: MaybeOwned<'b, AsyncDropGuard<ConcurrentFsBlob<B>>>,
         relative_path: impl Iterator<Item = &PathComponent>,
-    ) -> FsResult<MaybeOwned<'b, AsyncDropGuard<ConcurrentFsBlob<'a, B>>>> {
+    ) -> FsResult<MaybeOwned<'b, AsyncDropGuard<ConcurrentFsBlob<B>>>> {
         let mut current_blob = anchor;
 
         for path_component in relative_path {
@@ -182,11 +181,11 @@ where
         Ok(current_blob)
     }
 
-    async fn load_and_lock_two_blobs<'a, R>(
-        &'a self,
+    async fn load_and_lock_two_blobs<R>(
+        &self,
         path1: &AbsolutePath,
         path2: &AbsolutePath,
-        callback: impl LoadAndLockTwoBlobsCallback<'a, B, R>,
+        callback: impl LoadAndLockTwoBlobsCallback<B, R>,
     ) -> FsResult<R> {
         let num_shared_path_components = path1
             .iter()
@@ -378,13 +377,13 @@ where
                 dest_name: &'a PathComponent,
                 on_overwritten: O,
             }
-            impl<'a, 'b, B, O> LoadAndLockTwoBlobsCallback<'b, B, ()> for Callback<'a, B, O>
+            impl<'a, B, O> LoadAndLockTwoBlobsCallback<B, ()> for Callback<'a, B, O>
             where
                 B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
                 <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
                 O: AsyncFnOnce(&BlobId) -> FsResult<()>,
             {
-                async fn on_are_same_blob(self, blob: &ConcurrentFsBlob<'b, B>) -> FsResult<()> {
+                async fn on_are_same_blob(self, blob: &ConcurrentFsBlob<B>) -> FsResult<()> {
                     blob.with_lock(async |blob| {
                         let parent = blob
                             .as_dir_mut()
@@ -404,8 +403,8 @@ where
 
                 async fn on_are_different_blobs(
                     self,
-                    source_parent_blob: &ConcurrentFsBlob<'b, B>,
-                    dest_parent_blob: &ConcurrentFsBlob<'b, B>,
+                    source_parent_blob: &ConcurrentFsBlob<B>,
+                    dest_parent_blob: &ConcurrentFsBlob<B>,
                 ) -> FsResult<()> {
                     // TODO We're currently locking, releasing and re-locking blobs multiple times. This introduces race conditions and is not optimal for performance either.
                     //      We should just lock each blob once and keep it locked until we're done. But we need to do it in a deadlock-free way, locking multiple
@@ -593,15 +592,15 @@ where
     }
 }
 
-trait LoadAndLockTwoBlobsCallback<'a, B, R>
+trait LoadAndLockTwoBlobsCallback<B, R>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    async fn on_are_same_blob(self, blob: &ConcurrentFsBlob<'a, B>) -> FsResult<R>;
+    async fn on_are_same_blob(self, blob: &ConcurrentFsBlob<B>) -> FsResult<R>;
     async fn on_are_different_blobs(
         self,
-        blob1: &ConcurrentFsBlob<'a, B>,
-        blob2: &ConcurrentFsBlob<'a, B>,
+        blob1: &ConcurrentFsBlob<B>,
+        blob2: &ConcurrentFsBlob<B>,
     ) -> FsResult<R>;
 }

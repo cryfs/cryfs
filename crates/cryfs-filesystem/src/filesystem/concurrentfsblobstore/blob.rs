@@ -9,20 +9,20 @@ use crate::filesystem::{
 };
 
 #[derive(Debug)]
-pub struct ConcurrentFsBlob<'a, B>
+pub struct ConcurrentFsBlob<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    blob: AsyncDropGuard<LoadedBlobGuard<'a, B>>,
+    blob: AsyncDropGuard<LoadedBlobGuard<B>>,
 }
 
-impl<'a, B> ConcurrentFsBlob<'a, B>
+impl<B> ConcurrentFsBlob<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub fn new(blob: AsyncDropGuard<LoadedBlobGuard<'a, B>>) -> AsyncDropGuard<Self> {
+    pub fn new(blob: AsyncDropGuard<LoadedBlobGuard<B>>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { blob })
     }
 
@@ -49,7 +49,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<'a, B> AsyncDrop for ConcurrentFsBlob<'a, B>
+impl<B> AsyncDrop for ConcurrentFsBlob<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,

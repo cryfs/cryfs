@@ -10,23 +10,23 @@ use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex};
 
 #[derive(Debug)]
-pub struct LoadedBlobGuard<'s, B>
+pub struct LoadedBlobGuard<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    loaded_blobs: &'s LoadedBlobs<B>,
+    loaded_blobs: AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
     blob_id: BlobId,
     blob: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>>,
 }
 
-impl<'s, B> LoadedBlobGuard<'s, B>
+impl<B> LoadedBlobGuard<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub(super) fn new(
-        loaded_blobs: &'s LoadedBlobs<B>,
+        loaded_blobs: AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
         blob_id: BlobId,
         blob: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>>,
     ) -> AsyncDropGuard<Self> {
@@ -70,7 +70,7 @@ where
 }
 
 #[async_trait]
-impl<'s, B> AsyncDrop for LoadedBlobGuard<'s, B>
+impl<B> AsyncDrop for LoadedBlobGuard<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
@@ -80,6 +80,7 @@ where
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         let blob = std::mem::replace(&mut self.blob, AsyncDropGuard::new_invalid());
         self.loaded_blobs.unload(self.blob_id, blob).await?;
+        self.loaded_blobs.async_drop().await.unwrap(); // TODO No unwrap
         Ok(())
     }
 }
