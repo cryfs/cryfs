@@ -4,7 +4,6 @@ use futures::{join};
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::SystemTime;
-use tokio::sync::OnceCell;
 
 use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
 use super::{
@@ -879,19 +878,19 @@ where
                             ctime: mtime,
                         };
 
-                        let node_info = Arc::new(NodeInfo::IsNotRootDir {
+                        let node_info = Arc::new(NodeInfo::new_with_blob_details(
                             #[cfg(not(feature = "ancestor_checks_on_move"))]
-                            parent_blob_id: ancestors_and_self.ancestors_and_self(),
+                            ancestors_and_self.ancestors_and_self(),
                             #[cfg(feature = "ancestor_checks_on_move")]
-                            ancestors: ancestors_and_self.ancestors_and_self(),
+                            ancestors_and_self.ancestors_and_self(),
 
-                            name: name.to_owned(),
-                            blob_details: OnceCell::new_with(Some(BlobDetails {
+                            name.to_owned(),
+                            BlobDetails {
                                 blob_id: new_file_blob_id,
                                 blob_type: BlobType::File,
-                            })),
-                            atime_update_behavior: self.node_info.atime_update_behavior(),
-                        });
+                            },
+                            self.node_info.atime_update_behavior(),
+                        ));
 
                         let node = CryNode::new_internal(
                             AsyncDropArc::clone(self.blobstore),

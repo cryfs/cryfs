@@ -34,7 +34,7 @@ pub struct BlobDetails {
 }
 
 #[derive(Debug)]
-pub enum NodeInfo {
+enum NodeInfoImpl {
     IsRootDir {
         root_blob_id: BlobId,
 
@@ -87,11 +87,18 @@ where
     ) -> FsResult<R>;
 }
 
+#[derive(Debug)]
+pub struct NodeInfo {
+    inner: NodeInfoImpl,
+}
+
 impl NodeInfo {
     pub fn new_rootdir(root_blob_id: BlobId, atime_update_behavior: AtimeUpdateBehavior) -> Self {
-        Self::IsRootDir {
-            root_blob_id,
-            atime_update_behavior,
+        Self {
+            inner: NodeInfoImpl::IsRootDir {
+                root_blob_id,
+                atime_update_behavior,
+            },
         }
     }
 
@@ -101,14 +108,36 @@ impl NodeInfo {
         name: PathComponentBuf,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> Self {
-        Self::IsNotRootDir {
-            #[cfg(not(feature = "ancestor_checks_on_move"))]
-            parent_blob_id,
-            #[cfg(feature = "ancestor_checks_on_move")]
-            ancestors,
-            name,
-            blob_details: OnceCell::default(),
-            atime_update_behavior,
+        Self {
+            inner: NodeInfoImpl::IsNotRootDir {
+                #[cfg(not(feature = "ancestor_checks_on_move"))]
+                parent_blob_id,
+                #[cfg(feature = "ancestor_checks_on_move")]
+                ancestors,
+                name,
+                blob_details: OnceCell::default(),
+                atime_update_behavior,
+            },
+        }
+    }
+
+    pub fn new_with_blob_details(
+        #[cfg(not(feature = "ancestor_checks_on_move"))] parent_blob_id: BlobId,
+        #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
+        name: PathComponentBuf,
+        blob_details: BlobDetails,
+        atime_update_behavior: AtimeUpdateBehavior,
+    ) -> Self {
+        Self {
+            inner: NodeInfoImpl::IsNotRootDir {
+                #[cfg(not(feature = "ancestor_checks_on_move"))]
+                parent_blob_id,
+                #[cfg(feature = "ancestor_checks_on_move")]
+                ancestors,
+                name,
+                blob_details: OnceCell::new_with(Some(blob_details)),
+                atime_update_behavior,
+            },
         }
     }
 
@@ -144,12 +173,12 @@ impl NodeInfo {
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
-        match self {
-            Self::IsRootDir {
+        match &self.inner {
+            NodeInfoImpl::IsRootDir {
                 root_blob_id,
                 atime_update_behavior: _,
             } => callback.on_is_rootdir(*root_blob_id).await,
-            Self::IsNotRootDir {
+            NodeInfoImpl::IsNotRootDir {
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
                 #[cfg(feature = "ancestor_checks_on_move")]
@@ -196,12 +225,12 @@ impl NodeInfo {
 
     #[cfg(feature = "ancestor_checks_on_move")]
     pub fn ancestors(&self) -> &[BlobId] {
-        match self {
-            Self::IsRootDir { .. } => {
+        match &self.inner {
+            NodeInfoImpl::IsRootDir { .. } => {
                 // Return an empty array for the root dir
                 &[]
             }
-            Self::IsNotRootDir { ancestors, .. } => {
+            NodeInfoImpl::IsNotRootDir { ancestors, .. } => {
                 // Return the stored ancestors
                 ancestors
             }
@@ -257,15 +286,15 @@ impl NodeInfo {
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
     {
-        match self {
-            Self::IsRootDir {
+        match &self.inner {
+            NodeInfoImpl::IsRootDir {
                 root_blob_id,
                 atime_update_behavior: _,
             } => Ok(BlobDetails {
                 blob_id: root_blob_id.clone(),
                 blob_type: BlobType::Dir,
             }),
-            Self::IsNotRootDir {
+            NodeInfoImpl::IsNotRootDir {
                 #[cfg(not(feature = "ancestor_checks_on_move"))]
                 parent_blob_id,
                 #[cfg(feature = "ancestor_checks_on_move")]
@@ -647,12 +676,12 @@ impl NodeInfo {
     }
 
     pub fn atime_update_behavior(&self) -> AtimeUpdateBehavior {
-        match self {
-            Self::IsRootDir {
+        match &self.inner {
+            NodeInfoImpl::IsRootDir {
                 atime_update_behavior,
                 ..
             } => *atime_update_behavior,
-            Self::IsNotRootDir {
+            NodeInfoImpl::IsNotRootDir {
                 atime_update_behavior,
                 ..
             } => *atime_update_behavior,
