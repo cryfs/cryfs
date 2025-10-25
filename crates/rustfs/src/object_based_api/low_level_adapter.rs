@@ -100,6 +100,8 @@ where
     fs: Arc<RwLock<AsyncDropGuard<MaybeInitializedFs<Fs>>>>,
 
     // TODO Do we need Arc for inodes?
+    // TODO InodeInfo here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
+    //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
     inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>>,
 
     open_files: AsyncDropGuard<OpenFileList<Fs::OpenFile>>,
@@ -271,7 +273,7 @@ where
     ) -> FsResult<ReplyEntry> {
         self.trigger_on_operation().await?;
 
-        // TODO Will lookup() be called multiple times with the same parent+name and is it ok to give the second call a different inode while the first call is still ongoing?
+        // TODO Will lookup() be called multiple times with the same parent+name, before the previous one is forgotten, and is it ok to give the second call a different inode while the first call is still ongoing?
         let parent_node = self.get_inode(parent_ino).await?;
         let mut child = with_async_drop_2!(parent_node, {
             let parent_node_dir = parent_node
@@ -468,7 +470,7 @@ where
                 Ok((attrs, Dir::into_node(child)))
             })
         })?;
-        // TODO Are we supposed to add the inode to our inode list here?
+        // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
         let ino = self.add_inode(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
@@ -533,7 +535,8 @@ where
                 Ok((attrs, Symlink::into_node(child)))
             })
         })?;
-        // TODO Are we supposed to add the inode to our inode list here?
+        // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
+        // TODO Check this is actually the case for symlink, I only checked mkdir so far
         let ino = self.add_inode(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_SYMLINK,
@@ -979,7 +982,8 @@ where
                     .await
             })?;
 
-            // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode. If not, we probably don't need to return the child_node from create_and_open_file.
+            // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
+            // TODO Check this is actually the case for create, I only checked mkdir so far
             //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
             let child_ino = self.add_inode(parent_ino, child_node, name).await;
 
