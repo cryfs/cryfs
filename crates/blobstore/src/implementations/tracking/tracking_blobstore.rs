@@ -94,6 +94,12 @@ where
     async fn clear_cache_slow(&self) -> Result<()> {
         self.underlying_store.clear_cache_slow().await
     }
+    #[cfg(any(test, feature = "testutils"))]
+    async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
+        self.underlying_store
+            .clear_unloaded_blocks_from_cache()
+            .await
+    }
 
     #[cfg(test)]
     async fn all_blobs(&self) -> Result<Vec<BlobId>> {

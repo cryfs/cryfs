@@ -227,7 +227,10 @@ where
 
     pub async fn reset_caches(&self) {
         self.filesystem.reset_cache().await;
-        self.blobstore.clear_cache_slow().await.unwrap();
+        self.blobstore
+            .clear_unloaded_blocks_from_cache()
+            .await
+            .unwrap();
     }
 }
 

@@ -230,7 +230,7 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
         self.block_store.clear_cache_slow().await
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
         self.block_store.clear_unloaded_blocks_from_cache().await
     }

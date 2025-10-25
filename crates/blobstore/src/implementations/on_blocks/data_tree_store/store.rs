@@ -142,7 +142,7 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         self.node_store.clear_cache_slow().await
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testutils"))]
     pub async fn clear_unloaded_blocks_from_cache(&self) -> Result<()> {
         self.node_store.clear_unloaded_blocks_from_cache().await
     }
