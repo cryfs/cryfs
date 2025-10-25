@@ -41,6 +41,7 @@ pub trait FuserCacheBehavior: Send + Sync {
         child_name: &PathComponent,
         child_ino: InodeNumber,
     ) -> Self::NodeHandle;
+    async fn reset_cache(fs: &ObjectBasedFsAdapterLL<Device>);
 }
 
 /// This is a version of the [FuserFilesystemDriver] that caches inodes, i.e. it simulates operation counts for the scenario where a filesystem operation
@@ -72,6 +73,9 @@ impl FuserCacheBehavior for WithInodeCache {
         child_ino: InodeNumber,
     ) -> Self::NodeHandle {
         child_ino
+    }
+    async fn reset_cache(_fs: &ObjectBasedFsAdapterLL<Device>) {
+        // No-op for cached behavior
     }
 }
 /// This is a version of the [FuserFilesystemDriver] that doesn't cache inodes, i.e. it simulates operation counts for the scenario where a filesystem operation
@@ -167,6 +171,9 @@ impl FuserCacheBehavior for WithoutInodeCache {
             .unwrap_or_else(AbsolutePathBuf::root)
             .join(child_name)
     }
+    async fn reset_cache(fs: &ObjectBasedFsAdapterLL<Device>) {
+        fs.reset_cache().await;
+    }
 }
 
 /// Takes two iterators, returns common elements in the prefix in a Vector, and the remaining elements of both iterators as two separate iterators.
@@ -189,24 +196,20 @@ fn _split_common<T: PartialEq + Eq, I1: Iterator<Item = T>, I2: Iterator<Item = 
     (common, iter1, iter2)
 }
 
-/// A [FilesystemDriver] implementation using the low-level Api from [rustfs], i.e. [ObjectBasedFsAdapterLL].
-/// Its caching behavior can be configured using [FuserCacheBehavior].
-pub struct FuserFilesystemDriver<C: FuserCacheBehavior> {
-    fs: AsyncDropGuard<
-        ObjectBasedFsAdapterLL<
-            CryDevice<
-                AsyncDropArc<
-                    TrackingBlobStore<
-                        BlobStoreOnBlocks<
-                            HLSharedBlockStore<
-                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
-                            >,
-                        >,
-                    >,
-                >,
+type Device = CryDevice<
+    AsyncDropArc<
+        TrackingBlobStore<
+            BlobStoreOnBlocks<
+                HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
             >,
         >,
     >,
+>;
+
+/// A [FilesystemDriver] implementation using the low-level Api from [rustfs], i.e. [ObjectBasedFsAdapterLL].
+/// Its caching behavior can be configured using [FuserCacheBehavior].
+pub struct FuserFilesystemDriver<C: FuserCacheBehavior> {
+    fs: AsyncDropGuard<ObjectBasedFsAdapterLL<Device>>,
     _c: PhantomData<C>,
 }
 
@@ -221,21 +224,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
 
     type FileHandle = FileHandle;
 
-    async fn new(
-        device: AsyncDropGuard<
-            CryDevice<
-                AsyncDropArc<
-                    TrackingBlobStore<
-                        BlobStoreOnBlocks<
-                            HLSharedBlockStore<
-                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
-                            >,
-                        >,
-                    >,
-                >,
-            >,
-        >,
-    ) -> AsyncDropGuard<Self> {
+    async fn new(device: AsyncDropGuard<Device>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(FuserFilesystemDriver {
             fs: ObjectBasedFsAdapterLL::new(|_uid, _gid| device),
             _c: PhantomData,
@@ -248,6 +237,10 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
 
     async fn destroy(&self) {
         self.fs.destroy().await;
+    }
+
+    async fn reset_cache(&self) {
+        C::reset_cache(&self.fs).await;
     }
 
     async fn mkdir(

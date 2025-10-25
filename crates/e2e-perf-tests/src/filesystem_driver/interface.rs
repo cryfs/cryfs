@@ -42,6 +42,8 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
 
     async fn destroy(&self);
 
+    async fn reset_cache(&self);
+
     async fn mkdir(
         &self,
         parent: Option<Self::NodeHandle>,

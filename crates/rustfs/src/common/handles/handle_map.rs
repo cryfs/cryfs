@@ -60,6 +60,12 @@ where
     pub fn get(&self, handle: Handle) -> Option<&AsyncDropGuard<T>> {
         self.objects.get(&handle)
     }
+
+    #[cfg(feature = "testutils")]
+    pub fn drain(&mut self) -> impl Iterator<Item = (Handle, AsyncDropGuard<T>)> {
+        self.available_handles = HandlePool::new();
+        self.objects.drain()
+    }
 }
 
 #[async_trait]

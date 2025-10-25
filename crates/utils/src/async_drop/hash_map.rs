@@ -47,6 +47,11 @@ where
     pub fn get(&self, key: &K) -> Option<&AsyncDropGuard<V>> {
         self.map.get(key)
     }
+
+    #[cfg(feature = "testutils")]
+    pub fn drain(&mut self) -> impl Iterator<Item = (K, AsyncDropGuard<V>)> {
+        self.map.drain()
+    }
 }
 
 #[async_trait]

@@ -9,7 +9,6 @@ use crate::{
     filesystem_fixture::{ActionCounts, FilesystemFixture},
     perf_test_macro::FixtureType,
 };
-use cryfs_blobstore::BlobStore as _;
 use cryfs_blockstore::{LLBlockStore, OptimizedBlockStoreWriter};
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -170,7 +169,7 @@ where
     {
         self.setup_noflush(async move |fs| {
             let setup_result = setup_fn(fs).await;
-            fs.blobstore.clear_cache_slow().await.unwrap();
+            fs.reset_caches().await;
             setup_result
         })
     }
@@ -271,7 +270,7 @@ where
     {
         self.test_noflush(async move |fs, setup_result| {
             let test_result = (test_fn)(fs, setup_result).await;
-            fs.blobstore.clear_cache_slow().await.unwrap();
+            fs.reset_caches().await;
             test_result
         })
     }
@@ -295,7 +294,7 @@ where
     {
         self.test_noflush_no_counter_reset(async move |fs, setup_result| {
             let test_result = (test_fn)(fs, setup_result).await;
-            fs.blobstore.clear_cache_slow().await.unwrap();
+            fs.reset_caches().await;
             test_result
         })
     }

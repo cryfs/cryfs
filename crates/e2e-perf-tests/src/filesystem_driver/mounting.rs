@@ -238,6 +238,10 @@ where
         .unwrap();
     }
 
+    async fn reset_cache(&self) {
+        // No cache to reset
+    }
+
     async fn mkdir(
         &self,
         parent: Option<Self::NodeHandle>,

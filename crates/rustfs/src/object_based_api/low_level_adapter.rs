@@ -111,12 +111,8 @@ where
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
     ) -> AsyncDropGuard<Self> {
         let mut inodes = HandleMap::new();
-        // We need to block zero because fuse seems to dislike it.
-        inodes.block_handle(InodeNumber::from(0));
-        // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
-        if fuser::FUSE_ROOT_ID != 0 {
-            inodes.block_handle(FUSE_ROOT_ID);
-        }
+
+        Self::block_root_handle(&mut inodes);
 
         AsyncDropGuard::new(Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::new_uninitialized(
@@ -125,6 +121,24 @@ where
             inodes: Arc::new(RwLock::new(inodes)),
             open_files: OpenFileList::new(),
         })
+    }
+
+    fn block_root_handle(inodes: &mut HandleMap<InodeNumber, InodeInfo<Fs>>) {
+        // We need to block zero because fuse seems to dislike it.
+        inodes.block_handle(InodeNumber::from(0));
+        // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
+        if fuser::FUSE_ROOT_ID != 0 {
+            inodes.block_handle(FUSE_ROOT_ID);
+        }
+    }
+
+    #[cfg(feature = "testutils")]
+    pub async fn reset_cache(&self) {
+        let mut inodes = self.inodes.write().await;
+        for (_handle, mut object) in inodes.drain() {
+            object.async_drop().await.unwrap();
+        }
+        Self::block_root_handle(&mut inodes);
     }
 
     // TODO Test this is triggered by each operation

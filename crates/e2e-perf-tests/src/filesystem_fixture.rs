@@ -224,6 +224,11 @@ where
             low_level: self.ll_blockstore.counts(),
         }
     }
+
+    pub async fn reset_caches(&self) {
+        self.filesystem.reset_cache().await;
+        self.blobstore.clear_cache_slow().await.unwrap();
+    }
 }
 
 impl<B, FS> Drop for FilesystemFixture<B, FS>

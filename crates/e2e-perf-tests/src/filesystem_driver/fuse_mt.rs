@@ -19,23 +19,19 @@ use cryfs_rustfs::{
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use std::time::SystemTime;
 
-/// A [FilesystemDriver] implementation using the high-level Api from [rustfs], i.e. [ObjectBasedFsAdapter].
-pub struct FusemtFilesystemDriver {
-    fs: AsyncDropGuard<
-        ObjectBasedFsAdapter<
-            CryDevice<
-                AsyncDropArc<
-                    TrackingBlobStore<
-                        BlobStoreOnBlocks<
-                            HLSharedBlockStore<
-                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
-                            >,
-                        >,
-                    >,
-                >,
+type Device = CryDevice<
+    AsyncDropArc<
+        TrackingBlobStore<
+            BlobStoreOnBlocks<
+                HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>,
             >,
         >,
     >,
+>;
+
+/// A [FilesystemDriver] implementation using the high-level Api from [rustfs], i.e. [ObjectBasedFsAdapter].
+pub struct FusemtFilesystemDriver {
+    fs: AsyncDropGuard<ObjectBasedFsAdapter<Device>>,
 }
 
 impl Debug for FusemtFilesystemDriver {
@@ -49,21 +45,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
 
     type FileHandle = FileHandle;
 
-    async fn new(
-        device: AsyncDropGuard<
-            CryDevice<
-                AsyncDropArc<
-                    TrackingBlobStore<
-                        BlobStoreOnBlocks<
-                            HLSharedBlockStore<
-                                HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>,
-                            >,
-                        >,
-                    >,
-                >,
-            >,
-        >,
-    ) -> AsyncDropGuard<Self> {
+    async fn new(device: AsyncDropGuard<Device>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             fs: ObjectBasedFsAdapter::new(|_uid, _gid| device),
         })
@@ -75,6 +57,10 @@ impl FilesystemDriver for FusemtFilesystemDriver {
 
     async fn destroy(&self) {
         self.fs.destroy().await;
+    }
+
+    async fn reset_cache(&self) {
+        // ObjectBasedFsAdapter doesn't have a cache to reset
     }
 
     async fn lookup(
