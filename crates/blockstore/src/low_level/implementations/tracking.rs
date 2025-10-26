@@ -15,7 +15,7 @@ use cryfs_utils::{
     data::Data,
 };
 
-#[derive(Debug, Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
+#[derive(Add, AddAssign, Sum, PartialEq, Eq, Clone, Copy)]
 pub struct ActionCounts {
     pub exists: u32,
     pub load: u32,
@@ -26,6 +26,27 @@ pub struct ActionCounts {
     pub remove: u32,
     pub try_create: u32,
     pub store: u32,
+}
+
+impl Debug for ActionCounts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut ds = f.debug_struct("ActionCounts");
+        let mut print_field = |name, value: u32| {
+            if value != 0 {
+                ds.field(name, &value);
+            }
+        };
+        print_field("exists", self.exists);
+        print_field("load", self.load);
+        print_field("num_blocks", self.num_blocks);
+        print_field("estimate_num_free_bytes", self.estimate_num_free_bytes);
+        print_field("overhead", self.overhead);
+        print_field("all_blocks", self.all_blocks);
+        print_field("remove", self.remove);
+        print_field("try_create", self.try_create);
+        print_field("store", self.store);
+        ds.finish()
+    }
 }
 
 impl ActionCounts {

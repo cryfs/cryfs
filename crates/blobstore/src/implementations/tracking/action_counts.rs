@@ -1,6 +1,7 @@
 use derive_more::{Add, AddAssign, Sum};
+use std::fmt::Debug;
 
-#[derive(Debug, Add, AddAssign, Sum, Clone, Copy, PartialEq, Eq)]
+#[derive(Add, AddAssign, Sum, Clone, Copy, PartialEq, Eq)]
 pub struct BlobStoreActionCounts {
     pub blob_num_bytes: u32,
     pub blob_resize: u32,
@@ -19,6 +20,41 @@ pub struct BlobStoreActionCounts {
     pub store_num_nodes: u32,
     pub store_estimate_space_for_num_blocks_left: u32,
     pub store_logical_block_size_bytes: u32,
+}
+
+impl Debug for BlobStoreActionCounts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut ds = f.debug_struct("BlobStoreActionCounts");
+        let mut print_field = |name, value: u32| {
+            if value != 0 {
+                ds.field(name, &value);
+            }
+        };
+        print_field("blob_num_bytes", self.blob_num_bytes);
+        print_field("blob_resize", self.blob_resize);
+        print_field("blob_read_all", self.blob_read_all);
+        print_field("blob_read", self.blob_read);
+        print_field("blob_try_read", self.blob_try_read);
+        print_field("blob_write", self.blob_write);
+        print_field("blob_flush", self.blob_flush);
+        print_field("blob_num_nodes", self.blob_num_nodes);
+        print_field("blob_remove", self.blob_remove);
+        print_field("blob_all_blocks", self.blob_all_blocks);
+        print_field("store_create", self.store_create);
+        print_field("store_try_create", self.store_try_create);
+        print_field("store_load", self.store_load);
+        print_field("store_remove_by_id", self.store_remove_by_id);
+        print_field("store_num_nodes", self.store_num_nodes);
+        print_field(
+            "store_estimate_space_for_num_blocks_left",
+            self.store_estimate_space_for_num_blocks_left,
+        );
+        print_field(
+            "store_logical_block_size_bytes",
+            self.store_logical_block_size_bytes,
+        );
+        ds.finish()
+    }
 }
 
 impl BlobStoreActionCounts {
