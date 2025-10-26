@@ -4,6 +4,7 @@ use futures::try_join;
 use std::{
     fmt::Debug,
     marker::PhantomData,
+    ops::Deref,
     sync::{Arc, Mutex},
     time::SystemTime,
 };
@@ -40,6 +41,7 @@ pub trait FuserCacheBehavior: Send + Sync {
         parent: Option<Self::NodeHandle>,
         child_name: &PathComponent,
         child_ino: InodeNumber,
+        device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
     ) -> Self::NodeHandle;
     async fn reset_cache(fs: &ObjectBasedFsAdapterLL<Device>);
 }
@@ -48,13 +50,13 @@ pub trait FuserCacheBehavior: Send + Sync {
 /// is run on a path that was already loaded into fuser's inode cache. This means the operation can directly run on that preloaded inode and doesn't have to load the whole path from the root dir to the node being operated on.
 pub struct WithInodeCache;
 impl FuserCacheBehavior for WithInodeCache {
-    type NodeHandle = InodeNumber;
+    type NodeHandle = InodeGuard;
     async fn load_inode<R>(
         node: &Option<Self::NodeHandle>,
         _fs: &impl AsyncFilesystemLL,
         callback: impl AsyncFnOnce(InodeNumber) -> FsResult<R>,
     ) -> FsResult<R> {
-        let inode = node.unwrap_or(FUSE_ROOT_ID);
+        let inode = node.as_ref().map(|n| **n).unwrap_or(FUSE_ROOT_ID);
         callback(inode).await
     }
     async fn load_inodes<R>(
@@ -63,16 +65,17 @@ impl FuserCacheBehavior for WithInodeCache {
         _fs: &impl AsyncFilesystemLL,
         callback: impl AsyncFnOnce(InodeNumber, InodeNumber) -> FsResult<R>,
     ) -> FsResult<R> {
-        let ino1 = node1.unwrap_or(FUSE_ROOT_ID);
-        let ino2 = node2.unwrap_or(FUSE_ROOT_ID);
+        let ino1 = node1.as_ref().map(|n| **n).unwrap_or(FUSE_ROOT_ID);
+        let ino2 = node2.as_ref().map(|n| **n).unwrap_or(FUSE_ROOT_ID);
         callback(ino1, ino2).await
     }
     fn make_inode(
-        _parent: Option<InodeNumber>,
+        _parent: Option<Self::NodeHandle>,
         _child_name: &PathComponent,
         child_ino: InodeNumber,
+        device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
     ) -> Self::NodeHandle {
-        child_ino
+        InodeGuard::new(AsyncDropArc::clone(device), child_ino)
     }
     async fn reset_cache(_fs: &ObjectBasedFsAdapterLL<Device>) {
         // No-op for cached behavior
@@ -166,6 +169,7 @@ impl FuserCacheBehavior for WithoutInodeCache {
         parent: Option<AbsolutePathBuf>,
         child_name: &PathComponent,
         _child_ino: InodeNumber,
+        _device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
     ) -> Self::NodeHandle {
         parent
             .unwrap_or_else(AbsolutePathBuf::root)
@@ -196,6 +200,46 @@ fn _split_common<T: PartialEq + Eq, I1: Iterator<Item = T>, I2: Iterator<Item = 
     (common, iter1, iter2)
 }
 
+#[derive(Clone, Debug)]
+pub struct InodeGuard {
+    inner: Arc<InodeGuardInner>,
+}
+
+/// Holds an inode number and will tell the filesystem to forget it when dropped.
+#[derive(Debug)]
+pub struct InodeGuardInner {
+    fs: AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
+    ino: InodeNumber,
+}
+
+impl InodeGuard {
+    pub fn new(
+        fs: AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
+        ino: InodeNumber,
+    ) -> Self {
+        Self {
+            inner: Arc::new(InodeGuardInner { fs, ino }),
+        }
+    }
+}
+
+impl Drop for InodeGuardInner {
+    fn drop(&mut self) {
+        futures::executor::block_on(async move {
+            self.fs.forget(&request_info(), self.ino, 1).await.unwrap();
+            self.fs.async_drop().await.unwrap();
+        });
+    }
+}
+
+impl Deref for InodeGuard {
+    type Target = InodeNumber;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner.ino
+    }
+}
+
 type Device = CryDevice<
     AsyncDropArc<
         TrackingBlobStore<
@@ -209,7 +253,7 @@ type Device = CryDevice<
 /// A [FilesystemDriver] implementation using the low-level Api from [rustfs], i.e. [ObjectBasedFsAdapterLL].
 /// Its caching behavior can be configured using [FuserCacheBehavior].
 pub struct FuserFilesystemDriver<C: FuserCacheBehavior> {
-    fs: AsyncDropGuard<ObjectBasedFsAdapterLL<Device>>,
+    fs: AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
     _c: PhantomData<C>,
 }
 
@@ -226,7 +270,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
 
     async fn new(device: AsyncDropGuard<Device>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(FuserFilesystemDriver {
-            fs: ObjectBasedFsAdapterLL::new(|_uid, _gid| device),
+            fs: AsyncDropArc::new(ObjectBasedFsAdapterLL::new(|_uid, _gid| device)),
             _c: PhantomData,
         })
     }
@@ -248,7 +292,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,
     ) -> FsResult<Self::NodeHandle> {
-        let new_dir = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        let new_dir = C::load_inode(&parent, &**self.fs, async |parent_ino| {
             self.fs
                 .mkdir(
                     &request_info(),
@@ -260,7 +304,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 .await
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_dir.ino.handle))
+        Ok(C::make_inode(parent, name, new_dir.ino.handle, &self.fs))
     }
 
     async fn create_file(
@@ -268,7 +312,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,
     ) -> FsResult<Self::NodeHandle> {
-        let new_file = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        let new_file = C::load_inode(&parent, &**self.fs, async |parent_ino| {
             let open_file = self
                 .fs
                 .create(
@@ -293,7 +337,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
             Ok(open_file.ino)
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_file.handle))
+        Ok(C::make_inode(parent, name, new_file.handle, &self.fs))
     }
 
     async fn create_and_open_file(
@@ -301,7 +345,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,
     ) -> FsResult<(Self::NodeHandle, FileHandle)> {
-        let new_file = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        let new_file = C::load_inode(&parent, &**self.fs, async |parent_ino| {
             Ok(self
                 .fs
                 .create(
@@ -316,7 +360,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok((
-            C::make_inode(parent, name, new_file.ino.handle),
+            C::make_inode(parent, name, new_file.ino.handle, &self.fs),
             new_file.fh,
         ))
     }
@@ -327,13 +371,13 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         name: &PathComponent,
         target: &AbsolutePath,
     ) -> FsResult<Self::NodeHandle> {
-        let new_dir = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        let new_dir = C::load_inode(&parent, &**self.fs, async |parent_ino| {
             self.fs
                 .symlink(&request_info(), parent_ino, name, target)
                 .await
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_dir.ino.handle))
+        Ok(C::make_inode(parent, name, new_dir.ino.handle, &self.fs))
     }
 
     async fn lookup(
@@ -341,15 +385,15 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         parent: Option<Self::NodeHandle>,
         name: &PathComponent,
     ) -> FsResult<Self::NodeHandle> {
-        let new_file = C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        let new_file = C::load_inode(&parent, &**self.fs, async |parent_ino| {
             self.fs.lookup(&request_info(), parent_ino, name).await
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_file.ino.handle))
+        Ok(C::make_inode(parent, name, new_file.ino.handle, &self.fs))
     }
 
     async fn getattr(&self, node: Option<Self::NodeHandle>) -> FsResult<NodeAttrs> {
-        C::load_inode(&node, &*self.fs, async |ino| {
+        C::load_inode(&node, &**self.fs, async |ino| {
             self.fs
                 .getattr(&request_info(), ino, None)
                 .await
@@ -363,7 +407,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         node: Self::NodeHandle,
         open_file: &FileHandle,
     ) -> FsResult<NodeAttrs> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .getattr(&request_info(), ino, Some(*open_file))
                 .await
@@ -373,7 +417,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     }
 
     async fn chmod(&self, node: Option<Self::NodeHandle>, mode: Mode) -> FsResult<()> {
-        C::load_inode(&node, &*self.fs, async |ino| {
+        C::load_inode(&node, &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -403,7 +447,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         open_file: &FileHandle,
         mode: Mode,
     ) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -433,7 +477,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
-        C::load_inode(&node, &*self.fs, async |ino| {
+        C::load_inode(&node, &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -464,7 +508,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         uid: Option<Uid>,
         gid: Option<Gid>,
     ) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -489,7 +533,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     }
 
     async fn truncate(&self, node: Option<Self::NodeHandle>, size: NumBytes) -> FsResult<()> {
-        C::load_inode(&node, &*self.fs, async |ino| {
+        C::load_inode(&node, &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -519,7 +563,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         open_file: &FileHandle,
         size: NumBytes,
     ) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -549,7 +593,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
-        C::load_inode(&node, &*self.fs, async |ino| {
+        C::load_inode(&node, &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -580,7 +624,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .setattr(
                     &request_info(),
@@ -611,7 +655,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 target.map(|s| s.to_owned())
             }
         }
-        let target = C::load_inode(&Some(node), &*self.fs, async |ino| {
+        let target = C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .readlink(&request_info(), ino, ToOwnedCallback)
                 .await
@@ -621,21 +665,21 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     }
 
     async fn unlink(&self, parent: Option<Self::NodeHandle>, name: &PathComponent) -> FsResult<()> {
-        C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        C::load_inode(&parent, &**self.fs, async |parent_ino| {
             self.fs.unlink(&request_info(), parent_ino, name).await
         })
         .await
     }
 
     async fn rmdir(&self, parent: Option<Self::NodeHandle>, name: &PathComponent) -> FsResult<()> {
-        C::load_inode(&parent, &*self.fs, async |parent_ino| {
+        C::load_inode(&parent, &**self.fs, async |parent_ino| {
             self.fs.rmdir(&request_info(), parent_ino, name).await
         })
         .await
     }
 
     async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle> {
-        let open_file = C::load_inode(&Some(node), &*self.fs, async |ino| {
+        let open_file = C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .open(&request_info(), ino, OpenFlags::ReadWrite)
                 .await
@@ -645,7 +689,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     }
 
     async fn release(&self, node: Self::NodeHandle, open_file: FileHandle) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             // The fuse sequence for releasing a file in fuse is: first flush, then release
             self.fs.flush(&request_info(), ino, open_file, 0).await?;
             self.fs
@@ -661,7 +705,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         open_file: &mut FileHandle,
         datasync: bool,
     ) -> FsResult<()> {
-        C::load_inode(&Some(node), &*self.fs, async |ino| {
+        C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .fsync(&request_info(), ino, *open_file, datasync)
                 .await
@@ -678,7 +722,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         // TODO Instead of all these operations taking Option<NodeHandle>, would be nicer to just have a FilesystemDriver::rootdir() method that returns the root dir handle and then pass in the rootdir node handle
         node: Option<Self::NodeHandle>,
     ) -> FsResult<Vec<(String, NodeKind)>> {
-        let dir = C::load_inode(&node, &*self.fs, async |ino| {
+        let dir = C::load_inode(&node, &**self.fs, async |ino| {
             let fh = self.fs.opendir(&request_info(), ino, 0).await?.fh;
             let mut reply = ReplyDirectoryImpl::default();
             self.fs
@@ -697,7 +741,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         offset: NumBytes,
         size: NumBytes,
     ) -> FsResult<Vec<u8>> {
-        let result = C::load_inode(&Some(node), &*self.fs, async |ino| {
+        let result = C::load_inode(&Some(node), &**self.fs, async |ino| {
             let result = Arc::new(Mutex::new(None));
             self.fs
                 .read(
@@ -731,7 +775,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         data: Vec<u8>,
     ) -> FsResult<()> {
         let len = NumBytes::from(data.len() as u64);
-        let reply = C::load_inode(&Some(node), &*self.fs, async |ino| {
+        let reply = C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
                 .write(&request_info(), ino, *open_file, offset, data, 0, 0, None)
                 .await
@@ -755,7 +799,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         C::load_inodes(
             &old_parent,
             &new_parent,
-            &*self.fs,
+            &**self.fs,
             async |old_parent_ino, new_parent_ino| {
                 self.fs
                     .rename(
