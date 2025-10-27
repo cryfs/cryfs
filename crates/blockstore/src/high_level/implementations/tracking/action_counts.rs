@@ -33,7 +33,10 @@ impl Debug for ActionCounts {
         print_field("store_remove_by_id", self.store_remove_by_id);
         print_field("store_remove", self.store_remove);
         print_field("store_num_blocks", self.store_num_blocks);
-        print_field("store_estimate_num_free_bytes", self.store_estimate_num_free_bytes);
+        print_field(
+            "store_estimate_num_free_bytes",
+            self.store_estimate_num_free_bytes,
+        );
         print_field("store_overhead", self.store_overhead);
         print_field("store_all_blocks", self.store_all_blocks);
         print_field("store_create", self.store_create);
@@ -44,7 +47,6 @@ impl Debug for ActionCounts {
         ds.finish()
     }
 }
-
 
 impl ActionCounts {
     pub const ZERO: Self = Self {
