@@ -8,7 +8,7 @@ use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK}
 use super::{
     device::CryDevice,
     node::CryNode,
-    node_info::{BlobDetails, NodeInfo},
+    node_info::{NodeInfo},
     open_file::CryOpenFile,
     symlink::CrySymlink,
 };
@@ -206,8 +206,7 @@ where
     ) -> FsResult<()> {
         let dest_ancestors = newparent
             .node_info
-            .ancestors_and_self(&newparent.blobstore)
-            .await?;
+            .ancestors_and_self();
 
         // Check we're not moving a directory into itself or one of its own subdirectories
         // TODO Do we handle moving /path/to/file to /path/to/file/newname correctly? Or does it only work with /path/to/dir ?
@@ -268,15 +267,40 @@ where
         //      This seems to work fine at the moment because any operation on the child would then fail. But it's probably better to be
         //      safe and only return existing nodes.
 
-        let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
-
         // TODO We shouldn't have to reload the self blob here, that's weird
-        let self_blob = self.load_blob().await?;
+        let mut self_blob = self.load_blob().await?;
 
-        let node_info = NodeInfo::new(
+        let blob_details = self_blob
+            .with_lock(async |self_blob| {
+                let self_dir = self_blob
+                    .as_dir()
+                    .expect("Parent blob is not a directory");
+                let entry = self_dir
+                    .entry_by_name(name)
+                    .ok_or_else(|| FsError::NodeDoesNotExist)?;
+                let blob_id = *entry.blob_id();
+                let blob_type = match entry.entry_type() {
+                    EntryType::File => BlobType::File,
+                    EntryType::Dir => BlobType::Dir,
+                    EntryType::Symlink => BlobType::Symlink,
+                };
+                Ok((blob_id, blob_type))
+            })
+            .await;
+        let (blob_id, blob_type) = match blob_details {
+            Ok(blob_details) => blob_details,
+            Err(err) => {
+                self_blob.async_drop().await?;
+                return Err(err);
+            }
+        };
+
+        let node_info = NodeInfo::new_non_root_dir(
             self_blob,
-            ancestors_and_self.ancestors_and_self(),
+            #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
             name.to_owned(),
+            blob_id,
+            blob_type,
             self.node_info.atime_update_behavior(),
         );
         Ok(CryNode::new(
@@ -287,7 +311,7 @@ where
 
     async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+            .concurrently_update_modification_timestamp_in_parent( async || {
                 let blob = self.load_blob().await?;
                 with_async_drop_2!(blob, {
                     blob.with_lock(async |blob| {
@@ -500,10 +524,10 @@ where
             //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
             let (source_update, dest_update) = join!(
                 self.node_info
-                    .update_modification_timestamp_in_parent(&self.blobstore),
+                    .update_modification_timestamp_in_parent(),
                 newparent
                     .node_info
-                    .update_modification_timestamp_in_parent(&self.blobstore),
+                    .update_modification_timestamp_in_parent(),
             );
 
             // TODO Drop concurrently and drop latter even if first one fails
@@ -522,7 +546,7 @@ where
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         // TODO Can we return an iterator instead of a Vec from here? But it'll need state with an async destructor. Probably needs async generators.
         self.node_info
-            .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
+            .concurrently_maybe_update_access_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
                 with_async_drop_2!(blob, {
                     blob.with_lock(async |blob| {
@@ -554,9 +578,8 @@ where
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryDir<'_, B>>)> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
-                let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
-                let self_blob_id = ancestors_and_self.self_blob_id();
+            .concurrently_update_modification_timestamp_in_parent( async || {
+                let self_blob_id = self.node_info.blob_id();
                 let (blob, new_dir_blob_id) =
                     join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
                 let mut blob = match blob {
@@ -623,10 +646,12 @@ where
                 };
                 let node = CryDir::new(
                     &self.blobstore,
-                    AsyncDropArc::new(NodeInfo::new(
+                    AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        ancestors_and_self.ancestors_and_self(),
+                        #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
                         name,
+                        new_dir_blob_id,
+                        BlobType::Dir, 
                         self.node_info.atime_update_behavior(),
                     )),
                 );
@@ -638,7 +663,7 @@ where
     // TODO If/when we implement a ParallelAccessFsBlobStore, we probably need to make sure that there aren't any existing references to the removed blob before removing it. Or maybe delay the remove until they're gone. Same for the other remove functions.
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+            .concurrently_update_modification_timestamp_in_parent( async || {
                 let self_blob = self.load_blob().await?;
                 with_async_drop_2!(self_blob, {
                     let child_id = self_blob
@@ -722,16 +747,15 @@ where
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CrySymlink<B>>)> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+            .concurrently_update_modification_timestamp_in_parent( async || {
                 // TODO What should NumBytes be? Also, no unwrap?
                 let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
-                let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
-                let self_blob_id = ancestors_and_self.self_blob_id();
+                let self_blob_id = self.node_info.blob_id();
 
                 let (blob, new_symlink_blob_id) = join!(
                     self.load_blob(),
-                    self.create_symlink_blob(target, &self_blob_id),
+                    self.create_symlink_blob(target, self_blob_id),
                 );
                 let mut blob = match blob {
                     Ok(blob) => blob,
@@ -797,10 +821,12 @@ where
                 };
                 let node = CrySymlink::new(
                     &self.blobstore,
-                    AsyncDropArc::new(NodeInfo::new(
+                    AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        ancestors_and_self.ancestors_and_self(),
+                        #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
                         name,
+                        new_symlink_blob_id,
+                        BlobType::Symlink,
                         self.node_info.atime_update_behavior(),
                     )),
                 );
@@ -810,7 +836,7 @@ where
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
-        self.node_info.concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+        self.node_info.concurrently_update_modification_timestamp_in_parent( async || {
             let blob = self.load_blob().await?;
 
             with_async_drop_2!(blob, {
@@ -866,9 +892,8 @@ where
         AsyncDropGuard<CryOpenFile<B>>,
     )> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
-                let ancestors_and_self = self.node_info.ancestors_and_self(&self.blobstore).await?;
-                let self_blob_id = ancestors_and_self.self_blob_id();
+            .concurrently_update_modification_timestamp_in_parent( async || {
+                let self_blob_id = self.node_info.blob_id();
                 let (blob, new_file_blob_id) =
                     join!(self.load_blob(), self.create_file_blob(&self_blob_id),);
                 let mut blob = match blob {
@@ -931,17 +956,12 @@ where
                         return Err(FsError::UnknownError);
                     }
                 };
-                let node_info = AsyncDropArc::new(NodeInfo::new_with_blob_details(
+                let node_info = AsyncDropArc::new(NodeInfo::new_non_root_dir(
                     blob,
-                    #[cfg(not(feature = "ancestor_checks_on_move"))]
-                    ancestors_and_self.ancestors_and_self(),
-                    #[cfg(feature = "ancestor_checks_on_move")]
-                    ancestors_and_self.ancestors_and_self(),
+                    #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
                     name.to_owned(),
-                    BlobDetails {
-                        blob_id: new_file_blob_id,
-                        blob_type: BlobType::File,
-                    },
+                    new_file_blob_id,
+                    BlobType::File,
                     self.node_info.atime_update_behavior(),
                 ));
 
@@ -960,7 +980,7 @@ where
         if datasync {
             self.flush_dir_contents().await?;
         } else {
-            let (r1, r2) = join!(self.flush_dir_contents(), self.node_info.flush_metadata(&self.blobstore));
+            let (r1, r2) = join!(self.flush_dir_contents(), self.node_info.flush_metadata());
             // TODO Report both errors if both happen
             r1?;
             r2?;

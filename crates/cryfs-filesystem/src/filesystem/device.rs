@@ -126,7 +126,7 @@ where
             .await?
         {
             MaybeOwned::Owned(blob) => Ok(blob),
-            MaybeOwned::Borrowed(blob) => panic!(
+            MaybeOwned::Borrowed(_blob) => panic!(
                 "Since we called `load_blob_from_relative_path` with an owned anchor, it should never return a borrowed blob"
             ),
         }

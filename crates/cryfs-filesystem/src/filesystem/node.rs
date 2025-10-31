@@ -9,7 +9,7 @@ use super::node_info::NodeInfo;
 use super::{dir::CryDir, file::CryFile, symlink::CrySymlink};
 use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
 use crate::filesystem::fsblobstore::BlobType;
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{
     FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
 };
@@ -36,18 +36,6 @@ where
 {
     pub async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
-    }
-
-    pub async fn blob_id(&self) -> FsResult<BlobId> {
-        Ok(self.node_info.blob_details(&self.blobstore).await?.blob_id)
-    }
-
-    pub async fn node_type(&self) -> FsResult<BlobType> {
-        Ok(self
-            .node_info
-            .blob_details(&self.blobstore)
-            .await?
-            .blob_type)
     }
 }
 
@@ -100,7 +88,7 @@ where
     type Device = CryDevice<B>;
 
     async fn as_dir<'a>(&'a self) -> FsResult<AsyncDropGuard<CryDir<'a, B>>> {
-        if self.node_info.node_type(&self.blobstore).await? == BlobType::Dir {
+        if self.node_info.node_type() == BlobType::Dir {
             Ok(CryDir::new(
                 &self.blobstore,
                 AsyncDropArc::clone(&self.node_info),
@@ -111,7 +99,7 @@ where
     }
 
     async fn as_symlink<'a>(&'a self) -> FsResult<AsyncDropGuard<CrySymlink<'a, B>>> {
-        if self.node_info.node_type(&self.blobstore).await? == BlobType::Symlink {
+        if self.node_info.node_type() == BlobType::Symlink {
             Ok(CrySymlink::new(
                 &self.blobstore,
                 AsyncDropArc::clone(&self.node_info),
@@ -122,7 +110,7 @@ where
     }
 
     async fn as_file<'a>(&'a self) -> FsResult<AsyncDropGuard<CryFile<'a, B>>> {
-        match self.node_info.node_type(&self.blobstore).await? {
+        match self.node_info.node_type() {
             BlobType::File => Ok(CryFile::new(
                 &self.blobstore,
                 AsyncDropArc::clone(&self.node_info),
@@ -160,10 +148,7 @@ where
         if datasync {
             self.flush_blob().await?;
         } else {
-            let (r1, r2) = join!(
-                self.flush_blob(),
-                self.node_info.flush_metadata(&self.blobstore)
-            );
+            let (r1, r2) = join!(self.flush_blob(), self.node_info.flush_metadata());
             // TODO Report both errors if both happen
             r1?;
             r2?;

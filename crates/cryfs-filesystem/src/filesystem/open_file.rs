@@ -1,10 +1,9 @@
 use async_trait::async_trait;
-use cryfs_rustfs::PathComponent;
 use futures::join;
+use std::fmt::Debug;
 use std::time::SystemTime;
-use std::{fmt::Debug, marker::PhantomData};
 
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{
     FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::OpenFile,
 };
@@ -15,8 +14,6 @@ use cryfs_utils::{
 };
 
 use super::node_info::NodeInfo;
-use crate::filesystem::fsblobstore::DirBlob;
-use crate::filesystem::node_info::{BlobDetails, CallbackWithParentBlob};
 use crate::filesystem::{
     concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore},
     fsblobstore::{FileBlob, FsBlob},
@@ -173,7 +170,7 @@ where
         let should_update_atime = size > NumBytes::from(0);
         if should_update_atime {
             self.node_info
-                .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
+                .concurrently_maybe_update_access_timestamp_in_parent(async || {
                     self._read(offset, size).await
                 })
                 .await
@@ -187,7 +184,7 @@ where
         let should_update_mtime = data.len() > 0;
         if should_update_mtime {
             self.node_info
-                .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
+                .concurrently_update_modification_timestamp_in_parent(async || {
                     self._write(offset, data).await
                 })
                 .await
@@ -212,10 +209,7 @@ where
         if datasync {
             self.flush_file_contents().await?;
         } else {
-            let (r1, r2) = join!(
-                self.flush_file_contents(),
-                self.node_info.flush_metadata(&self.blobstore)
-            );
+            let (r1, r2) = join!(self.flush_file_contents(), self.node_info.flush_metadata());
             // TODO Report both errors if both happen
             r1?;
             r2?;
