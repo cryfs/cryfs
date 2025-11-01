@@ -36,6 +36,7 @@ mod filesystem_fixture;
 pub mod operations;
 pub mod perf_test_macro;
 mod test_driver;
+mod utils;
 
 // TODO For some reason, pressing CTRL+C during a benchmark run exits the program but keeps benchmarks running in the background? What's going on there?
 
