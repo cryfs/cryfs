@@ -70,4 +70,6 @@ pub trait Dir: AsyncDrop + Debug + Sized {
         AsyncDropGuard<<Self::Device as super::Device>::Node>,
         AsyncDropGuard<<Self::Device as super::Device>::OpenFile>,
     )>;
+
+    async fn fsync(&self, datasync: bool) -> FsResult<()>;
 }

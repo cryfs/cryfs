@@ -10,6 +10,7 @@ use cryfs_utils::{
 };
 use nix::fcntl::{AT_FDCWD, AtFlags};
 use std::os::unix::fs::OpenOptionsExt;
+use tokio::fs::OpenOptions;
 
 use super::device::PassthroughDevice;
 use super::errors::{IoResultExt, NixResultExt};
@@ -212,6 +213,23 @@ impl Dir for PassthroughDir {
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)?
+    }
+
+    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+        // TODO Is it actually correct to open a directory with OpenOptions to fsync it?
+        let dir_file = OpenOptions::new()
+            .read(true)
+            .open(&self.path)
+            .await
+            .map_error()?;
+        if datasync {
+            // sync data and metadata
+            dir_file.sync_all().await.map_error()?;
+        } else {
+            // only sync data, not metadata
+            dir_file.sync_data().await.map_error()?;
+        }
+        Ok(())
     }
 }
 

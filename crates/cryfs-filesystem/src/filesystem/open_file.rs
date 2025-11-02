@@ -86,49 +86,6 @@ where
         })
     }
 
-    async fn flush_metadata(&self) -> FsResult<()> {
-        struct Callback<B>
-        where
-            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-        {
-            _phantom: PhantomData<B>,
-        }
-        impl<B> CallbackWithParentBlob<B, ()> for Callback<B>
-        where
-            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
-        {
-            async fn on_is_rootdir(self, _root_blob: BlobId) -> FsResult<()> {
-                panic!("A file can't be the root dir");
-            }
-
-            async fn on_is_not_rootdir<'a, 'b, 'c>(
-                self,
-                parent_blob: &'a mut DirBlob<B>,
-                _name: &'b PathComponent,
-                _blob_details: &'c BlobDetails,
-            ) -> FsResult<()> {
-                // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
-                parent_blob.flush().await.map_err(|err| {
-                    log::error!("Failed to fsync parent blob: {err:?}");
-                    FsError::UnknownError
-                })?;
-                Ok(())
-            }
-        }
-        self.node_info
-            .with_parent_blob(
-                &self.blobstore,
-                Callback {
-                    _phantom: PhantomData,
-                },
-            )
-            .await?;
-
-        Ok(())
-    }
-
     async fn _read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {
         let blob = self.load_blob().await?;
         with_async_drop_2!(blob, {
@@ -255,7 +212,10 @@ where
         if datasync {
             self.flush_file_contents().await?;
         } else {
-            let (r1, r2) = join!(self.flush_file_contents(), self.flush_metadata());
+            let (r1, r2) = join!(
+                self.flush_file_contents(),
+                self.node_info.flush_metadata(&self.blobstore)
+            );
             // TODO Report both errors if both happen
             r1?;
             r2?;

@@ -336,6 +336,11 @@ impl Dir for InMemoryDirRef {
         }
         Ok((metadata, file.as_node(), openfile))
     }
+
+    async fn fsync(&self, _datasync: bool) -> FsResult<()> {
+        // No need to fsync because we're in-memory
+        Ok(())
+    }
 }
 
 impl Debug for InMemoryDirRef {

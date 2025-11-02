@@ -83,7 +83,9 @@ where
     }
 
     pub async fn flush(&mut self) -> Result<()> {
-        self.entries.serialize_if_dirty(&mut self.blob).await
+        self.entries.serialize_if_dirty(&mut self.blob).await?;
+        // TODO self.blob.flush().await?;
+        Ok(())
     }
 
     pub fn blob_id(&self) -> BlobId {

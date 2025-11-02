@@ -691,6 +691,52 @@ impl NodeInfo {
             } => *atime_update_behavior,
         }
     }
+
+    pub async fn flush_metadata<B>(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<()>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+        <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+    {
+        struct Callback<B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            _phantom: PhantomData<B>,
+        }
+        impl<B> CallbackWithParentBlob<B, ()> for Callback<B>
+        where
+            B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+            <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+        {
+            async fn on_is_rootdir(self, _root_blob: BlobId) -> FsResult<()> {
+                panic!("A file can't be the root dir");
+            }
+
+            async fn on_is_not_rootdir<'a, 'b, 'c>(
+                self,
+                parent_blob: &'a mut DirBlob<B>,
+                _name: &'b PathComponent,
+                _blob_details: &'c BlobDetails,
+            ) -> FsResult<()> {
+                // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
+                parent_blob.flush().await.map_err(|err| {
+                    log::error!("Failed to fsync parent blob: {err:?}");
+                    FsError::UnknownError
+                })?;
+                Ok(())
+            }
+        }
+        self.with_parent_blob(
+            blobstore,
+            Callback {
+                _phantom: PhantomData,
+            },
+        )
+        .await?;
+
+        Ok(())
+    }
 }
 
 #[async_trait]
