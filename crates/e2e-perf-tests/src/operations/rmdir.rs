@@ -60,6 +60,7 @@ fn existing_empty_dir_from_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 blob_resize: 1,
                 blob_write: 1,
                 blob_remove: 1,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -68,6 +69,7 @@ fn existing_empty_dir_from_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 blob_data: 20,
                 blob_data_mut: 1,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -211,6 +213,7 @@ fn empty_dir_from_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 blob_resize: 2,
                 blob_write: 2,
                 blob_remove: 1,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -227,6 +230,7 @@ fn empty_dir_from_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_data_mut: 2,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -437,6 +441,7 @@ fn empty_dir_from_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestRe
                 blob_resize: 2,
                 blob_write: 2,
                 blob_remove: 1,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -453,6 +458,7 @@ fn empty_dir_from_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestRe
                 },
                 blob_data_mut: 2,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -1092,6 +1098,7 @@ fn rmdir_large_directory(test_driver: impl TestDriver) -> impl TestReady {
                 blob_resize: 401,
                 blob_write: 401,
                 blob_remove: 201,
+                blob_flush: 201,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -1110,12 +1117,13 @@ fn rmdir_large_directory(test_driver: impl TestDriver) -> impl TestReady {
                 store_remove_by_id: 98,
                 store_remove: 215,
                 store_overwrite: 9514,
+                store_flush_block: 201,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
                 // Performance numbers for removing many directories
                 load: 314,
-                store: 1,
+                store: 201,
                 remove: 313,
                 ..LLActionCounts::ZERO
             },

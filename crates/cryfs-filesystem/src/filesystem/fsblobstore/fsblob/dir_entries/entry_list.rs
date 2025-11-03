@@ -136,7 +136,10 @@ impl DirEntryList {
         })
     }
 
-    pub async fn serialize_if_dirty<B>(&mut self, blob: &mut BaseBlob<B>) -> Result<()>
+    pub async fn serialize_if_dirty<B>(
+        &mut self,
+        blob: &mut BaseBlob<B>,
+    ) -> Result<SerializeIfDirtyResult>
     where
         B: BlobStore + Debug,
         B::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
@@ -152,8 +155,10 @@ impl DirEntryList {
             blob.resize_data(data.len() as u64).await?;
             blob.write_data(&data, 0).await?;
             self.dirty = false;
+            Ok(SerializeIfDirtyResult::Serialized)
+        } else {
+            Ok(SerializeIfDirtyResult::NotSerialized)
         }
-        Ok(())
     }
 
     // TODO FusedIterator, DoubleEndedIterator
@@ -412,4 +417,9 @@ impl DirEntryList {
         }
         Ok(())
     }
+}
+
+pub enum SerializeIfDirtyResult {
+    Serialized,
+    NotSerialized,
 }

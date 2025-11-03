@@ -6,7 +6,10 @@ use std::time::SystemTime;
 
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
-use crate::utils::fs_types::{Gid, Mode, Uid};
+use crate::{
+    filesystem::fsblobstore::fsblob::dir_entries::SerializeIfDirtyResult,
+    utils::fs_types::{Gid, Mode, Uid},
+};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, PathComponent, PathComponentBuf};
@@ -82,9 +85,17 @@ where
         self.entries.iter()
     }
 
+    pub async fn writeback(&mut self) -> Result<SerializeIfDirtyResult> {
+        self.entries.serialize_if_dirty(&mut self.blob).await
+    }
+
     pub async fn flush(&mut self) -> Result<()> {
-        self.entries.serialize_if_dirty(&mut self.blob).await?;
-        // TODO self.blob.flush().await?;
+        match self.writeback().await? {
+            SerializeIfDirtyResult::Serialized => {
+                self.blob.flush().await?;
+            }
+            SerializeIfDirtyResult::NotSerialized => (),
+        }
         Ok(())
     }
 
@@ -287,7 +298,7 @@ where
 
     #[cfg(any(test, feature = "testutils"))]
     pub async fn num_nodes(&mut self) -> Result<u64> {
-        self.flush().await?;
+        self.writeback().await?;
         self.blob.num_nodes().await
     }
 
@@ -295,7 +306,7 @@ where
     pub async fn into_raw(
         mut this: AsyncDropGuard<Self>,
     ) -> Result<AsyncDropGuard<B::ConcreteBlob>> {
-        this.flush().await?;
+        this.writeback().await?;
         let this = this.unsafe_into_inner_dont_drop();
         Ok(BaseBlob::into_raw(this.blob))
     }
@@ -324,10 +335,12 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.flush().await.map_err(|err| FsError::InternalError {
-            // TODO Instead of map_err, have flush return FsError
-            error: err.context("Error in DirBlob::async_drop_impl"),
-        })?;
+        self.writeback()
+            .await
+            .map_err(|err| FsError::InternalError {
+                // TODO Instead of map_err, have flush return FsError
+                error: err.context("Error in DirBlob::async_drop_impl"),
+            })?;
         self.blob
             .async_drop()
             .await

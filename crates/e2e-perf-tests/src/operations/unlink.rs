@@ -55,6 +55,7 @@ fn file_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 blob_resize: 1,
                 blob_write: 1,
                 store_remove_by_id: 1,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -63,6 +64,7 @@ fn file_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 blob_data: 15,
                 blob_data_mut: 1,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -103,6 +105,7 @@ fn symlink_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 blob_read: 1,
                 blob_resize: 1,
                 blob_write: 1,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -111,6 +114,7 @@ fn symlink_from_rootdir(test_driver: impl TestDriver) -> impl TestReady {
                 blob_data: 15,
                 blob_data_mut: 1,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -209,6 +213,7 @@ fn file_from_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_resize: 2,
                 blob_write: 2,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -226,6 +231,7 @@ fn file_from_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_data_mut: 2,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -287,6 +293,7 @@ fn symlink_from_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_resize: 2,
                 blob_write: 2,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -303,6 +310,7 @@ fn symlink_from_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_data_mut: 2,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -363,6 +371,7 @@ fn file_from_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_resize: 2,
                 blob_write: 2,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -380,6 +389,7 @@ fn file_from_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
                 },
                 blob_data_mut: 2,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -444,6 +454,7 @@ fn symlink_from_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestRead
                 },
                 blob_resize: 2,
                 blob_write: 2,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -460,6 +471,7 @@ fn symlink_from_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestRead
                 },
                 blob_data_mut: 2,
                 store_remove: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -499,6 +511,7 @@ fn try_unlink_directory_in_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 blob_read: 1,
                 blob_write: 1,
                 blob_resize: 1,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -506,6 +519,7 @@ fn try_unlink_directory_in_rootdir(test_driver: impl TestDriver) -> impl TestRea
                 store_load: 1,
                 blob_data: 11,
                 blob_data_mut: 1,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -563,6 +577,7 @@ fn try_unlink_directory_in_nested_dir(test_driver: impl TestDriver) -> impl Test
                 },
                 blob_write: 2,
                 blob_resize: 2,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -578,6 +593,7 @@ fn try_unlink_directory_in_nested_dir(test_driver: impl TestDriver) -> impl Test
                     FixtureType::FuserWithoutInodeCache => 40, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 2,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -635,6 +651,7 @@ fn try_unlink_directory_in_deeply_nested_dir(test_driver: impl TestDriver) -> im
                 },
                 blob_write: 2,
                 blob_resize: 2,
+                blob_flush: 1,
                 ..BlobStoreActionCounts::ZERO
             },
             high_level: HLActionCounts {
@@ -650,6 +667,7 @@ fn try_unlink_directory_in_deeply_nested_dir(test_driver: impl TestDriver) -> im
                     FixtureType::FuserWithoutInodeCache => 76, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
                 blob_data_mut: 2,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -698,6 +716,7 @@ fn large_file(test_driver: impl TestDriver) -> impl TestReady {
                 blob_read: 1,
                 blob_resize: 1,
                 blob_write: 1,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -708,6 +727,7 @@ fn large_file(test_driver: impl TestDriver) -> impl TestReady {
                 blob_data_mut: 1,
                 store_remove: 4,
                 store_remove_by_id: 22,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
@@ -753,6 +773,7 @@ fn large_symlink(test_driver: impl TestDriver) -> impl TestReady {
                 blob_read: 1,
                 blob_resize: 1,
                 blob_write: 1,
+                blob_flush: 1,
                 store_remove_by_id: 1,
                 ..BlobStoreActionCounts::ZERO
             },
@@ -763,6 +784,7 @@ fn large_symlink(test_driver: impl TestDriver) -> impl TestReady {
                 blob_data_mut: 1,
                 store_remove: 4,
                 store_remove_by_id: 22,
+                store_flush_block: 1,
                 ..HLActionCounts::ZERO
             },
             low_level: LLActionCounts {
