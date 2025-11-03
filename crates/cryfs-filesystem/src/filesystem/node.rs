@@ -1,4 +1,6 @@
 use async_trait::async_trait;
+use cryfs_utils::with_async_drop_2;
+use futures::join;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -71,6 +73,22 @@ where
             node_info,
         })
     }
+
+    #[cfg(feature = "testutils")]
+    async fn flush_blob(&self) -> FsResult<()> {
+        // TODO We'd only have to flush it if it's actually in some cache, but it might be far down the stack in some blockstore cache.
+        let blob = self.node_info.load_blob(&self.blobstore).await?;
+        with_async_drop_2!(blob, {
+            blob.with_lock(async |blob| {
+                blob.flush().await.map_err(|err| {
+                    log::error!("Failed to fsync node: {err:?}");
+                    FsError::UnknownError
+                })
+            })
+            .await
+        })?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -135,6 +153,23 @@ where
         self.node_info
             .setattr(&self.blobstore, mode, uid, gid, size, atime, mtime, ctime)
             .await
+    }
+
+    #[cfg(feature = "testutils")]
+    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+        // TODO Can we unify the fsync implementation betweeh CryNode, CryDir and CryOpenFile?
+        if datasync {
+            self.flush_blob().await?;
+        } else {
+            let (r1, r2) = join!(
+                self.flush_blob(),
+                self.node_info.flush_metadata(&self.blobstore)
+            );
+            // TODO Report both errors if both happen
+            r1?;
+            r2?;
+        }
+        Ok(())
     }
 }
 

@@ -52,6 +52,11 @@ where
     pub fn drain(&mut self) -> impl Iterator<Item = (K, AsyncDropGuard<V>)> {
         self.map.drain()
     }
+
+    #[cfg(feature = "testutils")]
+    pub fn iter(&self) -> impl Iterator<Item = (&K, &AsyncDropGuard<V>)> {
+        self.map.iter()
+    }
 }
 
 #[async_trait]

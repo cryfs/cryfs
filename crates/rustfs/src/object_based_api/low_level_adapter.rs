@@ -67,6 +67,11 @@ mod inode_info {
         pub fn node(&self) -> AsyncDropGuard<AsyncDropArc<Fs::Node>> {
             AsyncDropArc::clone(&self.node)
         }
+
+        #[cfg(feature = "testutils")]
+        pub async fn fsync(&self) -> FsResult<()> {
+            self.node.fsync(false).await
+        }
     }
 
     #[async_trait]
@@ -139,6 +144,14 @@ where
             object.async_drop().await.unwrap();
         }
         Self::block_root_handle(&mut inodes);
+    }
+
+    #[cfg(feature = "testutils")]
+    pub async fn flush_cache(&self) {
+        let mut inodes = self.inodes.write().await;
+        for (_handle, mut object) in inodes.iter() {
+            object.fsync().await.unwrap();
+        }
     }
 
     // TODO Test this is triggered by each operation

@@ -48,4 +48,4 @@ lockable = {workspace = true, features = ["slow_assertions"]}
 [features]
 ancestor_checks_on_move = []
 default = ["ancestor_checks_on_move"]
-testutils = ["cryfs-blobstore/testutils"]
+testutils = ["cryfs-blobstore/testutils", "cryfs-rustfs/testutils"]

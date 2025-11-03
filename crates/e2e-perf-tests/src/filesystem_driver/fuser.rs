@@ -77,8 +77,9 @@ impl FuserCacheBehavior for WithInodeCache {
     ) -> Self::NodeHandle {
         InodeGuard::new(AsyncDropArc::clone(device), child_ino)
     }
-    async fn reset_cache_after_setup(_fs: &ObjectBasedFsAdapterLL<Device>) {
-        // No-op for cached behavior
+    async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>) {
+        // Don't reset_cache (i.e. delete all inodes, as we do in WithoutInodeCache), but just flush any changes back to the underlying block stores so modifications are written back, but nodes are still in the cache
+        fs.flush_cache().await;
     }
 }
 /// This is a version of the [FuserFilesystemDriver] that doesn't cache inodes, i.e. it simulates operation counts for the scenario where a filesystem operation

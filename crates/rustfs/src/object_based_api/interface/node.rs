@@ -25,4 +25,7 @@ pub trait Node {
         mtime: Option<SystemTime>,
         ctime: Option<SystemTime>,
     ) -> FsResult<NodeAttrs>;
+
+    #[cfg(feature = "testutils")]
+    async fn fsync(&self, datasync: bool) -> FsResult<()>;
 }

@@ -165,6 +165,12 @@ impl Node for PassthroughNode {
 
         self.getattr().await
     }
+
+    #[cfg(feature = "testutils")]
+    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+        // No-op for passthrough filesystem
+        Ok(())
+    }
 }
 
 #[async_trait]

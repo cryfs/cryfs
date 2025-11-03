@@ -216,21 +216,21 @@ fn notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 3,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
                     ),
                 },
                 blob_read_all: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 3,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
                     ),
                 },
                 blob_read: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 3,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
@@ -241,14 +241,14 @@ fn notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 3,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
                     ),
                 },
                 blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 18,
+                    FixtureType::FuserWithInodeCache => 9,
                     FixtureType::FuserWithoutInodeCache => 27,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
@@ -258,7 +258,13 @@ fn notexisting_from_nesteddir(test_driver: impl TestDriver) -> impl TestReady {
             },
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
-                load: 2,
+                load: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 1,
+                    FixtureType::FuserWithoutInodeCache => 2,
+                    FixtureType::Fusemt => unreachable!(
+                        "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
+                    ),
+                },
                 ..LLActionCounts::ZERO
             },
         })
@@ -379,21 +385,21 @@ fn notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestRe
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 7,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
                     ),
                 },
                 blob_read_all: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 7,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
                     ),
                 },
                 blob_read: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 7,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
@@ -404,14 +410,14 @@ fn notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestRe
             high_level: HLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 7,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
                     ),
                 },
                 blob_data: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 18,
+                    FixtureType::FuserWithInodeCache => 9,
                     FixtureType::FuserWithoutInodeCache => 63,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"
@@ -422,7 +428,7 @@ fn notexisting_from_deeplynesteddir(test_driver: impl TestDriver) -> impl TestRe
             low_level: LLActionCounts {
                 // TODO Check if these counts are what we'd expect
                 load: match fixture_type {
-                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::FuserWithInodeCache => 1,
                     FixtureType::FuserWithoutInodeCache => 4,
                     FixtureType::Fusemt => unreachable!(
                         "Fusemt isn't enabled for this test because it doesn't have a lookup operation"

@@ -86,6 +86,12 @@ impl Node for InMemoryNodeRef {
             }
         }
     }
+
+    #[cfg(feature = "testutils")]
+    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+        // No-op for in-memory filesystem
+        Ok(())
+    }
 }
 
 #[async_trait]

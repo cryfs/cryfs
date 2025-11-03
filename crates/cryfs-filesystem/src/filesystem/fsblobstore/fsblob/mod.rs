@@ -160,6 +160,14 @@ where
         }
     }
 
+    pub async fn flush(&mut self) -> Result<()> {
+        match self {
+            Self::File(blob) => blob.flush().await,
+            Self::Directory(blob) => blob.flush().await,
+            Self::Symlink(blob) => blob.flush().await,
+        }
+    }
+
     #[cfg(any(test, feature = "testutils"))]
     pub async fn into_raw(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B::ConcreteBlob>> {
         match this.unsafe_into_inner_dont_drop() {

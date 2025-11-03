@@ -18,7 +18,7 @@ criterion = {workspace = true, features = ["async_tokio"]}
 cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
 cryfs-blockstore = {path = "../blockstore", features = ["testutils"]}
 cryfs-cli-utils = {path = "../cli-utils"}
-cryfs-filesystem = {path = "../cryfs-filesystem"}
+cryfs-filesystem = {path = "../cryfs-filesystem", features = ["testutils"]}
 cryfs-runner = {path = "../cryfs-runner"}
 cryfs-rustfs = {path = "../rustfs", default-features = false, features = ["fuser", "fuse_mt", "testutils"]}
 cryfs-utils = {path = "../utils"}

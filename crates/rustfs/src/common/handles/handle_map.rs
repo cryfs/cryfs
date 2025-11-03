@@ -66,6 +66,11 @@ where
         self.available_handles = HandlePool::new();
         self.objects.drain()
     }
+
+    #[cfg(feature = "testutils")]
+    pub fn iter(&self) -> impl Iterator<Item = (&Handle, &AsyncDropGuard<T>)> {
+        self.objects.iter()
+    }
 }
 
 #[async_trait]
