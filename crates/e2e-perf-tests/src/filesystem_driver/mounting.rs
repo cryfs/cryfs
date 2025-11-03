@@ -238,7 +238,11 @@ where
         .unwrap();
     }
 
-    async fn reset_cache(&self) {
+    async fn reset_cache_after_setup(&self) {
+        // No cache to reset
+    }
+
+    async fn reset_cache_after_test(&self) {
         // No cache to reset
     }
 

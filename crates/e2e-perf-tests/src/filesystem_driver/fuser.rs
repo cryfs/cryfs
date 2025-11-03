@@ -43,7 +43,7 @@ pub trait FuserCacheBehavior: Send + Sync {
         child_ino: InodeNumber,
         device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
     ) -> Self::NodeHandle;
-    async fn reset_cache(fs: &ObjectBasedFsAdapterLL<Device>);
+    async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>);
 }
 
 /// This is a version of the [FuserFilesystemDriver] that caches inodes, i.e. it simulates operation counts for the scenario where a filesystem operation
@@ -77,7 +77,7 @@ impl FuserCacheBehavior for WithInodeCache {
     ) -> Self::NodeHandle {
         InodeGuard::new(AsyncDropArc::clone(device), child_ino)
     }
-    async fn reset_cache(_fs: &ObjectBasedFsAdapterLL<Device>) {
+    async fn reset_cache_after_setup(_fs: &ObjectBasedFsAdapterLL<Device>) {
         // No-op for cached behavior
     }
 }
@@ -175,7 +175,7 @@ impl FuserCacheBehavior for WithoutInodeCache {
             .unwrap_or_else(AbsolutePathBuf::root)
             .join(child_name)
     }
-    async fn reset_cache(fs: &ObjectBasedFsAdapterLL<Device>) {
+    async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>) {
         fs.reset_cache().await;
     }
 }
@@ -283,8 +283,12 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         self.fs.destroy().await;
     }
 
-    async fn reset_cache(&self) {
-        C::reset_cache(&self.fs).await;
+    async fn reset_cache_after_setup(&self) {
+        C::reset_cache_after_setup(&self.fs).await;
+    }
+
+    async fn reset_cache_after_test(&self) {
+        self.fs.reset_cache().await;
     }
 
     async fn mkdir(

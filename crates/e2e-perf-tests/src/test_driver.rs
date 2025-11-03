@@ -169,7 +169,7 @@ where
     {
         self.setup_noflush(async move |fs| {
             let setup_result = setup_fn(fs).await;
-            fs.reset_caches().await;
+            fs.reset_cache_after_setup().await;
             setup_result
         })
     }
@@ -270,7 +270,7 @@ where
     {
         self.test_noflush(async move |fs, setup_result| {
             let test_result = (test_fn)(fs, setup_result).await;
-            fs.reset_caches().await;
+            fs.reset_cache_after_test().await;
             test_result
         })
     }
@@ -294,7 +294,7 @@ where
     {
         self.test_noflush_no_counter_reset(async move |fs, setup_result| {
             let test_result = (test_fn)(fs, setup_result).await;
-            fs.reset_caches().await;
+            fs.reset_cache_after_test().await;
             test_result
         })
     }

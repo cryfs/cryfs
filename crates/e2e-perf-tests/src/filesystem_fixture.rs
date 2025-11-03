@@ -225,8 +225,17 @@ where
         }
     }
 
-    pub async fn reset_caches(&self) {
-        self.filesystem.reset_cache().await;
+    pub async fn reset_cache_after_setup(&self) {
+        self.filesystem.reset_cache_after_setup().await;
+        self.blobstore
+            .clear_unloaded_blocks_from_cache()
+            .await
+            .unwrap();
+    }
+
+    pub async fn reset_cache_after_test(&self) {
+        self.filesystem.reset_cache_after_test().await;
+        // Some tests (e.g. fgetattr) keep files open when they finish running. That means we still have open files around and fully clearing the cache would deadlock. Let's only clear unloaded blocks.
         self.blobstore
             .clear_unloaded_blocks_from_cache()
             .await

@@ -42,7 +42,8 @@ pub trait FilesystemDriver: AsyncDrop + Debug {
 
     async fn destroy(&self);
 
-    async fn reset_cache(&self);
+    async fn reset_cache_after_setup(&self);
+    async fn reset_cache_after_test(&self);
 
     async fn mkdir(
         &self,
