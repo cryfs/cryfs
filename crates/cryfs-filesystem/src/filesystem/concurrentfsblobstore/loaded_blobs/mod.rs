@@ -394,9 +394,12 @@ where
                     }
                 }
                 BlobState::Dropping { .. } => {
-                    panic!(
-                        "unload called too often, blob is already dropping from previous unload"
-                    );
+                    // Because of the way unload releases the references (and reduces the reference count) without a lock before
+                    // calling into this function, there is a race condition and it is possible that multiple tasks unloading the
+                    // same blob both first decrement the refcount, which then reaches zero, and then both call into here.
+                    // The first one will change the state to Dropping, the second one will find it already in Dropping state.
+                    // We can just ignore that second call since the first call will take care of dropping the blob.
+                    None
                 }
             }
         };
