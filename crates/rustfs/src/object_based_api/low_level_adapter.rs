@@ -138,7 +138,17 @@ where
     }
 
     #[cfg(feature = "testutils")]
-    pub async fn reset_cache(&self) {
+    pub async fn reset_cache_after_setup(&self) {
+        let mut inodes = self.inodes.write().await;
+        for (_handle, mut object) in inodes.drain() {
+            object.fsync().await.unwrap();
+            object.async_drop().await.unwrap();
+        }
+        Self::block_root_handle(&mut inodes);
+    }
+
+    #[cfg(feature = "testutils")]
+    pub async fn reset_cache_after_test(&self) {
         let mut inodes = self.inodes.write().await;
         for (_handle, mut object) in inodes.drain() {
             object.async_drop().await.unwrap();
@@ -148,8 +158,8 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn flush_cache(&self) {
-        let mut inodes = self.inodes.write().await;
-        for (_handle, mut object) in inodes.iter() {
+        let inodes = self.inodes.write().await;
+        for (_handle, object) in inodes.iter() {
             object.fsync().await.unwrap();
         }
     }

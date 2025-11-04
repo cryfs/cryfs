@@ -177,7 +177,7 @@ impl FuserCacheBehavior for WithoutInodeCache {
             .join(child_name)
     }
     async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>) {
-        fs.reset_cache().await;
+        fs.reset_cache_after_setup().await;
     }
 }
 
@@ -289,7 +289,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     }
 
     async fn reset_cache_after_test(&self) {
-        self.fs.reset_cache().await;
+        self.fs.reset_cache_after_test().await;
     }
 
     async fn mkdir(
