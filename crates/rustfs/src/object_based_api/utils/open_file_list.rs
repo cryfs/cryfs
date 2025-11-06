@@ -60,6 +60,22 @@ where
         // TODO Since get() returns an error if the handle doesn't exist, maybe remove should as well instead of panicking
         open_files.remove(fh)
     }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn for_each(&self, callback: impl ForEachCallback<OF>) -> Result<(), FsError> {
+        use cryfs_utils::stream::for_each_unordered;
+
+        let open_files = self.open_files.lock().unwrap();
+        for_each_unordered(open_files.iter(), |(_fh, of)| callback.call(of)).await
+    }
+}
+
+#[cfg(any(test, feature = "testutils"))]
+pub trait ForEachCallback<OF>
+where
+    OF: OpenFile,
+{
+    async fn call(&self, file: &OF) -> Result<(), FsError>;
 }
 
 #[async_trait]

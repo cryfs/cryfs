@@ -139,12 +139,34 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn reset_cache_after_setup(&self) {
+        use crate::object_based_api::utils::ForEachCallback;
+
+        // clear inodes
         let mut inodes = self.inodes.write().await;
         for (_handle, mut object) in inodes.drain() {
             object.fsync().await.unwrap();
             object.async_drop().await.unwrap();
         }
         Self::block_root_handle(&mut inodes);
+
+        // flush open files
+        struct OpenFileFsyncCallback<OF> {
+            _phantom: std::marker::PhantomData<OF>,
+        }
+        impl<OF> ForEachCallback<OF> for OpenFileFsyncCallback<OF>
+        where
+            OF: OpenFile + Send + Sync,
+        {
+            async fn call(&self, file: &OF) -> Result<(), FsError> {
+                file.fsync(false).await
+            }
+        }
+        self.open_files
+            .for_each(OpenFileFsyncCallback {
+                _phantom: std::marker::PhantomData,
+            })
+            .await
+            .unwrap();
     }
 
     #[cfg(feature = "testutils")]

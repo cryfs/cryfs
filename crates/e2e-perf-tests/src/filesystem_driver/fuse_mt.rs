@@ -60,7 +60,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     }
 
     async fn reset_cache_after_setup(&self) {
-        // ObjectBasedFsAdapter doesn't have a cache to reset
+        self.fs.reset_cache_after_setup().await;
     }
 
     async fn reset_cache_after_test(&self) {

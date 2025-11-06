@@ -62,6 +62,30 @@ where
         fs.on_operation().await?;
         Ok(())
     }
+
+    #[cfg(feature = "testutils")]
+    pub async fn reset_cache_after_setup(&self) {
+        use crate::object_based_api::utils::ForEachCallback;
+
+        // flush open files
+        struct OpenFileFsyncCallback<OF> {
+            _phantom: std::marker::PhantomData<OF>,
+        }
+        impl<OF> ForEachCallback<OF> for OpenFileFsyncCallback<OF>
+        where
+            OF: OpenFile + Send + Sync,
+        {
+            async fn call(&self, file: &OF) -> Result<(), FsError> {
+                file.fsync(false).await
+            }
+        }
+        self.open_files
+            .for_each(OpenFileFsyncCallback {
+                _phantom: std::marker::PhantomData,
+            })
+            .await
+            .unwrap();
+    }
 }
 
 impl<Fs: Device> Debug for ObjectBasedFsAdapter<Fs>

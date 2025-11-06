@@ -226,6 +226,8 @@ where
     }
 
     pub async fn reset_cache_after_setup(&self) {
+        // after setup, we don't clear the cache because we want to keep inodes cached for testing scenarios where the filesystem already has them cached
+        // (i.e. ll_cache tests). But we still want to flush any dirty blocks from setup code so that those don't interfere with measurements.
         self.filesystem.reset_cache_after_setup().await;
         self.blobstore
             .clear_unloaded_blocks_from_cache()
@@ -234,6 +236,7 @@ where
     }
 
     pub async fn reset_cache_after_test(&self) {
+        // reset_cache_after_test should unload all inodes, so that the call to clear_unloaded_blocks_from_cache below can actually clear everything.
         self.filesystem.reset_cache_after_test().await;
         // Some tests (e.g. fgetattr) keep files open when they finish running. That means we still have open files around and fully clearing the cache would deadlock. Let's only clear unloaded blocks.
         self.blobstore

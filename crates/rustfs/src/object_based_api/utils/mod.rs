@@ -2,4 +2,6 @@ mod maybe_initialized_fs;
 pub use maybe_initialized_fs::MaybeInitializedFs;
 
 mod open_file_list;
+#[cfg(any(test, feature = "testutils"))]
+pub use open_file_list::ForEachCallback;
 pub use open_file_list::OpenFileList;
