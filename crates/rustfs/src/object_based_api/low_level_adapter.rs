@@ -139,8 +139,6 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn reset_cache_after_setup(&self) {
-        use crate::object_based_api::utils::ForEachCallback;
-
         // clear inodes
         let mut inodes = self.inodes.write().await;
         for (_handle, mut object) in inodes.drain() {
@@ -150,6 +148,12 @@ where
         Self::block_root_handle(&mut inodes);
 
         // flush open files
+        self._flush_open_files().await;
+    }
+
+    #[cfg(feature = "testutils")]
+    async fn _flush_open_files(&self) {
+        use crate::object_based_api::utils::ForEachCallback;
         struct OpenFileFsyncCallback<OF> {
             _phantom: std::marker::PhantomData<OF>,
         }
@@ -184,6 +188,7 @@ where
         for (_handle, object) in inodes.iter() {
             object.fsync().await.unwrap();
         }
+        self._flush_open_files().await;
     }
 
     // TODO Test this is triggered by each operation
