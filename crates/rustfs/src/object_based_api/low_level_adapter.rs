@@ -30,6 +30,7 @@ use cryfs_utils::{
 };
 
 pub const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
+pub const DUMMY_INO: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID + 1);
 
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
@@ -137,6 +138,7 @@ where
         if fuser::FUSE_ROOT_ID != 0 {
             inodes.block_handle(FUSE_ROOT_ID);
         }
+        inodes.block_handle(DUMMY_INO);
     }
 
     #[cfg(feature = "testutils")]
@@ -802,15 +804,16 @@ where
                     .skip(offset.saturating_sub(2)) // skip 2 less because those offset indices are for '.' and '..'
                     .map(async |(offset, entry)| {
                         let offset = offset + 2; // offset + 2 because of '.' and '..'
-                        let child = dir.lookup_child(&entry.name).await.unwrap(); // TODO No unwrap
 
-                        // TODO Check that readdir is actually supposed to register the inode and that [Self::forget] will be called for this inode
-                        //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
-                        //      fuse documentation says it shouldn't lookup: https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
-                        //      (but readdirplus should? see https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209 )
-                        //      I think for readdir, the correct behavior might be: return ino if in cache, otherwise return -1. Or just always return -1. See the `readdir_ino` config of libfuse.
-                        let child_ino = self.add_inode(ino, child, &entry.name).await;
-                        (offset, child_ino.handle, entry)
+                        // Readdir is not supposed to lookup or register inodes. The fuse API seems to just ignore it. There will never be forget() calls for these.
+                        // See:
+                        //  * https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
+                        //  * https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
+                        // But note that readdirplus is supposed to register inodes.
+                        //  * https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209
+                        let child_ino = DUMMY_INO;
+
+                        (offset, child_ino, entry)
                     });
                 // TODO Does this need to be FuturesOrdered or can we reply them without order?
                 let mut entries: FuturesOrdered<_> = entries.collect();
