@@ -1,16 +1,20 @@
 use std::{fmt::Debug, sync::Arc};
 
-use cryfs_blobstore::BlobStore;
+use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex},
     event::Event,
+    safe_panic,
 };
 use futures::{
     FutureExt as _,
     future::{BoxFuture, Shared},
 };
 
-use crate::filesystem::fsblobstore::FsBlob;
+use crate::filesystem::{
+    concurrentfsblobstore::loaded_blobs::{LoadedBlobGuard, LoadedBlobs},
+    fsblobstore::FsBlob,
+};
 
 pub(super) enum BlobState<B>
 where
@@ -71,9 +75,9 @@ impl BlobStateLoading {
         }
     }
 
-    pub fn add_waiter(&mut self) -> Shared<BoxFuture<'static, LoadingResult>> {
+    pub fn add_waiter(&mut self) -> BlobLoadingWaiter {
         self.num_waiters += 1;
-        self.loading_result.clone()
+        BlobLoadingWaiter::new(self.loading_result.clone())
     }
 
     pub fn num_waiters(&self) -> usize {
@@ -92,6 +96,87 @@ impl BlobStateLoading {
 
     pub fn removal_requested(&self) -> Option<&Event> {
         self.removal_requested.as_ref()
+    }
+}
+
+/// Handle for a task waiting for a blob to be loaded.
+/// This can be redeemed against the blob once loading is completed.
+/// It is an RAII type that ensures that the number of waiters is correctly tracked.
+#[must_use]
+pub(super) struct BlobLoadingWaiter {
+    // Alway Some unless destructed
+    loading_result: Option<Shared<BoxFuture<'static, LoadingResult>>>,
+}
+
+impl BlobLoadingWaiter {
+    pub fn new(loading_result: Shared<BoxFuture<'static, LoadingResult>>) -> Self {
+        BlobLoadingWaiter {
+            loading_result: Some(loading_result),
+        }
+    }
+
+    pub async fn wait_until_loaded<B>(
+        mut self,
+        loaded_blobs: &AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
+        blob_id: BlobId,
+    ) -> anyhow::Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
+        <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+    {
+        match self.loading_result.take().expect("Already dropped").await {
+            LoadingResult::Loaded => {
+                // _finalize_waiter will decrement the num_waiters refcount
+                Ok(Some(Self::_finalize_waiter(loaded_blobs, blob_id)))
+            }
+            LoadingResult::NotFound => {
+                // No need to decrement the num_waiters refcount here because the blob never made it to the Loaded state
+                Ok(None)
+            }
+            LoadingResult::Error(err) => {
+                // No need to decrement the num_waiters refcount here because the blob never made it to the Loaded state
+                Err(anyhow::anyhow!(
+                    "Error while try_insert'ing blob with id {}: {}",
+                    blob_id,
+                    err
+                ))
+            }
+        }
+    }
+
+    fn _finalize_waiter<B>(
+        loaded_blobs: &AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
+        blob_id: BlobId,
+    ) -> AsyncDropGuard<LoadedBlobGuard<B>>
+    where
+        B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
+        <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+    {
+        // This is not a race condition with dropping, i.e. the blob can't be in dropping state yet, because we are an "unfulfilled waiter",
+        // i.e. the blob cannot be dropped until we decrease the count below.
+        let mut blobs = loaded_blobs.blobs.lock().unwrap();
+        let Some(state) = blobs.get_mut(&blob_id) else {
+            panic!("Blob with id {} was not found in the map", blob_id);
+        };
+        let BlobState::Loaded(loaded) = state else {
+            panic!("Blob with id {} is not in loaded state", blob_id);
+        };
+        LoadedBlobGuard::new(
+            AsyncDropArc::clone(loaded_blobs),
+            blob_id,
+            // [Self::_clone_or_create_blob_state] added a waiter, so we need to decrement num_unfulfilled_waiters.
+            loaded.get_blob_and_decrease_num_unfulfilled_waiters(),
+        )
+    }
+}
+
+impl Drop for BlobLoadingWaiter {
+    fn drop(&mut self) {
+        if self.loading_result.is_some() {
+            safe_panic!(
+                "BlobLoadingWaiter was dropped without being awaited. This will lead to a memory leak because the number of waiters will not be decremented."
+            );
+        }
     }
 }
 
@@ -117,25 +202,30 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    pub fn new(
+    pub fn new_from_just_finished_loading(
         blob: AsyncDropGuard<FsBlob<B>>,
-        num_unfulfilled_waiters: usize,
-        removal_requested: Option<Event>,
+        loading: &BlobStateLoading,
     ) -> Self {
         BlobStateLoaded {
             blob: AsyncDropArc::new(AsyncDropTokioMutex::new(blob)),
-            num_unfulfilled_waiters,
-            removal_requested,
+            num_unfulfilled_waiters: loading.num_waiters(),
+            removal_requested: loading.removal_requested().cloned(), // TODO No clone
         }
     }
 
-    pub fn get_blob_without_decreasing_num_unfulfilled_waiters(
-        &self,
-    ) -> AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>> {
+    pub fn new_without_unfulfilled_waiters(blob: AsyncDropGuard<FsBlob<B>>) -> Self {
+        BlobStateLoaded {
+            blob: AsyncDropArc::new(AsyncDropTokioMutex::new(blob)),
+            num_unfulfilled_waiters: 0,
+            removal_requested: None,
+        }
+    }
+
+    pub fn get_blob(&self) -> AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>> {
         AsyncDropArc::clone(&self.blob)
     }
 
-    pub fn get_blob_and_decrease_num_unfulfilled_waiters(
+    fn get_blob_and_decrease_num_unfulfilled_waiters(
         &mut self,
     ) -> AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>> {
         assert!(self.num_unfulfilled_waiters > 0);
