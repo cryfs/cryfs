@@ -18,7 +18,7 @@ use cryfs_check::{
     BlobReference, BlobReferenceWithId, CorruptedError, NodeInfoAsSeenByLookingAtNode,
     NodeUnreferencedError,
 };
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_filesystem::filesystem::fsblobstore::{BlobType, FlushBehavior};
 use cryfs_filesystem::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
@@ -254,7 +254,7 @@ where
 {
     let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
-        .create_dir_blob(&parent_dir.blob_id())
+        .create_dir_blob(&parent_dir.blob_id(), FlushBehavior::DontFlush)
         .await
         .unwrap();
     add_dir_entry(&mut parent_dir, name, new_entry.blob_id());
@@ -290,7 +290,7 @@ where
 {
     let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
-        .create_file_blob(&parent_dir.blob_id())
+        .create_file_blob(&parent_dir.blob_id(), FlushBehavior::DontFlush)
         .await
         .unwrap();
     add_file_entry(&mut parent_dir, name, new_entry.blob_id());
@@ -327,7 +327,7 @@ where
 {
     let mut parent_dir = parent.blob.as_dir_mut().unwrap();
     let new_entry = fsblobstore
-        .create_symlink_blob(&parent_dir.blob_id(), target)
+        .create_symlink_blob(&parent_dir.blob_id(), target, FlushBehavior::DontFlush)
         .await
         .unwrap();
     add_symlink_entry(&mut parent_dir, name, new_entry.blob_id());

@@ -9,7 +9,7 @@ use std::time::SystemTime;
 use cryfs_blobstore::{BlobId, BlobOnBlocks, DataTree};
 use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeUnreferencedError};
 use cryfs_filesystem::{
-    filesystem::fsblobstore::FsBlob,
+    filesystem::fsblobstore::{FlushBehavior, FsBlob},
     utils::fs_types::{Gid, Uid},
 };
 use cryfs_rustfs::AbsolutePathBuf;
@@ -42,7 +42,10 @@ fn make_single_node_file_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut blob = fsblobstore.create_file_blob(&parent_id()).await.unwrap();
+                    let mut blob = fsblobstore
+                        .create_file_blob(&parent_id(), FlushBehavior::DontFlush)
+                        .await
+                        .unwrap();
                     let blob_id = blob.blob_id();
                     blob.async_drop().await.unwrap();
                     (blob_id, NodeInfoAsSeenByLookingAtNode::LeafNode)
@@ -59,7 +62,10 @@ fn make_large_file_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut blob = fsblobstore.create_file_blob(&parent_id()).await.unwrap();
+                    let mut blob = fsblobstore
+                        .create_file_blob(&parent_id(), FlushBehavior::DontFlush)
+                        .await
+                        .unwrap();
                     let file = blob.as_file_mut().unwrap();
                     file.write(&data(common::entry_helpers::LARGE_FILE_SIZE, 0), 0)
                         .await
@@ -93,7 +99,10 @@ fn make_single_node_dir_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut dir_blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let mut dir_blob = fsblobstore
+                        .create_dir_blob(&parent_id(), FlushBehavior::DontFlush)
+                        .await
+                        .unwrap();
                     let blob_id = dir_blob.blob_id();
                     dir_blob.async_drop().await.unwrap();
                     (blob_id, NodeInfoAsSeenByLookingAtNode::LeafNode)
@@ -110,7 +119,10 @@ fn make_large_dir_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let mut blob = fsblobstore
+                        .create_dir_blob(&parent_id(), FlushBehavior::DontFlush)
+                        .await
+                        .unwrap();
                     let dir_blob = blob.as_dir_mut().unwrap();
                     for i in 0..400 {
                         dir_blob
@@ -153,7 +165,10 @@ fn make_dir_blob_with_children(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let dir_blob = fsblobstore.create_dir_blob(&parent_id()).await.unwrap();
+                    let dir_blob = fsblobstore
+                        .create_dir_blob(&parent_id(), FlushBehavior::DontFlush)
+                        .await
+                        .unwrap();
                     let mut dir_blob = CreatedDirBlob::new(
                         dir_blob,
                         AbsolutePathBuf::root().push("dummy".try_into().unwrap()),
@@ -195,7 +210,7 @@ fn make_single_node_symlink_blob(
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
                     let mut blob = fsblobstore
-                        .create_symlink_blob(&parent_id(), "target")
+                        .create_symlink_blob(&parent_id(), "target", FlushBehavior::DontFlush)
                         .await
                         .unwrap();
                     let blob_id = blob.blob_id();
@@ -218,10 +233,11 @@ fn make_large_symlink_blob(
                         .create_symlink_blob(
                             &parent_id(),
                             &common::entry_helpers::large_symlink_target(),
+                            FlushBehavior::DontFlush,
                         )
                         .await
                         .unwrap();
-                    let mut symlink = blob.as_symlink_mut().unwrap();
+                    let symlink = blob.as_symlink_mut().unwrap();
                     assert!(
                         symlink.num_nodes().await.unwrap() > 1_000,
                         "If this fails, we need to make the data larger so it uses enough nodes."

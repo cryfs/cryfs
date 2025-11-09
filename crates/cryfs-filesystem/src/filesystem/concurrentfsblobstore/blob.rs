@@ -35,7 +35,6 @@ where
         self.blob.with_lock(async |b| b.blob_type()).await
     }
 
-    // TODO A lot of call sites call with_lock on blobs they just created. Can we optimize this? Sounds silly to create it, add it to loaded blobs to allow other threads to access it, and then immediately lock it for initialization. Sounds even like there could be race conditions.
     pub async fn with_lock<R, F>(&self, f: F) -> R
     where
         F: AsyncFnOnce(&mut crate::filesystem::fsblobstore::FsBlob<B>) -> R,

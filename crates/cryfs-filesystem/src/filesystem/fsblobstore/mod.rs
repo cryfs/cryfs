@@ -48,29 +48,47 @@ where
     pub async fn create_file_blob<'a>(
         &'a self,
         parent: &BlobId,
+        flush_behavior: FlushBehavior,
     ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
-        Ok(AsyncDropGuard::new(FsBlob::File(
-            FileBlob::create_blob(&*self.blobstore, parent).await?,
-        )))
+        let mut file_blob = FileBlob::create_blob(&*self.blobstore, parent).await?;
+        match flush_behavior {
+            FlushBehavior::FlushImmediately => {
+                file_blob.flush().await?;
+            }
+            FlushBehavior::DontFlush => {}
+        }
+        Ok(AsyncDropGuard::new(FsBlob::File(file_blob)))
     }
 
     pub async fn create_dir_blob<'a>(
         &'a self,
         parent: &BlobId,
+        flush_behavior: FlushBehavior,
     ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
-        Ok(AsyncDropGuard::new(FsBlob::Directory(
-            DirBlob::create_blob(&*self.blobstore, parent).await?,
-        )))
+        let mut dir_blob = DirBlob::create_blob(&*self.blobstore, parent).await?;
+        match flush_behavior {
+            FlushBehavior::FlushImmediately => {
+                dir_blob.flush().await?;
+            }
+            FlushBehavior::DontFlush => {}
+        }
+        Ok(AsyncDropGuard::new(FsBlob::Directory(dir_blob)))
     }
 
     pub async fn create_symlink_blob<'a>(
         &'a self,
         parent: &BlobId,
         target: &str,
+        flush_behavior: FlushBehavior,
     ) -> Result<AsyncDropGuard<fsblob::FsBlob<B>>> {
-        Ok(AsyncDropGuard::new(FsBlob::Symlink(
-            SymlinkBlob::create_blob(&*self.blobstore, parent, target).await?,
-        )))
+        let mut symlink_blob = SymlinkBlob::create_blob(&*self.blobstore, parent, target).await?;
+        match flush_behavior {
+            FlushBehavior::FlushImmediately => {
+                symlink_blob.flush().await?;
+            }
+            FlushBehavior::DontFlush => {}
+        }
+        Ok(AsyncDropGuard::new(FsBlob::Symlink(symlink_blob)))
     }
 
     pub async fn load<'a>(&'a self, blob_id: &BlobId) -> Result<Option<AsyncDropGuard<FsBlob<B>>>> {
@@ -106,6 +124,11 @@ where
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.blobstore.clear_cache_slow().await
     }
+}
+
+pub enum FlushBehavior {
+    FlushImmediately,
+    DontFlush,
 }
 
 #[async_trait]

@@ -13,7 +13,7 @@ use cryfs_utils::{
 
 use crate::filesystem::{
     concurrentfsblobstore::{ConcurrentFsBlob, loaded_blobs::RequestRemovalResult},
-    fsblobstore::FsBlobStore,
+    fsblobstore::{FlushBehavior, FsBlobStore},
 };
 
 use super::loaded_blobs::LoadedBlobs;
@@ -55,8 +55,12 @@ where
     pub async fn create_file_blob(
         &self,
         parent: &BlobId,
+        flush_behavior: FlushBehavior,
     ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
-        let blob = self.blobstore.create_file_blob(parent).await?;
+        let blob = self
+            .blobstore
+            .create_file_blob(parent, flush_behavior)
+            .await?;
         let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
         Ok(ConcurrentFsBlob::new(inserted))
     }
@@ -64,8 +68,12 @@ where
     pub async fn create_dir_blob(
         &self,
         parent: &BlobId,
+        flush_behavior: FlushBehavior,
     ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
-        let blob = self.blobstore.create_dir_blob(parent).await?;
+        let blob = self
+            .blobstore
+            .create_dir_blob(parent, flush_behavior)
+            .await?;
         let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
         Ok(ConcurrentFsBlob::new(inserted))
     }
@@ -74,8 +82,12 @@ where
         &self,
         parent: &BlobId,
         target: &str,
+        flush_behavior: FlushBehavior,
     ) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>> {
-        let blob = self.blobstore.create_symlink_blob(parent, target).await?;
+        let blob = self
+            .blobstore
+            .create_symlink_blob(parent, target, flush_behavior)
+            .await?;
         let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
         Ok(ConcurrentFsBlob::new(inserted))
     }
