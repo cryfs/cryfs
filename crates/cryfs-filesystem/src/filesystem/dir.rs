@@ -295,12 +295,6 @@ where
         newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
     ) -> FsResult<()> {
-        // TODO We're loading two blobs here, self and newparent. Can this cause a deadlock?
-        // What if they're the same? Or what if their parents are the same or one is the parent of the other?
-        // We need to load the parent to lookup our own blob id.
-        // Actually, they can't be the same per API contract, otherwise rustfs would call rename_child instead (but can we assert that?).
-        // Also, the other cases may apply.
-
         // TODO We're currently locking, releasing and re-locking blobs multiple times. This introduces race conditions and is not optimal for performance either.
         //      We should just lock each blob once and keep it locked until we're done. But we need to do it in a deadlock-free way, locking multiple
         //      blobs at once is risky for deadlocks if not done in a consistent order.
@@ -621,7 +615,6 @@ where
             .await
     }
 
-    // TODO If/when we implement a ParallelAccessFsBlobStore, we probably need to make sure that there aren't any existing references to the removed blob before removing it. Or maybe delay the remove until they're gone. Same for the other remove functions.
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent( async || {

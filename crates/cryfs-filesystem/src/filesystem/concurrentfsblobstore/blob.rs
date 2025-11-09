@@ -31,7 +31,7 @@ where
     }
 
     pub async fn blob_type(&self) -> BlobType {
-        // TODO Should we cache this instead of locking every time? Probably need to cache when calling Mutex::new() and pass through.
+        // It's ok to lock here instead of caching it, because this is called very rarely
         self.blob.with_lock(async |b| b.blob_type()).await
     }
 

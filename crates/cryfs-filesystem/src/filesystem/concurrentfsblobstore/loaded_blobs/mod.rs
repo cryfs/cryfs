@@ -23,8 +23,6 @@ use blob_state::{BlobState, BlobStateDropping, BlobStateLoaded, BlobStateLoading
 mod guard;
 pub use guard::LoadedBlobGuard;
 
-// TODO Now that we have the new approach of Shared<LoadingResult>, can we actually apply this with a FsBlob<'a, B> instead of FsBlob<B>?
-
 // TODO This is currently not cancellation safe. If a task waiting for a blob to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 
 // TODO This is pretty similar to lockable::LockableHashMap, just that we're giving out handles to unlocked entries to multiple tasks and they can use those handles to lock entries. Can we maybe add that feature to lockable and use that instead?
@@ -101,10 +99,6 @@ where
             .await?
             .expect("This shouldn't happen, our loading_future always returns Some");
 
-        // TODO This could be optimized, no need to increase and then decrease the waiter refcount for the blob.
-        //      BUT: We need to be careful. The current code assumes that any unfulfilled waiter will eventually
-        //      (increment the refcount and then on decrement) call [Self::unload]. If we don't increment the refcount here,
-        //      we need to ensure we still call [Self::unload] to check if we need to drop the blob.
         loaded.async_drop().await?;
         Ok(())
     }
