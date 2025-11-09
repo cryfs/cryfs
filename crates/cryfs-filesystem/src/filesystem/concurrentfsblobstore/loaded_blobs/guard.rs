@@ -7,7 +7,10 @@ use crate::filesystem::{
     concurrentfsblobstore::loaded_blobs::RequestRemovalResult, fsblobstore::FsBlob,
 };
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex},
+    mr_oneshot_channel::RecvError,
+};
 
 #[derive(Debug)]
 pub struct LoadedBlobGuard<B>
@@ -56,8 +59,15 @@ where
                 this.async_drop().await?;
                 std::mem::drop(this);
                 // Wait until the blob is removed. If there are other readers, this will wait.
-                on_removed.wait().await;
-                Ok(())
+                on_removed
+                    .recv()
+                    .await
+                    .map_err(|error: RecvError| FsError::InternalError {
+                        error: error.into(),
+                    })?
+                    .map_err(|err| FsError::InternalError {
+                        error: anyhow::anyhow!("Error during blob removal: {err}"),
+                    })
             }
             RequestRemovalResult::NotLoaded => {
                 panic!("This can't happen because we hold the LoadedBlobGuard");

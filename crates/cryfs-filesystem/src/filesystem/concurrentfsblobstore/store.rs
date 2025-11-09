@@ -7,6 +7,7 @@ use std::fmt::Debug;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    mr_oneshot_channel::RecvError,
     with_async_drop_2,
 };
 
@@ -115,7 +116,13 @@ where
             match self.loaded_blobs.request_removal(*id) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {
                     // Wait until the blob is removed
-                    on_removed.wait().await; // TODO Is this actually successfully removed? What if it fails? Can we somehow forward this? Maybe using a Shared future instead of an Event?
+                    on_removed
+                        .recv()
+                        .await
+                        .map_err(|error: RecvError| FsError::InternalError {
+                            error: error.into(),
+                        })?
+                        .map_err(|err| anyhow::anyhow!("Removal failed: {err:?}"))?;
                     return Ok(RemoveResult::SuccessfullyRemoved);
                 }
                 RequestRemovalResult::NotLoaded => {

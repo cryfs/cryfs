@@ -1,8 +1,7 @@
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cryfs_rustfs::FsResult;
-use cryfs_utils::event::Event;
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::{mr_oneshot_channel, with_async_drop_2};
 use futures::FutureExt;
 use futures::future::{BoxFuture, Shared};
 use std::sync::{Arc, Mutex};
@@ -11,7 +10,9 @@ use std::{
     fmt::Debug,
 };
 
-use crate::filesystem::concurrentfsblobstore::loaded_blobs::blob_state::BlobLoadingWaiter;
+use crate::filesystem::concurrentfsblobstore::loaded_blobs::blob_state::{
+    BlobLoadingWaiter, RemovalRequest,
+};
 use crate::filesystem::fsblobstore::{FsBlob, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex};
@@ -184,7 +185,7 @@ where
                         loading_fn: returned_loading_fn,
                     } => {
                         // Blob is either loading or loaded, but its removal was requested. Let's wait until current processing is complete, removal was processed, and then retry.
-                        on_removed.wait().await;
+                        let _ = on_removed.recv().await;
                         // Reset the `loading_fn` [FnOnce]. Since `_clone_or_create_blob_state` didn't use it, it returned it and we can use it in the next iteration.
                         loading_fn = returned_loading_fn;
                         continue;
@@ -211,7 +212,7 @@ where
             Entry::Occupied(mut entry) => match entry.get_mut() {
                 BlobState::Loaded(loaded) => match loaded.removal_requested() {
                     Some(removal_requested) => CloneOrCreateBlobStateResult::RemovalRequested {
-                        on_removed: removal_requested.clone(),
+                        on_removed: removal_requested,
                         loading_fn,
                     },
                     None => CloneOrCreateBlobStateResult::Loaded {
@@ -220,7 +221,7 @@ where
                 },
                 BlobState::Loading(loading) => match loading.removal_requested() {
                     Some(removal_requested) => CloneOrCreateBlobStateResult::RemovalRequested {
-                        on_removed: removal_requested.clone(),
+                        on_removed: removal_requested,
                         loading_fn,
                     },
                     None => CloneOrCreateBlobStateResult::Loading {
@@ -265,6 +266,7 @@ where
                     let BlobState::Loading(loading) = state else {
                         panic!("Blob with id {} is not in loading state", blob_id);
                     };
+                    let loading = std::mem::replace(loading, BlobStateLoading::new_dummy());
                     // We are still in the middle of executing the future, so no waiter has completed yet.
                     // Also, we currently have a lock on `blob`, so no new waiters can be added.
                     // We're about to change the state to BlobState::Loaded, which will prevent further waiters to be added even after we release the lock.
@@ -378,8 +380,7 @@ where
     }
 
     fn make_drop_future(&self, loaded: BlobStateLoaded<B>) -> Shared<BoxFuture<'static, ()>> {
-        let removal_requested = loaded.removal_requested().cloned(); // TODO No clone
-        let mut blob = loaded.into_inner();
+        let (removal_request, mut blob) = loaded.into_inner();
         let blob_id = blob.blob_id();
         let blobs = Arc::clone(&self.blobs);
         async move {
@@ -395,15 +396,20 @@ where
             };
             // This will be awaited after the lock on blobs is released, so we can concurrently drop
             // the blob without blocking other operations.
-            if let Some(removal_requested) = removal_requested {
-                // If removal was requested, execute the removal
-                FsBlob::remove(blob).await.unwrap(); // TODO No unwrap
-                remove_entry_fn().await;
-                removal_requested.trigger();
-            } else {
-                // otherwise just drop the blob
-                blob.async_drop().await.unwrap(); // TODO No unwrap
-                remove_entry_fn().await;
+            match removal_request {
+                RemovalRequest::Requested {
+                    removal_result_sender,
+                } => {
+                    // If removal was requested, execute the removal
+                    let remove_result = FsBlob::remove(blob).await;
+                    remove_entry_fn().await; // always remove the entry from the map, even if removal failed
+                    removal_result_sender.send(remove_result.map_err(Arc::new));
+                }
+                RemovalRequest::NotRequested => {
+                    // otherwise just drop the blob
+                    blob.async_drop().await.unwrap(); // TODO No unwrap
+                    remove_entry_fn().await;
+                }
             }
         }
         .boxed()
@@ -449,14 +455,14 @@ where
     },
     /// BlobState is either Loading or Loaded, but removal was requested. We need to block further accesses until removal is complete.
     RemovalRequested {
-        on_removed: Event,
+        on_removed: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
         loading_fn: F,
     },
 }
 
 pub enum RequestRemovalResult {
     RemovalRequested {
-        on_removed: Event,
+        on_removed: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
     },
     NotLoaded,
     Dropping {

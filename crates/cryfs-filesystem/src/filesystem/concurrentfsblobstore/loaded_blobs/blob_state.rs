@@ -1,10 +1,10 @@
 use std::{fmt::Debug, sync::Arc};
 
+use anyhow::Error;
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex},
-    event::Event,
-    safe_panic,
+    mr_oneshot_channel, safe_panic,
 };
 use futures::{
     FutureExt as _,
@@ -37,16 +37,15 @@ where
             BlobState::Loaded(BlobStateLoaded {
                 blob,
                 num_unfulfilled_waiters,
-                removal_requested,
+                removal_request,
             }) => write!(
                 f,
                 "Loaded({:?}, {}, {})",
                 blob,
                 num_unfulfilled_waiters,
-                if removal_requested.is_some() {
-                    "removal requested"
-                } else {
-                    "no removal requested"
+                match removal_request {
+                    RemovalRequest::NotRequested => "removal not requested",
+                    RemovalRequest::Requested { .. } => "removal requested",
                 }
             ),
             BlobState::Dropping { .. } => write!(f, "Dropping"),
@@ -61,9 +60,8 @@ pub(super) struct BlobStateLoading {
     loading_result: Shared<BoxFuture<'static, LoadingResult>>,
     /// Number of tasks currently waiting for this blob to be loaded. This is only ever incremented. Even if a waiter completes, it won't be decremented.
     num_waiters: usize,
-    /// If Some: While we're loading, another thread triggered a remove for this blob. Don't allow further loaders, and when this is unloaded, remove the blob. The event will be triggered once removal is complete.
-    /// If None: No removal was requested.
-    removal_requested: Option<Event>,
+    /// If RemovalRequest::Requested: While we're loading, another thread triggered a remove for this blob. Don't allow further loaders, and when this is unloaded, remove the blob.
+    removal_request: RemovalRequest,
 }
 
 impl BlobStateLoading {
@@ -71,7 +69,15 @@ impl BlobStateLoading {
         BlobStateLoading {
             loading_result: loading_result.shared(),
             num_waiters: 0,
-            removal_requested: None,
+            removal_request: RemovalRequest::NotRequested,
+        }
+    }
+
+    pub fn new_dummy() -> Self {
+        BlobStateLoading {
+            loading_result: futures::future::pending().boxed().shared(),
+            num_waiters: 0,
+            removal_request: RemovalRequest::NotRequested,
         }
     }
 
@@ -84,18 +90,14 @@ impl BlobStateLoading {
         self.num_waiters
     }
 
-    pub fn request_removal(&mut self) -> Event {
-        if let Some(event) = &self.removal_requested {
-            event.clone()
-        } else {
-            let event = Event::new();
-            self.removal_requested = Some(event.clone());
-            event
-        }
+    pub fn request_removal(&mut self) -> mr_oneshot_channel::Receiver<Result<(), Arc<Error>>> {
+        self.removal_request.request_removal()
     }
 
-    pub fn removal_requested(&self) -> Option<&Event> {
-        self.removal_requested.as_ref()
+    pub fn removal_requested(
+        &self,
+    ) -> Option<mr_oneshot_channel::Receiver<Result<(), Arc<Error>>>> {
+        self.removal_request.removal_requested()
     }
 }
 
@@ -192,9 +194,8 @@ where
     /// This gets never increased, only initialized when the blob is loaded and decreased when a waiter gets its clone of the AsyncDropArc.
     /// If this is non-zero, then we shouldn't prune the blob yet even if the refcount is zero.
     num_unfulfilled_waiters: usize,
-    /// If Some: While we're loading, another thread triggered a remove for this blob. Don't allow further loaders, and when this is unloaded, remove the blob. The event will be triggered once removal is complete.
-    /// If None: No removal was requested.
-    removal_requested: Option<Event>,
+    /// If RemovalRequest::Requested: While we're loading, another thread triggered a remove for this blob. Don't allow further loaders, and when this is unloaded, remove the blob.
+    removal_request: RemovalRequest,
 }
 
 impl<B> BlobStateLoaded<B>
@@ -204,12 +205,12 @@ where
 {
     pub fn new_from_just_finished_loading(
         blob: AsyncDropGuard<FsBlob<B>>,
-        loading: &BlobStateLoading,
+        loading: BlobStateLoading,
     ) -> Self {
         BlobStateLoaded {
             blob: AsyncDropArc::new(AsyncDropTokioMutex::new(blob)),
             num_unfulfilled_waiters: loading.num_waiters(),
-            removal_requested: loading.removal_requested().cloned(), // TODO No clone
+            removal_request: loading.removal_request,
         }
     }
 
@@ -217,7 +218,7 @@ where
         BlobStateLoaded {
             blob: AsyncDropArc::new(AsyncDropTokioMutex::new(blob)),
             num_unfulfilled_waiters: 0,
-            removal_requested: None,
+            removal_request: RemovalRequest::NotRequested,
         }
     }
 
@@ -239,26 +240,23 @@ where
         self.num_unfulfilled_waiters + AsyncDropArc::strong_count(&self.blob) - 1
     }
 
-    pub fn into_inner(self) -> AsyncDropGuard<FsBlob<B>> {
+    pub fn into_inner(self) -> (RemovalRequest, AsyncDropGuard<FsBlob<B>>) {
         assert!(
             self.num_unfulfilled_waiters == 0,
             "Cannot consume BlobStateLoaded while there are unfulfilled waiters"
         );
-        AsyncDropTokioMutex::into_inner(AsyncDropArc::try_unwrap(self.blob).unwrap())
+        let blob = AsyncDropTokioMutex::into_inner(AsyncDropArc::try_unwrap(self.blob).unwrap());
+        (self.removal_request, blob)
     }
 
-    pub fn request_removal(&mut self) -> Event {
-        if let Some(event) = &self.removal_requested {
-            event.clone()
-        } else {
-            let event = Event::new();
-            self.removal_requested = Some(event.clone());
-            event
-        }
+    pub fn request_removal(&mut self) -> mr_oneshot_channel::Receiver<Result<(), Arc<Error>>> {
+        self.removal_request.request_removal()
     }
 
-    pub fn removal_requested(&self) -> Option<&Event> {
-        self.removal_requested.as_ref()
+    pub fn removal_requested(
+        &self,
+    ) -> Option<mr_oneshot_channel::Receiver<Result<(), Arc<Error>>>> {
+        self.removal_request.removal_requested()
     }
 }
 
@@ -276,4 +274,42 @@ pub(super) enum LoadingResult {
 
     /// An error occurred while loading the blob. The blob state was removed from the map.
     Error(Arc<anyhow::Error>),
+}
+
+pub(super) enum RemovalRequest {
+    NotRequested,
+    Requested {
+        removal_result_sender: mr_oneshot_channel::Sender<Result<(), Arc<Error>>>,
+    },
+}
+
+impl RemovalRequest {
+    pub fn request_removal(&mut self) -> mr_oneshot_channel::Receiver<Result<(), Arc<Error>>> {
+        match self {
+            RemovalRequest::Requested {
+                removal_result_sender,
+                ..
+            } => removal_result_sender.subscribe(),
+            RemovalRequest::NotRequested => {
+                let (removal_result_sender, removal_result_receiver) =
+                    mr_oneshot_channel::channel();
+                *self = RemovalRequest::Requested {
+                    removal_result_sender,
+                };
+                removal_result_receiver
+            }
+        }
+    }
+
+    pub fn removal_requested(
+        &self,
+    ) -> Option<mr_oneshot_channel::Receiver<Result<(), Arc<Error>>>> {
+        match self {
+            RemovalRequest::Requested {
+                removal_result_sender,
+                ..
+            } => Some(removal_result_sender.subscribe()),
+            RemovalRequest::NotRequested => None,
+        }
+    }
 }
