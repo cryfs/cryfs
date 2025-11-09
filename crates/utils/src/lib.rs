@@ -9,6 +9,7 @@ pub mod containers;
 pub mod crypto;
 pub mod data;
 pub mod event;
+pub mod mr_oneshot_channel;
 pub mod mutex;
 mod panic;
 pub mod path;
