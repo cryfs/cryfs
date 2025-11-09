@@ -75,6 +75,10 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
         self.tree_store.logical_block_size_bytes()
     }
 
+    async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
+        self.tree_store.flush_tree_if_cached(blob_id.root).await
+    }
+
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()> {
         self.tree_store.clear_cache_slow().await

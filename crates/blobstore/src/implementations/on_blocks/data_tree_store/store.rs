@@ -117,6 +117,18 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         traversal::load_all_nodes_in_subtree_of_id(&self.node_store, subtree_root_id).await
     }
 
+    pub async fn flush_tree_if_cached(&self, root_node_id: BlockId) -> Result<()> {
+        // TODO We could be smarter here and remember an in-memory map of all the not-yet-flushed blobs and which
+        //      blocks they modified, and then only load and flush those here. Maybe even automatically clear it when
+        //      things get flushed or pruned from caches naturally.
+        //      But we don't have that yet. So the best we can do to get correct behavior here is to load the entire tree.
+        //      and flush it.
+        if let Some(mut tree) = self.load_tree(root_node_id).await? {
+            tree.flush().await?;
+        }
+        Ok(())
+    }
+
     #[cfg(test)]
     // This needs to load all blocks, so it's not very efficient. Only use it for tests.
     pub async fn all_tree_roots(&self) -> Result<Vec<BlockId>> {

@@ -124,6 +124,10 @@ where
     pub async fn clear_cache_slow(&self) -> Result<()> {
         self.blobstore.clear_cache_slow().await
     }
+
+    pub async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
+        self.blobstore.flush_if_cached(blob_id).await
+    }
 }
 
 pub enum FlushBehavior {

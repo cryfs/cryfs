@@ -50,6 +50,8 @@ pub trait BlobStore {
     // logical means "space we can use" as opposed to "space it takes on the disk" (i.e. logical is without headers, checksums, ...)
     fn logical_block_size_bytes(&self) -> Byte;
 
+    async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()>;
+
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()>;
     #[cfg(any(test, feature = "testutils"))]

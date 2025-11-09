@@ -190,23 +190,8 @@ where
     }
 
     async fn flush_dir_contents(&self) -> FsResult<()> {
-        let blob = self.load_blob().await?;
-        with_async_drop_2!(blob, {
-            blob.with_lock(async |mut blob| {
-                let dir = Self::blob_as_dir_mut(&mut blob).map_err(|err| {
-                    log::error!("Failed to cast blob to DirBlob: {err:?}");
-                    FsError::UnknownError
-                })?;
-                // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
-                dir.flush().await.map_err(|err| {
-                    log::error!("Failed to fsync dir blob: {err:?}");
-                    FsError::UnknownError
-                })?;
-
-                Ok(())
-            })
-            .await
-        })
+        // Only flush the blob if it is loaded. If it isn't even loaded/cached, there's nothing we need to do.
+        self.node_info.flush_if_cached(&self.blobstore).await
     }
 }
 

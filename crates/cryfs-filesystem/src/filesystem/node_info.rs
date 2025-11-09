@@ -167,6 +167,14 @@ where
             })
     }
 
+    pub async fn flush_if_cached(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<()> {
+        let blob_id = self.blob_id();
+        blobstore.flush_if_cached(*blob_id).await.map_err(|err| {
+            log::error!("Error flushing blob {:?}: {:?}", blob_id, err);
+            FsError::UnknownError
+        })
+    }
+
     pub fn as_file_mut<'s>(blob: &'s mut FsBlob<B>) -> FsResult<&'s mut FileBlob<B>> {
         let blob_id = blob.blob_id();
         blob.as_file_mut().map_err(|err| {
@@ -394,7 +402,6 @@ where
         let parent_blob = self
             .parent_blob()
             .expect("Can't flush metadata of root dir"); // TODO What to do here?
-        // TODO Can we change this to a BlobStore::flush(blob_id) method because such a method can avoid loading the blob if it isn't in any cache anyway?
         parent_blob
             .with_lock(async |parent_blob| {
                 parent_blob

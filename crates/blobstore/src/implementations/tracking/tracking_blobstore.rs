@@ -90,6 +90,11 @@ where
         self.underlying_store.logical_block_size_bytes()
     }
 
+    async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
+        self.counts.lock().unwrap().store_flush_if_cached += 1;
+        self.underlying_store.flush_if_cached(blob_id).await
+    }
+
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()> {
         self.underlying_store.clear_cache_slow().await

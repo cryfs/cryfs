@@ -39,6 +39,10 @@ impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<
         self.deref().logical_block_size_bytes()
     }
 
+    async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
+        self.deref().flush_if_cached(blob_id).await
+    }
+
     #[cfg(any(test, feature = "testutils"))]
     async fn clear_cache_slow(&self) -> Result<()> {
         self.deref().clear_cache_slow().await

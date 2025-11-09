@@ -149,6 +149,23 @@ where
             }
         }
     }
+
+    /// Flush the blob if it is loaded or cached somewhere. If it is not loaded or cached, do nothing.
+    pub async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
+        if let Some(loaded_blob) =
+            LoadedBlobs::get_if_loading_or_loaded(&self.loaded_blobs, &blob_id).await?
+        {
+            // Blob is loaded, we can flush it directly.
+            loaded_blob
+                .with_lock(async |blob| blob.flush().await)
+                .await?;
+        } else {
+            // Blob is not loaded. But it may have been previously async_dropped without a flush, which may cause it's blocks to still be in a lower level blockstore cache.
+            // We need to flush those as well
+            self.blobstore.flush_if_cached(blob_id).await?;
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]

@@ -189,6 +189,29 @@ where
         })
     }
 
+    pub async fn get_if_loading_or_loaded(
+        this: &AsyncDropGuard<AsyncDropArc<Self>>,
+        blob_id: &BlobId,
+    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error> {
+        let waiter = {
+            let mut blobs = this.blobs.lock().unwrap();
+            match blobs.get_mut(blob_id) {
+                Some(BlobState::Loaded(loaded)) => {
+                    return Ok(Some(LoadedBlobGuard::new(
+                        AsyncDropArc::clone(this),
+                        *blob_id,
+                        loaded.get_blob(),
+                    )));
+                }
+                Some(BlobState::Loading(loading)) => loading.add_waiter(),
+                None | Some(BlobState::Dropping { .. }) => return Ok(None),
+            }
+        };
+
+        // Now blobs are unlocked and we can wait for loading to complete
+        waiter.wait_until_loaded(this, *blob_id).await
+    }
+
     /// Note: This function clones a [BlobState], which may clone the [AsyncDropGuard] contained if it is [BlobState::Loaded]. It is the callers responsibility to async_drop that.
     fn _clone_or_create_blob_state<F, R>(
         &self,

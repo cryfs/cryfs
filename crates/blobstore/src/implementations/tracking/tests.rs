@@ -69,6 +69,7 @@ mod counter_tests {
                 store_num_nodes: 0,
                 store_estimate_space_for_num_blocks_left: 0,
                 store_logical_block_size_bytes: 0,
+                store_flush_if_cached: 0,
             },
             store.counts()
         );
