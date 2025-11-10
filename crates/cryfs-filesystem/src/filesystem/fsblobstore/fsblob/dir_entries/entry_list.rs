@@ -215,7 +215,7 @@ impl DirEntryList {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
         // TODO Return overwritten entry instead of taking an on_overwritten callback
-        on_overwritten: impl AsyncFnOnce(&BlobId) -> FsResult<()>,
+        on_overwritten: impl AsyncFnOnce(&BlobId, EntryType) -> FsResult<()>,
     ) -> Result<()> {
         let already_exists = self._get_by_name_with_index(&name);
         let entry = DirEntry::new(
@@ -230,7 +230,7 @@ impl DirEntryList {
             SystemTime::now(),
         )?;
         if let Some((index, old_entry)) = already_exists {
-            on_overwritten(old_entry.blob_id()).await?;
+            on_overwritten(old_entry.blob_id(), old_entry.entry_type()).await?;
             self._overwrite(index, entry)?;
         } else {
             self._add(entry);
@@ -255,7 +255,7 @@ impl DirEntryList {
         &mut self,
         old_name: &PathComponent,
         new_name: PathComponentBuf,
-        on_overwritten: impl AsyncFnOnce(&BlobId) -> FsResult<()>,
+        on_overwritten: impl AsyncFnOnce(&BlobId, EntryType) -> FsResult<()>,
     ) -> cryfs_rustfs::FsResult<()> {
         let Some((mut source_index, source_entry)) = self._get_by_name_with_index(old_name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
@@ -275,7 +275,7 @@ impl DirEntryList {
 
             let source = &self.entries[source_index];
             Self::_check_allowed_overwrite(found_same_name.entry_type(), source.entry_type())?;
-            on_overwritten(found_same_name.blob_id()).await?;
+            on_overwritten(found_same_name.blob_id(), found_same_name.entry_type()).await?;
 
             self.dirty = true;
             self.entries.remove(found_same_name_index);
@@ -300,7 +300,7 @@ impl DirEntryList {
         &mut self,
         blob_id: &BlobId,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(&BlobId) -> FsResult<()>,
+        on_overwritten: impl FnOnce(&BlobId, EntryType) -> FsResult<()>,
     ) -> FsResult<()> {
         let Some(old_entry) = self.get_by_id(blob_id) else {
             return Err(FsError::NodeDoesNotExist);
@@ -310,7 +310,7 @@ impl DirEntryList {
             &old_name,
             new_name,
             // TODO Why does future::Ready not work here?
-            async move |b| on_overwritten(b),
+            async move |b, t| on_overwritten(b, t),
         )
         .await
     }

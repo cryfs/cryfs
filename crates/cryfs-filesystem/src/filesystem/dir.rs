@@ -13,6 +13,7 @@ use super::{
     symlink::CrySymlink,
 };
 use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use crate::filesystem::device::check_were_not_overwriting_nonempty_dir;
 use crate::filesystem::fsblobstore::FlushBehavior;
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
@@ -262,9 +263,14 @@ where
                 with_async_drop_2!(blob, {
                     blob.with_lock(async |blob| {
                         Self::blob_as_dir_mut(&mut *blob)?
-                            .rename_entry_by_name(oldname, newname.to_owned(), async |blob_id| {
-                                // TODO Don't allow overwriting nonempty directories, but allow overwriting files and symlinks and empty directories
-                                self.on_rename_overwrites_destination(*blob_id).await
+                            .rename_entry_by_name(oldname, newname.to_owned(), async |overwritten_blobid, blob_type| {
+                                check_were_not_overwriting_nonempty_dir(
+                                    &self.blobstore,
+                                    overwritten_blobid,
+                                    blob_type,
+                                )
+                                .await?;
+                                self.on_rename_overwrites_destination(*overwritten_blobid).await
                             })
                             .await
                     })
@@ -323,26 +329,6 @@ where
                             FsError::NodeDoesNotExist
                         )?;
                     with_async_drop_2!(self_blob, {
-                        let existing_dest_entry = dest_parent
-                            .with_lock(async |dest_parent_dir| {
-                                let dest_parent_dir = Self::blob_as_dir_mut(dest_parent_dir)?;
-                                Ok(dest_parent_dir.entry_by_name_mut(newname).cloned()) // TODO No cloned
-                            })
-                            .await?;
-                        if let Some(existing_dest_entry) = existing_dest_entry {
-                            if existing_dest_entry.entry_type() == EntryType::Dir {
-                                // TODO Shouldn't we check the existing dest directory's entries instead of self_blob's entries?
-                                self_blob.with_lock(async |self_blob| {
-                                    let self_blob = self_blob.as_dir()
-                                            .map_err(|_| FsError::CorruptedFilesystem { message: format!("Blob {self_blob_id:?} is not a directory but its entry in its parent directory says it is") })?;
-                                    if self_blob.entries().len() > 0 {
-                                        return Err(FsError::CannotOverwriteNonEmptyDirectory);
-                                    }
-                                    Ok(())
-                                }).await?;
-                            }
-                        }
-
                         let entry = source_parent
                             .with_lock(async |source_parent_dir| {
                                 Self::blob_as_dir_mut(source_parent_dir)?.remove_entry_by_name(oldname)
@@ -364,10 +350,14 @@ where
                                         entry.gid(),
                                         entry.last_access_time(),
                                         entry.last_modification_time(),
-                                        async |blob_id| {
-                                            // TODO If we figure out exception safety (see below), we can move the existing_dir_check into here.
-                                            //      Currently, some checks already happen inside of [add_or_overwrite_entry], e.g. that we don't overwrite dirs with non-dirs.
-                                            self.on_rename_overwrites_destination(*blob_id).await
+                                        async |overwritten_blobid, blob_type| {
+                                            // Other checks (ensuring we don't overwrite a dir with a non-dir or a non-dir with a dir) is done in [DirEntryList::_check_allowed_overwrite].
+                                            check_were_not_overwriting_nonempty_dir(
+                                                &self.blobstore,
+                                                overwritten_blobid,
+                                                blob_type,
+                                            ).await?;
+                                            self.on_rename_overwrites_destination(*overwritten_blobid).await
                                         },
                                     )
                                     .await

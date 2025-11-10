@@ -314,15 +314,8 @@ where
                 );
                 return Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself);
             }
-            if dest_path.is_ancestor_of(source_path) {
-                // TODO Is this check actually necessary? We're checking that the target is non-empty anyways if it's a dir.
-                log::error!(
-                    "Tried to rename {source_path} into its ancestor {dest_path}",
-                    source_path = source_path,
-                    dest_path = dest_path
-                );
-                return Err(FsError::CannotOverwriteNonEmptyDirectory);
-            }
+            // We don't need to check dest_path.is_ancestor_of(source_path) because that case would mean
+            // that dest_path is non-empty (it contains source_path), and we check for non-emptiness below.
 
             let Some((source_parent, source_name)) = source_path.split_last() else {
                 log::error!("Tried to rename the root directory {source_path} into {dest_path}");
@@ -333,10 +326,16 @@ where
                 return Err(FsError::InvalidOperation);
             };
 
-            let on_overwritten =
-                async move |blobid: &BlobId| match self.blobstore.remove_by_id(&blobid).await {
-                    // TODO If we figure out exception safety (see below), we can move the existing_dir_check into here.
-                    //      Currently, some checks already happen inside of [add_or_overwrite_entry], e.g. that we don't overwrite dirs with non-dirs.
+            let on_overwritten = async move |overwritten_blobid: &BlobId, blob_type: EntryType| {
+                // Other checks (ensuring we don't overwrite a dir with a non-dir or a non-dir with a dir) is done in [DirEntryList::_check_allowed_overwrite].
+                check_were_not_overwriting_nonempty_dir(
+                    &self.blobstore,
+                    overwritten_blobid,
+                    blob_type,
+                )
+                .await?;
+
+                match self.blobstore.remove_by_id(&overwritten_blobid).await {
                     Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
                     Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
                         log::error!(
@@ -348,7 +347,8 @@ where
                         log::error!("Error removing blob: {:?}", err);
                         Err(FsError::UnknownError)
                     }
-                };
+                }
+            };
 
             match self.load_two_blobs(source_parent, dest_parent).await? {
                 LoadTwoBlobsResult::AreSameBlob(blob) => {
@@ -357,7 +357,6 @@ where
                             let parent = blob
                                 .as_dir_mut()
                                 .map_err(|_| FsError::NodeIsNotADirectory)?;
-                            // TODO Don't allow overriding a non-empty directory
                             parent
                                 .rename_entry_by_name(
                                     source_name,
@@ -405,29 +404,6 @@ where
 
                             // TODO Concurrently drop source_parent_blob, dest_parent_blob and self_blob
                             with_async_drop_2!(self_blob, {
-                                let existing_dest_entry = dest_parent_blob
-                                    .with_lock(async |dest_parent| {
-                                        Ok(dest_parent
-                                            .as_dir_mut()
-                                            .map_err(|_| FsError::NodeIsNotADirectory)?
-                                            .entry_by_name_mut(dest_name)
-                                            .cloned()) // TODO No cloned?
-                                    })
-                                    .await?;
-                                if let Some(existing_dest_entry) = existing_dest_entry {
-                                    if existing_dest_entry.entry_type() == EntryType::Dir {
-                                        // TODO Shouldn't we check the existing dest directory's entries instead of self_blob's entries?
-                                        self_blob.with_lock(async |self_blob| {
-                                            let self_blob = self_blob.as_dir()
-                                                .map_err(|_| FsError::CorruptedFilesystem { message: format!("Blob {self_blob_id:?} is not a directory but its entry in its parent directory says it is") })?;
-                                            if self_blob.entries().len() > 0 {
-                                                return Err(FsError::CannotOverwriteNonEmptyDirectory);
-                                            }
-                                            Ok(())
-                                        }).await?;
-                                    }
-                                }
-
                                 source_parent_blob
                                     .with_lock(async |source_parent| {
                                         source_parent
@@ -513,6 +489,44 @@ where
             num_free_inodes: num_free_blocks,
         })
     }
+}
+
+pub async fn check_were_not_overwriting_nonempty_dir<B>(
+    blobstore: &AsyncDropArc<ConcurrentFsBlobStore<B>>,
+    overwritten_blobid: &BlobId,
+    blob_type: EntryType,
+) -> FsResult<()>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    if blob_type == EntryType::Dir {
+        // If it's a dir, make sure it's empty. We're not allowed to overwrite non-empty dirs
+        let overwritten_blob = blobstore
+            .load(overwritten_blobid)
+            .await
+            .map_err(|err| {
+                // TODO How to handle this?
+                log::error!("Error loading blob: {:?}", err);
+                FsError::UnknownError
+            })?
+            .ok_or(
+                // TODO How to handle this?
+                FsError::NodeDoesNotExist,
+            )?;
+
+        with_async_drop_2!(overwritten_blob, {
+            overwritten_blob.with_lock(async |overwritten_blob| {
+                let overwritten_blob = overwritten_blob.as_dir()
+                    .map_err(|_| FsError::CorruptedFilesystem { message: format!("Blob {overwritten_blobid:?} is not a directory but its entry in its parent directory says it is") })?;
+                if overwritten_blob.entries().len() > 0 {
+                    return Err(FsError::CannotOverwriteNonEmptyDirectory);
+                }
+                Ok(())
+            }).await
+        })?;
+    }
+    Ok(())
 }
 
 #[async_trait]
