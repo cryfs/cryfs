@@ -1,8 +1,5 @@
 use async_trait::async_trait;
-use futures::{
-    join,
-    stream::{FuturesOrdered, StreamExt},
-};
+use futures::join;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -12,86 +9,30 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
+use crate::object_based_api::utils::{DUMMY_INO, FUSE_ROOT_ID};
 use crate::{
     DirEntry,
     common::{
-        Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
-        Mode, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+        Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenFlags,
+        PathComponent, RequestInfo, Statfs, Uid,
     },
-    low_level_api::{ReplyDirectory, ReplyDirectoryPlus},
-    object_based_api::utils::OpenDirHandle,
-};
-use crate::{
     low_level_api::{
-        AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectoryAddResult,
-        ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
+        AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory,
+        ReplyDirectoryAddResult, ReplyDirectoryPlus, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek,
+        ReplyOpen, ReplyWrite,
     },
-    object_based_api::utils::DirCache,
+    object_based_api::utils::{DirCache, InodeList, OpenDirHandle},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     with_async_drop_2,
 };
 
-pub const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
-pub const DUMMY_INO: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID + 1);
-
 // TODO What are good TTLs here?
 const TTL_LOOKUP: Duration = Duration::from_secs(1);
 const TTL_GETATTR: Duration = Duration::from_secs(1);
 const TTL_CREATE: Duration = Duration::from_secs(1);
 const TTL_SYMLINK: Duration = Duration::from_secs(1);
-
-mod inode_info {
-    use super::*;
-
-    #[derive(Debug)]
-    pub struct InodeInfo<Fs>
-    where
-        Fs: Device + Debug,
-    {
-        node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
-        parent_inode: InodeNumber,
-    }
-
-    impl<Fs> InodeInfo<Fs>
-    where
-        Fs: Device + Debug,
-    {
-        pub fn new(
-            node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
-            parent_inode: InodeNumber,
-        ) -> AsyncDropGuard<Self> {
-            AsyncDropGuard::new(Self { node, parent_inode })
-        }
-
-        pub fn parent_inode(&self) -> InodeNumber {
-            self.parent_inode
-        }
-
-        pub fn node(&self) -> AsyncDropGuard<AsyncDropArc<Fs::Node>> {
-            AsyncDropArc::clone(&self.node)
-        }
-
-        #[cfg(feature = "testutils")]
-        pub async fn fsync(&self) -> FsResult<()> {
-            self.node.fsync(false).await
-        }
-    }
-
-    #[async_trait]
-    impl<Fs> AsyncDrop for InodeInfo<Fs>
-    where
-        Fs: Device + Debug,
-    {
-        type Error = FsError;
-        async fn async_drop_impl(&mut self) -> FsResult<()> {
-            self.node.async_drop().await?;
-            Ok(())
-        }
-    }
-}
-use inode_info::InodeInfo;
 
 // TODO Can we share more code with [super::high_level_adapter::ObjectBasedFsAdapter]?
 pub struct ObjectBasedFsAdapterLL<Fs>
@@ -104,10 +45,7 @@ where
     // TODO We only need the Arc<RwLock<...>> because of initialization. Is there a better way to do that?
     fs: Arc<RwLock<AsyncDropGuard<MaybeInitializedFs<Fs>>>>,
 
-    // TODO Do we need Arc for inodes?
-    // TODO InodeInfo here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
-    //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
-    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>>,
+    inodes: AsyncDropGuard<InodeList<Fs>>,
 
     open_files: AsyncDropGuard<OpenFileList<Fs::OpenFile>>,
     open_dirs: AsyncDropGuard<DirCache>,
@@ -123,39 +61,20 @@ where
     pub fn new(
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
     ) -> AsyncDropGuard<Self> {
-        let mut inodes = HandleMap::new();
-
-        Self::block_root_handle(&mut inodes);
-
         AsyncDropGuard::new(Self {
             fs: Arc::new(RwLock::new(MaybeInitializedFs::new_uninitialized(
                 Box::new(fs),
             ))),
-            inodes: Arc::new(RwLock::new(inodes)),
+            inodes: InodeList::new(),
             open_files: OpenFileList::new(),
             open_dirs: DirCache::new(),
         })
     }
 
-    fn block_root_handle(inodes: &mut HandleMap<InodeNumber, InodeInfo<Fs>>) {
-        // We need to block zero because fuse seems to dislike it.
-        inodes.block_handle(InodeNumber::from(0));
-        // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
-        if fuser::FUSE_ROOT_ID != 0 {
-            inodes.block_handle(FUSE_ROOT_ID);
-        }
-        inodes.block_handle(DUMMY_INO);
-    }
-
     #[cfg(feature = "testutils")]
     pub async fn reset_cache_after_setup(&self) {
         // clear inodes
-        let mut inodes = self.inodes.write().await;
-        for (_handle, mut object) in inodes.drain() {
-            object.fsync().await.unwrap();
-            object.async_drop().await.unwrap();
-        }
-        Self::block_root_handle(&mut inodes);
+        self.inodes.fsync_and_clear_all().await.unwrap();
 
         // flush open files
         self._flush_open_files().await;
@@ -185,19 +104,12 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn reset_cache_after_test(&self) {
-        let mut inodes = self.inodes.write().await;
-        for (_handle, mut object) in inodes.drain() {
-            object.async_drop().await.unwrap();
-        }
-        Self::block_root_handle(&mut inodes);
+        self.inodes.clear_all().await.unwrap();
     }
 
     #[cfg(feature = "testutils")]
     pub async fn flush_cache(&self) {
-        let inodes = self.inodes.write().await;
-        for (_handle, object) in inodes.iter() {
-            object.fsync().await.unwrap();
-        }
+        self.inodes.fsync_all().await.unwrap();
         self._flush_open_files().await;
     }
 
@@ -225,9 +137,13 @@ where
             let node = Dir::into_node(fs.rootdir().await?);
             Ok((AsyncDropArc::new(node), None))
         } else {
-            let inodes = self.inodes.read().await;
-            let inode = inodes.get(ino).expect("Error: Inode number unassigned");
-            Ok((inode.node(), Some(inode.parent_inode())))
+            self.inodes
+                .get_node_and_parent_ino(ino)
+                .await
+                .ok_or_else(|| {
+                    log::error!("Tried to get unassigned inode number {ino:?}");
+                    FsError::InvalidOperation
+                })
         }
     }
 
@@ -236,21 +152,6 @@ where
         ino: InodeNumber,
     ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
         Ok(self.get_inode_and_parent_ino(ino).await?.0)
-    }
-
-    async fn add_inode(
-        &self,
-        parent_ino: InodeNumber,
-        node: AsyncDropGuard<Fs::Node>,
-        name: &PathComponent,
-    ) -> HandleWithGeneration<InodeNumber> {
-        let child_ino = self
-            .inodes
-            .write()
-            .await
-            .add(InodeInfo::new(AsyncDropArc::new(node), parent_ino));
-        log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
-        child_ino
     }
 }
 
@@ -281,24 +182,6 @@ where
     ) -> FsResult<ReplyEntry> {
         self.trigger_on_operation().await?;
 
-        // TODO Will lookup() be called multiple times with the same parent+name, before the previous one is forgotten, and is it ok to give the second call a different inode while the first call is still ongoing?
-        //      Seems not, `cp -R ~/mountdir/.cargo ~/.cargo.copy` (after `cp -R ~/.cargo ~/mountdir/`) is complaining when inodes change between stat and opening the file, see https://github.com/coreutils/coreutils/blob/b8675fe98cc38e9a49afec52f4102d330d9aaa27/src/copy.c#L775
-        //      Note that fuse-mt also increases lookup count and ensures that inodes for the same path stay consistent until the inode is forgotten
-        //      Main differences to fuse-mt:
-        //       * keeps path -> inode reverse mapping and reuses inode assignments if they're looked up again. Remembers lookup count and only frees inode if it goes to zero
-        //         * at unlink time, it removes the reverse map but keeps the inode around until it's forgotten. Need to think about why.
-        //         * also needs to deal with rename since the reverse mapping changes
-        //         * but we may have to do it in a tree maybe? because we don't have a path mapping but parent_ino+name mapping.
-        //      Most likely, we'll have to:
-        //       * keep a ino -> (parent_ino, node_info, refcount, children) mapping
-        //         * children: name->ino mapping for each loaded inode that is a direct child
-        //       * forget entries from the mapping only if refcount goes to zero AND children is empty (i.e. they are all unloaded)
-        //       * when forgetting an entry, also remove it from its parent's children mapping
-        //       * update name mapping on rename
-        //       * remove entry from `children` mapping of its parent ino on unlink/rmdir, but keep the inode itself in existence if refcount > 0
-        //          * see also https://github.com/wfraser/fuse-mt/issues/48 for rmdir
-        //       * Invariant: If an inode exists in the children mapping, it also exists in the main mapping.
-        //                    If an inode exists in the main mapping with refcount > 0, it may or may not exist in the children mapping, depending on whether it was deleted.
         let parent_node = self.get_inode(parent_ino).await?;
         let mut child = with_async_drop_2!(parent_node, {
             let parent_node_dir = parent_node
@@ -315,7 +198,7 @@ where
 
         match child.getattr().await {
             Ok(attr) => {
-                let ino = self.add_inode(parent_ino, child, name).await;
+                let ino = self.inodes.add(parent_ino, child, name).await;
                 Ok(ReplyEntry {
                     ttl: TTL_LOOKUP,
                     ino,
@@ -347,8 +230,7 @@ where
             "We don't reuse inode numbers so nlookup should always be 1"
         );
 
-        let mut entry = self.inodes.write().await.remove(ino);
-        entry.async_drop().await?;
+        self.inodes.remove(ino).await?;
         Ok(())
     }
 
@@ -496,7 +378,7 @@ where
             })
         })?;
         // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-        let ino = self.add_inode(parent_ino, child, name).await;
+        let ino = self.inodes.add(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
             attr,
@@ -561,7 +443,7 @@ where
             })
         })?;
         // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-        let ino = self.add_inode(parent_ino, child, name).await;
+        let ino = self.inodes.add(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_SYMLINK,
             attr: attrs,
@@ -1025,7 +907,7 @@ where
             })?;
 
             // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-            let child_ino = self.add_inode(parent_ino, child_node, name).await;
+            let child_ino = self.inodes.add(parent_ino, child_node, name).await;
 
             let fh = self.open_files.add(open_file);
             Ok(ReplyCreate {
@@ -1223,7 +1105,7 @@ where
         //      Or is it actually allowed fuse behavior to keep files open and/or inodes active on shutdown?
         self.open_files.async_drop().await.unwrap();
         self.open_dirs.async_drop().await.unwrap();
-        self.inodes.write().await.async_drop().await.unwrap();
+        self.inodes.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
         Ok(())
     }

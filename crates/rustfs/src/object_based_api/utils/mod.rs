@@ -8,3 +8,6 @@ pub use open_file_list::OpenFileList;
 
 mod dir_cache;
 pub use dir_cache::{DirCache, OpenDirHandle};
+
+mod inode_list;
+pub use inode_list::{DUMMY_INO, FUSE_ROOT_ID, InodeList};
