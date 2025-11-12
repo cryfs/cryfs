@@ -776,7 +776,7 @@ where
                 let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
 
                 if offset == 0 {
-                    match reply.add_self_reference(ino, 0) {
+                    match reply.add_self_reference(ino, 1) {
                         ReplyDirectoryAddResult::Full => {
                             return Ok(());
                         }
@@ -787,7 +787,7 @@ where
                 }
 
                 if offset <= 1 {
-                    match reply.add_parent_reference(parent_ino, 1) {
+                    match reply.add_parent_reference(parent_ino, 2) {
                         ReplyDirectoryAddResult::Full => {
                             return Ok(());
                         }
