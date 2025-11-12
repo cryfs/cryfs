@@ -353,11 +353,20 @@ where
         let drop_future = {
             let mut blobs = self.blobs.lock().unwrap();
             let Entry::Occupied(mut entry) = blobs.entry(blob_id) else {
-                panic!("Blob with id {} was not found in the map", blob_id);
+                // This can happen due to the same race condition described below under `BlobState::Dropping`.
+                // Another task already dropped the blob and completed dropping it before we got here.
+                // This is benign.
+                // Note that it is even possible that the blob was fully dropped and then re-loaded again
+                // before we got here, but even that is ok because in that case the reference count would not be zero.
+                return;
             };
             match entry.get() {
                 BlobState::Loading(_) => {
-                    panic!("unload called but the blob is still loading. This should not happen.");
+                    // Unload only happens for loaded blobs. There is no direct transition from Loading to call into here.
+                    // However, because of the race condition mentioned in other comments in this function, it is possible
+                    // that the blob was already fully unloaded, dropped, and then re-loaded before we call into here.
+                    // In that case, we just ignore the request.
+                    return;
                 }
                 BlobState::Loaded(loaded) => {
                     if loaded.num_tasks_with_access() == 0 {
