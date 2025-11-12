@@ -1022,7 +1022,6 @@ dependencies = [
  "cryfs-cli-utils",
  "cryfs-filesystem",
  "cryfs-runner",
- "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
  "dialoguer",

@@ -26,7 +26,6 @@ cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
-cryfs-rustfs = { path = "../rustfs", default-features=false }
 dialoguer.workspace = true
 humantime.workspace = true
 itertools.workspace = true

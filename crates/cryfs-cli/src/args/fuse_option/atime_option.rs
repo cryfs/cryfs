@@ -1,7 +1,7 @@
 use anyhow::{Result, bail};
 use clap::ValueEnum;
 
-use cryfs_rustfs::AtimeUpdateBehavior;
+use cryfs_runner::AtimeUpdateBehavior;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum AtimeOption {

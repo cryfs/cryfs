@@ -7,6 +7,7 @@ mod mounter;
 mod runner;
 mod unmount_trigger;
 
+pub use cryfs_rustfs::AtimeUpdateBehavior;
 pub use mounter::Mounter;
 pub use runner::{CreateOrLoad, FuseOption, MountArgs, make_device};
 
