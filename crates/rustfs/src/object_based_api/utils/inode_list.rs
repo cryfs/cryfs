@@ -19,7 +19,7 @@
 
 use async_trait::async_trait;
 use std::fmt::Debug;
-use tokio::sync::RwLock;
+use std::sync::Mutex;
 
 use cryfs_utils::async_drop::AsyncDropGuard;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
@@ -41,7 +41,7 @@ where
 {
     // TODO InodeInfo here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
     //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
-    inodes: RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>,
+    inodes: Mutex<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>,
 }
 
 impl<Fs> InodeList<Fs>
@@ -53,7 +53,7 @@ where
 
         Self::block_root_handle(&mut inodes);
         AsyncDropGuard::new(Self {
-            inodes: RwLock::new(inodes),
+            inodes: Mutex::new(inodes),
         })
     }
 
@@ -71,7 +71,7 @@ where
         &self,
         ino: InodeNumber,
     ) -> Option<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, Option<InodeNumber>)> {
-        let inodes = self.inodes.read().await;
+        let inodes = self.inodes.lock().unwrap();
         let inode = inodes.get(ino)?;
         Some((inode.node(), Some(inode.parent_inode())))
     }
@@ -84,22 +84,22 @@ where
     ) -> HandleWithGeneration<InodeNumber> {
         let child_ino = self
             .inodes
-            .write()
-            .await
+            .lock()
+            .unwrap()
             .add(InodeInfo::new(AsyncDropArc::new(node), parent_ino));
         log::info!("New inode {child_ino:?}: parent={parent_ino:?}, name={name}");
         child_ino
     }
 
     pub async fn remove(&self, ino: InodeNumber) -> FsResult<()> {
-        let mut entry = self.inodes.write().await.remove(ino);
+        let mut entry = self.inodes.lock().unwrap().remove(ino);
         entry.async_drop().await?;
         Ok(())
     }
 
     #[cfg(feature = "testutils")]
     pub async fn fsync_and_clear_all(&self) -> FsResult<()> {
-        let mut inodes = self.inodes.write().await;
+        let mut inodes = self.inodes.lock().unwrap();
         for (_handle, mut object) in inodes.drain() {
             object.fsync().await.unwrap();
             object.async_drop().await.unwrap();
@@ -110,7 +110,7 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn clear_all(&self) -> FsResult<()> {
-        let mut inodes = self.inodes.write().await;
+        let mut inodes = self.inodes.lock().unwrap();
         for (_handle, mut object) in inodes.drain() {
             object.async_drop().await.unwrap();
         }
@@ -120,7 +120,7 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn fsync_all(&self) -> FsResult<()> {
-        let inodes = self.inodes.write().await;
+        let inodes = self.inodes.lock().unwrap();
         for (_handle, object) in inodes.iter() {
             object.fsync().await.unwrap();
         }
@@ -144,7 +144,11 @@ where
 {
     type Error = FsError;
     async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.inodes.write().await.async_drop().await
+        let mut inodes = std::mem::replace(
+            &mut *self.inodes.lock().unwrap(),
+            AsyncDropGuard::new_invalid(),
+        );
+        inodes.async_drop().await
     }
 }
 
