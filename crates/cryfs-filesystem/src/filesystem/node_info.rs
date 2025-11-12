@@ -399,9 +399,10 @@ where
     }
 
     pub async fn flush_metadata(&self) -> FsResult<()> {
-        let parent_blob = self
-            .parent_blob()
-            .expect("Can't flush metadata of root dir"); // TODO What to do here?
+        let Some(parent_blob) = self.parent_blob() else {
+            // Can't flush metadata of root dir
+            return Ok(());
+        };
         parent_blob
             .with_lock(async |parent_blob| {
                 parent_blob
