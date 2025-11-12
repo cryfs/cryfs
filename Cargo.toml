@@ -85,8 +85,8 @@ reqwest = "^0.12.15"
 rpassword = "^7.3.1"
 rstest = "^0.26"
 rstest_reuse = "^0.7.0"
-# TODO Go back to public scrypt version once https://github.com/RustCrypto/password-hashes/pull/733 is merged
-scrypt = { git = "https://github.com/smessmer/password-hashes", rev = "a28947d142b48a3f5a54395428c5690f954594d3", default-features = false, features=["rayon"] }
+# TODO Go to stable scrypt version once a version with https://github.com/RustCrypto/password-hashes/pull/733 is released
+scrypt = { version = "0.12.0-rc.3", default-features = false, features=["rayon"] }
 serde = "^1.0.219"
 serde_json = "^1.0.140"
 serde_with = { version = "^3.12.0", features = ["hex"] }
