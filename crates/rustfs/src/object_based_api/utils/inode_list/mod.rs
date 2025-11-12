@@ -27,12 +27,14 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
 use crate::FsResult;
 use crate::PathComponent;
 use crate::common::HandleWithGeneration;
-use crate::object_based_api::Node as _;
 use crate::{FsError, object_based_api::Device};
 use crate::{InodeNumber, common::HandleMap};
 
 pub const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
 pub const DUMMY_INO: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID + 1);
+
+mod inode_info;
+use inode_info::InodeInfo;
 
 /// [InodeList] keeps track of all inodes that have been registered with FUSE
 pub struct InodeList<Fs>
@@ -151,54 +153,3 @@ where
         inodes.async_drop().await
     }
 }
-
-mod inode_info {
-    use super::*;
-
-    #[derive(Debug)]
-    pub struct InodeInfo<Fs>
-    where
-        Fs: Device + Debug,
-    {
-        node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
-        parent_inode: InodeNumber,
-    }
-
-    impl<Fs> InodeInfo<Fs>
-    where
-        Fs: Device + Debug,
-    {
-        pub fn new(
-            node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
-            parent_inode: InodeNumber,
-        ) -> AsyncDropGuard<Self> {
-            AsyncDropGuard::new(Self { node, parent_inode })
-        }
-
-        pub fn parent_inode(&self) -> InodeNumber {
-            self.parent_inode
-        }
-
-        pub fn node(&self) -> AsyncDropGuard<AsyncDropArc<Fs::Node>> {
-            AsyncDropArc::clone(&self.node)
-        }
-
-        #[cfg(feature = "testutils")]
-        pub async fn fsync(&self) -> FsResult<()> {
-            self.node.fsync(false).await
-        }
-    }
-
-    #[async_trait]
-    impl<Fs> AsyncDrop for InodeInfo<Fs>
-    where
-        Fs: Device + Debug,
-    {
-        type Error = FsError;
-        async fn async_drop_impl(&mut self) -> FsResult<()> {
-            self.node.async_drop().await?;
-            Ok(())
-        }
-    }
-}
-use inode_info::InodeInfo;
