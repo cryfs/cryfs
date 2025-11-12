@@ -19,7 +19,6 @@
 
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use cryfs_utils::async_drop::AsyncDropGuard;
@@ -40,10 +39,9 @@ pub struct InodeList<Fs>
 where
     Fs: Device + Debug,
 {
-    // TODO Do we need Arc for inodes?
     // TODO InodeInfo here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
     //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
-    inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>>,
+    inodes: RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>,
 }
 
 impl<Fs> InodeList<Fs>
@@ -55,7 +53,7 @@ where
 
         Self::block_root_handle(&mut inodes);
         AsyncDropGuard::new(Self {
-            inodes: Arc::new(RwLock::new(inodes)),
+            inodes: RwLock::new(inodes),
         })
     }
 
