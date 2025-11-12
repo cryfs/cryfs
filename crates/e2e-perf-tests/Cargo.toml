@@ -19,7 +19,8 @@ cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
 cryfs-blockstore = {path = "../blockstore", features = ["testutils"]}
 cryfs-cli-utils = {path = "../cli-utils"}
 cryfs-filesystem = {path = "../cryfs-filesystem", features = ["testutils"]}
-cryfs-runner = {path = "../cryfs-runner"}
+# TODO e2e-perf-tests shouldn't depend on cryfs-runner. Can we remove this dependency? Or at least clean up features, it doesn't make sense for it to depend on the "fuser" feature
+cryfs-runner = {path = "../cryfs-runner", features = ["fuser"]}
 cryfs-rustfs = {path = "../rustfs", default-features = false, features = ["fuser", "fuse_mt", "testutils"]}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}

@@ -44,6 +44,8 @@ predicates.workspace = true
 rstest.workspace = true
 
 [features]
-default = ["check_for_updates"]
+default = ["check_for_updates", "fuse_mt"]
 check_for_updates = ["cryfs-cli-utils/check_for_updates"]
 tokio_console = ["dep:console-subscriber"]
+fuse_mt = ["cryfs-runner/fuse_mt"]
+fuser = ["cryfs-runner/fuser"]

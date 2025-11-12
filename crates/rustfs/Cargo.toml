@@ -42,7 +42,7 @@ users.workspace = true
 
 [features]
 default = ["fuser"]
-fuse_mt = ["dep:fuse_mt"]
+fuse_mt = ["dep:fuse_mt", "dep:fuser"]
 fuser = ["dep:fuser"]
 testutils = []
 

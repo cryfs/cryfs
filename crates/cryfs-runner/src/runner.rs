@@ -10,7 +10,6 @@ use cryfs_cli_utils::{
 };
 use cryfs_filesystem::{config::CryConfig, filesystem::CryDevice, localstate::LocalStateDir};
 use cryfs_rustfs::AtimeUpdateBehavior;
-use cryfs_rustfs::backend::fuse_mt::{self, MountOption};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -19,6 +18,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::unmount_trigger::{TriggerReason, UnmountTrigger};
+
+#[cfg(all(feature = "fuser", feature = "fuse_mt"))]
+compile_error!("Features 'fuse_mt' and 'fuser' are mutually exclusive, can only enable one");
+#[cfg(all(not(feature = "fuser"), not(feature = "fuse_mt")))]
+compile_error!("One of the features 'fuse_mt' or 'fuser' must be enabled");
+#[cfg(all(feature = "fuse_mt", not(feature = "fuser")))]
+use cryfs_rustfs::backend::fuse_mt::{self as fuse_backend};
+#[cfg(all(feature = "fuser", not(feature = "fuse_mt")))]
+use cryfs_rustfs::backend::fuser::{self as fuse_backend};
+use fuse_backend::MountOption;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CreateOrLoad {
@@ -160,7 +169,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             FuseOption::AllowRoot => MountOption::AllowRoot,
         }))
         .collect::<Box<[_]>>();
-        fuse_mt::mount(
+        fuse_backend::mount(
             fs,
             self.mountdir,
             tokio::runtime::Handle::current(),
