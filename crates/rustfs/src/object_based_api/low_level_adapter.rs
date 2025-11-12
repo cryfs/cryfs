@@ -12,17 +12,21 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
-use crate::low_level_api::{
-    AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectoryAddResult,
-    ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
-};
-use crate::{NodeKind, PathComponentBuf, common::DirEntry};
 use crate::{
+    DirEntry,
     common::{
         Callback, FileHandle, FsError, FsResult, Gid, HandleMap, HandleWithGeneration, InodeNumber,
         Mode, NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
     },
     low_level_api::{ReplyDirectory, ReplyDirectoryPlus},
+    object_based_api::utils::OpenDirHandle,
+};
+use crate::{
+    low_level_api::{
+        AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectoryAddResult,
+        ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
+    },
+    object_based_api::utils::DirCache,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
@@ -106,6 +110,7 @@ where
     inodes: Arc<RwLock<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>>,
 
     open_files: AsyncDropGuard<OpenFileList<Fs::OpenFile>>,
+    open_dirs: AsyncDropGuard<DirCache>,
 }
 
 impl<Fs> ObjectBasedFsAdapterLL<Fs>
@@ -128,6 +133,7 @@ where
             ))),
             inodes: Arc::new(RwLock::new(inodes)),
             open_files: OpenFileList::new(),
+            open_dirs: DirCache::new(),
         })
     }
 
@@ -758,14 +764,16 @@ where
     async fn opendir(
         &self,
         _req: &RequestInfo,
-        _ino: InodeNumber,
-        _flags: i32,
+        ino: InodeNumber,
+        _flags: i32, // TODO What to do with flags?
     ) -> FsResult<ReplyOpen> {
         self.trigger_on_operation().await?;
 
+        let fh = self.open_dirs.add(ino);
+
         // We don't need opendir/releasedir because readdir works directly on the inode.
         Ok(ReplyOpen {
-            fh: FileHandle::from(0),
+            fh: fh.handle.into(),
             flags: OpenFlags::ReadWrite,
         })
     }
@@ -774,26 +782,30 @@ where
         &self,
         _req: &RequestInfo,
         ino: InodeNumber,
-        _fh: FileHandle,
+        fh: FileHandle,
         offset: u64,
         reply: &mut R,
     ) -> FsResult<()> {
-        // TODO If the response gets paginated, we should maybe just ask the filesystem once for the list of all entries and then cache it for
-        //      fuser's future readdir() calls. This is what fuse-mt does. And this is the only way to ensure
-        //      that the directory contents don't change between multiple readdir() calls for the same directory handle.
-        //      But before we do that, let's check what the exact requirements for readdir() are in fuse. I do remember seeing some
-        //      spec defining what readdir() is supposed to do when the directory contents change between calls.
         self.trigger_on_operation().await?;
 
-        // TODO Allow readdir on fh instead of ino?
+        let dir_cache_entry = self.open_dirs.get(OpenDirHandle::from(fh)).ok_or_else(|| {
+            log::error!("Tried to access a file descriptor for a directory that isn't opened");
+            FsError::InvalidFileDescriptor { fh: fh.into() }
+        })?;
+        if dir_cache_entry.dir_ino() != ino {
+            log::error!(
+                "Tried to access a directory with inode {ino:?} using a file descriptor for inode {:?}",
+                dir_cache_entry.dir_ino()
+            );
+            return Err(FsError::InvalidFileDescriptor { fh: fh.into() });
+        }
+
         let (node, parent_ino) = self.get_inode_and_parent_ino(ino).await?;
 
         with_async_drop_2!(node, {
             let parent_ino = parent_ino.unwrap_or(FUSE_ROOT_ID); // root is parent of itself
             let dir = node.as_dir().await?;
             with_async_drop_2!(dir, {
-                // TODO Instead of loading all entries and then possibly only returning some because the buffer gets full, try to only load the necessary ones? But concurrently somehow?
-                let entries = dir.entries().await?;
                 let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
 
                 if offset == 0 {
@@ -818,43 +830,43 @@ where
                     }
                 }
 
-                // TODO Add tests for the offset calculations including '.' and '..' here
-                let entries = entries
-                    .into_iter()
-                    .enumerate()
-                    .skip(offset.saturating_sub(2)) // skip 2 less because those offset indices are for '.' and '..'
-                    .map(async |(offset, entry)| {
-                        let offset = offset + 2; // offset + 2 because of '.' and '..'
+                // TODO Instead of loading all entries and then possibly only returning some because the buffer gets full, try to only load the necessary ones? But concurrently somehow?
+                let load_dir_entries = async || dir.entries().await;
 
+                let handle_dir_entries = move |entries: &[DirEntry]| {
+                    // TODO Add tests for the offset calculations including '.' and '..' here
+                    let entries = entries.iter().enumerate().skip(offset.saturating_sub(2)); // skip 2 less because those offset indices are for '.' and '..'
+                    for (offset, entry) in entries {
                         // Readdir is not supposed to lookup or register inodes. The fuse API seems to just ignore it. There will never be forget() calls for these.
                         // See:
                         //  * https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
                         //  * https://libfuse.github.io/doxygen/structfuse__lowlevel__ops.html#af1ef8e59e0cb0b02dc0e406898aeaa51
                         // But note that readdirplus is supposed to register inodes.
                         //  * https://github.com/libfuse/libfuse/blob/7b9e7eeec6c43a62ab1e02dfb6542e6bfb7f72dc/include/fuse_lowlevel.h#L1209
-                        let child_ino = DUMMY_INO;
+                        let ino = DUMMY_INO;
 
-                        (offset, child_ino, entry)
-                    });
-                // TODO Does this need to be FuturesOrdered or can we reply them without order?
-                let mut entries: FuturesOrdered<_> = entries.collect();
-                while let Some((offset, ino, entry)) = entries.next().await {
-                    // offset+1 because fuser actually expects us to return the offset of the **next** entry
-                    let offset = i64::try_from(offset).unwrap() + 1; // TODO No unwrap
-                    let buffer_is_full = reply.add(ino.into(), offset, entry.kind, &entry.name);
-                    match buffer_is_full {
-                        ReplyDirectoryAddResult::Full => {
-                            // TODO Can we cancel the stream if the buffer is full?
-                            // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
-                            break;
-                        }
-                        ReplyDirectoryAddResult::NotFull => {
-                            // continue
+                        // offset +2 because of '.' and '..' and +1 because fuser actually expects us to return the offset of the **next** entry
+                        let offset = offset + 3;
+
+                        let offset = i64::try_from(offset).unwrap(); // TODO No unwrap
+                        let buffer_is_full = reply.add(ino.into(), offset, entry.kind, &entry.name);
+                        match buffer_is_full {
+                            ReplyDirectoryAddResult::Full => {
+                                // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
+                                //      In that test, ensure that we only load the directory entries once from the underlying FS and then respond from the cache.
+                                break;
+                            }
+                            ReplyDirectoryAddResult::NotFull => {
+                                // continue
+                            }
                         }
                     }
-                }
+                    Ok(())
+                };
 
-                Ok(())
+                dir_cache_entry
+                    .get_or_query_entries(load_dir_entries, handle_dir_entries)
+                    .await
             })
         })
     }
@@ -876,13 +888,19 @@ where
     async fn releasedir(
         &self,
         _req: &RequestInfo,
-        _ino: InodeNumber,
-        _fh: FileHandle,
-        _flags: i32,
+        ino: InodeNumber,
+        fh: FileHandle,
+        _flags: i32, // TODO What to do with flags?
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        // We don't need opendir/releasedir because readdir works directly on the inode.
+        let removed = self.open_dirs.remove(OpenDirHandle::from(fh));
+        let removed_ino = removed.dir_ino();
+        assert_eq!(
+            ino, removed_ino,
+            "Releasedir handle does not match inode number. Expected: {ino:?}, dir cache: {removed_ino:?}",
+        );
+
         Ok(())
     }
 
@@ -1204,6 +1222,7 @@ where
         // TODO Can we add a check here that inodes are empty? To ensure we've handled them correctly?
         //      Or is it actually allowed fuse behavior to keep files open and/or inodes active on shutdown?
         self.open_files.async_drop().await.unwrap();
+        self.open_dirs.async_drop().await.unwrap();
         self.inodes.write().await.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
         Ok(())

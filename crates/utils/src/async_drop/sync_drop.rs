@@ -8,7 +8,6 @@ use super::{AsyncDrop, AsyncDropGuard};
 ///
 /// WARNING: This can cause deadlocks, see <https://stackoverflow.com/questions/71541765/rust-async-drop>
 ///          That's why we're restricting this to test code
-#[cfg(any(test, feature = "testutils"))]
 pub struct SyncDrop<T: Debug + AsyncDrop>(Option<AsyncDropGuard<T>>);
 
 impl<T: Debug + AsyncDrop> SyncDrop<T> {

@@ -5,3 +5,6 @@ mod open_file_list;
 #[cfg(any(test, feature = "testutils"))]
 pub use open_file_list::ForEachCallback;
 pub use open_file_list::OpenFileList;
+
+mod dir_cache;
+pub use dir_cache::{DirCache, OpenDirHandle};
