@@ -276,6 +276,23 @@ where
         self.trigger_on_operation().await?;
 
         // TODO Will lookup() be called multiple times with the same parent+name, before the previous one is forgotten, and is it ok to give the second call a different inode while the first call is still ongoing?
+        //      Seems not, `cp -R ~/mountdir/.cargo ~/.cargo.copy` (after `cp -R ~/.cargo ~/mountdir/`) is complaining when inodes change between stat and opening the file, see https://github.com/coreutils/coreutils/blob/b8675fe98cc38e9a49afec52f4102d330d9aaa27/src/copy.c#L775
+        //      Note that fuse-mt also increases lookup count and ensures that inodes for the same path stay consistent until the inode is forgotten
+        //      Main differences to fuse-mt:
+        //       * keeps path -> inode reverse mapping and reuses inode assignments if they're looked up again. Remembers lookup count and only frees inode if it goes to zero
+        //         * at unlink time, it removes the reverse map but keeps the inode around until it's forgotten. Need to think about why.
+        //         * also needs to deal with rename since the reverse mapping changes
+        //         * but we may have to do it in a tree maybe? because we don't have a path mapping but parent_ino+name mapping.
+        //      Most likely, we'll have to:
+        //       * keep a ino -> (parent_ino, node_info, refcount, children) mapping
+        //         * children: name->ino mapping for each loaded inode that is a direct child
+        //       * forget entries from the mapping only if refcount goes to zero AND children is empty (i.e. they are all unloaded)
+        //       * when forgetting an entry, also remove it from its parent's children mapping
+        //       * update name mapping on rename
+        //       * remove entry from `children` mapping of its parent ino on unlink/rmdir, but keep the inode itself in existence if refcount > 0
+        //          * see also https://github.com/wfraser/fuse-mt/issues/48 for rmdir
+        //       * Invariant: If an inode exists in the children mapping, it also exists in the main mapping.
+        //                    If an inode exists in the main mapping with refcount > 0, it may or may not exist in the children mapping, depending on whether it was deleted.
         let parent_node = self.get_inode(parent_ino).await?;
         let mut child = with_async_drop_2!(parent_node, {
             let parent_node_dir = parent_node
@@ -538,7 +555,6 @@ where
             })
         })?;
         // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-        // TODO Check this is actually the case for symlink, I only checked mkdir so far
         let ino = self.add_inode(parent_ino, child, name).await;
         Ok(ReplyEntry {
             ttl: TTL_SYMLINK,
@@ -762,6 +778,11 @@ where
         offset: u64,
         reply: &mut R,
     ) -> FsResult<()> {
+        // TODO If the response gets paginated, we should maybe just ask the filesystem once for the list of all entries and then cache it for
+        //      fuser's future readdir() calls. This is what fuse-mt does. And this is the only way to ensure
+        //      that the directory contents don't change between multiple readdir() calls for the same directory handle.
+        //      But before we do that, let's check what the exact requirements for readdir() are in fuse. I do remember seeing some
+        //      spec defining what readdir() is supposed to do when the directory contents change between calls.
         self.trigger_on_operation().await?;
 
         // TODO Allow readdir on fh instead of ino?
@@ -986,8 +1007,6 @@ where
             })?;
 
             // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-            // TODO Check this is actually the case for create, I only checked mkdir so far
-            //      Note also that fuse-mt actually doesn't register the inode here and a comment there claims that fuse just ignores it, see https://github.com/wfraser/fuse-mt/blob/881d7320b4c73c0bfbcbca48a5faab2a26f3e9e8/src/fusemt.rs#L619
             let child_ino = self.add_inode(parent_ino, child_node, name).await;
 
             let fh = self.open_files.add(open_file);

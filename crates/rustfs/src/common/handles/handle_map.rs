@@ -19,6 +19,9 @@ where
     available_handles: HandlePool<Handle>,
 
     // We use a hashmap instead of Vec so that space gets reused when an object gets removed, even before the handle gets reused.
+    // TODO It might actually be faster to use a `Vec<Handle, Option<T>>` here and just set entries to None when they get removed.
+    //      Then we could also store the generation number right in this struct at each entry, instead of having HandlePool manage it.
+    //      This is also what fuse-mt does.
     objects: AsyncDropGuard<AsyncDropHashMap<Handle, T>>,
 }
 
