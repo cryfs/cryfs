@@ -83,7 +83,7 @@ where
                                 message: format!("Unparseable symlink blob: {err:?}"),
                             }
                         });
-                        Ok(target)
+                        Ok::<_, FsError>(target)
                     })
                     .await
                 })?

@@ -235,7 +235,7 @@ where
             .unwrap();
     }
 
-    pub async fn reset_cache_after_test(&self) {
+    pub async fn reset_cache_after_test(&mut self) {
         // reset_cache_after_test should unload all inodes, so that the call to clear_unloaded_blocks_from_cache below can actually clear everything.
         self.filesystem.reset_cache_after_test().await;
         // Some tests (e.g. fgetattr) keep files open when they finish running. That means we still have open files around and fully clearing the cache would deadlock. Let's only clear unloaded blocks.

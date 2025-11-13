@@ -21,10 +21,14 @@ use crate::concurrent_store::entry::{
 use crate::concurrent_store::guard::LoadedEntryGuard;
 use crate::event::Event;
 use crate::stream::for_each_unordered;
+#[cfg(any(test, feature = "testutils"))]
+use crate::with_async_drop_2;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::entry::EntryState,
 };
+#[cfg(any(test, feature = "testutils"))]
+use lockable::InfallibleUnwrap as _;
 
 // TODO This is currently not cancellation safe. If a task waiting for a blob to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 
@@ -264,6 +268,46 @@ where
             }
             None | Some(EntryState::Dropping { .. }) => LoadingOrLoaded::new_not_found(),
         }
+    }
+
+    /// Return all entries that are loading, loaded.
+    pub fn all_loading_or_loaded(
+        this: &AsyncDropGuard<AsyncDropArc<Self>>,
+    ) -> Vec<LoadingOrLoaded<K, V, E>> {
+        let mut entries = this.entries.lock().unwrap();
+        let mut result = Vec::with_capacity(entries.len());
+        for (key, entry_state) in entries.iter_mut() {
+            match entry_state {
+                EntryState::Loaded(loaded) => {
+                    result.push(LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
+                        AsyncDropArc::clone(this),
+                        key.clone(),
+                        loaded.get_entry(),
+                    )));
+                }
+                EntryState::Loading(loading) => {
+                    result.push(LoadingOrLoaded::new_loading(
+                        AsyncDropArc::clone(this),
+                        loading.add_waiter(key.clone()),
+                    ));
+                }
+                EntryState::Dropping { .. } => {
+                    // Ignore dropping entries
+                }
+            }
+        }
+        result
+    }
+
+    pub fn is_fully_absent(&self, key: &K) -> bool {
+        let entries = self.entries.lock().unwrap();
+        !entries.contains_key(key)
+    }
+
+    #[cfg(any(test, feature = "testutils"))]
+    pub fn is_empty(&self) -> bool {
+        let entries = self.entries.lock().unwrap();
+        entries.is_empty()
     }
 
     /// Note: This function clones a [EntryState], which may clone the [AsyncDropGuard] contained if it is [EntryState::Loaded]. It is the callers responsibility to async_drop that.

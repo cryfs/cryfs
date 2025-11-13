@@ -282,7 +282,7 @@ where
         with_async_drop_2!(newparent, {
             let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
             let (source_parent, dest_parent) =
-                flatten_async_drop(source_parent, dest_parent).await?;
+                flatten_async_drop::<FsError,_,_,_,_>(source_parent, dest_parent).await?;
             // TODO Drop source_parent, dest_parent, newparent and self_blob concurrently
             with_async_drop_2!(source_parent, {
                 with_async_drop_2!(dest_parent, {
@@ -292,7 +292,7 @@ where
                             let entry = source_parent_dir
                                 .entry_by_name(oldname)
                                 .ok_or(FsError::NodeDoesNotExist)?;
-                            Ok(entry.clone()) // TODO No clone
+                            Ok::<_, FsError>(entry.clone()) // TODO No clone
                         })
                         .await?;
 
@@ -380,7 +380,7 @@ where
                         source_update?;
                         dest_update?;
 
-                        Ok(())
+                        Ok::<(), FsError>(())
                     })
                 })
             })?;
@@ -520,7 +520,7 @@ where
                             if child_entry.entry_type() != EntryType::Dir {
                                 Err(FsError::NodeIsNotADirectory)?;
                             }
-                            Ok(*child_entry.blob_id())
+                            Ok::<_, FsError>(*child_entry.blob_id())
                         })
                         .await?;
 
@@ -702,7 +702,7 @@ where
                         log::error!("Error flushing blob: {err:?}");
                         FsError::UnknownError
                     })?;
-                    Ok(removed)
+                    Ok::<_, FsError>(removed)
                 }).await?;
 
                 let blob_id = removed.blob_id();

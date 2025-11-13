@@ -127,7 +127,7 @@ impl Dir for PassthroughDir {
                     Some(nix::unistd::Gid::from_raw(gid.into())),
                 )
                 .map_error()?;
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
@@ -166,7 +166,7 @@ impl Dir for PassthroughDir {
                     AtFlags::AT_SYMLINK_NOFOLLOW,
                 )
                 .map_error()?;
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;

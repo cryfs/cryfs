@@ -39,7 +39,7 @@ impl PassthroughOpenFile {
         tokio::runtime::Handle::current()
             .spawn_blocking(move || {
                 nix::unistd::fchown(open_file.as_fd(), uid, gid).map_error()?;
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
@@ -91,7 +91,7 @@ impl PassthroughOpenFile {
                     &convert_timespec(mtime),
                 )
                 .map_error()?;
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
@@ -178,7 +178,7 @@ impl OpenFile for PassthroughOpenFile {
                 .map_error()?;
                 // TODO Should we handle the case where not all data was written gracefully by retrying to write the rest? The pwrite manpage says it's not an error if not all data gets written.
                 assert_eq!(data.len(), num_written, "pwrite did not write all data");
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;

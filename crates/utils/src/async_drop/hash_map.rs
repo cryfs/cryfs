@@ -48,6 +48,10 @@ where
         self.map.get(key)
     }
 
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut AsyncDropGuard<V>> {
+        self.map.get_mut(key)
+    }
+
     #[cfg(feature = "testutils")]
     pub fn drain(&mut self) -> impl Iterator<Item = (K, AsyncDropGuard<V>)> {
         self.map.drain()

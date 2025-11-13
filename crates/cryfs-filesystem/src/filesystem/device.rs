@@ -360,7 +360,7 @@ where
                                     on_overwritten,
                                 )
                                 .await?;
-                            Ok(())
+                            Ok::<(), FsError>(())
                         })
                         .await
                     })?;
@@ -447,7 +447,7 @@ where
                                         log::error!("Error setting parent: {err:?}");
                                         FsError::UnknownError
                                     })?;
-                                Ok(())
+                                Ok::<(), FsError>(())
                             })
                         })
                     })?;

@@ -145,6 +145,22 @@ where
             waker_key: NULL_WAKER_KEY,
         })
     }
+
+    // TODO Tests
+    pub fn new_ready(output: AsyncDropGuard<O>) -> AsyncDropGuard<Self> {
+        let inner = AsyncDropGuard::new(Inner {
+            future_or_output: UnsafeCell::new(FutureOrOutput::Output(AsyncDropArc::new(output))),
+            notifier: Arc::new(Notifier {
+                state: AtomicUsize::new(COMPLETE),
+                wakers: Mutex::new(None),
+            }),
+        });
+
+        AsyncDropGuard::new(Self {
+            inner: Some(AsyncDropArc::new(inner)),
+            waker_key: NULL_WAKER_KEY,
+        })
+    }
 }
 
 impl<O, Fut> AsyncDropShared<O, Fut>

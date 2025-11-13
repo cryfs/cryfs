@@ -48,7 +48,7 @@ impl PassthroughNode {
                     AtFlags::AT_SYMLINK_NOFOLLOW,
                 )
                 .map_error()?;
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
@@ -103,7 +103,7 @@ impl PassthroughNode {
                     nix::sys::stat::UtimensatFlags::NoFollowSymlink,
                 )
                 .map_error()?;
-                Ok(())
+                Ok::<(), FsError>(())
             })
             .await
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;

@@ -73,7 +73,7 @@ where
 
     #[cfg(feature = "testutils")]
     pub async fn reset_cache_after_test(&self) {
-        self.inodes.clear_all().await.unwrap();
+        self.inodes.clear_all_slow().await.unwrap();
     }
 
     #[cfg(feature = "testutils")]
@@ -122,20 +122,14 @@ where
         // TODO Once async closures are stable, we can - instead of returning an AsyncDropArc - take a callback parameter and pass &Fs::Node to it.
         //      That would simplify all the call sites (e.g. don't require them to call async_drop on the returned value anymore).
         //      See https://stackoverflow.com/questions/76625378/async-closure-holding-reference-over-await-point
-        self.inodes
-            .get_node_and_parent_ino(ino)
-            .await
-            .ok_or_else(|| {
-                log::error!("Tried to get unassigned inode number {ino:?}");
-                FsError::InvalidOperation
-            })
+        self.inodes.get_node_and_parent_ino(ino).await
     }
 
     async fn get_inode(
         &self,
         ino: InodeNumber,
     ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
-        Ok(self.get_inode_and_parent_ino(ino).await?.0)
+        self.inodes.get_node(ino).await
     }
 }
 
@@ -152,7 +146,7 @@ where
         let mut fs = self.fs.write().await;
         fs.initialize(req.uid, req.gid);
         let rootdir = Dir::into_node(fs.get().rootdir().await?);
-        self.inodes.insert_rootdir(rootdir);
+        self.inodes.insert_rootdir(rootdir).await;
         Ok(())
     }
 
@@ -169,34 +163,39 @@ where
     ) -> FsResult<ReplyEntry> {
         self.trigger_on_operation().await?;
 
-        let parent_node = self.get_inode(parent_ino).await?;
-        let mut child = with_async_drop_2!(parent_node, {
-            let parent_node_dir = parent_node
-                .as_dir()
-                .await
-                .expect("Error: Inode number is not a directory");
-            with_async_drop_2!(parent_node_dir, {
-                // TODO Can we avoid the async_drop here by using something like parent_node_dir.into_lookup_child() ?
-                parent_node_dir.lookup_child(&name).await
-            })
-        })?;
+        // TODO CryDir.lookup_child looks up name in the dir entry list from the parent dir node to get the blob id.
+        //      child.getattr looks it up again, to get the node attrs. Both need to first lock the parent dir
+        //      and then look up the same entry. Can we optimize that?
 
-        // TODO async_drop parent_node concurrently with the child.getattr() call below.
-
-        match child.getattr().await {
-            Ok(attr) => {
-                let ino = self.inodes.add(parent_ino, child, name).await;
-                Ok(ReplyEntry {
-                    ttl: TTL_LOOKUP,
-                    ino,
-                    attr,
+        let name_clone = name.to_owned();
+        let load_child = move |parent_node: &AsyncDropGuard<AsyncDropArc<Fs::Node>>| {
+            let parent_node = AsyncDropArc::clone(parent_node); // TODO Why is this necessary?
+            async move {
+                with_async_drop_2!(parent_node, {
+                    let parent_node_dir = parent_node
+                        .as_dir()
+                        .await
+                        .expect("Error: Inode number is not a directory");
+                    with_async_drop_2!(parent_node_dir, {
+                        // TODO Can we avoid the async_drop here by using something like parent_node_dir.into_lookup_child() ?
+                        parent_node_dir.lookup_child(&name_clone).await
+                    })
                 })
             }
-            Err(err) => {
-                child.async_drop().await?;
-                Err(err)
-            }
-        }
+        };
+
+        let (ino, child) = self
+            .inodes
+            .add_or_increment_refcount(parent_ino, name.to_owned(), load_child)
+            .await?;
+
+        with_async_drop_2!(child, {
+            child.getattr().await.map(|attr| ReplyEntry {
+                ttl: TTL_LOOKUP,
+                ino,
+                attr,
+            })
+        })
     }
 
     async fn forget(&self, _req: &RequestInfo, ino: InodeNumber, nlookup: u64) -> FsResult<()> {
@@ -212,12 +211,13 @@ where
         // inodes will receive a forget message.
         // ```
         // But we don't reuse inode numbers so nlookup should always be 1.
+        // TODO We probably now have to allow higher numbers
         assert_eq!(
             1, nlookup,
             "We don't reuse inode numbers so nlookup should always be 1"
         );
 
-        self.inodes.remove(ino).await?;
+        self.inodes.forget(ino).await?;
         Ok(())
     }
 
@@ -361,11 +361,15 @@ where
                 let (attrs, child) = parent_dir
                     .create_child_dir(&name, mode, req.uid, req.gid)
                     .await?;
-                Ok((attrs, Dir::into_node(child)))
+                Ok::<_, FsError>((attrs, Dir::into_node(child)))
             })
         })?;
         // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-        let ino = self.inodes.add(parent_ino, child, name).await;
+        let ino = self
+            .inodes
+            .add(parent_ino, child, name.to_owned())
+            .await
+            .expect("Parent inode vanished while executing");
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
             attr,
@@ -426,11 +430,15 @@ where
                 let (attrs, child) = parent_dir
                     .create_child_symlink(&name, link, req.uid, req.gid)
                     .await?;
-                Ok((attrs, Symlink::into_node(child)))
+                Ok::<_, FsError>((attrs, Symlink::into_node(child)))
             })
         })?;
         // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-        let ino = self.inodes.add(parent_ino, child, name).await;
+        let ino = self
+            .inodes
+            .add(parent_ino, child, name.to_owned())
+            .await
+            .expect("Parent inode vanished while executing");
         Ok(ReplyEntry {
             ttl: TTL_SYMLINK,
             attr: attrs,
@@ -463,7 +471,8 @@ where
         } else {
             let (oldparent, newparent) =
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
-            let (mut oldparent, mut newparent) = flatten_async_drop(oldparent, newparent).await?;
+            let (mut oldparent, mut newparent) =
+                flatten_async_drop::<FsError, _, _, _, _>(oldparent, newparent).await?;
             let result = (async || {
                 let oldparent_dir = oldparent.as_dir().await?;
                 with_async_drop_2!(oldparent_dir, {
@@ -893,7 +902,11 @@ where
             })?;
 
             // Fuser counts mkdir/create/symlink as a lookup and will call forget on the inode we allocate here.
-            let child_ino = self.inodes.add(parent_ino, child_node, name).await;
+            let child_ino = self
+                .inodes
+                .add(parent_ino, child_node, name.to_owned())
+                .await
+                .expect("Parent inode vanished while executing");
 
             let fh = self.open_files.add(open_file);
             Ok(ReplyCreate {

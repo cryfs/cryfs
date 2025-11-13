@@ -1,5 +1,5 @@
+use lockable::Never;
 use std::sync::Arc;
-
 use thiserror::Error;
 
 use crate::FileHandle;
@@ -119,3 +119,9 @@ impl FsError {
 }
 
 pub type FsResult<T> = Result<T, FsError>;
+
+impl From<Never> for FsError {
+    fn from(_err: Never) -> Self {
+        match _err {}
+    }
+}

@@ -1,56 +1,117 @@
 use async_trait::async_trait;
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropResult, AsyncDropShared};
+use cryfs_utils::concurrent_store::LoadedEntryGuard;
+use futures::future::BoxFuture;
 use std::fmt::Debug;
 
-use crate::FsResult;
-use crate::{FsError, InodeNumber, object_based_api::Device};
+use crate::{FsError, FsResult, InodeNumber, object_based_api::Device};
 
+// TODO Rename to InodeTreeNode
 #[derive(Debug)]
 pub struct InodeInfo<Fs>
 where
-    Fs: Device + Debug,
+    Fs: Device + Debug + 'static,
+    Fs::Node: 'static,
 {
-    // TODO Node here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
-    //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
-    node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
-    parent_inode: InodeNumber,
+    kernel_refcount: usize,
+    inode: AsyncDropGuard<
+        // TODO We only store this as a Shared future because ConcurrentStore doesn't allow returning a LoadedEntryGuard for
+        //      entries that are still loading. If we change ConcurrentStore to allow that, we can just store LoadedEntryGuard here directly.
+        AsyncDropShared<
+            AsyncDropResult<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>, FsError>,
+            // TODO No BoxFuture
+            BoxFuture<
+                'static,
+                AsyncDropGuard<
+                    AsyncDropResult<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>, FsError>,
+                >,
+            >,
+        >,
+    >,
 }
 
 impl<Fs> InodeInfo<Fs>
 where
-    Fs: Device + Debug,
+    Fs: Device + Debug + 'static,
+    Fs::Node: 'static,
 {
     pub fn new(
-        node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
-        parent_inode: InodeNumber,
+        inode: AsyncDropGuard<
+            AsyncDropShared<
+                AsyncDropResult<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>, FsError>,
+                BoxFuture<
+                    'static,
+                    AsyncDropGuard<
+                        AsyncDropResult<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>, FsError>,
+                    >,
+                >,
+            >,
+        >,
     ) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self { node, parent_inode })
+        AsyncDropGuard::new(Self {
+            kernel_refcount: 1,
+            inode,
+        })
     }
 
-    pub fn parent_inode(&self) -> InodeNumber {
-        self.parent_inode
+    pub fn increment_refcount(&mut self) {
+        self.kernel_refcount = self
+            .kernel_refcount
+            .checked_add(1)
+            .expect("Inode kernel refcount overflowed");
     }
 
-    pub fn node(&self) -> AsyncDropGuard<AsyncDropArc<Fs::Node>> {
-        AsyncDropArc::clone(&self.node)
+    pub fn decrement_refcount(&mut self) -> RefcountInfo {
+        assert!(
+            self.kernel_refcount > 0,
+            "Inode kernel refcount underflowed"
+        );
+        self.kernel_refcount -= 1;
+        if self.kernel_refcount == 0 {
+            RefcountInfo::RefcountZero
+        } else {
+            RefcountInfo::RefcountNotZero
+        }
     }
 
-    #[cfg(feature = "testutils")]
-    pub async fn fsync(&self) -> FsResult<()> {
-        use crate::object_based_api::Node as _;
-
-        self.node.fsync(false).await
+    pub fn refcount(&self) -> usize {
+        self.kernel_refcount
     }
+
+    pub fn inode_future(
+        &self,
+    ) -> &AsyncDropGuard<
+        AsyncDropShared<
+            AsyncDropResult<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>, FsError>,
+            BoxFuture<
+                'static,
+                AsyncDropGuard<
+                    AsyncDropResult<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>, FsError>,
+                >,
+            >,
+        >,
+    > {
+        &self.inode
+    }
+}
+
+#[must_use]
+#[derive(Debug, PartialEq, Eq)]
+pub enum RefcountInfo {
+    RefcountNotZero,
+    RefcountZero,
 }
 
 #[async_trait]
 impl<Fs> AsyncDrop for InodeInfo<Fs>
 where
-    Fs: Device + Debug,
+    Fs: Device + Debug + 'static,
+    Fs::Node: 'static,
 {
     type Error = FsError;
     async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.node.async_drop().await?;
+        self.inode.async_drop().await?;
+
         Ok(())
     }
 }

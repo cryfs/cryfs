@@ -17,7 +17,7 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Gid, InodeNumber, Mode,
+    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode,
     NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
     low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
@@ -142,7 +142,7 @@ impl FuserCacheBehavior for WithoutInodeCache {
             for ino in inodes1.iter().skip(1).rev() {
                 AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
             }
-            Ok(())
+            Ok::<(), FsError>(())
         };
         let cleanup2 = async {
             for ino in inodes2.iter().skip(1).rev() {
@@ -154,7 +154,7 @@ impl FuserCacheBehavior for WithoutInodeCache {
             for ino in common_inodes.iter().skip(1).rev() {
                 AsyncFilesystemLL::forget(fs, &request_info(), *ino, 1).await?;
             }
-            Ok(())
+            Ok::<(), FsError>(())
         };
         try_join!(cleanup1, cleanup2)?;
         cleanup_common.await?;

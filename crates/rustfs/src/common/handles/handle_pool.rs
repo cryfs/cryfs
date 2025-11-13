@@ -62,6 +62,11 @@ where
 
     /// Acquires a handle with a given value. If the handle is already acquired, this will panic.
     pub fn acquire_specific(&mut self, handle: Handle) -> HandleWithGeneration<Handle> {
+        self.try_acquire_specific(handle)
+            .expect("Tried to acquire a specific handle but it was already acquired")
+    }
+
+    pub fn try_acquire_specific(&mut self, handle: Handle) -> Option<HandleWithGeneration<Handle>> {
         if handle >= self.next_handle {
             let inbetween_handles = Handle::range(&self.next_handle, &handle);
             self.released_handles
@@ -70,7 +75,7 @@ where
                     generation: 0,
                 }));
             self.next_handle = handle.incremented();
-            self._acquire(handle, 0)
+            Some(self._acquire(handle, 0))
         } else {
             match self
                 .released_handles
@@ -81,11 +86,9 @@ where
                     let released_handle =
                         self.released_handles.swap_remove(pos_in_released_handles);
                     assert_eq!(handle, released_handle.handle);
-                    self._acquire(handle, released_handle.generation + 1)
+                    Some(self._acquire(handle, released_handle.generation + 1))
                 }
-                _ => {
-                    panic!("Tried to acquire a specific handle but it was already acquired");
-                }
+                _ => None,
             }
         }
     }
@@ -102,6 +105,28 @@ where
             .expect("Tried to release a handle that wasn't in use");
         self.released_handles
             .push(HandleWithGeneration { handle, generation });
+    }
+
+    /// Releases a handle same as [Self::release], but also undoes the generation increment that happened on acquire.
+    pub fn undo_acquire(&mut self, handle: Handle) {
+        let generation = self
+            .in_use_handles
+            .remove(&handle)
+            .expect("Tried to undo_acquire a handle that wasn't in use");
+        assert!(generation > 0);
+        self.released_handles.push(HandleWithGeneration {
+            handle,
+            generation: generation - 1,
+        });
+    }
+
+    pub fn lookup(&self, handle: Handle) -> Option<HandleWithGeneration<Handle>> {
+        self.in_use_handles
+            .get(&handle)
+            .map(|generation| HandleWithGeneration {
+                handle,
+                generation: *generation,
+            })
     }
 }
 
