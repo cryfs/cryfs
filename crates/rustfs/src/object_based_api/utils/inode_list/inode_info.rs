@@ -10,6 +10,8 @@ pub struct InodeInfo<Fs>
 where
     Fs: Device + Debug,
 {
+    // TODO Node here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
+    //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
     node: AsyncDropGuard<AsyncDropArc<Fs::Node>>,
     parent_inode: InodeNumber,
 }

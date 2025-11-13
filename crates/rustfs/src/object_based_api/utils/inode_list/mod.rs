@@ -41,8 +41,8 @@ pub struct InodeList<Fs>
 where
     Fs: Device + Debug,
 {
-    // TODO InodeInfo here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
-    //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
+    // Invariants:
+    // * inodes always contains an entry for FUSE_ROOT_ID (established by calling insert_rootdir() after new())
     inodes: Mutex<AsyncDropGuard<HandleMap<InodeNumber, InodeInfo<Fs>>>>,
 }
 
@@ -50,6 +50,7 @@ impl<Fs> InodeList<Fs>
 where
     Fs: Device + Debug,
 {
+    /// After calling [Self::new], and before calling anything else, you must also call [Self::insert_rootdir] to establish the invariants and get a usable [InodeList].
     pub fn new() -> AsyncDropGuard<Self> {
         let mut inodes = HandleMap::new();
 
