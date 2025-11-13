@@ -9,7 +9,7 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
-use crate::object_based_api::utils::{DUMMY_INO, FUSE_ROOT_ID};
+use crate::object_based_api::utils::DUMMY_INO;
 use crate::{
     DirEntry,
     common::{
@@ -127,24 +127,17 @@ where
     async fn get_inode_and_parent_ino(
         &self,
         ino: InodeNumber,
-    ) -> FsResult<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, Option<InodeNumber>)> {
+    ) -> FsResult<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, InodeNumber)> {
         // TODO Once async closures are stable, we can - instead of returning an AsyncDropArc - take a callback parameter and pass &Fs::Node to it.
         //      That would simplify all the call sites (e.g. don't require them to call async_drop on the returned value anymore).
         //      See https://stackoverflow.com/questions/76625378/async-closure-holding-reference-over-await-point
-        if ino == FUSE_ROOT_ID {
-            let fs = self.fs.read().await;
-            let fs = fs.get();
-            let node = Dir::into_node(fs.rootdir().await?);
-            Ok((AsyncDropArc::new(node), None))
-        } else {
-            self.inodes
-                .get_node_and_parent_ino(ino)
-                .await
-                .ok_or_else(|| {
-                    log::error!("Tried to get unassigned inode number {ino:?}");
-                    FsError::InvalidOperation
-                })
-        }
+        self.inodes
+            .get_node_and_parent_ino(ino)
+            .await
+            .ok_or_else(|| {
+                log::error!("Tried to get unassigned inode number {ino:?}");
+                FsError::InvalidOperation
+            })
     }
 
     async fn get_inode(
@@ -165,7 +158,10 @@ where
 {
     async fn init(&self, req: &RequestInfo) -> FsResult<()> {
         log::info!("init");
-        self.fs.write().await.initialize(req.uid, req.gid);
+        let mut fs = self.fs.write().await;
+        fs.initialize(req.uid, req.gid);
+        let rootdir = Dir::into_node(fs.get().rootdir().await?);
+        self.inodes.insert_rootdir(rootdir);
         Ok(())
     }
 
@@ -685,7 +681,6 @@ where
         let (node, parent_ino) = self.get_inode_and_parent_ino(ino).await?;
 
         with_async_drop_2!(node, {
-            let parent_ino = parent_ino.unwrap_or(FUSE_ROOT_ID); // root is parent of itself
             let dir = node.as_dir().await?;
             with_async_drop_2!(dir, {
                 let offset = usize::try_from(offset).unwrap(); // TODO No unwrap

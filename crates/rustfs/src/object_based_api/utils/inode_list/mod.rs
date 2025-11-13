@@ -53,29 +53,39 @@ where
     pub fn new() -> AsyncDropGuard<Self> {
         let mut inodes = HandleMap::new();
 
-        Self::block_root_handle(&mut inodes);
+        Self::block_invalid_handles(&mut inodes);
         AsyncDropGuard::new(Self {
             inodes: Mutex::new(inodes),
         })
     }
 
-    fn block_root_handle(inodes: &mut HandleMap<InodeNumber, InodeInfo<Fs>>) {
+    fn block_invalid_handles(inodes: &mut HandleMap<InodeNumber, InodeInfo<Fs>>) {
         // We need to block zero because fuse seems to dislike it.
-        inodes.block_handle(InodeNumber::from(0));
-        // FUSE_ROOT_ID represents the root directory. We can't use it for other inodes.
         if fuser::FUSE_ROOT_ID != 0 {
-            inodes.block_handle(FUSE_ROOT_ID);
+            inodes.block_handle(InodeNumber::from(0));
         }
         inodes.block_handle(DUMMY_INO);
+    }
+
+    pub fn insert_rootdir(&self, rootdir: AsyncDropGuard<Fs::Node>) {
+        let mut inodes = self.inodes.lock().unwrap();
+        inodes.insert(
+            FUSE_ROOT_ID,
+            InodeInfo::new(
+                AsyncDropArc::new(rootdir),
+                // The root dir is its own parent
+                FUSE_ROOT_ID,
+            ),
+        );
     }
 
     pub async fn get_node_and_parent_ino(
         &self,
         ino: InodeNumber,
-    ) -> Option<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, Option<InodeNumber>)> {
+    ) -> Option<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, InodeNumber)> {
         let inodes = self.inodes.lock().unwrap();
         let inode = inodes.get(ino)?;
-        Some((inode.node(), Some(inode.parent_inode())))
+        Some((inode.node(), inode.parent_inode()))
     }
 
     pub async fn add(
@@ -94,6 +104,7 @@ where
     }
 
     pub async fn remove(&self, ino: InodeNumber) -> FsResult<()> {
+        assert!(ino != FUSE_ROOT_ID, "Cannot remove root inode");
         let mut entry = self.inodes.lock().unwrap().remove(ino);
         entry.async_drop().await?;
         Ok(())
@@ -102,21 +113,31 @@ where
     #[cfg(feature = "testutils")]
     pub async fn fsync_and_clear_all(&self) -> FsResult<()> {
         let mut inodes = self.inodes.lock().unwrap();
+        let root_inode = inodes.try_remove(FUSE_ROOT_ID);
         for (_handle, mut object) in inodes.drain() {
             object.fsync().await.unwrap();
             object.async_drop().await.unwrap();
         }
-        Self::block_root_handle(&mut inodes);
+        // Re-add root inode so the InodeList is still usable after this call
+        if let Some(root_inode) = root_inode {
+            inodes.insert(FUSE_ROOT_ID, root_inode);
+        }
+        Self::block_invalid_handles(&mut inodes);
         Ok(())
     }
 
     #[cfg(feature = "testutils")]
     pub async fn clear_all(&self) -> FsResult<()> {
         let mut inodes = self.inodes.lock().unwrap();
+        let root_inode = inodes.try_remove(FUSE_ROOT_ID);
         for (_handle, mut object) in inodes.drain() {
             object.async_drop().await.unwrap();
         }
-        Self::block_root_handle(&mut inodes);
+        // Re-add root inode so the InodeList is still usable after this call
+        if let Some(root_inode) = root_inode {
+            inodes.insert(FUSE_ROOT_ID, root_inode);
+        }
+        Self::block_invalid_handles(&mut inodes);
         Ok(())
     }
 

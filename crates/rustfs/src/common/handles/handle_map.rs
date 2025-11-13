@@ -51,6 +51,13 @@ where
         handle
     }
 
+    pub fn insert(&mut self, handle: Handle, file: AsyncDropGuard<T>) {
+        self.available_handles.acquire_specific(handle.clone());
+        self.objects
+            .try_insert(handle, file)
+            .expect("Tried to insert a file to the HandleMap but the handle was already in use");
+    }
+
     pub fn remove(&mut self, handle: Handle) -> AsyncDropGuard<T> {
         let file = self
             .objects
@@ -58,6 +65,14 @@ where
             .expect("Tried to remove a file from the HandleMap but the object didn't exist");
         self.available_handles.release(handle);
         file
+    }
+
+    pub fn try_remove(&mut self, handle: Handle) -> Option<AsyncDropGuard<T>> {
+        let Some(file) = self.objects.remove(&handle) else {
+            return None;
+        };
+        self.available_handles.release(handle);
+        Some(file)
     }
 
     pub fn get(&self, handle: Handle) -> Option<&AsyncDropGuard<T>> {
