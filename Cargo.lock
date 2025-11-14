@@ -1215,6 +1215,7 @@ dependencies = [
  "rstest",
  "scrypt",
  "signal-hook",
+ "slab",
  "sodiumoxide",
  "static_assertions",
  "tempdir",

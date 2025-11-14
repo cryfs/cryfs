@@ -21,3 +21,6 @@ pub use with::with_async_drop;
 
 mod flatten;
 pub use flatten::flatten_async_drop;
+
+mod shared;
+pub use shared::AsyncDropShared;

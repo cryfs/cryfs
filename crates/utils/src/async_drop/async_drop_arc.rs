@@ -37,6 +37,16 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
             .expect("Already dropped");
         Arc::into_inner(v)
     }
+
+    pub fn as_ptr(&self) -> *const AsyncDropGuard<T> {
+        Arc::as_ptr(self.v.as_ref().expect("Already dropped"))
+    }
+
+    pub fn ptr_eq(a: &AsyncDropGuard<Self>, b: &AsyncDropGuard<Self>) -> bool {
+        let lhs = a.v.as_ref().expect("Already dropped");
+        let rhs = b.v.as_ref().expect("Already dropped");
+        Arc::ptr_eq(lhs, rhs)
+    }
 }
 
 #[async_trait]
