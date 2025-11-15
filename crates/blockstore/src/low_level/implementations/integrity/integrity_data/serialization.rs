@@ -112,7 +112,7 @@ impl KnownBlockVersionsSerialized {
             // TODO Is there a better alternative that doesn't involve busy waiting?
             tokio::task::yield_now().await;
         }
-        let block_infos = Arc::try_unwrap(data.block_infos).expect("We just waited until we're the only one with a clone of the Arc. It can't have gone back up.");
+        let block_infos = Arc::into_inner(data.block_infos).expect("We just waited until we're the only one with a clone of the Arc. It can't have gone back up.");
 
         for (block_id, block_info) in block_infos.into_entries_unordered() {
             for (client_id, block_version) in block_info.known_block_versions {

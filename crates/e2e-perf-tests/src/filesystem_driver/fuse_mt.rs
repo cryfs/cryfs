@@ -297,7 +297,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
                 },
             )
             .await;
-        Arc::try_unwrap(data)
+        Arc::into_inner(data)
             .unwrap()
             .into_inner()
             .unwrap()

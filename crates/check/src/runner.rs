@@ -104,7 +104,7 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
                 return Err(e);
             }
         };
-        let processed_blobs = Arc::try_unwrap(processed_blobs)
+        let processed_blobs = Arc::into_inner(processed_blobs)
             .expect("All tasks are finished here and we should be able to unwrap the Arc");
         let reachable_blobs: Vec<(BlobId, BlobReference)> = processed_blobs
             .into_iter()
@@ -137,7 +137,7 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
             }
         };
 
-        let processed_nodes = Arc::try_unwrap(processed_nodes)
+        let processed_nodes = Arc::into_inner(processed_nodes)
             .expect("All tasks are finished here and we should be able to unwrap the Arc");
         let unreachable_nodes = set_remove_all(all_nodes, processed_nodes.into_keys());
         let check_unreachable_nodes_result =

@@ -249,7 +249,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDro
                 tokio::task::yield_now().await;
             }
             // Now we're the only task having access to this arc
-            let cache = Arc::try_unwrap(cache)
+            let cache = Arc::into_inner(cache)
                 .expect("This can't fail since we are the only task having access");
             for_each_unordered::<(BlockId, BlockCacheEntry<B>), anyhow::Error, _>(
                 cache.into_entries_unordered().await,

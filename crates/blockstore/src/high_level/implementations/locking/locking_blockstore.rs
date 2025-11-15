@@ -78,7 +78,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
         this.cache.async_drop().await?;
 
         let base_store = this.base_store.take().expect("Already destructed");
-        let base_store = Arc::try_unwrap(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
+        let base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         Ok(base_store)
     }
 
@@ -264,7 +264,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDro
         // This also means there can't be any other tasks/threads currently locking cache entries and doing things with it,
         // we're truly the only one with access to self.base_store.
         let base_store = self.base_store.take().expect("Already destructed");
-        let mut base_store = Arc::try_unwrap(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
+        let mut base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         base_store.async_drop().await?;
 
         Ok(())

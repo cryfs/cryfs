@@ -245,7 +245,7 @@ where
             self.num_unfulfilled_waiters == 0,
             "Cannot consume BlobStateLoaded while there are unfulfilled waiters"
         );
-        let blob = AsyncDropTokioMutex::into_inner(AsyncDropArc::try_unwrap(self.blob).unwrap());
+        let blob = AsyncDropTokioMutex::into_inner(AsyncDropArc::into_inner(self.blob).unwrap());
         (self.removal_request, blob)
     }
 

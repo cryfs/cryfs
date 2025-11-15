@@ -272,7 +272,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
             tokio::task::yield_now().await;
         }
         // Now we're the only task having access to this arc
-        let cache = Arc::try_unwrap(
+        let cache = Arc::into_inner(
             self.cache
                 .take()
                 .expect("Value is already being dropped, this can't happen"),

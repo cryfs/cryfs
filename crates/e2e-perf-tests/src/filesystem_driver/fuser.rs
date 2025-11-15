@@ -762,7 +762,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     },
                 )
                 .await;
-            Arc::try_unwrap(result)
+            Arc::into_inner(result)
                 .unwrap()
                 .into_inner()
                 .unwrap()

@@ -426,7 +426,7 @@ pub mod overwrite {
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert!(overwrite_task.is_finished());
 
-        Arc::try_unwrap(store).unwrap().async_drop().await.unwrap();
+        Arc::into_inner(store).unwrap().async_drop().await.unwrap();
     }
 
     pub async fn test_whenOverwritingWhileLoaded_thenSuccessfullyOverwrites(mut f: impl HLFixture) {
@@ -446,7 +446,7 @@ pub mod overwrite {
         assert_eq!(&data(512, 1), block.data());
 
         drop(block);
-        Arc::try_unwrap(store).unwrap().async_drop().await.unwrap();
+        Arc::into_inner(store).unwrap().async_drop().await.unwrap();
     }
 
     // TODO Test other locking behaviors, i.e. loading while loaded, removing while loaded, ...

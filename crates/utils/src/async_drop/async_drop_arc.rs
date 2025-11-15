@@ -30,17 +30,12 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
         Arc::strong_count(this.v.as_ref().expect("Already dropped"))
     }
 
-    pub fn try_unwrap(
-        this: AsyncDropGuard<Self>,
-    ) -> Result<AsyncDropGuard<T>, AsyncDropGuard<Self>> {
+    pub fn into_inner(this: AsyncDropGuard<Self>) -> Option<AsyncDropGuard<T>> {
         let v = this
             .unsafe_into_inner_dont_drop()
             .v
             .expect("Already dropped");
-        match Arc::try_unwrap(v) {
-            Ok(v) => Ok(v),
-            Err(v) => Err(AsyncDropGuard::new(Self { v: Some(v) })),
-        }
+        Arc::into_inner(v)
     }
 }
 
@@ -56,7 +51,7 @@ impl<T: AsyncDrop + Debug + Send> AsyncDrop for AsyncDropArc<T> {
         Self: 'async_trait,
     {
         let v = self.v.take().expect("Already destructed");
-        if let Ok(mut v) = Arc::try_unwrap(v) {
+        if let Some(mut v) = Arc::into_inner(v) {
             Box::pin(async move { v.async_drop().await })
         } else {
             Box::pin(async { Ok(()) })
