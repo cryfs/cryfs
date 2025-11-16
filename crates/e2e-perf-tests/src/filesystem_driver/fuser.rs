@@ -37,12 +37,12 @@ pub trait FuserCacheBehavior: Send + Sync {
         fs: &impl AsyncFilesystemLL,
         callback: impl AsyncFnOnce(InodeNumber, InodeNumber) -> FsResult<R>,
     ) -> FsResult<R>;
-    fn make_inode(
+    async fn make_inode(
         parent: Option<Self::NodeHandle>,
         child_name: &PathComponent,
         child_ino: InodeNumber,
         device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
-    ) -> Self::NodeHandle;
+    ) -> FsResult<Self::NodeHandle>;
     async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>);
 }
 
@@ -69,13 +69,13 @@ impl FuserCacheBehavior for WithInodeCache {
         let ino2 = node2.as_ref().map(|n| **n).unwrap_or(FUSE_ROOT_ID);
         callback(ino1, ino2).await
     }
-    fn make_inode(
+    async fn make_inode(
         _parent: Option<Self::NodeHandle>,
         _child_name: &PathComponent,
         child_ino: InodeNumber,
         device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
-    ) -> Self::NodeHandle {
-        InodeGuard::new(AsyncDropArc::clone(device), child_ino)
+    ) -> FsResult<Self::NodeHandle> {
+        Ok(InodeGuard::new(AsyncDropArc::clone(device), child_ino))
     }
     async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>) {
         // Don't reset_cache (i.e. delete all inodes, as we do in WithoutInodeCache), but just flush any changes back to the underlying block stores so modifications are written back, but nodes are still in the cache
@@ -166,15 +166,17 @@ impl FuserCacheBehavior for WithoutInodeCache {
 
         result
     }
-    fn make_inode(
+    async fn make_inode(
         parent: Option<AbsolutePathBuf>,
         child_name: &PathComponent,
-        _child_ino: InodeNumber,
-        _device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
-    ) -> Self::NodeHandle {
-        parent
+        child_ino: InodeNumber,
+        device: &AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
+    ) -> FsResult<Self::NodeHandle> {
+        // Because we don't return the inode to the caller, we need to forget it here or it'll be leaked and the filesystem will keep believing it's still in use by the OS kernel.
+        AsyncFilesystemLL::forget(&***device, &request_info(), child_ino, 1).await?;
+        Ok(parent
             .unwrap_or_else(AbsolutePathBuf::root)
-            .join(child_name)
+            .join(child_name))
     }
     async fn reset_cache_after_setup(fs: &ObjectBasedFsAdapterLL<Device>) {
         fs.reset_cache_after_setup().await;
@@ -309,7 +311,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 .await
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_dir.ino.handle, &self.fs))
+        C::make_inode(parent, name, new_dir.ino.handle, &self.fs).await
     }
 
     async fn create_file(
@@ -342,7 +344,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
             Ok(open_file.ino)
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_file.handle, &self.fs))
+        C::make_inode(parent, name, new_file.handle, &self.fs).await
     }
 
     async fn create_and_open_file(
@@ -365,7 +367,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         })
         .await?;
         Ok((
-            C::make_inode(parent, name, new_file.ino.handle, &self.fs),
+            C::make_inode(parent, name, new_file.ino.handle, &self.fs).await?,
             new_file.fh,
         ))
     }
@@ -382,7 +384,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 .await
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_dir.ino.handle, &self.fs))
+        C::make_inode(parent, name, new_dir.ino.handle, &self.fs).await
     }
 
     async fn lookup(
@@ -394,7 +396,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
             self.fs.lookup(&request_info(), parent_ino, name).await
         })
         .await?;
-        Ok(C::make_inode(parent, name, new_file.ino.handle, &self.fs))
+        C::make_inode(parent, name, new_file.ino.handle, &self.fs).await
     }
 
     async fn getattr(&self, node: Option<Self::NodeHandle>) -> FsResult<NodeAttrs> {
