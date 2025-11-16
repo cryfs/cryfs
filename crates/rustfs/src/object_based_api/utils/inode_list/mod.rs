@@ -112,22 +112,6 @@ where
     }
 
     #[cfg(feature = "testutils")]
-    pub async fn fsync_and_clear_all(&self) -> FsResult<()> {
-        let mut inodes = self.inodes.lock().unwrap();
-        let root_inode = inodes.try_remove(FUSE_ROOT_ID);
-        for (_handle, mut object) in inodes.drain() {
-            object.fsync().await.unwrap();
-            object.async_drop().await.unwrap();
-        }
-        // Re-add root inode so the InodeList is still usable after this call
-        if let Some(root_inode) = root_inode {
-            inodes.insert(FUSE_ROOT_ID, root_inode);
-        }
-        Self::block_invalid_handles(&mut inodes);
-        Ok(())
-    }
-
-    #[cfg(feature = "testutils")]
     pub async fn clear_all(&self) -> FsResult<()> {
         let mut inodes = self.inodes.lock().unwrap();
         let root_inode = inodes.try_remove(FUSE_ROOT_ID);

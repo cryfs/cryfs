@@ -72,11 +72,13 @@ where
     }
 
     #[cfg(feature = "testutils")]
-    pub async fn reset_cache_after_setup(&self) {
-        // clear inodes
-        self.inodes.fsync_and_clear_all().await.unwrap();
+    pub async fn reset_cache_after_test(&self) {
+        self.inodes.clear_all().await.unwrap();
+    }
 
-        // flush open files
+    #[cfg(feature = "testutils")]
+    pub async fn flush_cache(&self) {
+        self.inodes.fsync_all().await.unwrap();
         self._flush_open_files().await;
     }
 
@@ -100,17 +102,6 @@ where
             })
             .await
             .unwrap();
-    }
-
-    #[cfg(feature = "testutils")]
-    pub async fn reset_cache_after_test(&self) {
-        self.inodes.clear_all().await.unwrap();
-    }
-
-    #[cfg(feature = "testutils")]
-    pub async fn flush_cache(&self) {
-        self.inodes.fsync_all().await.unwrap();
-        self._flush_open_files().await;
     }
 
     // TODO Test this is triggered by each operation
