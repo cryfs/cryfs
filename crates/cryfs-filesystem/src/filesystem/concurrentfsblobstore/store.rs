@@ -12,11 +12,12 @@ use cryfs_utils::{
 };
 
 use crate::filesystem::{
-    concurrentfsblobstore::{ConcurrentFsBlob, loaded_blobs::RequestRemovalResult},
+    concurrentfsblobstore::{
+        ConcurrentFsBlob,
+        loaded_blobs::{LoadedBlobs, RequestRemovalResult},
+    },
     fsblobstore::{FlushBehavior, FsBlobStore},
 };
-
-use super::loaded_blobs::LoadedBlobs;
 
 #[derive(Debug)]
 pub struct ConcurrentFsBlobStore<B>

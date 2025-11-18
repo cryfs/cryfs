@@ -1,16 +1,15 @@
-use async_trait::async_trait;
-use cryfs_rustfs::{FsError, FsResult};
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
-use super::LoadedBlobs;
-use crate::filesystem::{
-    concurrentfsblobstore::loaded_blobs::RequestRemovalResult, fsblobstore::FsBlob,
-};
+use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex},
+    async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex},
+    concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult},
     mr_oneshot_channel::RecvError,
 };
+
+use crate::filesystem::fsblobstore::FsBlob;
 
 #[derive(Debug)]
 pub struct LoadedBlobGuard<B>
@@ -18,9 +17,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    loaded_blobs: AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
-    blob_id: BlobId,
-    blob: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>>,
+    loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
 }
 
 impl<B> LoadedBlobGuard<B>
@@ -29,37 +26,40 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub(super) fn new(
-        loaded_blobs: AsyncDropGuard<AsyncDropArc<LoadedBlobs<B>>>,
-        blob_id: BlobId,
-        blob: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<FsBlob<B>>>>,
+        loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
     ) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self {
-            loaded_blobs,
-            blob_id,
-            blob,
-        })
+        AsyncDropGuard::new(Self { loaded_blob })
     }
 
     pub fn blob_id(&self) -> BlobId {
-        self.blob_id
+        *self.loaded_blob.key()
     }
 
     pub async fn with_lock<R, F>(&self, f: F) -> R
     where
         F: AsyncFnOnce(&mut FsBlob<B>) -> R,
     {
-        let mut guard = self.blob.lock().await;
+        let mut guard = self.loaded_blob.value().lock().await;
         f(&mut *guard).await
     }
 
     pub async fn remove(mut this: AsyncDropGuard<Self>) -> FsResult<()> {
-        match this.loaded_blobs.request_removal(this.blob_id) {
-            RequestRemovalResult::RemovalRequested { on_removed } => {
+        match this.loaded_blob.store().request_immediate_drop(
+            *this.loaded_blob.key(),
+            |blob| async move {
+                let blob = AsyncDropTokioMutex::into_inner(blob);
+                FsBlob::remove(blob).await.map_err(Arc::new)
+            },
+        ) {
+            RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
+            // An earlier immediate drop result can only be a remove request, because that's the only scenario in which we request immediate drops.
+            // So we're fine and that earlier request will remove it for us.
+            | RequestImmediateDropResult::AlreadyDroppingFromEarlierImmediateDrop { on_dropped } => {
                 // Drop the blob so we don't hold a lock on it, which would prevent the removal. Removal waits until all readers relinquished their blob.
                 this.async_drop().await?;
                 std::mem::drop(this);
                 // Wait until the blob is removed. If there are other readers, this will wait.
-                on_removed
+                on_dropped
                     .recv()
                     .await
                     .map_err(|error: RecvError| FsError::InternalError {
@@ -69,10 +69,10 @@ where
                         error: anyhow::anyhow!("Error during blob removal: {err}"),
                     })
             }
-            RequestRemovalResult::NotLoaded => {
+            RequestImmediateDropResult::NotLoaded => {
                 panic!("This can't happen because we hold the LoadedBlobGuard");
             }
-            RequestRemovalResult::AlreadyDropping { .. } => {
+            RequestImmediateDropResult::AlreadyDroppingWithoutImmediateDrop { .. } => {
                 panic!("This can't happen because we hold the LoadedBlobGuard");
             }
         }
@@ -88,9 +88,10 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let blob = std::mem::replace(&mut self.blob, AsyncDropGuard::new_invalid());
-        self.loaded_blobs.unload(self.blob_id, blob).await?;
-        self.loaded_blobs.async_drop().await.unwrap(); // TODO No unwrap
+        self.loaded_blob.async_drop().await.map_err(|e| {
+            log::error!("Error dropping LoadedBlobGuard: {:?}", e);
+            FsError::UnknownError
+        })?;
         Ok(())
     }
 }
