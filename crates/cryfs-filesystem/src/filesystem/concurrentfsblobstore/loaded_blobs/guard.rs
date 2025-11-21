@@ -72,7 +72,7 @@ where
             RequestRemovalResult::NotLoaded => {
                 panic!("This can't happen because we hold the LoadedBlobGuard");
             }
-            RequestRemovalResult::Dropping { .. } => {
+            RequestRemovalResult::AlreadyDropping { .. } => {
                 panic!("This can't happen because we hold the LoadedBlobGuard");
             }
         }

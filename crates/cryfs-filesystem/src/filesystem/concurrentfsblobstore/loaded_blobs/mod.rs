@@ -325,7 +325,7 @@ where
                     on_removed: loading.request_removal(),
                 },
                 BlobState::Dropping(BlobStateDropping { future, .. }) => {
-                    RequestRemovalResult::Dropping {
+                    RequestRemovalResult::AlreadyDropping {
                         future: future.clone(),
                     }
                 }
@@ -487,11 +487,15 @@ where
 }
 
 pub enum RequestRemovalResult {
+    /// Removal request accepted, will be processed once current operations are complete.
     RemovalRequested {
+        /// The receiver gets notified once removal is complete.
         on_removed: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
     },
+    /// Removal request failed because the blob is not loaded.
     NotLoaded,
-    Dropping {
+    /// Removal request failed because the blob is already dropping.
+    AlreadyDropping {
         future: Shared<BoxFuture<'static, ()>>,
     },
 }

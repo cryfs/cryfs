@@ -139,9 +139,10 @@ where
                 }
                 RequestRemovalResult::NotLoaded => {
                     // Blob is not loaded, so we can remove it directly
+                    // TODO Is this a race condition? What if it was loaded again in the meantime?
                     return self.blobstore.remove_by_id(id).await;
                 }
-                RequestRemovalResult::Dropping { future } => {
+                RequestRemovalResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry
                     future.await;
                     continue;
