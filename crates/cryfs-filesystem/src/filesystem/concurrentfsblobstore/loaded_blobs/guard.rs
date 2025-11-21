@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex},
@@ -17,7 +17,8 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
+    loaded_blob:
+        AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, RemoveResult>>,
 }
 
 impl<B> LoadedBlobGuard<B>
@@ -26,7 +27,9 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub(super) fn new(
-        loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
+        loaded_blob: AsyncDropGuard<
+            LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, RemoveResult>,
+        >,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { loaded_blob })
     }
@@ -43,12 +46,16 @@ where
         f(&mut *guard).await
     }
 
-    pub async fn remove(mut this: AsyncDropGuard<Self>) -> FsResult<()> {
+    pub async fn remove(mut this: AsyncDropGuard<Self>) -> FsResult<RemoveResult> {
         match this.loaded_blob.store().request_immediate_drop(
             *this.loaded_blob.key(),
             |blob| async move {
+                let Some(blob) = blob else {
+                    panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
+                };
                 let blob = AsyncDropTokioMutex::into_inner(blob);
-                FsBlob::remove(blob).await.map_err(Arc::new)
+                FsBlob::remove(blob).await.map_err(Arc::new)?;
+                Ok(RemoveResult::SuccessfullyRemoved)
             },
         ) {
             RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
@@ -68,9 +75,6 @@ where
                     .map_err(|err| FsError::InternalError {
                         error: anyhow::anyhow!("Error during blob removal: {err}"),
                     })
-            }
-            RequestImmediateDropResult::NotLoaded => {
-                panic!("This can't happen because we hold the LoadedBlobGuard");
             }
             RequestImmediateDropResult::AlreadyDroppingWithoutImmediateDrop { .. } => {
                 panic!("This can't happen because we hold the LoadedBlobGuard");

@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
@@ -66,7 +66,7 @@ where
         }
     }
 
-    pub async fn remove(this: AsyncDropGuard<Self>) -> FsResult<()> {
+    pub async fn remove(this: AsyncDropGuard<Self>) -> FsResult<RemoveResult> {
         LoadedBlobGuard::remove(this.unsafe_into_inner_dont_drop().blob).await
     }
 }

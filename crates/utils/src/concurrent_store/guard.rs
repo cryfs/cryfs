@@ -12,23 +12,25 @@ use crate::{
 /// This ensures that the entry remains loaded while the guard is held,
 /// and unloads the entry when the last guard for a key is dropped.
 #[derive(Debug)]
-pub struct LoadedEntryGuard<K, V>
+pub struct LoadedEntryGuard<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
-    store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
+    store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, D>>>,
     key: K,
     value: AsyncDropGuard<AsyncDropArc<V>>,
 }
 
-impl<K, V> LoadedEntryGuard<K, V>
+impl<K, V, D> LoadedEntryGuard<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     pub(super) fn new(
-        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
+        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, D>>>,
         key: K,
         value: AsyncDropGuard<AsyncDropArc<V>>,
     ) -> AsyncDropGuard<Self> {
@@ -43,16 +45,17 @@ where
         &self.value
     }
 
-    pub fn store(&self) -> &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>> {
+    pub fn store(&self) -> &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, D>>> {
         &self.store
     }
 }
 
 #[async_trait]
-impl<K, V> AsyncDrop for LoadedEntryGuard<K, V>
+impl<K, V, D> AsyncDrop for LoadedEntryGuard<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     type Error = Error;
 

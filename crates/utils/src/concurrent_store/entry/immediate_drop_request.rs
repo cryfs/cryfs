@@ -9,9 +9,10 @@ use crate::{
 };
 
 /// Represents a request to immediately drop an entry that is currently loading or loaded.
-pub enum ImmediateDropRequest<V>
+pub enum ImmediateDropRequest<V, D>
 where
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     /// No immediate drop has been requested.
     NotRequested,
@@ -21,28 +22,29 @@ where
         /// This function is then expected to drop it.
         // TODO No Box<dyn> but impl Fn?
         drop_fn: Box<
-            dyn FnOnce(AsyncDropGuard<V>) -> BoxFuture<'static, Result<(), Arc<Error>>>
+            dyn FnOnce(Option<AsyncDropGuard<V>>) -> BoxFuture<'static, Result<D, Arc<Error>>>
                 + Send
                 + Sync,
         >,
         /// Sender to notify the requester when the drop is complete.
-        completion_sender: mr_oneshot_channel::Sender<Result<(), Arc<Error>>>,
+        completion_sender: mr_oneshot_channel::Sender<Result<D, Arc<Error>>>,
     },
 }
 
-impl<V> ImmediateDropRequest<V>
+impl<V, D> ImmediateDropRequest<V, D>
 where
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     /// Request an immediate drop of the entry.
     /// If an immediate drop has already been requested, returns a receiver to wait for the completion of that request.
     /// If no immediate drop has been requested yet, sets up the request with the provided drop function and returns a receiver to wait for its completion.
     pub fn request_immediate_drop_if_not_yet_requested<F>(
         &mut self,
-        drop_fn: impl FnOnce(AsyncDropGuard<V>) -> F + Send + Sync + 'static,
-    ) -> ImmediateDropRequestResponse
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
+    ) -> ImmediateDropRequestResponse<D>
     where
-        F: Future<Output = Result<(), Arc<Error>>> + Send,
+        F: Future<Output = Result<D, Arc<Error>>> + Send,
     {
         match self {
             ImmediateDropRequest::Requested {
@@ -65,7 +67,7 @@ where
 
     pub fn immediate_drop_requested(
         &self,
-    ) -> Option<mr_oneshot_channel::Receiver<Result<(), Arc<Error>>>> {
+    ) -> Option<mr_oneshot_channel::Receiver<Result<D, Arc<Error>>>> {
         match self {
             ImmediateDropRequest::Requested {
                 completion_sender, ..
@@ -75,11 +77,11 @@ where
     }
 }
 
-pub enum ImmediateDropRequestResponse {
+pub enum ImmediateDropRequestResponse<R> {
     Requested {
-        on_dropped: mr_oneshot_channel::Receiver<Result<(), Arc<Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<Result<R, Arc<Error>>>,
     },
     NotRequestedBecauseItWasAlreadyRequestedEarlier {
-        on_dropped: mr_oneshot_channel::Receiver<Result<(), Arc<Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<Result<R, Arc<Error>>>,
     },
 }

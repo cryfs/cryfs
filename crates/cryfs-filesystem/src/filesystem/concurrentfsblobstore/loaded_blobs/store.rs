@@ -8,23 +8,24 @@ use std::sync::Arc;
 
 use crate::filesystem::concurrentfsblobstore::loaded_blobs::guard::LoadedBlobGuard;
 use crate::filesystem::fsblobstore::{FsBlob, FsBlobStore};
-use cryfs_blobstore::{BlobId, BlobStore};
+use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex};
 
 #[derive(Debug)]
 pub struct LoadedBlobs<B>
 where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Here (and in other places using BlockId or BlobId as hash map/set key), use a faster hash function, e.g. just take the first 8 bytes of the id. Ids are already random.
-    loaded_blobs:
-        AsyncDropGuard<AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>>,
+    loaded_blobs: AsyncDropGuard<
+        AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, RemoveResult>>,
+    >,
 }
 
 impl<B> LoadedBlobs<B>
 where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new() -> AsyncDropGuard<Self> {
@@ -92,12 +93,35 @@ where
             .map(|v| v.map(LoadedBlobGuard::new))
     }
 
-    pub fn request_removal(&self, blob_id: BlobId) -> RequestRemovalResult {
+    pub fn request_removal(
+        &self,
+        blob_id: BlobId,
+        blobstore: &AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+    ) -> RequestRemovalResult {
+        let mut blobstore = AsyncDropArc::clone(blobstore);
         let request = self
             .loaded_blobs
-            .request_immediate_drop(blob_id, |blob| async move {
-                let blob = AsyncDropTokioMutex::into_inner(blob);
-                FsBlob::remove(blob).await.map_err(Arc::new)
+            .request_immediate_drop(blob_id, move |blob| async move {
+                if let Some(blob) = blob {
+                    let blob = AsyncDropTokioMutex::into_inner(blob);
+                    let remove_result = FsBlob::remove(blob).await.map_err(Arc::new);
+                    blobstore
+                        .async_drop()
+                        .await
+                        .map_err(|err| Arc::new(err.into()))?;
+                    remove_result?;
+                    Ok(RemoveResult::SuccessfullyRemoved)
+                } else {
+                    // The blob wasn't loaded, we can just remove it from the base store
+                    // We're doing this within the drop handler of `request_immediate_drop()`, because that gives us
+                    // exclusive access and blocks other tasks from loading this blob.
+                    let result = blobstore.remove_by_id(&blob_id).await.map_err(Arc::new);
+                    blobstore
+                        .async_drop()
+                        .await
+                        .map_err(|err| Arc::new(err.into()))?;
+                    result
+                }
             });
         match request {
             RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
@@ -108,7 +132,6 @@ where
                     on_removed: on_dropped,
                 }
             }
-            RequestImmediateDropResult::NotLoaded => RequestRemovalResult::NotLoaded,
             RequestImmediateDropResult::AlreadyDroppingWithoutImmediateDrop { future } => {
                 RequestRemovalResult::AlreadyDropping { future }
             }
@@ -119,7 +142,7 @@ where
 #[async_trait]
 impl<B> AsyncDrop for LoadedBlobs<B>
 where
-    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = anyhow::Error;
@@ -134,10 +157,8 @@ pub enum RequestRemovalResult {
     /// Removal request accepted
     RemovalRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_removed: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
+        on_removed: mr_oneshot_channel::Receiver<Result<RemoveResult, Arc<anyhow::Error>>>,
     },
-    /// Immediate drop request failed because the entry isn't loaded
-    NotLoaded,
     /// Removal failed because the entry is already in dropping state.
     AlreadyDropping {
         future: Shared<BoxFuture<'static, ()>>,

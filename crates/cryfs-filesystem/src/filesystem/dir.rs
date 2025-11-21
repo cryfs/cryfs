@@ -585,7 +585,14 @@ where
                     
                     let remove_result = ConcurrentFsBlob::remove(child_blob).await;
                     match remove_result {
-                        Ok(()) => Ok(()),
+                        Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
+                        Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                            Err(FsError::CorruptedFilesystem {
+                                message: format!(
+                                    "Removed entry {name} from directory but didn't find its blob {child_id:?} to remove"
+                                ),
+                            })
+                        }
                         Err(err) => {
                             log::error!("Error removing blob: {err:?}");
                             Err(FsError::UnknownError)

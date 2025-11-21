@@ -31,10 +31,16 @@ use crate::{mr_oneshot_channel, with_async_drop_2};
 /// Once the last task releases its reference, the object is asynchronously dropped.
 ///
 /// If any tasks want to load it while it is being dropped, they'll wait until dropping is complete, and then start a new loading operation.
-pub struct ConcurrentStore<K, V>
+///
+/// Parameters:
+/// * K: Key type for the entries in the store.
+/// * V: Value type for the entries in the store.
+/// * R: Result type for immediate drop requests.
+pub struct ConcurrentStore<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     /// [EntryState::Loading]:
     ///  * Loading of the entry is in progress, or has completed but we haven't updated the state yet.
@@ -55,17 +61,21 @@ where
     ///   * In both, [EntryState::Loading] and [EntryState::Loaded], if an immediate drop is requested, the flag `immediate_drop_requested` is set to true.
     ///   * If the flag is true, once the last current reader is done, the entry will be removed from the map and the user-provided callback function will be called with exclusive access, to do the remove.
     ///   * Also, any further tasks trying to load the entry while `immediate_drop_requested=true` will wait until all tasks with current access are done, and the user-defined callback is complete, so it'll be exclusive access, and only then execute.
-    pub(super) entries: Arc<Mutex<HashMap<K, EntryState<V>>>>,
+    pub(super) entries: Arc<Mutex<HashMap<K, EntryState<V, D>>>>,
+
+    _d: PhantomData<D>,
 }
-impl<K, V> ConcurrentStore<K, V>
+impl<K, V, D> ConcurrentStore<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     /// Create a new empty [ConcurrentStore].
     pub fn new() -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(ConcurrentStore {
             entries: Arc::new(Mutex::new(HashMap::new())),
+            _d: PhantomData,
         })
     }
 
@@ -118,7 +128,7 @@ where
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: K,
         value: AsyncDropGuard<V>,
-    ) -> AsyncDropGuard<LoadedEntryGuard<K, V>> {
+    ) -> AsyncDropGuard<LoadedEntryGuard<K, V, D>> {
         // We now have the newly assigned key and are fully loaded. Insert it into the map.
         let mut entries = this.entries.lock().unwrap();
         // No unfulfilled waiters, we just created it
@@ -142,7 +152,7 @@ where
         key: K,
         loading_fn_input: AsyncDropGuard<AsyncDropArc<I>>,
         mut loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> F + Send,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>, anyhow::Error>
+    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, D>>>, anyhow::Error>
     where
         F: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
         I: AsyncDrop + Debug + Send,
@@ -175,7 +185,6 @@ where
                     CloneOrCreateEntryStateResult::Dropping {
                         future,
                         loading_fn: returned_loading_fn,
-                        _k: _,
                         _r: _,
                         _i: _,
                     } => {
@@ -205,7 +214,7 @@ where
     pub async fn get_if_loading_or_loaded(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: &K,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>, anyhow::Error> {
+    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, D>>>, anyhow::Error> {
         let waiter = {
             let mut entries = this.entries.lock().unwrap();
             match entries.get_mut(key) {
@@ -231,7 +240,7 @@ where
         key: K,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         loading_fn: F,
-    ) -> CloneOrCreateEntryStateResult<K, V, F, R, I>
+    ) -> CloneOrCreateEntryStateResult<V, F, R, I, D>
     where
         F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send,
         R: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
@@ -262,7 +271,6 @@ where
                 },
                 EntryState::Dropping(state) => CloneOrCreateEntryStateResult::Dropping {
                     future: state.future().clone(),
-                    _k: PhantomData,
                     _r: PhantomData,
                     _i: PhantomData,
                     loading_fn,
@@ -284,7 +292,7 @@ where
         &self,
         key: K,
         loading_fn: impl Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
-    ) -> EntryStateLoading<V> {
+    ) -> EntryStateLoading<V, D> {
         let entries = Arc::clone(&self.entries);
         let loading_task = async move {
             // Run loading_fn concurrently, without a lock on `entries`.
@@ -332,16 +340,19 @@ where
     }
 
     /// Request immediate drop of the entry with the given key.
-    /// If the entry is loading or loaded, the immediate drop will be requested and a receiver for the result will be returned.
-    /// If the entry is already dropping, the existing dropping future will be returned.
-    /// If the entry is not loading, loaded or dropping, [RequestImmediateDropResult::NotLoaded] is returned.
+    /// * If the entry is loading or loaded, all further tasks wanting to load this key will be blocked from loading,
+    ///   and once all current tasks with access are complete, the given drop_fn will be executed with exclusive access to the entry,
+    ///   and the entry will be unloaded from the map. After drop_fn completes, other tasks can load it again.
+    /// * If the entry is not loaded, all tasks wanting to load this key will be blocked from loading,
+    ///   and the given drop_fn will be executed with a `None` value. After drop_fn completes, other tasks can load it again.
+    /// * If the entry is already dropping, the existing dropping future will be returned.
     pub fn request_immediate_drop<F>(
         &self,
         key: K,
-        drop_fn: impl FnOnce(AsyncDropGuard<V>) -> F + Send + Sync + 'static,
-    ) -> RequestImmediateDropResult
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
+    ) -> RequestImmediateDropResult<D>
     where
-        F: Future<Output = Result<(), Arc<Error>>> + Send,
+        F: Future<Output = Result<D, Arc<Error>>> + Send + 'static,
     {
         let mut entries = self.entries.lock().unwrap();
         match entries.entry(key) {
@@ -376,7 +387,28 @@ where
                     }
                 }
             },
-            Entry::Vacant(_) => RequestImmediateDropResult::NotLoaded,
+            Entry::Vacant(entry) => {
+                // The entry is not loaded or loading. Let's add a dummy entry to block other tasks from loading it while we execute drop_fn.
+                let (completion_sender, entry_receiver) = mr_oneshot_channel::channel();
+                let drop_future = self.make_drop_future_for_unloaded_entry(
+                    entry.key().clone(),
+                    drop_fn,
+                    completion_sender,
+                );
+                entry.insert(EntryState::Dropping(EntryStateDropping::new(
+                    drop_future.clone(),
+                )));
+
+                std::mem::drop(entries);
+
+                // In the other cases, we register the drop future to the loaded entry and it will be executed by that entry's unload logic.
+                // However, if no entry was loaded, then there is no unload to execute the drop future. We have to execute it ourselves.
+                tokio::task::spawn(drop_future);
+
+                RequestImmediateDropResult::ImmediateDropRequested {
+                    on_dropped: entry_receiver,
+                }
+            }
         }
     }
 
@@ -424,7 +456,8 @@ where
                         let EntryState::Loaded(loaded) = entry_state else {
                             unreachable!("We already checked the state above, it should be Loaded");
                         };
-                        let drop_future = self.make_drop_future(entry.key().clone(), loaded);
+                        let drop_future =
+                            self.make_drop_future_for_loaded_entry(entry.key().clone(), loaded);
                         *entry.get_mut() =
                             EntryState::Dropping(EntryStateDropping::new(drop_future.clone()));
                         Some(drop_future)
@@ -453,25 +486,14 @@ where
     /// Create a drop future that will drop the entry and remove it from the map.
     /// This is called when the last reference to the entry is dropped.
     /// The future will update the entries map itself, no need for the caller to do that.
-    fn make_drop_future(
+    fn make_drop_future_for_loaded_entry(
         &self,
         key: K,
-        loaded: EntryStateLoaded<V>,
+        loaded: EntryStateLoaded<V, D>,
     ) -> Shared<BoxFuture<'static, ()>> {
         let (immediate_drop_request, mut entry) = loaded.into_inner();
         let entries = Arc::clone(&self.entries);
         async move {
-            let remove_entry_fn = || async {
-                // Remove the entry from the map
-                let mut entries = entries.lock().unwrap();
-                let Some(entry) = entries.remove(&key) else {
-                    panic!("Entry with key {:?} was not found in the map", key);
-                };
-                let EntryState::Dropping { .. } = entry else {
-                    panic!("Entry with key {:?} is not in dropping state", key);
-                };
-            };
-
             // This will be awaited after the lock on entries is released, so we can concurrently drop
             // the entry without blocking other operations.
             match immediate_drop_request {
@@ -479,29 +501,75 @@ where
                     drop_fn,
                     completion_sender,
                 } => {
-                    // If immediate drop was requested, execute the removal
-                    let drop_result = drop_fn(entry).await;
-                    // Only now that drop_fn is complete, we remove the entry from the map and notify any tasks waiting for loading this entry.
-                    // This guarantees that drop_fn has exclusive access to entry.
-                    remove_entry_fn().await; // always remove the entry from the map, even if drop_fn failed
-                    completion_sender.send(drop_result);
+                    // An immediate drop was requested. Execute the user-provided drop function with exclusive access to the entry.
+                    Self::_execute_immediate_drop(
+                        entries,
+                        key,
+                        Some(entry),
+                        drop_fn,
+                        completion_sender,
+                    )
+                    .await;
                 }
                 ImmediateDropRequest::NotRequested => {
                     // otherwise just drop the entry
                     entry.async_drop().await.unwrap(); // TODO No unwrap
-                    remove_entry_fn().await;
+                    Self::_remove_dropping_entry(entries, &key).await; // always remove the entry from the map, even if drop_fn failed
                 }
             }
         }
         .boxed()
         .shared()
     }
+
+    fn make_drop_future_for_unloaded_entry<F>(
+        &self,
+        key: K,
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + 'static,
+        completion_sender: mr_oneshot_channel::Sender<Result<D, Arc<Error>>>,
+    ) -> Shared<BoxFuture<'static, ()>>
+    where
+        F: Future<Output = Result<D, Arc<Error>>> + Send + 'static,
+    {
+        let entries = Arc::clone(&self.entries);
+        Self::_execute_immediate_drop(entries, key, None, drop_fn, completion_sender)
+            .boxed()
+            .shared()
+    }
+
+    async fn _execute_immediate_drop<F>(
+        entries: Arc<Mutex<HashMap<K, EntryState<V, D>>>>,
+        key: K,
+        entry: Option<AsyncDropGuard<V>>,
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F,
+        completion_sender: mr_oneshot_channel::Sender<Result<D, Arc<Error>>>,
+    ) where
+        F: Future<Output = Result<D, Arc<Error>>>,
+    {
+        // Execute drop_fn without holding the lock on entries
+        let drop_result = drop_fn(entry).await;
+        // Only now that drop_fn is complete, we remove the entry from the map and notify any tasks waiting for loading this entry.
+        // This guarantees that drop_fn has exclusive access to entry.
+        Self::_remove_dropping_entry(entries, &key).await; // always remove the entry from the map, even if drop_fn failed
+        completion_sender.send(drop_result);
+    }
+
+    async fn _remove_dropping_entry(entries: Arc<Mutex<HashMap<K, EntryState<V, D>>>>, key: &K) {
+        let mut entries = entries.lock().unwrap();
+        let Some(entry) = entries.remove(key) else {
+            panic!("Entry with key {:?} was not found in the map", key);
+        };
+        let EntryState::Dropping { .. } = entry else {
+            panic!("Entry with key {:?} is not in dropping state", key);
+        };
+    }
 }
 
-impl<K, V> Debug for ConcurrentStore<K, V>
+impl<K, V, D> Debug for ConcurrentStore<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ConcurrentStore").finish()
@@ -509,10 +577,11 @@ where
 }
 
 #[async_trait]
-impl<K, V> AsyncDrop for ConcurrentStore<K, V>
+impl<K, V, D> AsyncDrop for ConcurrentStore<K, V, D>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     type Error = Error;
 
@@ -527,13 +596,13 @@ where
 
 /// Basically the same as [EntryState], but the [Self::Dropping] state carries an additional member `loading_fn` so the `FnOnce` can be returned from
 /// the method if not used.
-enum CloneOrCreateEntryStateResult<K, V, F, R, I>
+enum CloneOrCreateEntryStateResult<V, F, R, I, D>
 where
-    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
     F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send,
     R: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
     I: AsyncDrop + Debug + Send,
+    D: Clone + Debug + Send + Sync + 'static,
 {
     Loading {
         loading_result: EntryLoadingWaiter,
@@ -543,27 +612,28 @@ where
     },
     Dropping {
         future: Shared<BoxFuture<'static, ()>>,
-        _k: PhantomData<K>,
         _r: PhantomData<R>,
         _i: PhantomData<I>,
         loading_fn: F,
     },
     /// EntryState is either Loading or Loaded, but an immediate drop was requested. We need to block further accesses until dropping is complete.
     ImmediateDropRequested {
-        on_dropped: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<Result<D, Arc<anyhow::Error>>>,
         loading_fn: F,
     },
 }
 
 /// Result of requesting immediate drop of an entry.
-pub enum RequestImmediateDropResult {
-    /// Immediate drop request accepted
+pub enum RequestImmediateDropResult<D>
+where
+    D: Clone + Debug + Send + Sync + 'static,
+{
+    /// Immediate drop request accepted. The entry was either loading or loaded and the specified drop function will be executed with the entry,
+    /// or the entry was not loaded and the specified drop function will be executed with None.
     ImmediateDropRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_dropped: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<Result<D, Arc<anyhow::Error>>>,
     },
-    /// Immediate drop request failed because the entry isn't loaded
-    NotLoaded,
     /// Immediate drop request failed because the entry is already in dropping state.
     /// This drop happened by the last task giving up its guard, not by an immediate drop request.
     AlreadyDroppingWithoutImmediateDrop {
@@ -572,6 +642,6 @@ pub enum RequestImmediateDropResult {
     /// Immediate drop request failed because the entry is already in dropping state
     /// due to an earlier immediate drop request.
     AlreadyDroppingFromEarlierImmediateDrop {
-        on_dropped: mr_oneshot_channel::Receiver<Result<(), Arc<anyhow::Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<Result<D, Arc<anyhow::Error>>>,
     },
 }

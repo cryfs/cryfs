@@ -5,7 +5,7 @@ pub enum TryCreateResult {
     NotCreatedBecauseBlockIdAlreadyExists,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[must_use]
 pub enum RemoveResult {
     SuccessfullyRemoved,

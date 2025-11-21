@@ -126,22 +126,17 @@ where
 
     pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult> {
         loop {
-            match self.loaded_blobs.request_removal(*id) {
+            match self.loaded_blobs.request_removal(*id, &self.blobstore) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {
                     // Wait until the blob is removed
-                    on_removed
+                    let remove_result = on_removed
                         .recv()
                         .await
                         .map_err(|error: RecvError| FsError::InternalError {
                             error: error.into(),
                         })?
-                        .map_err(|err| anyhow::anyhow!("Removal failed: {err:?}"))?;
-                    return Ok(RemoveResult::SuccessfullyRemoved);
-                }
-                RequestRemovalResult::NotLoaded => {
-                    // Blob is not loaded, so we can remove it directly
-                    // TODO Is this a race condition? What if it was loaded again in the meantime?
-                    return self.blobstore.remove_by_id(id).await;
+                        .map_err(|err| anyhow::anyhow!("Removal failed: {err:?}"));
+                    return remove_result;
                 }
                 RequestRemovalResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry
