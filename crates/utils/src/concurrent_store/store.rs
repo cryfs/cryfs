@@ -352,7 +352,7 @@ where
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> RequestImmediateDropResult<D>
     where
-        F: Future<Output = Result<D, Arc<Error>>> + Send + 'static,
+        F: Future<Output = D> + Send + 'static,
     {
         let mut entries = self.entries.lock().unwrap();
         match entries.entry(key) {
@@ -526,10 +526,10 @@ where
         &self,
         key: K,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + 'static,
-        completion_sender: mr_oneshot_channel::Sender<Result<D, Arc<Error>>>,
+        completion_sender: mr_oneshot_channel::Sender<D>,
     ) -> Shared<BoxFuture<'static, ()>>
     where
-        F: Future<Output = Result<D, Arc<Error>>> + Send + 'static,
+        F: Future<Output = D> + Send + 'static,
     {
         let entries = Arc::clone(&self.entries);
         Self::_execute_immediate_drop(entries, key, None, drop_fn, completion_sender)
@@ -542,9 +542,9 @@ where
         key: K,
         entry: Option<AsyncDropGuard<V>>,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F,
-        completion_sender: mr_oneshot_channel::Sender<Result<D, Arc<Error>>>,
+        completion_sender: mr_oneshot_channel::Sender<D>,
     ) where
-        F: Future<Output = Result<D, Arc<Error>>>,
+        F: Future<Output = D>,
     {
         // Execute drop_fn without holding the lock on entries
         let drop_result = drop_fn(entry).await;
@@ -618,7 +618,7 @@ where
     },
     /// EntryState is either Loading or Loaded, but an immediate drop was requested. We need to block further accesses until dropping is complete.
     ImmediateDropRequested {
-        on_dropped: mr_oneshot_channel::Receiver<Result<D, Arc<anyhow::Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<D>,
         loading_fn: F,
     },
 }
@@ -632,7 +632,7 @@ where
     /// or the entry was not loaded and the specified drop function will be executed with None.
     ImmediateDropRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_dropped: mr_oneshot_channel::Receiver<Result<D, Arc<anyhow::Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<D>,
     },
     /// Immediate drop request failed because the entry is already in dropping state.
     /// This drop happened by the last task giving up its guard, not by an immediate drop request.
@@ -642,6 +642,6 @@ where
     /// Immediate drop request failed because the entry is already in dropping state
     /// due to an earlier immediate drop request.
     AlreadyDroppingFromEarlierImmediateDrop {
-        on_dropped: mr_oneshot_channel::Receiver<Result<D, Arc<anyhow::Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<D>,
     },
 }

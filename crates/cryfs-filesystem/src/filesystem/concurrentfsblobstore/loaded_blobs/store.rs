@@ -19,7 +19,13 @@ where
 {
     // TODO Here (and in other places using BlockId or BlobId as hash map/set key), use a faster hash function, e.g. just take the first 8 bytes of the id. Ids are already random.
     loaded_blobs: AsyncDropGuard<
-        AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, RemoveResult>>,
+        AsyncDropArc<
+            ConcurrentStore<
+                BlobId,
+                AsyncDropTokioMutex<FsBlob<B>>,
+                Result<RemoveResult, Arc<anyhow::Error>>,
+            >,
+        >,
     >,
 }
 

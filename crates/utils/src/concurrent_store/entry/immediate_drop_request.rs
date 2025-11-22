@@ -1,7 +1,5 @@
-use anyhow::Error;
 use futures::{FutureExt as _, future::BoxFuture};
 use std::fmt::Debug;
-use std::sync::Arc;
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -21,13 +19,9 @@ where
         /// The entry gets sent here once all other references to it are gone and we have exclusive access to it.
         /// This function is then expected to drop it.
         // TODO No Box<dyn> but impl Fn?
-        drop_fn: Box<
-            dyn FnOnce(Option<AsyncDropGuard<V>>) -> BoxFuture<'static, Result<D, Arc<Error>>>
-                + Send
-                + Sync,
-        >,
+        drop_fn: Box<dyn FnOnce(Option<AsyncDropGuard<V>>) -> BoxFuture<'static, D> + Send + Sync>,
         /// Sender to notify the requester when the drop is complete.
-        completion_sender: mr_oneshot_channel::Sender<Result<D, Arc<Error>>>,
+        completion_sender: mr_oneshot_channel::Sender<D>,
     },
 }
 
@@ -44,7 +38,7 @@ where
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> ImmediateDropRequestResponse<D>
     where
-        F: Future<Output = Result<D, Arc<Error>>> + Send,
+        F: Future<Output = D> + Send,
     {
         match self {
             ImmediateDropRequest::Requested {
@@ -65,9 +59,7 @@ where
         }
     }
 
-    pub fn immediate_drop_requested(
-        &self,
-    ) -> Option<mr_oneshot_channel::Receiver<Result<D, Arc<Error>>>> {
+    pub fn immediate_drop_requested(&self) -> Option<mr_oneshot_channel::Receiver<D>> {
         match self {
             ImmediateDropRequest::Requested {
                 completion_sender, ..
@@ -77,11 +69,11 @@ where
     }
 }
 
-pub enum ImmediateDropRequestResponse<R> {
+pub enum ImmediateDropRequestResponse<D> {
     Requested {
-        on_dropped: mr_oneshot_channel::Receiver<Result<R, Arc<Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<D>,
     },
     NotRequestedBecauseItWasAlreadyRequestedEarlier {
-        on_dropped: mr_oneshot_channel::Receiver<Result<R, Arc<Error>>>,
+        on_dropped: mr_oneshot_channel::Receiver<D>,
     },
 }

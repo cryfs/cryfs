@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use anyhow::Error;
 use futures::{
     FutureExt as _,
     future::{BoxFuture, Shared},
@@ -77,15 +76,13 @@ where
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> ImmediateDropRequestResponse<D>
     where
-        F: Future<Output = Result<D, Arc<Error>>> + Send,
+        F: Future<Output = D> + Send,
     {
         self.immediate_drop_request
             .request_immediate_drop_if_not_yet_requested(drop_fn)
     }
 
-    pub fn immediate_drop_requested(
-        &self,
-    ) -> Option<mr_oneshot_channel::Receiver<Result<D, Arc<Error>>>> {
+    pub fn immediate_drop_requested(&self) -> Option<mr_oneshot_channel::Receiver<D>> {
         self.immediate_drop_request.immediate_drop_requested()
     }
 
