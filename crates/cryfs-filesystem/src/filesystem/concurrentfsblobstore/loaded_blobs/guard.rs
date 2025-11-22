@@ -56,12 +56,12 @@ where
                     Ok(RemoveResult::SuccessfullyRemoved)
                 },
             ) {
-                RequestImmediateDropResult::ImmediateDropRequested { on_dropped } => {
+                RequestImmediateDropResult::ImmediateDropRequested { drop_result } => {
                     // Drop the blob so we don't hold a lock on it, which would prevent the removal. Removal waits until all readers relinquished their blob.
                     this.async_drop().await?;
                     std::mem::drop(this);
                     // Wait until the blob is removed. If there are other readers, this will wait.
-                    return on_dropped
+                    return drop_result
                         .recv()
                         .await
                         .map_err(|error: RecvError| FsError::InternalError {

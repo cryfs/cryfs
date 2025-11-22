@@ -351,13 +351,22 @@ where
         D: Send + 'static,
         F: Future<Output = D> + Send + 'static,
     {
+        let (drop_result_sender, drop_result_receiver) = mr_oneshot_channel::channel(); // TODO normal oneshot channel should be enough here now
+        let drop_fn = move |value| {
+            async move {
+                let drop_fn_result = drop_fn(value).await;
+                drop_result_sender.send(drop_fn_result);
+            }
+            .boxed()
+        };
+
         let mut entries = self.entries.lock().unwrap();
         match entries.entry(key) {
             Entry::Occupied(mut entry) => match entry.get_mut() {
                 EntryState::Loaded(loaded) => {
                     match loaded.request_immediate_drop_if_not_yet_requested(drop_fn) {
-                        ImmediateDropRequestResponse::Requested { on_dropped } => {
-                            RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
+                        ImmediateDropRequestResponse::Requested => {
+                            RequestImmediateDropResult::ImmediateDropRequested { drop_result: drop_result_receiver }
                         }
                         ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
                             on_earlier_request_complete,
@@ -368,8 +377,8 @@ where
                 }
                 EntryState::Loading(loading) => {
                     match loading.request_immediate_drop_if_not_yet_requested(drop_fn) {
-                            ImmediateDropRequestResponse::Requested { on_dropped } => {
-                            RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
+                        ImmediateDropRequestResponse::Requested => {
+                            RequestImmediateDropResult::ImmediateDropRequested { drop_result: drop_result_receiver }
                         }
                         ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
                             on_earlier_request_complete,
@@ -384,14 +393,6 @@ where
             },
             Entry::Vacant(entry) => {
                 // The entry is not loaded or loading. Let's add a dummy entry to block other tasks from loading it while we execute drop_fn.
-                let (entry_sender, entry_receiver) = mr_oneshot_channel::channel();
-                let drop_fn = move |value| {
-                    async move {
-                        let drop_fn_result = drop_fn(value).await;
-                        entry_sender.send(drop_fn_result);
-                    }
-                    .boxed()
-                };
                 let drop_future =
                     self.make_drop_future_for_unloaded_entry(entry.key().clone(), drop_fn);
                 entry.insert(EntryState::Dropping(EntryStateDropping::new(
@@ -405,7 +406,7 @@ where
                 tokio::task::spawn(drop_future);
 
                 RequestImmediateDropResult::ImmediateDropRequested {
-                    on_dropped: entry_receiver,
+                    drop_result: drop_result_receiver,
                 }
             }
         }
@@ -498,7 +499,7 @@ where
             match immediate_drop_request {
                 ImmediateDropRequest::Requested {
                     drop_fn,
-                    on_dropped,
+                    on_dropped: _,
                 } => {
                     // An immediate drop was requested. Execute the user-provided drop function with exclusive access to the entry.
                     Self::_execute_immediate_drop(entries, key, Some(entry), drop_fn).await;
@@ -618,7 +619,7 @@ where
     /// or the entry was not loaded and the specified drop function will be executed with None.
     ImmediateDropRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_dropped: mr_oneshot_channel::Receiver<D>,
+        drop_result: mr_oneshot_channel::Receiver<D>,
     },
     /// Immediate drop request failed because the entry is already in dropping state.
     /// This could be from the last task giving up its guard, or by an earlier immediate drop request.

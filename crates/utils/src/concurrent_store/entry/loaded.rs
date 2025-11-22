@@ -73,13 +73,12 @@ where
         (self.immediate_drop_request, entry)
     }
 
-    pub fn request_immediate_drop_if_not_yet_requested<D, F>(
+    pub fn request_immediate_drop_if_not_yet_requested<F>(
         &mut self,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
-    ) -> ImmediateDropRequestResponse<D>
+    ) -> ImmediateDropRequestResponse
     where
-        D: Send + 'static,
-        F: Future<Output = D> + Send,
+        F: Future<Output = ()> + Send,
     {
         self.immediate_drop_request
             .request_immediate_drop_if_not_yet_requested(drop_fn)

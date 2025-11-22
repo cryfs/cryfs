@@ -123,9 +123,9 @@ where
                 }
             });
         match request {
-            RequestImmediateDropResult::ImmediateDropRequested { on_dropped } => {
+            RequestImmediateDropResult::ImmediateDropRequested { drop_result } => {
                 RequestRemovalResult::RemovalRequested {
-                    on_removed: on_dropped,
+                    on_removed: drop_result,
                 }
             }
             RequestImmediateDropResult::AlreadyDropping { future } => {

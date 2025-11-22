@@ -7,7 +7,6 @@ use std::fmt::Debug;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     event::Event,
-    mr_oneshot_channel,
 };
 
 /// Represents a request to immediately drop an entry that is currently loading or loaded.
@@ -35,13 +34,12 @@ where
     /// Request an immediate drop of the entry.
     /// If an immediate drop has already been requested, returns a receiver to wait for the completion of that request.
     /// If no immediate drop has been requested yet, sets up the request with the provided drop function and returns a receiver to wait for its completion.
-    pub fn request_immediate_drop_if_not_yet_requested<D, F>(
+    pub fn request_immediate_drop_if_not_yet_requested<F>(
         &mut self,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
-    ) -> ImmediateDropRequestResponse<D>
+    ) -> ImmediateDropRequestResponse
     where
-        F: Future<Output = D> + Send,
-        D: Send + 'static,
+        F: Future<Output = ()> + Send,
     {
         match self {
             ImmediateDropRequest::Requested { on_dropped, .. } => {
@@ -53,23 +51,19 @@ where
                 }
             }
             ImmediateDropRequest::NotRequested => {
-                let (entry_sender, entry_receiver) = mr_oneshot_channel::channel(); // TODO normal oneshot channel should be enough here now
                 let on_dropped = Event::new();
                 let on_dropped_clone = on_dropped.clone();
                 *self = ImmediateDropRequest::Requested {
                     drop_fn: Box::new(move |i| {
                         async move {
-                            let drop_fn_result = drop_fn(i).await;
-                            entry_sender.send(drop_fn_result);
+                            drop_fn(i).await;
                             on_dropped_clone.trigger();
                         }
                         .boxed()
                     }),
-                    on_dropped,
+                    on_dropped: on_dropped,
                 };
-                ImmediateDropRequestResponse::Requested {
-                    on_dropped: entry_receiver,
-                }
+                ImmediateDropRequestResponse::Requested
             }
         }
     }
@@ -82,10 +76,8 @@ where
     }
 }
 
-pub enum ImmediateDropRequestResponse<D> {
-    Requested {
-        on_dropped: mr_oneshot_channel::Receiver<D>,
-    },
+pub enum ImmediateDropRequestResponse {
+    Requested,
     NotRequestedBecauseItWasAlreadyRequestedEarlier {
         on_earlier_request_complete: Shared<BoxFuture<'static, ()>>,
     },
