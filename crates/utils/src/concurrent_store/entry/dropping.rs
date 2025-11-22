@@ -4,6 +4,7 @@ use futures::{
 };
 
 pub struct EntryStateDropping {
+    // TODO Would an Event be enough here or do we actually benefit from the shared future?
     future: Shared<BoxFuture<'static, ()>>,
 }
 

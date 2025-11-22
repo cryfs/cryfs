@@ -410,6 +410,7 @@ where
 
                 // In the other cases, we register the drop future to the loaded entry and it will be executed by that entry's unload logic.
                 // However, if no entry was loaded, then there is no unload to execute the drop future. We have to execute it ourselves.
+                // TODO Can we find a way to not spawn a task, but have the caller drive the execution of the future?
                 tokio::task::spawn(drop_future);
 
                 RequestImmediateDropResult::ImmediateDropRequested {
