@@ -2,7 +2,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_rustfs::FsError;
 use cryfs_utils::concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
-use cryfs_utils::mr_oneshot_channel;
 use futures::future::{BoxFuture, Shared};
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -153,7 +152,7 @@ pub enum RequestRemovalResult {
     /// Removal request accepted
     RemovalRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_removed: mr_oneshot_channel::Receiver<Result<RemoveResult, Arc<FsError>>>,
+        on_removed: tokio::sync::oneshot::Receiver<Result<RemoveResult, Arc<FsError>>>,
     },
     /// Removal failed because the entry is already in dropping state.
     AlreadyDropping {

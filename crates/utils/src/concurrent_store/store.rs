@@ -18,11 +18,11 @@ use crate::concurrent_store::entry::{
 };
 use crate::concurrent_store::guard::LoadedEntryGuard;
 use crate::event::Event;
+use crate::with_async_drop_2;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::entry::EntryState,
 };
-use crate::{mr_oneshot_channel, with_async_drop_2};
 
 // TODO This is currently not cancellation safe. If a task waiting for a blob to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 
@@ -348,14 +348,21 @@ where
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> RequestImmediateDropResult<D>
     where
-        D: Send + 'static,
+        D: Debug + Send + 'static,
         F: Future<Output = D> + Send + 'static,
     {
-        let (drop_result_sender, drop_result_receiver) = mr_oneshot_channel::channel(); // TODO normal oneshot channel should be enough here now
+        let (drop_result_sender, drop_result_receiver) = tokio::sync::oneshot::channel();
+        let key_clone = key.clone();
         let drop_fn = move |value| {
             async move {
                 let drop_fn_result = drop_fn(value).await;
-                drop_result_sender.send(drop_fn_result);
+                if let Err(err) = drop_result_sender.send(drop_fn_result) {
+                    log::warn!(
+                        "Failed to send immediate drop result for entry with key {:?}: {:?}",
+                        key_clone,
+                        err
+                    );
+                }
             }
             .boxed()
         };
@@ -619,7 +626,7 @@ where
     /// or the entry was not loaded and the specified drop function will be executed with None.
     ImmediateDropRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        drop_result: mr_oneshot_channel::Receiver<D>,
+        drop_result: tokio::sync::oneshot::Receiver<D>,
     },
     /// Immediate drop request failed because the entry is already in dropping state.
     /// This could be from the last task giving up its guard, or by an earlier immediate drop request.

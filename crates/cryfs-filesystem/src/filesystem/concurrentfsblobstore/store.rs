@@ -3,11 +3,11 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_rustfs::FsError;
 use std::{fmt::Debug, sync::Arc};
+use tokio::sync::oneshot::error::RecvError;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    mr_oneshot_channel::RecvError,
     with_async_drop_2,
 };
 
@@ -129,11 +129,12 @@ where
             match self.loaded_blobs.request_removal(*id, &self.blobstore) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {
                     // Wait until the blob is removed
-                    let remove_result = on_removed.recv().await.map_err(|error: RecvError| {
-                        FsError::InternalError {
-                            error: error.into(),
-                        }
-                    })?;
+                    let remove_result =
+                        on_removed
+                            .await
+                            .map_err(|error: RecvError| FsError::InternalError {
+                                error: error.into(),
+                            })?;
                     return remove_result;
                 }
                 RequestRemovalResult::AlreadyDropping { future } => {
