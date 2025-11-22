@@ -17,13 +17,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    loaded_blob: AsyncDropGuard<
-        LoadedEntryGuard<
-            BlobId,
-            AsyncDropTokioMutex<FsBlob<B>>,
-            Result<RemoveResult, Arc<FsError>>,
-        >,
-    >,
+    loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
 }
 
 impl<B> LoadedBlobGuard<B>
@@ -32,13 +26,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub(super) fn new(
-        loaded_blob: AsyncDropGuard<
-            LoadedEntryGuard<
-                BlobId,
-                AsyncDropTokioMutex<FsBlob<B>>,
-                Result<RemoveResult, Arc<FsError>>,
-            >,
-        >,
+        loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { loaded_blob })
     }
@@ -79,7 +67,7 @@ where
                         .map_err(|error: RecvError| FsError::InternalError {
                             error: error.into(),
                         })?
-                        .map_err(|err| FsError::InternalError {
+                        .map_err(|err: Arc<FsError>| FsError::InternalError {
                             error: anyhow::anyhow!("Error during blob removal: {err}"),
                         });
                 }

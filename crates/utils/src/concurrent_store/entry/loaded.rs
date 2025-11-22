@@ -6,13 +6,12 @@ use crate::{
         immediate_drop_request::{ImmediateDropRequest, ImmediateDropRequestResponse},
         loading::EntryStateLoading,
     },
-    mr_oneshot_channel,
+    event::Event,
 };
 
-pub struct EntryStateLoaded<V, D>
+pub struct EntryStateLoaded<V>
 where
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    D: Clone + Debug + Send + Sync + 'static,
 {
     entry: AsyncDropGuard<AsyncDropArc<V>>,
     /// Number of tasks that started waiting for this entry when it was in [Entry::Loading],
@@ -21,17 +20,16 @@ where
     /// If this is non-zero, then we shouldn't prune the entry yet even if the refcount is zero.
     num_unfulfilled_waiters: usize,
     /// If ImmediateDropRequest::Requested: While we're loading, another thread triggered an immediate drop request for this entry. Don't allow further loaders, and when this is unloaded, call the triggering thread's callback with exclusive access.
-    immediate_drop_request: ImmediateDropRequest<V, D>,
+    immediate_drop_request: ImmediateDropRequest<V>,
 }
 
-impl<V, D> EntryStateLoaded<V, D>
+impl<V> EntryStateLoaded<V>
 where
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    D: Clone + Debug + Send + Sync + 'static,
 {
     pub fn new_from_just_finished_loading(
         entry: AsyncDropGuard<V>,
-        loading: EntryStateLoading<V, D>,
+        loading: EntryStateLoading<V>,
     ) -> Self {
         EntryStateLoaded {
             entry: AsyncDropArc::new(entry),
@@ -66,7 +64,7 @@ where
         self.num_unfulfilled_waiters + AsyncDropArc::strong_count(&self.entry) - 1
     }
 
-    pub fn into_inner(self) -> (ImmediateDropRequest<V, D>, AsyncDropGuard<V>) {
+    pub fn into_inner(self) -> (ImmediateDropRequest<V>, AsyncDropGuard<V>) {
         assert!(
             self.num_unfulfilled_waiters == 0,
             "Cannot consume EntryStateLoaded while there are unfulfilled waiters"
@@ -75,18 +73,19 @@ where
         (self.immediate_drop_request, entry)
     }
 
-    pub fn request_immediate_drop_if_not_yet_requested<F>(
+    pub fn request_immediate_drop_if_not_yet_requested<D, F>(
         &mut self,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> ImmediateDropRequestResponse<D>
     where
+        D: Send + 'static,
         F: Future<Output = D> + Send,
     {
         self.immediate_drop_request
             .request_immediate_drop_if_not_yet_requested(drop_fn)
     }
 
-    pub fn immediate_drop_requested(&self) -> Option<mr_oneshot_channel::Receiver<D>> {
+    pub fn immediate_drop_requested(&self) -> Option<&Event> {
         self.immediate_drop_request.immediate_drop_requested()
     }
 }

@@ -32,15 +32,14 @@ impl EntryLoadingWaiter {
     /// Wait until the entry is loaded, and return a guard for the loaded entry.
     /// If the entry was not found, return None.
     /// If an error occurred while loading, return the error.
-    pub async fn wait_until_loaded<K, V, D>(
+    pub async fn wait_until_loaded<K, V>(
         mut self,
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, D>>>,
+        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
         key: K,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, D>>>>
+    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>>
     where
         K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
         V: AsyncDrop + Debug + Send + Sync + 'static,
-        D: Clone + Debug + Send + Sync + 'static,
     {
         match self.loading_result.take().expect("Already dropped").await {
             LoadingResult::Loaded => {
@@ -60,14 +59,13 @@ impl EntryLoadingWaiter {
         }
     }
 
-    fn _finalize_waiter<K, V, D>(
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, D>>>,
+    fn _finalize_waiter<K, V>(
+        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
         key: K,
-    ) -> AsyncDropGuard<LoadedEntryGuard<K, V, D>>
+    ) -> AsyncDropGuard<LoadedEntryGuard<K, V>>
     where
         K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
         V: AsyncDrop + Debug + Send + Sync + 'static,
-        D: Clone + Debug + Send + Sync + 'static,
     {
         // This is not a race condition with dropping, i.e. the entry can't be in dropping state yet, because we are an "unfulfilled waiter",
         // i.e. the entry cannot be dropped until we decrease the count below.
