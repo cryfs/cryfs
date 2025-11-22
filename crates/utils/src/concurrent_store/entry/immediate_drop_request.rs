@@ -1,4 +1,7 @@
-use futures::{FutureExt as _, future::BoxFuture};
+use futures::{
+    FutureExt as _,
+    future::{BoxFuture, Shared},
+};
 use std::fmt::Debug;
 
 use crate::{
@@ -43,9 +46,19 @@ where
         match self {
             ImmediateDropRequest::Requested {
                 completion_sender, ..
-            } => ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
-                on_dropped: completion_sender.subscribe(),
-            },
+            } => {
+                let receiver = completion_sender.subscribe();
+                ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
+                    on_earlier_request_complete: async move {
+                        receiver
+                            .recv()
+                            .await
+                            .expect("Sender was dropped before sending completion");
+                    }
+                    .boxed()
+                    .shared(),
+                }
+            }
             ImmediateDropRequest::NotRequested => {
                 let (completion_sender, entry_receiver) = mr_oneshot_channel::channel();
                 *self = ImmediateDropRequest::Requested {
@@ -74,6 +87,6 @@ pub enum ImmediateDropRequestResponse<D> {
         on_dropped: mr_oneshot_channel::Receiver<D>,
     },
     NotRequestedBecauseItWasAlreadyRequestedEarlier {
-        on_dropped: mr_oneshot_channel::Receiver<D>,
+        on_earlier_request_complete: Shared<BoxFuture<'static, ()>>,
     },
 }

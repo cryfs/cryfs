@@ -363,9 +363,9 @@ where
                             RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
                         }
                         ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
-                            on_dropped,
+                            on_earlier_request_complete,
                         } => {
-                            RequestImmediateDropResult::AlreadyDroppingFromEarlierImmediateDrop { on_dropped }
+                            RequestImmediateDropResult::AlreadyDropping { future: on_earlier_request_complete }
                         },
                     }
                 }
@@ -375,17 +375,15 @@ where
                             RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
                         }
                         ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
-                            on_dropped,
+                            on_earlier_request_complete,
                         } => {
-                            RequestImmediateDropResult::AlreadyDroppingFromEarlierImmediateDrop { on_dropped }
+                            RequestImmediateDropResult::AlreadyDropping { future: on_earlier_request_complete }
                         },
                         }
                 }
-                EntryState::Dropping(dropping) => {
-                    RequestImmediateDropResult::AlreadyDroppingWithoutImmediateDrop {
-                        future: dropping.future().clone(),
-                    }
-                }
+                EntryState::Dropping(dropping) => RequestImmediateDropResult::AlreadyDropping {
+                    future: dropping.future().clone(),
+                },
             },
             Entry::Vacant(entry) => {
                 // The entry is not loaded or loading. Let's add a dummy entry to block other tasks from loading it while we execute drop_fn.
@@ -635,13 +633,8 @@ where
         on_dropped: mr_oneshot_channel::Receiver<D>,
     },
     /// Immediate drop request failed because the entry is already in dropping state.
-    /// This drop happened by the last task giving up its guard, not by an immediate drop request.
-    AlreadyDroppingWithoutImmediateDrop {
+    /// This could be from the last task giving up its guard, or by an earlier immediate drop request.
+    AlreadyDropping {
         future: Shared<BoxFuture<'static, ()>>,
-    },
-    /// Immediate drop request failed because the entry is already in dropping state
-    /// due to an earlier immediate drop request.
-    AlreadyDroppingFromEarlierImmediateDrop {
-        on_dropped: mr_oneshot_channel::Receiver<D>,
     },
 }

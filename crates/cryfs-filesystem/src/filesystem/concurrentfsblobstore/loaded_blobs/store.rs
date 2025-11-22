@@ -130,15 +130,12 @@ where
                 }
             });
         match request {
-            RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
-            // An earlier immediate drop result can only be a remove request, because that's the only scenario in which we request immediate drops.
-            // So we're fine and that earlier request will remove it for us.
-            | RequestImmediateDropResult::AlreadyDroppingFromEarlierImmediateDrop { on_dropped } => {
+            RequestImmediateDropResult::ImmediateDropRequested { on_dropped } => {
                 RequestRemovalResult::RemovalRequested {
                     on_removed: on_dropped,
                 }
             }
-            RequestImmediateDropResult::AlreadyDroppingWithoutImmediateDrop { future } => {
+            RequestImmediateDropResult::AlreadyDropping { future } => {
                 RequestRemovalResult::AlreadyDropping { future }
             }
         }

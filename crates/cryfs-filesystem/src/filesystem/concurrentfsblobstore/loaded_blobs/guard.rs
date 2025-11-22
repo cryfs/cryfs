@@ -56,37 +56,38 @@ where
     }
 
     pub async fn remove(mut this: AsyncDropGuard<Self>) -> FsResult<RemoveResult> {
-        match this.loaded_blob.store().request_immediate_drop(
-            *this.loaded_blob.key(),
-            |blob| async move {
-                let Some(blob) = blob else {
-                    panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
-                };
-                let blob = AsyncDropTokioMutex::into_inner(blob);
-                FsBlob::remove(blob).await.map_err(|error| FsError::InternalError { error })?;
-                Ok(RemoveResult::SuccessfullyRemoved)
-            },
-        ) {
-            RequestImmediateDropResult::ImmediateDropRequested { on_dropped }
-            // An earlier immediate drop result can only be a remove request, because that's the only scenario in which we request immediate drops.
-            // So we're fine and that earlier request will remove it for us.
-            | RequestImmediateDropResult::AlreadyDroppingFromEarlierImmediateDrop { on_dropped } => {
-                // Drop the blob so we don't hold a lock on it, which would prevent the removal. Removal waits until all readers relinquished their blob.
-                this.async_drop().await?;
-                std::mem::drop(this);
-                // Wait until the blob is removed. If there are other readers, this will wait.
-                on_dropped
-                    .recv()
-                    .await
-                    .map_err(|error: RecvError| FsError::InternalError {
-                        error: error.into(),
-                    })?
-                    .map_err(|err| FsError::InternalError {
-                        error: anyhow::anyhow!("Error during blob removal: {err}"),
-                    })
-            }
-            RequestImmediateDropResult::AlreadyDroppingWithoutImmediateDrop { .. } => {
-                panic!("This can't happen because we hold the LoadedBlobGuard");
+        loop {
+            match this.loaded_blob.store().request_immediate_drop(
+                *this.loaded_blob.key(),
+                |blob| async move {
+                    let Some(blob) = blob else {
+                        panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
+                    };
+                    let blob = AsyncDropTokioMutex::into_inner(blob);
+                    FsBlob::remove(blob).await.map_err(|error| FsError::InternalError { error })?;
+                    Ok(RemoveResult::SuccessfullyRemoved)
+                },
+            ) {
+                RequestImmediateDropResult::ImmediateDropRequested { on_dropped } => {
+                    // Drop the blob so we don't hold a lock on it, which would prevent the removal. Removal waits until all readers relinquished their blob.
+                    this.async_drop().await?;
+                    std::mem::drop(this);
+                    // Wait until the blob is removed. If there are other readers, this will wait.
+                    return on_dropped
+                        .recv()
+                        .await
+                        .map_err(|error: RecvError| FsError::InternalError {
+                            error: error.into(),
+                        })?
+                        .map_err(|err| FsError::InternalError {
+                            error: anyhow::anyhow!("Error during blob removal: {err}"),
+                        });
+                }
+                RequestImmediateDropResult::AlreadyDropping { future } => {
+                    // Blob is currently dropping, let's wait until that is done and then retry
+                    future.await;
+                    continue;
+                }
             }
         }
     }
