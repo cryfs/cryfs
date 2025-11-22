@@ -21,7 +21,7 @@ where
         LoadedEntryGuard<
             BlobId,
             AsyncDropTokioMutex<FsBlob<B>>,
-            Result<RemoveResult, Arc<anyhow::Error>>,
+            Result<RemoveResult, Arc<FsError>>,
         >,
     >,
 }
@@ -36,7 +36,7 @@ where
             LoadedEntryGuard<
                 BlobId,
                 AsyncDropTokioMutex<FsBlob<B>>,
-                Result<RemoveResult, Arc<anyhow::Error>>,
+                Result<RemoveResult, Arc<FsError>>,
             >,
         >,
     ) -> AsyncDropGuard<Self> {
@@ -63,7 +63,7 @@ where
                     panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
                 };
                 let blob = AsyncDropTokioMutex::into_inner(blob);
-                FsBlob::remove(blob).await.map_err(Arc::new)?;
+                FsBlob::remove(blob).await.map_err(|error| FsError::InternalError { error })?;
                 Ok(RemoveResult::SuccessfullyRemoved)
             },
         ) {

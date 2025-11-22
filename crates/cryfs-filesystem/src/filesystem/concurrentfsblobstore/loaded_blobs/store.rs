@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use cryfs_rustfs::FsError;
 use cryfs_utils::concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use cryfs_utils::mr_oneshot_channel;
 use futures::future::{BoxFuture, Shared};
@@ -23,7 +24,7 @@ where
             ConcurrentStore<
                 BlobId,
                 AsyncDropTokioMutex<FsBlob<B>>,
-                Result<RemoveResult, Arc<anyhow::Error>>,
+                Result<RemoveResult, Arc<FsError>>,
             >,
         >,
     >,
@@ -110,22 +111,21 @@ where
             .request_immediate_drop(blob_id, move |blob| async move {
                 if let Some(blob) = blob {
                     let blob = AsyncDropTokioMutex::into_inner(blob);
-                    let remove_result = FsBlob::remove(blob).await.map_err(Arc::new);
-                    blobstore
-                        .async_drop()
+                    let remove_result = FsBlob::remove(blob)
                         .await
-                        .map_err(|err| Arc::new(err.into()))?;
+                        .map_err(|error| Arc::new(FsError::InternalError { error }));
+                    blobstore.async_drop().await.map_err(Arc::new)?;
                     remove_result?;
                     Ok(RemoveResult::SuccessfullyRemoved)
                 } else {
                     // The blob wasn't loaded, we can just remove it from the base store
                     // We're doing this within the drop handler of `request_immediate_drop()`, because that gives us
                     // exclusive access and blocks other tasks from loading this blob.
-                    let result = blobstore.remove_by_id(&blob_id).await.map_err(Arc::new);
-                    blobstore
-                        .async_drop()
+                    let result = blobstore
+                        .remove_by_id(&blob_id)
                         .await
-                        .map_err(|err| Arc::new(err.into()))?;
+                        .map_err(|error| Arc::new(FsError::InternalError { error }));
+                    blobstore.async_drop().await.map_err(|err| Arc::new(err))?;
                     result
                 }
             });
@@ -163,7 +163,7 @@ pub enum RequestRemovalResult {
     /// Removal request accepted
     RemovalRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_removed: mr_oneshot_channel::Receiver<Result<RemoveResult, Arc<anyhow::Error>>>,
+        on_removed: mr_oneshot_channel::Receiver<Result<RemoveResult, Arc<FsError>>>,
     },
     /// Removal failed because the entry is already in dropping state.
     AlreadyDropping {

@@ -154,6 +154,7 @@ where
             }
             Err(err) => {
                 log::error!("Error removing blob: {:?}", err);
+                // TODO How to convert the Arc<FsError> into FsError here?
                 Err(FsError::UnknownError)
             }
         }
@@ -735,6 +736,7 @@ where
                             }
                             Err(err) => {
                                 log::error!("Error removing blob: {err:?}");
+                                // TODO How to convert the Arc<FsError> into FsError here?
                                 Err(FsError::UnknownError)
                             }
                         }
