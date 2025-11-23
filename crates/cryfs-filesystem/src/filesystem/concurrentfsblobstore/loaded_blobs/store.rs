@@ -150,11 +150,14 @@ where
 pub enum RequestRemovalResult {
     /// Removal request accepted
     RemovalRequested {
-        /// on_dropped will be completed once the entry has been fully dropped
-        on_removed: tokio::sync::oneshot::Receiver<FsResult<RemoveResult>>,
+        /// on_removed will be completed once the entry has been fully dropped
+        /// The caller is expected to drive this future to completion,
+        /// otherwise we may be stuck forever waiting for the drop to complete.
+        on_removed: BoxFuture<'static, FsResult<RemoveResult>>,
     },
     /// Removal failed because the entry is already in dropping state.
     AlreadyDropping {
+        // TODO Is Event good enough here or do we benefit from the caller driving this?
         future: Shared<BoxFuture<'static, ()>>,
     },
 }

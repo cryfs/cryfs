@@ -7,7 +7,6 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex},
     concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult},
 };
-use tokio::sync::oneshot::error::RecvError;
 
 use crate::filesystem::fsblobstore::FsBlob;
 
@@ -63,9 +62,6 @@ where
                     // Wait until the blob is removed. If there are other readers, this will wait.
                     return drop_result
                         .await
-                        .map_err(|error: RecvError| FsError::InternalError {
-                            error: error.into(),
-                        })?
                         .map_err(|err: Arc<FsError>| FsError::InternalError {
                             error: anyhow::anyhow!("Error during blob removal: {err}"),
                         });

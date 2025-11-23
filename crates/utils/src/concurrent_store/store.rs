@@ -370,7 +370,7 @@ where
                 EntryState::Loaded(loaded) => {
                     match loaded.request_immediate_drop_if_not_yet_requested(drop_fn) {
                         ImmediateDropRequestResponse::Requested => {
-                            RequestImmediateDropResult::ImmediateDropRequested { drop_result: drop_result_receiver }
+                            RequestImmediateDropResult::ImmediateDropRequested { drop_result: async move {drop_result_receiver.await.expect("The sender should not be dropped")}.boxed() }
                         }
                         ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
                             on_earlier_request_complete,
@@ -382,7 +382,7 @@ where
                 EntryState::Loading(loading) => {
                     match loading.request_immediate_drop_if_not_yet_requested(drop_fn) {
                         ImmediateDropRequestResponse::Requested => {
-                            RequestImmediateDropResult::ImmediateDropRequested { drop_result: drop_result_receiver }
+                            RequestImmediateDropResult::ImmediateDropRequested { drop_result: async move {drop_result_receiver.await.expect("The sender should not be dropped")}.boxed() }
                         }
                         ImmediateDropRequestResponse::NotRequestedBecauseItWasAlreadyRequestedEarlier {
                             on_earlier_request_complete,
@@ -405,13 +405,17 @@ where
 
                 std::mem::drop(entries);
 
-                // In the other cases, we register the drop future to the loaded entry and it will be executed by that entry's unload logic.
-                // However, if no entry was loaded, then there is no unload to execute the drop future. We have to execute it ourselves.
-                // TODO Can we find a way to not spawn a task, but have the caller drive the execution of the future?
-                tokio::task::spawn(drop_future);
-
                 RequestImmediateDropResult::ImmediateDropRequested {
-                    drop_result: drop_result_receiver,
+                    drop_result: async move {
+                        // In the other cases, we register the drop future to the loaded entry and it will be executed by that entry's unload logic.
+                        // However, if no entry was loaded, then there is no unload to execute the drop future. We have to execute it ourselves.
+                        drop_future.await;
+
+                        drop_result_receiver
+                            .await
+                            .expect("The sender should not be dropped")
+                    }
+                    .boxed(),
                 }
             }
         }
@@ -620,12 +624,15 @@ pub enum RequestImmediateDropResult<D> {
     /// Immediate drop request accepted. The entry was either loading or loaded and the specified drop function will be executed with the entry,
     /// or the entry was not loaded and the specified drop function will be executed with None.
     ImmediateDropRequested {
-        /// on_dropped will be completed once the entry has been fully dropped
-        drop_result: tokio::sync::oneshot::Receiver<D>,
+        /// on_dropped will be completed once the entry has been fully dropped.
+        /// The caller is expected to drive this future to completion,
+        /// otherwise we may be stuck forever waiting for the drop to complete.
+        drop_result: BoxFuture<'static, D>,
     },
     /// Immediate drop request failed because the entry is already in dropping state.
     /// This could be from the last task giving up its guard, or by an earlier immediate drop request.
     AlreadyDropping {
+        // TODO Is Event good enough here or do we benefit from the caller driving this?
         future: Shared<BoxFuture<'static, ()>>,
     },
 }

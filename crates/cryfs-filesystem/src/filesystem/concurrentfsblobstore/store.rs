@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_rustfs::{FsError, FsResult};
 use std::fmt::Debug;
-use tokio::sync::oneshot::error::RecvError;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::{
@@ -129,13 +128,7 @@ where
             match self.loaded_blobs.request_removal(*id, &self.blobstore) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {
                     // Wait until the blob is removed
-                    let remove_result =
-                        on_removed
-                            .await
-                            .map_err(|error: RecvError| FsError::InternalError {
-                                error: error.into(),
-                            })?;
-                    return remove_result;
+                    return on_removed.await;
                 }
                 RequestRemovalResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry
