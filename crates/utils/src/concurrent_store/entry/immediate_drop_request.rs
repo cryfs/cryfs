@@ -61,7 +61,7 @@ where
                         }
                         .boxed()
                     }),
-                    on_dropped: on_dropped,
+                    on_dropped,
                 };
                 ImmediateDropRequestResponse::Requested
             }

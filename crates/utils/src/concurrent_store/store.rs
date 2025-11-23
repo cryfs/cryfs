@@ -209,15 +209,15 @@ where
     /// If the entry is not loading or loaded, return None.
     pub async fn get_if_loading_or_loaded(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
-        key: &K,
+        key: K,
     ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>, anyhow::Error> {
         let waiter = {
             let mut entries = this.entries.lock().unwrap();
-            match entries.get_mut(key) {
+            match entries.get_mut(&key) {
                 Some(EntryState::Loaded(loaded)) => {
                     return Ok(Some(LoadedEntryGuard::new(
                         AsyncDropArc::clone(this),
-                        key.clone(), // TODO Avoid this clone by making the `key` parameter owned?
+                        key.clone(),
                         loaded.get_entry(),
                     )));
                 }
@@ -227,7 +227,7 @@ where
         };
 
         // Now entries are unlocked and we can wait for loading to complete
-        waiter.wait_until_loaded(this, key.clone()).await
+        waiter.wait_until_loaded(this, key).await
     }
 
     /// Note: This function clones a [EntryState], which may clone the [AsyncDropGuard] contained if it is [EntryState::Loaded]. It is the callers responsibility to async_drop that.
@@ -244,7 +244,7 @@ where
         <I as AsyncDrop>::Error: std::error::Error + Send + Sync + 's,
     {
         let mut entries = self.entries.lock().unwrap();
-        match entries.entry(key.clone()) {
+        match entries.entry(key) {
             Entry::Occupied(mut entry) => match entry.get_mut() {
                 EntryState::Loaded(loaded) => match loaded.immediate_drop_requested() {
                     Some(on_dropped) => CloneOrCreateEntryStateResult::ImmediateDropRequested {
@@ -274,8 +274,10 @@ where
             },
             Entry::Vacant(entry) => {
                 // No loading operation is in progress, so we start a new one.
-                let mut loading_future = self
-                    .make_loading_future(key, loading_fn(AsyncDropArc::clone(loading_fn_input)));
+                let mut loading_future = self.make_loading_future(
+                    entry.key().clone(),
+                    loading_fn(AsyncDropArc::clone(loading_fn_input)),
+                );
                 let loading_result = loading_future.add_waiter();
                 entry.insert(EntryState::Loading(loading_future));
                 CloneOrCreateEntryStateResult::Loading { loading_result }

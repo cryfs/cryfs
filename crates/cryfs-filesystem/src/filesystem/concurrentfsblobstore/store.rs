@@ -142,7 +142,7 @@ where
     /// Flush the blob if it is loaded or cached somewhere. If it is not loaded or cached, do nothing.
     pub async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
         if let Some(loaded_blob) =
-            LoadedBlobs::get_if_loading_or_loaded(&self.loaded_blobs, &blob_id).await?
+            LoadedBlobs::get_if_loading_or_loaded(&self.loaded_blobs, blob_id).await?
         {
             // Blob is loaded, we can flush it directly.
             loaded_blob

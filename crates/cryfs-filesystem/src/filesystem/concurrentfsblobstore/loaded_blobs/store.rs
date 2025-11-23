@@ -84,7 +84,7 @@ where
 
     pub async fn get_if_loading_or_loaded(
         &self,
-        blob_id: &BlobId,
+        blob_id: BlobId,
     ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error> {
         ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)
             .await
