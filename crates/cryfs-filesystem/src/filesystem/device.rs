@@ -335,17 +335,12 @@ where
                 )
                 .await?;
 
-                match self.blobstore.remove_by_id(&overwritten_blobid).await {
-                    Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                    Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                match self.blobstore.remove_by_id(&overwritten_blobid).await? {
+                    RemoveResult::SuccessfullyRemoved => Ok(()),
+                    RemoveResult::NotRemovedBecauseItDoesntExist => {
                         log::error!(
                             "During rename->overwrite, tried to remove blob that doesn't exist"
                         );
-                        Err(FsError::UnknownError)
-                    }
-                    Err(err) => {
-                        log::error!("Error removing blob: {:?}", err);
-                        // TODO How to convert the Arc<FsError> into FsError here?
                         Err(FsError::UnknownError)
                     }
                 }

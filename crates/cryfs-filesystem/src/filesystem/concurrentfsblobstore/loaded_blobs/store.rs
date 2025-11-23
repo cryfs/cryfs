@@ -1,10 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use cryfs_rustfs::FsError;
+use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use futures::future::{BoxFuture, Shared};
 use std::fmt::Debug;
-use std::sync::Arc;
 
 use crate::filesystem::concurrentfsblobstore::loaded_blobs::guard::LoadedBlobGuard;
 use crate::filesystem::fsblobstore::{FsBlob, FsBlobStore};
@@ -105,8 +104,8 @@ where
                     let blob = AsyncDropTokioMutex::into_inner(blob);
                     let remove_result = FsBlob::remove(blob)
                         .await
-                        .map_err(|error| Arc::new(FsError::InternalError { error }));
-                    blobstore.async_drop().await.map_err(Arc::new)?;
+                        .map_err(|error| FsError::InternalError { error });
+                    blobstore.async_drop().await?;
                     remove_result?;
                     Ok(RemoveResult::SuccessfullyRemoved)
                 } else {
@@ -116,8 +115,8 @@ where
                     let result = blobstore
                         .remove_by_id(&blob_id)
                         .await
-                        .map_err(|error| Arc::new(FsError::InternalError { error }));
-                    blobstore.async_drop().await.map_err(|err| Arc::new(err))?;
+                        .map_err(|error| FsError::InternalError { error });
+                    blobstore.async_drop().await?;
                     result
                 }
             });
@@ -152,7 +151,7 @@ pub enum RequestRemovalResult {
     /// Removal request accepted
     RemovalRequested {
         /// on_dropped will be completed once the entry has been fully dropped
-        on_removed: tokio::sync::oneshot::Receiver<Result<RemoveResult, Arc<FsError>>>,
+        on_removed: tokio::sync::oneshot::Receiver<FsResult<RemoveResult>>,
     },
     /// Removal failed because the entry is already in dropping state.
     AlreadyDropping {

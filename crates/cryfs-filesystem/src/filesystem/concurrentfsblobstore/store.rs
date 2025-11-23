@@ -1,8 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
-use cryfs_rustfs::FsError;
-use std::{fmt::Debug, sync::Arc};
+use cryfs_rustfs::{FsError, FsResult};
+use std::fmt::Debug;
 use tokio::sync::oneshot::error::RecvError;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
@@ -124,7 +124,7 @@ where
         self.blobstore.logical_block_size_bytes()
     }
 
-    pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult, Arc<FsError>> {
+    pub async fn remove_by_id(&self, id: &BlobId) -> FsResult<RemoveResult> {
         loop {
             match self.loaded_blobs.request_removal(*id, &self.blobstore) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {

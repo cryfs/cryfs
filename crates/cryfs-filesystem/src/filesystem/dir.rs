@@ -141,20 +141,11 @@ where
         let result = self
             .blobstore
             .remove_by_id(&old_destination_blob_id)
-            .await
-            .map_err(|err| {
-                log::error!("Error removing blob: {:?}", err);
-                FsError::UnknownError
-            });
+            .await?;
         match result {
-            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+            RemoveResult::SuccessfullyRemoved => Ok(()),
+            RemoveResult::NotRemovedBecauseItDoesntExist => {
                 log::error!("During rename->overwrite, tried to remove blob that doesn't exist");
-                Err(FsError::UnknownError)
-            }
-            Err(err) => {
-                log::error!("Error removing blob: {:?}", err);
-                // TODO How to convert the Arc<FsError> into FsError here?
                 Err(FsError::UnknownError)
             }
         }
@@ -724,20 +715,15 @@ where
                         Err(FsError::NodeIsADirectory)
                     }
                     EntryType::File | EntryType::Symlink => {
-                        let remove_result = self.blobstore.remove_by_id(blob_id).await;
+                        let remove_result = self.blobstore.remove_by_id(blob_id).await?;
                         match remove_result {
-                            Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
-                            Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
+                            RemoveResult::SuccessfullyRemoved => Ok(()),
+                            RemoveResult::NotRemovedBecauseItDoesntExist => {
                                 Err(FsError::CorruptedFilesystem {
                                     message: format!(
                                         "Removed entry {name} from directory but didn't find its blob {blob_id:?} to remove"
                                     ),
                                 })
-                            }
-                            Err(err) => {
-                                log::error!("Error removing blob: {err:?}");
-                                // TODO How to convert the Arc<FsError> into FsError here?
-                                Err(FsError::UnknownError)
                             }
                         }
                     }
