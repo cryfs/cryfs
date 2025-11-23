@@ -619,10 +619,7 @@ where
 }
 
 /// Result of requesting immediate drop of an entry.
-pub enum RequestImmediateDropResult<D>
-where
-    D: Send + 'static,
-{
+pub enum RequestImmediateDropResult<D> {
     /// Immediate drop request accepted. The entry was either loading or loaded and the specified drop function will be executed with the entry,
     /// or the entry was not loaded and the specified drop function will be executed with None.
     ImmediateDropRequested {
