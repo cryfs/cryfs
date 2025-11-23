@@ -41,7 +41,16 @@ where
         F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>>> + Send,
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
-        ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn).await
+        let loading_waiter =
+            ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn)?;
+
+        // We need to await the loading_waiter, otherwise loading may not be driven to completion
+        let mut loaded = loading_waiter
+            .wait_until_loaded(&self.loaded_blobs, blob_id)
+            .await?
+            .expect("This shouldn't happen, we're inserting a new entry so it can't fail");
+        loaded.async_drop().await?;
+        Ok(())
     }
 
     /// Insert a new blob that was just created and has a new blob id assigned.

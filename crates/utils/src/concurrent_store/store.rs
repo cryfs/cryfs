@@ -78,42 +78,37 @@ where
     /// Try to insert a new entry by loading it using the provided loading function.
     /// If an entry with the same key is already loaded, an error is returned.
     /// The loading function is only called if no other loading or loaded entry with the same key exists.
-    pub async fn try_insert_with_key<F>(
+    ///
+    /// The call site is expected to await the returned [EntryLoadingWaiter] through [EntryLoadingWaiter::wait_until_loaded],
+    /// otherwise the loading operation might not be driven to completion.
+    pub fn try_insert_with_key<F>(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: K,
         loading_fn: impl FnOnce() -> F + Send + 'static,
-    ) -> Result<(), anyhow::Error>
+    ) -> Result<EntryLoadingWaiter>
+    // TODO We're returning an EntryLoadingWaiter here, and in general, EntryLoadingWaiter can deal with absent values (e.g. when loading doesn't find the entry).
+    //      But for this function, we know that the entry must be present because we're just inserting it. Can we represent that in the type system?
+    //      Maybe some kind of variant of EntryLoadingWaiter that doesn't have the value-not-found case?
     where
         F: Future<Output = Result<AsyncDropGuard<V>>> + Send,
     {
-        let loading_future = {
-            let mut entries = this.entries.lock().unwrap();
-            match entries.entry(key.clone()) {
-                Entry::Occupied(entry) => Err(anyhow::anyhow!(
-                    "Key {key:?} is already loaded",
-                    key = entry.key()
-                )),
-                Entry::Vacant(entry) => {
-                    let loading_future = async move {
-                        let loaded_entry = loading_fn().await?;
-                        Ok(Some(loaded_entry))
-                    };
-                    let mut loading_future = this.make_loading_future(key.clone(), loading_future);
-                    let loading_result = loading_future.add_waiter();
-                    entry.insert(EntryState::Loading(loading_future));
-                    Ok(loading_result)
-                }
+        let mut entries = this.entries.lock().unwrap();
+        match entries.entry(key.clone()) {
+            Entry::Occupied(entry) => Err(anyhow::anyhow!(
+                "Key {key:?} is already loaded",
+                key = entry.key()
+            )),
+            Entry::Vacant(entry) => {
+                let loading_future = async move {
+                    let loaded_entry = loading_fn().await?;
+                    Ok(Some(loaded_entry))
+                };
+                let mut loading_future = this.make_loading_future(key.clone(), loading_future);
+                let loading_result = loading_future.add_waiter();
+                entry.insert(EntryState::Loading(loading_future));
+                Ok(loading_result)
             }
-        }?;
-
-        // Now the lock on `entries` is released, so we can await the loading future without blocking other operations.
-        let mut loaded = loading_future
-            .wait_until_loaded(this, key)
-            .await?
-            .expect("This shouldn't happen, our loading_future always returns Some");
-
-        loaded.async_drop().await?;
-        Ok(())
+        }
     }
 
     /// Insert a new entry that was just created and has a new key assigned.
