@@ -41,15 +41,11 @@ where
         F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>>> + Send,
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
-        let loading_waiter =
-            ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn)?;
-
-        // We need to await the loading_waiter, otherwise loading may not be driven to completion
-        let mut loaded = loading_waiter
-            .wait_until_loaded(&self.loaded_blobs, blob_id)
-            .await?
-            .expect("This shouldn't happen, we're inserting a new entry so it can't fail");
-        loaded.async_drop().await?;
+        let mut inserted =
+            ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn)?
+                .wait_until_inserted()
+                .await?;
+        inserted.async_drop().await?;
         Ok(())
     }
 
@@ -81,23 +77,28 @@ where
     {
         let loading_fn =
             move |i| async move { loading_fn(i).await.map(|v| v.map(AsyncDropTokioMutex::new)) };
-        ConcurrentStore::get_loaded_or_insert_loading(
+        Ok(ConcurrentStore::get_loaded_or_insert_loading(
             &self.loaded_blobs,
             blob_id,
             blobstore,
             loading_fn,
         )
-        .await
-        .map(|v| v.map(LoadedBlobGuard::new))
+        .await?
+        .wait_until_loaded()
+        .await?
+        .map(LoadedBlobGuard::new))
     }
 
     pub async fn get_if_loading_or_loaded(
         &self,
         blob_id: BlobId,
     ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error> {
-        ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)
-            .await
-            .map(|v| v.map(LoadedBlobGuard::new))
+        Ok(
+            ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)?
+                .wait_until_loaded()
+                .await?
+                .map(LoadedBlobGuard::new),
+        )
     }
 
     pub fn request_removal(

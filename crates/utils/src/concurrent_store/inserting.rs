@@ -1,0 +1,76 @@
+use anyhow::Result;
+use std::{fmt::Debug, hash::Hash};
+
+use crate::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    concurrent_store::{ConcurrentStore, LoadedEntryGuard, entry::EntryLoadingWaiter},
+    safe_panic, with_async_drop_2,
+};
+
+/// Represents a newly inserted entry that is currently in the process of being inserted.
+#[must_use]
+pub struct Inserting<K, V>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+{
+    // Always Some, except for during destruction
+    inner: Option<InsertingInner<K, V>>,
+}
+
+struct InsertingInner<K, V>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+{
+    key: K,
+    store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
+
+    // Invariant: The entry is marked as "loading", which is why we use [EntryLoadingWaiter],
+    // but our loading function never returns a None. It always returns a Some. So we don't need to deal with the
+    // None case of EntryLoadingWaiter.
+    waiter: EntryLoadingWaiter,
+}
+
+impl<K, V> Inserting<K, V>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+{
+    pub(super) fn new(
+        key: K,
+        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
+        waiter: EntryLoadingWaiter,
+    ) -> Self {
+        Inserting {
+            inner: Some(InsertingInner { key, store, waiter }),
+        }
+    }
+
+    /// Wait until the entry is loaded, and return a guard for the loaded entry.
+    /// If the entry was not found, return None.
+    /// If an error occurred while loading, return the error.
+    pub async fn wait_until_inserted(mut self) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V>>>
+    where
+        K: Hash + Eq + Clone + Debug + Send + Sync,
+        V: AsyncDrop + Debug + Send + Sync,
+    {
+        let InsertingInner { waiter, store, key } = self.inner.take().expect("Already destructed");
+        with_async_drop_2!(store, {
+            Ok(waiter.wait_until_loaded(&store, key).await?.expect(
+                "Invariant violated: Inserting should never return None from the loading function",
+            ))
+        })
+    }
+}
+impl<K, V> Drop for Inserting<K, V>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+{
+    fn drop(&mut self) {
+        if self.inner.is_some() {
+            safe_panic!("Inserting was dropped without a call to wait_until_inserted.");
+        }
+    }
+}

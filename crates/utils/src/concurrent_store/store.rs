@@ -1,5 +1,5 @@
 use anyhow::Error;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use futures::FutureExt as _;
 use futures::future::{BoxFuture, Shared};
@@ -12,6 +12,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::concurrent_store::Inserting;
+use crate::concurrent_store::LoadingOrLoaded;
 use crate::concurrent_store::entry::{
     EntryLoadingWaiter, EntryStateDropping, EntryStateLoaded, EntryStateLoading,
     ImmediateDropRequest, ImmediateDropRequestResponse, LoadingResult,
@@ -84,10 +86,7 @@ where
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: K,
         loading_fn: impl FnOnce() -> F + Send + 'static,
-    ) -> Result<EntryLoadingWaiter>
-    // TODO We're returning an EntryLoadingWaiter here, and in general, EntryLoadingWaiter can deal with absent values (e.g. when loading doesn't find the entry).
-    //      But for this function, we know that the entry must be present because we're just inserting it. Can we represent that in the type system?
-    //      Maybe some kind of variant of EntryLoadingWaiter that doesn't have the value-not-found case?
+    ) -> Result<Inserting<K, V>>
     where
         F: Future<Output = Result<AsyncDropGuard<V>>> + Send,
     {
@@ -105,7 +104,11 @@ where
                 let mut loading_future = this.make_loading_future(key.clone(), loading_future);
                 let loading_result = loading_future.add_waiter();
                 entry.insert(EntryState::Loading(loading_future));
-                Ok(loading_result)
+                Ok(Inserting::new(
+                    key,
+                    AsyncDropArc::clone(this),
+                    loading_result,
+                ))
             }
         }
     }
@@ -142,7 +145,7 @@ where
         key: K,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         mut loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> F + Send,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>, anyhow::Error>
+    ) -> Result<LoadingOrLoaded<K, V>, anyhow::Error>
     where
         F: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
         I: AsyncDrop + Debug + Send,
@@ -157,19 +160,18 @@ where
                 CloneOrCreateEntryStateResult::Loaded { entry } => {
                     // Oh, the entry is already loaded! We can just return it
                     // Returning means we shift the responsibility to call async_drop on the [AsyncDropArc] to our caller.
-                    return Ok(Some(LoadedEntryGuard::new(
+                    return Ok(LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
                         AsyncDropArc::clone(this),
                         key,
                         entry,
                     )));
                 }
                 CloneOrCreateEntryStateResult::Loading { loading_result } => {
-                    return loading_result
-                        .wait_until_loaded(this, key.clone())
-                        .await
-                        .with_context(|| {
-                            format!("Error while try_insert'ing entry with key {key:?}")
-                        });
+                    return Ok(LoadingOrLoaded::new_loading(
+                        key,
+                        AsyncDropArc::clone(this),
+                        loading_result,
+                    ));
                 }
                 CloneOrCreateEntryStateResult::Dropping {
                     future,
@@ -199,27 +201,25 @@ where
 
     /// Check if an entry is either loading or loaded, and if yes return it.
     /// If the entry is not loading or loaded, return None.
-    pub async fn get_if_loading_or_loaded(
+    ///
+    /// The caller is expected to await the returned [EntryLoadingWaiter] (in [LoadingOrLoaded::Loading])
+    /// through [EntryLoadingWaiter::wait_until_loaded], and to drop the returned [AsyncDropGuard] in [LoadingOrLoaded::Loaded].
+    pub fn get_if_loading_or_loaded(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: K,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>, anyhow::Error> {
-        let waiter = {
-            let mut entries = this.entries.lock().unwrap();
-            match entries.get_mut(&key) {
-                Some(EntryState::Loaded(loaded)) => {
-                    return Ok(Some(LoadedEntryGuard::new(
-                        AsyncDropArc::clone(this),
-                        key.clone(),
-                        loaded.get_entry(),
-                    )));
-                }
-                Some(EntryState::Loading(loading)) => loading.add_waiter(),
-                None | Some(EntryState::Dropping { .. }) => return Ok(None),
-            }
-        };
-
-        // Now entries are unlocked and we can wait for loading to complete
-        waiter.wait_until_loaded(this, key).await
+    ) -> Result<LoadingOrLoaded<K, V>, anyhow::Error> {
+        let mut entries = this.entries.lock().unwrap();
+        match entries.get_mut(&key) {
+            Some(EntryState::Loaded(loaded)) => Ok(LoadingOrLoaded::new_loaded(
+                LoadedEntryGuard::new(AsyncDropArc::clone(this), key, loaded.get_entry()),
+            )),
+            Some(EntryState::Loading(loading)) => Ok(LoadingOrLoaded::new_loading(
+                key,
+                AsyncDropArc::clone(this),
+                loading.add_waiter(),
+            )),
+            None | Some(EntryState::Dropping { .. }) => Ok(LoadingOrLoaded::new_not_found()),
+        }
     }
 
     /// Note: This function clones a [EntryState], which may clone the [AsyncDropGuard] contained if it is [EntryState::Loaded]. It is the callers responsibility to async_drop that.
