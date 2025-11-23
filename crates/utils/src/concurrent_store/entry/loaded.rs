@@ -11,7 +11,7 @@ use crate::{
 
 pub struct EntryStateLoaded<V>
 where
-    V: AsyncDrop + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + 'static,
 {
     entry: AsyncDropGuard<AsyncDropArc<V>>,
     /// Number of tasks that started waiting for this entry when it was in [Entry::Loading],
@@ -25,7 +25,7 @@ where
 
 impl<V> EntryStateLoaded<V>
 where
-    V: AsyncDrop + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + 'static,
 {
     pub fn new_from_just_finished_loading(
         entry: AsyncDropGuard<V>,

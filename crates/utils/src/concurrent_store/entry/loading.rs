@@ -17,7 +17,7 @@ use crate::{
 
 pub struct EntryStateLoading<V>
 where
-    V: AsyncDrop + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + 'static,
 {
     /// loading_result is a future that will hold the result of the loading operation once it is complete.
     /// See [LoadingResult] for an explanation of the possible results.
@@ -42,7 +42,7 @@ pub enum LoadingResult {
 
 impl<V> EntryStateLoading<V>
 where
-    V: AsyncDrop + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + 'static,
 {
     pub fn new(loading_result: BoxFuture<'static, LoadingResult>) -> Self {
         EntryStateLoading {

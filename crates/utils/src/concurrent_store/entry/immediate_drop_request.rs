@@ -12,7 +12,7 @@ use crate::{
 /// Represents a request to immediately drop an entry that is currently loading or loaded.
 pub enum ImmediateDropRequest<V>
 where
-    V: AsyncDrop + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + 'static,
 {
     /// No immediate drop has been requested.
     NotRequested,
@@ -29,7 +29,7 @@ where
 
 impl<V> ImmediateDropRequest<V>
 where
-    V: AsyncDrop + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + 'static,
 {
     /// Request an immediate drop of the entry.
     /// If an immediate drop has already been requested, returns a receiver to wait for the completion of that request.

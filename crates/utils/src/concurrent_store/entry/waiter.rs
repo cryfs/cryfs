@@ -38,8 +38,8 @@ impl EntryLoadingWaiter {
         key: K,
     ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>>
     where
-        K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
-        V: AsyncDrop + Debug + Send + Sync + 'static,
+        K: Hash + Eq + Clone + Debug + Send + Sync,
+        V: AsyncDrop + Debug + Send + Sync,
     {
         match self.loading_result.take().expect("Already dropped").await {
             LoadingResult::Loaded => {
@@ -64,8 +64,8 @@ impl EntryLoadingWaiter {
         key: K,
     ) -> AsyncDropGuard<LoadedEntryGuard<K, V>>
     where
-        K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
-        V: AsyncDrop + Debug + Send + Sync + 'static,
+        K: Hash + Eq + Clone + Debug + Send + Sync,
+        V: AsyncDrop + Debug + Send + Sync,
     {
         // This is not a race condition with dropping, i.e. the entry can't be in dropping state yet, because we are an "unfulfilled waiter",
         // i.e. the entry cannot be dropped until we decrease the count below.
