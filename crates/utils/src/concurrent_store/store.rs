@@ -353,18 +353,15 @@ where
     {
         let (drop_result_sender, drop_result_receiver) = tokio::sync::oneshot::channel();
         let key_clone = key.clone();
-        let drop_fn = move |value| {
-            async move {
-                let drop_fn_result = drop_fn(value).await;
-                if let Err(err) = drop_result_sender.send(drop_fn_result) {
-                    log::warn!(
-                        "Failed to send immediate drop result for entry with key {:?}: {:?}",
-                        key_clone,
-                        err
-                    );
-                }
+        let drop_fn = move |value| async move {
+            let drop_fn_result = drop_fn(value).await;
+            if let Err(err) = drop_result_sender.send(drop_fn_result) {
+                log::warn!(
+                    "Failed to send immediate drop result for entry with key {:?}: {:?}",
+                    key_clone,
+                    err
+                );
             }
-            .boxed()
         };
 
         let mut entries = self.entries.lock().unwrap();
