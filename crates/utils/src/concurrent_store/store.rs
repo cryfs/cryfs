@@ -632,7 +632,6 @@ pub enum RequestImmediateDropResult<D> {
     /// Immediate drop request failed because the entry is already in dropping state.
     /// This could be from the last task giving up its guard, or by an earlier immediate drop request.
     AlreadyDropping {
-        // TODO Is Event good enough here or do we benefit from the caller driving this?
         future: Shared<BoxFuture<'static, ()>>,
     },
 }
