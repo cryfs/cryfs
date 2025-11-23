@@ -71,7 +71,7 @@ where
     pub async fn get_loaded_or_insert_loading<F>(
         &self,
         blob_id: BlobId,
-        blobstore: AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
+        blobstore: &AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
         loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>) -> F + Send + 'static,
     ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error>
     where

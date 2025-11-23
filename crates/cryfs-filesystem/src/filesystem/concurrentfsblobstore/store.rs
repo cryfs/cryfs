@@ -97,11 +97,10 @@ where
         blob_id: &BlobId,
     ) -> Result<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>> {
         let blob_id = *blob_id;
-        let blobstore = AsyncDropArc::clone(&self.blobstore);
         let loaded_blob = LoadedBlobs::get_loaded_or_insert_loading(
             &self.loaded_blobs,
             blob_id,
-            blobstore,
+            &self.blobstore,
             async move |blobstore| {
                 with_async_drop_2!(blobstore, { blobstore.load(&blob_id).await })
             },

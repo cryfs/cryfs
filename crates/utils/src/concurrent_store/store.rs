@@ -18,7 +18,6 @@ use crate::concurrent_store::entry::{
 };
 use crate::concurrent_store::guard::LoadedEntryGuard;
 use crate::event::Event;
-use crate::with_async_drop_2;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::entry::EntryState,
@@ -141,7 +140,7 @@ where
     pub async fn get_loaded_or_insert_loading<'a, F, I>(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: K,
-        loading_fn_input: AsyncDropGuard<AsyncDropArc<I>>,
+        loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         mut loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> F + Send,
     ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>, anyhow::Error>
     where
@@ -149,55 +148,53 @@ where
         I: AsyncDrop + Debug + Send,
         <I as AsyncDrop>::Error: std::error::Error + Send + Sync + 'static,
     {
-        with_async_drop_2!(loading_fn_input, {
-            loop {
-                let entry_state =
-                    this._clone_or_create_entry_state(key.clone(), &loading_fn_input, loading_fn);
-                // Now the lock on `this.entries` is released, so we can await the loading future without blocking other operations.
+        loop {
+            let entry_state =
+                this._clone_or_create_entry_state(key.clone(), &loading_fn_input, loading_fn);
+            // Now the lock on `this.entries` is released, so we can await the loading future without blocking other operations.
 
-                match entry_state {
-                    CloneOrCreateEntryStateResult::Loaded { entry } => {
-                        // Oh, the entry is already loaded! We can just return it
-                        // Returning means we shift the responsibility to call async_drop on the [AsyncDropArc] to our caller.
-                        return Ok(Some(LoadedEntryGuard::new(
-                            AsyncDropArc::clone(this),
-                            key,
-                            entry,
-                        )));
-                    }
-                    CloneOrCreateEntryStateResult::Loading { loading_result } => {
-                        return loading_result
-                            .wait_until_loaded(this, key.clone())
-                            .await
-                            .with_context(|| {
-                                format!("Error while try_insert'ing entry with key {key:?}")
-                            });
-                    }
-                    CloneOrCreateEntryStateResult::Dropping {
-                        future,
-                        loading_fn: returned_loading_fn,
-                        _r: _,
-                        _i: _,
-                    } => {
-                        future.await;
-                        // Reset the `loading_fn` [FnOnce]. Since `_clone_or_create_entry_state` didn't use it, it returned it and we can use it in the next iteration.
-                        loading_fn = returned_loading_fn;
-                        // After the drop is complete, we can try to load the entry again.
-                        continue;
-                    }
-                    CloneOrCreateEntryStateResult::ImmediateDropRequested {
-                        on_dropped,
-                        loading_fn: returned_loading_fn,
-                    } => {
-                        // Entry is either loading or loaded, but an immediate drop was requested. Let's wait until current processing is complete, dropping was processed, and then retry.
-                        let _ = on_dropped.wait().await;
-                        // Reset the `loading_fn` [FnOnce]. Since `_clone_or_create_entry_state` didn't use it, it returned it and we can use it in the next iteration.
-                        loading_fn = returned_loading_fn;
-                        continue;
-                    }
+            match entry_state {
+                CloneOrCreateEntryStateResult::Loaded { entry } => {
+                    // Oh, the entry is already loaded! We can just return it
+                    // Returning means we shift the responsibility to call async_drop on the [AsyncDropArc] to our caller.
+                    return Ok(Some(LoadedEntryGuard::new(
+                        AsyncDropArc::clone(this),
+                        key,
+                        entry,
+                    )));
+                }
+                CloneOrCreateEntryStateResult::Loading { loading_result } => {
+                    return loading_result
+                        .wait_until_loaded(this, key.clone())
+                        .await
+                        .with_context(|| {
+                            format!("Error while try_insert'ing entry with key {key:?}")
+                        });
+                }
+                CloneOrCreateEntryStateResult::Dropping {
+                    future,
+                    loading_fn: returned_loading_fn,
+                    _r: _,
+                    _i: _,
+                } => {
+                    future.await;
+                    // Reset the `loading_fn` [FnOnce]. Since `_clone_or_create_entry_state` didn't use it, it returned it and we can use it in the next iteration.
+                    loading_fn = returned_loading_fn;
+                    // After the drop is complete, we can try to load the entry again.
+                    continue;
+                }
+                CloneOrCreateEntryStateResult::ImmediateDropRequested {
+                    on_dropped,
+                    loading_fn: returned_loading_fn,
+                } => {
+                    // Entry is either loading or loaded, but an immediate drop was requested. Let's wait until current processing is complete, dropping was processed, and then retry.
+                    let _ = on_dropped.wait().await;
+                    // Reset the `loading_fn` [FnOnce]. Since `_clone_or_create_entry_state` didn't use it, it returned it and we can use it in the next iteration.
+                    loading_fn = returned_loading_fn;
+                    continue;
                 }
             }
-        })
+        }
     }
 
     /// Check if an entry is either loading or loaded, and if yes return it.
