@@ -94,7 +94,7 @@ where
         blob_id: BlobId,
     ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error> {
         Ok(
-            ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)?
+            ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)
                 .wait_until_loaded()
                 .await?
                 .map(LoadedBlobGuard::new),

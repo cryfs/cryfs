@@ -207,18 +207,18 @@ where
     pub fn get_if_loading_or_loaded(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         key: K,
-    ) -> Result<LoadingOrLoaded<K, V>, anyhow::Error> {
+    ) -> LoadingOrLoaded<K, V> {
         let mut entries = this.entries.lock().unwrap();
         match entries.get_mut(&key) {
-            Some(EntryState::Loaded(loaded)) => Ok(LoadingOrLoaded::new_loaded(
-                LoadedEntryGuard::new(AsyncDropArc::clone(this), key, loaded.get_entry()),
-            )),
-            Some(EntryState::Loading(loading)) => Ok(LoadingOrLoaded::new_loading(
-                key,
+            Some(EntryState::Loaded(loaded)) => LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
                 AsyncDropArc::clone(this),
-                loading.add_waiter(),
+                key,
+                loaded.get_entry(),
             )),
-            None | Some(EntryState::Dropping { .. }) => Ok(LoadingOrLoaded::new_not_found()),
+            Some(EntryState::Loading(loading)) => {
+                LoadingOrLoaded::new_loading(key, AsyncDropArc::clone(this), loading.add_waiter())
+            }
+            None | Some(EntryState::Dropping { .. }) => LoadingOrLoaded::new_not_found(),
         }
     }
 
