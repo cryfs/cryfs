@@ -1,8 +1,8 @@
-use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::FutureExt as _;
 use futures::future::{BoxFuture, Shared};
+use lockable::Never;
 use std::collections::hash_map::Entry;
 use std::marker::PhantomData;
 use std::{
@@ -416,18 +416,13 @@ where
     }
 
     /// Called by [LoadedEntryGuard] when it is dropped.
-    pub(super) async fn unload(
-        &self,
-        key: K,
-        mut entry: AsyncDropGuard<AsyncDropArc<V>>,
-    ) -> Result<()> {
+    pub(super) async fn unload(&self, key: K, mut entry: AsyncDropGuard<AsyncDropArc<V>>) {
         // First drop the entry to decrement the reference count
         entry.async_drop().await.unwrap(); // TODO No unwrap? But what to do if it fails?
         std::mem::drop(entry);
 
         // Now check if we're the last reference. If yes, remove the entry from our map.
         self._drop_if_no_references(key).await;
-        Ok(())
     }
 
     /// Check if there are no more references to the entry with the given key, and if yes, async drop it.
@@ -574,7 +569,7 @@ where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
 {
-    type Error = Error;
+    type Error = Never;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         assert!(

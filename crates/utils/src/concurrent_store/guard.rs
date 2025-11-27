@@ -1,5 +1,5 @@
-use anyhow::Error;
 use async_trait::async_trait;
+use lockable::Never;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -54,11 +54,11 @@ where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
 {
-    type Error = Error;
+    type Error = Never;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         let value = std::mem::replace(&mut self.value, AsyncDropGuard::new_invalid());
-        self.store.unload(self.key.clone(), value).await?;
+        self.store.unload(self.key.clone(), value).await;
         self.store.async_drop().await.unwrap(); // TODO No unwrap
         Ok(())
     }
