@@ -26,8 +26,7 @@ where
 {
     NotFound,
     Loading {
-        waiter: EntryLoadingWaiter,
-        key: K,
+        waiter: EntryLoadingWaiter<K>,
         store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
     },
     Loaded(AsyncDropGuard<LoadedEntryGuard<K, V>>),
@@ -45,12 +44,11 @@ where
     }
 
     pub(super) fn new_loading(
-        key: K,
         store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
-        waiter: EntryLoadingWaiter,
+        waiter: EntryLoadingWaiter<K>,
     ) -> Self {
         Self {
-            inner: Some(LoadingOrLoadedInner::Loading { key, store, waiter }),
+            inner: Some(LoadingOrLoadedInner::Loading { store, waiter }),
         }
     }
 
@@ -66,8 +64,8 @@ where
         match self.inner.take().expect("Already destructed") {
             LoadingOrLoadedInner::NotFound => Ok(None),
             LoadingOrLoadedInner::Loaded(loaded) => Ok(Some(loaded)),
-            LoadingOrLoadedInner::Loading { key, store, waiter } => {
-                with_async_drop_2!(store, { waiter.wait_until_loaded(&store, key).await })
+            LoadingOrLoadedInner::Loading { store, waiter } => {
+                with_async_drop_2!(store, { waiter.wait_until_loaded(&store).await })
             }
         }
     }

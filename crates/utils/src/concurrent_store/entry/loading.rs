@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use futures::{
@@ -60,9 +61,12 @@ where
         }
     }
 
-    pub fn add_waiter(&mut self) -> EntryLoadingWaiter {
+    pub fn add_waiter<K>(&mut self, key: K) -> EntryLoadingWaiter<K>
+    where
+        K: Hash + Eq + Clone + Debug + Send + Sync,
+    {
         self.num_waiters += 1;
-        EntryLoadingWaiter::new(self.loading_result.clone())
+        EntryLoadingWaiter::new(key, self.loading_result.clone())
     }
 
     pub fn num_waiters(&self) -> usize {

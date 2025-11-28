@@ -23,13 +23,12 @@ where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
 {
-    key: K,
     store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
 
     // Invariant: The entry is marked as "loading", which is why we use [EntryLoadingWaiter],
     // but our loading function never returns a None. It always returns a Some. So we don't need to deal with the
     // None case of EntryLoadingWaiter.
-    waiter: EntryLoadingWaiter,
+    waiter: EntryLoadingWaiter<K>,
 }
 
 impl<K, V> Inserting<K, V>
@@ -38,12 +37,11 @@ where
     V: AsyncDrop + Debug + Send + Sync + 'static,
 {
     pub(super) fn new(
-        key: K,
         store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
-        waiter: EntryLoadingWaiter,
+        waiter: EntryLoadingWaiter<K>,
     ) -> Self {
         Inserting {
-            inner: Some(InsertingInner { key, store, waiter }),
+            inner: Some(InsertingInner { store, waiter }),
         }
     }
 
@@ -55,9 +53,9 @@ where
         K: Hash + Eq + Clone + Debug + Send + Sync,
         V: AsyncDrop + Debug + Send + Sync,
     {
-        let InsertingInner { waiter, store, key } = self.inner.take().expect("Already destructed");
+        let InsertingInner { waiter, store } = self.inner.take().expect("Already destructed");
         with_async_drop_2!(store, {
-            Ok(waiter.wait_until_loaded(&store, key).await?.expect(
+            Ok(waiter.wait_until_loaded(&store).await?.expect(
                 "Invariant violated: Inserting should never return None from the loading function",
             ))
         })

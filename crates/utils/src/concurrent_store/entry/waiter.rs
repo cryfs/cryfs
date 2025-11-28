@@ -17,34 +17,50 @@ use crate::{
 /// This can be redeemed against the entry once loading is completed.
 /// It is an RAII type that ensures that the number of waiters is correctly tracked.
 #[must_use]
-pub struct EntryLoadingWaiter {
+pub struct EntryLoadingWaiter<K>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync,
+{
     // Alway Some unless destructed
-    loading_result: Option<Shared<BoxFuture<'static, LoadingResult>>>,
+    inner: Option<EntryLoadingWaiterInner<K>>,
 }
 
-impl EntryLoadingWaiter {
-    pub fn new(loading_result: Shared<BoxFuture<'static, LoadingResult>>) -> Self {
+struct EntryLoadingWaiterInner<K>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync,
+{
+    key: K,
+    loading_result: Shared<BoxFuture<'static, LoadingResult>>,
+}
+
+impl<K> EntryLoadingWaiter<K>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync,
+{
+    pub fn new(key: K, loading_result: Shared<BoxFuture<'static, LoadingResult>>) -> Self {
         EntryLoadingWaiter {
-            loading_result: Some(loading_result),
+            inner: Some(EntryLoadingWaiterInner {
+                key,
+                loading_result: loading_result,
+            }),
         }
     }
 
     /// Wait until the entry is loaded, and return a guard for the loaded entry.
     /// If the entry was not found, return None.
     /// If an error occurred while loading, return the error.
-    pub async fn wait_until_loaded<K, V>(
+    pub async fn wait_until_loaded<V>(
         mut self,
         store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
-        key: K,
     ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>>
     where
-        K: Hash + Eq + Clone + Debug + Send + Sync,
         V: AsyncDrop + Debug + Send + Sync,
     {
-        match self.loading_result.take().expect("Already dropped").await {
+        let inner = self.inner.take().expect("Already awaited");
+        match inner.loading_result.await {
             LoadingResult::Loaded => {
                 // _finalize_waiter will decrement the num_waiters refcount
-                Ok(Some(Self::_finalize_waiter(store, key)))
+                Ok(Some(Self::_finalize_waiter(store, inner.key)))
             }
             LoadingResult::NotFound => {
                 // No need to decrement the num_waiters refcount here because the entry never made it to the Loaded state
@@ -54,17 +70,17 @@ impl EntryLoadingWaiter {
                 // No need to decrement the num_waiters refcount here because the entry never made it to the Loaded state
                 Err(anyhow::anyhow!(
                     "Error while try_insert'ing entry with key {key:?}: {err}",
+                    key = inner.key
                 ))
             }
         }
     }
 
-    fn _finalize_waiter<K, V>(
+    fn _finalize_waiter<V>(
         store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
         key: K,
     ) -> AsyncDropGuard<LoadedEntryGuard<K, V>>
     where
-        K: Hash + Eq + Clone + Debug + Send + Sync,
         V: AsyncDrop + Debug + Send + Sync,
     {
         // This is not a race condition with dropping, i.e. the entry can't be in dropping state yet, because we are an "unfulfilled waiter",
@@ -85,9 +101,12 @@ impl EntryLoadingWaiter {
     }
 }
 
-impl Drop for EntryLoadingWaiter {
+impl<K> Drop for EntryLoadingWaiter<K>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync,
+{
     fn drop(&mut self) {
-        if self.loading_result.is_some() {
+        if self.inner.is_some() {
             safe_panic!(
                 "EntryLoadingWaiter was dropped without being awaited. This will lead to a memory leak because the number of waiters will not be decremented."
             );

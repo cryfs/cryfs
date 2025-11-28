@@ -91,7 +91,7 @@ where
         F: Future<Output = Result<AsyncDropGuard<V>>> + Send,
     {
         let mut entries = this.entries.lock().unwrap();
-        match entries.entry(key.clone()) {
+        match entries.entry(key) {
             Entry::Occupied(entry) => Err(anyhow::anyhow!(
                 "Key {key:?} is already loaded",
                 key = entry.key()
@@ -101,14 +101,11 @@ where
                     let loaded_entry = loading_fn().await?;
                     Ok(Some(loaded_entry))
                 };
-                let mut loading_future = this.make_loading_future(key.clone(), loading_future);
-                let loading_result = loading_future.add_waiter();
+                let mut loading_future =
+                    this.make_loading_future(entry.key().clone(), loading_future);
+                let loading_result = loading_future.add_waiter(entry.key().clone());
                 entry.insert(EntryState::Loading(loading_future));
-                Ok(Inserting::new(
-                    key,
-                    AsyncDropArc::clone(this),
-                    loading_result,
-                ))
+                Ok(Inserting::new(AsyncDropArc::clone(this), loading_result))
             }
         }
     }
@@ -168,7 +165,6 @@ where
                 }
                 CloneOrCreateEntryStateResult::Loading { loading_result } => {
                     return Ok(LoadingOrLoaded::new_loading(
-                        key,
                         AsyncDropArc::clone(this),
                         loading_result,
                     ));
@@ -216,7 +212,7 @@ where
                 loaded.get_entry(),
             )),
             Some(EntryState::Loading(loading)) => {
-                LoadingOrLoaded::new_loading(key, AsyncDropArc::clone(this), loading.add_waiter())
+                LoadingOrLoaded::new_loading(AsyncDropArc::clone(this), loading.add_waiter(key))
             }
             None | Some(EntryState::Dropping { .. }) => LoadingOrLoaded::new_not_found(),
         }
@@ -228,7 +224,7 @@ where
         key: K,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         loading_fn: F,
-    ) -> CloneOrCreateEntryStateResult<V, F, R, I>
+    ) -> CloneOrCreateEntryStateResult<K, V, F, R, I>
     where
         F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send,
         R: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
@@ -236,7 +232,7 @@ where
         <I as AsyncDrop>::Error: std::error::Error + Send + Sync + 's,
     {
         let mut entries = self.entries.lock().unwrap();
-        match entries.entry(key) {
+        match entries.entry(key.clone()) {
             Entry::Occupied(mut entry) => match entry.get_mut() {
                 EntryState::Loaded(loaded) => match loaded.immediate_drop_requested() {
                     Some(on_dropped) => CloneOrCreateEntryStateResult::ImmediateDropRequested {
@@ -254,7 +250,7 @@ where
                     },
                     None => CloneOrCreateEntryStateResult::Loading {
                         // The caller is responsible for decreasing num_unfulfilled_waiters when it gets the entry.
-                        loading_result: loading.add_waiter(),
+                        loading_result: loading.add_waiter(key),
                     },
                 },
                 EntryState::Dropping(state) => CloneOrCreateEntryStateResult::Dropping {
@@ -267,10 +263,10 @@ where
             Entry::Vacant(entry) => {
                 // No loading operation is in progress, so we start a new one.
                 let mut loading_future = self.make_loading_future(
-                    entry.key().clone(),
+                    key.clone(),
                     loading_fn(AsyncDropArc::clone(loading_fn_input)),
                 );
-                let loading_result = loading_future.add_waiter();
+                let loading_result = loading_future.add_waiter(key);
                 entry.insert(EntryState::Loading(loading_future));
                 CloneOrCreateEntryStateResult::Loading { loading_result }
             }
@@ -582,15 +578,16 @@ where
 
 /// Basically the same as [EntryState], but the [Self::Dropping] state carries an additional member `loading_fn` so the `FnOnce` can be returned from
 /// the method if not used.
-enum CloneOrCreateEntryStateResult<V, F, R, I>
+enum CloneOrCreateEntryStateResult<K, V, F, R, I>
 where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
     F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send,
     R: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
     I: AsyncDrop + Debug + Send,
 {
     Loading {
-        loading_result: EntryLoadingWaiter,
+        loading_result: EntryLoadingWaiter<K>,
     },
     Loaded {
         entry: AsyncDropGuard<AsyncDropArc<V>>,
@@ -602,10 +599,7 @@ where
         loading_fn: F,
     },
     /// EntryState is either Loading or Loaded, but an immediate drop was requested. We need to block further accesses until dropping is complete.
-    ImmediateDropRequested {
-        on_dropped: Event,
-        loading_fn: F,
-    },
+    ImmediateDropRequested { on_dropped: Event, loading_fn: F },
 }
 
 /// Result of requesting immediate drop of an entry.
