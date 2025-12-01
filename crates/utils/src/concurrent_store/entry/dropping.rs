@@ -19,4 +19,8 @@ impl EntryStateDropping {
     pub fn future(&self) -> &Shared<BoxFuture<'static, ()>> {
         &self.future
     }
+
+    pub fn into_future(self) -> Shared<BoxFuture<'static, ()>> {
+        self.future
+    }
 }

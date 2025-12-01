@@ -16,6 +16,7 @@ use crate::{
     event::Event,
 };
 
+#[derive(Debug)]
 pub struct EntryStateLoading<V>
 where
     V: AsyncDrop + Debug + Send + 'static,

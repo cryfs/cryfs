@@ -568,10 +568,25 @@ where
     type Error = Never;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        assert!(
-            self.entries.lock().unwrap().is_empty(),
-            "There are still loading tasks running or loaded entries being used by some tasks. Please wait for them to complete before dropping the ConcurrentStore."
-        );
+        // Wait for any currently dropping entries to complete
+        let mut entries = std::mem::take(&mut *self.entries.lock().unwrap());
+        let dropping_futures = entries
+                .drain()
+                .filter_map(|(_, entry_state)| match entry_state {
+                    EntryState::Dropping(dropping) => Some(dropping.into_future()),
+                    EntryState::Loading(loading) => {
+                        panic!("There are still loading tasks running. Please async_drop all guards before dropping the ConcurrentStore. Witness: {loading:?}");
+                    }
+                    EntryState::Loaded(loaded) => {
+                        panic!("There are still loaded entries. Please async_drop all guards before dropping the ConcurrentStore. Witness: {loaded:?}");
+                    }
+                });
+        for_each_unordered(dropping_futures, |future| async move {
+            future.await;
+            Ok::<(), Never>(())
+        })
+        .await
+        .infallible_unwrap();
         Ok(())
     }
 }

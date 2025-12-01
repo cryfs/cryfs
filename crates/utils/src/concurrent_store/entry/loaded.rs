@@ -9,6 +9,7 @@ use crate::{
     event::Event,
 };
 
+#[derive(Debug)]
 pub struct EntryStateLoaded<V>
 where
     V: AsyncDrop + Debug + Send + 'static,

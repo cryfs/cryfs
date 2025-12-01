@@ -82,3 +82,19 @@ pub enum ImmediateDropRequestResponse {
         on_earlier_request_complete: Shared<BoxFuture<'static, ()>>,
     },
 }
+
+impl<V> Debug for ImmediateDropRequest<V>
+where
+    V: AsyncDrop + Debug + Send + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ImmediateDropRequest::NotRequested => {
+                write!(f, "ImmediateDropRequest::NotRequested")
+            }
+            ImmediateDropRequest::Requested { .. } => {
+                write!(f, "ImmediateDropRequest::Requested {{ .. }}")
+            }
+        }
+    }
+}
