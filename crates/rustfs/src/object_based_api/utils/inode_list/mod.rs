@@ -13,7 +13,6 @@
 //       * when forgetting an entry, also remove it from its parent's children mapping
 //       * update name mapping on rename
 //       * remove entry from `children` mapping of its parent ino on unlink/rmdir, but keep the inode itself in existence if refcount > 0
-//          * see also https://github.com/wfraser/fuse-mt/issues/48 for rmdir
 //       * Invariant: If an inode exists in the children mapping, it also exists in the main mapping.
 //                    If an inode exists in the main mapping with refcount > 0, it may or may not exist in the children mapping, depending on whether it was deleted.
 

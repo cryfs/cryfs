@@ -1670,9 +1670,9 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "fuse_mt"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3da46985bfced10164e22733cacfc4f226333dec9849014106328231ea85d451"
+checksum = "a9f59af312f6f40a721dafd2662f4bb33eacc90d3a2e1dfebc4536aa732a79be"
 dependencies = [
  "fuser",
  "libc",

@@ -350,7 +350,6 @@ where
     }
 
     async fn rmdir(&self, _req: RequestInfo, path: &AbsolutePath) -> FsResult<()> {
-        // TODO Check https://github.com/wfraser/fuse-mt/issues/48 and fix myself if it wasn't fixed yet
         self.trigger_on_operation().await?;
 
         let (parent, name) = path.split_last().ok_or_else(|| {
