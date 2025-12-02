@@ -32,7 +32,7 @@ where
         })
     }
 
-    pub async fn try_insert_with_id<F>(
+    pub async fn try_insert_loading<F>(
         &self,
         blob_id: BlobId,
         loading_fn: impl FnOnce() -> F + Send + 'static,
@@ -42,7 +42,7 @@ where
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
         let mut inserted =
-            ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn)
+            ConcurrentStore::try_insert_loading(&self.loaded_blobs, blob_id, loading_fn)
                 .await?
                 .wait_until_inserted()
                 .await?;
@@ -50,11 +50,11 @@ where
         Ok(())
     }
 
-    pub async fn insert_with_new_id(
+    pub async fn try_insert_loaded(
         &self,
         blob: AsyncDropGuard<FsBlob<B>>,
     ) -> Result<AsyncDropGuard<LoadedBlobGuard<B>>> {
-        ConcurrentStore::insert_with_new_key(
+        ConcurrentStore::try_insert_loaded(
             &self.loaded_blobs,
             blob.blob_id(),
             AsyncDropTokioMutex::new(blob),

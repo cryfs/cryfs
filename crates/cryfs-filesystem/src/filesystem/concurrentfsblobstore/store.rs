@@ -44,7 +44,7 @@ where
     pub async fn create_root_dir_blob(&self, root_blob_id: &BlobId) -> Result<()> {
         let root_blob_id = *root_blob_id;
         let blobstore = AsyncDropArc::clone(&self.blobstore);
-        LoadedBlobs::try_insert_with_id(&self.loaded_blobs, root_blob_id, async move || {
+        LoadedBlobs::try_insert_loading(&self.loaded_blobs, root_blob_id, async move || {
             with_async_drop_2!(blobstore, {
                 blobstore.create_root_dir_blob(&root_blob_id).await
             })
@@ -61,7 +61,7 @@ where
             .blobstore
             .create_file_blob(parent, flush_behavior)
             .await?;
-        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob)
+        let inserted = LoadedBlobs::try_insert_loaded(&self.loaded_blobs, blob)
             .await
             .expect("This can't fail because the blob id is new");
         Ok(ConcurrentFsBlob::new(inserted))
@@ -76,7 +76,7 @@ where
             .blobstore
             .create_dir_blob(parent, flush_behavior)
             .await?;
-        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob)
+        let inserted = LoadedBlobs::try_insert_loaded(&self.loaded_blobs, blob)
             .await
             .expect("This can't fail because the blob id is new");
         Ok(ConcurrentFsBlob::new(inserted))
@@ -92,7 +92,7 @@ where
             .blobstore
             .create_symlink_blob(parent, target, flush_behavior)
             .await?;
-        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob)
+        let inserted = LoadedBlobs::try_insert_loaded(&self.loaded_blobs, blob)
             .await
             .expect("This can't fail because the blob id is new");
         Ok(ConcurrentFsBlob::new(inserted))

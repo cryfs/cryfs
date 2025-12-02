@@ -83,7 +83,7 @@ where
     ///
     /// The call site is expected to await the returned [EntryLoadingWaiter] through [EntryLoadingWaiter::wait_until_loaded],
     /// otherwise the loading operation might not be driven to completion.
-    pub async fn try_insert_with_key<F>(
+    pub async fn try_insert_loading<F>(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         mut key: K,
         loading_fn: impl FnOnce() -> F + Send + 'static,
@@ -130,12 +130,11 @@ where
 
     /// Insert a new entry that was just created and has a new key assigned.
     /// This will return an Error if the key already exists.
-    pub async fn insert_with_new_key(
+    pub async fn try_insert_loaded(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         mut key: K,
         value: AsyncDropGuard<V>,
     ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V>>> {
-        // TODO rename try_insert_with_key -> try_insert_loading and insert_with_new_key -> try_insert_loaded
         // TODO Deduplicate between this and try_insert_loading
         let loaded = EntryStateLoaded::new_without_unfulfilled_waiters(value);
         // No unfulfilled waiters, we just created it
