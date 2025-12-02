@@ -28,10 +28,13 @@ impl<V> EntryStateLoaded<V>
 where
     V: AsyncDrop + Debug + Send + 'static,
 {
-    pub fn new_from_just_finished_loading(
+    pub fn new_from_just_finished_loading<E>(
         entry: AsyncDropGuard<V>,
-        loading: EntryStateLoading<V>,
-    ) -> Self {
+        loading: EntryStateLoading<V, E>,
+    ) -> Self
+    where
+        E: Debug + Send + Sync,
+    {
         EntryStateLoaded {
             entry: AsyncDropArc::new(entry),
             num_unfulfilled_waiters: loading.num_waiters(),

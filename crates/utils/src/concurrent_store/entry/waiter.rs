@@ -1,7 +1,7 @@
 use anyhow::Result;
 use futures::future::{BoxFuture, Shared};
-use std::fmt::Debug;
 use std::hash::Hash;
+use std::{fmt::Debug, sync::Arc};
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
@@ -17,27 +17,30 @@ use crate::{
 /// This can be redeemed against the entry once loading is completed.
 /// It is an RAII type that ensures that the number of waiters is correctly tracked.
 #[must_use]
-pub struct EntryLoadingWaiter<K>
+pub struct EntryLoadingWaiter<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
+    E: Debug + Send + Sync + 'static,
 {
     // Alway Some unless destructed
-    inner: Option<EntryLoadingWaiterInner<K>>,
+    inner: Option<EntryLoadingWaiterInner<K, E>>,
 }
 
-struct EntryLoadingWaiterInner<K>
+struct EntryLoadingWaiterInner<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
+    E: Debug + Send + Sync + 'static,
 {
     key: K,
-    loading_result: Shared<BoxFuture<'static, LoadingResult>>,
+    loading_result: Shared<BoxFuture<'static, LoadingResult<E>>>,
 }
 
-impl<K> EntryLoadingWaiter<K>
+impl<K, E> EntryLoadingWaiter<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
+    E: Debug + Send + Sync + 'static,
 {
-    pub fn new(key: K, loading_result: Shared<BoxFuture<'static, LoadingResult>>) -> Self {
+    pub fn new(key: K, loading_result: Shared<BoxFuture<'static, LoadingResult<E>>>) -> Self {
         EntryLoadingWaiter {
             inner: Some(EntryLoadingWaiterInner {
                 key,
@@ -51,8 +54,8 @@ where
     /// If an error occurred while loading, return the error.
     pub async fn wait_until_loaded<V>(
         mut self,
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V>>>>
+        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, E>>>, Arc<E>>
     where
         V: AsyncDrop + Debug + Send + Sync,
     {
@@ -68,18 +71,15 @@ where
             }
             LoadingResult::Error(err) => {
                 // No need to decrement the num_waiters refcount here because the entry never made it to the Loaded state
-                Err(anyhow::anyhow!(
-                    "Error while try_insert'ing entry with key {key:?}: {err}",
-                    key = inner.key
-                ))
+                Err(err)
             }
         }
     }
 
     fn _finalize_waiter<V>(
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V>>>,
+        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
         key: K,
-    ) -> AsyncDropGuard<LoadedEntryGuard<K, V>>
+    ) -> AsyncDropGuard<LoadedEntryGuard<K, V, E>>
     where
         V: AsyncDrop + Debug + Send + Sync,
     {
@@ -101,9 +101,10 @@ where
     }
 }
 
-impl<K> Drop for EntryLoadingWaiter<K>
+impl<K, E> Drop for EntryLoadingWaiter<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
+    E: Debug + Send + Sync + 'static,
 {
     fn drop(&mut self) {
         if self.inner.is_some() {

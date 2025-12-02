@@ -22,6 +22,22 @@ macro_rules! with_async_drop_2 {
     };
 }
 
+/// Variant of [with_async_drop_2] for types that return a `Never` error in their async_drop
+#[macro_export]
+macro_rules! with_async_drop_2_infallible {
+    ($value:ident, $f:block) => {
+        async {
+            use lockable::InfallibleUnwrap as _;
+            // TODO Now that we use an async closure here, can we simplify some call sites? Or can we simplify this function here? Why two async?
+            let result = (async || $f)().await;
+            let mut value = $value;
+            value.async_drop().await.infallible_unwrap();
+            result
+        }
+        .await
+    };
+}
+
 pub async fn with_async_drop<T, R, E, F>(
     mut value: AsyncDropGuard<T>,
     f: impl FnOnce(&mut T) -> F,

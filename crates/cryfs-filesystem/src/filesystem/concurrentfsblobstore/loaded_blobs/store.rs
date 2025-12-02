@@ -17,8 +17,10 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Here (and in other places using BlockId or BlobId as hash map/set key), use a faster hash function, e.g. just take the first 8 bytes of the id. Ids are already random.
-    loaded_blobs:
-        AsyncDropGuard<AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>>,
+    loaded_blobs: AsyncDropGuard<
+        // TODO Would ConcurrentStore<_, _, FsError> be better?
+        AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, anyhow::Error>>,
+    >,
 }
 
 impl<B> LoadedBlobs<B>
@@ -45,7 +47,11 @@ where
             ConcurrentStore::try_insert_loading(&self.loaded_blobs, blob_id, loading_fn)
                 .await?
                 .wait_until_inserted()
-                .await?;
+                .await
+                .map_err(|err| {
+                    // TODO
+                    anyhow::anyhow!("{err:?}")
+                })?;
         inserted.async_drop().await?;
         Ok(())
     }
@@ -84,7 +90,11 @@ where
         )
         .await
         .wait_until_loaded()
-        .await?
+        .await
+        .map_err(|err| {
+            // TODO
+            anyhow::anyhow!("{err:?}")
+        })?
         .map(LoadedBlobGuard::new))
     }
 
@@ -95,7 +105,11 @@ where
         Ok(
             ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)
                 .wait_until_loaded()
-                .await?
+                .await
+                .map_err(|err| {
+                    // TODO
+                    anyhow::anyhow!("{err:?}")
+                })?
                 .map(LoadedBlobGuard::new),
         )
     }

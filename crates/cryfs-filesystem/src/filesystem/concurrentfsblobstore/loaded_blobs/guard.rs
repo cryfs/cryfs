@@ -7,6 +7,7 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex},
     concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult},
 };
+use lockable::InfallibleUnwrap as _;
 
 use crate::filesystem::fsblobstore::FsBlob;
 
@@ -16,7 +17,8 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
+    loaded_blob:
+        AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, anyhow::Error>>,
 }
 
 impl<B> LoadedBlobGuard<B>
@@ -25,7 +27,9 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub(super) fn new(
-        loaded_blob: AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>>>,
+        loaded_blob: AsyncDropGuard<
+            LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, anyhow::Error>,
+        >,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { loaded_blob })
     }
@@ -85,10 +89,7 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.loaded_blob.async_drop().await.map_err(|e| {
-            log::error!("Error dropping LoadedBlobGuard: {:?}", e);
-            FsError::UnknownError
-        })?;
+        self.loaded_blob.async_drop().await.infallible_unwrap();
         Ok(())
     }
 }

@@ -8,11 +8,12 @@ mod loaded;
 mod loading;
 mod waiter;
 
-pub enum EntryState<V>
+pub enum EntryState<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
+    E: Debug + Send + Sync + 'static,
 {
-    Loading(EntryStateLoading<V>),
+    Loading(EntryStateLoading<V, E>),
     Loaded(EntryStateLoaded<V>),
     Dropping(EntryStateDropping),
 }
