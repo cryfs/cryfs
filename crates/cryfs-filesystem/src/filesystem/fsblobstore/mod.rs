@@ -147,6 +147,6 @@ where
         self.blobstore
             .async_drop()
             .await
-            .map_err(|error| FsError::InternalError { error })
+            .map_err(FsError::internal_error)
     }
 }

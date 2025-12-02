@@ -335,18 +335,15 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.writeback()
-            .await
-            .map_err(|err| FsError::InternalError {
+        self.writeback().await.map_err(|err| {
+            FsError::internal_error(
                 // TODO Instead of map_err, have flush return FsError
-                error: err.context("Error in DirBlob::async_drop_impl"),
-            })?;
-        self.blob
-            .async_drop()
-            .await
-            .map_err(|err| FsError::InternalError {
-                error: err.context("Error in DirBlob::async_drop_impl"),
-            })?;
+                err.context("Error in DirBlob::async_drop_impl"),
+            )
+        })?;
+        self.blob.async_drop().await.map_err(|err| {
+            FsError::internal_error(err.context("Error in DirBlob::async_drop_impl"))
+        })?;
         Ok(())
     }
 }

@@ -114,12 +114,9 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blob
-            .async_drop()
-            .await
-            .map_err(|err| FsError::InternalError {
-                error: err.context("Error in FileBlob::async_drop_impl"),
-            })?;
+        self.blob.async_drop().await.map_err(|err| {
+            FsError::internal_error(err.context("Error in FileBlob::async_drop_impl"))
+        })?;
         Ok(())
     }
 }

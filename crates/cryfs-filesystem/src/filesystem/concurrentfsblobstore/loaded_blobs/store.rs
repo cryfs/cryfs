@@ -127,7 +127,7 @@ where
                     let blob = AsyncDropTokioMutex::into_inner(blob);
                     let remove_result = FsBlob::remove(blob)
                         .await
-                        .map_err(|error| FsError::InternalError { error });
+                        .map_err(|error| FsError::internal_error(error));
                     blobstore.async_drop().await?;
                     remove_result?;
                     Ok(RemoveResult::SuccessfullyRemoved)
@@ -138,7 +138,7 @@ where
                     let result = blobstore
                         .remove_by_id(&blob_id)
                         .await
-                        .map_err(|error| FsError::InternalError { error });
+                        .map_err(|error| FsError::internal_error(error));
                     blobstore.async_drop().await?;
                     result
                 }

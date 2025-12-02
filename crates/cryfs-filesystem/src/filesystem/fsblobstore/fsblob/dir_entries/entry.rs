@@ -79,9 +79,7 @@ impl DirEntry {
                 blob_id,
             },
         };
-        result
-            .validate()
-            .map_err(|error| FsError::InternalError { error })?;
+        result.validate().map_err(FsError::internal_error)?;
         Ok(result)
     }
 

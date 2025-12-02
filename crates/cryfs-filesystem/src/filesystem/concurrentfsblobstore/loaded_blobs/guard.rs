@@ -55,7 +55,7 @@ where
                         panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
                     };
                     let blob = AsyncDropTokioMutex::into_inner(blob);
-                    FsBlob::remove(blob).await.map_err(|error| FsError::InternalError { error })?;
+                    FsBlob::remove(blob).await.map_err(|error| FsError::internal_error(error))?;
                     Ok(RemoveResult::SuccessfullyRemoved)
                 },
             ) {
@@ -66,9 +66,8 @@ where
                     // Wait until the blob is removed. If there are other readers, this will wait.
                     return drop_result
                         .await
-                        .map_err(|err: Arc<FsError>| FsError::InternalError {
-                            error: anyhow::anyhow!("Error during blob removal: {err}"),
-                        });
+                        // TODO Weird to return Arc when FsError is cloneable
+                        .map_err(|err: Arc<FsError>| (*err).clone());
                 }
                 RequestImmediateDropResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry

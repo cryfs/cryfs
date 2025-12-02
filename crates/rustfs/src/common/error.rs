@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use thiserror::Error;
 
 // TODO Add fh parameters for descriptor errors and path parameters to others
 
 // TODO Is there a better way for error reporting, e.g. having custom error types for each interface function and mapping them to system error codes in the fuse_mt backend adapter?
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum FsError {
     // TODO We should probably get rid of Custom and instead use more specific error types, or at least minimize its use
     #[error("Error code: {error_code}")]
@@ -18,7 +20,7 @@ pub enum FsError {
     UnknownError,
 
     #[error("Internal Error: {error}")]
-    InternalError { error: anyhow::Error },
+    InternalError { error: Arc<anyhow::Error> },
 
     #[error("There is an error in the file system data. Maybe it is corrupted. {message}")]
     CorruptedFilesystem { message: String },
@@ -83,6 +85,12 @@ pub enum FsError {
 }
 
 impl FsError {
+    pub fn internal_error(error: anyhow::Error) -> Self {
+        FsError::InternalError {
+            error: Arc::new(error),
+        }
+    }
+
     pub fn system_error_code(&self) -> libc::c_int {
         match self {
             FsError::Custom { error_code } => *error_code,
