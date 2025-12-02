@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use futures::FutureExt as _;
 use futures::future::{BoxFuture, Shared};
-use lockable::Never;
+use lockable::{InfallibleUnwrap as _, Never};
 use std::collections::hash_map::Entry;
 use std::marker::PhantomData;
 use std::{
@@ -20,6 +20,7 @@ use crate::concurrent_store::entry::{
 };
 use crate::concurrent_store::guard::LoadedEntryGuard;
 use crate::event::Event;
+use crate::stream::for_each_unordered;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::entry::EntryState,
@@ -82,36 +83,53 @@ where
     ///
     /// The call site is expected to await the returned [EntryLoadingWaiter] through [EntryLoadingWaiter::wait_until_loaded],
     /// otherwise the loading operation might not be driven to completion.
-    pub fn try_insert_with_key<F>(
+    pub async fn try_insert_with_key<F>(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
-        key: K,
+        mut key: K,
         loading_fn: impl FnOnce() -> F + Send + 'static,
     ) -> Result<Inserting<K, V>>
     where
         F: Future<Output = Result<AsyncDropGuard<V>>> + Send,
     {
-        let mut entries = this.entries.lock().unwrap();
-        match entries.entry(key) {
-            Entry::Occupied(entry) => Err(anyhow::anyhow!(
-                "Key {key:?} is already loaded",
-                key = entry.key()
-            )),
-            Entry::Vacant(entry) => {
-                let loading_future = async move {
-                    let loaded_entry = loading_fn().await?;
-                    Ok(Some(loaded_entry))
-                };
-                let mut loading_future =
-                    this.make_loading_future(entry.key().clone(), loading_future);
-                let loading_result = loading_future.add_waiter(entry.key().clone());
-                entry.insert(EntryState::Loading(loading_future));
-                Ok(Inserting::new(AsyncDropArc::clone(this), loading_result))
+        loop {
+            let mut entries = this.entries.lock().unwrap();
+            match entries.entry(key) {
+                Entry::Occupied(entry) => {
+                    match entry.get() {
+                        EntryState::Loading(_) | EntryState::Loaded(_) => {
+                            return Err(anyhow::anyhow!(
+                                "Key {key:?} is already loading",
+                                key = entry.key()
+                            ));
+                        }
+                        EntryState::Dropping(dropping) => {
+                            // Release the lock and then wait for dropping. Then retry
+                            let dropping_future = Shared::clone(dropping.future());
+                            key = entry.key().clone();
+                            std::mem::drop(entries);
+                            dropping_future.await;
+                            continue;
+                        }
+                    }
+                }
+                Entry::Vacant(entry) => {
+                    let loading_future = async move {
+                        let loaded_entry = loading_fn().await?;
+                        Ok(Some(loaded_entry))
+                    };
+                    let mut loading_future =
+                        this.make_loading_future(entry.key().clone(), loading_future);
+                    let loading_result = loading_future.add_waiter(entry.key().clone());
+                    entry.insert(EntryState::Loading(loading_future));
+                    return Ok(Inserting::new(AsyncDropArc::clone(this), loading_result));
+                }
             }
         }
     }
 
     /// Insert a new entry that was just created and has a new key assigned.
     /// This must not be an existing key or it can cause race conditions or panics.
+    /// This key also must not have been used before, otherwise it might still be dropping.
     /// This key also must not be used in any other calls before this completes.
     /// Only after this function call returns are we set up to deal with concurrent accesses.
     pub fn insert_with_new_key(

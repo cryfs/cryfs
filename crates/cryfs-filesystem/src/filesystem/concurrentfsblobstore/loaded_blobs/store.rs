@@ -42,7 +42,8 @@ where
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
         let mut inserted =
-            ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn)?
+            ConcurrentStore::try_insert_with_key(&self.loaded_blobs, blob_id, loading_fn)
+                .await?
                 .wait_until_inserted()
                 .await?;
         inserted.async_drop().await?;
