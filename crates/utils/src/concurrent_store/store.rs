@@ -133,12 +133,9 @@ where
     pub async fn try_insert_loaded(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
         mut key: K,
-        value: AsyncDropGuard<V>,
+        mut value: AsyncDropGuard<V>,
     ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V>>> {
         // TODO Deduplicate between this and try_insert_loading
-        let loaded = EntryStateLoaded::new_without_unfulfilled_waiters(value);
-        // No unfulfilled waiters, we just created it
-        let loaded_entry = loaded.get_entry();
         loop {
             let dropping_future = {
                 let mut entries = this.entries.lock().unwrap();
@@ -147,20 +144,23 @@ where
                     Entry::Occupied(entry) => {
                         match entry.get() {
                             EntryState::Loading(_) | EntryState::Loaded(_) => {
-                                return Err(anyhow::anyhow!(
-                                    "Entry with key {:?} is already loaded even though we just created it",
-                                    entry.key()
-                                ));
+                                key = entry.key().clone();
+                                break;
+                                // continue below the loop to return the error
                             }
                             EntryState::Dropping(dropping) => {
                                 key = entry.key().clone();
                                 Shared::clone(dropping.future())
-                                // continue below
+                                // continue below the match statement with dropping_future
                             }
                         }
                     }
                     Entry::Vacant(entry) => {
-                        let key = entry.key().clone();
+                        let loaded = EntryStateLoaded::new_without_unfulfilled_waiters(value);
+                        // No unfulfilled waiters, we just created it
+                        let loaded_entry = loaded.get_entry();
+
+                        key = entry.key().clone();
                         entry.insert(EntryState::Loaded(loaded));
                         return Ok(LoadedEntryGuard::new(
                             AsyncDropArc::clone(this),
@@ -171,10 +171,18 @@ where
                 }
             };
 
-            // We'll only get here if we had EntryState::Dropping.
+            // We only get here if we had EntryState::Dropping.
             // We now released the lock on entries. Wait for dropping to complete and then retry.
             dropping_future.await;
         }
+
+        // We only get here if the entry was already Loading or Loaded.
+        // We now released the lock on entries. Return the error.
+        value.async_drop().await.unwrap(); // TODO No unwrap
+        return Err(anyhow::anyhow!(
+            "Entry with key {:?} is already loaded even though we just created it",
+            key
+        ));
     }
 
     /// Load an entry if it is not already loaded, or return the existing loaded entry.
