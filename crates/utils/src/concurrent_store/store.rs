@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use futures::FutureExt as _;
 use futures::future::{BoxFuture, Shared};
@@ -128,30 +128,53 @@ where
     }
 
     /// Insert a new entry that was just created and has a new key assigned.
-    /// This must not be an existing key or it can cause race conditions or panics.
-    /// This key also must not have been used before, otherwise it might still be dropping.
-    /// This key also must not be used in any other calls before this completes.
-    /// Only after this function call returns are we set up to deal with concurrent accesses.
-    pub fn insert_with_new_key(
+    /// This will return an Error if the key already exists.
+    pub async fn insert_with_new_key(
         this: &AsyncDropGuard<AsyncDropArc<Self>>,
-        key: K,
+        mut key: K,
         value: AsyncDropGuard<V>,
-    ) -> AsyncDropGuard<LoadedEntryGuard<K, V>> {
-        // We now have the newly assigned key and are fully loaded. Insert it into the map.
-        let mut entries = this.entries.lock().unwrap();
-        // No unfulfilled waiters, we just created it
+    ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V>>> {
+        // TODO rename try_insert_with_key -> try_insert_loading and insert_with_new_key -> try_insert_loaded
+        // TODO Deduplicate between this and try_insert_loading
         let loaded = EntryStateLoaded::new_without_unfulfilled_waiters(value);
+        // No unfulfilled waiters, we just created it
         let loaded_entry = loaded.get_entry();
-        match entries.entry(key.clone()) {
-            Entry::Occupied(_) => {
-                panic!("Entry with key {key:?} is already loaded even though we just created it",);
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(EntryState::Loaded(loaded));
-            }
-        }
+        loop {
+            let dropping_future = {
+                let mut entries = this.entries.lock().unwrap();
 
-        LoadedEntryGuard::new(AsyncDropArc::clone(this), key, loaded_entry)
+                match entries.entry(key) {
+                    Entry::Occupied(entry) => {
+                        match entry.get() {
+                            EntryState::Loading(_) | EntryState::Loaded(_) => {
+                                return Err(anyhow::anyhow!(
+                                    "Entry with key {:?} is already loaded even though we just created it",
+                                    entry.key()
+                                ));
+                            }
+                            EntryState::Dropping(dropping) => {
+                                // Release the lock and then wait for dropping. Then retry
+                                key = entry.key().clone();
+                                Shared::clone(dropping.future())
+                            }
+                        }
+                    }
+                    Entry::Vacant(entry) => {
+                        let key = entry.key().clone();
+                        entry.insert(EntryState::Loaded(loaded));
+                        return Ok(LoadedEntryGuard::new(
+                            AsyncDropArc::clone(this),
+                            key,
+                            loaded_entry,
+                        ));
+                    }
+                }
+            };
+
+            // We'll only get here if we had EntryState::Dropping.
+            // We now released the lock on entries. Wait for dropping to complete and then retry.
+            dropping_future.await;
+        }
     }
 
     /// Load an entry if it is not already loaded, or return the existing loaded entry.

@@ -50,19 +50,17 @@ where
         Ok(())
     }
 
-    /// Insert a new blob that was just created and has a new blob id assigned.
-    /// This must not be an existing blob id or it can cause race conditions or panics.
-    /// This id also must not be used in any other calls before this completes.
-    /// Only after this function call returns are we set up to deal with concurrent accesses.
-    pub fn insert_with_new_id(
+    pub async fn insert_with_new_id(
         &self,
         blob: AsyncDropGuard<FsBlob<B>>,
-    ) -> AsyncDropGuard<LoadedBlobGuard<B>> {
-        LoadedBlobGuard::new(ConcurrentStore::insert_with_new_key(
+    ) -> Result<AsyncDropGuard<LoadedBlobGuard<B>>> {
+        ConcurrentStore::insert_with_new_key(
             &self.loaded_blobs,
             blob.blob_id(),
             AsyncDropTokioMutex::new(blob),
-        ))
+        )
+        .await
+        .map(LoadedBlobGuard::new)
     }
 
     pub async fn get_loaded_or_insert_loading<F>(

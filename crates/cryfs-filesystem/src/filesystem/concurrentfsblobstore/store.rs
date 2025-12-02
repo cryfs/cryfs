@@ -61,7 +61,9 @@ where
             .blobstore
             .create_file_blob(parent, flush_behavior)
             .await?;
-        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
+        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob)
+            .await
+            .expect("This can't fail because the blob id is new");
         Ok(ConcurrentFsBlob::new(inserted))
     }
 
@@ -74,7 +76,9 @@ where
             .blobstore
             .create_dir_blob(parent, flush_behavior)
             .await?;
-        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
+        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob)
+            .await
+            .expect("This can't fail because the blob id is new");
         Ok(ConcurrentFsBlob::new(inserted))
     }
 
@@ -88,7 +92,9 @@ where
             .blobstore
             .create_symlink_blob(parent, target, flush_behavior)
             .await?;
-        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob);
+        let inserted = LoadedBlobs::insert_with_new_id(&self.loaded_blobs, blob)
+            .await
+            .expect("This can't fail because the blob id is new");
         Ok(ConcurrentFsBlob::new(inserted))
     }
 
