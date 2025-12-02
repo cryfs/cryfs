@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use async_trait::async_trait;
 use futures::FutureExt as _;
 use futures::future::{BoxFuture, Shared};
@@ -92,10 +92,10 @@ where
         F: Future<Output = Result<AsyncDropGuard<V>>> + Send,
     {
         loop {
-            let mut entries = this.entries.lock().unwrap();
-            match entries.entry(key) {
-                Entry::Occupied(entry) => {
-                    match entry.get() {
+            let dropping_future = {
+                let mut entries = this.entries.lock().unwrap();
+                match entries.entry(key) {
+                    Entry::Occupied(entry) => match entry.get() {
                         EntryState::Loading(_) | EntryState::Loaded(_) => {
                             return Err(anyhow::anyhow!(
                                 "Key {key:?} is already loading",
@@ -103,27 +103,28 @@ where
                             ));
                         }
                         EntryState::Dropping(dropping) => {
-                            // Release the lock and then wait for dropping. Then retry
-                            let dropping_future = Shared::clone(dropping.future());
                             key = entry.key().clone();
-                            std::mem::drop(entries);
-                            dropping_future.await;
-                            continue;
+                            Shared::clone(dropping.future())
+                            //continue below
                         }
+                    },
+                    Entry::Vacant(entry) => {
+                        let loading_future = async move {
+                            let loaded_entry = loading_fn().await?;
+                            Ok(Some(loaded_entry))
+                        };
+                        let mut loading_future =
+                            this.make_loading_future(entry.key().clone(), loading_future);
+                        let loading_result = loading_future.add_waiter(entry.key().clone());
+                        entry.insert(EntryState::Loading(loading_future));
+                        return Ok(Inserting::new(AsyncDropArc::clone(this), loading_result));
                     }
                 }
-                Entry::Vacant(entry) => {
-                    let loading_future = async move {
-                        let loaded_entry = loading_fn().await?;
-                        Ok(Some(loaded_entry))
-                    };
-                    let mut loading_future =
-                        this.make_loading_future(entry.key().clone(), loading_future);
-                    let loading_result = loading_future.add_waiter(entry.key().clone());
-                    entry.insert(EntryState::Loading(loading_future));
-                    return Ok(Inserting::new(AsyncDropArc::clone(this), loading_result));
-                }
-            }
+            };
+
+            // We'll only get here if we had EntryState::Dropping.
+            // We now released the lock on entries. Wait for dropping to complete and then retry.
+            dropping_future.await;
         }
     }
 
@@ -153,9 +154,9 @@ where
                                 ));
                             }
                             EntryState::Dropping(dropping) => {
-                                // Release the lock and then wait for dropping. Then retry
                                 key = entry.key().clone();
                                 Shared::clone(dropping.future())
+                                // continue below
                             }
                         }
                     }
