@@ -1,7 +1,7 @@
 use anyhow::Result;
 use futures::future::{BoxFuture, Shared};
+use std::fmt::Debug;
 use std::hash::Hash;
-use std::{fmt::Debug, sync::Arc};
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
@@ -20,7 +20,7 @@ use crate::{
 pub struct EntryLoadingWaiter<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     // Alway Some unless destructed
     inner: Option<EntryLoadingWaiterInner<K, E>>,
@@ -29,7 +29,7 @@ where
 struct EntryLoadingWaiterInner<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     key: K,
     loading_result: Shared<BoxFuture<'static, LoadingResult<E>>>,
@@ -38,7 +38,7 @@ where
 impl<K, E> EntryLoadingWaiter<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     pub fn new(key: K, loading_result: Shared<BoxFuture<'static, LoadingResult<E>>>) -> Self {
         EntryLoadingWaiter {
@@ -55,7 +55,7 @@ where
     pub async fn wait_until_loaded<V>(
         mut self,
         store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, E>>>, Arc<E>>
+    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, E>>>, E>
     where
         V: AsyncDrop + Debug + Send + Sync,
     {
@@ -104,7 +104,7 @@ where
 impl<K, E> Drop for EntryLoadingWaiter<K, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     fn drop(&mut self) {
         if self.inner.is_some() {

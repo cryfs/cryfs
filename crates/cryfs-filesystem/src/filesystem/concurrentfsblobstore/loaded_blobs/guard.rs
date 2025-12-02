@@ -17,8 +17,9 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    loaded_blob:
-        AsyncDropGuard<LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, anyhow::Error>>,
+    loaded_blob: AsyncDropGuard<
+        LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, Arc<anyhow::Error>>,
+    >,
 }
 
 impl<B> LoadedBlobGuard<B>
@@ -28,7 +29,7 @@ where
 {
     pub(super) fn new(
         loaded_blob: AsyncDropGuard<
-            LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, anyhow::Error>,
+            LoadedEntryGuard<BlobId, AsyncDropTokioMutex<FsBlob<B>>, Arc<anyhow::Error>>,
         >,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self { loaded_blob })

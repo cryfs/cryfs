@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_rustfs::{FsError, FsResult};
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::{
@@ -48,6 +48,7 @@ where
             with_async_drop_2!(blobstore, {
                 blobstore.create_root_dir_blob(&root_blob_id).await
             })
+            .map_err(Arc::new)
         })
         .await
     }
@@ -108,7 +109,7 @@ where
             blob_id,
             &self.blobstore,
             async move |blobstore| {
-                with_async_drop_2!(blobstore, { blobstore.load(&blob_id).await })
+                with_async_drop_2!(blobstore, { blobstore.load(&blob_id).await }).map_err(Arc::new)
             },
         )
         .await?;

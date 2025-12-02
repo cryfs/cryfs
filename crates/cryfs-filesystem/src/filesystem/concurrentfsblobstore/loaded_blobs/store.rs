@@ -4,6 +4,7 @@ use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use futures::future::{BoxFuture, Shared};
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use crate::filesystem::concurrentfsblobstore::loaded_blobs::guard::LoadedBlobGuard;
 use crate::filesystem::fsblobstore::{FsBlob, FsBlobStore};
@@ -19,7 +20,7 @@ where
     // TODO Here (and in other places using BlockId or BlobId as hash map/set key), use a faster hash function, e.g. just take the first 8 bytes of the id. Ids are already random.
     loaded_blobs: AsyncDropGuard<
         // TODO Would ConcurrentStore<_, _, FsError> be better?
-        AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, anyhow::Error>>,
+        AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, Arc<anyhow::Error>>>,
     >,
 }
 
@@ -40,7 +41,7 @@ where
         loading_fn: impl FnOnce() -> F + Send + 'static,
     ) -> Result<(), anyhow::Error>
     where
-        F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>>> + Send,
+        F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>, Arc<anyhow::Error>>> + Send,
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
         let mut inserted =
@@ -76,7 +77,9 @@ where
         loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>) -> F + Send + 'static,
     ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error>
     where
-        F: Future<Output = Result<Option<AsyncDropGuard<FsBlob<B>>>>> + Send + 'static,
+        F: Future<Output = Result<Option<AsyncDropGuard<FsBlob<B>>>, Arc<anyhow::Error>>>
+            + Send
+            + 'static,
         B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
         <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
     {

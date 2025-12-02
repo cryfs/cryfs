@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::sync::Arc;
 
 use futures::{
     FutureExt as _,
@@ -20,7 +19,7 @@ use crate::{
 pub struct EntryStateLoading<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     /// loading_result is a future that will hold the result of the loading operation once it is complete.
     /// See [LoadingResult] for an explanation of the possible results.
@@ -39,18 +38,18 @@ pub enum LoadingResult<E> {
     NotFound,
 
     /// An error occurred while loading the entry. The entry state was removed from the map.
-    Error(Arc<E>),
+    Error(E),
 }
 
 impl<E> Clone for LoadingResult<E>
 where
-    E: Debug + Send + Sync,
+    E: Clone + Debug + Send + Sync,
 {
     fn clone(&self) -> Self {
         match self {
             LoadingResult::Loaded => LoadingResult::Loaded,
             LoadingResult::NotFound => LoadingResult::NotFound,
-            LoadingResult::Error(err) => LoadingResult::Error(Arc::clone(err)),
+            LoadingResult::Error(err) => LoadingResult::Error(err.clone()),
         }
     }
 }
@@ -58,7 +57,7 @@ where
 impl<V, E> EntryStateLoading<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     pub fn new(loading_result: BoxFuture<'static, LoadingResult<E>>) -> Self {
         EntryStateLoading {

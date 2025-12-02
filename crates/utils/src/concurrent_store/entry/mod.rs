@@ -11,7 +11,7 @@ mod waiter;
 pub enum EntryState<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     Loading(EntryStateLoading<V, E>),
     Loaded(EntryStateLoaded<V>),

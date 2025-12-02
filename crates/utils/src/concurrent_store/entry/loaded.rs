@@ -33,7 +33,7 @@ where
         loading: EntryStateLoading<V, E>,
     ) -> Self
     where
-        E: Debug + Send + Sync,
+        E: Clone + Debug + Send + Sync,
     {
         EntryStateLoaded {
             entry: AsyncDropArc::new(entry),

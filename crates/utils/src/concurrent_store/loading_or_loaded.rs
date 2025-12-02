@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::{fmt::Debug, hash::Hash, sync::Arc};
+use std::{fmt::Debug, hash::Hash};
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
@@ -14,7 +14,7 @@ pub struct LoadingOrLoaded<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     // Always Some except when being dropped
     inner: Option<LoadingOrLoadedInner<K, V, E>>,
@@ -24,7 +24,7 @@ enum LoadingOrLoadedInner<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     NotFound,
     Loading {
@@ -38,7 +38,7 @@ impl<K, V, E> LoadingOrLoaded<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     pub(super) fn new_not_found() -> Self {
         Self {
@@ -63,7 +63,7 @@ where
 
     pub async fn wait_until_loaded(
         mut self,
-    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, E>>>, Arc<E>> {
+    ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, E>>>, E> {
         match self.inner.take().expect("Already destructed") {
             LoadingOrLoadedInner::NotFound => Ok(None),
             LoadingOrLoadedInner::Loaded(loaded) => Ok(Some(loaded)),
@@ -78,7 +78,7 @@ impl<K, V, E> Drop for LoadingOrLoaded<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     fn drop(&mut self) {
         if self.inner.is_some() {

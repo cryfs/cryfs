@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::{fmt::Debug, hash::Hash, sync::Arc};
+use std::{fmt::Debug, hash::Hash};
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
@@ -13,7 +13,7 @@ pub struct Inserting<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     // Always Some, except for during destruction
     inner: Option<InsertingInner<K, V, E>>,
@@ -23,7 +23,7 @@ struct InsertingInner<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
 
@@ -37,7 +37,7 @@ impl<K, V, E> Inserting<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     pub(super) fn new(
         store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
@@ -53,7 +53,7 @@ where
     /// If an error occurred while loading, return the error.
     pub async fn wait_until_inserted(
         mut self,
-    ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V, E>>, Arc<E>>
+    ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V, E>>, E>
     where
         K: Hash + Eq + Clone + Debug + Send + Sync,
         V: AsyncDrop + Debug + Send + Sync,
@@ -70,7 +70,7 @@ impl<K, V, E> Drop for Inserting<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     fn drop(&mut self) {
         if self.inner.is_some() {

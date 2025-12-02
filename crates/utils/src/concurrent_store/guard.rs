@@ -16,7 +16,7 @@ pub struct LoadedEntryGuard<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
     key: K,
@@ -27,7 +27,7 @@ impl<K, V, E> LoadedEntryGuard<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     pub(super) fn new(
         store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
@@ -55,7 +55,7 @@ impl<K, V, E> AsyncDrop for LoadedEntryGuard<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     type Error = Never;
 

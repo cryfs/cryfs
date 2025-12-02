@@ -43,7 +43,7 @@ pub struct ConcurrentStore<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     /// [EntryState::Loading]:
     ///  * Loading of the entry is in progress, or has completed but we haven't updated the state yet.
@@ -70,7 +70,7 @@ impl<K, V, E> ConcurrentStore<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     /// Create a new empty [ConcurrentStore].
     pub fn new() -> AsyncDropGuard<Self> {
@@ -366,7 +366,7 @@ where
                     let Some(_) = entries.remove(&key) else {
                         panic!("Entry with key {:?} was not found in the map", key);
                     };
-                    LoadingResult::Error(Arc::new(err))
+                    LoadingResult::Error(err)
                 }
             }
         };
@@ -601,7 +601,7 @@ impl<K, V, E> Debug for ConcurrentStore<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ConcurrentStore").finish()
@@ -613,7 +613,7 @@ impl<K, V, E> AsyncDrop for ConcurrentStore<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
 {
     type Error = Never;
 
@@ -647,7 +647,7 @@ enum CloneOrCreateEntryStateResult<K, V, E, F, R, I>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
     F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send,
     R: Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
     I: AsyncDrop + Debug + Send,
