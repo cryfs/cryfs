@@ -79,7 +79,7 @@ where
                     Ok(ok)
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     Err(err.system_error_code())
                 }
             }

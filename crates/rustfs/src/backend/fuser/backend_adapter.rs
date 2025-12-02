@@ -131,7 +131,7 @@ where
                     Ok(ok)
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     Err(err.system_error_code())
                 }
             }
@@ -155,7 +155,7 @@ where
                     log::info!("{}...done", log_msg);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                 }
             }
         });
@@ -178,7 +178,7 @@ where
                     fuser_reply.ok();
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -206,7 +206,7 @@ where
                     );
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -230,7 +230,7 @@ where
                     fuser_reply.attr(&reply.ttl, &convert_node_attrs(reply.attr, reply.ino));
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -257,7 +257,7 @@ where
                     fuser_reply.opened(reply.fh.into(), flags);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -283,7 +283,7 @@ where
                     fuser_reply.written(num_written.unwrap());
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -317,7 +317,7 @@ where
                     fuser_reply.statfs(blocks, bfree, bavail, files, ffree, bsize, namelen, frsize);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -347,7 +347,7 @@ where
                     );
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -371,7 +371,7 @@ where
                     fuser_reply.locked(reply.start.into(), reply.end.into(), reply.typ, reply.pid);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -395,7 +395,7 @@ where
                     fuser_reply.bmap(reply.block);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -419,7 +419,7 @@ where
                     fuser_reply.ioctl(reply.result, &reply.data);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -446,7 +446,7 @@ where
                     fuser_reply.offset(offset);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -471,7 +471,7 @@ where
                     fuser_reply.xtimes(reply.bkuptime, reply.crtime);
                 }
                 Err(err) => {
-                    log::info!("{}...failed: {}", log_msg, err);
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -1040,7 +1040,7 @@ where
         let name = match parse_xattr_name(name) {
             Ok(name) => name.to_owned(),
             Err(err) => {
-                log::info!("getxattr(ino={ino:?}, name={name:?})...failed: {}", err);
+                log::info!("getxattr(ino={ino:?}, name={name:?})...failed: {err:?}");
                 reply.error(err.system_error_code());
                 return;
             }
@@ -1569,7 +1569,7 @@ struct DataCallback {
 
 impl DataCallback {
     fn error(self, err: FsError) {
-        log::info!("{}...failed: {}", self.log_msg, err);
+        log::info!("{}...failed: {err:?}", self.log_msg);
         self.reply.error(err.system_error_code());
     }
 }
