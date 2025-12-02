@@ -82,7 +82,7 @@ where
             blobstore,
             loading_fn,
         )
-        .await?
+        .await
         .wait_until_loaded()
         .await?
         .map(LoadedBlobGuard::new))

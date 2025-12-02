@@ -191,7 +191,7 @@ where
         key: K,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         mut loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> F + Send,
-    ) -> Result<LoadingOrLoaded<K, V>, anyhow::Error>
+    ) -> LoadingOrLoaded<K, V>
     where
         F: Future<Output = Result<Option<AsyncDropGuard<V>>>> + Send + 'static,
         I: AsyncDrop + Debug + Send,
@@ -206,17 +206,14 @@ where
                 CloneOrCreateEntryStateResult::Loaded { entry } => {
                     // Oh, the entry is already loaded! We can just return it
                     // Returning means we shift the responsibility to call async_drop on the [AsyncDropArc] to our caller.
-                    return Ok(LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
+                    return LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
                         AsyncDropArc::clone(this),
                         key,
                         entry,
-                    )));
+                    ));
                 }
                 CloneOrCreateEntryStateResult::Loading { loading_result } => {
-                    return Ok(LoadingOrLoaded::new_loading(
-                        AsyncDropArc::clone(this),
-                        loading_result,
-                    ));
+                    return LoadingOrLoaded::new_loading(AsyncDropArc::clone(this), loading_result);
                 }
                 CloneOrCreateEntryStateResult::Dropping {
                     future,
