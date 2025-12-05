@@ -9,7 +9,7 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
-use crate::object_based_api::utils::DUMMY_INO;
+use crate::object_based_api::utils::{DUMMY_INO, MakeOrphanError};
 use crate::{
     DirEntry,
     common::{
@@ -130,6 +130,23 @@ where
         ino: InodeNumber,
     ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
         self.inodes.get_node(ino).await
+    }
+
+    async fn _orphan_inode(&self, parent_ino: InodeNumber, name: &PathComponent) {
+        match self.inodes.make_into_orphan(parent_ino, name).await {
+            Ok(()) => {
+                // everything ok
+            }
+            Err(MakeOrphanError::ParentNotFound) => {
+                panic!(
+                    "Tried to orphan inode with name {:?} under parent inode {:?}, and the operation (unlink/rmdir) seems to have been successful, but when trying to orphan, the parent inode was not found",
+                    name, parent_ino
+                );
+            }
+            Err(MakeOrphanError::ChildNotFound) => {
+                // This can happen if the unlink'ed/rmdir'ed file/directory was never looked up before, so it is not in the inode list.
+            }
+        }
     }
 }
 
@@ -389,7 +406,9 @@ where
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
             with_async_drop_2!(parent_dir, {
-                parent_dir.remove_child_file_or_symlink(&name).await
+                parent_dir.remove_child_file_or_symlink(&name).await?;
+                self._orphan_inode(parent_ino, name).await;
+                Ok::<_, FsError>(())
             })?;
             Ok(())
         })
@@ -406,7 +425,11 @@ where
         let parent = self.get_inode(parent_ino).await?;
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
-            with_async_drop_2!(parent_dir, { parent_dir.remove_child_dir(&name).await })?;
+            with_async_drop_2!(parent_dir, {
+                parent_dir.remove_child_dir(&name).await?;
+                self._orphan_inode(parent_ino, name).await;
+                Ok::<_, FsError>(())
+            })?;
             Ok(())
         })
     }

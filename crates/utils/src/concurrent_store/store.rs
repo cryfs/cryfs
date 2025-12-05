@@ -506,7 +506,7 @@ where
     /// Called by [LoadedEntryGuard] when it is dropped.
     pub(super) async fn unload(&self, key: K, mut entry: AsyncDropGuard<AsyncDropArc<V>>) {
         // First drop the entry to decrement the reference count
-        entry.async_drop().await.unwrap(); // TODO No unwrap? But what to do if it fails?
+        entry.async_drop().await.unwrap(); // TODO No unwrap? But what to do if it fails? We need to guarantee that we still remove the entry since the guard is gone now.
         std::mem::drop(entry);
 
         // Now check if we're the last reference. If yes, remove the entry from our map.
@@ -530,7 +530,7 @@ where
                     // Unload only happens for loaded entries. There is no direct transition from Loading to call into here.
                     // However, because of the race condition mentioned in other comments in this function, it is possible
                     // that the entry was already fully unloaded, dropped, and then re-loaded before we call into here.
-                    // In that case, we just ignore the request.
+                    // In that case, we just ignore the request. The re-loaded guard will eventually call unload again when it is dropped.
                     return;
                 }
                 EntryState::Loaded(loaded) => {

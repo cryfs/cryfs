@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::borrow::Borrow;
 use std::hash::Hash;
 use std::{collections::HashMap, fmt::Debug};
 
@@ -86,13 +87,21 @@ where
         }
     }
 
-    pub(super) fn try_remove_child(&mut self, edge: &EdgeKey) -> Option<RemoveResult> {
+    pub(super) fn try_remove_child<K>(&mut self, edge: &K) -> Option<RemoveResult>
+    where
+        K: ?Sized + Hash + Eq,
+        EdgeKey: Borrow<K>,
+    {
         self.children.remove(edge)?;
         if self.children.is_empty() {
             Some(RemoveResult::NoChildrenLeft)
         } else {
             Some(RemoveResult::StillHasChildren)
         }
+    }
+
+    pub fn num_children(&self) -> usize {
+        self.children.len()
     }
 
     pub fn has_children(&self) -> bool {

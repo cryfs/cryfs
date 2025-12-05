@@ -33,7 +33,6 @@ use tokio::sync::{Mutex, MutexGuard};
 use cryfs_utils::async_drop::AsyncDropGuard;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropResult, AsyncDropShared};
 
-use crate::FsResult;
 use crate::InodeNumber;
 use crate::PathComponentBuf;
 use crate::common::HandleWithGeneration;
@@ -42,6 +41,7 @@ use crate::object_based_api::utils::inode_list::handle_forest::{
 };
 use crate::object_based_api::utils::inode_list::inode_info::RefcountInfo;
 use crate::{FsError, object_based_api::Device};
+use crate::{FsResult, PathComponent};
 
 pub const FUSE_ROOT_ID: InodeNumber =
     InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID).unwrap());
@@ -49,6 +49,7 @@ pub const DUMMY_INO: InodeNumber =
     InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID + 1).unwrap());
 
 mod handle_forest;
+pub use handle_forest::MakeOrphanError;
 
 mod inode_info;
 use inode_info::InodeInfo;
@@ -90,11 +91,16 @@ where
     //        but `inodes` will asynchronously drop the entry later, so there may be a short time window where the entry still exists in `inodes` but not in `inode_forest`.
     //        However, their InodeNumbers are blocked from being reused until the drop completes, see invariant D.
     // * D: All inodes that are either in `inodes` or `inode_forest` are blocked in `inode_forest` from being re-used.
-    //     * Note: For entries in `inode_forest`, this is ensured by HandleForest. So we only need to ensure t for entries in `inodes` that are not in `inode_forest` (see invariant C2).
+    //     * Note: For entries in `inode_forest`, this is ensured by HandleForest. So we only need to ensure it for entries in `inodes` that are not in `inode_forest` (see invariant C2).
     //       This is done by DelayedHandleRelease when dropping such entries.
-    // * E: All entries in `inode_forest` have children or a refcount > 0.
+    // * E: Refcount:
+    //     * E1: The refcount of an entry is
+    //       * the number of times its InodeNumber was returned (or if it is mid loading that counts as well, even though it wasn't returned yet)
+    //       * minus the number of times it was forgotten
+    //       * plus the number of times it was added as a parent pointer to a child inode in `inode_forest`.
+    //         (note that this can be different from the number of children stored in the inode, since orphaned nodes can still point to their parents but the parents dont have them in their children array)
+    //     * E2: All entries in `inode_forest` have refcount > 0, otherwise they would have been deleted.
     // * F: Each entry in self.inodes has at most one guard active, which is stored in self.inode_forest.
-
     // TODO Currently, each call site of ConcurrentStore has to wrap it into an AsyncDropArc themselves. Can we make ConcurrentStore do that internally, simplifying call sites?
     // TODO Node here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
     //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
@@ -145,7 +151,7 @@ where
         // * B: Root inode is fully loaded
         // * C: Root inode is present in both inodes and inode_forest
         // * D: Root inode is blocked from being reused in inode_forest
-        // * E: Root inode has a refcount > 0
+        // * E: Root inode has a refcount == 1
         // * F: Root inode has exactly one guard active in inode_forest
     }
 
@@ -267,6 +273,13 @@ where
                     return Err(FsError::NodeAlreadyExists);
                 }
                 Ok((new_child_ino, _new_node)) => {
+                    // Adjust refcount of parent for invariant E1.
+                    inner
+                        .inode_forest
+                        .get_mut(&parent_ino)
+                        .expect("We checked above that parent exists")
+                        .value_mut()
+                        .increment_refcount();
                     log::info!(
                         "New inode {new_child_ino:?}: parent={parent_ino:?}, name={name_clone}"
                     );
@@ -283,7 +296,7 @@ where
         //      if and only if the node is inserted to self.inode_tree. The entry is either added to both or neither.
         // * D: If we added it to self.inode_forest, HandleForest keeps it blocked. If we didn't add it to inode_forest,
         //      we also didn't add it to self.inodes (see invariant C in previous point), so no need to block it.
-        // * E: The new entry got a refcount of 1.
+        // * E: The new entry got a refcount of 1 because we are returning it now, and its parent got its refcount incremented by 1, if adding was successful.
         // * F: The new entry has exactly one guard active in inode_forest.
     }
 
@@ -387,6 +400,14 @@ where
             parent_node_value
         };
 
+        // Adjust refcount of parent for invariant E1.
+        inner
+            .inode_forest
+            .get_mut(&parent_ino)
+            .expect("We checked above that parent exists")
+            .value_mut()
+            .increment_refcount();
+
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
         let inodes = AsyncDropArc::clone(&inner.inodes);
         let (new_child_ino, new_node) = with_async_drop_2!(inodes, {
@@ -442,7 +463,7 @@ where
         //      * C1:  Note that loading can fail after we release the lock, which can temporarily violate invariant C1, but we'll fix that below.
         // * D: If we added it to self.inode_forest, HandleForest keeps it blocked. If we didn't add it to inode_forest,
         //      we also didn't add it to self.inodes (see invariant C in previous point), so no need to block it.
-        // * E: The new entry got a refcount of 1.
+        // * E: The new entry got a refcount of 1 because it is mid loading, and its parent got its refcount incremented by 1, if adding was successful.
         // * F: The new entry has exactly one guard active in inode_forest.
 
         let node = Self::_wait_for_node_loaded(inserting).await;
@@ -464,7 +485,6 @@ where
                 let drop_result = removed_node.async_drop().await;
                 // Release the inode number to be reused.
                 delayed_handle_release.release(&mut inner.inode_forest);
-                drop_result?;
                 match remove_result {
                     TryRemoveResult::NoParent => {
                         panic!("Parent entry vanished while we were adding it, this can't happen");
@@ -472,20 +492,25 @@ where
                     TryRemoveResult::ParentStillHasChildren { parent_handle }
                     | TryRemoveResult::JustRemovedLastChildOfParent { parent_handle }
                     | TryRemoveResult::ParentDidntHaveRemovedNodeAsChild { parent_handle } => {
-                        // Even though we just removed a child, we don't need to consider removing the parent inode because we have its InodeNumber,
-                        // so we know the refcount is larger than zero. But let's assert that to be sure.
-                        assert!(
-                            inner
-                                .inode_forest
-                                .get(&parent_handle)
-                                .expect("We just checked above that the parent exists")
-                                .value()
-                                .refcount()
-                                > 0,
-                            "The parent entry existed before our call so it must have refcount > 0"
-                        );
+                        let parent_inode = inner
+                            .inode_forest
+                            .get_mut(&parent_handle)
+                            .expect("We just checked above that the parent exists")
+                            .value_mut();
+                        // We removed a child node pointing to this parent, so decrement its refcount for invariant E1.
+                        match parent_inode.decrement_refcount() {
+                            RefcountInfo::RefcountNotZero => {
+                                // Refcount is still > 0, nothing more to do
+                            }
+                            RefcountInfo::RefcountZero => {
+                                panic!(
+                                    "Invariant E1 violated: Parent inode's refcount went to zero even though we have its InodeNumber"
+                                );
+                            }
+                        }
                     }
                 }
+                drop_result?;
                 Err(err)
             }
         }
@@ -497,7 +522,9 @@ where
         // * C: If loading failed, self.inodes already removed the entry, but we then cleaned it up.
         //      C1 is re-established. If loading succeeded, both self.inodes and self.inode_forest contain the entry.
         // * D: We only released the inode number if we also removed it from self.inode_forest after it was removed from self.inodes.
-        // * E: No change here
+        // * E: If loading succeeded, refcount of the node is still 1 and we're now returning its InodeNumber. Refcount of parent remains
+        //      to its incrementd value if loading succeeded, because we now have a child pointing to it, and got decremented back down
+        //      if loading failed and the child node got removed.
         // * F: No change here
     }
 
@@ -524,13 +551,10 @@ where
             RefcountInfo::RefcountZero => {
                 // Continue to remove the inode
 
-                if inode.has_children() {
-                    // Still has children, nothing more to do
-                    // Fulfilling invariants:
-                    // * A, B, C, D, F: No change here
-                    // * E: Still has children
-                    return Ok(());
-                }
+                assert!(
+                    !inode.has_children(),
+                    "Invariant E2 violated: tried to forget inode {ino:?} whose refcount went to zero but still has children"
+                );
 
                 let parent_ino = *inode
                     .parent_handle()
@@ -585,6 +609,7 @@ where
         Ok(())
     }
 
+    // Precondition: The inode's refcount is zero
     fn _remove_inode<'a>(
         &self,
         inner: &mut MutexGuard<'_, InodeListInner<Fs>>,
@@ -602,28 +627,54 @@ where
                 .inode_forest
                 // TODO remove_by_name might be faster because we don't have to search the whole map
                 .try_remove(child_ino)
-                .expect("Inode reference disappeared");
+                .expect("Inode reference disappeared or still has children");
             to_async_drop.push((child_ino, removed_entry, delayed_handle_release));
 
+            let parent_inode = inner.inode_forest.get_mut(&parent_ino).expect(
+                "Tried to remove inode but its parent vanished while we were removing the child",
+            );
+            let parent_decr_refcount_result = parent_inode.value_mut().decrement_refcount();
+
             match remove_result {
-                TryRemoveResult::NoParent
-                | TryRemoveResult::ParentDidntHaveRemovedNodeAsChild { .. } => {
-                    // Child entry didn't exist. We were a tree root. Everything is ok.
+                TryRemoveResult::NoParent => {
+                    panic!(
+                        "Tried to remove inode but its parent vanished while we were removing the child"
+                    );
+                }
+                TryRemoveResult::ParentStillHasChildren { parent_handle } => {
+                    assert_eq!(parent_handle, parent_ino);
+                    // Our parent still has other children, in which case it must have refcount>0 because of invariant E1.
+                    match parent_decr_refcount_result {
+                        RefcountInfo::RefcountNotZero => { /* All good */ }
+                        RefcountInfo::RefcountZero => {
+                            panic!(
+                                "Invariant E1 violated: Parent inode's refcount went to zero even though it still has children"
+                            );
+                        }
+                    }
                     break;
                 }
-                TryRemoveResult::ParentStillHasChildren { .. } => {
-                    // Parent inode still has children, we can stop here.
-                    break;
-                }
-                TryRemoveResult::JustRemovedLastChildOfParent { parent_handle } => {
-                    // Parent has no more children. Let's check its refcount to see if we can remove it as well.
+                TryRemoveResult::JustRemovedLastChildOfParent { parent_handle }
+                | TryRemoveResult::ParentDidntHaveRemovedNodeAsChild { parent_handle } => {
+                    assert_eq!(parent_handle, parent_ino);
+                    // Parent might not have more children. Let's check its refcount to see if we can remove it as well.
                     let parent_inode = inner.inode_forest.get_mut(&parent_handle).expect(
                         "Tried to remove inode but its parent vanished while we were removing the child",
                     );
-                    if parent_inode.value().refcount() > 0 {
-                        // Parent still has references, we can stop here.
-                        break;
+                    match parent_decr_refcount_result {
+                        RefcountInfo::RefcountNotZero => {
+                            // Parent still has references, we can stop here.
+                            break;
+                        }
+                        RefcountInfo::RefcountZero => {
+                            // Continue removing parent as well
+                        }
                     }
+                    assert_eq!(
+                        0,
+                        parent_inode.num_children(),
+                        "Invariant E1 violated: Parent inode has refcount == 0 but still has children"
+                    );
 
                     // It was already removed from the ConcurrentStore because the last reference just got removed.
                     // So we can continue our removal algorithm up the tree.
@@ -644,8 +695,29 @@ where
         //      which will then free the corresponding entry in self.inodes as well (invariant F). So eventually, both entries are removed.
         //      This is temporarily violating invariant C2, but re-established by the async drop.
         // * D: We're using DelayedHandleRelease to only free the inode numbers after the async drop completed, so invariant D is upheld.
-        // * E: We're only removing inodes that have refcount 0 and no children, so invariant E is upheld.
+        // * E1: We're decrementing the refcount of parent inodes when removing child inodes, so invariant E1 is upheld.
+        // * E2: We're only removing inodes that have refcount 0, so invariant E2 is upheld.
         // * F: We're dropping the only active guard for each removed inode, so invariant F is upheld.
+    }
+
+    /// Remove an inode from its parent's childrn map. The inode itself stays alive, but becomes an orphan in the inode forest.
+    pub async fn make_into_orphan(
+        &self,
+        parent_ino: InodeNumber,
+        name: &PathComponent,
+    ) -> Result<(), MakeOrphanError> {
+        // TODO After unlink, the kernel could try to re-enter a node ad parent_ino/name again.
+        //      We support that here, but does CryNode support that correctly? The previous child node might still exist and stored in the orphaned inode.
+        let mut inner = self.inner.lock().await;
+        inner.inode_forest.make_node_into_orphan(&parent_ino, name)
+
+        // Fulfilling invariants:
+        // A, C, D, F: No change here
+        // B1: No change here
+        // B2: We're removing a parent pointer, which makes this invariant strictly easier to fulfil
+        // E1: We're leaving the child orphaned, but its parent pointer still points to the parent.
+        //     So no need to adjust the parents refcount for invariant E1.
+        // E2: No changes to refcounts
     }
 
     #[cfg(feature = "testutils")]
@@ -717,13 +789,16 @@ where
         // The kernel doesn't guarantee that it'll forget all inodes on shutdown, so we can't assert that all inodes are forgotten here.
         // Instead, we just drop all remaining inodes.
         let inner = self.inner.get_mut();
+
+        // We don't assert that all inodes were forgotten because the fuse kernl doesn't guarantee that on shutdown.
+        // TODO But maybe we still want to assert it when an InodeInfo is dropped in a non-shutdown scenario. Maybe we should add the assertion here and add a [InodeInfo::drop_on_shutdown(self)] that deals with the shutdown case?
+        // assert_eq!(1, inner.inode_forest.num_nodes());
+        // assert!(inner.inode_forest.get(&FUSE_ROOT_ID).is_some());
+
         let result = inner.inode_forest.async_drop().await;
         // And after all of its references are dropped, we can drop the inode list itself
         inner.inodes.async_drop().await.infallible_unwrap();
 
         result
-
-        // We don't assert that refcount is zero because the fuse kernel doesn't guarantee that it'll forget all inodes on shutdown.
-        // TODO But maybe we still want to assert it when an InodeInfo is dropped in a non-shutdown scenario. Maybe we should add the assertion here and add a [InodeInfo::drop_on_shutdown(self)] that deals with the shutdown case?
     }
 }

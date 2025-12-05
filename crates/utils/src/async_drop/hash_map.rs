@@ -52,6 +52,10 @@ where
         self.map.get_mut(key)
     }
 
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
     #[cfg(feature = "testutils")]
     pub fn drain(&mut self) -> impl Iterator<Item = (K, AsyncDropGuard<V>)> {
         self.map.drain()

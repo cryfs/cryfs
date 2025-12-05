@@ -5,5 +5,6 @@ mod node;
 
 pub use delayed_handle_release::DelayedHandleRelease;
 pub use handle_forest::{
-    GetChildOfError, HandleForest, TryInsertError, TryInsertError2, TryRemoveResult,
+    GetChildOfError, HandleForest, MakeOrphanError, TryInsertError, TryInsertError2,
+    TryRemoveResult,
 };

@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -32,11 +33,9 @@ where
     // * B: Tree pointers are well formed, i.e.
     //   * B1: Each Node.parent pointer points to a valid entry in the `nodes` map (if Some. If None, the node is a root)
     //   * B2: Each Node.children[_] pointer points to a valid entry in the `nodes` map
-    //   * TODO Should it be an invariant that Node.children[_].parent and/or Node.parent.children[_] point back to the original node?
-    //          When a file gets deleted, its inode might point to a parent that doesn't point back to it because the file can't be looked up anymore.
-    //          Or maybe we should then also remove the parnt pointer of the file inode? If we do that, we could have this invariant.
-    //          See also TODO in TryRemoveResult::ParentDidntHaveRemovedNodeAsChild
-    // * Note: Not every node may have a parent. We're a forest, there might be multiple roots.
+    // * C: Each Node.children[_].parent entry points back to the original node.
+    //   * Note: The reverse isn't necessarily true. An orphaned node might still point to its parent even though the parent doesn't have it in its chldren array.
+    // * Note: Not every node may have a parent. We're a forest, there can be orphaned nodes that no parent points to.
     nodes: AsyncDropGuard<AsyncDropHashMap<Handle, Node<Handle, EdgeKey, NodeValue>>>,
 }
 
@@ -253,6 +252,35 @@ where
         self.handles.release(removed_handle);
     }
 
+    pub fn num_nodes(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn make_node_into_orphan<K>(
+        &mut self,
+        parent_handle: &Handle,
+        edge: &K,
+    ) -> Result<(), MakeOrphanError>
+    where
+        K: ?Sized + Hash + Eq,
+        EdgeKey: Borrow<K>,
+    {
+        let parent_node = self
+            .nodes
+            .get_mut(&parent_handle)
+            .ok_or_else(|| MakeOrphanError::ParentNotFound)?;
+
+        let remove_result = parent_node
+            .try_remove_child(edge)
+            .ok_or_else(|| MakeOrphanError::ChildNotFound)?;
+        match remove_result {
+            RemoveResult::NoChildrenLeft | RemoveResult::StillHasChildren => { /* ok */ }
+        }
+
+        // We're leaving the chld orphaned, that's ok for invariant C.
+        Ok(())
+    }
+
     #[cfg(feature = "testutils")]
     pub fn drain(
         &mut self,
@@ -275,14 +303,19 @@ pub enum TryRemoveError {
 }
 
 #[derive(Error, Debug, Display)]
+pub enum MakeOrphanError {
+    ParentNotFound,
+    ChildNotFound,
+}
+
+#[derive(Error, Debug, Display)]
 pub enum TryRemoveResult<Handle>
 where
     Handle: HandleTrait + Send,
 {
     NoParent,
 
-    /// Our parent node doesn't have us as a child.
-    // TODO is this ok? See TODO above about whether we want that invariant.
+    /// Our parent node doesn't have us as a child. We're an orphaned node.
     ParentDidntHaveRemovedNodeAsChild {
         parent_handle: Handle,
     },
