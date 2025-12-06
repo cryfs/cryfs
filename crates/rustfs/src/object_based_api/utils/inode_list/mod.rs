@@ -17,11 +17,13 @@
 //                    If an inode exists in the main mapping with refcount > 0, it may or may not exist in the children mapping, depending on whether it was deleted.
 
 use async_trait::async_trait;
+use core::panic;
 use cryfs_utils::concurrent_store::{
     ConcurrentStore, LoadedEntryGuard, RequestImmediateDropResult,
 };
 use cryfs_utils::stream::for_each_unordered;
 use cryfs_utils::with_async_drop_2;
+use derive_more::{Display, Error};
 use futures::future::BoxFuture;
 use futures::{FutureExt, future};
 use itertools::multiunzip;
@@ -37,7 +39,8 @@ use crate::InodeNumber;
 use crate::PathComponentBuf;
 use crate::common::HandleWithGeneration;
 use crate::object_based_api::utils::inode_list::handle_forest::{
-    DelayedHandleRelease, GetChildOfError, HandleForest, TryInsertError2, TryRemoveResult,
+    DelayedHandleRelease, GetChildOfError, HandleForest, MoveInodeSuccess, TryInsertError2,
+    TryRemoveResult,
 };
 use crate::object_based_api::utils::inode_list::inode_info::RefcountInfo;
 use crate::{FsError, object_based_api::Device};
@@ -534,10 +537,26 @@ where
             return Err(FsError::InvalidOperation);
         }
 
-        let mut inner = self.inner.lock().await;
+        let inner = self.inner.lock().await;
+        self._decrement_refcount(inner, ino)
+            .await
+            .map_err(|err| match err {
+                DecrementRefcountError::NodeNotFound => {
+                    // Kernel gave us a wrong inode number
+                    FsError::InvalidOperation
+                }
+                DecrementRefcountError::ErrorWhileDroppingNode(err) => err,
+            })
+    }
+
+    async fn _decrement_refcount(
+        &self,
+        mut inner: MutexGuard<'_, InodeListInner<Fs>>,
+        ino: InodeNumber,
+    ) -> Result<(), DecrementRefcountError> {
         let Some(inode) = inner.inode_forest.get_mut(&ino) else {
             log::error!("Tried to forget unknown inode {ino:?}");
-            return Err(FsError::InvalidOperation);
+            return Err(DecrementRefcountError::NodeNotFound);
         };
 
         match inode.value_mut().decrement_refcount() {
@@ -561,7 +580,7 @@ where
                     .expect("Tried to forget inode but it doesn't have a parent");
 
                 let mut to_async_drop = Vec::new();
-                let result = self._remove_inode(&mut inner, ino, parent_ino, &mut to_async_drop);
+                self._remove_inode(&mut inner, ino, parent_ino, &mut to_async_drop);
                 let (removed_inos, removed_inodes, delayed_handle_releases): (
                     Vec<InodeNumber>,
                     Vec<AsyncDropGuard<InodeInfo<Fs>>>,
@@ -595,8 +614,7 @@ where
                     delayed_handle_release.release(&mut inner.inode_forest);
                 }
 
-                drop_result?;
-                result?;
+                drop_result.map_err(DecrementRefcountError::ErrorWhileDroppingNode)?;
 
                 // Fulfilling invariants:
                 // * A, B, E, F are fulfilled after the call to[Self::_remove_inode].
@@ -620,7 +638,7 @@ where
             AsyncDropGuard<InodeInfo<Fs>>,
             DelayedHandleRelease<InodeNumber>,
         )>,
-    ) -> FsResult<()> {
+    ) {
         while child_ino != FUSE_ROOT_ID {
             // First remove the node itself (dropping the guard in self.inode_forest later when to_async_drop is processed will also remove it from self.inodes)
             let (removed_entry, remove_result, delayed_handle_release) = inner
@@ -686,7 +704,6 @@ where
                 }
             }
         }
-        Ok(())
 
         // Fulfilling invariants:
         // * A: No change here
@@ -718,6 +735,82 @@ where
         // E1: We're leaving the child orphaned, but its parent pointer still points to the parent.
         //     So no need to adjust the parents refcount for invariant E1.
         // E2: No changes to refcounts
+    }
+
+    /// Move an inode from one parent to another, possibly renaming it.
+    /// precondition: The inode isn't yet loaded under new_parent_ino/new_name.
+    pub async fn move_inode(
+        &self,
+        old_parent_ino: InodeNumber,
+        old_name: &PathComponent,
+        new_parent_ino: InodeNumber,
+        new_name: PathComponentBuf,
+    ) -> Result<(), MoveInodeError> {
+        let mut inner = self.inner.lock().await;
+        let move_result = inner
+            .inode_forest
+            .move_node(old_parent_ino, old_name, new_parent_ino, new_name)
+            .await
+            .map_err(|err| match err {
+                handle_forest::MoveInodeError::OldParentNotFound => {
+                    MoveInodeError::OldParentNotFound
+                }
+                handle_forest::MoveInodeError::NewParentNotFound => {
+                    MoveInodeError::NewParentNotFound
+                }
+                handle_forest::MoveInodeError::ChildNotFound => MoveInodeError::ChildNotFound,
+            })?;
+
+        // We only get here if the move succeeded. Error cases, including the 'benign' error case of the child inode not being loaded, have already returned above.
+
+        // According to invariant E1, each child's parent pointer counts towards the refcount of the parent.
+        // Since we just redirected that pointer to a new parent, we need to adjust the refcounts.
+        if old_parent_ino != new_parent_ino {
+            match move_result {
+                MoveInodeSuccess::OrphanedExistingChildInNewParent => {
+                    // We replaced an existing child that is now orphaned. No need to adjust the destination parent refcount.
+                }
+                MoveInodeSuccess::AddedAsNewChildToNewParent => {
+                    inner
+                        .inode_forest
+                        .get_mut(&new_parent_ino)
+                        .expect("We already checked that it exists when we moved the node above")
+                        .value_mut()
+                        .increment_refcount();
+                }
+            }
+            self._decrement_refcount(inner, old_parent_ino)
+                .await
+                .map_err(|err| match err {
+                    DecrementRefcountError::NodeNotFound => {
+                        panic!("We already checked that it exists when we moved the node above")
+                    }
+                    DecrementRefcountError::ErrorWhileDroppingNode(err) => {
+                        MoveInodeError::ErrorWhileDroppingNode(err)
+                    }
+                })?;
+        } else {
+            match move_result {
+                MoveInodeSuccess::OrphanedExistingChildInNewParent => {
+                    panic!(
+                        "If parents are the same, we should never hit the case of orphaning an existing child."
+                    )
+                }
+                MoveInodeSuccess::AddedAsNewChildToNewParent => {
+                    // everything ok
+                }
+            }
+        }
+
+        // Fulfilling invariants:
+        // * A, C, D, F: No change here
+        // * B1: No change here
+        // * B2: We assigned a new parent pointer to the node, but with B1+B2, we know that that parent is fully loaded.
+        // * E1: If parent didn't change, we didn't change refcounts.
+        //       If parent changed, we incremented new parent's refcount and decremented old parent's refcount.
+        //       Unless we orphaned an existing child in the new parent, in which case new parent's refcount remains unchanged.
+        // * E2: We used [Self::_decrement_refcount] to decrement old parent's refcount, which would drop the parent if its refcount went to zero.
+        Ok(())
     }
 
     #[cfg(feature = "testutils")]
@@ -801,4 +894,18 @@ where
 
         result
     }
+}
+
+#[derive(Error, Debug, Display)]
+pub enum DecrementRefcountError {
+    NodeNotFound,
+    ErrorWhileDroppingNode(FsError),
+}
+
+#[derive(Error, Debug, Display)]
+pub enum MoveInodeError {
+    OldParentNotFound,
+    NewParentNotFound,
+    ChildNotFound,
+    ErrorWhileDroppingNode(FsError),
 }

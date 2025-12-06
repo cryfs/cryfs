@@ -50,7 +50,15 @@ where
         self.parent.as_ref()
     }
 
-    pub fn get_child(&self, edge: &EdgeKey) -> Option<&Handle> {
+    pub(super) fn set_parent(&mut self, parent: Option<Handle>) {
+        self.parent = parent;
+    }
+
+    pub fn get_child<E>(&self, edge: &E) -> Option<&Handle>
+    where
+        E: ?Sized + Hash + Eq,
+        EdgeKey: Borrow<E>,
+    {
         self.children.get(edge)
     }
 
@@ -61,6 +69,11 @@ where
     ) -> Result<(), OccupiedError<'_, EdgeKey, Handle>> {
         self.children.try_insert(edge, value)?;
         Ok(())
+    }
+
+    // Returns old handle if it was overwritten
+    pub(super) fn insert_child(&mut self, edge: EdgeKey, value: Handle) -> Option<Handle> {
+        self.children.insert(edge, value)
     }
 
     pub(super) fn try_remove_child_by_handle(
@@ -77,26 +90,26 @@ where
             }
         }
         if let Some(edge_key) = remove_key {
-            Some(
-                self.try_remove_child(&edge_key).expect(
-                    "This should never happen because we just found the child by inode number",
-                ),
-            )
+            let (removed_handle, remove_result) = self
+                .try_remove_child(&edge_key)
+                .expect("This should never happen because we just found the child by inode number");
+            assert_eq!(*child_ino, removed_handle);
+            Some(remove_result)
         } else {
             None
         }
     }
 
-    pub(super) fn try_remove_child<K>(&mut self, edge: &K) -> Option<RemoveResult>
+    pub(super) fn try_remove_child<K>(&mut self, edge: &K) -> Option<(Handle, RemoveResult)>
     where
         K: ?Sized + Hash + Eq,
         EdgeKey: Borrow<K>,
     {
-        self.children.remove(edge)?;
+        let removed = self.children.remove(edge)?;
         if self.children.is_empty() {
-            Some(RemoveResult::NoChildrenLeft)
+            Some((removed, RemoveResult::NoChildrenLeft))
         } else {
-            Some(RemoveResult::StillHasChildren)
+            Some((removed, RemoveResult::StillHasChildren))
         }
     }
 
@@ -106,6 +119,14 @@ where
 
     pub fn has_children(&self) -> bool {
         !self.children.is_empty()
+    }
+
+    pub fn has_child<K>(&self, edge: &K) -> bool
+    where
+        K: ?Sized + Hash + Eq,
+        EdgeKey: Borrow<K>,
+    {
+        self.children.contains_key(edge)
     }
 
     pub fn into_value(this: AsyncDropGuard<Self>) -> AsyncDropGuard<NodeValue> {

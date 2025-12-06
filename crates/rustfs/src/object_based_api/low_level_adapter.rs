@@ -9,7 +9,7 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
-use crate::object_based_api::utils::{DUMMY_INO, MakeOrphanError};
+use crate::object_based_api::utils::{DUMMY_INO, MakeOrphanError, MoveInodeError};
 use crate::{
     DirEntry,
     common::{
@@ -146,6 +146,47 @@ where
             Err(MakeOrphanError::ChildNotFound) => {
                 // This can happen if the unlink'ed/rmdir'ed file/directory was never looked up before, so it is not in the inode list.
             }
+        }
+    }
+
+    async fn _move_inode(
+        &self,
+        old_parent_ino: InodeNumber,
+        old_name: &PathComponent,
+        new_parent_ino: InodeNumber,
+        new_name: &PathComponent,
+    ) -> FsResult<()> {
+        match self
+            .inodes
+            .move_inode(
+                old_parent_ino,
+                old_name,
+                new_parent_ino,
+                new_name.to_owned(),
+            )
+            .await
+        {
+            Ok(()) => {
+                // everything ok
+                Ok(())
+            }
+            Err(MoveInodeError::OldParentNotFound) => {
+                panic!(
+                    "Tried to move inode with name {:?} under parent inode {:?} to name {:?} under parent inode {:?}, but the operation (rename) seems to have been successful, but when trying to update the inode list, the old parent inode was not found",
+                    old_name, old_parent_ino, new_name, new_parent_ino
+                );
+            }
+            Err(MoveInodeError::NewParentNotFound) => {
+                panic!(
+                    "Tried to move inode with name {:?} under parent inode {:?} to name {:?} under parent inode {:?}, but the operation (rename) seems to have been successful, but when trying to update the inode list, the new parent inode was not found",
+                    old_name, old_parent_ino, new_name, new_parent_ino
+                );
+            }
+            Err(MoveInodeError::ChildNotFound) => {
+                // The moved inode wasn't loaded, everything is ok. No need to adjust anything.
+                Ok(())
+            }
+            Err(MoveInodeError::ErrorWhileDroppingNode(err)) => Err(err),
         }
     }
 }
@@ -487,7 +528,10 @@ where
             with_async_drop_2!(shared_parent, {
                 let parent_dir = shared_parent.as_dir().await?;
                 with_async_drop_2!(parent_dir, {
-                    parent_dir.rename_child(&oldname, &newname).await
+                    parent_dir.rename_child(&oldname, &newname).await?;
+                    self._move_inode(oldparent_ino, oldname, newparent_ino, newname)
+                        .await?;
+                    Ok::<_, FsError>(())
                 })?;
                 Ok(())
             })
@@ -502,7 +546,10 @@ where
                     let newparent_dir = newparent.as_dir().await?;
                     oldparent_dir
                         .move_child_to(oldname, newparent_dir, newname)
-                        .await
+                        .await?;
+                    self._move_inode(oldparent_ino, oldname, newparent_ino, newname)
+                        .await?;
+                    Ok::<_, FsError>(())
                 })
             })()
             .await;

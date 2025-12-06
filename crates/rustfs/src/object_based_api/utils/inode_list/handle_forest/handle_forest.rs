@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::f32::consts::E;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -270,15 +271,68 @@ where
             .get_mut(&parent_handle)
             .ok_or_else(|| MakeOrphanError::ParentNotFound)?;
 
-        let remove_result = parent_node
+        let (_removed_handle, remove_result) = parent_node
             .try_remove_child(edge)
             .ok_or_else(|| MakeOrphanError::ChildNotFound)?;
         match remove_result {
             RemoveResult::NoChildrenLeft | RemoveResult::StillHasChildren => { /* ok */ }
         }
 
-        // We're leaving the chld orphaned, that's ok for invariant C.
+        // We're leaving the child orphaned, that's ok for invariant C.
         Ok(())
+    }
+
+    pub async fn move_node<E>(
+        &mut self,
+        old_parent_handle: Handle,
+        old_edge: &E,
+        new_parent_handle: Handle,
+        new_edge: EdgeKey,
+    ) -> Result<MoveInodeSuccess, MoveInodeError>
+    where
+        EdgeKey: Borrow<E>,
+        E: ?Sized + Hash + Eq + ToOwned<Owned = EdgeKey>,
+    {
+        // Remove from old parent
+        let old_parent_node = self
+            .nodes
+            .get_mut(&old_parent_handle)
+            .ok_or(MoveInodeError::OldParentNotFound)?;
+        let (child_handle, _remove_result) = old_parent_node
+            .try_remove_child(old_edge)
+            .ok_or(MoveInodeError::ChildNotFound)?;
+
+        let reinsert_to_old_parent_for_exception_safety = |nodes: &mut AsyncDropGuard<
+            AsyncDropHashMap<Handle, Node<Handle, EdgeKey, NodeValue>>,
+        >| {
+            let old_parent_node = nodes
+                .get_mut(&old_parent_handle)
+                .expect("We just had it above");
+            old_parent_node
+                .try_insert_child(old_edge.to_owned(), child_handle.clone())
+                .expect("We just removed the child above");
+        };
+
+        let Some(new_parent_node) = self.nodes.get_mut(&new_parent_handle) else {
+            reinsert_to_old_parent_for_exception_safety(&mut self.nodes);
+            return Err(MoveInodeError::NewParentNotFound);
+        };
+
+        // Insert into new parent
+        let overwritten_child = new_parent_node.insert_child(new_edge, child_handle.clone());
+
+        // Update child's parent pointer
+        let child_node = self
+            .nodes
+            .get_mut(&child_handle)
+            .expect("Invariant B2 violated");
+        child_node.set_parent(Some(new_parent_handle));
+
+        if overwritten_child.is_some() {
+            Ok(MoveInodeSuccess::OrphanedExistingChildInNewParent)
+        } else {
+            Ok(MoveInodeSuccess::AddedAsNewChildToNewParent)
+        }
     }
 
     #[cfg(feature = "testutils")]
@@ -305,6 +359,19 @@ pub enum TryRemoveError {
 #[derive(Error, Debug, Display)]
 pub enum MakeOrphanError {
     ParentNotFound,
+    ChildNotFound,
+}
+
+#[must_use]
+pub enum MoveInodeSuccess {
+    AddedAsNewChildToNewParent,
+    OrphanedExistingChildInNewParent,
+}
+
+#[derive(Error, Debug, Display)]
+pub enum MoveInodeError {
+    OldParentNotFound,
+    NewParentNotFound,
     ChildNotFound,
 }
 
