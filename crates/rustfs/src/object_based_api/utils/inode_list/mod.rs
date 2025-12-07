@@ -39,7 +39,7 @@ use crate::InodeNumber;
 use crate::PathComponentBuf;
 use crate::common::HandleWithGeneration;
 use crate::object_based_api::utils::inode_list::handle_forest::{
-    DelayedHandleRelease, GetChildOfError, HandleForest, MoveInodeSuccess, TryInsertError2,
+    DelayedHandleRelease, GetChildOfError, HandleForest, MoveInodeSuccess, TryInsertError,
     TryRemoveResult,
 };
 use crate::object_based_api::utils::inode_list::inode_info::RefcountInfo;
@@ -265,11 +265,11 @@ where
                 .await;
 
             match insert_result {
-                Err(TryInsertError2::ParentNotFound) => {
+                Err(TryInsertError::ParentNotFound) => {
                     log::error!("Tried to add inode under unknown parent inode {parent_ino:?}");
                     return Err(FsError::InvalidOperation);
                 }
-                Err(TryInsertError2::AlreadyExists) => {
+                Err(TryInsertError::AlreadyExists) => {
                     log::error!(
                         "Tried to add already existng inode {name_clone} under parent inode {parent_ino:?}"
                     );
@@ -444,10 +444,10 @@ where
 
             match insert_result {
                 Ok((new_child_ino, new_node)) => Ok((new_child_ino, new_node)),
-                Err(TryInsertError2::ParentNotFound) => {
+                Err(TryInsertError::ParentNotFound) => {
                     panic!("We just looked up the parent above, it must exist.");
                 }
-                Err(TryInsertError2::AlreadyExists) => {
+                Err(TryInsertError::AlreadyExists) => {
                     panic!("We checked above that it doesn't exist yet (see precondition)");
                 }
             }

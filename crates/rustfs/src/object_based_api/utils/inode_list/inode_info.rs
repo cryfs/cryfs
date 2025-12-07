@@ -74,10 +74,6 @@ where
         }
     }
 
-    pub fn refcount(&self) -> usize {
-        self.kernel_refcount
-    }
-
     pub fn inode_future(
         &self,
     ) -> &AsyncDropGuard<

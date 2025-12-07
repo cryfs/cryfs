@@ -1,5 +1,4 @@
 use std::borrow::Borrow;
-use std::f32::consts::E;
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -10,7 +9,6 @@ use derive_more::{Display, Error};
 
 use crate::common::{HandlePool, HandleTrait, HandleWithGeneration};
 use crate::object_based_api::utils::inode_list::handle_forest::DelayedHandleRelease;
-use crate::object_based_api::utils::inode_list::handle_forest::insert_transaction::InsertTransaction;
 use crate::object_based_api::utils::inode_list::handle_forest::node::{Node, RemoveResult};
 
 #[derive(Debug)]
@@ -131,17 +129,17 @@ where
             HandleWithGeneration<Handle>,
             &Node<Handle, EdgeKey, NodeValue>,
         ),
-        TryInsertError2,
+        TryInsertError,
     > {
         let Some(parent) = self.nodes.get_mut(&parent_handle) else {
-            return Err(TryInsertError2::ParentNotFound);
+            return Err(TryInsertError::ParentNotFound);
         };
 
         let new_handle = self.handles.acquire();
 
         let Ok(_) = parent.try_insert_child(edge, new_handle.handle.clone()) else {
             self.handles.undo_acquire(new_handle.handle);
-            return Err(TryInsertError2::AlreadyExists);
+            return Err(TryInsertError::AlreadyExists);
         };
 
         let value = value_fn(&new_handle).await;
@@ -155,47 +153,6 @@ where
                 panic!("Invariant A violated");
             }
         }
-    }
-
-    pub fn start_insert_transaction(&mut self) -> InsertTransaction<Handle> {
-        let reserved_handle = self.handles.acquire();
-        InsertTransaction::new(reserved_handle)
-    }
-
-    pub(super) fn abort_insert_transaction(
-        &mut self,
-        reserved_handle: HandleWithGeneration<Handle>,
-    ) {
-        self.handles.undo_acquire(reserved_handle.handle);
-    }
-
-    pub(super) fn commit_insert_transaction(
-        &mut self,
-        parent_handle: Handle,
-        edge: EdgeKey,
-        value: AsyncDropGuard<NodeValue>,
-        reserved_handle: HandleWithGeneration<Handle>,
-    ) -> Result<(), TryInsertError<NodeValue>> {
-        let Some(parent) = self.nodes.get_mut(&parent_handle) else {
-            self.abort_insert_transaction(reserved_handle);
-            return Err(TryInsertError::ParentNotFound { value });
-        };
-
-        let Ok(_) = parent.try_insert_child(edge, reserved_handle.handle.clone()) else {
-            self.abort_insert_transaction(reserved_handle);
-            return Err(TryInsertError::AlreadyExists { value });
-        };
-
-        match self
-            .nodes
-            .try_insert(reserved_handle.handle, Node::new(parent_handle, value))
-        {
-            Ok(_node) => (),
-            Err(OccupiedError { entry: _, value: _ }) => {
-                panic!("Invariant A violated");
-            }
-        }
-        Ok(())
     }
 
     pub fn try_remove(
@@ -251,10 +208,6 @@ where
 
     pub(super) fn release_removed_handle(&mut self, removed_handle: Handle) {
         self.handles.release(removed_handle);
-    }
-
-    pub fn num_nodes(&self) -> usize {
-        self.nodes.len()
     }
 
     pub fn make_node_into_orphan<K>(
@@ -396,17 +349,7 @@ where
 
 #[must_use]
 #[derive(Error, Debug, Display)]
-pub enum TryInsertError<NodeValue>
-where
-    NodeValue: AsyncDrop + Send + Debug,
-{
-    ParentNotFound { value: AsyncDropGuard<NodeValue> },
-    AlreadyExists { value: AsyncDropGuard<NodeValue> },
-}
-
-#[must_use]
-#[derive(Error, Debug, Display)]
-pub enum TryInsertError2 {
+pub enum TryInsertError {
     ParentNotFound,
     AlreadyExists,
 }
