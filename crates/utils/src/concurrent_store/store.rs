@@ -21,14 +21,10 @@ use crate::concurrent_store::entry::{
 use crate::concurrent_store::guard::LoadedEntryGuard;
 use crate::event::Event;
 use crate::stream::for_each_unordered;
-#[cfg(any(test, feature = "testutils"))]
-use crate::with_async_drop_2;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::entry::EntryState,
 };
-#[cfg(any(test, feature = "testutils"))]
-use lockable::InfallibleUnwrap as _;
 
 // TODO This is currently not cancellation safe. If a task waiting for a blob to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 
