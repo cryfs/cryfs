@@ -1,13 +1,13 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, process::ExitCode};
+use std::{error::Error, process::ExitCode, sync::Arc};
 
 // Don't derive `Error` for `CliError` because we don't want a thrown CliError to be converted back to `anyhow::Error`, that might swallow the exit code.
 #[derive(Display, Debug)]
 #[display("{error}")]
 pub struct CliError {
     pub kind: CliErrorKind,
-    pub error: anyhow::Error,
+    pub error: Arc<anyhow::Error>,
 }
 
 /// An extension trait to map a Result with an anyhow::Error error type into a Result with a `CliError` error type.
@@ -16,6 +16,15 @@ pub trait CliResultExt {
     fn map_cli_error(self, kind: CliErrorKind) -> Result<Self::T, CliError>;
 }
 impl<T> CliResultExt for Result<T, anyhow::Error> {
+    type T = T;
+    fn map_cli_error(self, kind: CliErrorKind) -> Result<T, CliError> {
+        self.map_err(|error| CliError {
+            kind,
+            error: Arc::new(error),
+        })
+    }
+}
+impl<T> CliResultExt for Result<T, Arc<anyhow::Error>> {
     type T = T;
     fn map_cli_error(self, kind: CliErrorKind) -> Result<T, CliError> {
         self.map_err(|error| CliError { kind, error })
@@ -40,7 +49,7 @@ where
     fn map_cli_error(self, kind: impl FnOnce(&E) -> CliErrorKind) -> Result<T, CliError> {
         self.map_err(|error| CliError {
             kind: kind(&error),
-            error: anyhow::Error::from(error),
+            error: Arc::new(anyhow::Error::from(error)),
         })
     }
 }

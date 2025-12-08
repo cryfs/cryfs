@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -43,7 +44,7 @@ impl BackgroundProcess {
             Response::MountResponse(Ok(())) => Ok(()),
             Response::MountResponse(Err(err)) => Err(CliError {
                 kind: err.cli_error_kind,
-                error: anyhow!("{}", err.message),
+                error: Arc::new(anyhow!("{}", err.message)),
             }),
             response => panic!("Unexpected response: {response:?}"),
         }

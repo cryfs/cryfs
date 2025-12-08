@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::{Result, anyhow};
 use clap::{
     Args, Parser,
@@ -70,9 +72,9 @@ pub fn parse_args<ConcreteArgs: Args>() -> Result<ParseArgsResult<ConcreteArgs>,
                     if args.immediate_exit_flags.version {
                         return Err(ArgParseError::Other(CliError {
                             kind: CliErrorKind::InvalidArguments,
-                            error: anyhow!(
+                            error: Arc::new(anyhow!(
                                 "the argument '--version' cannot be used with other arguments"
-                            ),
+                            )),
                         }));
                     }
                     args

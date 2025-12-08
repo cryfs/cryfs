@@ -104,7 +104,7 @@ pub async fn mount_filesystem(
         }
         Some(TriggerReason::UnmountIdle) => Ok(()),
         Some(TriggerReason::IntegrityViolation(err)) => Err(CliError {
-            error: err.into(),
+            error: Arc::new(err.into()),
             kind: CliErrorKind::IntegrityViolation,
         }),
     }

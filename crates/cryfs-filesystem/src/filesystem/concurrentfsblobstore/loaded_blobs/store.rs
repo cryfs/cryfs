@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use futures::future::{BoxFuture, Shared};
+use lockable::InfallibleUnwrap as _;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -39,7 +40,7 @@ where
         &self,
         blob_id: BlobId,
         loading_fn: impl FnOnce() -> F + Send + 'static,
-    ) -> Result<(), anyhow::Error>
+    ) -> Result<(), Arc<anyhow::Error>>
     where
         F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>, Arc<anyhow::Error>>> + Send,
     {
@@ -49,12 +50,8 @@ where
             .try_insert_loading(blob_id, loading_fn)
             .await?
             .wait_until_inserted()
-            .await
-            .map_err(|err| {
-                // TODO
-                anyhow::anyhow!("{err:?}")
-            })?;
-        inserted.async_drop().await?;
+            .await?;
+        inserted.async_drop().await.infallible_unwrap();
         Ok(())
     }
 
@@ -73,7 +70,7 @@ where
         blob_id: BlobId,
         blobstore: &AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
         loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>) -> F + Send + 'static,
-    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error>
+    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, Arc<anyhow::Error>>
     where
         F: Future<Output = Result<Option<AsyncDropGuard<FsBlob<B>>>, Arc<anyhow::Error>>>
             + Send
@@ -88,27 +85,19 @@ where
             .get_loaded_or_insert_loading(blob_id, blobstore, loading_fn)
             .await
             .wait_until_loaded()
-            .await
-            .map_err(|err| {
-                // TODO
-                anyhow::anyhow!("{err:?}")
-            })?
+            .await?
             .map(LoadedBlobGuard::new))
     }
 
     pub async fn get_if_loading_or_loaded(
         &self,
         blob_id: BlobId,
-    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error> {
+    ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, Arc<anyhow::Error>> {
         Ok(self
             .loaded_blobs
             .get_if_loading_or_loaded(blob_id)
             .wait_until_loaded()
-            .await
-            .map_err(|err| {
-                // TODO
-                anyhow::anyhow!("{err:?}")
-            })?
+            .await?
             .map(LoadedBlobGuard::new))
     }
 

@@ -60,7 +60,7 @@ where
         blobstore: AsyncDropGuard<B>,
         root_blob_id: BlobId,
         atime_update_behavior: AtimeUpdateBehavior,
-    ) -> Result<AsyncDropGuard<Self>> {
+    ) -> Result<AsyncDropGuard<Self>, Arc<anyhow::Error>> {
         let mut fsblobstore = ConcurrentFsBlobStore::new(FsBlobStore::new(blobstore));
         match fsblobstore.create_root_dir_blob(&root_blob_id).await {
             Ok(()) => Ok(AsyncDropGuard::new(Self {
@@ -70,7 +70,10 @@ where
                 last_access_time: Arc::new(AtomicInstant::now()),
             })),
             Err(err) => {
-                fsblobstore.async_drop().await?;
+                fsblobstore
+                    .async_drop()
+                    .await
+                    .map_err(|err| Arc::new(err.into()))?;
                 Err(err)
             }
         }

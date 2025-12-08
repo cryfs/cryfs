@@ -41,7 +41,10 @@ where
         })
     }
 
-    pub async fn create_root_dir_blob(&self, root_blob_id: &BlobId) -> Result<()> {
+    pub async fn create_root_dir_blob(
+        &self,
+        root_blob_id: &BlobId,
+    ) -> Result<(), Arc<anyhow::Error>> {
         let root_blob_id = *root_blob_id;
         let blobstore = AsyncDropArc::clone(&self.blobstore);
         LoadedBlobs::try_insert_loading(&self.loaded_blobs, root_blob_id, async move || {
@@ -102,7 +105,7 @@ where
     pub async fn load(
         &self,
         blob_id: &BlobId,
-    ) -> Result<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>> {
+    ) -> Result<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>, Arc<anyhow::Error>> {
         let blob_id = *blob_id;
         let loaded_blob = LoadedBlobs::get_loaded_or_insert_loading(
             &self.loaded_blobs,
@@ -146,7 +149,7 @@ where
     }
 
     /// Flush the blob if it is loaded or cached somewhere. If it is not loaded or cached, do nothing.
-    pub async fn flush_if_cached(&self, blob_id: BlobId) -> Result<()> {
+    pub async fn flush_if_cached(&self, blob_id: BlobId) -> Result<(), Arc<anyhow::Error>> {
         if let Some(loaded_blob) =
             LoadedBlobs::get_if_loading_or_loaded(&self.loaded_blobs, blob_id).await?
         {
