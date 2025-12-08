@@ -62,7 +62,7 @@ where
     fn block_invalid_handles(inodes: &mut HandleMap<InodeNumber, InodeInfo<Fs>>) {
         // We need to block zero because fuse seems to dislike it.
         if fuser::FUSE_ROOT_ID != 0 {
-            inodes.block_handle(InodeNumber::from(0));
+            inodes.block_handle(InodeNumber::from_const(0));
         }
         inodes.block_handle(DUMMY_INO);
     }

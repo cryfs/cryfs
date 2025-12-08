@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, Callback, DirEntry, DirEntryOrReference, FileHandle, FsError, FsResult, Gid,
-    Mode, NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntryOrReference, FileHandle, FsError, FsResult, Gid, Mode,
+    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
@@ -574,7 +574,7 @@ where
         // TODO Do we need opendir? The path seems to be passed to readdir, but the fuse_mt comment
         // to opendir seems to suggest that readdir may have to recognize dirs with just the fh and no path?
         Ok(OpendirResponse {
-            fh: FileHandle::from(0),
+            fh: FileHandle::ZERO,
             flags,
         })
     }

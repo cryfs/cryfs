@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use thiserror::Error;
 
+use crate::FileHandle;
+
 // TODO Add fh parameters for descriptor errors and path parameters to others
 
 // TODO Is there a better way for error reporting, e.g. having custom error types for each interface function and mapping them to system error codes in the fuse_mt backend adapter?
@@ -26,10 +28,7 @@ pub enum FsError {
     CorruptedFilesystem { message: String },
 
     #[error("The file descriptor {fh} does not represent an open file")]
-    InvalidFileDescriptor {
-        // TODO Use FileHandle wrapper type
-        fh: u64,
-    },
+    InvalidFileDescriptor { fh: FileHandle },
 
     #[error(
         "The file descriptor represents a file that is open for writing, but the file is not open for reading"

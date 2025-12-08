@@ -5,19 +5,23 @@ use std::fmt::Debug;
 
 use crate::{
     DirEntry, FileHandle, FsError, FsResult, InodeNumber,
-    common::{HandleMap, HandleWithGeneration},
+    common::{HandleMap, HandleTrait, HandleWithGeneration},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From, Into)]
-pub struct OpenDirHandle(pub FileHandle);
-impl From<u64> for OpenDirHandle {
-    fn from(value: u64) -> Self {
-        OpenDirHandle(FileHandle::from(value))
+pub struct OpenDirHandle(FileHandle);
+impl HandleTrait for OpenDirHandle {
+    const MIN: Self = Self(FileHandle::MIN);
+    const MAX: Self = Self(FileHandle::MAX);
+
+    #[inline]
+    fn incremented(&self) -> Self {
+        Self(self.0.incremented())
     }
-}
-impl Into<u64> for OpenDirHandle {
-    fn into(self) -> u64 {
-        self.0.into()
+
+    #[inline]
+    fn range(begin_inclusive: &Self, end_exclusive: &Self) -> impl Iterator<Item = Self> {
+        FileHandle::range(&begin_inclusive.0, &end_exclusive.0).map(Self)
     }
 }
 

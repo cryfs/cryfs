@@ -34,8 +34,8 @@ where
         let mut open_file = {
             let open_files = self.open_files.lock().unwrap();
             let open_file = open_files.get(fh).ok_or_else(|| {
-                log::error!("no open file with handle {}", u64::from(fh));
-                FsError::InvalidFileDescriptor { fh: u64::from(fh) }
+                log::error!("no open file with handle {fh}");
+                FsError::InvalidFileDescriptor { fh }
             })?;
 
             AsyncDropArc::clone(open_file)

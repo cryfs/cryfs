@@ -32,7 +32,7 @@ mod path;
 pub use path::{AbsolutePath, AbsolutePathBuf, ParsePathError, PathComponent, PathComponentBuf};
 
 mod handles;
-pub use handles::{HandleMap, HandleWithGeneration};
+pub use handles::{HandleMap, HandleTrait, HandleWithGeneration};
 
 mod file_handle;
 pub use file_handle::FileHandle;

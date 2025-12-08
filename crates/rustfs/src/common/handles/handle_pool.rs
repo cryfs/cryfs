@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use crate::common::handles::handle_trait::HandleTrait;
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct HandleWithGeneration<Handle> {
     pub handle: Handle,
@@ -15,8 +17,7 @@ pub struct HandleWithGeneration<Handle> {
 #[derive(Debug)]
 pub struct HandlePool<Handle>
 where
-    // TODO Instead of From<u64> + Into<u64>, `Step` would be better, but that's unstable.
-    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Debug,
+    Handle: HandleTrait,
 {
     /// Handles that are currently in use, mapping to their current generation.
     in_use_handles: HashMap<Handle, u64>,
@@ -31,13 +32,13 @@ where
 
 impl<Handle> HandlePool<Handle>
 where
-    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Debug,
+    Handle: HandleTrait,
 {
     pub fn new() -> Self {
         Self {
             in_use_handles: HashMap::new(),
             released_handles: Vec::new(),
-            next_handle: Handle::from(0),
+            next_handle: Handle::MIN,
         }
     }
 
@@ -52,8 +53,8 @@ where
             }
             _ => {
                 let handle = self.next_handle.clone();
-                assert!(self.next_handle < Handle::from(u64::MAX));
-                self.next_handle = Self::increment(self.next_handle.clone());
+                assert!(self.next_handle < Handle::MAX);
+                self.next_handle = self.next_handle.incremented();
                 self._acquire(handle, 0)
             }
         }
@@ -62,15 +63,13 @@ where
     /// Acquires a handle with a given value. If the handle is already acquired, this will panic.
     pub fn acquire_specific(&mut self, handle: Handle) -> HandleWithGeneration<Handle> {
         if handle >= self.next_handle {
-            // TODO Requiring `Handle: Step` would allow us to create a Range right from the Handle
-            let inbetween_handles =
-                (self.next_handle.clone().into()..handle.clone().into()).map(Handle::from);
+            let inbetween_handles = Handle::range(&self.next_handle, &handle);
             self.released_handles
                 .extend(inbetween_handles.map(|handle| HandleWithGeneration {
                     handle,
                     generation: 0,
                 }));
-            self.next_handle = Self::increment(handle.clone());
+            self.next_handle = handle.incremented();
             self._acquire(handle, 0)
         } else {
             match self
@@ -103,10 +102,6 @@ where
             .expect("Tried to release a handle that wasn't in use");
         self.released_handles
             .push(HandleWithGeneration { handle, generation });
-    }
-
-    fn increment(handle: Handle) -> Handle {
-        Handle::from(handle.into() + 1)
     }
 }
 

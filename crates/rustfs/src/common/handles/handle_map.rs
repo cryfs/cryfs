@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
-use std::hash::Hash;
 
 use super::{HandlePool, HandleWithGeneration};
-use crate::FsError;
+use crate::{FsError, common::handles::handle_trait::HandleTrait};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 
 /// A [HandleMap] stores objects keyed by a unique handle. You can add
@@ -12,8 +11,7 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 #[derive(Debug)]
 pub struct HandleMap<Handle, T>
 where
-    // TODO Instead of From<u64> + Into<u64>, `Step` would be better, but that's unstable.
-    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Send + Debug,
+    Handle: HandleTrait + Send,
     T: AsyncDrop<Error = FsError> + Send + Debug,
 {
     available_handles: HandlePool<Handle>,
@@ -27,7 +25,7 @@ where
 
 impl<Handle, T> HandleMap<Handle, T>
 where
-    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Send + Debug,
+    Handle: HandleTrait + Send,
     T: AsyncDrop<Error = FsError> + Send + Debug,
 {
     pub fn new() -> AsyncDropGuard<Self> {
@@ -94,7 +92,7 @@ where
 #[async_trait]
 impl<Handle, T> AsyncDrop for HandleMap<Handle, T>
 where
-    Handle: From<u64> + Into<u64> + Clone + Eq + Ord + Hash + Send + Debug,
+    Handle: HandleTrait + Send,
     T: AsyncDrop<Error = FsError> + Send + Debug,
 {
     type Error = FsError;
