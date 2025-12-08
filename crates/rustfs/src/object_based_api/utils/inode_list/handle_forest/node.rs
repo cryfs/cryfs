@@ -67,7 +67,7 @@ where
         edge: EdgeKey,
         value: Handle,
     ) -> Result<(), OccupiedError<'_, EdgeKey, Handle>> {
-        self.children.try_insert(edge, value)?;
+        HashMapExt::try_insert(&mut self.children, edge, value)?;
         Ok(())
     }
 
@@ -119,14 +119,6 @@ where
 
     pub fn has_children(&self) -> bool {
         !self.children.is_empty()
-    }
-
-    pub fn has_child<K>(&self, edge: &K) -> bool
-    where
-        K: ?Sized + Hash + Eq,
-        EdgeKey: Borrow<K>,
-    {
-        self.children.contains_key(edge)
     }
 
     pub fn into_value(this: AsyncDropGuard<Self>) -> AsyncDropGuard<NodeValue> {
