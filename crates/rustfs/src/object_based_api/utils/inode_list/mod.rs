@@ -767,10 +767,10 @@ where
         // Since we just redirected that pointer to a new parent, we need to adjust the refcounts.
         if old_parent_ino != new_parent_ino {
             match move_result {
-                MoveInodeSuccess::OrphanedExistingChildInNewParent => {
-                    // We replaced an existing child that is now orphaned. No need to adjust the destination parent refcount.
-                }
-                MoveInodeSuccess::AddedAsNewChildToNewParent => {
+                MoveInodeSuccess::OrphanedExistingChildInNewParent
+                | MoveInodeSuccess::AddedAsNewChildToNewParent => {
+                    // Whether we replaced an existing (now orphaned) child or whether we added a new child, we need to increment
+                    // the refcount of the new parent for invariant E1, because we count the number of nodes pointing to it, not the number of nodes in is children map.
                     inner
                         .inode_forest
                         .get_mut(&new_parent_ino)
@@ -808,7 +808,6 @@ where
         // * B2: We assigned a new parent pointer to the node, but with B1+B2, we know that that parent is fully loaded.
         // * E1: If parent didn't change, we didn't change refcounts.
         //       If parent changed, we incremented new parent's refcount and decremented old parent's refcount.
-        //       Unless we orphaned an existing child in the new parent, in which case new parent's refcount remains unchanged.
         // * E2: We used [Self::_decrement_refcount] to decrement old parent's refcount, which would drop the parent if its refcount went to zero.
         Ok(())
     }
