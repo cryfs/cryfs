@@ -83,7 +83,7 @@ where
         self.objects.drain()
     }
 
-    #[cfg(feature = "testutils")]
+    #[cfg(any(test, feature = "testutils"))]
     pub fn iter(&self) -> impl Iterator<Item = (&Handle, &AsyncDropGuard<T>)> {
         self.objects.iter()
     }
