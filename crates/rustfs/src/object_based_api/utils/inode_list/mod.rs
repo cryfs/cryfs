@@ -751,7 +751,6 @@ where
         let move_result = inner
             .inode_forest
             .move_node(old_parent_ino, old_name, new_parent_ino, new_name)
-            .await
             .map_err(|err| match err {
                 handle_forest::MoveInodeError::OldParentNotFound => {
                     MoveInodeError::OldParentNotFound

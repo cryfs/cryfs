@@ -235,7 +235,7 @@ where
         Ok(())
     }
 
-    pub async fn move_node<E>(
+    pub fn move_node<E>(
         &mut self,
         old_parent_handle: Handle,
         old_edge: &E,
