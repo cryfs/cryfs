@@ -6,9 +6,8 @@ use std::fmt::Debug;
 
 use crate::{FsError, FsResult, InodeNumber, object_based_api::Device};
 
-// TODO Rename to InodeTreeNode
 #[derive(Debug)]
-pub struct InodeInfo<Fs>
+pub struct InodeTreeNode<Fs>
 where
     Fs: Device + Debug + 'static,
     Fs::Node: 'static,
@@ -30,7 +29,7 @@ where
     >,
 }
 
-impl<Fs> InodeInfo<Fs>
+impl<Fs> InodeTreeNode<Fs>
 where
     Fs: Device + Debug + 'static,
     Fs::Node: 'static,
@@ -99,7 +98,7 @@ pub enum RefcountInfo {
 }
 
 #[async_trait]
-impl<Fs> AsyncDrop for InodeInfo<Fs>
+impl<Fs> AsyncDrop for InodeTreeNode<Fs>
 where
     Fs: Device + Debug + 'static,
     Fs::Node: 'static,

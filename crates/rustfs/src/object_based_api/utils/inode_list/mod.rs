@@ -42,7 +42,7 @@ use crate::object_based_api::utils::inode_list::handle_forest::{
     DelayedHandleRelease, GetChildOfError, HandleForest, MoveInodeSuccess, TryInsertError,
     TryRemoveResult,
 };
-use crate::object_based_api::utils::inode_list::inode_info::RefcountInfo;
+use crate::object_based_api::utils::inode_list::inode_tree_node::RefcountInfo;
 use crate::{FsError, object_based_api::Device};
 use crate::{FsResult, PathComponent};
 
@@ -54,8 +54,8 @@ pub const DUMMY_INO: InodeNumber =
 mod handle_forest;
 pub use handle_forest::MakeOrphanError;
 
-mod inode_info;
-use inode_info::InodeInfo;
+mod inode_tree_node;
+use inode_tree_node::InodeTreeNode;
 
 const PARENT_OF_ROOT_INO: InodeNumber = FUSE_ROOT_ID; // Root inode's parent is itself
 
@@ -113,7 +113,7 @@ where
     // On top of this refcount, each InodeInfo also remmbers its parent InodeNumber. Overall, we guarantee that inodes only get removed once the kernel has
     // released it and all its children.
     // TODO Use Vec or slab instead of HashMap since InodeNumber is mostly contiguous?
-    inode_forest: AsyncDropGuard<HandleForest<InodeNumber, PathComponentBuf, InodeInfo<Fs>>>,
+    inode_forest: AsyncDropGuard<HandleForest<InodeNumber, PathComponentBuf, InodeTreeNode<Fs>>>,
 }
 
 impl<Fs> InodeList<Fs>
@@ -139,7 +139,7 @@ where
     }
 
     fn block_invalid_handles(
-        inode_forest: &mut HandleForest<InodeNumber, PathComponentBuf, InodeInfo<Fs>>,
+        inode_forest: &mut HandleForest<InodeNumber, PathComponentBuf, InodeTreeNode<Fs>>,
     ) {
         // We don't need to block zero because we use NonZeroU64 in the handle, so it can't be represented anyways
         inode_forest.block_handle(DUMMY_INO);
@@ -170,7 +170,7 @@ where
             .inode_forest
             .try_insert_root_with_specific_handle(
                 FUSE_ROOT_ID,
-                InodeInfo::new(AsyncDropShared::new(
+                InodeTreeNode::new(AsyncDropShared::new(
                     future::ready(AsyncDropResult::new(Ok(inserted))).boxed(),
                 )),
             )
@@ -258,7 +258,7 @@ where
                         //      but even so it is better to not wait for it here while having a lock on inner.
                         .await
                         .expect("Invariant D violated: A new (i.e. not blocked) inode number was already in use.");
-                    InodeInfo::new(AsyncDropShared::new(
+                    InodeTreeNode::new(AsyncDropShared::new(
                         future::ready(AsyncDropResult::new(Ok(inserted_node))).boxed(),
                     ))
                 })
@@ -435,7 +435,7 @@ where
                     .await
                     .expect("Invariant D violated: entry for a new inode number already exists");
 
-                    InodeInfo::new(AsyncDropShared::new(
+                    InodeTreeNode::new(AsyncDropShared::new(
                         async move { AsyncDropResult::new(inserting.wait_until_inserted().await) }
                             .boxed(),
                     ))
@@ -583,7 +583,7 @@ where
                 self._remove_inode(&mut inner, ino, parent_ino, &mut to_async_drop);
                 let (removed_inos, removed_inodes, delayed_handle_releases): (
                     Vec<InodeNumber>,
-                    Vec<AsyncDropGuard<InodeInfo<Fs>>>,
+                    Vec<AsyncDropGuard<InodeTreeNode<Fs>>>,
                     Vec<DelayedHandleRelease<InodeNumber>>,
                 ) = multiunzip(to_async_drop.into_iter());
 
@@ -635,7 +635,7 @@ where
         mut parent_ino: InodeNumber,
         to_async_drop: &mut Vec<(
             InodeNumber,
-            AsyncDropGuard<InodeInfo<Fs>>,
+            AsyncDropGuard<InodeTreeNode<Fs>>,
             DelayedHandleRelease<InodeNumber>,
         )>,
     ) {
