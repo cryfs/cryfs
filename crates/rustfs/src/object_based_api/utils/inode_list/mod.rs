@@ -644,7 +644,6 @@ where
             // First remove the node itself (dropping the guard in self.inode_forest later when to_async_drop is processed will also remove it from self.inodes)
             let (removed_entry, remove_result, delayed_handle_release) = inner
                 .inode_forest
-                // TODO remove_by_name might be faster because we don't have to search the whole map
                 .try_remove(child_ino)
                 .expect("Inode reference disappeared or still has children");
             to_async_drop.push((child_ino, removed_entry, delayed_handle_release));

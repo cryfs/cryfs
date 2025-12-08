@@ -9,7 +9,9 @@ use derive_more::{Display, Error};
 
 use crate::common::{HandlePool, HandleTrait, HandleWithGeneration};
 use crate::object_based_api::utils::inode_list::handle_forest::DelayedHandleRelease;
-use crate::object_based_api::utils::inode_list::handle_forest::node::{Node, RemoveResult};
+use crate::object_based_api::utils::inode_list::handle_forest::node::{
+    Node, RemoveResult, TryRemoveChildByHandleError,
+};
 
 #[derive(Debug)]
 pub struct HandleForest<Handle, EdgeKey, NodeValue>
@@ -32,7 +34,7 @@ where
     // * B: Tree pointers are well formed, i.e.
     //   * B1: Each Node.parent pointer points to a valid entry in the `nodes` map (if Some. If None, the node is a root)
     //   * B2: Each Node.children[_] pointer points to a valid entry in the `nodes` map
-    // * C: Each Node.children[_].parent entry points back to the original node.
+    // * C: Each Node.children[_].parent entry points back to the original node, with the correct EdgeKey stored in the parent pointer.
     //   * Note: The reverse isn't necessarily true. An orphaned node might still point to its parent even though the parent doesn't have it in its chldren array.
     // * Note: Not every node may have a parent. We're a forest, there can be orphaned nodes that no parent points to.
     nodes: AsyncDropGuard<AsyncDropHashMap<Handle, Node<Handle, EdgeKey, NodeValue>>>,
@@ -62,7 +64,7 @@ where
     }
 
     pub fn get_mut(&mut self, index: &Handle) -> Option<&mut Node<Handle, EdgeKey, NodeValue>> {
-        let node = self.nodes.get_mut(index)?;
+        let node: &mut AsyncDropGuard<Node<Handle, EdgeKey, NodeValue>> = self.nodes.get_mut(index)?;
         Some(&mut **node)
     }
 
@@ -137,17 +139,17 @@ where
 
         let new_handle = self.handles.acquire();
 
-        let Ok(_) = parent.try_insert_child(edge, new_handle.handle.clone()) else {
+        let Ok(_) = parent.try_insert_child(edge.clone(), new_handle.handle.clone()) else {
             self.handles.undo_acquire(new_handle.handle);
             return Err(TryInsertError::AlreadyExists);
         };
 
         let value = value_fn(&new_handle).await;
 
-        match self
-            .nodes
-            .try_insert(new_handle.handle.clone(), Node::new(parent_handle, value))
-        {
+        match self.nodes.try_insert(
+            new_handle.handle.clone(),
+            Node::new(parent_handle, edge, value),
+        ) {
             Ok(node) => Ok((new_handle, node)),
             Err(OccupiedError { entry: _, value: _ }) => {
                 panic!("Invariant A violated");
@@ -180,22 +182,23 @@ where
             .remove(&handle)
             .expect("We just checked above that it exists");
 
-        let result = if let Some(parent_handle) = node.parent_handle() {
+        let result = if let Some((parent_handle, edge_from_parent)) = node.parent() {
             let Some(parent_node) = self.nodes.get_mut(parent_handle) else {
                 panic!("Invariant B1 violated");
             };
-            match parent_node.try_remove_child_by_handle(&handle) {
-                Some(RemoveResult::NoChildrenLeft) => {
-                    TryRemoveResult::JustRemovedLastChildOfParent {
+            match parent_node.try_remove_child_by_handle(&handle, &edge_from_parent) {
+                Ok(RemoveResult::NoChildrenLeft) => TryRemoveResult::JustRemovedLastChildOfParent {
+                    parent_handle: parent_handle.clone(),
+                },
+                Ok(RemoveResult::StillHasChildren) => TryRemoveResult::ParentStillHasChildren {
+                    parent_handle: parent_handle.clone(),
+                },
+                Err(TryRemoveChildByHandleError::EdgeNotFound)
+                | Err(TryRemoveChildByHandleError::EdgeLeadsToDifferentNode) => {
+                    TryRemoveResult::ParentDidntHaveRemovedNodeAsChild {
                         parent_handle: parent_handle.clone(),
                     }
                 }
-                Some(RemoveResult::StillHasChildren) => TryRemoveResult::ParentStillHasChildren {
-                    parent_handle: parent_handle.clone(),
-                },
-                None => TryRemoveResult::ParentDidntHaveRemovedNodeAsChild {
-                    parent_handle: parent_handle.clone(),
-                },
             }
         } else {
             TryRemoveResult::NoParent
@@ -272,14 +275,15 @@ where
         };
 
         // Insert into new parent
-        let overwritten_child = new_parent_node.insert_child(new_edge, child_handle.clone());
+        let overwritten_child =
+            new_parent_node.insert_child(new_edge.clone(), child_handle.clone());
 
         // Update child's parent pointer
         let child_node = self
             .nodes
             .get_mut(&child_handle)
             .expect("Invariant B2 violated");
-        child_node.set_parent(Some(new_parent_handle));
+        child_node.set_parent(Some((new_parent_handle, new_edge)));
 
         if overwritten_child.is_some() {
             Ok(MoveInodeSuccess::OrphanedExistingChildInNewParent)

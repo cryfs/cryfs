@@ -18,7 +18,8 @@ where
     NodeValue: AsyncDrop + Send + Debug,
     <NodeValue as AsyncDrop>::Error: Send,
 {
-    parent: Option<Handle>,
+    /// Parent inode, together with the EdgeKey used to get from the parent to this node
+    parent: Option<(Handle, EdgeKey)>,
     children: HashMap<EdgeKey, Handle>,
     value: AsyncDropGuard<NodeValue>,
 }
@@ -38,19 +39,27 @@ where
         })
     }
 
-    pub fn new(parent: Handle, value: AsyncDropGuard<NodeValue>) -> AsyncDropGuard<Self> {
+    pub fn new(
+        parent: Handle,
+        edge: EdgeKey,
+        value: AsyncDropGuard<NodeValue>,
+    ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            parent: Some(parent),
+            parent: Some((parent, edge)),
             children: HashMap::new(),
             value,
         })
     }
 
     pub fn parent_handle(&self) -> Option<&Handle> {
+        self.parent.as_ref().map(|(handle, _)| handle)
+    }
+
+    pub fn parent(&self) -> Option<&(Handle, EdgeKey)> {
         self.parent.as_ref()
     }
 
-    pub(super) fn set_parent(&mut self, parent: Option<Handle>) {
+    pub(super) fn set_parent(&mut self, parent: Option<(Handle, EdgeKey)>) {
         self.parent = parent;
     }
 
@@ -76,28 +85,21 @@ where
         self.children.insert(edge, value)
     }
 
+    /// Removes the child with the given edge/handle combination. If no such child exists, returns None.
     pub(super) fn try_remove_child_by_handle(
         &mut self,
         child_ino: &Handle,
-    ) -> Option<RemoveResult> {
-        let mut remove_key: Option<EdgeKey> = None;
-        // TODO Might be better to keep a reverse map from child_ino to name to avoid this linear scan
-        //      Or maybe check call sites for whether they alrady have the parent_ino and name available, that would make this cheaper here.
-        for (edge_key, entry_child_ino) in &self.children {
-            if entry_child_ino == child_ino {
-                remove_key = Some(edge_key.clone());
-                break;
-            }
+        edge: &EdgeKey,
+    ) -> Result<RemoveResult, TryRemoveChildByHandleError> {
+        let Some((removed, remove_result)) = self.try_remove_child(edge) else {
+            return Err(TryRemoveChildByHandleError::EdgeNotFound);
+        };
+        if removed != *child_ino {
+            // Put it back
+            self.children.insert(edge.clone(), removed);
+            return Err(TryRemoveChildByHandleError::EdgeLeadsToDifferentNode);
         }
-        if let Some(edge_key) = remove_key {
-            let (removed_handle, remove_result) = self
-                .try_remove_child(&edge_key)
-                .expect("This should never happen because we just found the child by inode number");
-            assert_eq!(*child_ino, removed_handle);
-            Some(remove_result)
-        } else {
-            None
-        }
+        Ok(remove_result)
     }
 
     pub(super) fn try_remove_child<K>(&mut self, edge: &K) -> Option<(Handle, RemoveResult)>
@@ -153,4 +155,9 @@ where
 pub enum RemoveResult {
     StillHasChildren,
     NoChildrenLeft,
+}
+
+pub enum TryRemoveChildByHandleError {
+    EdgeNotFound,
+    EdgeLeadsToDifferentNode,
 }
