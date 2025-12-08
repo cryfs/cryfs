@@ -49,8 +49,7 @@ where
 
     pub async fn remove(mut this: AsyncDropGuard<Self>) -> FsResult<RemoveResult> {
         loop {
-            match this.loaded_blob.store().request_immediate_drop(
-                *this.loaded_blob.key(),
+            match this.loaded_blob.request_immediate_drop(
                 |blob| async move {
                     let Some(blob) = blob else {
                         panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");

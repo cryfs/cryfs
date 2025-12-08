@@ -20,7 +20,7 @@ where
     // TODO Here (and in other places using BlockId or BlobId as hash map/set key), use a faster hash function, e.g. just take the first 8 bytes of the id. Ids are already random.
     loaded_blobs: AsyncDropGuard<
         // TODO Would ConcurrentStore<_, _, FsError> be better?
-        AsyncDropArc<ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, Arc<anyhow::Error>>>,
+        ConcurrentStore<BlobId, AsyncDropTokioMutex<FsBlob<B>>, Arc<anyhow::Error>>,
     >,
 }
 
@@ -31,7 +31,7 @@ where
 {
     pub fn new() -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            loaded_blobs: AsyncDropArc::new(ConcurrentStore::new()),
+            loaded_blobs: ConcurrentStore::new(),
         })
     }
 
@@ -44,15 +44,16 @@ where
         F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>, Arc<anyhow::Error>>> + Send,
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
-        let mut inserted =
-            ConcurrentStore::try_insert_loading(&self.loaded_blobs, blob_id, loading_fn)
-                .await?
-                .wait_until_inserted()
-                .await
-                .map_err(|err| {
-                    // TODO
-                    anyhow::anyhow!("{err:?}")
-                })?;
+        let mut inserted = self
+            .loaded_blobs
+            .try_insert_loading(blob_id, loading_fn)
+            .await?
+            .wait_until_inserted()
+            .await
+            .map_err(|err| {
+                // TODO
+                anyhow::anyhow!("{err:?}")
+            })?;
         inserted.async_drop().await?;
         Ok(())
     }
@@ -61,13 +62,10 @@ where
         &self,
         blob: AsyncDropGuard<FsBlob<B>>,
     ) -> Result<AsyncDropGuard<LoadedBlobGuard<B>>> {
-        ConcurrentStore::try_insert_loaded(
-            &self.loaded_blobs,
-            blob.blob_id(),
-            AsyncDropTokioMutex::new(blob),
-        )
-        .await
-        .map(LoadedBlobGuard::new)
+        self.loaded_blobs
+            .try_insert_loaded(blob.blob_id(), AsyncDropTokioMutex::new(blob))
+            .await
+            .map(LoadedBlobGuard::new)
     }
 
     pub async fn get_loaded_or_insert_loading<F>(
@@ -85,36 +83,33 @@ where
     {
         let loading_fn =
             move |i| async move { loading_fn(i).await.map(|v| v.map(AsyncDropTokioMutex::new)) };
-        Ok(ConcurrentStore::get_loaded_or_insert_loading(
-            &self.loaded_blobs,
-            blob_id,
-            blobstore,
-            loading_fn,
-        )
-        .await
-        .wait_until_loaded()
-        .await
-        .map_err(|err| {
-            // TODO
-            anyhow::anyhow!("{err:?}")
-        })?
-        .map(LoadedBlobGuard::new))
+        Ok(self
+            .loaded_blobs
+            .get_loaded_or_insert_loading(blob_id, blobstore, loading_fn)
+            .await
+            .wait_until_loaded()
+            .await
+            .map_err(|err| {
+                // TODO
+                anyhow::anyhow!("{err:?}")
+            })?
+            .map(LoadedBlobGuard::new))
     }
 
     pub async fn get_if_loading_or_loaded(
         &self,
         blob_id: BlobId,
     ) -> Result<Option<AsyncDropGuard<LoadedBlobGuard<B>>>, anyhow::Error> {
-        Ok(
-            ConcurrentStore::get_if_loading_or_loaded(&self.loaded_blobs, blob_id)
-                .wait_until_loaded()
-                .await
-                .map_err(|err| {
-                    // TODO
-                    anyhow::anyhow!("{err:?}")
-                })?
-                .map(LoadedBlobGuard::new),
-        )
+        Ok(self
+            .loaded_blobs
+            .get_if_loading_or_loaded(blob_id)
+            .wait_until_loaded()
+            .await
+            .map_err(|err| {
+                // TODO
+                anyhow::anyhow!("{err:?}")
+            })?
+            .map(LoadedBlobGuard::new))
     }
 
     pub fn request_removal(

@@ -5,7 +5,7 @@ use std::hash::Hash;
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::store::ConcurrentStore,
+    concurrent_store::{RequestImmediateDropResult, store::ConcurrentStoreInner},
 };
 
 /// Guard for a loaded entry in a ConcurrentStore.
@@ -18,7 +18,7 @@ where
     V: AsyncDrop + Debug + Send + Sync + 'static,
     E: Clone + Debug + Send + Sync + 'static,
 {
-    store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+    store: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
     key: K,
     value: AsyncDropGuard<AsyncDropArc<V>>,
 }
@@ -30,7 +30,7 @@ where
     E: Clone + Debug + Send + Sync + 'static,
 {
     pub(super) fn new(
-        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+        store: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
         value: AsyncDropGuard<AsyncDropArc<V>>,
     ) -> AsyncDropGuard<Self> {
@@ -45,8 +45,15 @@ where
         &self.value
     }
 
-    pub fn store(&self) -> &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>> {
-        &self.store
+    pub fn request_immediate_drop<D, F>(
+        &self,
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
+    ) -> RequestImmediateDropResult<D>
+    where
+        D: Debug + Send + 'static,
+        F: Future<Output = D> + Send + 'static,
+    {
+        ConcurrentStoreInner::request_immediate_drop(&self.store, self.key.clone(), drop_fn)
     }
 }
 
@@ -61,7 +68,7 @@ where
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         let value = std::mem::replace(&mut self.value, AsyncDropGuard::new_invalid());
-        self.store.unload(self.key.clone(), value).await;
+        ConcurrentStoreInner::unload(&self.store, self.key.clone(), value).await;
         self.store.async_drop().await.unwrap(); // TODO No unwrap
         Ok(())
     }

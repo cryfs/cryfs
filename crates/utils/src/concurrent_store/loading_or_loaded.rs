@@ -3,7 +3,7 @@ use std::{fmt::Debug, hash::Hash};
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::{ConcurrentStore, LoadedEntryGuard, entry::EntryLoadingWaiter},
+    concurrent_store::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner},
     safe_panic, with_async_drop_2_infallible,
 };
 
@@ -29,7 +29,7 @@ where
     NotFound,
     Loading {
         waiter: EntryLoadingWaiter<K, E>,
-        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+        store: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
     },
     Loaded(AsyncDropGuard<LoadedEntryGuard<K, V, E>>),
 }
@@ -47,7 +47,7 @@ where
     }
 
     pub(super) fn new_loading(
-        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+        store: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         waiter: EntryLoadingWaiter<K, E>,
     ) -> Self {
         Self {

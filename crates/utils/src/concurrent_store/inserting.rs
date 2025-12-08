@@ -3,7 +3,7 @@ use std::{fmt::Debug, hash::Hash};
 
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::{ConcurrentStore, LoadedEntryGuard, entry::EntryLoadingWaiter},
+    concurrent_store::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner},
     safe_panic, with_async_drop_2_infallible,
 };
 
@@ -25,7 +25,7 @@ where
     V: AsyncDrop + Debug + Send + Sync + 'static,
     E: Clone + Debug + Send + Sync + 'static,
 {
-    store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+    store: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
 
     // Invariant: The entry is marked as "loading", which is why we use [EntryLoadingWaiter],
     // but our loading function never returns a None. It always returns a Some. So we don't need to deal with the
@@ -40,7 +40,7 @@ where
     E: Clone + Debug + Send + Sync + 'static,
 {
     pub(super) fn new(
-        store: AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+        store: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         waiter: EntryLoadingWaiter<K, E>,
     ) -> Self {
         Inserting {

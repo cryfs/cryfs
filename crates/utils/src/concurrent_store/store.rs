@@ -5,12 +5,7 @@ use futures::future::{BoxFuture, Shared};
 use lockable::{InfallibleUnwrap as _, Never};
 use std::collections::hash_map::Entry;
 use std::marker::PhantomData;
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-    hash::Hash,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Mutex};
 
 use crate::concurrent_store::Inserting;
 use crate::concurrent_store::LoadingOrLoaded;
@@ -21,12 +16,13 @@ use crate::concurrent_store::entry::{
 use crate::concurrent_store::guard::LoadedEntryGuard;
 use crate::event::Event;
 use crate::stream::for_each_unordered;
+use crate::with_async_drop_2;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::entry::EntryState,
 };
 
-// TODO This is currently not cancellation safe. If a task waiting for a blob to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
+// TODO This is currently not cancellation safe. If a task waiting for an entry to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 
 /// A concurrent store allows loading objects from an underlying store, while handling concurrency.
 ///
@@ -40,6 +36,15 @@ use crate::{
 /// * V: Value type for the entries in the store.
 /// * R: Result type for immediate drop requests.
 pub struct ConcurrentStore<K, V, E>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
+{
+    inner: AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
+}
+
+pub(super) struct ConcurrentStoreInner<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
     V: AsyncDrop + Debug + Send + Sync + 'static,
@@ -64,7 +69,7 @@ where
     ///   * In both, [EntryState::Loading] and [EntryState::Loaded], if an immediate drop is requested, the flag `immediate_drop_requested` is set to true.
     ///   * If the flag is true, once the last current reader is done, the entry will be removed from the map and the user-provided callback function will be called with exclusive access, to do the remove.
     ///   * Also, any further tasks trying to load the entry while `immediate_drop_requested=true` will wait until all tasks with current access are done, and the user-defined callback is complete, so it'll be exclusive access, and only then execute.
-    pub(super) entries: Arc<Mutex<HashMap<K, EntryState<V, E>>>>,
+    pub(super) entries: Mutex<HashMap<K, EntryState<V, E>>>, // TODO Can we remove pub(super)?
 }
 impl<K, V, E> ConcurrentStore<K, V, E>
 where
@@ -75,7 +80,15 @@ where
     /// Create a new empty [ConcurrentStore].
     pub fn new() -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(ConcurrentStore {
-            entries: Arc::new(Mutex::new(HashMap::new())),
+            inner: AsyncDropArc::new(AsyncDropGuard::new(ConcurrentStoreInner {
+                entries: Mutex::new(HashMap::new()),
+            })),
+        })
+    }
+
+    pub fn clone_ref(&self) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(ConcurrentStore {
+            inner: AsyncDropArc::clone(&self.inner),
         })
     }
 
@@ -86,7 +99,7 @@ where
     /// The call site is expected to await the returned [EntryLoadingWaiter] through [EntryLoadingWaiter::wait_until_loaded],
     /// otherwise the loading operation might not be driven to completion.
     pub async fn try_insert_loading<F>(
-        this: &AsyncDropGuard<AsyncDropArc<Self>>,
+        &self,
         mut key: K,
         loading_fn: impl FnOnce() -> F + Send + 'static,
     ) -> Result<Inserting<K, V, E>>
@@ -95,7 +108,7 @@ where
     {
         loop {
             let dropping_future = {
-                let mut entries = this.entries.lock().unwrap();
+                let mut entries = self.inner.entries.lock().unwrap();
                 match entries.entry(key) {
                     Entry::Occupied(entry) => match entry.get() {
                         EntryState::Loading(_) | EntryState::Loaded(_) => {
@@ -116,10 +129,13 @@ where
                             Ok(Some(loaded_entry))
                         };
                         let mut loading_future =
-                            this.make_loading_future(entry.key().clone(), loading_future);
+                            self.make_loading_future(entry.key().clone(), loading_future);
                         let loading_result = loading_future.add_waiter(entry.key().clone());
                         entry.insert(EntryState::Loading(loading_future));
-                        return Ok(Inserting::new(AsyncDropArc::clone(this), loading_result));
+                        return Ok(Inserting::new(
+                            AsyncDropArc::clone(&self.inner),
+                            loading_result,
+                        ));
                     }
                 }
             };
@@ -133,14 +149,14 @@ where
     /// Insert a new entry that was just created and has a new key assigned.
     /// This will return an Error if the key already exists.
     pub async fn try_insert_loaded(
-        this: &AsyncDropGuard<AsyncDropArc<Self>>,
+        &self,
         mut key: K,
         mut value: AsyncDropGuard<V>,
     ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V, E>>> {
         // TODO Deduplicate between this and try_insert_loading
         loop {
             let dropping_future = {
-                let mut entries = this.entries.lock().unwrap();
+                let mut entries = self.inner.entries.lock().unwrap();
 
                 match entries.entry(key) {
                     Entry::Occupied(entry) => {
@@ -165,7 +181,7 @@ where
                         key = entry.key().clone();
                         entry.insert(EntryState::Loaded(loaded));
                         return Ok(LoadedEntryGuard::new(
-                            AsyncDropArc::clone(this),
+                            AsyncDropArc::clone(&self.inner),
                             key,
                             loaded_entry,
                         ));
@@ -189,7 +205,7 @@ where
 
     /// Load an entry if it is not already loaded, or return the existing loaded entry.
     pub async fn get_loaded_or_insert_loading<'a, F, I>(
-        this: &AsyncDropGuard<AsyncDropArc<Self>>,
+        &self,
         key: K,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         mut loading_fn: impl FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> F + Send,
@@ -201,7 +217,7 @@ where
     {
         loop {
             let entry_state =
-                this._clone_or_create_entry_state(key.clone(), &loading_fn_input, loading_fn);
+                self._clone_or_create_entry_state(key.clone(), &loading_fn_input, loading_fn);
             // Now the lock on `this.entries` is released, so we can await the loading future without blocking other operations.
 
             match entry_state {
@@ -209,13 +225,16 @@ where
                     // Oh, the entry is already loaded! We can just return it
                     // Returning means we shift the responsibility to call async_drop on the [AsyncDropArc] to our caller.
                     return LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
-                        AsyncDropArc::clone(this),
+                        AsyncDropArc::clone(&self.inner),
                         key,
                         entry,
                     ));
                 }
                 CloneOrCreateEntryStateResult::Loading { loading_result } => {
-                    return LoadingOrLoaded::new_loading(AsyncDropArc::clone(this), loading_result);
+                    return LoadingOrLoaded::new_loading(
+                        AsyncDropArc::clone(&self.inner),
+                        loading_result,
+                    );
                 }
                 CloneOrCreateEntryStateResult::Dropping {
                     future,
@@ -248,42 +267,38 @@ where
     ///
     /// The caller is expected to await the returned [EntryLoadingWaiter] (in [LoadingOrLoaded::Loading])
     /// through [EntryLoadingWaiter::wait_until_loaded], and to drop the returned [AsyncDropGuard] in [LoadingOrLoaded::Loaded].
-    pub fn get_if_loading_or_loaded(
-        this: &AsyncDropGuard<AsyncDropArc<Self>>,
-        key: K,
-    ) -> LoadingOrLoaded<K, V, E> {
-        let mut entries = this.entries.lock().unwrap();
+    pub fn get_if_loading_or_loaded(&self, key: K) -> LoadingOrLoaded<K, V, E> {
+        let mut entries = self.inner.entries.lock().unwrap();
         match entries.get_mut(&key) {
             Some(EntryState::Loaded(loaded)) => LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
-                AsyncDropArc::clone(this),
+                AsyncDropArc::clone(&self.inner),
                 key,
                 loaded.get_entry(),
             )),
-            Some(EntryState::Loading(loading)) => {
-                LoadingOrLoaded::new_loading(AsyncDropArc::clone(this), loading.add_waiter(key))
-            }
+            Some(EntryState::Loading(loading)) => LoadingOrLoaded::new_loading(
+                AsyncDropArc::clone(&self.inner),
+                loading.add_waiter(key),
+            ),
             None | Some(EntryState::Dropping { .. }) => LoadingOrLoaded::new_not_found(),
         }
     }
 
     /// Return all entries that are loading, loaded.
-    pub fn all_loading_or_loaded(
-        this: &AsyncDropGuard<AsyncDropArc<Self>>,
-    ) -> Vec<LoadingOrLoaded<K, V, E>> {
-        let mut entries = this.entries.lock().unwrap();
+    pub fn all_loading_or_loaded(&self) -> Vec<LoadingOrLoaded<K, V, E>> {
+        let mut entries = self.inner.entries.lock().unwrap();
         let mut result = Vec::with_capacity(entries.len());
         for (key, entry_state) in entries.iter_mut() {
             match entry_state {
                 EntryState::Loaded(loaded) => {
                     result.push(LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
-                        AsyncDropArc::clone(this),
+                        AsyncDropArc::clone(&self.inner),
                         key.clone(),
                         loaded.get_entry(),
                     )));
                 }
                 EntryState::Loading(loading) => {
                     result.push(LoadingOrLoaded::new_loading(
-                        AsyncDropArc::clone(this),
+                        AsyncDropArc::clone(&self.inner),
                         loading.add_waiter(key.clone()),
                     ));
                 }
@@ -296,13 +311,13 @@ where
     }
 
     pub fn is_fully_absent(&self, key: &K) -> bool {
-        let entries = self.entries.lock().unwrap();
+        let entries = self.inner.entries.lock().unwrap();
         !entries.contains_key(key)
     }
 
     #[cfg(any(test, feature = "testutils"))]
     pub fn is_empty(&self) -> bool {
-        let entries = self.entries.lock().unwrap();
+        let entries = self.inner.entries.lock().unwrap();
         entries.is_empty()
     }
 
@@ -319,7 +334,7 @@ where
         I: AsyncDrop + Debug + Send,
         <I as AsyncDrop>::Error: std::error::Error + Send + Sync + 's,
     {
-        let mut entries = self.entries.lock().unwrap();
+        let mut entries = self.inner.entries.lock().unwrap();
         match entries.entry(key.clone()) {
             Entry::Occupied(mut entry) => match entry.get_mut() {
                 EntryState::Loaded(loaded) => match loaded.immediate_drop_requested() {
@@ -367,52 +382,74 @@ where
         key: K,
         loading_fn: impl Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
     ) -> EntryStateLoading<V, E> {
-        let entries = Arc::clone(&self.entries);
+        let inner = AsyncDropArc::clone(&self.inner);
         let loading_task = async move {
-            // Run loading_fn concurrently, without a lock on `entries`.
-            let result = loading_fn.await;
+            with_async_drop_2!(inner, {
+                // Run loading_fn concurrently, without a lock on `entries`.
+                let result = loading_fn.await;
 
-            match result {
-                Ok(Some(entry)) => {
-                    // Now that we're loaded, change the entry state in the map to loaded so that any waiters (current or future) can access it.
-                    let mut entries = entries.lock().unwrap();
-                    let Some(state) = entries.get_mut(&key) else {
-                        panic!("Entry with key {:?} was not found in the map", key);
-                    };
-                    let EntryState::Loading(loading) = state else {
-                        panic!("Entry with key {:?} is not in loading state", key);
-                    };
-                    let loading = std::mem::replace(loading, EntryStateLoading::new_dummy());
-                    // We are still in the middle of executing the future, so no waiter has completed yet.
-                    // Also, we currently have a lock on `entry`, so no new waiters can be added.
-                    // We're about to change the state to EntryState::Loaded, which will prevent further waiters to be added even after we release the lock.
-                    *state = EntryState::Loaded(EntryStateLoaded::new_from_just_finished_loading(
-                        entry, loading,
-                    ));
+                match result {
+                    Ok(Some(entry)) => {
+                        // Now that we're loaded, change the entry state in the map to loaded so that any waiters (current or future) can access it.
+                        let mut entries = inner.entries.lock().unwrap();
+                        let Some(state) = entries.get_mut(&key) else {
+                            panic!("Entry with key {:?} was not found in the map", key);
+                        };
+                        let EntryState::Loading(loading) = state else {
+                            panic!("Entry with key {:?} is not in loading state", key);
+                        };
+                        let loading = std::mem::replace(loading, EntryStateLoading::new_dummy());
+                        // We are still in the middle of executing the future, so no waiter has completed yet.
+                        // Also, we currently have a lock on `entry`, so no new waiters can be added.
+                        // We're about to change the state to EntryState::Loaded, which will prevent further waiters to be added even after we release the lock.
+                        *state = EntryState::Loaded(
+                            EntryStateLoaded::new_from_just_finished_loading(entry, loading),
+                        );
 
-                    LoadingResult::Loaded
+                        Ok(LoadingResult::Loaded)
+                    }
+                    Ok(None) => {
+                        // We're loaded but the entry wasn't found. Remove the entry from the map and return the error to any waiters.
+                        let mut entries = inner.entries.lock().unwrap();
+                        let Some(_) = entries.remove(&key) else {
+                            panic!("Entry with key {:?} was not found in the map", key);
+                        };
+                        Ok(LoadingResult::NotFound)
+                    }
+                    Err(err) => {
+                        // An error occurred while loading the entry. Remove the entry from the map and return the error to any waiters.
+                        let mut entries = inner.entries.lock().unwrap();
+                        let Some(_) = entries.remove(&key) else {
+                            panic!("Entry with key {:?} was not found in the map", key);
+                        };
+                        Ok(LoadingResult::Error(err))
+                    }
                 }
-                Ok(None) => {
-                    // We're loaded but the entry wasn't found. Remove the entry from the map and return the error to any waiters.
-                    let mut entries = entries.lock().unwrap();
-                    let Some(_) = entries.remove(&key) else {
-                        panic!("Entry with key {:?} was not found in the map", key);
-                    };
-                    LoadingResult::NotFound
-                }
-                Err(err) => {
-                    // An error occurred while loading the entry. Remove the entry from the map and return the error to any waiters.
-                    let mut entries = entries.lock().unwrap();
-                    let Some(_) = entries.remove(&key) else {
-                        panic!("Entry with key {:?} was not found in the map", key);
-                    };
-                    LoadingResult::Error(err)
-                }
-            }
+            })
+            .infallible_unwrap()
         };
         EntryStateLoading::new(loading_task.boxed())
     }
 
+    pub fn request_immediate_drop<D, F>(
+        &self,
+        key: K,
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
+    ) -> RequestImmediateDropResult<D>
+    where
+        D: Debug + Send + 'static,
+        F: Future<Output = D> + Send + 'static,
+    {
+        ConcurrentStoreInner::request_immediate_drop(&self.inner, key, drop_fn)
+    }
+}
+
+impl<K, V, E> ConcurrentStoreInner<K, V, E>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
+{
     /// Request immediate drop of the entry with the given key.
     /// * If the entry is loading or loaded, all further tasks wanting to load this key will be blocked from loading,
     ///   and once all current tasks with access are complete, the given drop_fn will be executed with exclusive access to the entry,
@@ -421,7 +458,7 @@ where
     ///   and the given drop_fn will be executed with a `None` value. After drop_fn completes, other tasks can load it again.
     /// * If the entry is already dropping, the existing dropping future will be returned.
     pub fn request_immediate_drop<D, F>(
-        &self,
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> RequestImmediateDropResult<D>
@@ -442,7 +479,7 @@ where
             }
         };
 
-        let mut entries = self.entries.lock().unwrap();
+        let mut entries = this.entries.lock().unwrap();
         match entries.entry(key) {
             Entry::Occupied(mut entry) => match entry.get_mut() {
                 EntryState::Loaded(loaded) => {
@@ -475,8 +512,11 @@ where
             },
             Entry::Vacant(entry) => {
                 // The entry is not loaded or loading. Let's add a dummy entry to block other tasks from loading it while we execute drop_fn.
-                let drop_future =
-                    self.make_drop_future_for_unloaded_entry(entry.key().clone(), drop_fn);
+                let drop_future = ConcurrentStoreInner::make_drop_future_for_unloaded_entry(
+                    this,
+                    entry.key().clone(),
+                    drop_fn,
+                );
                 entry.insert(EntryState::Dropping(EntryStateDropping::new(
                     drop_future.clone(),
                 )));
@@ -500,19 +540,26 @@ where
     }
 
     /// Called by [LoadedEntryGuard] when it is dropped.
-    pub(super) async fn unload(&self, key: K, mut entry: AsyncDropGuard<AsyncDropArc<V>>) {
+    pub(super) async fn unload(
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
+        key: K,
+        mut entry: AsyncDropGuard<AsyncDropArc<V>>,
+    ) {
         // First drop the entry to decrement the reference count
         entry.async_drop().await.unwrap(); // TODO No unwrap? But what to do if it fails? We need to guarantee that we still remove the entry since the guard is gone now.
         std::mem::drop(entry);
 
         // Now check if we're the last reference. If yes, remove the entry from our map.
-        self._drop_if_no_references(key).await;
+        Self::_drop_if_no_references(this, key).await;
     }
 
     /// Check if there are no more references to the entry with the given key, and if yes, async drop it.
-    async fn _drop_if_no_references(&self, key: K) {
+    async fn _drop_if_no_references(
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
+        key: K,
+    ) {
         let drop_future = {
-            let mut entries = self.entries.lock().unwrap();
+            let mut entries = this.entries.lock().unwrap();
             let Entry::Occupied(mut entry) = entries.entry(key) else {
                 // This can happen due to the same race condition described below under `EntryState::Dropping`.
                 // Another task already dropped the entry and completed dropping it before we got here.
@@ -538,8 +585,11 @@ where
                         let EntryState::Loaded(loaded) = entry_state else {
                             unreachable!("We already checked the state above, it should be Loaded");
                         };
-                        let drop_future =
-                            self.make_drop_future_for_loaded_entry(entry.key().clone(), loaded);
+                        let drop_future = ConcurrentStoreInner::make_drop_future_for_loaded_entry(
+                            this,
+                            entry.key().clone(),
+                            loaded,
+                        );
                         *entry.get_mut() =
                             EntryState::Dropping(EntryStateDropping::new(drop_future.clone()));
                         Some(drop_future)
@@ -569,50 +619,60 @@ where
     /// This is called when the last reference to the entry is dropped.
     /// The future will update the entries map itself, no need for the caller to do that.
     fn make_drop_future_for_loaded_entry(
-        &self,
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
         loaded: EntryStateLoaded<V>,
     ) -> Shared<BoxFuture<'static, ()>> {
         let (immediate_drop_request, mut entry) = loaded.into_inner();
-        let entries = Arc::clone(&self.entries);
+        let this = AsyncDropArc::clone(&this);
         async move {
-            // This will be awaited after the lock on entries is released, so we can concurrently drop
-            // the entry without blocking other operations.
-            match immediate_drop_request {
-                ImmediateDropRequest::Requested {
-                    drop_fn,
-                    on_dropped: _,
-                } => {
-                    // An immediate drop was requested. Execute the user-provided drop function with exclusive access to the entry.
-                    Self::_execute_immediate_drop(entries, key, Some(entry), drop_fn).await;
+            with_async_drop_2!(this, {
+                // This will be awaited after the lock on entries is released, so we can concurrently drop
+                // the entry without blocking other operations.
+                match immediate_drop_request {
+                    ImmediateDropRequest::Requested {
+                        drop_fn,
+                        on_dropped: _,
+                    } => {
+                        // An immediate drop was requested. Execute the user-provided drop function with exclusive access to the entry.
+                        Self::_execute_immediate_drop(&this, key, Some(entry), drop_fn).await;
+                    }
+                    ImmediateDropRequest::NotRequested => {
+                        // otherwise just drop the entry
+                        entry.async_drop().await.unwrap(); // TODO No unwrap
+                        Self::_remove_dropping_entry(&this, &key).await; // always remove the entry from the map, even if drop_fn failed
+                    }
                 }
-                ImmediateDropRequest::NotRequested => {
-                    // otherwise just drop the entry
-                    entry.async_drop().await.unwrap(); // TODO No unwrap
-                    Self::_remove_dropping_entry(entries, &key).await; // always remove the entry from the map, even if drop_fn failed
-                }
-            }
+                Ok(())
+            })
+            .infallible_unwrap()
         }
         .boxed()
         .shared()
     }
 
     fn make_drop_future_for_unloaded_entry<F>(
-        &self,
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + 'static,
     ) -> Shared<BoxFuture<'static, ()>>
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        let entries = Arc::clone(&self.entries);
-        Self::_execute_immediate_drop(entries, key, None, drop_fn)
-            .boxed()
-            .shared()
+        let this = AsyncDropArc::clone(&this);
+        async move {
+            with_async_drop_2!(this, {
+                Self::_execute_immediate_drop(&this, key, None, drop_fn).await;
+                Ok(())
+            })
+            .infallible_unwrap()
+        }
+        .boxed()
+        .shared()
     }
 
     async fn _execute_immediate_drop<F>(
-        entries: Arc<Mutex<HashMap<K, EntryState<V, E>>>>,
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
         entry: Option<AsyncDropGuard<V>>,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F,
@@ -623,17 +683,64 @@ where
         drop_fn(entry).await;
         // Only now that drop_fn is complete, we remove the entry from the map and notify any tasks waiting for loading this entry.
         // This guarantees that drop_fn has exclusive access to entry.
-        Self::_remove_dropping_entry(entries, &key).await; // always remove the entry from the map, even if drop_fn failed
+        Self::_remove_dropping_entry(this, &key).await; // always remove the entry from the map, even if drop_fn failed
     }
 
-    async fn _remove_dropping_entry(entries: Arc<Mutex<HashMap<K, EntryState<V, E>>>>, key: &K) {
-        let mut entries = entries.lock().unwrap();
+    async fn _remove_dropping_entry(
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
+        key: &K,
+    ) {
+        let mut entries = this.entries.lock().unwrap();
         let Some(entry) = entries.remove(key) else {
             panic!("Entry with key {:?} was not found in the map", key);
         };
         let EntryState::Dropping { .. } = entry else {
             panic!("Entry with key {:?} is not in dropping state", key);
         };
+    }
+}
+
+impl<K, V, E> Debug for ConcurrentStoreInner<K, V, E>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConcurrentStoreInner").finish()
+    }
+}
+
+#[async_trait]
+impl<K, V, E> AsyncDrop for ConcurrentStoreInner<K, V, E>
+where
+    K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
+    V: AsyncDrop + Debug + Send + Sync + 'static,
+    E: Clone + Debug + Send + Sync + 'static,
+{
+    type Error = Never;
+
+    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        // Wait for any currently dropping entries to complete
+        let mut entries = std::mem::take(&mut *self.entries.get_mut().unwrap());
+        let dropping_futures = entries
+                .drain()
+                .filter_map(|(_, entry_state)| match entry_state {
+                    EntryState::Dropping(dropping) => Some(dropping.into_future()),
+                    EntryState::Loading(loading) => {
+                        panic!("There are still loading tasks running. Please async_drop all guards before dropping the ConcurrentStore. Witness: {loading:?}");
+                    }
+                    EntryState::Loaded(loaded) => {
+                        panic!("There are still loaded entries. Please async_drop all guards before dropping the ConcurrentStore. Witness: {loaded:?}");
+                    }
+                });
+        for_each_unordered(dropping_futures, |future| async move {
+            future.await;
+            Ok::<(), Never>(())
+        })
+        .await
+        .infallible_unwrap();
+        Ok(())
     }
 }
 
@@ -658,26 +765,7 @@ where
     type Error = Never;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        // Wait for any currently dropping entries to complete
-        let mut entries = std::mem::take(&mut *self.entries.lock().unwrap());
-        let dropping_futures = entries
-                .drain()
-                .filter_map(|(_, entry_state)| match entry_state {
-                    EntryState::Dropping(dropping) => Some(dropping.into_future()),
-                    EntryState::Loading(loading) => {
-                        panic!("There are still loading tasks running. Please async_drop all guards before dropping the ConcurrentStore. Witness: {loading:?}");
-                    }
-                    EntryState::Loaded(loaded) => {
-                        panic!("There are still loaded entries. Please async_drop all guards before dropping the ConcurrentStore. Witness: {loaded:?}");
-                    }
-                });
-        for_each_unordered(dropping_futures, |future| async move {
-            future.await;
-            Ok::<(), Never>(())
-        })
-        .await
-        .infallible_unwrap();
-        Ok(())
+        self.inner.async_drop().await
     }
 }
 

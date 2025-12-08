@@ -8,7 +8,7 @@ use crate::{
     concurrent_store::{
         entry::{EntryState, loading::LoadingResult},
         guard::LoadedEntryGuard,
-        store::ConcurrentStore,
+        store::ConcurrentStoreInner,
     },
     safe_panic,
 };
@@ -57,7 +57,7 @@ where
     /// If an error occurred while loading, return the error.
     pub async fn wait_until_loaded<V>(
         mut self,
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
     ) -> Result<Option<AsyncDropGuard<LoadedEntryGuard<K, V, E>>>, E>
     where
         V: AsyncDrop + Debug + Send + Sync,
@@ -80,7 +80,7 @@ where
     }
 
     fn _finalize_waiter<V>(
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStore<K, V, E>>>,
+        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
     ) -> AsyncDropGuard<LoadedEntryGuard<K, V, E>>
     where

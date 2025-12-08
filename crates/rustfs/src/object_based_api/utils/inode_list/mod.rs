@@ -104,10 +104,9 @@ where
     //         (note that this can be different from the number of children stored in the inode, since orphaned nodes can still point to their parents but the parents dont have them in their children array)
     //     * E2: All entries in `inode_forest` have refcount > 0, otherwise they would have been deleted.
     // * F: Each entry in self.inodes has at most one guard active, which is stored in self.inode_forest.
-    // TODO Currently, each call site of ConcurrentStore has to wrap it into an AsyncDropArc themselves. Can we make ConcurrentStore do that internally, simplifying call sites?
     // TODO Node here holds a reference to the ConcurrentFsBlob, which blocks the blob from being removed. This would be a deadlock in unlink/rmdir if we store a reference to the self blob in NodeInfo.
     //      Right now, we only store a reference to the parent blob and that's fine because child inodes are forgotten before the parent can be removed.
-    inodes: AsyncDropGuard<AsyncDropArc<ConcurrentStore<InodeNumber, Fs::Node, FsError>>>,
+    inodes: AsyncDropGuard<ConcurrentStore<InodeNumber, Fs::Node, FsError>>,
 
     // All the inode numbers we've given to the kernel, with a corresponding refcount. These references ensure that the inodes are being kept alive in self.inodes.
     // On top of this refcount, each InodeInfo also remmbers its parent InodeNumber. Overall, we guarantee that inodes only get removed once the kernel has
@@ -129,7 +128,7 @@ where
         Self::block_invalid_handles(&mut inode_forest);
         AsyncDropGuard::new(Self {
             inner: Mutex::new(InodeListInner {
-                inodes: AsyncDropArc::new(inodes),
+                inodes,
                 inode_forest,
             }),
         })
@@ -163,7 +162,9 @@ where
         inner: &mut MutexGuard<'_, InodeListInner<Fs>>,
         rootdir: AsyncDropGuard<Fs::Node>,
     ) {
-        let inserted = ConcurrentStore::try_insert_loaded(&inner.inodes, FUSE_ROOT_ID, rootdir)
+        let inserted = inner
+            .inodes
+            .try_insert_loaded(FUSE_ROOT_ID, rootdir)
             .await
             .expect("Root dir entry already exists");
         inner
@@ -181,7 +182,9 @@ where
         inner: &MutexGuard<'_, InodeListInner<Fs>>,
         ino: InodeNumber,
     ) -> FsResult<AsyncDropGuard<LoadedEntryGuard<InodeNumber, Fs::Node, FsError>>> {
-        ConcurrentStore::get_if_loading_or_loaded(&inner.inodes, ino)
+        inner
+            .inodes
+            .get_if_loading_or_loaded(ino)
             .wait_until_loaded()
             .now_or_never()
             .ok_or_else(|| {
@@ -242,17 +245,13 @@ where
         let name_clone = name.clone();
 
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
-        let inodes = AsyncDropArc::clone(&inner.inodes);
+        let inodes = inner.inodes.clone_ref();
         with_async_drop_2!(inodes, {
             let insert_result = inner
                 .inode_forest
                 .try_insert(parent_ino, name, async |new_child_ino| {
-                    let inserted_node = ConcurrentStore::<
-                            InodeNumber,
-                            <Fs as Device>::Node,
-                            FsError,
-                        >::try_insert_loaded(
-                            &inodes, new_child_ino.handle, node
+                    let inserted_node = inodes.try_insert_loaded(
+                            new_child_ino.handle, node
                         )
                         // TODO Remove this await. It only triggers async code if the inode happens to be dropping at this exact moment,
                         //      but even so it is better to not wait for it here while having a lock on inner.
@@ -412,15 +411,13 @@ where
             .increment_refcount();
 
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
-        let inodes = AsyncDropArc::clone(&inner.inodes);
+        let inodes = inner.inodes.clone_ref();
         let (new_child_ino, new_node) = with_async_drop_2!(inodes, {
             let insert_result = inner
                 .inode_forest
                 .try_insert(parent_ino, name, async |new_child_ino| {
-                    let inserting = ConcurrentStore::try_insert_loading(
-                        &inodes,
-                        new_child_ino.handle,
-                        async move || {
+                    let inserting = inodes
+                        .try_insert_loading(new_child_ino.handle, async move || {
                             // It's ok to capture the parent_node in this lambda, because
                             // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
                             // * If try_insert returns Err, the lambda is never executed, but we panic below anyways.
@@ -428,12 +425,13 @@ where
                                 let node = loading_fn(&parent_node).await?;
                                 Ok(node)
                             })
-                        },
-                    )
-                    // TODO Remove this await. It only triggers async code if the inode happens to be dropping at this exact moment,
-                    //      but even so it is better to not wait for it here while having a lock on inner.
-                    .await
-                    .expect("Invariant D violated: entry for a new inode number already exists");
+                        })
+                        // TODO Remove this await. It only triggers async code if the inode happens to be dropping at this exact moment,
+                        //      but even so it is better to not wait for it here while having a lock on inner.
+                        .await
+                        .expect(
+                            "Invariant D violated: entry for a new inode number already exists",
+                        );
 
                     InodeTreeNode::new(AsyncDropShared::new(
                         async move { AsyncDropResult::new(inserting.wait_until_inserted().await) }
@@ -849,7 +847,7 @@ where
     #[cfg(feature = "testutils")]
     pub async fn fsync_all(&self) -> FsResult<()> {
         // TODO Don't just look at loading or loaded entries, but also at ones that are currently dropping and wait for them to be dropped.
-        let inodes = ConcurrentStore::all_loading_or_loaded(&self.inner.lock().await.inodes);
+        let inodes = self.inner.lock().await.inodes.all_loading_or_loaded();
         for_each_unordered(inodes.into_iter(), async |inode| {
             use crate::object_based_api::Node as _;
 
