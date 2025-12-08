@@ -3,6 +3,7 @@
 use mockall::predicate::{always, eq};
 use nix::errno::Errno;
 use rstest::rstest;
+use std::num::NonZeroU64;
 use std::time::{Duration, SystemTime};
 
 use super::utils::{
@@ -15,7 +16,7 @@ use crate::common::{
 };
 use crate::low_level_api::ReplyEntry;
 
-const SOME_INO: InodeNumber = InodeNumber::from_const(20434);
+const SOME_INO: InodeNumber = InodeNumber::from_const(NonZeroU64::new(20434).unwrap());
 
 struct Fixture {
     parent_ino: InodeNumber,

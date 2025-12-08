@@ -18,6 +18,7 @@
 
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::num::NonZeroU64;
 use std::sync::Mutex;
 
 use cryfs_utils::async_drop::AsyncDropGuard;
@@ -29,8 +30,10 @@ use crate::common::HandleWithGeneration;
 use crate::{FsError, object_based_api::Device};
 use crate::{InodeNumber, common::HandleMap};
 
-pub const FUSE_ROOT_ID: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
-pub const DUMMY_INO: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID + 1);
+pub const FUSE_ROOT_ID: InodeNumber =
+    InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID).unwrap());
+pub const DUMMY_INO: InodeNumber =
+    InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID + 1).unwrap());
 
 mod inode_info;
 use inode_info::InodeInfo;
@@ -60,10 +63,7 @@ where
     }
 
     fn block_invalid_handles(inodes: &mut HandleMap<InodeNumber, InodeInfo<Fs>>) {
-        // We need to block zero because fuse seems to dislike it.
-        if fuser::FUSE_ROOT_ID != 0 {
-            inodes.block_handle(InodeNumber::from_const(0));
-        }
+        // We don't need to block zero because we use NonZeroU64 in the handle, so it can't be represented anyways
         inodes.block_handle(DUMMY_INO);
     }
 

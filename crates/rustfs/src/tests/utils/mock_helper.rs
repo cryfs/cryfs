@@ -1,4 +1,5 @@
 use mockall::predicate::{always, eq};
+use std::num::NonZeroU64;
 use std::time::{Duration, SystemTime};
 
 use super::MockAsyncFilesystemLL;
@@ -8,7 +9,8 @@ use crate::common::{
 };
 use crate::low_level_api::ReplyEntry;
 
-pub const ROOT_INO: InodeNumber = InodeNumber::from_const(fuser::FUSE_ROOT_ID);
+pub const ROOT_INO: InodeNumber =
+    InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID).unwrap());
 
 struct TestInodeNumberPool {
     highest_assigned_ino: InodeNumber,
@@ -17,12 +19,14 @@ struct TestInodeNumberPool {
 impl TestInodeNumberPool {
     pub fn new() -> Self {
         Self {
-            highest_assigned_ino: InodeNumber::from(12), // arbitrary starting number
+            highest_assigned_ino: InodeNumber::from_const(NonZeroU64::new(12).unwrap()), // arbitrary starting number
         }
     }
 
     pub fn next(&mut self) -> InodeNumber {
-        self.highest_assigned_ino = InodeNumber::from(u64::from(self.highest_assigned_ino) + 11); // 11 is an arbitrary offset to generate different INOs
+        self.highest_assigned_ino = InodeNumber::from_const(
+            NonZeroU64::new(NonZeroU64::from(self.highest_assigned_ino).get() + 11).unwrap(),
+        ); // 11 is an arbitrary offset to generate different INOs
         self.highest_assigned_ino
     }
 }
