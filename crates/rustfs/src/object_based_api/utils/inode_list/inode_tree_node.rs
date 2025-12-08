@@ -12,7 +12,7 @@ where
     Fs: Device + Debug + 'static,
     Fs::Node: 'static,
 {
-    kernel_refcount: usize,
+    kernel_refcount: u64,
     inode: AsyncDropGuard<
         // TODO We only store this as a Shared future because ConcurrentStore doesn't allow returning a LoadedEntryGuard for
         //      entries that are still loading. If we change ConcurrentStore to allow that, we can just store LoadedEntryGuard here directly.
@@ -60,12 +60,12 @@ where
             .expect("Inode kernel refcount overflowed");
     }
 
-    pub fn decrement_refcount(&mut self) -> RefcountInfo {
+    pub fn decrease_refcount(&mut self, nlookup: u64) -> RefcountInfo {
         assert!(
-            self.kernel_refcount > 0,
+            self.kernel_refcount >= nlookup,
             "Inode kernel refcount underflowed"
         );
-        self.kernel_refcount -= 1;
+        self.kernel_refcount -= nlookup;
         if self.kernel_refcount == 0 {
             RefcountInfo::RefcountZero
         } else {

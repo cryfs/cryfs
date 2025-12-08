@@ -501,7 +501,7 @@ where
                             .expect("We just checked above that the parent exists")
                             .value_mut();
                         // We removed a child node pointing to this parent, so decrement its refcount for invariant E1.
-                        match parent_inode.decrement_refcount() {
+                        match parent_inode.decrease_refcount(1) {
                             RefcountInfo::RefcountNotZero => {
                                 // Refcount is still > 0, nothing more to do
                             }
@@ -531,14 +531,14 @@ where
         // * F: No change here
     }
 
-    pub async fn forget(&self, ino: InodeNumber) -> FsResult<()> {
+    pub async fn forget(&self, ino: InodeNumber, nlookup: u64) -> FsResult<()> {
         if ino == FUSE_ROOT_ID {
             log::error!("Tried to forget root inode");
             return Err(FsError::InvalidOperation);
         }
 
         let inner = self.inner.lock().await;
-        self._decrement_refcount(inner, ino)
+        self._decrease_refcount(inner, ino, nlookup)
             .await
             .map_err(|err| match err {
                 DecrementRefcountError::NodeNotFound => {
@@ -549,17 +549,18 @@ where
             })
     }
 
-    async fn _decrement_refcount(
+    async fn _decrease_refcount(
         &self,
         mut inner: MutexGuard<'_, InodeListInner<Fs>>,
         ino: InodeNumber,
+        nlookup: u64,
     ) -> Result<(), DecrementRefcountError> {
         let Some(inode) = inner.inode_forest.get_mut(&ino) else {
             log::error!("Tried to forget unknown inode {ino:?}");
             return Err(DecrementRefcountError::NodeNotFound);
         };
 
-        match inode.value_mut().decrement_refcount() {
+        match inode.value_mut().decrease_refcount(nlookup) {
             RefcountInfo::RefcountNotZero => {
                 // Refcount is still > 0, nothing more to do
                 // Fulfilling invariants:
@@ -651,7 +652,7 @@ where
             let parent_inode = inner.inode_forest.get_mut(&parent_ino).expect(
                 "Tried to remove inode but its parent vanished while we were removing the child",
             );
-            let parent_decr_refcount_result = parent_inode.value_mut().decrement_refcount();
+            let parent_decr_refcount_result = parent_inode.value_mut().decrease_refcount(1);
 
             match remove_result {
                 TryRemoveResult::NoParent => {
@@ -779,7 +780,7 @@ where
                         .increment_refcount();
                 }
             }
-            self._decrement_refcount(inner, old_parent_ino)
+            self._decrease_refcount(inner, old_parent_ino, 1)
                 .await
                 .map_err(|err| match err {
                     DecrementRefcountError::NodeNotFound => {

@@ -268,14 +268,8 @@ where
         // have a limited lifetime. On unmount it is not guaranteed, that all referenced
         // inodes will receive a forget message.
         // ```
-        // But we don't reuse inode numbers so nlookup should always be 1.
-        // TODO We probably now have to allow higher numbers
-        assert_eq!(
-            1, nlookup,
-            "We don't reuse inode numbers so nlookup should always be 1"
-        );
 
-        self.inodes.forget(ino).await?;
+        self.inodes.forget(ino, nlookup).await?;
         Ok(())
     }
 
