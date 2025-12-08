@@ -5,6 +5,7 @@ use fuse_mt::{
 };
 use std::ffi::OsStr;
 use std::fmt::Debug;
+use std::num::NonZeroU64;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -147,7 +148,7 @@ where
             let response = self
                 .fs()
                 .await?
-                .getattr(req.into(), path, fh.into_fh())
+                .getattr(req.into(), path, fh.into_fh()?)
                 .await?;
             Ok((response.ttl, convert_node_attrs(response.attrs)))
         })
@@ -158,7 +159,7 @@ where
             let path = parse_absolute_path(path)?;
             self.fs()
                 .await?
-                .chmod(req.into(), path, fh.into_fh(), Mode::from(mode))
+                .chmod(req.into(), path, fh.into_fh()?, Mode::from(mode))
                 .await
         })
     }
@@ -180,7 +181,7 @@ where
                     .chown(
                         req.into(),
                         path,
-                        fh.into_fh(),
+                        fh.into_fh()?,
                         uid.into_uid(),
                         gid.into_gid(),
                     )
@@ -194,7 +195,7 @@ where
             let path = parse_absolute_path(path)?;
             self.fs()
                 .await?
-                .truncate(req.into(), path, fh.into_fh(), NumBytes::from(size))
+                .truncate(req.into(), path, fh.into_fh()?, NumBytes::from(size))
                 .await
         })
     }
@@ -213,7 +214,7 @@ where
                 let path = parse_absolute_path(path)?;
                 self.fs()
                     .await?
-                    .utimens(req.into(), path, fh.into_fh(), atime, mtime)
+                    .utimens(req.into(), path, fh.into_fh()?, atime, mtime)
                     .await
             },
         )
@@ -232,7 +233,7 @@ where
     ) -> ResultEmpty {
         self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), async move ||{
             let path = parse_absolute_path(path)?;
-            self.fs().await?.utimens_macos(req.into(), path, fh.into_fh(), crtime, chgtime, bkuptime, flags).await
+            self.fs().await?.utimens_macos(req.into(), path, fh.into_fh()?, crtime, chgtime, bkuptime, flags).await
         })
     }
 
@@ -376,7 +377,7 @@ where
                 .await?;
             // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
             let flags = convert_openflags(response.flags.into()) as u32;
-            Ok((response.fh.into(), flags))
+            Ok((NonZeroU64::from(response.fh).get(), flags))
         })
     }
 
@@ -393,26 +394,29 @@ where
         self.runtime.block_on(async move {
             let log_msg = format!("read({path:?}, fh={fh}, offset={offset}, size={size})");
             log::info!("{}...", log_msg);
-            match parse_absolute_path(path) {
+            match parse_file_handle(fh) {
                 Err(err) => callback(Err(err.system_error_code())),
-                Ok(path) => {
-                    let mut result = None;
-                    match self.fs().await {
-                        Err(err) => callback(Err(err.system_error_code())),
-                        Ok(fs) => {
-                            fs.read(
-                                req.into(),
-                                path,
-                                FileHandle::from(fh),
-                                NumBytes::from(offset),
-                                NumBytes::from(u64::from(size)),
-                                DataCallback::new(log_msg, callback, &mut result),
-                            )
-                            .await;
-                            result.expect("callback not called")
+                Ok(fh) => match parse_absolute_path(path) {
+                    Err(err) => callback(Err(err.system_error_code())),
+                    Ok(path) => {
+                        let mut result = None;
+                        match self.fs().await {
+                            Err(err) => callback(Err(err.system_error_code())),
+                            Ok(fs) => {
+                                fs.read(
+                                    req.into(),
+                                    path,
+                                    fh,
+                                    NumBytes::from(offset),
+                                    NumBytes::from(u64::from(size)),
+                                    DataCallback::new(log_msg, callback, &mut result),
+                                )
+                                .await;
+                                result.expect("callback not called")
+                            }
                         }
                     }
-                }
+                },
             }
         })
     }
@@ -432,18 +436,12 @@ where
                 data_len = data.len(),
             ),
             async move || {
+                let fh = parse_file_handle(fh)?;
                 let path = parse_absolute_path(path)?;
                 let response = self
                     .fs()
                     .await?
-                    .write(
-                        req.into(),
-                        path,
-                        FileHandle::from(fh),
-                        NumBytes::from(offset),
-                        data,
-                        flags,
-                    )
+                    .write(req.into(), path, fh, NumBytes::from(offset), data, flags)
                     .await?;
                 // TODO No unwrap
                 Ok(u32::try_from(u64::from(response)).unwrap())
@@ -453,10 +451,11 @@ where
 
     fn flush(&self, req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
         self.run_async(&format!("flush({path:?}, fh={fh})"), async move || {
+            let fh = parse_file_handle(fh)?;
             let path = parse_absolute_path(path)?;
             self.fs()
                 .await?
-                .flush(req.into(), path, FileHandle::from(fh), lock_owner)
+                .flush(req.into(), path, fh, lock_owner)
                 .await
         })
     }
@@ -477,13 +476,14 @@ where
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
             ),
             async move || {
+                let fh = parse_file_handle(fh)?;
                 let path = parse_absolute_path(path)?;
                 self.fs()
                     .await?
                     .release(
                         req.into(),
                         path,
-                        FileHandle::from(fh),
+                        fh,
                         parse_openflags(flags),
                         lock_owner,
                         flush,
@@ -497,11 +497,9 @@ where
         self.run_async(
             &format!("fsync({path:?}, fh={fh}, datasync={datasync})"),
             async move || {
+                let fh = parse_file_handle(fh)?;
                 let path = parse_absolute_path(path)?;
-                self.fs()
-                    .await?
-                    .fsync(req.into(), path, FileHandle::from(fh), datasync)
-                    .await
+                self.fs().await?.fsync(req.into(), path, fh, datasync).await
             },
         )
     }
@@ -512,16 +510,17 @@ where
             async move || {
                 let path = parse_absolute_path(path)?;
                 let response = self.fs().await?.opendir(req.into(), path, flags).await?;
-                Ok((response.fh.into(), response.flags))
+                Ok((NonZeroU64::from(response.fh).get(), response.flags))
             },
         )
     }
 
     fn readdir(&self, req: RequestInfo, path: &Path, fh: u64) -> ResultReaddir {
         self.run_async(&format!("readdir({path:?}, fh={fh})"), async move || {
+            let fh = parse_file_handle(fh)?;
             let path = parse_absolute_path(path)?;
             let fs = self.fs().await?;
-            let entries = fs.readdir(req.into(), path, FileHandle::from(fh)).await?;
+            let entries = fs.readdir(req.into(), path, fh).await?;
             let entries = convert_dir_entries(entries).collect::<Vec<_>>();
             Ok(entries)
         })
@@ -531,10 +530,11 @@ where
         self.run_async(
             &format!("releasedir({path:?}, fh={fh}, flags={flags})"),
             async move || {
+                let fh = parse_file_handle(fh)?;
                 let path = parse_absolute_path(path)?;
                 self.fs()
                     .await?
-                    .releasedir(req.into(), path, FileHandle::from(fh), flags)
+                    .releasedir(req.into(), path, fh, flags)
                     .await
             },
         )
@@ -544,10 +544,11 @@ where
         self.run_async(
             &format!("fsyncdir({path:?}, fh={fh}, datasync={datasync})"),
             async move || {
+                let fh = parse_file_handle(fh)?;
                 let path = parse_absolute_path(path)?;
                 self.fs()
                     .await?
-                    .fsyncdir(req.into(), path, FileHandle::from(fh), datasync)
+                    .fsyncdir(req.into(), path, fh, datasync)
                     .await
             },
         )
@@ -680,7 +681,7 @@ where
                 Ok(CreatedEntry {
                     ttl: response.ttl,
                     attr: convert_node_attrs(response.attrs),
-                    fh: response.fh.into(),
+                    fh: NonZeroU64::from(response.fh).get(),
                     flags,
                 })
             },
@@ -797,6 +798,13 @@ fn parse_openflags(flags: i32) -> OpenFlags {
     }
 }
 
+fn parse_file_handle(fh: u64) -> FsResult<FileHandle> {
+    FileHandle::try_from(fh).ok_or_else(|| {
+        log::error!("Kernel gave us zero as a file handle");
+        FsError::InvalidOperation
+    })
+}
+
 fn convert_openflags(flags: OpenFlags) -> i32 {
     // TODO Is this the right way to convert openflags? Are there other flags than just Read+Write?
     //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
@@ -833,11 +841,17 @@ impl From<fuse_mt::RequestInfo> for crate::common::RequestInfo {
 }
 
 trait IntoOptionFileHandle {
-    fn into_fh(self) -> Option<FileHandle>;
+    fn into_fh(self) -> FsResult<Option<FileHandle>>;
 }
 impl IntoOptionFileHandle for Option<u64> {
-    fn into_fh(self) -> Option<FileHandle> {
-        self.map(FileHandle::from)
+    fn into_fh(self) -> FsResult<Option<FileHandle>> {
+        self.map(|v| {
+            NonZeroU64::new(v).map(FileHandle::from).ok_or_else(|| {
+                log::error!("Kernel gave us zero as a file handle");
+                FsError::InvalidOperation
+            })
+        })
+        .transpose()
     }
 }
 

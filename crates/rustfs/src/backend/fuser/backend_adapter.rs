@@ -255,7 +255,7 @@ where
                     let flags = convert_openflags(reply.flags);
                     // TODO Why u32 and not i32?
                     let flags = u32::try_from(flags).unwrap();
-                    fuser_reply.opened(reply.fh.into(), flags);
+                    fuser_reply.opened(NonZeroU64::from(reply.fh).get(), flags);
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
@@ -343,7 +343,7 @@ where
                         &reply.ttl,
                         &convert_node_attrs(reply.attr, reply.ino.handle),
                         reply.ino.generation,
-                        reply.fh.into(),
+                        NonZeroU64::from(reply.fh).get(),
                         reply.flags,
                     );
                 }
@@ -561,11 +561,11 @@ where
 
     fn getattr(&mut self, req: &Request<'_>, ino: u64, fh: Option<u64>, reply: ReplyAttr) {
         let req = RequestInfo::from(req);
-        let fh = fh.map(FileHandle::from);
         self.run_async_reply_attr(
             format!("getattr(ino={ino:?}, fh={fh:?})"),
             reply,
             async move |fs| {
+                let fh = parse_opt_file_handle(fh)?;
                 let ino = parse_inode(ino)?;
                 fs.getattr(&req, ino, fh).await
             },
@@ -597,12 +597,12 @@ where
         let size = size.map(NumBytes::from);
         let atime = atime.map(parse_time);
         let mtime = mtime.map(parse_time);
-        let fh = fh.map(FileHandle::from);
         self.run_async_reply_attr(
             format!("setattr(ino={ino:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_opt_file_handle(fh)?;
                 fs.setattr(&req, ino, mode, uid, gid, size, atime, mtime, ctime, fh, crtime, chgtime, bkuptime, flags).await
             });
     }
@@ -802,7 +802,6 @@ where
         reply: ReplyData,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let size = NumBytes::from(u64::from(size));
         self.run_async_reply_data(
@@ -810,17 +809,27 @@ where
             reply,
             async move |fs, callback| {
                 match parse_inode(ino) {
-                    Ok(ino) => fs.read(
-                            &req,
-                            ino,
-                            fh,
-                            offset,
-                            size,
-                            flags,
-                            lock_owner,
-                            callback,
-                        )
-                        .await,
+                    Ok(ino) => {
+                        match parse_file_handle(fh) {
+                            Ok(fh) => {
+                                fs.read(
+                                    &req,
+                                    ino,
+                                    fh,
+                                    offset,
+                                    size,
+                                    flags,
+                                    lock_owner,
+                                    callback,
+                                )
+                                .await
+                            }
+                            Err(err) => {
+                                callback.error(err);
+                                return;
+                            }
+                        }
+                    },
                     Err(err) => {
                         callback.error(err);
                         return;
@@ -843,7 +852,6 @@ where
         reply: ReplyWrite,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let data = data.to_owned();
         self.run_async_reply_write(
@@ -851,6 +859,7 @@ where
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.write(
                     &req,
                     ino,
@@ -868,12 +877,12 @@ where
 
     fn flush(&mut self, req: &Request<'_>, ino: u64, fh: u64, lock_owner: u64, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("flush(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.flush(&req, ino, fh, lock_owner).await
             },
         );
@@ -890,12 +899,12 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("release(ino={ino:?}, fh={fh:?}, flags={flags:?}, lock_owner={lock_owner:?}, flush={flush:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.release(&req, ino, fh, flags, lock_owner, flush).await
             },
         );
@@ -904,12 +913,12 @@ where
     fn fsync(&mut self, req: &Request<'_>, ino: u64, fh: u64, datasync: bool, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
 
-        let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("fsync(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.fsync(&req, ino, fh, datasync).await
             },
         );
@@ -936,12 +945,12 @@ where
         mut reply: fuser::ReplyDirectory,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 let result = fs.readdir(&req, ino, fh, offset, &mut reply).await;
                 match result {
                     Ok(()) => {
@@ -966,12 +975,12 @@ where
         mut reply: fuser::ReplyDirectoryPlus,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdirplus(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 let result = fs.readdirplus(&req, ino, fh, offset, &mut reply).await;
                 match result {
                     Ok(()) => {
@@ -989,12 +998,12 @@ where
 
     fn releasedir(&mut self, req: &Request<'_>, ino: u64, fh: u64, flags: i32, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("releasedir(ino={ino:?}, fh={fh:?}, flags={flags:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.releasedir(&req, ino, fh, flags).await
             },
         );
@@ -1009,12 +1018,12 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("fsyncdir(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.fsyncdir(&req, ino, fh, datasync).await
             },
         );
@@ -1212,12 +1221,12 @@ where
         reply: ReplyLock,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         self.run_async_reply_lock(
             format!("getlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.getlk(&req, ino, fh, lock_owner, start, end, typ, pid)
                     .await
             },
@@ -1238,12 +1247,12 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         self.run_async_reply_empty(
             format!("setlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?}, sleep={sleep:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.setlk(&req, ino, fh, lock_owner, start, end, typ, pid, sleep)
                     .await
             },
@@ -1275,13 +1284,13 @@ where
         reply: ReplyIoctl,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let in_data = in_data.to_owned();
         self.run_async_reply_ioctl(
             format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data={in_data:?}, out_size={out_size:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.ioctl(&req, ino, fh, flags, cmd, &in_data, out_size)
                     .await
             },
@@ -1299,7 +1308,6 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let length = NumBytes::from(u64::try_from(length).unwrap()); // TODO No unwrap?
 
@@ -1310,6 +1318,7 @@ where
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.fallocate(&req, ino, fh, offset, length, mode)
                     .await
             },
@@ -1326,13 +1335,13 @@ where
         reply: ReplyLseek,
     ) {
         let req = RequestInfo::from(req);
-        let fh = FileHandle::from(fh);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_reply_lseek(
             format!("lseek(ino={ino:?}, fh={fh:?}, offset={offset:?}, whence={whence:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
+                let fh = parse_file_handle(fh)?;
                 fs.lseek(&req, ino, fh, offset, whence).await
             },
         );
@@ -1352,9 +1361,7 @@ where
         reply: ReplyWrite,
     ) {
         let req = RequestInfo::from(req);
-        let fh_in = FileHandle::from(fh_in);
         let offset_in = NumBytes::from(u64::try_from(offset_in).unwrap()); // TODO No unwrap?
-        let fh_out = FileHandle::from(fh_out);
         let offset_out = NumBytes::from(u64::try_from(offset_out).unwrap()); // TODO No unwrap?
         let len = NumBytes::from(len);
         self.run_async_reply_write(
@@ -1363,6 +1370,8 @@ where
             async move |fs| {
                 let ino_in = parse_inode(ino_in)?;
                 let ino_out = parse_inode(ino_out)?;
+                let fh_in = parse_file_handle(fh_in)?;
+                let fh_out = parse_file_handle(fh_out)?;
                 fs.copy_file_range(
                     &req,
                     ino_in,
@@ -1514,6 +1523,24 @@ impl<'a> From<&fuser::Request<'a>> for crate::common::RequestInfo {
     }
 }
 
+fn parse_inode(ino: u64) -> FsResult<InodeNumber> {
+    InodeNumber::try_from(ino).ok_or_else(|| {
+        log::error!("Kernel gave us zero as an inode number");
+        FsError::InvalidOperation
+    })
+}
+
+fn parse_file_handle(fh: u64) -> FsResult<FileHandle> {
+    FileHandle::try_from(fh).ok_or_else(|| {
+        log::error!("Kernel gave us zero as a file handle");
+        FsError::InvalidOperation
+    })
+}
+
+fn parse_opt_file_handle(fh: Option<u64>) -> FsResult<Option<FileHandle>> {
+    fh.map(parse_file_handle).transpose()
+}
+
 fn parse_time(time: TimeOrNow) -> SystemTime {
     match time {
         TimeOrNow::SpecificTime(time) => time,
@@ -1624,11 +1651,4 @@ impl<'a> Callback<FsResult<&'a str>, ()> for DataCallback {
     fn call(self, data: FsResult<&'a str>) {
         <Self as Callback<FsResult<&'a [u8]>, ()>>::call(self, data.map(|s| s.as_bytes()))
     }
-}
-
-fn parse_inode(ino: u64) -> FsResult<InodeNumber> {
-    InodeNumber::try_from(ino).ok_or_else(|| {
-        log::error!("Kernel gave us zero as an inode number");
-        FsError::InvalidOperation
-    })
 }
