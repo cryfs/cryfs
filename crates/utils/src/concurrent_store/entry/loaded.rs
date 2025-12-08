@@ -54,7 +54,7 @@ where
         AsyncDropArc::clone(&self.entry)
     }
 
-    pub(super) fn get_entry_and_decrease_num_unfulfilled_waiters(
+    pub fn get_entry_and_decrease_num_unfulfilled_waiters(
         &mut self,
     ) -> AsyncDropGuard<AsyncDropArc<V>> {
         assert!(self.num_unfulfilled_waiters > 0);

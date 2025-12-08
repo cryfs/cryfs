@@ -69,7 +69,7 @@ where
     ///   * In both, [EntryState::Loading] and [EntryState::Loaded], if an immediate drop is requested, the flag `immediate_drop_requested` is set to true.
     ///   * If the flag is true, once the last current reader is done, the entry will be removed from the map and the user-provided callback function will be called with exclusive access, to do the remove.
     ///   * Also, any further tasks trying to load the entry while `immediate_drop_requested=true` will wait until all tasks with current access are done, and the user-defined callback is complete, so it'll be exclusive access, and only then execute.
-    pub(super) entries: Mutex<HashMap<K, EntryState<V, E>>>, // TODO Can we remove pub(super)?
+    entries: Mutex<HashMap<K, EntryState<V, E>>>,
 }
 impl<K, V, E> ConcurrentStore<K, V, E>
 where
@@ -697,6 +697,27 @@ where
         let EntryState::Dropping { .. } = entry else {
             panic!("Entry with key {:?} is not in dropping state", key);
         };
+    }
+
+    pub(super) fn _finalize_waiter(
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
+        key: K,
+    ) -> AsyncDropGuard<LoadedEntryGuard<K, V, E>> {
+        // This is not a race condition with dropping, i.e. the entry can't be in dropping state yet, because we are an "unfulfilled waiter",
+        // i.e. the entry cannot be dropped until we decrease the count below.
+        let mut entries = this.entries.lock().unwrap();
+        let Some(state) = entries.get_mut(&key) else {
+            panic!("Entry with key {:?} was not found in the map", key);
+        };
+        let EntryState::Loaded(loaded) = state else {
+            panic!("Entry with key {:?} is not in loaded state", key);
+        };
+        LoadedEntryGuard::new(
+            AsyncDropArc::clone(this),
+            key,
+            // [Self::_clone_or_create_entry_state] added a waiter, so we need to decrement num_unfulfilled_waiters.
+            loaded.get_entry_and_decrease_num_unfulfilled_waiters(),
+        )
     }
 }
 

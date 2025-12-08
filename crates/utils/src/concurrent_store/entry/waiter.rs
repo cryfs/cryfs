@@ -6,9 +6,7 @@ use std::hash::Hash;
 use crate::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     concurrent_store::{
-        entry::{EntryState, loading::LoadingResult},
-        guard::LoadedEntryGuard,
-        store::ConcurrentStoreInner,
+        entry::loading::LoadingResult, guard::LoadedEntryGuard, store::ConcurrentStoreInner,
     },
     safe_panic,
 };
@@ -66,7 +64,9 @@ where
         match inner.loading_result.await {
             LoadingResult::Loaded => {
                 // _finalize_waiter will decrement the num_waiters refcount
-                Ok(Some(Self::_finalize_waiter(store, inner.key)))
+                Ok(Some(ConcurrentStoreInner::_finalize_waiter(
+                    store, inner.key,
+                )))
             }
             LoadingResult::NotFound => {
                 // No need to decrement the num_waiters refcount here because the entry never made it to the Loaded state
@@ -77,30 +77,6 @@ where
                 Err(err)
             }
         }
-    }
-
-    fn _finalize_waiter<V>(
-        store: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
-        key: K,
-    ) -> AsyncDropGuard<LoadedEntryGuard<K, V, E>>
-    where
-        V: AsyncDrop + Debug + Send + Sync,
-    {
-        // This is not a race condition with dropping, i.e. the entry can't be in dropping state yet, because we are an "unfulfilled waiter",
-        // i.e. the entry cannot be dropped until we decrease the count below.
-        let mut entries = store.entries.lock().unwrap();
-        let Some(state) = entries.get_mut(&key) else {
-            panic!("Entry with key {:?} was not found in the map", key);
-        };
-        let EntryState::Loaded(loaded) = state else {
-            panic!("Entry with key {:?} is not in loaded state", key);
-        };
-        LoadedEntryGuard::new(
-            AsyncDropArc::clone(store),
-            key,
-            // [Self::_clone_or_create_entry_state] added a waiter, so we need to decrement num_unfulfilled_waiters.
-            loaded.get_entry_and_decrease_num_unfulfilled_waiters(),
-        )
     }
 }
 
