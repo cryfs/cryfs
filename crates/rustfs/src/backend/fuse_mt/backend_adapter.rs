@@ -80,7 +80,7 @@ where
                     Ok(ok)
                 }
                 Err(err) => {
-                    log::info!("{log_msg}...failed: {err:?}");
+                    log::warn!("{log_msg}...failed: {err:?}");
                     Err(err.system_error_code())
                 }
             }
@@ -916,7 +916,7 @@ where
             }
             Err(err) => {
                 *self.result = Some((self.callback)(Err(err.system_error_code())));
-                log::info!("{}...failed: {err:?}", self.log_msg);
+                log::warn!("{}...failed: {err:?}", self.log_msg);
             }
         }
     }
