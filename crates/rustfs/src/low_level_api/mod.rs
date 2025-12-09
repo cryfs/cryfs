@@ -5,6 +5,3 @@ pub use interface::{
     AsyncFilesystemLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory, ReplyDirectoryAddResult,
     ReplyDirectoryPlus, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyWrite,
 };
-
-mod into_fs;
-pub(crate) use into_fs::IntoFsLL;

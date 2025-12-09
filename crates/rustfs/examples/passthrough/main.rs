@@ -10,7 +10,7 @@ mod openfile;
 mod symlink;
 mod utils;
 
-use cryfs_rustfs::{Gid, Uid};
+use cryfs_rustfs::{Gid, Uid, object_based_api::ObjectBasedFsAdapterLL};
 use device::PassthroughDevice;
 
 const USAGE: &str = "Usage: passthroughfs [basedir] [mountdir]";
@@ -34,7 +34,7 @@ fn main() {
         .unwrap();
     runtime
         .block_on(cryfs_rustfs::backend::fuser::mount(
-            fs,
+            ObjectBasedFsAdapterLL::new(fs),
             mountdir,
             runtime.handle().clone(),
             None,

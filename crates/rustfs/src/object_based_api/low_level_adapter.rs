@@ -17,7 +17,7 @@ use crate::{
         OpenOutFlags, RequestInfo, Statfs, Uid,
     },
     low_level_api::{
-        AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory,
+        AsyncFilesystemLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory,
         ReplyDirectoryAddResult, ReplyDirectoryPlus, ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek,
         ReplyOpen, ReplyWrite,
     },
@@ -1124,18 +1124,6 @@ where
 
         // TODO
         Err(FsError::NotImplemented)
-    }
-}
-
-impl<Fn, Fs> IntoFsLL<ObjectBasedFsAdapterLL<Fs>> for Fn
-where
-    Fn: FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
-    Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
-    for<'a> Fs::File<'a>: Send,
-    Fs::OpenFile: Send + Sync,
-{
-    fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapterLL<Fs>> {
-        ObjectBasedFsAdapterLL::new(self)
     }
 }
 

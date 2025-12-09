@@ -1,6 +1,7 @@
 //#![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
 
+mod backend;
 mod background_process;
 mod ipc;
 mod mounter;

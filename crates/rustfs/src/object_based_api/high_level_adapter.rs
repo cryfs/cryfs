@@ -10,7 +10,7 @@ use crate::common::{
     NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
-    AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
+    AsyncFilesystem, AttrResponse, CreateResponse, OpenResponse, OpendirResponse,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -764,17 +764,6 @@ where
                 flags: OpenOutFlags {},
             })
         })
-    }
-}
-
-impl<Fn, D> IntoFs<ObjectBasedFsAdapter<D>> for Fn
-where
-    Fn: FnOnce(Uid, Gid) -> AsyncDropGuard<D> + Send + Sync + 'static,
-    D: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
-    D::OpenFile: Send + Sync,
-{
-    fn into_fs(self) -> AsyncDropGuard<ObjectBasedFsAdapter<D>> {
-        ObjectBasedFsAdapter::new(self)
     }
 }
 

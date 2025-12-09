@@ -5,6 +5,7 @@ mod inode_metadata;
 mod node;
 mod symlink;
 
+use cryfs_rustfs::object_based_api::ObjectBasedFsAdapterLL;
 use device::InMemoryDevice;
 
 const USAGE: &str = "Usage: inmemoryfs [mountdir]";
@@ -27,7 +28,7 @@ fn main() {
         .unwrap();
     runtime
         .block_on(cryfs_rustfs::backend::fuser::mount(
-            fs,
+            ObjectBasedFsAdapterLL::new(fs),
             mountdir,
             runtime.handle().clone(),
             None,

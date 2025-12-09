@@ -6,11 +6,11 @@ use tokio_util::sync::CancellationToken;
 
 use super::{RunningFilesystem, backend_adapter::BackendAdapter};
 use crate::common::FsError;
-use crate::low_level_api::{AsyncFilesystemLL, IntoFsLL};
-use cryfs_utils::async_drop::AsyncDrop;
+use crate::low_level_api::AsyncFilesystemLL;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 pub async fn mount<Fs>(
-    fs: impl IntoFsLL<Fs>,
+    fs: AsyncDropGuard<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
     unmount_trigger: Option<CancellationToken>,
@@ -32,7 +32,7 @@ where
 }
 
 pub async fn spawn_mount<Fs>(
-    fs: impl IntoFsLL<Fs>,
+    fs: AsyncDropGuard<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
     mount_options: &[MountOption],
@@ -40,7 +40,7 @@ pub async fn spawn_mount<Fs>(
 where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    let backend = BackendAdapter::new(fs.into_fs(), runtime);
+    let backend = BackendAdapter::new(fs, runtime);
 
     // We need to keep a handle to the internal arc because we need to manually async drop it if fuser::spawn_mount2 fails.
     // This is because usually, the internal Arc is dropped in BackendAdapter::destroy() but if fuser::spawn_mount2 fails,

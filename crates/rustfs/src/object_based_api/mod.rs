@@ -16,3 +16,10 @@ pub(crate) mod low_level_adapter;
 pub use high_level_adapter::ObjectBasedFsAdapter;
 #[cfg(feature = "fuser")]
 pub use low_level_adapter::ObjectBasedFsAdapterLL;
+
+mod backends;
+#[cfg(feature = "fuse_mt")]
+pub use backends::RustfsFusemtBackend;
+#[cfg(feature = "fuser")]
+pub use backends::RustfsFuserBackend;
+pub use backends::{MountOption, RustfsBackend};

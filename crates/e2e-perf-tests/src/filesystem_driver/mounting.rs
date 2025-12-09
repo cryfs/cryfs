@@ -8,7 +8,7 @@ use std::{
     io::SeekFrom,
     os::unix::fs::{MetadataExt, PermissionsExt},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::{Duration, SystemTime},
 };
 use tempdir::TempDir;
@@ -23,6 +23,7 @@ use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
 };
 use cryfs_filesystem::filesystem::CryDevice;
+use cryfs_rustfs::object_based_api::RustfsBackend as _;
 use cryfs_rustfs::{
     FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, Statfs, Uid,
     backend::{BackgroundSession, RunningFilesystem},
@@ -72,11 +73,16 @@ impl MountingBackend for FuserBackend {
         mountdir: &Path,
     ) -> FsResult<RunningFilesystem<Self::Session>> {
         let runtime = tokio::runtime::Handle::current();
-        cryfs_rustfs::backend::fuser::spawn_mount(|_uid, _gid| device, mountdir, runtime, &[])
-            .await
-            .map_err(|error| FsError::InternalError {
-                error: error.into(),
-            })
+        cryfs_rustfs::object_based_api::RustfsFuserBackend::spawn_mount(
+            |_uid, _gid| device,
+            mountdir,
+            runtime,
+            &[],
+        )
+        .await
+        .map_err(|error| FsError::InternalError {
+            error: Arc::new(error.into()),
+        })
     }
 }
 pub struct FusemtBackend;
@@ -99,11 +105,16 @@ impl MountingBackend for FusemtBackend {
         mountdir: &Path,
     ) -> FsResult<RunningFilesystem<Self::Session>> {
         let runtime = tokio::runtime::Handle::current();
-        cryfs_rustfs::backend::fuse_mt::spawn_mount(|_uid, _gid| device, mountdir, runtime, &[])
-            .await
-            .map_err(|error| FsError::InternalError {
-                error: error.into(),
-            })
+        cryfs_rustfs::object_based_api::RustfsFusemtBackend::spawn_mount(
+            |_uid, _gid| device,
+            mountdir,
+            runtime,
+            &[],
+        )
+        .await
+        .map_err(|error| FsError::InternalError {
+            error: Arc::new(error.into()),
+        })
     }
 }
 
@@ -258,7 +269,7 @@ where
         fs::create_dir(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(node)
@@ -271,7 +282,7 @@ where
         fs::create_dir_all(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(path.to_owned())
@@ -304,7 +315,7 @@ where
             .open(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok((node, fh))
@@ -321,7 +332,7 @@ where
         fs::symlink(target.as_str(), &real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(node)
@@ -333,7 +344,7 @@ where
         fs::remove_file(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(())
@@ -345,7 +356,7 @@ where
         fs::remove_dir(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(())
@@ -364,7 +375,7 @@ where
             Ok(false) => return Err(FsError::NodeDoesNotExist),
             Err(error) => {
                 return Err(FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 });
             }
         }
@@ -379,7 +390,7 @@ where
             fs::symlink_metadata(&real_path)
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?;
 
         Ok(metadata_to_node_attrs(metadata))
@@ -390,7 +401,7 @@ where
             .metadata()
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(metadata_to_node_attrs(metadata))
@@ -411,7 +422,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })
     }
 
@@ -431,7 +442,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })
     }
 
@@ -449,7 +460,7 @@ where
         asyncify(move || std::os::unix::fs::lchown(&real_path, uid, gid))
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })
     }
 
@@ -467,7 +478,7 @@ where
         asyncify(move || std::os::unix::fs::fchown(open_file, uid, gid))
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })
     }
 
@@ -480,7 +491,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })
     }
 
@@ -498,7 +509,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })
     }
 
@@ -524,7 +535,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })
     }
 
@@ -545,7 +556,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })
     }
 
@@ -555,7 +566,7 @@ where
         let target = fs::read_link(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         let target = AbsolutePathBuf::try_from_string(target.to_str().unwrap().to_string())
@@ -574,7 +585,7 @@ where
             .open(&real_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })
     }
 
@@ -585,7 +596,7 @@ where
             .flush()
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         // Then close (this will trigger the *fuse* flush operation and then release)
@@ -601,7 +612,7 @@ where
         })
         .await
         .map_err(|error| FsError::InternalError {
-            error: error.into(),
+            error: Arc::new(error.into()),
         })?;
 
         Ok(Statfs {
@@ -630,7 +641,7 @@ where
         fs::rename(&real_old_path, &real_new_path)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(())
@@ -643,7 +654,7 @@ where
             fs::read_dir(&real_path)
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?;
 
         let mut result = Vec::new();
@@ -652,7 +663,7 @@ where
                 .next_entry()
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?
         {
             let path_component = entry.file_name().into_string().unwrap();
@@ -660,7 +671,7 @@ where
                 .file_type()
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?;
             let kind = if kind.is_dir() {
                 NodeKind::Dir
@@ -688,7 +699,7 @@ where
             .seek(SeekFrom::Start(u64::from(offset)))
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         let mut buf = vec![0; usize::try_from(u64::from(size)).unwrap()];
@@ -697,7 +708,7 @@ where
                 .read(&mut buf)
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?;
 
         assert!(num_read_bytes <= buf.len());
@@ -717,14 +728,14 @@ where
             .seek(SeekFrom::Start(u64::from(offset)))
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         open_file
             .write_all(&data)
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         // Flush write, otherwise fuse doesn't actually send the write operation to the file system.
@@ -735,7 +746,7 @@ where
             .flush()
             .await
             .map_err(|error| FsError::InternalError {
-                error: error.into(),
+                error: Arc::new(error.into()),
             })?;
 
         Ok(())
@@ -752,14 +763,14 @@ where
                 .sync_data()
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?;
         } else {
             open_file
                 .sync_all()
                 .await
                 .map_err(|error| FsError::InternalError {
-                    error: error.into(),
+                    error: Arc::new(error.into()),
                 })?;
         }
         Ok(())
