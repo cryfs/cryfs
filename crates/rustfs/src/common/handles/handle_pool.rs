@@ -23,7 +23,7 @@ where
     in_use_handles: HashMap<Handle, u64>,
 
     /// Handles that were used previously but then returned and are now free to be reused
-    /// The generation number is the number it was last used with.
+    /// The generation number is the number it can be used next with
     released_handles: Vec<HandleWithGeneration<Handle>>,
 
     /// The lowest handle that hasn't been used yet
@@ -44,13 +44,7 @@ where
 
     pub fn acquire(&mut self) -> HandleWithGeneration<Handle> {
         match self.released_handles.pop() {
-            Some(HandleWithGeneration {
-                handle,
-                generation: last_used_generation,
-            }) => {
-                assert!(last_used_generation < u64::MAX);
-                self._acquire(handle, last_used_generation + 1)
-            }
+            Some(HandleWithGeneration { handle, generation }) => self._acquire(handle, generation),
             _ => {
                 let handle = self.next_handle.clone();
                 assert!(self.next_handle < Handle::MAX);
@@ -86,7 +80,7 @@ where
                     let released_handle =
                         self.released_handles.swap_remove(pos_in_released_handles);
                     assert_eq!(handle, released_handle.handle);
-                    Some(self._acquire(handle, released_handle.generation + 1))
+                    Some(self._acquire(handle, released_handle.generation))
                 }
                 _ => None,
             }
@@ -103,21 +97,21 @@ where
             .in_use_handles
             .remove(&handle)
             .expect("Tried to release a handle that wasn't in use");
-        self.released_handles
-            .push(HandleWithGeneration { handle, generation });
+        assert!(generation < u64::MAX);
+        self.released_handles.push(HandleWithGeneration {
+            handle,
+            generation: generation + 1,
+        });
     }
 
-    /// Releases a handle same as [Self::release], but also undoes the generation increment that happened on acquire.
+    /// Releases a handle same as [Self::release], but doesn't increase the generation.
     pub fn undo_acquire(&mut self, handle: Handle) {
         let generation = self
             .in_use_handles
             .remove(&handle)
             .expect("Tried to undo_acquire a handle that wasn't in use");
-        assert!(generation > 0);
-        self.released_handles.push(HandleWithGeneration {
-            handle,
-            generation: generation - 1,
-        });
+        self.released_handles
+            .push(HandleWithGeneration { handle, generation });
     }
 
     pub fn lookup(&self, handle: Handle) -> Option<HandleWithGeneration<Handle>> {
