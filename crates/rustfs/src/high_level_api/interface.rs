@@ -1,9 +1,10 @@
 use async_trait::async_trait;
+use derive_more::Debug;
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    AbsolutePath, Callback, DirEntry, DirEntryOrReference, FileHandle, FsResult, Gid, Mode,
-    NodeAttrs, NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
+    AbsolutePath, Callback, DirEntryOrReference, FileHandle, FsResult, Gid, Mode, NodeAttrs,
+    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -14,12 +15,14 @@ pub struct AttrResponse {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct OpenResponse {
+    #[debug("{fh}")]
     pub fh: FileHandle,
     pub flags: OpenFlags,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct OpendirResponse {
+    #[debug("{fh}")]
     pub fh: FileHandle,
     // TODO Wrap flags into its own type, or reuse OpenFlags?
     pub flags: u32,
@@ -29,6 +32,7 @@ pub struct OpendirResponse {
 pub struct CreateResponse {
     pub ttl: Duration,
     pub attrs: NodeAttrs,
+    #[debug("{fh}")]
     pub fh: FileHandle,
     // TODO Wrap flags into its own type, or reuse OpenFlags?
     pub flags: i32,

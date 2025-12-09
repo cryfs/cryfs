@@ -1,4 +1,4 @@
-use derive_more::{From, Into};
+use derive_more::{Display, From, Into};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, From, Into)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Hash, From, Into)]
 pub struct Uid(u32);

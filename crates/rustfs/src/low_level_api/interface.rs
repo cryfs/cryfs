@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use derive_more::Debug;
 use std::time::{Duration, SystemTime};
 
 use crate::{
@@ -13,6 +14,7 @@ use crate::{
 
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyEntry {
+    #[debug("{ino}")]
     pub ino: HandleWithGeneration<InodeNumber>,
     pub attr: NodeAttrs,
     pub ttl: Duration,
@@ -20,6 +22,7 @@ pub struct ReplyEntry {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyAttr {
+    #[debug("{ino}")]
     pub ino: InodeNumber,
     pub attr: NodeAttrs,
     pub ttl: Duration,
@@ -27,20 +30,24 @@ pub struct ReplyAttr {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyOpen {
+    #[debug("{fh}")]
     pub fh: FileHandle,
     pub flags: OpenFlags,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyWrite {
+    #[debug("{written}")]
     pub written: NumBytes,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyCreate {
     pub ttl: Duration,
+    #[debug("{ino}")]
     pub ino: HandleWithGeneration<InodeNumber>,
     pub attr: NodeAttrs,
+    #[debug("{fh}")]
     pub fh: FileHandle,
     // TODO Wrapper type for flags
     pub flags: u32,
@@ -48,7 +55,9 @@ pub struct ReplyCreate {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyLock {
+    #[debug("{start}")]
     pub start: NumBytes,
+    #[debug("{end}")]
     pub end: NumBytes,
     // TODO Wrapper type for typ and pid
     pub typ: i32,
@@ -64,6 +73,7 @@ pub struct ReplyBmap {
 #[derive(Clone, Copy, Debug)]
 pub struct ReplyLseek {
     // TODO In fuser, this was i64. Why?
+    #[debug("{offset}")]
     pub offset: NumBytes,
 }
 
@@ -78,6 +88,7 @@ pub struct ReplyXTimes {
 pub struct ReplyIoctl {
     pub result: i32,
     // TOOD It'd be better to not force a clone of the bytes, but instead use a callback type similar to read() or readdir().
+    #[debug("[{} bytes]", data.len())]
     pub data: Box<[u8]>,
 }
 

@@ -1,8 +1,9 @@
-use derive_more::{Add, AddAssign, From, Into, Sub, SubAssign, Sum};
+use derive_more::{Add, AddAssign, Display, From, Into, Sub, SubAssign, Sum};
 use std::ops::{Div, DivAssign, Mul, MulAssign};
 
 #[derive(
     Debug,
+    Display,
     Clone,
     Copy,
     PartialEq,

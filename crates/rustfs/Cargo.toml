@@ -27,6 +27,7 @@ serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
+time = {workspace = true, features = ["formatting"]}
 
 [dev-dependencies]
 rstest.workspace = true

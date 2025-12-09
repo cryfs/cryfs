@@ -158,9 +158,15 @@ impl Mode {
     }
 }
 
+impl std::fmt::Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0o{:o}", self.0)
+    }
+}
+
 impl std::fmt::Debug for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Mode(0o{:o})", self.0)
+        write!(f, "Mode({})", self)
     }
 }
 
