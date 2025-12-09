@@ -37,6 +37,7 @@ impl AtExitHandler {
                     log::info!("Received {signal_name}");
                     func();
                 }
+                thread::sleep(std::time::Duration::from_millis(50));
             }
         });
         AtExitHandler {
