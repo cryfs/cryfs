@@ -536,7 +536,7 @@ where
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         self.run_async_reply_entry(
-            format!("lookup(parent={parent_ino:?}, name={name:?}"),
+            format!("lookup(parent={parent_ino}, name={name:?}"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -549,7 +549,7 @@ where
     fn forget(&mut self, req: &Request, ino: u64, nlookup: u64) {
         let req = RequestInfo::from(req);
         self.run_async_no_reply(
-            format!("forget(ino={ino:?}, nlookup={nlookup:?})"),
+            format!("forget(ino={ino}, nlookup={nlookup})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 fs.forget(&req, ino, nlookup).await
@@ -565,7 +565,7 @@ where
     fn getattr(&mut self, req: &Request<'_>, ino: u64, fh: Option<u64>, reply: ReplyAttr) {
         let req = RequestInfo::from(req);
         self.run_async_reply_attr(
-            format!("getattr(ino={ino:?}, fh={fh:?})"),
+            format!("getattr(ino={ino}, fh={fh:?})"),
             reply,
             async move |fs| {
                 let fh = parse_opt_file_handle(fh)?;
@@ -601,7 +601,7 @@ where
         let atime = atime.map(parse_time);
         let mtime = mtime.map(parse_time);
         self.run_async_reply_attr(
-            format!("setattr(ino={ino:?}, fh={fh:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
+            format!("setattr(ino={ino}, fh={fh:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -613,7 +613,7 @@ where
     fn readlink(&mut self, req: &Request<'_>, ino: u64, reply: ReplyData) {
         let req = RequestInfo::from(req);
         self.run_async_reply_data(
-            format!("readlink(ino={ino:?})"),
+            format!("readlink(ino={ino})"),
             reply,
             async move |fs, callback| match parse_inode(ino) {
                 Ok(ino) => fs.readlink(&req, ino, callback).await,
@@ -639,7 +639,9 @@ where
         let name = name.to_owned();
         let mode = Mode::from(mode);
         self.run_async_reply_entry(
-            format!("mknod(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, rdev={rdev:?})"),
+            format!(
+                "mknod(parent={parent_ino}, name={name:?}, mode={mode}, umask={umask}, rdev={rdev})"
+            ),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -665,7 +667,7 @@ where
         let name = name.to_owned();
         let mode = Mode::from(mode).add_dir_flag();
         self.run_async_reply_entry(
-            format!("mkdir(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?})"),
+            format!("mkdir(parent={parent_ino}, name={name:?}, mode={mode}, umask={umask})"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -679,7 +681,7 @@ where
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         self.run_async_reply_empty(
-            format!("unlink(parent={parent_ino:?}, name={name:?})"),
+            format!("unlink(parent={parent_ino}, name={name:?})"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -693,7 +695,7 @@ where
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         self.run_async_reply_empty(
-            format!("rmdir(parent={parent_ino:?}, name={name:?})"),
+            format!("rmdir(parent={parent_ino}, name={name:?})"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -715,7 +717,7 @@ where
         let name = name.to_owned();
         let link = link.to_owned();
         self.run_async_reply_entry(
-            format!("symlink(parent={parent_ino:?}, name={name:?}, link={link:?})"),
+            format!("symlink(parent={parent_ino}, name={name:?}, link={link:?})"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -743,7 +745,7 @@ where
         let name = name.to_owned();
         let newname = newname.to_owned();
         self.run_async_reply_empty(
-            format!("rename(parent={parent_ino:?}, name={name:?}, newparent={newparent:?}, newname={newname:?}, flags={flags:?})"),
+            format!("rename(parent={parent_ino}, name={name:?}, newparent={newparent}, newname={newname:?}, flags={flags})"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -768,7 +770,7 @@ where
         let req = RequestInfo::from(req);
         let newname = newname.to_owned();
         self.run_async_reply_entry(
-            format!("link(ino={ino:?}, newparent={newparent:?}, newname={newname:?})"),
+            format!("link(ino={ino}, newparent={newparent}, newname={newname:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -784,7 +786,7 @@ where
         let req = RequestInfo::from(req);
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_open(
-            format!("open(ino={ino:?}, flags={flags:?})"),
+            format!("open(ino={ino}, flags={flags})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -808,7 +810,7 @@ where
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let size = NumBytes::from(u64::from(size));
         self.run_async_reply_data(
-            format!("read(ino={ino:?}, fh={fh:?}, offset={offset:?}, size={size:?}, flags={flags:?}, lock_owner={lock_owner:?})"),
+            format!("read(ino={ino}, fh={fh}, offset={offset}, size={size}, flags={flags}, lock_owner={lock_owner:?})"),
             reply,
             async move |fs, callback| {
                 match parse_inode(ino) {
@@ -858,7 +860,7 @@ where
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let data = data.to_owned();
         self.run_async_reply_write(
-            format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, data=[{size:?} bytes], write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})", size=data.len()),
+            format!("write(ino={ino}, fh={fh}, offset={offset}, data=[{size} bytes], write_flags={write_flags}, flags={flags}, lock_owner={lock_owner:?})", size=data.len()),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -881,7 +883,7 @@ where
     fn flush(&mut self, req: &Request<'_>, ino: u64, fh: u64, lock_owner: u64, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
         self.run_async_reply_empty(
-            format!("flush(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?})"),
+            format!("flush(ino={ino}, fh={fh}, lock_owner={lock_owner})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -903,7 +905,7 @@ where
     ) {
         let req = RequestInfo::from(req);
         self.run_async_reply_empty(
-            format!("release(ino={ino:?}, fh={fh:?}, flags={flags:?}, lock_owner={lock_owner:?}, flush={flush:?})"),
+            format!("release(ino={ino}, fh={fh}, flags={flags}, lock_owner={lock_owner:?}, flush={flush})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -917,7 +919,7 @@ where
         let req = RequestInfo::from(req);
 
         self.run_async_reply_empty(
-            format!("fsync(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
+            format!("fsync(ino={ino}, fh={fh}, datasync={datasync})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -931,7 +933,7 @@ where
         let req = RequestInfo::from(req);
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_open(
-            format!("opendir(ino={ino:?}, flags={flags:?})"),
+            format!("opendir(ino={ino}, flags={flags})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -951,7 +953,7 @@ where
         let req = RequestInfo::from(req);
         let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
-            format!("readdir(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
+            format!("readdir(ino={ino}, fh={fh}, offset={offset})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 let fh = parse_file_handle(fh)?;
@@ -981,7 +983,7 @@ where
         let req = RequestInfo::from(req);
         let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
-            format!("readdirplus(ino={ino:?}, fh={fh:?}, offset={offset:?})"),
+            format!("readdirplus(ino={ino}, fh={fh}, offset={offset})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 let fh = parse_file_handle(fh)?;
@@ -1004,7 +1006,7 @@ where
         let req = RequestInfo::from(req);
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_empty(
-            format!("releasedir(ino={ino:?}, fh={fh:?}, flags={flags:?})"),
+            format!("releasedir(ino={ino}, fh={fh}, flags={flags})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1024,7 +1026,7 @@ where
     ) {
         let req = RequestInfo::from(req);
         self.run_async_reply_empty(
-            format!("fsyncdir(ino={ino:?}, fh={fh:?}, datasync={datasync:?})"),
+            format!("fsyncdir(ino={ino}, fh={fh}, datasync={datasync})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1036,7 +1038,7 @@ where
 
     fn statfs(&mut self, req: &Request<'_>, ino: u64, reply: ReplyStatfs) {
         let req = RequestInfo::from(req);
-        self.run_async_reply_statfs(format!("statfs(ino={ino:?})"), reply, async move |fs| {
+        self.run_async_reply_statfs(format!("statfs(ino={ino})"), reply, async move |fs| {
             let ino = parse_inode(ino)?;
             fs.statfs(&req, ino).await
         });
@@ -1057,7 +1059,7 @@ where
         let value = value.to_owned();
         let position = NumBytes::from(u64::from(position));
         self.run_async_reply_empty(
-            format!("setxattr(ino={ino:?}, name={name:?}, value=[{} bytes], flags={flags:?}, position={position:?})", value.len()),
+            format!("setxattr(ino={ino}, name={name:?}, value=[{} bytes], flags={flags}, position={position})", value.len()),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1081,14 +1083,14 @@ where
         let name = match parse_xattr_name(name) {
             Ok(name) => name.to_owned(),
             Err(err) => {
-                log::warn!("getxattr(ino={ino:?}, name={name:?})...failed: {err:?}");
+                log::warn!("getxattr(ino={ino}, name={name:?})...failed: {err:?}");
                 reply.error(err.system_error_code());
                 return;
             }
         };
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
-            format!("getxattr(ino={ino:?}, name={name:?}, size={size:?})"),
+            format!("getxattr(ino={ino}, name={name:?}, size={size:?})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 if NumBytes::from(0) == size {
@@ -1124,7 +1126,7 @@ where
         let req = RequestInfo::from(req);
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
-            format!("listxattr(ino={ino:?}, size={size:?})"),
+            format!("listxattr(ino={ino}, size={size})"),
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 if NumBytes::from(0) == size {
@@ -1162,7 +1164,7 @@ where
         let req = RequestInfo::from(_req);
         let name = name.to_owned();
         self.run_async_reply_empty(
-            format!("removexattr(ino={ino:?}, name={name:?})"),
+            format!("removexattr(ino={ino}, name={name:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1177,7 +1179,7 @@ where
     fn access(&mut self, req: &Request<'_>, ino: u64, mask: i32, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
         self.run_async_reply_empty(
-            format!("access(ino={ino:?}, mask={mask:?})"),
+            format!("access(ino={ino}, mask={mask})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1203,7 +1205,7 @@ where
         let mode = Mode::from(mode).add_file_flag();
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_create(
-            format!("create(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, flags={flags:?})"),
+            format!("create(parent={parent_ino}, name={name:?}, mode={mode}, umask={umask}, flags={flags})"),
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
@@ -1228,7 +1230,7 @@ where
     ) {
         let req = RequestInfo::from(req);
         self.run_async_reply_lock(
-            format!("getlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?})"),
+            format!("getlk(ino={ino}, fh={fh}, lock_owner={lock_owner}, start={start}, end={end}, typ={typ}, pid={pid})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1254,7 +1256,7 @@ where
     ) {
         let req = RequestInfo::from(req);
         self.run_async_reply_empty(
-            format!("setlk(ino={ino:?}, fh={fh:?}, lock_owner={lock_owner:?}, start={start:?}, end={end:?}, typ={typ:?}, pid={pid:?}, sleep={sleep:?})"),
+            format!("setlk(ino={ino}, fh={fh}, lock_owner={lock_owner}, start={start}, end={end}, typ={typ}, pid={pid}, sleep={sleep:?})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1269,7 +1271,7 @@ where
         let req = RequestInfo::from(req);
         let blocksize = NumBytes::from(u64::from(blocksize));
         self.run_async_reply_bmap(
-            format!("bmap(ino={ino:?}, blocksize={blocksize:?}, idx={idx:?})"),
+            format!("bmap(ino={ino}, blocksize={blocksize}, idx={idx})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1292,7 +1294,7 @@ where
         let req = RequestInfo::from(req);
         let in_data = in_data.to_owned();
         self.run_async_reply_ioctl(
-            format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data=[{} bytes], out_size={out_size:?})", in_data.len()),
+            format!("ioctl(ino={ino}, fh={fh}, flags={flags}, cmd={cmd}, in_data=[{} bytes], out_size={out_size})", in_data.len()),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1320,13 +1322,12 @@ where
         // TODO Why does fuser use i32 instead of u32? for mode?
         let mode = Mode::from(u32::try_from(mode).unwrap());
         self.run_async_reply_empty(
-            format!("fallocate(ino={ino:?}, fh={fh:?}, offset={offset:?}, length={length:?}, mode={mode:?})"),
+            format!("fallocate(ino={ino}, fh={fh}, offset={offset}, length={length}, mode={mode})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 let fh = parse_file_handle(fh)?;
-                fs.fallocate(&req, ino, fh, offset, length, mode)
-                    .await
+                fs.fallocate(&req, ino, fh, offset, length, mode).await
             },
         );
     }
@@ -1343,7 +1344,7 @@ where
         let req = RequestInfo::from(req);
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         self.run_async_reply_lseek(
-            format!("lseek(ino={ino:?}, fh={fh:?}, offset={offset:?}, whence={whence:?})"),
+            format!("lseek(ino={ino}, fh={fh}, offset={offset}, whence={whence})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1371,7 +1372,7 @@ where
         let offset_out = NumBytes::from(u64::try_from(offset_out).unwrap()); // TODO No unwrap?
         let len = NumBytes::from(len);
         self.run_async_reply_write(
-            format!("copy_file_range(ino_in={ino_in:?}, fh_in={fh_in:?}, offset_in={offset_in:?}, ino_out={ino_out:?}, fh_out={fh_out:?}, offset_out={offset_out:?}, len={len:?}, flags={flags:?})"),
+            format!("copy_file_range(ino_in={ino_in}, fh_in={fh_in}, offset_in={offset_in}, ino_out={ino_out}, fh_out={fh_out}, offset_out={offset_out}, len={len}, flags={flags})"),
             reply,
             async move |fs| {
                 let ino_in = parse_inode(ino_in)?;
@@ -1430,7 +1431,7 @@ where
         let newparent_ino = parse_inode(newparent_ino)?;
         let newname = newname.to_owned();
         self.run_async_reply_empty(
-            format!("exchange(parent={parent_ino:?}, name={name:?}, newparent={newparent_ino:?}, newname={newname:?}, options={options:?})"),
+            format!("exchange(parent={parent_ino}, name={name:?}, newparent={newparent_ino}, newname={newname:?}, options={options})"),
             reply,
             async move |fs| {
                 // TODO InvalidPath is the wrong error here
@@ -1451,7 +1452,7 @@ where
     fn getxtimes(&mut self, req: &Request<'_>, ino: u64, reply: ReplyXTimes) {
         let req = RequestInfo::from(req);
         let ino = parse_inode(ino)?;
-        self.run_async_reply_xtimes(format!("getxtimes(ino={ino:?})"), reply, async move |fs| {
+        self.run_async_reply_xtimes(format!("getxtimes(ino={ino})"), reply, async move |fs| {
             fs.getxtimes(&req, ino).await
         });
     }

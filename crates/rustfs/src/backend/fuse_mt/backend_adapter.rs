@@ -280,7 +280,7 @@ where
         let mode = Mode::from(mode).add_dir_flag();
         // TODO Assert that file/symlink flags aren't set
         self.run_async(
-            &format!("mkdir({parent:?}, name={name:?}, mode={mode:?})"),
+            &format!("mkdir({parent:?}, name={name:?}, mode={mode})"),
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self.fs().await?.mkdir(req.into(), &path, mode).await?;
@@ -517,7 +517,7 @@ where
     fn opendir(&self, req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
         let flags = parse_open_in_flags(flags as i32); // TODO Why convert u32 -> i32 and back?
         self.run_async(
-            &format!("opendir({path:?}, flags={flags:?})"),
+            &format!("opendir({path:?}, flags={flags})"),
             async move || {
                 let path = parse_absolute_path(path)?;
                 let response = self.fs().await?.opendir(req.into(), path, flags).await?;
@@ -682,7 +682,7 @@ where
         let mode = Mode::from(mode).add_file_flag();
         // TODO Assert that dir/symlink flags aren't set
         self.run_async(
-            &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags:?})"),
+            &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags})"),
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
