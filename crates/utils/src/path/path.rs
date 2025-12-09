@@ -133,7 +133,7 @@ impl AbsolutePath {
     ///
     /// # Examples
     /// ```
-    /// use cryfs_rustfs::AbsolutePath;
+    /// use cryfs_utils::path::AbsolutePath;
     ///
     /// let path = AbsolutePath::try_from_str("/foo/bar").unwrap();
     ///
