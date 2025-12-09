@@ -96,7 +96,12 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
         let new_file = self
             .fs
-            .create(request_info(), &path, Mode::default().add_file_flag(), OpenInFlags::ReadWrite)
+            .create(
+                request_info(),
+                &path,
+                Mode::default().add_file_flag(),
+                OpenInFlags::ReadWrite,
+            )
             .await?;
         self.fs
             .release(
@@ -119,7 +124,12 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
         let new_file = self
             .fs
-            .create(request_info(), &path, Mode::default().add_file_flag(), OpenInFlags::ReadWrite)
+            .create(
+                request_info(),
+                &path,
+                Mode::default().add_file_flag(),
+                OpenInFlags::ReadWrite,
+            )
             .await?;
         Ok((path, new_file.fh))
     }
@@ -265,8 +275,18 @@ impl FilesystemDriver for FusemtFilesystemDriver {
 
     async fn readdir(&self, node: Option<Self::NodeHandle>) -> FsResult<Vec<(String, NodeKind)>> {
         let node = node.unwrap_or_else(AbsolutePathBuf::root);
-        let fh = self.fs.opendir(request_info(), &node, OpenInFlags::Read).await?.fh;
-        let entries = self.fs.readdir(request_info(), &node, fh).await?;
+        let fh = self
+            .fs
+            .opendir(request_info(), &node, OpenInFlags::Read)
+            .await?
+            .fh;
+        let read_result = self.fs.readdir(request_info(), &node, fh).await;
+        let release_result = self
+            .fs
+            .releasedir(request_info(), &node, fh, OpenInFlags::Read)
+            .await;
+        let entries = read_result?;
+        release_result?;
         Ok(entries
             .into_iter()
             .map(|entry| match entry {

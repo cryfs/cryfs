@@ -735,9 +735,16 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                 .await?
                 .fh;
             let mut reply = ReplyDirectoryImpl::default();
-            self.fs
+            let read_result = self
+                .fs
                 .readdir(&request_info(), ino, fh, 0, &mut reply)
-                .await?;
+                .await;
+            let release_result = self
+                .fs
+                .releasedir(&request_info(), ino, fh, OpenInFlags::Read)
+                .await;
+            read_result?;
+            release_result?;
             Ok(reply.entries)
         })
         .await?;
