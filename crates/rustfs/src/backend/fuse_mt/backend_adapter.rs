@@ -1,3 +1,4 @@
+use cryfs_utils::safe_panic;
 use fuse_mt::{
     CallbackResult, CreatedEntry, FileAttr, FilesystemMT, RequestInfo, ResultCreate, ResultData,
     ResultEmpty, ResultEntry, ResultOpen, ResultReaddir, ResultSlice, ResultStatfs, ResultWrite,
@@ -725,10 +726,9 @@ where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     fn drop(&mut self) {
-        // TODO
-        // if !self.fs.read().is_dropped() {
-        //     safe_panic!("BackendAdapter dropped without calling destroy() first");
-        // }
+        if !self.fs.blocking_read().is_dropped() {
+            safe_panic!("BackendAdapter dropped without calling destroy() first");
+        }
     }
 }
 
