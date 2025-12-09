@@ -133,7 +133,8 @@ impl Dir for PassthroughDir {
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         let node = PassthroughDir::new(path.clone());
         // TODO Return value directly without another call but make sure it returns the same value
-        let attrs = PassthroughNode::new(path).getattr().await?;
+        let child_node = PassthroughNode::new(path);
+        let attrs = with_async_drop_2!(child_node, { child_node.getattr().await })?;
         Ok((attrs, AsyncDropGuard::new(node)))
     }
 
@@ -171,9 +172,11 @@ impl Dir for PassthroughDir {
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         // TODO Return value directly without another call but make sure it returns the same value
         let node = PassthroughNode::new(path);
-        let attrs = node.getattr().await?;
-        let symlink = node.as_symlink().await?;
-        Ok((attrs, symlink))
+        with_async_drop_2!(node, {
+            let attrs = node.getattr().await?;
+            let symlink = node.as_symlink().await?;
+            Ok((attrs, symlink))
+        })
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
