@@ -20,10 +20,10 @@ use cryfs_utils::{
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute, here and elsewhere.
 
 // TODO Set these TTLs to the fuse defaults
-const TTL_GETATTR: Duration = Duration::from_secs(0);
-const TTL_MKDIR: Duration = Duration::from_secs(0);
-const TTL_SYMLINK: Duration = Duration::from_secs(0);
-const TTL_CREATE: Duration = Duration::from_secs(0);
+const TTL_GETATTR: Duration = Duration::from_secs(1);
+const TTL_MKDIR: Duration = Duration::from_secs(1);
+const TTL_SYMLINK: Duration = Duration::from_secs(1);
+const TTL_CREATE: Duration = Duration::from_secs(1);
 
 pub struct ObjectBasedFsAdapter<Fs>
 where
