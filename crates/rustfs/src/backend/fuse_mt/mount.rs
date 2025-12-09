@@ -11,8 +11,6 @@ use crate::common::FsError;
 use crate::high_level_api::{AsyncFilesystem, IntoFs};
 use cryfs_utils::async_drop::AsyncDrop;
 
-// TODO fuser backend has two more arguments that are missing here: mount_options, on_successfully_mounted
-
 pub async fn mount<Fs>(
     fs: impl IntoFs<Fs>,
     mountpoint: impl AsRef<Path>,
