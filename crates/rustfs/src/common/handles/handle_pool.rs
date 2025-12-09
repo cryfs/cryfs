@@ -2,9 +2,12 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use derive_more::Display;
+
 use crate::common::handles::handle_trait::HandleTrait;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
+#[display("{handle}.{generation}")]
 pub struct HandleWithGeneration<Handle> {
     pub handle: Handle,
     pub generation: u64,

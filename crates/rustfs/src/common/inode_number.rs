@@ -1,10 +1,10 @@
 use std::{cmp::PartialOrd, num::NonZeroU64};
 
-use derive_more::{From, Into};
+use derive_more::{Display, From, Into};
 
 use crate::common::HandleTrait;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From, Into)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From, Into, Display)]
 pub struct InodeNumber {
     // Using NonZeroU64 to get a niche for optimizing Option<InodeNumber>
     v: NonZeroU64,

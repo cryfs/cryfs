@@ -176,6 +176,8 @@ where
                 )),
             )
             .expect("Failed to insert rootdir because it already exists in the forest");
+
+        log::debug!("Inode {FUSE_ROOT_ID}: Added rootdir inode");
     }
 
     fn _lookup_node(
@@ -189,11 +191,11 @@ where
             .now_or_never()
             .ok_or_else(|| {
                 // Invariant B violated, but this can happen if the kernel gives us wrong inode numbers, so treating it as InvalidOperation
-                log::error!("Tried to load inode but inode number {ino:?} is still loading");
+                log::error!("inode {ino}: Tried to load inode but it is still loading");
                 FsError::InvalidOperation
             })??
             .ok_or_else(|| {
-                log::error!("Tried to load inode but inode number {ino:?} isn't assigned");
+                log::error!("inode {ino}: Tried to load inode but inode number isn't assigned");
                 FsError::InvalidOperation
             })
     }
@@ -204,7 +206,7 @@ where
     ) -> FsResult<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, InodeNumber)> {
         let mut inner = self.inner.lock().await;
         let inode_tree_node = inner.inode_forest.get(&ino).ok_or_else(|| {
-            log::error!("Tried to get inode info for unknown inode {ino:?}");
+            log::error!("inode {ino}: Tried to get inode info for unknown inode");
             FsError::InvalidOperation
         })?;
         let parent_ino = inode_tree_node
@@ -265,12 +267,14 @@ where
 
             match insert_result {
                 Err(TryInsertError::ParentNotFound) => {
-                    log::error!("Tried to add inode under unknown parent inode {parent_ino:?}");
+                    log::error!(
+                        "Inode: {parent_ino}: Tried to add inode under unknown parent inode {parent_ino}"
+                    );
                     return Err(FsError::InvalidOperation);
                 }
                 Err(TryInsertError::AlreadyExists) => {
                     log::error!(
-                        "Tried to add already existng inode {name_clone} under parent inode {parent_ino:?}"
+                        "Inode: {parent_ino}: Tried to add already existng inode {name_clone} under parent inode {parent_ino}"
                     );
                     return Err(FsError::NodeAlreadyExists);
                 }
@@ -282,8 +286,8 @@ where
                         .expect("We checked above that parent exists")
                         .value_mut()
                         .increment_refcount();
-                    log::info!(
-                        "New inode {new_child_ino:?}: parent={parent_ino:?}, name={name_clone}"
+                    log::debug!(
+                        "Inode {new_child_ino}: Added with parent={parent_ino}, name={name_clone}"
                     );
                     Ok(new_child_ino)
                 }
@@ -320,7 +324,7 @@ where
             Err(GetChildOfError::ParentNotFound) => {
                 // Invariant B violated, but this can happen if the kernel gives us wrong inode numbers, so treating it as InvalidOperation
                 log::error!(
-                    "Tried to add/increment inode under unknown parent inode {parent_ino:?}"
+                    "Inode {parent_ino}: Tried to add/increment inode under unknown parent inode {parent_ino}"
                 );
                 Err(FsError::InvalidOperation)
             }
@@ -329,7 +333,7 @@ where
 
                 let name_clone = name.clone();
                 let (child_ino, node) = self._add_new(inner, parent_ino, name, loading_fn).await?;
-                log::info!("New inode: parent={parent_ino:?}, name={name_clone}");
+                log::debug!("Inode {child_ino}: Added with parent={parent_ino}, name={name_clone}");
                 Ok((child_ino, node))
 
                 // Fulfilling invariants: See comments in [Self::_add_new]
@@ -346,7 +350,9 @@ where
 
                 let inode = Self::_wait_for_node_loaded(node_future).await?;
 
-                log::info!("Existing inode {child_ino:?}: parent={parent_ino:?}, name={name}");
+                log::debug!(
+                    "Inode {child_ino}: Found existing with parent={parent_ino}, name={name}"
+                );
                 Ok((child_ino, inode))
 
                 // Fulfilling invariants:
@@ -413,14 +419,15 @@ where
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
         let inodes = inner.inodes.clone_ref();
         let (new_child_ino, new_node) = with_async_drop_2!(inodes, {
-            let insert_result = inner
-                .inode_forest
-                .try_insert(
-                    parent_ino,
-                    name,
-                    parent_node,
-                    async |parent_node, new_child_ino| {
-                        let inserting = inodes
+            let insert_result =
+                inner
+                    .inode_forest
+                    .try_insert(
+                        parent_ino,
+                        name,
+                        parent_node,
+                        async |parent_node, new_child_ino| {
+                            let inserting = inodes
                             .try_insert_loading(new_child_ino.handle, async move || {
                                 // It's ok to capture the parent_node in this lambda, because
                                 // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
@@ -437,17 +444,15 @@ where
                                 "Invariant D violated: entry for a new inode number already exists",
                             );
 
-                        InodeTreeNode::new(
-                            AsyncDropShared::new(
+                            InodeTreeNode::new(AsyncDropShared::new(
                                 async move {
                                     AsyncDropResult::new(inserting.wait_until_inserted().await)
                                 }
                                 .boxed(),
-                            ),
-                        )
-                    },
-                )
-                .await;
+                            ))
+                        },
+                    )
+                    .await;
 
             match insert_result {
                 Ok((new_child_ino, new_node)) => Ok((new_child_ino, new_node)),
@@ -483,6 +488,9 @@ where
                 // If loading failed, then ConcurrentStore already removed it from self.inodes, and our future in inode_forest is now invalid.
                 // Let's just remove it from inode_forest as well to keep things consistent and re-establish invariant E1.
                 let mut inner = self.inner.lock().await;
+                log::debug!(
+                    "Inode {new_child_ino}: Loading failed, cleaned up its entry from InodeList"
+                );
                 assert!(
                     // TODO Is this assertion a race condition? Could it be that removal from self.inodes is delayed?
                     inner.inodes.is_fully_absent(&new_child_ino.handle),
@@ -521,6 +529,7 @@ where
                     }
                 }
                 drop_result?;
+                log::debug!("Inode {new_child_ino}: cleaned up");
                 Err(err)
             }
         }
@@ -545,6 +554,7 @@ where
         }
 
         let inner = self.inner.lock().await;
+        log::debug!("Inode {ino}: Forgetting nlookup={nlookup}");
         self._decrease_refcount(inner, ino, nlookup)
             .await
             .map_err(|err| match err {
@@ -563,7 +573,7 @@ where
         nlookup: u64,
     ) -> Result<(), DecrementRefcountError> {
         let Some(inode) = inner.inode_forest.get_mut(&ino) else {
-            log::error!("Tried to forget unknown inode {ino:?}");
+            log::error!("Inode {ino}: Tried to forget unknown inode");
             return Err(DecrementRefcountError::NodeNotFound);
         };
 
@@ -701,6 +711,10 @@ where
                         "Invariant E1 violated: Parent inode has refcount == 0 but still has children"
                     );
 
+                    log::debug!(
+                        "Inode {parent_ino}: Refcount went to zero after removing child {child_ino}, continuing removal up the tree"
+                    );
+
                     // It was already removed from the ConcurrentStore because the last reference just got removed.
                     // So we can continue our removal algorithm up the tree.
                     child_ino = parent_ino;
@@ -733,6 +747,7 @@ where
         // TODO After unlink, the kernel could try to re-enter a node ad parent_ino/name again.
         //      We support that here, but does CryNode support that correctly? The previous child node might still exist and stored in the orphaned inode.
         let mut inner = self.inner.lock().await;
+        log::debug!("Inode {parent_ino} / {name}: Making into orphan");
         inner.inode_forest.make_node_into_orphan(&parent_ino, name)
 
         // Fulfilling invariants:
@@ -754,6 +769,9 @@ where
         new_name: PathComponentBuf,
     ) -> Result<(), MoveInodeError> {
         let mut inner = self.inner.lock().await;
+        log::debug!(
+            "Inode {old_parent_ino} / {old_name} -> {new_parent_ino} / {new_name}: Moving inode"
+        );
         let move_result = inner
             .inode_forest
             .move_node(old_parent_ino, old_name, new_parent_ino, new_name)
