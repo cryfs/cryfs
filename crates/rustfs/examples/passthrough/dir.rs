@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    AbsolutePathBuf, DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, PathComponent,
-    Uid,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
     object_based_api::{Dir, Node},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    path::{AbsolutePathBuf, PathComponent},
     with_async_drop_2,
 };
 use nix::fcntl::{AT_FDCWD, AtFlags};

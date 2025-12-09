@@ -6,7 +6,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::num::NonZeroU8;
-use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 use super::checks::{AllChecks, BlobToProcess, NodeToProcess};
@@ -19,7 +18,7 @@ use crate::error::{
 use crate::{
     BlobInfoAsSeenByLookingAtBlob, BlobReference, BlobReferenceWithId,
     MaybeNodeInfoAsSeenByLookingAtNode, NodeAndBlobReference,
-    NodeAndBlobReferenceFromReachableBlob, NodeInfoAsSeenByLookingAtNode, NodeReference,
+    NodeAndBlobReferenceFromReachableBlob, NodeReference,
 };
 use cryfs_blobstore::{
     BlobId, BlobStore, BlobStoreOnBlocks, DataNode, DataNodeStore, DataTreeStore,
@@ -30,11 +29,10 @@ use cryfs_filesystem::{
     config::ConfigLoadResult,
     filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
 };
-// TODO Move AbsolutePathBuf to common crate and remove dependency on cryfs_rustfs.
-use cryfs_rustfs::AbsolutePathBuf;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     containers::{HashMapExt, OccupiedError},
+    path::AbsolutePathBuf,
     progress::{Progress, ProgressBarManager, Spinner},
 };
 

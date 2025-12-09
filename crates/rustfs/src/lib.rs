@@ -7,9 +7,9 @@ pub mod low_level_api;
 
 mod common;
 pub use common::{
-    AbsolutePath, AbsolutePathBuf, AtimeUpdateBehavior, DirEntry, DirEntryOrReference, FileHandle,
-    FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags,
-    OpenOutFlags, ParsePathError, PathComponent, PathComponentBuf, RequestInfo, Statfs, Uid,
+    AtimeUpdateBehavior, DirEntry, DirEntryOrReference, FileHandle, FsError, FsResult, Gid,
+    InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags, OpenOutFlags, RequestInfo,
+    Statfs, Uid,
 };
 
 pub mod backend;

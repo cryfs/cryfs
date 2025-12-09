@@ -9,10 +9,11 @@ use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlo
 use crate::filesystem::fsblobstore::BlobType;
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{
-    AtimeUpdateBehavior, FsError, FsResult, Mode, NodeAttrs, NumBytes, PathComponentBuf,
+use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, Mode, NodeAttrs, NumBytes};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::PathComponentBuf,
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO The ancestor_checks_on_move feature implements checks that when moving a node to a different directory,
 //      it doesn't get moved into an ancestor or child of itself. But it requires that `NodeInfo` remembers the blob ids

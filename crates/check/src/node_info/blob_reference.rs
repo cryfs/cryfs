@@ -1,6 +1,6 @@
 use cryfs_blobstore::BlobId;
 use cryfs_filesystem::filesystem::fsblobstore::BlobType;
-use cryfs_rustfs::AbsolutePathBuf;
+use cryfs_utils::path::AbsolutePathBuf;
 
 /// Reference to a blob as seen by looking at its parent dir blob
 #[derive(PartialEq, Debug, Eq, PartialOrd, Ord, Hash, Clone)]

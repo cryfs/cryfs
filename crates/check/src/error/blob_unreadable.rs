@@ -48,7 +48,7 @@ impl Display for BlobUnreadableError {
 mod tests {
     use console::strip_ansi_codes;
     use cryfs_filesystem::filesystem::fsblobstore::BlobType;
-    use cryfs_rustfs::AbsolutePathBuf;
+    use cryfs_utils::path::AbsolutePathBuf;
 
     use super::*;
 

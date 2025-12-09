@@ -18,12 +18,13 @@ use crate::filesystem::fsblobstore::FlushBehavior;
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, PathComponent, Uid,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
     object_based_api::Dir,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     with_async_drop_2,
+    path::PathComponent,
 };
 
 #[derive(Debug)]

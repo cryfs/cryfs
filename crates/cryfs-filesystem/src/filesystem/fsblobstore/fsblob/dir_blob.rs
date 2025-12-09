@@ -12,8 +12,11 @@ use crate::{
 };
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
-use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, PathComponent, PathComponentBuf};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::{PathComponent, PathComponentBuf},
+};
 
 use super::dir_entries::{DirEntry, DirEntryList, EntryType};
 

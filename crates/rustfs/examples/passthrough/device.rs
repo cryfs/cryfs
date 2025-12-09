@@ -1,10 +1,11 @@
 use async_trait::async_trait;
 
 use super::errors::{IoResultExt, NixResultExt};
-use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FsError, FsResult, Statfs, object_based_api::Device,
+use cryfs_rustfs::{FsError, FsResult, Statfs, object_based_api::Device};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::{AbsolutePath, AbsolutePathBuf},
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::dir::PassthroughDir;
 use super::file::PassthroughFile;

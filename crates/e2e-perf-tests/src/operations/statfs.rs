@@ -4,6 +4,7 @@ use crate::test_driver::{TestDriver, TestReady};
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
+use cryfs_utils::path::PathComponent;
 
 crate::perf_test_macro::perf_test!(statfs, [empty_filesystem, with_content]);
 
@@ -42,19 +43,13 @@ fn with_content(test_driver: impl TestDriver) -> impl TestReady {
         .setup(async move |fixture| {
             let dir = fixture
                 .filesystem
-                .mkdir(
-                    None,
-                    cryfs_rustfs::PathComponent::try_from_str("testdir").unwrap(),
-                )
+                .mkdir(None, PathComponent::try_from_str("testdir").unwrap())
                 .await
                 .unwrap();
 
             fixture
                 .filesystem
-                .create_file(
-                    None,
-                    cryfs_rustfs::PathComponent::try_from_str("rootfile.txt").unwrap(),
-                )
+                .create_file(None, PathComponent::try_from_str("rootfile.txt").unwrap())
                 .await
                 .unwrap();
 
@@ -62,7 +57,7 @@ fn with_content(test_driver: impl TestDriver) -> impl TestReady {
                 .filesystem
                 .create_file(
                     Some(dir),
-                    cryfs_rustfs::PathComponent::try_from_str("subfile.txt").unwrap(),
+                    PathComponent::try_from_str("subfile.txt").unwrap(),
                 )
                 .await
                 .unwrap();

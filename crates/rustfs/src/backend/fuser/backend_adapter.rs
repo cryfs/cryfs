@@ -15,15 +15,15 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::{OwnedRwLockReadGuard, RwLock, RwLockWriteGuard};
 
-use crate::PathComponent;
 use crate::common::{
     Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
-    OpenInFlags, OpenOutFlags, PathComponentBuf, RequestInfo, Statfs, Uid,
+    OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{
     self, AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult, ReplyDirectoryPlus,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
 // TODO Check if any of the APIs in the high or low level interface would benefit from replacing Vec<> with impl Iterator
 

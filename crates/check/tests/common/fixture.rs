@@ -15,7 +15,7 @@ use cryfs_filesystem::{
     filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
     localstate::LocalStateDir,
 };
-use cryfs_rustfs::AbsolutePathBuf;
+use cryfs_utils::path::AbsolutePathBuf;
 use cryfs_utils::{
     async_drop::{AsyncDropGuard, SyncDrop},
     progress::SilentProgressBarManager,

@@ -39,7 +39,7 @@ mod tests {
     use super::*;
 
     use console::strip_ansi_codes;
-    use cryfs_rustfs::AbsolutePathBuf;
+    use cryfs_utils::path::AbsolutePathBuf;
 
     #[test]
     fn test_display() {

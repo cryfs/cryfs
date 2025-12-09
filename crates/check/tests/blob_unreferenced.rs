@@ -12,7 +12,7 @@ use cryfs_filesystem::{
     filesystem::fsblobstore::{FlushBehavior, FsBlob},
     utils::fs_types::{Gid, Uid},
 };
-use cryfs_rustfs::AbsolutePathBuf;
+use cryfs_utils::path::AbsolutePathBuf;
 use cryfs_utils::{
     data::Data, testutils::asserts::assert_unordered_vec_eq, testutils::data_fixture::DataFixture,
 };

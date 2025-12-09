@@ -7,8 +7,11 @@ use std::time::SystemTime;
 
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::BlobId;
-use cryfs_rustfs::{FsError, FsResult, PathComponent, PathComponentBuf};
-use cryfs_utils::binary::{read_null_string, read_timespec, write_null_string, write_timespec};
+use cryfs_rustfs::{FsError, FsResult};
+use cryfs_utils::{
+    binary::{read_null_string, read_timespec, write_null_string, write_timespec},
+    path::{PathComponent, PathComponentBuf},
+};
 
 // TODO Unify this with the BlobType enum from this very same crate?
 

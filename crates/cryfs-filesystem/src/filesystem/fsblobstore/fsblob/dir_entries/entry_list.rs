@@ -8,7 +8,8 @@ use super::super::base_blob::BaseBlob;
 use super::entry::{DirEntry, EntryType};
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, PathComponent, PathComponentBuf};
+use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult};
+use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
 #[derive(Debug)]
 pub struct DirEntryList {

@@ -12,11 +12,13 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Gid, Mode, NodeAttrs, NodeKind,
-    NumBytes, OpenInFlags, PathComponent, Statfs, Uid, high_level_api::AsyncFilesystem as _,
-    object_based_api::ObjectBasedFsAdapter,
+    Callback, FileHandle, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags, Statfs,
+    Uid, high_level_api::AsyncFilesystem as _, object_based_api::ObjectBasedFsAdapter,
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    path::{AbsolutePath, AbsolutePathBuf, PathComponent},
+};
 use std::time::SystemTime;
 
 type Device = CryDevice<

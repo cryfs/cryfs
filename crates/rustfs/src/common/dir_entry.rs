@@ -1,5 +1,5 @@
 use super::NodeKind;
-use crate::common::PathComponentBuf;
+use cryfs_utils::path::PathComponentBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DirEntry {

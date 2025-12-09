@@ -6,9 +6,10 @@ use crate::{
     NodeKind,
     common::{
         Callback, FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
-        NumBytes, OpenInFlags, OpenOutFlags, PathComponent, RequestInfo, Statfs, Uid,
+        NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
     },
 };
+use cryfs_utils::path::PathComponent;
 
 // TODO Can we deduplicate some of these Reply types with the high level Response types? Also, unify naming. Reply+Response are one name too many.
 

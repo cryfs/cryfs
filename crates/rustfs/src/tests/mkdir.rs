@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use cryfs_utils::path::{AbsolutePath, PathComponent};
 use mockall::predicate::{always, eq};
 use nix::errno::Errno;
 use rstest::rstest;
@@ -11,8 +12,8 @@ use super::utils::{
     make_mock_filesystem,
 };
 use crate::common::{
-    AbsolutePath, FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
-    NodeKind, NumBytes, PathComponent, RequestInfo, Uid,
+    FsError, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
+    RequestInfo, Uid,
 };
 use crate::low_level_api::ReplyEntry;
 

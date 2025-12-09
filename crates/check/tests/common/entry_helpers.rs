@@ -23,9 +23,10 @@ use cryfs_filesystem::{
     filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
     utils::fs_types::{Gid, Mode, Uid},
 };
-use cryfs_rustfs::{AbsolutePathBuf, FsError};
+use cryfs_rustfs::FsError;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    path::AbsolutePathBuf,
     with_async_drop_2,
 };
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};

@@ -3,9 +3,10 @@ use derive_more::Debug;
 use std::time::{Duration, SystemTime};
 
 use crate::common::{
-    AbsolutePath, Callback, DirEntryOrReference, FileHandle, FsResult, Gid, Mode, NodeAttrs,
-    NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
+    Callback, DirEntryOrReference, FileHandle, FsResult, Gid, Mode, NodeAttrs, NumBytes,
+    OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
 };
+use cryfs_utils::path::AbsolutePath;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct AttrResponse {

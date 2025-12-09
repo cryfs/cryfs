@@ -9,9 +9,8 @@ use crate::utils::maybe_close;
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
-use cryfs_rustfs::AbsolutePath;
 use cryfs_rustfs::NumBytes;
-use cryfs_rustfs::PathComponent;
+use cryfs_utils::path::{AbsolutePath, PathComponent};
 
 // TODO Same TODOs as in release.rs
 //    - Some flush operations in here seem to load blocks in low_level, i.e. below the cache??? Why is that? If it's not loaded, shouldn't we just ignore it since it's already flushed? Also, generally, for a simple flush, there's a lot of operations going on in the high level stores.

@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc},
+    path::PathComponent,
+};
 use mockall::mock;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
@@ -10,7 +13,7 @@ use crate::low_level_api::ReplyXTimes;
 use crate::{
     common::{
         Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenInFlags,
-        PathComponent, RequestInfo, Statfs, Uid,
+        RequestInfo, Statfs, Uid,
     },
     low_level_api::{
         AsyncFilesystemLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory, ReplyDirectoryPlus,

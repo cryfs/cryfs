@@ -1,11 +1,14 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags,
-    PathComponent, PathComponentBuf, Uid, object_based_api::Dir,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags, Uid,
+    object_based_api::Dir,
 };
-use cryfs_utils::async_drop::AsyncDrop;
-use cryfs_utils::with_async_drop_2;
-use cryfs_utils::{async_drop::AsyncDropGuard, mutex::lock_in_ptr_order};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    mutex::lock_in_ptr_order,
+    path::{PathComponent, PathComponentBuf},
+    with_async_drop_2,
+};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::{Arc, Mutex};

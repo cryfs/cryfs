@@ -1,8 +1,7 @@
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
-use cryfs_rustfs::AbsolutePath;
-use cryfs_rustfs::PathComponent;
+use cryfs_utils::path::{AbsolutePath, PathComponent};
 
 use crate::filesystem_driver::FilesystemDriver;
 use crate::filesystem_fixture::ActionCounts;

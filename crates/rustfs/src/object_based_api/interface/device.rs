@@ -3,9 +3,10 @@ use std::fmt::Debug;
 
 use super::dir::Dir;
 use super::node::Node;
-use crate::common::{AbsolutePath, FsError, FsResult, Statfs};
+use crate::common::{FsError, FsResult, Statfs};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    path::AbsolutePath,
     with_async_drop_2,
 };
 

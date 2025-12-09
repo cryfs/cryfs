@@ -6,14 +6,15 @@ use std::time::{Duration, SystemTime};
 use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
-    AbsolutePath, Callback, DirEntryOrReference, FileHandle, FsError, FsResult, Gid,
-    HandleTrait as _, Mode, NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
+    Callback, DirEntryOrReference, FileHandle, FsError, FsResult, Gid, HandleTrait as _, Mode,
+    NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    path::AbsolutePath,
     with_async_drop_2,
 };
 

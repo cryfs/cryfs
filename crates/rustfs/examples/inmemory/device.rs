@@ -3,12 +3,13 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use cryfs_rustfs::{
-    AbsolutePath, FsError, FsResult, Gid, Mode, Statfs, Uid,
+    FsError, FsResult, Gid, Mode, Statfs, Uid,
     object_based_api::{Device, Node},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     mutex::lock_in_ptr_order,
+    path::AbsolutePath,
     with_async_drop_2,
 };
 

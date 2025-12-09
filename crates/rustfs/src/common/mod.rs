@@ -31,9 +31,6 @@ pub use statfs::Statfs;
 mod uid;
 pub use uid::Uid;
 
-mod path;
-pub use path::{AbsolutePath, AbsolutePathBuf, ParsePathError, PathComponent, PathComponentBuf};
-
 mod handles;
 pub use handles::{HandleMap, HandlePool, HandleTrait, HandleWithGeneration};
 

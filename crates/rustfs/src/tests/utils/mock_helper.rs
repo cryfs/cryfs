@@ -1,11 +1,11 @@
+use cryfs_utils::path::{AbsolutePath, PathComponent};
 use mockall::predicate::{always, eq};
 use std::num::NonZeroU64;
 use std::time::{Duration, SystemTime};
 
 use super::MockAsyncFilesystemLL;
 use crate::common::{
-    AbsolutePath, FsError, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs, NodeKind,
-    NumBytes, PathComponent, Uid,
+    FsError, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes, Uid,
 };
 use crate::low_level_api::ReplyEntry;
 

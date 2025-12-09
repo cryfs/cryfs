@@ -1,8 +1,11 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, PathComponent, Uid};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, Uid};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::PathComponent,
+};
 
 #[async_trait]
 pub trait Dir: AsyncDrop + Debug + Sized {

@@ -4,9 +4,12 @@ use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
 
 use cryfs_rustfs::{
-    AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
+    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::AbsolutePathBuf,
+};
 
 use super::errors::{IoResultExt, NixResultExt};
 use super::utils::{convert_metadata, convert_timespec};

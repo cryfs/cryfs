@@ -24,11 +24,13 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes,
-    PathComponent, Statfs, Uid,
+    FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, Statfs, Uid,
     backend::{BackgroundSession, RunningFilesystem},
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    path::{AbsolutePath, AbsolutePathBuf, PathComponent},
+};
 use std::os::unix::io::AsRawFd;
 
 pub trait MountingBackend {

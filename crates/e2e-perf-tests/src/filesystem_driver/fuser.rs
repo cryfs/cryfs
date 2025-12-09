@@ -17,12 +17,15 @@ use cryfs_blockstore::{
 };
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode,
-    NodeAttrs, NodeKind, NumBytes, OpenInFlags, PathComponent, Statfs, Uid,
+    Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
+    OpenInFlags, Statfs, Uid,
     low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    path::{AbsolutePath, AbsolutePathBuf, PathComponent},
+};
 
 pub trait FuserCacheBehavior: Send + Sync {
     type NodeHandle: Debug + Clone;

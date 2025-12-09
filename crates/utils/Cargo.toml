@@ -43,6 +43,7 @@ tokio = { workspace = true, features = [
     "fs",
 ] }
 tokio-util.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 common_macros.workspace = true
@@ -52,6 +53,7 @@ generic-tests.workspace = true
 rand = { workspace = true, features = ["small_rng"] }
 rayon.workspace = true
 rstest.workspace = true
+rstest_reuse.workspace = true
 tempdir.workspace = true
 # TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
 lockable = {workspace = true, features = ["slow_assertions"]}

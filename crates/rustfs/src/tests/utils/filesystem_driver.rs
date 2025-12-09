@@ -1,7 +1,8 @@
+use cryfs_utils::path::AbsolutePathBuf;
 use nix::{Result, unistd};
 use std::path::PathBuf;
 
-use crate::{AbsolutePathBuf, Mode};
+use crate::Mode;
 
 // TODO Unify this with [cryfs_e2e_tests:::FilesystemDriver]
 

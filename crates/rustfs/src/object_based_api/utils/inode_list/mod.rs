@@ -17,8 +17,8 @@ use tokio::sync::{Mutex, MutexGuard};
 use cryfs_utils::async_drop::AsyncDropGuard;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropResult, AsyncDropShared};
 
+use crate::FsResult;
 use crate::InodeNumber;
-use crate::PathComponentBuf;
 use crate::common::HandleWithGeneration;
 use crate::object_based_api::utils::inode_list::handle_forest::{
     DelayedHandleRelease, GetChildOfError, HandleForest, MoveInodeSuccess, TryInsertError,
@@ -26,7 +26,7 @@ use crate::object_based_api::utils::inode_list::handle_forest::{
 };
 use crate::object_based_api::utils::inode_list::inode_tree_node::RefcountInfo;
 use crate::{FsError, object_based_api::Device};
-use crate::{FsResult, PathComponent};
+use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
 pub const FUSE_ROOT_ID: InodeNumber =
     InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID).unwrap());

@@ -14,7 +14,7 @@ use crate::{
     DirEntry,
     common::{
         Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenInFlags,
-        OpenOutFlags, PathComponent, RequestInfo, Statfs, Uid,
+        OpenOutFlags, RequestInfo, Statfs, Uid,
     },
     low_level_api::{
         AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory,
@@ -25,6 +25,7 @@ use crate::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
+    path::PathComponent,
     with_async_drop_2,
 };
 

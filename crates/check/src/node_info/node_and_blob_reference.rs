@@ -81,7 +81,7 @@ mod tests {
     use cryfs_blobstore::BlobId;
     use cryfs_blockstore::BlockId;
     use cryfs_filesystem::filesystem::fsblobstore::BlobType;
-    use cryfs_rustfs::AbsolutePathBuf;
+    use cryfs_utils::path::AbsolutePathBuf;
 
     fn _test_node_info_and_blob_info(node_info: NodeReference, blob_info: BlobReferenceWithId) {
         let converted = NodeAndBlobReference::from(NodeAndBlobReferenceFromReachableBlob {

@@ -6,8 +6,7 @@ use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
-use cryfs_rustfs::AbsolutePath;
-use cryfs_rustfs::PathComponent;
+use cryfs_utils::path::{AbsolutePath, PathComponent};
 
 // only run fuser tests since fuse-mt doesn't have a lookup operation
 crate::perf_test_macro::perf_test_only_fuser!(

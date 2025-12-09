@@ -6,8 +6,7 @@ use crate::test_driver::TestReady;
 use cryfs_blobstore::BlobStoreActionCounts;
 use cryfs_blockstore::HLActionCounts;
 use cryfs_blockstore::LLActionCounts;
-use cryfs_rustfs::AbsolutePath;
-use cryfs_rustfs::PathComponent;
+use cryfs_utils::path::{AbsolutePath, PathComponent};
 
 crate::perf_test_macro::perf_test!(
     rename,

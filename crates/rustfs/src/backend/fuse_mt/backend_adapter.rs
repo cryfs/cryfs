@@ -12,12 +12,14 @@ use std::time::SystemTime;
 use tokio::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::common::{
-    AbsolutePath, AbsolutePathBuf, Callback, DirEntryOrReference, FileHandle, FsError, FsResult,
-    Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags, OpenOutFlags, PathComponent, Statfs,
-    Uid,
+    Callback, DirEntryOrReference, FileHandle, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind,
+    NumBytes, OpenInFlags, OpenOutFlags, Statfs, Uid,
 };
 use crate::high_level_api::AsyncFilesystem;
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    path::{AbsolutePath, AbsolutePathBuf, PathComponent},
+};
 
 // (all these TODOs apply to here and to the fuser backend)
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute

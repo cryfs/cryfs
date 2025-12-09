@@ -12,10 +12,11 @@ use std::sync::atomic::Ordering;
 use std::{fmt::Debug, time::Instant};
 
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{
-    AbsolutePath, FsError, FsResult, PathComponent, Statfs, object_based_api::Device,
+use cryfs_rustfs::{FsError, FsResult, Statfs, object_based_api::Device};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    path::{AbsolutePath, PathComponent},
 };
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 use super::{
     dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
