@@ -1,21 +1,3 @@
-// TODO Will lookup() be called multiple times with the same parent+name, before the previous one is forgotten, and is it ok to give the second call a different inode while the first call is still ongoing?
-//      Seems not, `cp -R ~/mountdir/.cargo ~/.cargo.copy` (after `cp -R ~/.cargo ~/mountdir/`) is complaining when inodes change between stat and opening the file, see https://github.com/coreutils/coreutils/blob/b8675fe98cc38e9a49afec52f4102d330d9aaa27/src/copy.c#L775
-//      Note that fuse-mt also increases lookup count and ensures that inodes for the same path stay consistent until the inode is forgotten
-//      Main differences to fuse-mt:
-//       * keeps path -> inode reverse mapping and reuses inode assignments if they're looked up again. Remembers lookup count and only frees inode if it goes to zero
-//         * at unlink time, it removes the reverse map but keeps the inode around until it's forgotten. Need to think about why.
-//         * also needs to deal with rename since the reverse mapping changes
-//         * but we may have to do it in a tree maybe? because we don't have a path mapping but parent_ino+name mapping.
-//      Most likely, we'll have to:
-//       * keep a ino -> (parent_ino, node_info, refcount, children) mapping
-//         * children: name->ino mapping for each loaded inode that is a direct child
-//       * forget entries from the mapping only if refcount goes to zero AND children is empty (i.e. they are all unloaded)
-//       * when forgetting an entry, also remove it from its parent's children mapping
-//       * update name mapping on rename
-//       * remove entry from `children` mapping of its parent ino on unlink/rmdir, but keep the inode itself in existence if refcount > 0
-//       * Invariant: If an inode exists in the children mapping, it also exists in the main mapping.
-//                    If an inode exists in the main mapping with refcount > 0, it may or may not exist in the children mapping, depending on whether it was deleted.
-
 use async_trait::async_trait;
 use core::panic;
 use cryfs_utils::concurrent_store::{
@@ -492,7 +474,7 @@ where
                     "Inode {new_child_ino}: Loading failed, cleaned up its entry from InodeList"
                 );
                 assert!(
-                    // TODO Is this assertion a race condition? Could it be that removal from self.inodes is delayed?
+                    // If loading failed, then ConcurrentStore already removed the entry before completing the loading future
                     inner.inodes.is_fully_absent(&new_child_ino.handle),
                     "We just checked that loading failed, so invariant C1 must be violated here"
                 );
@@ -612,7 +594,8 @@ where
                 let drop_result =
                     for_each_unordered(removed_inodes.into_iter(), |mut inode| async move {
                         inode.async_drop().await?;
-                        // TODO What to do if async_drop fails? Did the entry still get removed or ar we in an inconsistent state now?
+                        // We dropped the guard and concurrent_store::LoadedEntryGuard ensures that the entry is removed from self.inodes now.
+                        // Even if it's async_drop fails, it still removes the entry.
                         Ok::<(), FsError>(())
                     })
                     .await;

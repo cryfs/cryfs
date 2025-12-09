@@ -60,6 +60,8 @@ where
         );
         match inner.into_inner() {
             FutureOrOutput::Future(future) => {
+                // To ensure that any AsyncDropGuards that may temporarily exist in the future state,
+                // or maybe even are returned from the future, are dropped, we have to await the future here.
                 let mut output = future.await;
                 output.async_drop().await
             }
