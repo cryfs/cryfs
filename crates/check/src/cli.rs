@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_blockstore::{
@@ -105,7 +105,7 @@ pub async fn check_filesystem(
     local_state_dir: &LocalStateDir,
     password_provider: &impl PasswordProvider,
     progress_bar_manager: impl ProgressBarManager,
-) -> Result<Vec<CorruptedError>> {
+) -> Result<Vec<CorruptedError>, Arc<anyhow::Error>> {
     let blockstore = ReadOnlyBlockStore::new(blockstore);
 
     let config = load_config(
@@ -113,7 +113,8 @@ pub async fn check_filesystem(
         local_state_dir,
         password_provider,
         progress_bar_manager,
-    )?;
+    )
+    .map_err(|err| Arc::new(err.into()))?;
     print_config(&config);
 
     // TODO It currently seems to spend some seconds before getting from here in to `RecoveryRunner`. Probably to load local state or something like that. Let's add a spinner.
@@ -141,6 +142,7 @@ pub async fn check_filesystem(
     )
     .await
     .map_err(|err: CliError| err.error)?
+    .map_err(Arc::new)
 }
 
 fn load_config(
