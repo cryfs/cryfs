@@ -65,7 +65,7 @@ where
         Arc::clone(&self.fs)
     }
 
-    fn run_async<R>(
+    fn run_async<R: Debug>(
         &self,
         log_msg: &str,
         func: impl AsyncFnOnce() -> FsResult<R>,
@@ -76,7 +76,7 @@ where
             let result = func().await;
             match result {
                 Ok(ok) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {ok:?}");
                     Ok(ok)
                 }
                 Err(err) => {
@@ -143,7 +143,7 @@ where
     }
 
     fn getattr(&self, req: RequestInfo, path: &Path, fh: Option<u64>) -> ResultEntry {
-        self.run_async(&format!("getattr {path:?}"), async move || {
+        self.run_async(&format!("getattr ({path:?}, fh={fh:?})"), async move || {
             let path = parse_absolute_path(path)?;
             let response = self
                 .fs()
@@ -155,13 +155,16 @@ where
     }
 
     fn chmod(&self, req: RequestInfo, path: &Path, fh: Option<u64>, mode: u32) -> ResultEmpty {
-        self.run_async(&format!("chmod({path:?}, mode={mode})"), async move || {
-            let path = parse_absolute_path(path)?;
-            self.fs()
-                .await?
-                .chmod(req.into(), path, fh.into_fh()?, Mode::from(mode))
-                .await
-        })
+        self.run_async(
+            &format!("chmod({path:?}, fh={fh:?}, mode={mode})"),
+            async move || {
+                let path = parse_absolute_path(path)?;
+                self.fs()
+                    .await?
+                    .chmod(req.into(), path, fh.into_fh()?, Mode::from(mode))
+                    .await
+            },
+        )
     }
 
     fn chown(
@@ -173,7 +176,7 @@ where
         gid: Option<u32>,
     ) -> ResultEmpty {
         self.run_async(
-            &format!("chown({path:?}, uid={uid:?}, gid={gid:?})"),
+            &format!("chown({path:?}, fh={fh:?}, uid={uid:?}, gid={gid:?})"),
             async move || {
                 let path = parse_absolute_path(path)?;
                 self.fs()
@@ -191,13 +194,16 @@ where
     }
 
     fn truncate(&self, req: RequestInfo, path: &Path, fh: Option<u64>, size: u64) -> ResultEmpty {
-        self.run_async(&format!("truncate({path:?}, {size})"), async move || {
-            let path = parse_absolute_path(path)?;
-            self.fs()
-                .await?
-                .truncate(req.into(), path, fh.into_fh()?, NumBytes::from(size))
-                .await
-        })
+        self.run_async(
+            &format!("truncate({path:?}, fh={fh:?}, size={size})"),
+            async move || {
+                let path = parse_absolute_path(path)?;
+                self.fs()
+                    .await?
+                    .truncate(req.into(), path, fh.into_fh()?, NumBytes::from(size))
+                    .await
+            },
+        )
     }
 
     fn utimens(
@@ -231,7 +237,7 @@ where
         bkuptime: Option<SystemTime>,
         flags: Option<u32>,
     ) -> ResultEmpty {
-        self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}"), async move ||{
+        self.run_async(&format!("utimens({path:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?})"), async move ||{
             let path = parse_absolute_path(path)?;
             self.fs().await?.utimens_macos(req.into(), path, fh.into_fh()?, crtime, chgtime, bkuptime, flags).await
         })
@@ -393,7 +399,7 @@ where
         // TODO Is it ok to call block_on concurrently for multiple fs operations? Probably not.
         self.runtime.block_on(async move {
             let log_msg = format!("read({path:?}, fh={fh}, offset={offset}, size={size})");
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match parse_file_handle(fh) {
                 Err(err) => callback(Err(err.system_error_code())),
                 Ok(fh) => match parse_absolute_path(path) {
@@ -432,7 +438,7 @@ where
     ) -> ResultWrite {
         self.run_async(
             &format!(
-                "write({path:?}, fh={fh}, offset={offset}, size={data_len}, flags={flags})",
+                "write({path:?}, fh={fh}, offset={offset}, data=[{data_len} bytes], flags={flags})",
                 data_len = data.len(),
             ),
             async move || {
@@ -450,14 +456,17 @@ where
     }
 
     fn flush(&self, req: RequestInfo, path: &Path, fh: u64, lock_owner: u64) -> ResultEmpty {
-        self.run_async(&format!("flush({path:?}, fh={fh})"), async move || {
-            let fh = parse_file_handle(fh)?;
-            let path = parse_absolute_path(path)?;
-            self.fs()
-                .await?
-                .flush(req.into(), path, fh, lock_owner)
-                .await
-        })
+        self.run_async(
+            &format!("flush({path:?}, fh={fh}, lock_owner={lock_owner})"),
+            async move || {
+                let fh = parse_file_handle(fh)?;
+                let path = parse_absolute_path(path)?;
+                self.fs()
+                    .await?
+                    .flush(req.into(), path, fh, lock_owner)
+                    .await
+            },
+        )
     }
 
     fn release(
@@ -903,7 +912,7 @@ where
         match result {
             Ok(slice) => {
                 *self.result = Some((self.callback)(Ok(slice)));
-                log::info!("{}...done", self.log_msg);
+                log::info!("{}...success: [{} bytes]", self.log_msg, slice.len());
             }
             Err(err) => {
                 *self.result = Some((self.callback)(Err(err.system_error_code())));
