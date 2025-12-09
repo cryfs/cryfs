@@ -202,10 +202,6 @@ where
     }
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
-        // TODO lookup_child currently doesn't check if the node exists or not. It will always return a CryNode for the child.
-        //      This seems to work fine at the moment because any operation on the child would then fail. But it's probably better to be
-        //      safe and only return existing nodes.
-
         // TODO We shouldn't have to reload the self blob here, that's weird
         let mut self_blob = self.load_blob().await?;
 

@@ -43,9 +43,12 @@ impl Dir for PassthroughDir {
         name: &PathComponent,
     ) -> FsResult<AsyncDropGuard<PassthroughNode>> {
         // TODO cloning path and then pushing is inefficient. Allow a way to do this with just one allocation.
-        let path = self.path.clone();
-        let path = path.push(name);
-        Ok(PassthroughNode::new(path))
+        let child_path = self.path.clone().push(name);
+        if !tokio::fs::try_exists(&child_path).await.map_error()? {
+            return Err(FsError::NodeDoesNotExist);
+        }
+
+        Ok(PassthroughNode::new(child_path))
     }
 
     async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
