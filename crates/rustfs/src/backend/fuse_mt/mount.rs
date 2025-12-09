@@ -65,7 +65,6 @@ where
             return Err(e);
         }
     };
-    let session = Arc::new(Mutex::new(Some(session)));
 
     Ok(RunningFilesystem::new(session))
 }

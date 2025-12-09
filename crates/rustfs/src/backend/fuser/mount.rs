@@ -1,7 +1,6 @@
 use fuser::MountOption;
 use std::fmt::Debug;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use tokio_util::sync::CancellationToken;
 
 use super::{RunningFilesystem, backend_adapter::BackendAdapter};
@@ -60,7 +59,6 @@ where
             return Err(e);
         }
     };
-    let session = Arc::new(Mutex::new(Some(session)));
 
     Ok(RunningFilesystem::new(session))
 }

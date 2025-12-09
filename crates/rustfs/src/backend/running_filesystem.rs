@@ -45,7 +45,8 @@ impl<BS: BackgroundSession> RunningFilesystem<BS>
 where
     BS: BackgroundSession + Send + 'static,
 {
-    pub(super) fn new(session: Arc<Mutex<Option<BS>>>) -> Self {
+    pub(super) fn new(session: BS) -> Self {
+        let session = Arc::new(Mutex::new(Some(session)));
         let session_clone = session.clone();
         let unmount_atexit = AtExitHandler::new(move || {
             log::info!("Received exit signal, unmounting filesystem...");
