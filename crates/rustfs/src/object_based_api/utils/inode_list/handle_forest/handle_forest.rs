@@ -121,37 +121,50 @@ where
     // * value_fn is executed if and only if a new node is successfully inserted.
     //   * If `value_fn` is executed, a new node is successfully inserted (or we panic).
     //   * If `value_fn` was not executed, an error is returned.
-    pub async fn try_insert(
+    pub async fn try_insert<I>(
         &mut self,
         parent_handle: Handle,
         edge: EdgeKey,
-        value_fn: impl AsyncFnOnce(&HandleWithGeneration<Handle>) -> AsyncDropGuard<NodeValue>,
+        mut value_fn_input: AsyncDropGuard<I>,
+        value_fn: impl AsyncFnOnce(
+            AsyncDropGuard<I>,
+            &HandleWithGeneration<Handle>,
+        ) -> AsyncDropGuard<NodeValue>,
     ) -> Result<
         (
             HandleWithGeneration<Handle>,
             &Node<Handle, EdgeKey, NodeValue>,
         ),
         TryInsertError,
-    > {
+    >
+    where
+        I: AsyncDrop + Debug,
+    {
         let Some(parent) = self.nodes.get_mut(&parent_handle) else {
+            value_fn_input.async_drop().await.unwrap(); // TODO No unwrap
             return Err(TryInsertError::ParentNotFound);
         };
 
         let new_handle = self.handles.acquire();
 
         let Ok(_) = parent.try_insert_child(edge.clone(), new_handle.handle.clone()) else {
+            value_fn_input.async_drop().await.unwrap(); // TODO No unwrap
             self.handles.undo_acquire(new_handle.handle);
             return Err(TryInsertError::AlreadyExists);
         };
 
-        let value = value_fn(&new_handle).await;
+        let value = value_fn(value_fn_input, &new_handle).await;
 
         match self.nodes.try_insert(
             new_handle.handle.clone(),
             Node::new(parent_handle, edge, value),
         ) {
             Ok(node) => Ok((new_handle, node)),
-            Err(OccupiedError { entry: _, value: _ }) => {
+            Err(OccupiedError {
+                entry: _,
+                mut value,
+            }) => {
+                value.async_drop().await.unwrap();
                 panic!("Invariant A violated");
             }
         }

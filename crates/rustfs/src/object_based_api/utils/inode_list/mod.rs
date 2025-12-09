@@ -249,7 +249,7 @@ where
         with_async_drop_2!(inodes, {
             let insert_result = inner
                 .inode_forest
-                .try_insert(parent_ino, name, async |new_child_ino| {
+                .try_insert(parent_ino, name, node, async |node, new_child_ino| {
                     let inserted_node = inodes.try_insert_loaded(
                             new_child_ino.handle, node
                         )
@@ -415,29 +415,38 @@ where
         let (new_child_ino, new_node) = with_async_drop_2!(inodes, {
             let insert_result = inner
                 .inode_forest
-                .try_insert(parent_ino, name, async |new_child_ino| {
-                    let inserting = inodes
-                        .try_insert_loading(new_child_ino.handle, async move || {
-                            // It's ok to capture the parent_node in this lambda, because
-                            // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
-                            // * If try_insert returns Err, the lambda is never executed, but we panic below anyways.
-                            with_async_drop_2!(parent_node, {
-                                let node = loading_fn(&parent_node).await?;
-                                Ok(node)
+                .try_insert(
+                    parent_ino,
+                    name,
+                    parent_node,
+                    async |parent_node, new_child_ino| {
+                        let inserting = inodes
+                            .try_insert_loading(new_child_ino.handle, async move || {
+                                // It's ok to capture the parent_node in this lambda, because
+                                // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
+                                // * If try_insert returns Err, the lambda is never executed, but we panic below anyways.
+                                with_async_drop_2!(parent_node, {
+                                    let node = loading_fn(&parent_node).await?;
+                                    Ok(node)
+                                })
                             })
-                        })
-                        // TODO Remove this await. It only triggers async code if the inode happens to be dropping at this exact moment,
-                        //      but even so it is better to not wait for it here while having a lock on inner.
-                        .await
-                        .expect(
-                            "Invariant D violated: entry for a new inode number already exists",
-                        );
+                            // TODO Remove this await. It only triggers async code if the inode happens to be dropping at this exact moment,
+                            //      but even so it is better to not wait for it here while having a lock on inner.
+                            .await
+                            .expect(
+                                "Invariant D violated: entry for a new inode number already exists",
+                            );
 
-                    InodeTreeNode::new(AsyncDropShared::new(
-                        async move { AsyncDropResult::new(inserting.wait_until_inserted().await) }
-                            .boxed(),
-                    ))
-                })
+                        InodeTreeNode::new(
+                            AsyncDropShared::new(
+                                async move {
+                                    AsyncDropResult::new(inserting.wait_until_inserted().await)
+                                }
+                                .boxed(),
+                            ),
+                        )
+                    },
+                )
                 .await;
 
             match insert_result {
