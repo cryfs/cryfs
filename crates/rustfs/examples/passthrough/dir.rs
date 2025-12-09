@@ -116,7 +116,11 @@ impl Dir for PassthroughDir {
             .spawn_blocking(move || {
                 // TODO Make this platform independent
                 // TODO Don't use unwrap
-                nix::unistd::mkdir(path_clone.as_str(), convert_mode(mode.into())).map_error()?;
+                nix::unistd::mkdir(
+                    path_clone.as_str(),
+                    convert_mode(mode.remove_dir_flag().into()),
+                )
+                .map_error()?;
                 nix::unistd::chown(
                     path_clone.as_str(),
                     Some(nix::unistd::Uid::from_raw(uid.into())),
@@ -240,7 +244,9 @@ fn convert_mode(mode: u32) -> nix::sys::stat::Mode {
     use nix::sys::stat::{Mode, mode_t};
     // Most systems seems ot use u32 for [mode_t], but MacOS seems to use u16.
     let mode = mode_t::try_from(mode).unwrap();
-    Mode::from_bits(mode.into()).unwrap()
+    Mode::from_bits(mode.into())
+        .ok_or_else(|| anyhow::anyhow!("Invalid mode bits: 0b{mode:b}"))
+        .unwrap()
 }
 
 #[async_trait]

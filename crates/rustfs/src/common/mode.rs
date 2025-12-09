@@ -78,6 +78,12 @@ impl Mode {
     }
 
     #[inline]
+    pub const fn remove_dir_flag(mut self) -> Self {
+        self.0 &= !S_IFDIR.0;
+        self
+    }
+
+    #[inline]
     pub const fn add_symlink_flag(mut self) -> Self {
         self.0 |= S_IFLNK.0;
         self
