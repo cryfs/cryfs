@@ -1579,7 +1579,7 @@ fn convert_node_attrs(attrs: NodeAttrs, ino: InodeNumber) -> fuser::FileAttr {
     fuser::FileAttr {
         ino: NonZeroU64::from(ino).get(),
         size,
-        blocks: attrs.num_blocks.unwrap_or(size / 512),
+        blocks: attrs.num_blocks.unwrap_or(size.div_ceil(512)),
         atime: attrs.atime,
         mtime: attrs.mtime,
         ctime: attrs.ctime,
