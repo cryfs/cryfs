@@ -1,10 +1,6 @@
 use signal_hook::{
     consts::{SIGINT, SIGQUIT, SIGTERM, TERM_SIGNALS},
-    iterator::Signals,
-};
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+    iterator::{Handle, Signals},
 };
 use std::thread::{self, JoinHandle};
 
@@ -17,17 +13,16 @@ pub struct AtExitHandler {
     // Always Some except during drop
     join_handle: Option<JoinHandle<()>>,
 
-    cancellation_token: CancellationToken,
+    signals_handle: Handle,
 }
 
 impl AtExitHandler {
     pub fn new(func: impl Fn() + Send + 'static) -> AtExitHandler {
-        let cancellation_token = CancellationToken::new();
-        let cancellation_token_clone = cancellation_token.clone();
+        let mut signals = Signals::new(TERM_SIGNALS).unwrap();
+        let signals_handle = signals.handle();
         let join_handle = thread::spawn(move || {
-            let mut signals = Signals::new(TERM_SIGNALS).unwrap();
-            while !cancellation_token_clone.is_cancelled() {
-                for signal in signals.pending() {
+            while !signals.is_closed() {
+                for signal in signals.wait() {
                     let signal_name = match signal {
                         SIGTERM => "SIGTERM".to_string(),
                         SIGINT => "SIGINT".to_string(),
@@ -37,45 +32,23 @@ impl AtExitHandler {
                     log::info!("Received {signal_name}");
                     func();
                 }
-                thread::sleep(std::time::Duration::from_millis(50));
             }
         });
         AtExitHandler {
             join_handle: Some(join_handle),
-            cancellation_token,
+            signals_handle,
         }
     }
 }
 
 impl Drop for AtExitHandler {
     fn drop(&mut self) {
-        self.cancellation_token.cancel();
+        self.signals_handle.close();
         self.join_handle
             .take()
             .expect("Already destructed")
             .join()
             .unwrap();
-    }
-}
-
-#[derive(Clone)]
-struct CancellationToken {
-    should_cancel: Arc<AtomicBool>,
-}
-
-impl CancellationToken {
-    fn new() -> Self {
-        Self {
-            should_cancel: Arc::new(AtomicBool::new(false)),
-        }
-    }
-
-    fn cancel(&self) {
-        self.should_cancel.store(true, Ordering::Relaxed);
-    }
-
-    fn is_cancelled(&self) -> bool {
-        self.should_cancel.load(Ordering::Relaxed)
     }
 }
 
