@@ -63,7 +63,7 @@ mod tests {
     async fn setup_doesnt_panic() {
         // This test is here to demonstrate that basic setup of a file system works as expected.
         let mock_filesystem = make_mock_filesystem();
-        let _runner = Runner::start(mock_filesystem);
+        let _runner = Runner::start(mock_filesystem).await;
     }
 
     #[tokio::test]
@@ -79,6 +79,6 @@ mod tests {
             .expect_mkdir()
             .once()
             .returning(|_, _, _, _, _| Err(FsError::NotImplemented));
-        let _runner = Runner::start(mock_filesystem);
+        let _runner = Runner::start(mock_filesystem).await;
     }
 }
