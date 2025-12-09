@@ -1,11 +1,14 @@
 use std::sync::OnceLock;
 use tempdir::TempDir;
+use tokio::sync::{Mutex, MutexGuard};
 
 use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 
 use super::filesystem_driver::FilesystemDriver;
 use super::mock_low_level_api::MockAsyncFilesystemLL;
 use crate::backend::fuser::{RunningFilesystem, spawn_mount};
+
+static LOCK: Mutex<()> = Mutex::const_new(());
 
 pub struct Runner {
     // Order of members is important. We need to Drop `running_filesystem` before `mountpoint` and `implementation`.
@@ -16,10 +19,13 @@ pub struct Runner {
     // But if it gets dropped later in `Runner::drop`, then it's on the main thread and
     // correctly fails.
     _implementation: SyncDrop<AsyncDropArc<MockAsyncFilesystemLL>>,
+    // TODO Why is this lock necessary? Without it, tests seem to become flaky.
+    _lock: MutexGuard<'static, ()>,
 }
 
 impl Runner {
     pub async fn start(implementation: MockAsyncFilesystemLL) -> Self {
+        let lock = LOCK.lock().await;
         LOG_INIT.get_or_init(|| {
             env_logger::builder()
                 .filter_level(log::LevelFilter::Debug)
@@ -45,6 +51,7 @@ impl Runner {
             _running_filesystem: running_filesystem,
             mountpoint,
             _implementation: implementation,
+            _lock: lock,
         }
     }
 
