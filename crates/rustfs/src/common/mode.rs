@@ -54,75 +54,90 @@ const fn S_ISLNK(mode: Mode) -> bool {
 pub struct Mode(u32);
 
 impl Mode {
+    #[inline]
     pub const fn default_const() -> Self {
         Self(0)
     }
 
+    #[inline]
     pub const fn add_file_flag(mut self) -> Self {
         self.0 |= S_IFREG.0;
         self
     }
 
+    #[inline]
     pub const fn remove_file_flag(mut self) -> Self {
         self.0 &= !S_IFREG.0;
         self
     }
 
+    #[inline]
     pub const fn add_dir_flag(mut self) -> Self {
         self.0 |= S_IFDIR.0;
         self
     }
 
+    #[inline]
     pub const fn add_symlink_flag(mut self) -> Self {
         self.0 |= S_IFLNK.0;
         self
     }
 
+    #[inline]
     pub const fn add_user_read_flag(mut self) -> Self {
         self.0 |= S_IRUSR.0;
         self
     }
 
+    #[inline]
     pub const fn add_user_write_flag(mut self) -> Self {
         self.0 |= S_IWUSR.0;
         self
     }
 
+    #[inline]
     pub const fn add_user_exec_flag(mut self) -> Self {
         self.0 |= S_IXUSR.0;
         self
     }
 
+    #[inline]
     pub const fn add_group_read_flag(mut self) -> Self {
         self.0 |= S_IRGRP.0;
         self
     }
 
+    #[inline]
     pub const fn add_group_write_flag(mut self) -> Self {
         self.0 |= S_IWGRP.0;
         self
     }
 
+    #[inline]
     pub const fn add_group_exec_flag(mut self) -> Self {
         self.0 |= S_IXGRP.0;
         self
     }
 
+    #[inline]
     pub const fn add_other_read_flag(mut self) -> Self {
         self.0 |= S_IROTH.0;
         self
     }
 
+    #[inline]
     pub const fn add_other_write_flag(mut self) -> Self {
         self.0 |= S_IWOTH.0;
         self
     }
 
+    #[inline]
     pub const fn add_other_exec_flag(mut self) -> Self {
         self.0 |= S_IXOTH.0;
         self
     }
 
+    #[inline]
     pub const fn node_kind(self) -> NodeKind {
         if S_ISREG(self) {
             NodeKind::File
