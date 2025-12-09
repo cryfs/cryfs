@@ -11,32 +11,32 @@ use crate::{
 
 // TODO Can we deduplicate some of these Reply types with the high level Response types? Also, unify naming. Reply+Response are one name too many.
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyEntry {
     pub ino: HandleWithGeneration<InodeNumber>,
     pub attr: NodeAttrs,
     pub ttl: Duration,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyAttr {
     pub ino: InodeNumber,
     pub attr: NodeAttrs,
     pub ttl: Duration,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyOpen {
     pub fh: FileHandle,
     pub flags: OpenFlags,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyWrite {
     pub written: NumBytes,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyCreate {
     pub ttl: Duration,
     pub ino: HandleWithGeneration<InodeNumber>,
@@ -46,7 +46,7 @@ pub struct ReplyCreate {
     pub flags: u32,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyLock {
     pub start: NumBytes,
     pub end: NumBytes,
@@ -55,26 +55,26 @@ pub struct ReplyLock {
     pub pid: u32,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyBmap {
     // TODO What is block? Add a wrapper type?
     pub block: u64,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyLseek {
     // TODO In fuser, this was i64. Why?
     pub offset: NumBytes,
 }
 
 #[cfg(target_os = "macos")]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ReplyXTimes {
     pub bkuptime: SystemTime,
     pub crtime: SystemTime,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ReplyIoctl {
     pub result: i32,
     // TOOD It'd be better to not force a clone of the bytes, but instead use a callback type similar to read() or readdir().

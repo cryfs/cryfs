@@ -117,18 +117,18 @@ where
         Ok(fs)
     }
 
-    fn run_blocking<R>(
+    fn run_blocking<R: Debug>(
         runtime: &tokio::runtime::Handle,
         log_msg: &str,
         func: impl AsyncFnOnce() -> FsResult<R>,
     ) -> Result<R, libc::c_int> {
         // TODO Is it ok to call block_on concurrently for multiple fs operations?
         runtime.block_on(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             let result = func().await;
             match result {
                 Ok(ok) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {ok:?}");
                     Ok(ok)
                 }
                 Err(err) => {
@@ -150,10 +150,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(()) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success");
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
@@ -172,10 +172,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(()) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success");
                     fuser_reply.ok();
                 }
                 Err(err) => {
@@ -196,10 +196,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.entry(
                         &reply.ttl,
                         &convert_node_attrs(reply.attr, reply.ino.handle),
@@ -224,10 +224,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.attr(&reply.ttl, &convert_node_attrs(reply.attr, reply.ino));
                 }
                 Err(err) => {
@@ -248,10 +248,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     let flags = convert_openflags(reply.flags);
                     // TODO Why u32 and not i32?
                     let flags = u32::try_from(flags).unwrap();
@@ -275,10 +275,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     // TODO No unwrap, probably introduce a u32 variant of NumBytes.
                     let num_written = u32::try_from(u64::from(reply.written));
                     fuser_reply.written(num_written.unwrap());
@@ -301,10 +301,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     let blocks = reply.num_total_blocks;
                     let bfree = reply.num_free_blocks;
                     let bavail = reply.num_available_blocks;
@@ -335,10 +335,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.created(
                         &reply.ttl,
                         &convert_node_attrs(reply.attr, reply.ino.handle),
@@ -365,10 +365,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.locked(reply.start.into(), reply.end.into(), reply.typ, reply.pid);
                 }
                 Err(err) => {
@@ -389,10 +389,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.bmap(reply.block);
                 }
                 Err(err) => {
@@ -413,10 +413,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.ioctl(reply.result, &reply.data);
                 }
                 Err(err) => {
@@ -437,10 +437,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     let offset: u64 = reply.offset.into();
                     // TODO Why does fuse use i64 instead of u64?
                     let offset: i64 = i64::try_from(offset).unwrap(); // TODO No unwrap
@@ -465,10 +465,10 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
-                    log::info!("{}...done", log_msg);
+                    log::info!("{log_msg}...success: {reply:?}");
                     fuser_reply.xtimes(reply.bkuptime, reply.crtime);
                 }
                 Err(err) => {
@@ -490,7 +490,7 @@ where
     {
         let fs = Arc::clone(&self.fs);
         self.runtime.spawn(async move {
-            log::info!("{}...", log_msg);
+            log::info!("{log_msg}...");
             let callback = DataCallback { reply, log_msg };
             let func = async move || match Self::fs_read(fs).await {
                 Ok(fs) => func(fs, callback).await,
@@ -508,7 +508,7 @@ where
     fn init(&mut self, req: &Request<'_>, config: &mut KernelConfig) -> Result<(), c_int> {
         // TODO Allow a way to set KernelConfig? Or should we make choices in rustfs? The fuse-mt crate chose to hide it.
 
-        Self::run_blocking(&self.runtime, &format!("init"), async || {
+        Self::run_blocking(&self.runtime, &format!("init({config:?})"), async || {
             self.fs_write().await?.init(&RequestInfo::from(req)).await
         })
     }
@@ -548,10 +548,13 @@ where
 
     fn forget(&mut self, req: &Request, ino: u64, nlookup: u64) {
         let req = RequestInfo::from(req);
-        self.run_async_no_reply(format!("forget(ino={ino:?})"), async move |fs| {
-            let ino = parse_inode(ino)?;
-            fs.forget(&req, ino, nlookup).await
-        });
+        self.run_async_no_reply(
+            format!("forget(ino={ino:?}, nlookup={nlookup:?})"),
+            async move |fs| {
+                let ino = parse_inode(ino)?;
+                fs.forget(&req, ino, nlookup).await
+            },
+        );
     }
 
     // TODO Do we want this? It seems to be gated by an "abi-7-16" feature but what is that?
@@ -598,7 +601,7 @@ where
         let atime = atime.map(parse_time);
         let mtime = mtime.map(parse_time);
         self.run_async_reply_attr(
-            format!("setattr(ino={ino:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, fh={fh:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
+            format!("setattr(ino={ino:?}, fh={fh:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -855,7 +858,7 @@ where
         let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
         let data = data.to_owned();
         self.run_async_reply_write(
-            format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, size={size:?}, write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})", size=data.len()),
+            format!("write(ino={ino:?}, fh={fh:?}, offset={offset:?}, data=[{size:?} bytes], write_flags={write_flags:?}, flags={flags:?}, lock_owner={lock_owner:?})", size=data.len()),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1052,7 +1055,7 @@ where
         let value = value.to_owned();
         let position = NumBytes::from(u64::from(position));
         self.run_async_reply_empty(
-            format!("setxattr(ino={ino:?}, name={name:?}, value={value:?}, flags={flags:?}, position={position:?})"),
+            format!("setxattr(ino={ino:?}, name={name:?}, value=[{} bytes], flags={flags:?}, position={position:?})", value.len()),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1286,7 +1289,7 @@ where
         let req = RequestInfo::from(req);
         let in_data = in_data.to_owned();
         self.run_async_reply_ioctl(
-            format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data={in_data:?}, out_size={out_size:?})"),
+            format!("ioctl(ino={ino:?}, fh={fh:?}, flags={flags:?}, cmd={cmd:?}, in_data=[{} bytes], out_size={out_size:?})", in_data.len()),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -1639,7 +1642,7 @@ impl<'a> Callback<FsResult<&'a [u8]>, ()> for DataCallback {
     fn call(self, data: FsResult<&'a [u8]>) {
         match data {
             Ok(data) => {
-                log::info!("{}...done", self.log_msg);
+                log::info!("{}...success: [{} bytes]", self.log_msg, data.len());
                 self.reply.data(data);
             }
             Err(err) => self.error(err),
