@@ -253,8 +253,6 @@ where
                 Ok(reply) => {
                     log::info!("{log_msg}...success: {reply:?}");
                     let flags = convert_open_out_flags(reply.flags);
-                    // TODO Why u32 and not i32?
-                    let flags = u32::try_from(flags).unwrap();
                     fuser_reply.opened(NonZeroU64::from(reply.fh).get(), flags);
                 }
                 Err(err) => {
@@ -344,7 +342,7 @@ where
                         &convert_node_attrs(reply.attr, reply.ino.handle),
                         reply.ino.generation,
                         NonZeroU64::from(reply.fh).get(),
-                        convert_open_out_flags(reply.flags) as u32, // TODO Why convert i32 -> u32?
+                        convert_open_out_flags(reply.flags),
                     );
                 }
                 Err(err) => {
@@ -1567,7 +1565,7 @@ fn parse_open_in_flags(flags: i32) -> OpenInFlags {
     }
 }
 
-fn convert_open_out_flags(flags: OpenOutFlags) -> i32 {
+fn convert_open_out_flags(flags: OpenOutFlags) -> u32 {
     // TODO This is duplicate between fuser and fuse_mt
     // TODO Not implemented yet
     let OpenOutFlags {} = flags;

@@ -373,8 +373,6 @@ where
     }
 
     fn open(&self, req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
-        // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-        let flags = flags as i32;
         self.run_async(&format!("open({path:?}, flags={flags})"), async move || {
             let path = parse_absolute_path(path)?;
             let response = self
@@ -382,8 +380,7 @@ where
                 .await?
                 .open(req.into(), path, parse_open_in_flags(flags))
                 .await?;
-            // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-            let flags = convert_open_out_flags(response.flags.into()) as u32;
+            let flags = convert_open_out_flags(response.flags.into());
             Ok((NonZeroU64::from(response.fh).get(), flags))
         })
     }
@@ -479,8 +476,6 @@ where
         lock_owner: u64,
         flush: bool,
     ) -> ResultEmpty {
-        // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-        let flags = flags as i32;
         self.run_async(
             &format!(
                 "release({path:?}, fh={fh}, flags={flags}, lock_owner={lock_owner}, flush={flush})"
@@ -515,7 +510,7 @@ where
     }
 
     fn opendir(&self, req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
-        let flags = parse_open_in_flags(flags as i32); // TODO Why convert u32 -> i32 and back?
+        let flags = parse_open_in_flags(flags);
         self.run_async(
             &format!("opendir({path:?}, flags={flags})"),
             async move || {
@@ -523,7 +518,7 @@ where
                 let response = self.fs().await?.opendir(req.into(), path, flags).await?;
                 Ok((
                     NonZeroU64::from(response.fh).get(),
-                    convert_open_out_flags(response.flags) as u32, // TODO Why convert i32 -> u32 and back?
+                    convert_open_out_flags(response.flags),
                 ))
             },
         )
@@ -548,7 +543,7 @@ where
                 let path = parse_absolute_path(path)?;
                 self.fs()
                     .await?
-                    .releasedir(req.into(), path, fh, parse_open_in_flags(flags as i32)) // TODO Why convert u32 -> i32?
+                    .releasedir(req.into(), path, fh, parse_open_in_flags(flags))
                     .await
             },
         )
@@ -678,7 +673,7 @@ where
         mode: u32,
         flags: u32,
     ) -> ResultCreate {
-        let flags = parse_open_in_flags(flags as i32); // TODO Why convert u32 -> i32 and back?
+        let flags = parse_open_in_flags(flags);
         let mode = Mode::from(mode).add_file_flag();
         // TODO Assert that dir/symlink flags aren't set
         self.run_async(
@@ -690,8 +685,7 @@ where
                     .await?
                     .create(req.into(), &path, mode, flags)
                     .await?;
-                // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-                let flags = convert_open_out_flags(response.flags) as u32;
+                let flags = convert_open_out_flags(response.flags);
                 Ok(CreatedEntry {
                     ttl: response.ttl,
                     attr: convert_node_attrs(response.attrs),
@@ -801,7 +795,9 @@ fn parse_xattr_name(name: &OsStr) -> FsResult<&str> {
     })
 }
 
-fn parse_open_in_flags(flags: i32) -> OpenInFlags {
+fn parse_open_in_flags(flags: u32) -> OpenInFlags {
+    // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
+    let flags = flags as i32;
     // TODO Is this the right way to parse openflags? Are there other flags than just Read+Write?
     //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
     // TODO This is duplicate between fuser and fuse_mt
@@ -820,7 +816,7 @@ fn parse_file_handle(fh: u64) -> FsResult<FileHandle> {
     })
 }
 
-fn convert_open_out_flags(flags: OpenOutFlags) -> i32 {
+fn convert_open_out_flags(flags: OpenOutFlags) -> u32 {
     // TODO This is duplicate between fuser and fuse_mt
     // TODO Not implemented yet
     let OpenOutFlags {} = flags;
