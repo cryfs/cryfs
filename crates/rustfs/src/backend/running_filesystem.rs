@@ -99,4 +99,11 @@ where
     }
 }
 
-// No need to implement Drop for RunningFilesystem because `BackgroundSession` already unmounts on Drop.
+impl<BS> Drop for RunningFilesystem<BS>
+where
+    BS: BackgroundSession + Send + 'static,
+{
+    fn drop(&mut self) {
+        self.unmount_join();
+    }
+}

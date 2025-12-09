@@ -12,7 +12,7 @@ pub struct Runner {
     _running_filesystem: RunningFilesystem,
     mountpoint: TempDir,
     // We keep an Arc to the mock here so that it doesn't get dropped within the fuser thread.
-    // If it got dropped within the fuser threat, the error may not correctly fail the test.
+    // If it got dropped within the fuser thread, the error may not correctly fail the test.
     // But if it gets dropped later in `Runner::drop`, then it's on the main thread and
     // correctly fails.
     _implementation: SyncDrop<AsyncDropArc<MockAsyncFilesystemLL>>,
@@ -40,6 +40,7 @@ impl Runner {
         )
         .await
         .expect("Failed to spawn filesystem");
+
         Self {
             _running_filesystem: running_filesystem,
             mountpoint,
