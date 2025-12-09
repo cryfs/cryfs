@@ -160,6 +160,8 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
         let mount_options = [
             MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
             MountOption::Subtype("cryfs".to_string()),
+            // let the kernel handle permission checking based on permission flags instead of calling the `access()` function of the fuse filesystem
+            MountOption::DefaultPermissions,
             fuse_atime_option,
             // TODO What other MountOptions should we set (or let the user set on the command line)?
         ]
