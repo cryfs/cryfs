@@ -19,8 +19,11 @@ pub use node_kind::NodeKind;
 mod num_bytes;
 pub use num_bytes::NumBytes;
 
-mod open_flags;
-pub use open_flags::OpenFlags;
+mod open_in_flags;
+pub use open_in_flags::OpenInFlags;
+
+mod open_out_flags;
+pub use open_out_flags::OpenOutFlags;
 
 mod statfs;
 pub use statfs::Statfs;

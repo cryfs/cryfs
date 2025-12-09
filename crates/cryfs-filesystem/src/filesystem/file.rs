@@ -5,7 +5,7 @@ use crate::filesystem::concurrentfsblobstore::ConcurrentFsBlobStore;
 
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
 use cryfs_blobstore::BlobStore;
-use cryfs_rustfs::{FsError, FsResult, OpenFlags, object_based_api::File};
+use cryfs_rustfs::{FsError, FsResult, OpenInFlags, object_based_api::File};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryFile<'a, B>
@@ -43,7 +43,7 @@ where
 
     async fn into_open(
         this: AsyncDropGuard<Self>,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<AsyncDropGuard<CryOpenFile<B>>> {
         // TODO Share the NodeInfo instance between CryFile and CryOpenFile with an Arc so that [CryFile::truncate] will not have to load the parent blob
         //      if CryOpenFile already did (or the other way round)

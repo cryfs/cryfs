@@ -7,7 +7,7 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 use crate::common::{
     AbsolutePath, Callback, DirEntryOrReference, FileHandle, FsError, FsResult, Gid,
-    HandleTrait as _, Mode, NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
+    HandleTrait as _, Mode, NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
 };
 use crate::high_level_api::{
     AsyncFilesystem, AttrResponse, CreateResponse, IntoFs, OpenResponse, OpendirResponse,
@@ -437,7 +437,7 @@ where
         &self,
         _req: RequestInfo,
         path: &AbsolutePath,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<OpenResponse> {
         self.trigger_on_operation().await?;
 
@@ -451,8 +451,7 @@ where
                     let fh = self.open_files.add(open_file);
                     Ok(OpenResponse {
                         fh: fh.handle,
-                        // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
-                        flags,
+                        flags: OpenOutFlags {},
                     })
                 }
             };
@@ -536,7 +535,7 @@ where
         _req: RequestInfo,
         _path: &AbsolutePath,
         fh: FileHandle,
-        _flags: OpenFlags,
+        _flags: OpenInFlags,
         _lock_owner: u64,
         _flush: bool,
     ) -> FsResult<()> {
@@ -567,7 +566,7 @@ where
         &self,
         _req: RequestInfo,
         _path: &AbsolutePath,
-        flags: u32,
+        _flags: OpenInFlags,
     ) -> FsResult<OpendirResponse> {
         self.trigger_on_operation().await?;
 
@@ -575,7 +574,7 @@ where
         // to opendir seems to suggest that readdir may have to recognize dirs with just the fh and no path?
         Ok(OpendirResponse {
             fh: FileHandle::MAX,
-            flags,
+            flags: OpenOutFlags {},
         })
     }
 
@@ -622,7 +621,7 @@ where
         _req: RequestInfo,
         _path: &AbsolutePath,
         _fh: FileHandle,
-        _flags: u32,
+        _flags: OpenInFlags,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -734,7 +733,7 @@ where
         req: RequestInfo,
         path: &AbsolutePath,
         mode: Mode,
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<CreateResponse> {
         self.trigger_on_operation().await?;
 
@@ -761,8 +760,7 @@ where
                 ttl: TTL_CREATE,
                 attrs: file_attrs,
                 fh: fh.handle,
-                // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
-                flags,
+                flags: OpenOutFlags {},
             })
         })
     }

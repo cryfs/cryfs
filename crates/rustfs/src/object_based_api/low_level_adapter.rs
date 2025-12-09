@@ -13,8 +13,8 @@ use crate::object_based_api::utils::{DUMMY_INO, MakeOrphanError, MoveInodeError}
 use crate::{
     DirEntry,
     common::{
-        Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenFlags,
-        PathComponent, RequestInfo, Statfs, Uid,
+        Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenInFlags,
+        OpenOutFlags, PathComponent, RequestInfo, Statfs, Uid,
     },
     low_level_api::{
         AsyncFilesystemLL, IntoFsLL, ReplyAttr, ReplyBmap, ReplyCreate, ReplyDirectory,
@@ -571,7 +571,7 @@ where
         &self,
         _req: &RequestInfo,
         ino: InodeNumber,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyOpen> {
         self.trigger_on_operation().await?;
 
@@ -583,8 +583,7 @@ where
             let fh = self.open_files.add(open_file);
             Ok(ReplyOpen {
                 fh: fh.handle,
-                // TODO What flags to return here? Just same as the argument?
-                flags,
+                flags: OpenOutFlags {},
             })
         })
     }
@@ -669,7 +668,7 @@ where
         _req: &RequestInfo,
         _ino: InodeNumber,
         fh: FileHandle,
-        _flags: i32,
+        _flags: OpenInFlags,
         _lock_owner: Option<u64>,
         flush: bool,
     ) -> FsResult<()> {
@@ -707,16 +706,15 @@ where
         &self,
         _req: &RequestInfo,
         ino: InodeNumber,
-        _flags: i32, // TODO What to do with flags?
+        _flags: OpenInFlags, // TODO What to do with flags?
     ) -> FsResult<ReplyOpen> {
         self.trigger_on_operation().await?;
 
         let fh = self.open_dirs.add(ino);
 
-        // We don't need opendir/releasedir because readdir works directly on the inode.
         Ok(ReplyOpen {
             fh: fh.handle.into(),
-            flags: OpenFlags::ReadWrite,
+            flags: OpenOutFlags {},
         })
     }
 
@@ -831,7 +829,7 @@ where
         _req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        _flags: i32, // TODO What to do with flags?
+        _flags: OpenInFlags,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -949,7 +947,7 @@ where
         name: &PathComponent,
         mode: Mode,
         _umask: u32,
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyCreate> {
         self.trigger_on_operation().await?;
 
@@ -978,8 +976,7 @@ where
                 attr,
                 ino: child_ino,
                 fh: fh.handle,
-                // TODO Do we need to change flags or is it ok to just return the flags passed in? If it's ok, then why do we have to return them?
-                flags: u32::try_from(flags).unwrap(), // TODO No unwrap?
+                flags: OpenOutFlags {},
             })
         })
     }

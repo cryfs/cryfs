@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenFlags, Uid,
+    Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenInFlags, Uid,
     object_based_api::{File, OpenFile},
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -102,7 +102,7 @@ impl InMemoryFileRef {
         }
     }
 
-    pub fn open_sync(&self, openflags: OpenFlags) -> AsyncDropGuard<InMemoryOpenFileRef> {
+    pub fn open_sync(&self, openflags: OpenInFlags) -> AsyncDropGuard<InMemoryOpenFileRef> {
         AsyncDropGuard::new(InMemoryOpenFileRef {
             openflags,
             inode: Arc::clone(&self.inode),
@@ -138,7 +138,7 @@ impl File for InMemoryFileRef {
 
     async fn into_open(
         this: AsyncDropGuard<Self>,
-        openflags: OpenFlags,
+        openflags: OpenInFlags,
     ) -> FsResult<AsyncDropGuard<InMemoryOpenFileRef>> {
         let this = this.unsafe_into_inner_dont_drop();
         Ok(this.open_sync(openflags))
@@ -162,7 +162,7 @@ impl AsyncDrop for InMemoryFileRef {
 }
 
 pub struct InMemoryOpenFileRef {
-    openflags: OpenFlags,
+    openflags: OpenInFlags,
     inode: Arc<Mutex<FileInode>>,
 }
 
@@ -188,8 +188,8 @@ impl OpenFile for InMemoryOpenFileRef {
         let mut inode = self.inode.lock().unwrap();
         if let Some(size) = size {
             match self.openflags {
-                OpenFlags::Read => return Err(FsError::WriteOnReadOnlyFileDescriptor),
-                OpenFlags::Write | OpenFlags::ReadWrite => {
+                OpenInFlags::Read => return Err(FsError::WriteOnReadOnlyFileDescriptor),
+                OpenInFlags::Write | OpenInFlags::ReadWrite => {
                     inode.resize(size);
                 }
             }
@@ -199,8 +199,8 @@ impl OpenFile for InMemoryOpenFileRef {
 
     async fn read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {
         match self.openflags {
-            OpenFlags::Write => Err(FsError::ReadOnWriteOnlyFileDescriptor),
-            OpenFlags::Read | OpenFlags::ReadWrite => {
+            OpenInFlags::Write => Err(FsError::ReadOnWriteOnlyFileDescriptor),
+            OpenInFlags::Read | OpenInFlags::ReadWrite => {
                 let offset = usize::try_from(u64::from(offset)).unwrap();
                 let size = usize::try_from(u64::from(size)).unwrap();
                 let inode = self.inode.lock().unwrap();
@@ -213,8 +213,8 @@ impl OpenFile for InMemoryOpenFileRef {
 
     async fn write(&self, offset: NumBytes, data: Data) -> FsResult<()> {
         match self.openflags {
-            OpenFlags::Read => Err(FsError::WriteOnReadOnlyFileDescriptor),
-            OpenFlags::Write | OpenFlags::ReadWrite => {
+            OpenInFlags::Read => Err(FsError::WriteOnReadOnlyFileDescriptor),
+            OpenInFlags::Write | OpenInFlags::ReadWrite => {
                 // TODO No unwrap
                 let data_len = NumBytes::from(u64::try_from(data.len()).unwrap());
                 let inode = &mut self.inode.lock().unwrap();

@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum OpenFlags {
+pub enum OpenInFlags {
     Read,
     Write,
     ReadWrite,

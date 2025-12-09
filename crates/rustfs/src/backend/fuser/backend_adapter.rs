@@ -18,7 +18,7 @@ use tokio::sync::{OwnedRwLockReadGuard, RwLock, RwLockWriteGuard};
 use crate::PathComponent;
 use crate::common::{
     Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NodeAttrs, NodeKind, NumBytes,
-    OpenFlags, PathComponentBuf, RequestInfo, Statfs, Uid,
+    OpenInFlags, OpenOutFlags, PathComponentBuf, RequestInfo, Statfs, Uid,
 };
 use crate::low_level_api::{
     self, AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult, ReplyDirectoryPlus,
@@ -252,7 +252,7 @@ where
             match Self::call_with_fs(fs, func).await {
                 Ok(reply) => {
                     log::info!("{log_msg}...success: {reply:?}");
-                    let flags = convert_openflags(reply.flags);
+                    let flags = convert_open_out_flags(reply.flags);
                     // TODO Why u32 and not i32?
                     let flags = u32::try_from(flags).unwrap();
                     fuser_reply.opened(NonZeroU64::from(reply.fh).get(), flags);
@@ -344,7 +344,7 @@ where
                         &convert_node_attrs(reply.attr, reply.ino.handle),
                         reply.ino.generation,
                         NonZeroU64::from(reply.fh).get(),
-                        reply.flags,
+                        convert_open_out_flags(reply.flags) as u32, // TODO Why convert i32 -> u32?
                     );
                 }
                 Err(err) => {
@@ -782,7 +782,7 @@ where
 
     fn open(&mut self, req: &Request<'_>, ino: u64, flags: i32, reply: ReplyOpen) {
         let req = RequestInfo::from(req);
-        let flags = parse_openflags(flags);
+        let flags = parse_open_in_flags(flags);
         self.run_async_reply_open(
             format!("open(ino={ino:?}, flags={flags:?})"),
             reply,
@@ -908,7 +908,7 @@ where
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 let fh = parse_file_handle(fh)?;
-                fs.release(&req, ino, fh, flags, lock_owner, flush).await
+                fs.release(&req, ino, fh, parse_open_in_flags(flags), lock_owner, flush).await
             },
         );
     }
@@ -929,6 +929,7 @@ where
 
     fn opendir(&mut self, req: &Request<'_>, ino: u64, flags: i32, reply: ReplyOpen) {
         let req = RequestInfo::from(req);
+        let flags = parse_open_in_flags(flags);
         self.run_async_reply_open(
             format!("opendir(ino={ino:?}, flags={flags:?})"),
             reply,
@@ -1001,6 +1002,7 @@ where
 
     fn releasedir(&mut self, req: &Request<'_>, ino: u64, fh: u64, flags: i32, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
+        let flags = parse_open_in_flags(flags);
         self.run_async_reply_empty(
             format!("releasedir(ino={ino:?}, fh={fh:?}, flags={flags:?})"),
             reply,
@@ -1199,6 +1201,7 @@ where
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         let mode = Mode::from(mode).add_file_flag();
+        let flags = parse_open_in_flags(flags);
         self.run_async_reply_create(
             format!("create(parent={parent_ino:?}, name={name:?}, mode={mode:?}, umask={umask:?}, flags={flags:?})"),
             reply,
@@ -1551,27 +1554,23 @@ fn parse_time(time: TimeOrNow) -> SystemTime {
     }
 }
 
-fn parse_openflags(flags: i32) -> OpenFlags {
+fn parse_open_in_flags(flags: i32) -> OpenInFlags {
     // TODO Is this the right way to parse openflags? Are there other flags than just Read+Write?
     //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
     // TODO This is duplicate between fuser and fuse_mt
     match flags & libc::O_ACCMODE {
-        libc::O_RDONLY => OpenFlags::Read,
-        libc::O_WRONLY => OpenFlags::Write,
-        libc::O_RDWR => OpenFlags::ReadWrite,
+        libc::O_RDONLY => OpenInFlags::Read,
+        libc::O_WRONLY => OpenInFlags::Write,
+        libc::O_RDWR => OpenInFlags::ReadWrite,
         _ => panic!("invalid flags: {flags}"),
     }
 }
 
-fn convert_openflags(flags: OpenFlags) -> i32 {
-    // TODO Is this the right way to convert openflags? Are there other flags than just Read+Write?
-    //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
+fn convert_open_out_flags(flags: OpenOutFlags) -> i32 {
     // TODO This is duplicate between fuser and fuse_mt
-    match flags {
-        OpenFlags::Read => libc::O_RDONLY,
-        OpenFlags::Write => libc::O_WRONLY,
-        OpenFlags::ReadWrite => libc::O_RDWR,
-    }
+    // TODO Not implemented yet
+    let OpenOutFlags {} = flags;
+    0
 }
 
 fn convert_node_attrs(attrs: NodeAttrs, ino: InodeNumber) -> fuser::FileAttr {

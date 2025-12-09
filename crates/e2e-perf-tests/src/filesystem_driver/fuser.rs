@@ -18,7 +18,7 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode,
-    NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    NodeAttrs, NodeKind, NumBytes, OpenInFlags, PathComponent, Statfs, Uid,
     low_level_api::{AsyncFilesystemLL, ReplyDirectory, ReplyDirectoryAddResult},
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -320,7 +320,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     name,
                     Mode::default().add_file_flag(),
                     0,
-                    0,
+                    OpenInFlags::ReadWrite,
                 )
                 .await?;
             self.fs
@@ -328,7 +328,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     &request_info(),
                     open_file.ino.handle,
                     open_file.fh,
-                    0,
+                    OpenInFlags::ReadWrite,
                     None,
                     false,
                 )
@@ -353,7 +353,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
                     name,
                     Mode::default().add_file_flag(),
                     0,
-                    0,
+                    OpenInFlags::ReadWrite,
                 )
                 .await?)
         })
@@ -680,7 +680,7 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle> {
         let open_file = C::load_inode(&Some(node), &**self.fs, async |ino| {
             self.fs
-                .open(&request_info(), ino, OpenFlags::ReadWrite)
+                .open(&request_info(), ino, OpenInFlags::ReadWrite)
                 .await
         })
         .await?;
@@ -692,7 +692,14 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
             // The fuse sequence for releasing a file in fuse is: first flush, then release
             self.fs.flush(&request_info(), ino, open_file, 0).await?;
             self.fs
-                .release(&request_info(), ino, open_file, 0, None, false)
+                .release(
+                    &request_info(),
+                    ino,
+                    open_file,
+                    OpenInFlags::ReadWrite,
+                    None,
+                    false,
+                )
                 .await
         })
         .await
@@ -722,7 +729,11 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
         node: Option<Self::NodeHandle>,
     ) -> FsResult<Vec<(String, NodeKind)>> {
         let dir = C::load_inode(&node, &**self.fs, async |ino| {
-            let fh = self.fs.opendir(&request_info(), ino, 0).await?.fh;
+            let fh = self
+                .fs
+                .opendir(&request_info(), ino, OpenInFlags::Read)
+                .await?
+                .fh;
             let mut reply = ReplyDirectoryImpl::default();
             self.fs
                 .readdir(&request_info(), ino, fh, 0, &mut reply)

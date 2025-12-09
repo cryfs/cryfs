@@ -13,7 +13,8 @@ use tokio::sync::{RwLockReadGuard, RwLockWriteGuard};
 
 use crate::common::{
     AbsolutePath, AbsolutePathBuf, Callback, DirEntryOrReference, FileHandle, FsError, FsResult,
-    Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags, PathComponent, Statfs, Uid,
+    Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags, OpenOutFlags, PathComponent, Statfs,
+    Uid,
 };
 use crate::high_level_api::AsyncFilesystem;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -379,10 +380,10 @@ where
             let response = self
                 .fs()
                 .await?
-                .open(req.into(), path, parse_openflags(flags))
+                .open(req.into(), path, parse_open_in_flags(flags))
                 .await?;
             // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-            let flags = convert_openflags(response.flags.into()) as u32;
+            let flags = convert_open_out_flags(response.flags.into()) as u32;
             Ok((NonZeroU64::from(response.fh).get(), flags))
         })
     }
@@ -493,7 +494,7 @@ where
                         req.into(),
                         path,
                         fh,
-                        parse_openflags(flags),
+                        parse_open_in_flags(flags),
                         lock_owner,
                         flush,
                     )
@@ -514,12 +515,16 @@ where
     }
 
     fn opendir(&self, req: RequestInfo, path: &Path, flags: u32) -> ResultOpen {
+        let flags = parse_open_in_flags(flags as i32); // TODO Why convert u32 -> i32 and back?
         self.run_async(
-            &format!("opendir({path:?}, flags={flags})"),
+            &format!("opendir({path:?}, flags={flags:?})"),
             async move || {
                 let path = parse_absolute_path(path)?;
                 let response = self.fs().await?.opendir(req.into(), path, flags).await?;
-                Ok((NonZeroU64::from(response.fh).get(), response.flags))
+                Ok((
+                    NonZeroU64::from(response.fh).get(),
+                    convert_open_out_flags(response.flags) as u32, // TODO Why convert i32 -> u32 and back?
+                ))
             },
         )
     }
@@ -543,7 +548,7 @@ where
                 let path = parse_absolute_path(path)?;
                 self.fs()
                     .await?
-                    .releasedir(req.into(), path, fh, flags)
+                    .releasedir(req.into(), path, fh, parse_open_in_flags(flags as i32)) // TODO Why convert u32 -> i32?
                     .await
             },
         )
@@ -673,11 +678,11 @@ where
         mode: u32,
         flags: u32,
     ) -> ResultCreate {
-        let flags = flags as i32;
+        let flags = parse_open_in_flags(flags as i32); // TODO Why convert u32 -> i32 and back?
         let mode = Mode::from(mode).add_file_flag();
         // TODO Assert that dir/symlink flags aren't set
         self.run_async(
-            &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags})"),
+            &format!("create({parent:?}, name={name:?}, mode={mode:?}, flags={flags:?})"),
             async move || {
                 let path = parse_absolute_path_with_last_component(parent, name)?;
                 let response = self
@@ -686,7 +691,7 @@ where
                     .create(req.into(), &path, mode, flags)
                     .await?;
                 // TODO flags should be i32 and is in fuser, but fuse_mt accidentally converts it to u32. Undo that.
-                let flags = response.flags as u32;
+                let flags = convert_open_out_flags(response.flags) as u32;
                 Ok(CreatedEntry {
                     ttl: response.ttl,
                     attr: convert_node_attrs(response.attrs),
@@ -796,13 +801,14 @@ fn parse_xattr_name(name: &OsStr) -> FsResult<&str> {
     })
 }
 
-fn parse_openflags(flags: i32) -> OpenFlags {
+fn parse_open_in_flags(flags: i32) -> OpenInFlags {
     // TODO Is this the right way to parse openflags? Are there other flags than just Read+Write?
     //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
+    // TODO This is duplicate between fuser and fuse_mt
     match flags & libc::O_ACCMODE {
-        libc::O_RDONLY => OpenFlags::Read,
-        libc::O_WRONLY => OpenFlags::Write,
-        libc::O_RDWR => OpenFlags::ReadWrite,
+        libc::O_RDONLY => OpenInFlags::Read,
+        libc::O_WRONLY => OpenInFlags::Write,
+        libc::O_RDWR => OpenInFlags::ReadWrite,
         _ => panic!("invalid flags: {flags}"),
     }
 }
@@ -814,14 +820,11 @@ fn parse_file_handle(fh: u64) -> FsResult<FileHandle> {
     })
 }
 
-fn convert_openflags(flags: OpenFlags) -> i32 {
-    // TODO Is this the right way to convert openflags? Are there other flags than just Read+Write?
-    //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
-    match flags {
-        OpenFlags::Read => libc::O_RDONLY,
-        OpenFlags::Write => libc::O_WRONLY,
-        OpenFlags::ReadWrite => libc::O_RDWR,
-    }
+fn convert_open_out_flags(flags: OpenOutFlags) -> i32 {
+    // TODO This is duplicate between fuser and fuse_mt
+    // TODO Not implemented yet
+    let OpenOutFlags {} = flags;
+    0
 }
 
 fn convert_statfs(statfs: Statfs) -> fuse_mt::Statfs {

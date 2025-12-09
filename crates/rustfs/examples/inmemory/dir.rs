@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenFlags,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags,
     PathComponent, PathComponentBuf, Uid, object_based_api::Dir,
 };
 use cryfs_utils::async_drop::AsyncDrop;
@@ -323,7 +323,7 @@ impl Dir for InMemoryDirRef {
     )> {
         let mut inode = self.inode.lock().unwrap();
         let file = InMemoryFileRef::new(mode, uid, gid);
-        let openfile = file.open_sync(OpenFlags::ReadWrite);
+        let openfile = file.open_sync(OpenInFlags::ReadWrite);
         let metadata = file.metadata();
         // TODO Use try_insert once that is stable
         match inode.entries_mut().entry(name.to_owned()) {

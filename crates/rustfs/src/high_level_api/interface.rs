@@ -4,7 +4,7 @@ use std::time::{Duration, SystemTime};
 
 use crate::common::{
     AbsolutePath, Callback, DirEntryOrReference, FileHandle, FsResult, Gid, Mode, NodeAttrs,
-    NumBytes, OpenFlags, RequestInfo, Statfs, Uid,
+    NumBytes, OpenInFlags, OpenOutFlags, RequestInfo, Statfs, Uid,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -17,15 +17,14 @@ pub struct AttrResponse {
 pub struct OpenResponse {
     #[debug("{fh}")]
     pub fh: FileHandle,
-    pub flags: OpenFlags,
+    pub flags: OpenOutFlags,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct OpendirResponse {
     #[debug("{fh}")]
     pub fh: FileHandle,
-    // TODO Wrap flags into its own type, or reuse OpenFlags?
-    pub flags: u32,
+    pub flags: OpenOutFlags,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -34,8 +33,7 @@ pub struct CreateResponse {
     pub attrs: NodeAttrs,
     #[debug("{fh}")]
     pub fh: FileHandle,
-    // TODO Wrap flags into its own type, or reuse OpenFlags?
-    pub flags: i32,
+    pub flags: OpenOutFlags,
 }
 
 #[async_trait(?Send)]
@@ -208,7 +206,7 @@ pub trait AsyncFilesystem {
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<OpenResponse>;
 
     /// Read from a file.
@@ -292,7 +290,7 @@ pub trait AsyncFilesystem {
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
-        flags: OpenFlags,
+        flags: OpenInFlags,
         // TODO What to do with lock_owner in flush and release? Wrap into a custom type?
         lock_owner: u64,
         flush: bool,
@@ -328,7 +326,7 @@ pub trait AsyncFilesystem {
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
-        flags: u32,
+        flags: OpenInFlags,
     ) -> FsResult<OpendirResponse>;
 
     /// Get the entries of a directory.
@@ -358,7 +356,7 @@ pub trait AsyncFilesystem {
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
-        flags: u32,
+        flags: OpenInFlags,
     ) -> FsResult<()>;
 
     /// Write out any pending changes to a directory.
@@ -479,7 +477,6 @@ pub trait AsyncFilesystem {
         req: RequestInfo,
         path: &AbsolutePath,
         mode: Mode,
-        // TODO What with flags? Wrap into a custom type instead of using u32? Also, the fuse-mt function not only takes but also returns flags. Is this necessary? What are these flags?
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<CreateResponse>;
 }

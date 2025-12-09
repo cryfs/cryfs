@@ -6,7 +6,7 @@ use crate::{
     NodeKind,
     common::{
         Callback, FileHandle, FsResult, Gid, HandleWithGeneration, InodeNumber, Mode, NodeAttrs,
-        NumBytes, OpenFlags, PathComponent, RequestInfo, Statfs, Uid,
+        NumBytes, OpenInFlags, OpenOutFlags, PathComponent, RequestInfo, Statfs, Uid,
     },
 };
 
@@ -32,7 +32,7 @@ pub struct ReplyAttr {
 pub struct ReplyOpen {
     #[debug("{fh}")]
     pub fh: FileHandle,
-    pub flags: OpenFlags,
+    pub flags: OpenOutFlags,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -49,8 +49,7 @@ pub struct ReplyCreate {
     pub attr: NodeAttrs,
     #[debug("{fh}")]
     pub fh: FileHandle,
-    // TODO Wrapper type for flags
-    pub flags: u32,
+    pub flags: OpenOutFlags,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -295,7 +294,7 @@ pub trait AsyncFilesystemLL {
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyOpen>;
 
     /// Read data.
@@ -388,7 +387,7 @@ pub trait AsyncFilesystemLL {
         ino: InodeNumber,
         fh: FileHandle,
         // TODO Wrapper type for flags
-        flags: i32,
+        flags: OpenInFlags,
         // TODO What is lock_owner?
         lock_owner: Option<u64>,
         flush: bool,
@@ -416,8 +415,7 @@ pub trait AsyncFilesystemLL {
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        // TODO Wrapper type for flags
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyOpen>;
 
     /// Read directory.
@@ -461,8 +459,7 @@ pub trait AsyncFilesystemLL {
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        // TODO Wrapper type for flags
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<()>;
 
     /// Synchronize directory contents.
@@ -570,8 +567,7 @@ pub trait AsyncFilesystemLL {
         mode: Mode,
         // TODO Wrapper type for umask
         umask: u32,
-        // TODO Wrapper type for flags
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyCreate>;
 
     /// Test for a POSIX file lock.

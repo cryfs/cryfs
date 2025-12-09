@@ -9,7 +9,7 @@ use std::time::SystemTime;
 use crate::low_level_api::ReplyXTimes;
 use crate::{
     common::{
-        Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenFlags,
+        Callback, FileHandle, FsError, FsResult, Gid, InodeNumber, Mode, NumBytes, OpenInFlags,
         PathComponent, RequestInfo, Statfs, Uid,
     },
     low_level_api::{
@@ -137,7 +137,7 @@ mock! {
             &self,
             req: &RequestInfo,
             ino: InodeNumber,
-            flags: OpenFlags,
+            flags: OpenInFlags,
         ) -> FsResult<ReplyOpen>;
 
         async fn read<R, C>(
@@ -180,7 +180,7 @@ mock! {
             req: &RequestInfo,
             ino: InodeNumber,
             fh: FileHandle,
-            flags: i32,
+            flags: OpenInFlags,
             lock_owner: Option<u64>,
             flush: bool,
         ) -> FsResult<()>;
@@ -197,7 +197,7 @@ mock! {
             &self,
             req: &RequestInfo,
             ino: InodeNumber,
-            flags: i32,
+            flags: OpenInFlags,
         ) -> FsResult<ReplyOpen>;
 
         async fn readdir<R: ReplyDirectory + Send + 'static>(
@@ -223,7 +223,7 @@ mock! {
             req: &RequestInfo,
             ino: InodeNumber,
             fh: FileHandle,
-            flags: i32,
+            flags: OpenInFlags,
         ) -> FsResult<()>;
 
         async fn fsyncdir(
@@ -291,7 +291,7 @@ mock! {
             name: &PathComponent,
             mode: Mode,
             umask: u32,
-            flags: i32,
+            flags: OpenInFlags,
         ) -> FsResult<ReplyCreate>;
 
         async fn getlk(
@@ -550,7 +550,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyOpen> {
         self.deref().open(req, ino, flags).await
     }
@@ -606,7 +606,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        flags: i32,
+        flags: OpenInFlags,
         lock_owner: Option<u64>,
         flush: bool,
     ) -> FsResult<()> {
@@ -629,7 +629,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyOpen> {
         self.deref().opendir(req, ino, flags).await
     }
@@ -661,7 +661,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<()> {
         self.deref().releasedir(req, ino, fh, flags).await
     }
@@ -750,7 +750,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         name: &PathComponent,
         mode: Mode,
         umask: u32,
-        flags: i32,
+        flags: OpenInFlags,
     ) -> FsResult<ReplyCreate> {
         self.deref()
             .create(req, parent, name, mode, umask, flags)

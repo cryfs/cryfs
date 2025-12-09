@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use cryfs_rustfs::FsError;
-use cryfs_rustfs::{AbsolutePathBuf, FsResult, OpenFlags, object_based_api::File};
+use cryfs_rustfs::{AbsolutePathBuf, FsResult, OpenInFlags, object_based_api::File};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use super::device::PassthroughDevice;
@@ -25,14 +25,14 @@ impl File for PassthroughFile {
 
     async fn into_open(
         this: AsyncDropGuard<Self>,
-        openflags: OpenFlags,
+        openflags: OpenInFlags,
     ) -> FsResult<AsyncDropGuard<PassthroughOpenFile>> {
         let this = this.unsafe_into_inner_dont_drop();
         let mut options = tokio::fs::OpenOptions::new();
         match openflags {
-            OpenFlags::Read => options.read(true),
-            OpenFlags::Write => options.write(true),
-            OpenFlags::ReadWrite => options.read(true).write(true),
+            OpenInFlags::Read => options.read(true),
+            OpenInFlags::Write => options.write(true),
+            OpenInFlags::ReadWrite => options.read(true).write(true),
         };
         let open_file = options.open(&this.path).await.map_error()?;
         Ok(PassthroughOpenFile::new(open_file))

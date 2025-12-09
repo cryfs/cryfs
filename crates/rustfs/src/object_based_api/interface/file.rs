@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::common::{FsResult, OpenFlags};
+use crate::common::{FsResult, OpenInFlags};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 #[async_trait]
@@ -10,6 +10,6 @@ pub trait File: AsyncDrop + Debug + Sized {
 
     async fn into_open(
         this: AsyncDropGuard<Self>,
-        flags: OpenFlags,
+        flags: OpenInFlags,
     ) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::OpenFile>>;
 }

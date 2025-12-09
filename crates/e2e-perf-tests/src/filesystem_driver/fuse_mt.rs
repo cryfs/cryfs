@@ -13,7 +13,7 @@ use cryfs_blockstore::{
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AbsolutePath, AbsolutePathBuf, Callback, FileHandle, FsResult, Gid, Mode, NodeAttrs, NodeKind,
-    NumBytes, OpenFlags, PathComponent, Statfs, Uid, high_level_api::AsyncFilesystem as _,
+    NumBytes, OpenInFlags, PathComponent, Statfs, Uid, high_level_api::AsyncFilesystem as _,
     object_based_api::ObjectBasedFsAdapter,
 };
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
@@ -96,14 +96,14 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
         let new_file = self
             .fs
-            .create(request_info(), &path, Mode::default().add_file_flag(), 0)
+            .create(request_info(), &path, Mode::default().add_file_flag(), OpenInFlags::ReadWrite)
             .await?;
         self.fs
             .release(
                 request_info(),
                 &path,
                 new_file.fh,
-                OpenFlags::Read,
+                OpenInFlags::ReadWrite,
                 0,
                 false,
             )
@@ -119,7 +119,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         let path = parent.unwrap_or_else(AbsolutePathBuf::root).join(name);
         let new_file = self
             .fs
-            .create(request_info(), &path, Mode::default().add_file_flag(), 0)
+            .create(request_info(), &path, Mode::default().add_file_flag(), OpenInFlags::ReadWrite)
             .await?;
         Ok((path, new_file.fh))
     }
@@ -237,7 +237,10 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     }
 
     async fn open(&self, node: Self::NodeHandle) -> FsResult<FileHandle> {
-        let open_file = self.fs.open(request_info(), &node, OpenFlags::Read).await?;
+        let open_file = self
+            .fs
+            .open(request_info(), &node, OpenInFlags::ReadWrite)
+            .await?;
         Ok(open_file.fh)
     }
 
@@ -245,7 +248,14 @@ impl FilesystemDriver for FusemtFilesystemDriver {
         // The fuse sequence for releasing a file in fuse is: first flush, then release
         self.fs.flush(request_info(), &node, open_file, 0).await?;
         self.fs
-            .release(request_info(), &node, open_file, OpenFlags::Read, 0, false)
+            .release(
+                request_info(),
+                &node,
+                open_file,
+                OpenInFlags::ReadWrite,
+                0,
+                false,
+            )
             .await
     }
 
@@ -255,7 +265,7 @@ impl FilesystemDriver for FusemtFilesystemDriver {
 
     async fn readdir(&self, node: Option<Self::NodeHandle>) -> FsResult<Vec<(String, NodeKind)>> {
         let node = node.unwrap_or_else(AbsolutePathBuf::root);
-        let fh = self.fs.opendir(request_info(), &node, 0).await?.fh;
+        let fh = self.fs.opendir(request_info(), &node, OpenInFlags::Read).await?.fh;
         let entries = self.fs.readdir(request_info(), &node, fh).await?;
         Ok(entries
             .into_iter()
