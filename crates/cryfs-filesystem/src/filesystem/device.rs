@@ -209,8 +209,8 @@ where
         );
         match (blob1, blob2) {
             (Err(err1), Err(err2)) => {
+                log::error!("Both blob loads failed: err1={err1:?}, err2={err2:?}");
                 shared_blob.async_drop().await?;
-                // TODO Report both errors
                 Err(err1)
             }
             (Err(err1), Ok(mut blob2)) => {

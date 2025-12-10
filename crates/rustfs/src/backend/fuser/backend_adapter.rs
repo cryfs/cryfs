@@ -538,7 +538,10 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in lookup: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.lookup(&req, parent_ino, &name).await
             },
         );
@@ -643,7 +646,10 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in mknod: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.mknod(&req, parent_ino, &name, mode, umask, rdev).await
             },
         );
@@ -669,7 +675,10 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in mkdir: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.mkdir(&req, parent_ino, &name, mode, umask).await
             },
         );
@@ -683,7 +692,10 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in unlink: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.unlink(&req, parent_ino, &name).await
             },
         );
@@ -697,7 +709,10 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in rmdir: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.rmdir(&req, parent_ino, &name).await
             },
         );
@@ -719,11 +734,14 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
-                let link = link
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in symlink: {err:?}");
+                    FsError::InvalidPath
+                })?;
+                let link = link.into_os_string().into_string().map_err(|err| {
+                    log::error!("Failed to parse symlink target path in symlink: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.symlink(&req, parent_ino, &name, &link).await
             },
         );
@@ -748,9 +766,15 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let newparent = parse_inode(newparent)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component for old name in rename: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 let newname: PathComponentBuf =
-                    newname.try_into().map_err(|err| FsError::InvalidPath)?;
+                    newname.try_into().map_err(|err| {
+                        log::error!("Failed to parse path component for new name in rename: {err:?}");
+                        FsError::InvalidPath
+                    })?;
                 fs.rename(&req, parent_ino, &name, newparent, &newname, flags)
                     .await
             },
@@ -773,8 +797,10 @@ where
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 let newparent = parse_inode(newparent)?;
-                let newname: PathComponentBuf =
-                    newname.try_into().map_err(|err| FsError::InvalidPath)?;
+                let newname: PathComponentBuf = newname.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component for new name in link: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.link(&req, ino, newparent, &newname).await
             },
         );
@@ -1062,7 +1088,10 @@ where
             async move |fs| {
                 let ino = parse_inode(ino)?;
                 // TODO InvalidPath is probably the wrong error here
-                let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
+                let name = PathComponentBuf::try_from(name).map_err(|err| {
+                    log::error!("Failed to parse xattr name in setxattr: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.setxattr(&req, ino, &name, &value, flags, position)
                     .await
             },
@@ -1168,7 +1197,10 @@ where
                 let ino = parse_inode(ino)?;
                 // TODO Here (and in other operations), it would be better to do error handling of path conversion or similar things before we lock the file system unnecessarily.
                 // TODO InvalidPath is probably the wrong error here
-                let name = PathComponentBuf::try_from(name).map_err(|err| FsError::InvalidPath)?;
+                let name = PathComponentBuf::try_from(name).map_err(|err| {
+                    log::error!("Failed to parse xattr name in removexattr: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.removexattr(&req, ino, &name).await
             },
         );
@@ -1207,7 +1239,10 @@ where
             reply,
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
-                let name: PathComponentBuf = name.try_into().map_err(|err| FsError::InvalidPath)?;
+                let name: PathComponentBuf = name.try_into().map_err(|err| {
+                    log::error!("Failed to parse path component in create: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.create(&req, parent_ino, &name, mode, umask, flags)
                     .await
             },
