@@ -27,8 +27,7 @@ const FORMAT_VERSION_HEADER: &[u8] = b"cryfs.integritydata.knownblockversions;1"
 #[derive(BinRead, BinWrite, Debug, PartialEq)]
 #[brw(little)]
 pub struct KnownBlockVersionsSerialized {
-    #[br(
-        assert(header.iter().map(|c| c.get()).collect::<Vec<_>>() == FORMAT_VERSION_HEADER,
+    #[br(assert(header.iter().map(|c| c.get()).collect::<Vec<_>>() == FORMAT_VERSION_HEADER,
         "Wrong format version header: '{}'. Expected '{}'",
         format_potential_utf8(&header.iter().map(|c| c.get()).collect::<Vec<_>>()),
         format_potential_utf8(FORMAT_VERSION_HEADER)))]
