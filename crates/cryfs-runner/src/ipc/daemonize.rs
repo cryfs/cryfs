@@ -82,8 +82,9 @@ mod tests {
     }
 
     #[test]
-    fn test_child_panicking() {
-        fn background_main(_rpc: RpcServer<Request, Response>) -> ! {
+    fn test_child_panicking_after_request() {
+        fn background_main(mut rpc: RpcServer<Request, Response>) -> ! {
+            let _request = rpc.next_request().unwrap();
             panic!("Child is panicking");
         }
         let mut rpc = start_background_process(background_main).unwrap();
@@ -95,12 +96,37 @@ mod tests {
     }
 
     #[test]
-    fn test_child_exiting() {
+    fn test_child_panicking_before_request() {
         fn background_main(_rpc: RpcServer<Request, Response>) -> ! {
+            panic!("Child is panicking");
+        }
+        let mut rpc = start_background_process(background_main).unwrap();
+        let response = rpc
+            .recv_response(std::time::Duration::from_secs(2))
+            .unwrap_err();
+        assert_eq!("Sender closed the pipe", response.to_string());
+    }
+
+    #[test]
+    fn test_child_exiting_after_request() {
+        fn background_main(mut rpc: RpcServer<Request, Response>) -> ! {
+            let _request = rpc.next_request().unwrap();
             std::process::exit(0);
         }
         let mut rpc = start_background_process(background_main).unwrap();
         rpc.send_request(&Request { request: 42 }).unwrap();
+        let response = rpc
+            .recv_response(std::time::Duration::from_secs(2))
+            .unwrap_err();
+        assert_eq!("Sender closed the pipe", response.to_string());
+    }
+
+    #[test]
+    fn test_child_exiting_before_request() {
+        fn background_main(_rpc: RpcServer<Request, Response>) -> ! {
+            std::process::exit(0);
+        }
+        let mut rpc = start_background_process(background_main).unwrap();
         let response = rpc
             .recv_response(std::time::Duration::from_secs(2))
             .unwrap_err();
