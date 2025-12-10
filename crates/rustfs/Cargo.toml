@@ -19,11 +19,12 @@ fuse_mt = { workspace = true, optional = true }
 #      7.31 is the newest supported by fuser as of time of writing and was introduced in
 #      Linux Kernel 5.2, see https://github.com/torvalds/linux/blob/v5.2/include/uapi/linux/fuse.h .
 #      But probably make this configurable in the future.
-fuser = { workspace = true, optional = true, features = ["abi-7-31"] }
+# TODO Make fuser dependency optional and only include it if the "fuser" feature is enabled (here and below in the macos setup).
+fuser = { workspace = true, features = ["abi-7-31"] }
 futures.workspace = true
 libc.workspace = true
 log.workspace = true
-serde.workspace = true
+serde.workspace = true  
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
@@ -45,12 +46,12 @@ users.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Building fuser without linking libfuse currently only works on Linux, not on macos. Macos requires the `libfuse` feature to link against the library
-fuser = { workspace = true, optional = true, features = ["libfuse"] }
+fuser = { workspace = true, features = ["libfuse"] }
 
 [features]
 default = ["fuser"]
-fuse_mt = ["dep:fuse_mt", "dep:fuser"]
-fuser = ["dep:fuser"]
+fuse_mt = ["dep:fuse_mt"]
+fuser = []
 testutils = []
 
 [[example]]

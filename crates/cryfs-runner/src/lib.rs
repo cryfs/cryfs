@@ -1,6 +1,9 @@
 //#![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
 
+// cryfs-runner only makes sense if either fuser or fuse_mt is enabled
+#![cfg(any(feature = "fuser", feature = "fuse_mt"))]
+
 mod backend;
 mod background_process;
 mod ipc;

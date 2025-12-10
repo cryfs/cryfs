@@ -7,7 +7,3 @@ pub type Backend = cryfs_rustfs::object_based_api::RustfsFuserBackend;
 // This is non-default, and can be enabled by enabling the `fuse_mt` feature
 #[cfg(feature = "fuse_mt")]
 pub type Backend = cryfs_rustfs::object_based_api::RustfsFusemtBackend;
-
-// If both features are disabled, emit a compile error
-#[cfg(all(not(feature = "fuser"), not(feature = "fuse_mt")))]
-compile_error!("Either the 'fuser' or 'fuse-mt' feature must be enabled for cryfs-runner");
