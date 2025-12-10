@@ -40,10 +40,11 @@ async fn test_mkdir<'a>(
     let (parent, name) = path.split_last().unwrap();
 
     let mut mock_filesystem = make_mock_filesystem();
-    let mut mock_helper = MockHelper::new(&mut mock_filesystem);
+    let mut mock_helper = MockHelper::new(&mut mock_filesystem.fs);
     let parent_ino = mock_helper.expect_lookup_path_is_dir(parent);
     mock_helper.expect_lookup_doesnt_exist(parent_ino, name);
     mock_filesystem
+        .fs
         .expect_mkdir()
         .once()
         .with(
@@ -240,7 +241,7 @@ mod result {
             #[case] expected_error_code: libc::c_int,
         ) {
             let mut mock_filesystem = make_mock_filesystem();
-            MockHelper::new(&mut mock_filesystem).expect_lookup_fail(
+            MockHelper::new(&mut mock_filesystem.fs).expect_lookup_fail(
                 ROOT_INO,
                 pathcomp("some"),
                 error,
@@ -263,7 +264,7 @@ mod result {
             #[case] expected_error_code: libc::c_int,
         ) {
             let mut mock_filesystem = make_mock_filesystem();
-            let mut mock_helper = MockHelper::new(&mut mock_filesystem);
+            let mut mock_helper = MockHelper::new(&mut mock_filesystem.fs);
             let parent_ino = mock_helper.expect_lookup_path_is_dir(path("/some/nested"));
             mock_helper.expect_lookup_fail(parent_ino, pathcomp("dir"), error);
             let runner = Runner::start(mock_filesystem).await;
@@ -281,7 +282,7 @@ mod result {
             #[values(NodeKind::Dir, NodeKind::File, NodeKind::Symlink)] kind: NodeKind,
         ) {
             let mut mock_filesystem = make_mock_filesystem();
-            MockHelper::new(&mut mock_filesystem)
+            MockHelper::new(&mut mock_filesystem.fs)
                 .expect_lookup_path_is_kind(path("/some/nested/dir"), kind);
             let runner = Runner::start(mock_filesystem).await;
             let driver = runner.driver();
@@ -295,7 +296,8 @@ mod result {
         #[tokio::test]
         async fn parent_is_a_file() {
             let mut mock_filesystem = make_mock_filesystem();
-            MockHelper::new(&mut mock_filesystem).expect_lookup_path_is_file(path("/some/nested"));
+            MockHelper::new(&mut mock_filesystem.fs)
+                .expect_lookup_path_is_file(path("/some/nested"));
             let runner = Runner::start(mock_filesystem).await;
             let driver = runner.driver();
             let result = driver

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc},
+    event::Event,
     path::PathComponent,
 };
 use mockall::mock;
@@ -21,12 +22,27 @@ use crate::{
     },
 };
 
-pub fn make_mock_filesystem() -> MockAsyncFilesystemLL {
+pub struct MockFilesystem {
+    pub fs: MockAsyncFilesystemLL,
+    pub on_init_complete: Event,
+}
+
+pub fn make_mock_filesystem() -> MockFilesystem {
+    let on_init_complete = Event::new();
+    let on_init_complete_clone = on_init_complete.clone();
+
     let mut mock = MockAsyncFilesystemLL::new();
-    mock.expect_init().once().returning(|_| Ok(()));
+    mock.expect_init().once().returning(move |_| {
+        on_init_complete_clone.trigger();
+        Ok(())
+    });
     mock.expect_destroy().once().returning(|| ());
     mock.expect_async_drop_impl().once().returning(|| Ok(()));
-    mock
+
+    MockFilesystem {
+        fs: mock,
+        on_init_complete,
+    }
 }
 
 mock! {
