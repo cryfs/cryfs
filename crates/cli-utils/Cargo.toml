@@ -29,7 +29,7 @@ path-absolutize.workspace = true
 rpassword.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 reqwest = { workspace = true, optional = true, features = ["blocking", "json"] }
-serde = { workspace = true, optional = true }
+serde.workspace = true
 serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -46,4 +46,4 @@ tempproject = { path = "../tempproject" }
 
 [features]
 default = ["check_for_updates"]
-check_for_updates = ["dep:reqwest", "dep:serde", "dep:serde_json"]
+check_for_updates = ["dep:reqwest", "dep:serde_json"]
