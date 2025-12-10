@@ -26,6 +26,9 @@ use cryfs_utils::{
     stream::for_each_unordered,
 };
 
+// TODO Exception safety. If an operation fails, it shouldn't do any modifications (or undo any that it did do).
+//      Also look at traversal.rs for this.
+
 pub struct DataTree<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
     // The lock on the root node also ensures that there never are two [DataTree] instances for the same tree
     // &mut self in all the methods makes sure we don't run into race conditions where
@@ -370,8 +373,16 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
                     new_num_leaves,
                 },
             )
-            .await?;
-        self.root_node = Some(new_root);
+            .await;
+        match new_root {
+            Ok(v) => {
+                self.root_node = Some(v);
+            }
+            Err((err, new_root)) => {
+                self.root_node = Some(new_root);
+                return Err(err);
+            }
+        };
 
         self.num_bytes_cache
             .update(self.node_store.layout(), new_num_leaves, new_num_bytes)?;
@@ -394,7 +405,7 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         begin_index: u64,
         end_index: u64,
         callbacks: &C,
-    ) -> Result<DataNode<B>> {
+    ) -> Result<DataNode<B>, (anyhow::Error, DataNode<B>)> {
         if end_index <= begin_index {
             return Ok(root_node);
         }
@@ -551,14 +562,22 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         };
 
         let root_node = self.root_node.take().expect("self.root_node is None");
-        let new_root = self._traverse_leaves_by_leaf_indices_return_new_root::<WrappedCallbacks<'_, B, C, ALLOW_WRITES>, ALLOW_WRITES>(
+        let traverse_result = self._traverse_leaves_by_leaf_indices_return_new_root::<WrappedCallbacks<'_, B, C, ALLOW_WRITES>, ALLOW_WRITES>(
             root_node,
             first_leaf,
             end_leaf,
             &wrapped_callbacks,
         )
-        .await?;
-        self.root_node = Some(new_root);
+        .await;
+        match traverse_result {
+            Ok(new_root) => {
+                self.root_node = Some(new_root);
+            }
+            Err((err, new_root)) => {
+                self.root_node = Some(new_root);
+                return Err(err);
+            }
+        }
         let blob_is_growing_from_this_traversal = wrapped_callbacks
             .blob_is_growing_from_this_traversal
             .load(Ordering::Relaxed);

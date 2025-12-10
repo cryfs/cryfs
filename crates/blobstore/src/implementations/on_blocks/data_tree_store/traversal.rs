@@ -122,7 +122,7 @@ pub async fn traverse_and_return_new_root<
     begin_index: u64,
     end_index: u64,
     callbacks: &C,
-) -> Result<DataNode<B>> {
+) -> Result<DataNode<B>, (anyhow::Error, DataNode<B>)> {
     _traverse_and_return_new_root::<B, C, ALLOW_WRITES>(
         node_store,
         root,
@@ -145,7 +145,7 @@ async fn _traverse_and_return_new_root<
     end_index: u64,
     is_left_border_of_traversal: bool,
     callbacks: &C,
-) -> Result<DataNode<B>> {
+) -> Result<DataNode<B>, (anyhow::Error, DataNode<B>)> {
     assert!(
         begin_index <= end_index,
         "Called _traverse_and_return_new_root with begin_index={} > end_index={}",
@@ -159,33 +159,55 @@ async fn _traverse_and_return_new_root<
 
     let max_leaves_for_depth = node_store
         .layout()
-        .num_leaves_per_full_subtree(root.depth())?;
+        .num_leaves_per_full_subtree(root.depth());
+    let max_leaves_for_depth = match max_leaves_for_depth {
+        Ok(v) => v,
+        Err(err) => {
+            return Err((err, root));
+        }
+    };
     let should_increase_tree_depth = end_index > max_leaves_for_depth.get();
-    ensure!(
-        ALLOW_WRITES || !should_increase_tree_depth,
-        "Tried to grow a tree on a read only traversal. Accessing end_index {} is out of bounds for tree with {} bytes",
-        end_index,
-        max_leaves_for_depth,
-    );
+    if !ALLOW_WRITES && should_increase_tree_depth {
+        return Err((
+            anyhow!(
+                "Tried to grow a tree on a read only traversal. Accessing end_index {} is out of bounds for tree with {} bytes",
+                end_index,
+                max_leaves_for_depth,
+            ),
+            root,
+        ));
+    }
 
     match &mut root {
-        DataNode::Leaf(root) => {
+        DataNode::Leaf(root_as_leaf) => {
             let max_bytes_per_leaf = node_store.layout().max_bytes_per_leaf();
-            if ALLOW_WRITES && should_increase_tree_depth && root.num_bytes() != max_bytes_per_leaf
+            if ALLOW_WRITES
+                && should_increase_tree_depth
+                && root_as_leaf.num_bytes() != max_bytes_per_leaf
             {
-                root.resize(max_bytes_per_leaf);
+                root_as_leaf.resize(max_bytes_per_leaf);
             }
             if begin_index == 0 && end_index >= 1 {
                 let is_right_border_leaf: bool = end_index == 1;
-                callbacks
-                    .on_existing_leaf(0, is_right_border_leaf, LeafHandle::new_borrowed(root))
-                    .await?;
+                let res = callbacks
+                    .on_existing_leaf(
+                        0,
+                        is_right_border_leaf,
+                        LeafHandle::new_borrowed(root_as_leaf),
+                    )
+                    .await;
+                match res {
+                    Ok(()) => {}
+                    Err(err) => {
+                        return Err((err, root));
+                    }
+                }
             }
         }
-        DataNode::Inner(root) => {
-            _traverse_existing_subtree_of_inner_node::<B, C, ALLOW_WRITES>(
+        DataNode::Inner(root_as_inner) => {
+            let res = _traverse_existing_subtree_of_inner_node::<B, C, ALLOW_WRITES>(
                 node_store,
-                root,
+                root_as_inner,
                 begin_index.min(max_leaves_for_depth.get()),
                 end_index.min(max_leaves_for_depth.get()),
                 0,
@@ -194,7 +216,13 @@ async fn _traverse_and_return_new_root<
                 should_increase_tree_depth,
                 callbacks,
             )
-            .await?;
+            .await;
+            match res {
+                Ok(()) => {}
+                Err(err) => {
+                    return Err((err, root));
+                }
+            }
         }
     }
 
@@ -531,8 +559,14 @@ fn _create_max_size_leaf(layout: &NodeLayout) -> Data {
 async fn _increase_tree_depth<B: BlockStore + AsyncDrop + Debug + Send>(
     node_store: &DataNodeStore<B>,
     root: DataNode<B>,
-) -> Result<DataNode<B>> {
-    let copy_of_old_root = node_store.create_new_node_as_copy_from(&root).await?;
+) -> Result<DataNode<B>, (anyhow::Error, DataNode<B>)> {
+    let copy_of_old_root = node_store.create_new_node_as_copy_from(&root).await;
+    let copy_of_old_root = match copy_of_old_root {
+        Ok(v) => v,
+        Err(err) => {
+            return Err((err, root));
+        }
+    };
     Ok(DataNode::Inner(root.convert_to_new_inner_node(
         copy_of_old_root,
         node_store.layout(),
@@ -675,7 +709,7 @@ async fn _while_root_has_only_one_child_replace_root_with_its_child<
 >(
     node_store: &DataNodeStore<B>,
     root: DataNode<B>,
-) -> Result<DataNode<B>> {
+) -> Result<DataNode<B>, (anyhow::Error, DataNode<B>)> {
     match &root {
         DataNode::Leaf(_) => {
             // do nothing
@@ -694,9 +728,27 @@ async fn _while_root_has_only_one_child_replace_root_with_its_child<
                         .next()
                         .expect("Inner node must have at least one child"),
                 )
-                .await?;
-                let overwritten_root = root.overwrite_node_with(&new_root, node_store.layout())?;
-                node_store.remove(new_root).await?;
+                .await;
+                let new_root = match new_root {
+                    Ok(v) => v,
+                    Err(err) => {
+                        return Err((err, root));
+                    }
+                };
+                let overwritten_root = root.overwrite_node_with(&new_root, node_store.layout());
+                let overwritten_root = match overwritten_root {
+                    Ok(v) => v,
+                    Err(err) => {
+                        return Err((err, new_root)); // TODO Is new_root the right root to return on error? Consider exception safety.
+                    }
+                };
+                let res = node_store.remove(new_root).await;
+                match res {
+                    Ok(()) => {}
+                    Err(err) => {
+                        return Err((err, overwritten_root));
+                    }
+                };
                 Ok(overwritten_root)
             } else {
                 Ok(root)
