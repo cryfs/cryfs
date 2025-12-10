@@ -132,7 +132,9 @@ pub async fn create_multi_leaf_tree_return_id<
 }
 
 #[cfg(feature = "slow-tests-any")]
-pub async fn manually_create_tree<B: LLBlockStore + Send + Sync>(
+pub async fn manually_create_tree<
+    B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+>(
     nodestore: &DataNodeStore<B>,
     num_full_leaves: u64,
     last_leaf_num_bytes: u64,

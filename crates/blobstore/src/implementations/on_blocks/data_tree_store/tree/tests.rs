@@ -1,10 +1,20 @@
 use super::super::super::data_node_store::NodeLayout;
-#[cfg(any(feature = "slow-tests-1", feature = "slow-tests-2",))]
+#[cfg(any(
+    feature = "slow-tests-1",
+    feature = "slow-tests-2",
+    feature = "slow-tests-6"
+))]
 use super::super::super::data_tree_store::DataTree;
 use super::super::testutils::*;
+#[cfg(feature = "slow-tests-any")]
+use byte_unit::Byte;
 use cryfs_blockstore::BlockId;
 #[cfg(feature = "slow-tests-any")]
-use cryfs_blockstore::LLBlockStore;
+use cryfs_blockstore::BlockStore;
+#[cfg(feature = "slow-tests-any")]
+use cryfs_utils::async_drop::AsyncDrop;
+#[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
+use cryfs_utils::async_drop::AsyncDropGuard;
 #[cfg(feature = "slow-tests-any")]
 use cryfs_utils::testutils::data_fixture::DataFixture;
 #[cfg(any(
@@ -13,11 +23,14 @@ use cryfs_utils::testutils::data_fixture::DataFixture;
     feature = "slow-tests-5",
     feature = "slow-tests-6",
 ))]
+#[cfg(feature = "slow-tests-4")]
 use divrem::DivCeil;
 #[cfg(feature = "slow-tests-any")]
 use rstest::rstest;
 #[cfg(feature = "slow-tests-any")]
 use rstest_reuse::{apply, template};
+#[cfg(feature = "slow-tests-any")]
+use std::fmt::Debug;
 
 #[cfg(feature = "slow-tests-any")]
 mod testutils {
@@ -127,7 +140,9 @@ mod testutils {
         }
 
         #[cfg(feature = "slow-tests-1")]
-        pub async fn create_tree<B: LLBlockStore + Send + Sync>(
+        pub async fn create_tree<
+            B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+        >(
             &self,
             nodestore: &DataNodeStore<B>,
         ) -> BlockId {
@@ -142,7 +157,9 @@ mod testutils {
             id
         }
 
-        pub async fn create_tree_with_data<B: LLBlockStore + Send + Sync>(
+        pub async fn create_tree_with_data<
+            B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+        >(
             &self,
             nodestore: &DataNodeStore<B>,
             data: &DataFixture,
@@ -226,7 +243,9 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_is_max_data_tree<B: LLBlockStore + Send + Sync>(
+    pub async fn assert_is_max_data_tree<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         root_id: BlockId,
         expected_depth: u8,
         nodestore: &DataNodeStore<B>,
@@ -266,7 +285,9 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_is_left_max_data_tree<B: LLBlockStore + Send + Sync>(
+    pub async fn assert_is_left_max_data_tree<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         root_id: BlockId,
         expected_depth: u8,
         nodestore: &DataNodeStore<B>,
@@ -307,13 +328,16 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn flush_caches<'a, B: LLBlockStore + Send + Sync>(
-        tree: DataTree<'a, B>,
+    pub async fn flush_caches<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
+        mut tree: AsyncDropGuard<DataTree<B>>,
         nodestore: &DataNodeStore<B>,
         treestore: &DataTreeStore<B>,
     ) -> BlockId {
         let root_id = *tree.root_node_id();
         // Flush tree
+        tree.async_drop().await.unwrap();
         std::mem::drop(tree);
 
         // Flush tree store cache
@@ -324,7 +348,9 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_tree_structure<B: LLBlockStore + Send + Sync>(
+    pub async fn assert_tree_structure<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         root_id: BlockId,
         expected_depth: u8,
         nodestore: &DataNodeStore<B>,
@@ -348,7 +374,9 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn assert_leaf_data_is_correct<B: LLBlockStore + Send + Sync>(
+    pub async fn assert_leaf_data_is_correct<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         root_id: BlockId,
         expected_data: &[u8],
         nodestore: &DataNodeStore<B>,
@@ -366,7 +394,9 @@ mod testutils {
     }
 
     #[cfg(any(feature = "slow-tests-4", feature = "slow-tests-5"))]
-    pub async fn for_each_leaf<B: LLBlockStore + Send + Sync>(
+    pub async fn for_each_leaf<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
         root_id: BlockId,
         first_leaf_index: u64,
         nodestore: &DataNodeStore<B>,
@@ -455,7 +485,7 @@ mod num_bytes_and_num_nodes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn build_tree_via_resize_and_check_num_bytes_and_num_nodes(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -501,7 +531,7 @@ mod num_bytes_and_num_nodes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn build_tree_manually_and_check_num_bytes_and_num_nodes(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -634,7 +664,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn whole_tree(
-                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+                #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
             ) {
@@ -652,7 +682,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn single_byte(
-                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+                #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
@@ -682,7 +712,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn two_bytes(
-                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+                #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(LeafIndex::FromStart(0), LeafIndex::FromStart(1), LeafIndex::FromMid(0), LeafIndex::FromEnd(-1), LeafIndex::FromEnd(0), LeafIndex::FromEnd(1))]
@@ -713,7 +743,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn single_leaf(
-                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+                #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(
@@ -757,7 +787,7 @@ macro_rules! instantiate_read_write_tests {
             #[apply(super::testutils::tree_parameters)]
             #[test]
             fn across_leaves(
-                #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+                #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
                 param_num_full_leaves: ParamNum,
                 param_last_leaf_num_bytes: ParamNum,
                 #[values(
@@ -824,8 +854,10 @@ mod read_bytes {
     use super::testutils::*;
     use super::*;
 
-    async fn assert_reads_correct_data<'a, B: LLBlockStore + Send + Sync>(
-        tree: &mut DataTree<'a, B>,
+    async fn assert_reads_correct_data<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
+        tree: &mut DataTree<B>,
         data: &DataFixture,
         offset: u64,
         num_bytes: usize,
@@ -837,8 +869,10 @@ mod read_bytes {
         assert_eq!(expected_data, read_data);
     }
 
-    async fn assert_reading_is_out_of_range<'a, B: LLBlockStore + Send + Sync>(
-        tree: &mut DataTree<'a, B>,
+    async fn assert_reading_is_out_of_range<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
+        tree: &mut DataTree<B>,
         layout: NodeLayout,
         params: &Parameter,
         offset: u64,
@@ -888,8 +922,10 @@ mod try_read_bytes {
     use super::testutils::*;
     use super::*;
 
-    async fn assert_reads_correct_data<'a, B: LLBlockStore + Send + Sync>(
-        tree: &mut DataTree<'a, B>,
+    async fn assert_reads_correct_data<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
+        tree: &mut DataTree<B>,
         data: &DataFixture,
         offset: u64,
         num_bytes: usize,
@@ -902,8 +938,10 @@ mod try_read_bytes {
         assert_eq!(expected_data, read_data);
     }
 
-    async fn assert_reading_is_out_of_range<'a, B: LLBlockStore + Send + Sync>(
-        tree: &mut DataTree<'a, B>,
+    async fn assert_reading_is_out_of_range<
+        B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
+    >(
+        tree: &mut DataTree<B>,
         layout: NodeLayout,
         data: &DataFixture,
         param: Parameter,
@@ -963,7 +1001,7 @@ mod read_all {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn read_whole_tree(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -1210,7 +1248,7 @@ mod resize_num_bytes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_resize_basic(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
         // param2_num_full_leaves and param2_last_leaf_num_bytes are set up the same way
@@ -1249,7 +1287,7 @@ mod resize_num_bytes {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_resize_to_zero(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -1273,7 +1311,7 @@ mod remove {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_remove(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
@@ -1291,7 +1329,7 @@ mod remove {
                     let tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
 
                     // Remove tree
-                    tree.remove().await.unwrap();
+                    DataTree::remove(tree).await.unwrap();
 
                     // Check tree is gone
                     assert!(treestore.load_tree(tree_id).await.unwrap().is_none());
@@ -1317,7 +1355,7 @@ mod all_blocks {
     #[apply(super::testutils::tree_parameters)]
     #[test]
     fn test_all_blocks(
-        #[values(Byte::from(40), Byte::from(64), Byte::from(512))] block_size: Byte,
+        #[values(Byte::from_u64(40), Byte::from_u64(64), Byte::from_u64(512))] block_size: Byte,
         param_num_full_leaves: ParamNum,
         param_last_leaf_num_bytes: ParamNum,
     ) {
