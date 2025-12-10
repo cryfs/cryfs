@@ -1011,12 +1011,12 @@ fn multiple_reads_from_same_file<const CLOSE_AFTER: bool>(
         })
         .expect_op_counts(|fixture_type, atime_behavior| {
             let close_after = if CLOSE_AFTER { 1 } else { 0 };
-            let (expect_atime_update_1, expect_atime_update_2) = match atime_behavior {
-                AtimeUpdateBehavior::Noatime => (0, 0),
-                AtimeUpdateBehavior::Relatime | AtimeUpdateBehavior::NodiratimeRelatime => (1, 0),
-                AtimeUpdateBehavior::Strictatime | AtimeUpdateBehavior::NodiratimeStrictatime => {
-                    (1, 1)
-                }
+            let expect_atime_update = match atime_behavior {
+                AtimeUpdateBehavior::Noatime => 0,
+                AtimeUpdateBehavior::Relatime
+                | AtimeUpdateBehavior::NodiratimeRelatime
+                | AtimeUpdateBehavior::Strictatime
+                | AtimeUpdateBehavior::NodiratimeStrictatime => 1,
             };
 
             ActionCounts {
@@ -1031,13 +1031,13 @@ fn multiple_reads_from_same_file<const CLOSE_AFTER: bool>(
                         FixtureType::FuserWithoutInodeCache => 20 + 2 * close_after, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                     },
                     blob_try_read: 10,
-                    blob_resize: expect_atime_update_1 * close_after,
-                    blob_write: expect_atime_update_1 * close_after,
+                    blob_resize: expect_atime_update * close_after,
+                    blob_write: expect_atime_update * close_after,
                     blob_num_bytes: match fixture_type {
                         FixtureType::FuserWithInodeCache | FixtureType::Fusemt => 0,
                         FixtureType::FuserWithoutInodeCache => 10 + close_after, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                     },
-                    blob_flush: close_after + expect_atime_update_1 * close_after,
+                    blob_flush: close_after + expect_atime_update * close_after,
                     ..BlobStoreActionCounts::ZERO
                 },
                 high_level: HLActionCounts {
@@ -1048,20 +1048,20 @@ fn multiple_reads_from_same_file<const CLOSE_AFTER: bool>(
                         }
                         FixtureType::FuserWithoutInodeCache => 120 + 10 * close_after, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                     },
-                    store_flush_block: close_after + expect_atime_update_1 * close_after,
+                    store_flush_block: close_after + expect_atime_update * close_after,
                     blob_data: match fixture_type {
                         FixtureType::FuserWithInodeCache | FixtureType::Fusemt => {
                             530 + 35 * close_after
                         }
                         FixtureType::FuserWithoutInodeCache => 880 + 70 * close_after, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
-                    } + 2 * expect_atime_update_1 * close_after,
-                    blob_data_mut: expect_atime_update_1 * close_after,
+                    } + 2 * expect_atime_update * close_after,
+                    blob_data_mut: expect_atime_update * close_after,
                     ..HLActionCounts::ZERO
                 },
                 low_level: LLActionCounts {
                     // TODO Check if these counts are what we'd expect
                     load: 7,
-                    store: expect_atime_update_1 * close_after,
+                    store: expect_atime_update * close_after,
                     ..LLActionCounts::ZERO
                 },
             }

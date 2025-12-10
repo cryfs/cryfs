@@ -1,6 +1,7 @@
 use derive_more::{Display, From, Into};
 use std::{cmp::PartialOrd, num::NonZeroU64};
 
+#[cfg(any(feature = "fuser", feature = "fuse_mt"))]
 use crate::common::HandleTrait;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Into)]
@@ -22,6 +23,7 @@ impl FileHandle {
     }
 }
 
+#[cfg(any(feature = "fuser", feature = "fuse_mt"))]
 impl HandleTrait for FileHandle {
     const MIN: Self = Self { v: NonZeroU64::MIN };
     const MAX: Self = Self { v: NonZeroU64::MAX };

@@ -72,25 +72,25 @@ impl<'a> MockHelper<'a> {
         self.expect_lookup_has_attrs(parent_ino, name, attr)
     }
 
-    /// The mock file system will return on `lookup` that the given node is a file.
-    /// This function returns the inode number that will be returned for that node.
-    pub fn expect_lookup_is_file(
-        &mut self,
-        parent_ino: InodeNumber,
-        name: &PathComponent,
-    ) -> InodeNumber {
-        self.expect_lookup_is_kind(parent_ino, name, NodeKind::File)
-    }
+    // /// The mock file system will return on `lookup` that the given node is a file.
+    // /// This function returns the inode number that will be returned for that node.
+    // pub fn expect_lookup_is_file(
+    //     &mut self,
+    //     parent_ino: InodeNumber,
+    //     name: &PathComponent,
+    // ) -> InodeNumber {
+    //     self.expect_lookup_is_kind(parent_ino, name, NodeKind::File)
+    // }
 
-    /// The mock file system will return on `lookup` that the given node is a symlink.
-    /// This function returns the inode number that will be returned for that node.
-    pub fn expect_lookup_is_symlink(
-        &mut self,
-        parent_ino: InodeNumber,
-        name: &PathComponent,
-    ) -> InodeNumber {
-        self.expect_lookup_is_kind(parent_ino, name, NodeKind::Symlink)
-    }
+    // /// The mock file system will return on `lookup` that the given node is a symlink.
+    // /// This function returns the inode number that will be returned for that node.
+    // pub fn expect_lookup_is_symlink(
+    //     &mut self,
+    //     parent_ino: InodeNumber,
+    //     name: &PathComponent,
+    // ) -> InodeNumber {
+    //     self.expect_lookup_is_kind(parent_ino, name, NodeKind::Symlink)
+    // }
 
     /// The mock file system will return on `lookup` that the given node is a directory.
     /// This function returns the inode number that will be returned for that node.
@@ -160,12 +160,12 @@ impl<'a> MockHelper<'a> {
         self.expect_lookup_path_is_kind(path, NodeKind::File)
     }
 
-    /// Expect to lookup all intermediate directories on `path`.
-    /// Each intermediate directory will be returned to be a directory.
-    /// The final entry will be returned to be a symlink, and its inode will be returned from this function.
-    pub fn expect_lookup_path_is_symlink(&mut self, path: &AbsolutePath) -> InodeNumber {
-        self.expect_lookup_path_is_kind(path, NodeKind::Symlink)
-    }
+    // /// Expect to lookup all intermediate directories on `path`.
+    // /// Each intermediate directory will be returned to be a directory.
+    // /// The final entry will be returned to be a symlink, and its inode will be returned from this function.
+    // pub fn expect_lookup_path_is_symlink(&mut self, path: &AbsolutePath) -> InodeNumber {
+    //     self.expect_lookup_path_is_kind(path, NodeKind::Symlink)
+    // }
 }
 
 fn some_dir_attrs() -> NodeAttrs {

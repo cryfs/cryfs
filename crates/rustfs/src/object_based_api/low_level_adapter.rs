@@ -310,10 +310,11 @@ where
         mtime: Option<SystemTime>,
         ctime: Option<SystemTime>,
         fh: Option<FileHandle>,
-        crtime: Option<SystemTime>,
-        chgtime: Option<SystemTime>,
-        bkuptime: Option<SystemTime>,
-        flags: Option<u32>,
+        // TODO Add support for crtime, chgtme, bkuptime, flags. They're only relevant for macos.
+        _crtime: Option<SystemTime>,
+        _chgtime: Option<SystemTime>,
+        _bkuptime: Option<SystemTime>,
+        _flags: Option<u32>,
     ) -> FsResult<ReplyAttr> {
         self.trigger_on_operation().await?;
 
@@ -333,7 +334,6 @@ where
             })?
         };
 
-        // TODO What to do with crtime, chgtime, bkuptime, flags?
         Ok(ReplyAttr {
             ttl: TTL_GETATTR,
             attr,
@@ -380,12 +380,12 @@ where
 
     async fn mknod(
         &self,
-        req: &RequestInfo,
-        parent_ino: InodeNumber,
-        name: &PathComponent,
-        mode: Mode,
-        umask: u32,
-        rdev: u32,
+        _req: &RequestInfo,
+        _parent_ino: InodeNumber,
+        _name: &PathComponent,
+        _mode: Mode,
+        _umask: u32,
+        _rdev: u32,
     ) -> FsResult<ReplyEntry> {
         self.trigger_on_operation().await?;
 
@@ -557,10 +557,10 @@ where
 
     async fn link(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        newparent_ino: InodeNumber,
-        newname: &PathComponent,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _newparent_ino: InodeNumber,
+        _newname: &PathComponent,
     ) -> FsResult<ReplyEntry> {
         self.trigger_on_operation().await?;
 
@@ -591,13 +591,13 @@ where
 
     async fn read<R, C>(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
         fh: FileHandle,
         offset: NumBytes,
         size: NumBytes,
-        flags: i32,
-        lock_owner: Option<u64>,
+        _flags: i32, // TODO Handle flags, see https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.read
+        _lock_owner: Option<u64>, // TODO What to do with lock_owner?
         callback: C,
     ) -> R
     where
@@ -813,11 +813,11 @@ where
 
     async fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        offset: u64,
-        reply: &mut R,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _offset: u64,
+        _reply: &mut R,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -846,10 +846,10 @@ where
 
     async fn fsyncdir(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        datasync: bool,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _datasync: bool,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -865,12 +865,12 @@ where
 
     async fn setxattr(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        name: &PathComponent,
-        value: &[u8],
-        flags: i32,
-        position: NumBytes,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _name: &PathComponent,
+        _value: &[u8],
+        _flags: i32,
+        _position: NumBytes,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -880,9 +880,9 @@ where
 
     async fn getxattr_numbytes(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        name: &PathComponent,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _name: &PathComponent,
     ) -> FsResult<NumBytes> {
         self.trigger_on_operation().await?;
 
@@ -892,10 +892,10 @@ where
 
     async fn getxattr_data(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        name: &PathComponent,
-        max_bytes_to_read: NumBytes,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _name: &PathComponent,
+        _max_bytes_to_read: NumBytes,
     ) -> FsResult<Vec<u8>> {
         self.trigger_on_operation().await?;
 
@@ -903,7 +903,11 @@ where
         return Err(FsError::NotImplemented);
     }
 
-    async fn listxattr_numbytes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<NumBytes> {
+    async fn listxattr_numbytes(
+        &self,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+    ) -> FsResult<NumBytes> {
         self.trigger_on_operation().await?;
 
         // TODO
@@ -912,9 +916,9 @@ where
 
     async fn listxattr_data(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        max_bytes_to_read: NumBytes,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _max_bytes_to_read: NumBytes,
     ) -> FsResult<Vec<u8>> {
         self.trigger_on_operation().await?;
 
@@ -924,9 +928,9 @@ where
 
     async fn removexattr(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        name: &PathComponent,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _name: &PathComponent,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -934,7 +938,7 @@ where
         Err(FsError::NotImplemented)
     }
 
-    async fn access(&self, req: &RequestInfo, ino: InodeNumber, mask: i32) -> FsResult<()> {
+    async fn access(&self, _req: &RequestInfo, _ino: InodeNumber, _mask: i32) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
         // TODO Should we implement access?
@@ -984,14 +988,14 @@ where
 
     async fn getlk(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        lock_owner: u64,
-        start: u64,
-        end: u64,
-        typ: i32,
-        pid: u32,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _lock_owner: u64,
+        _start: u64,
+        _end: u64,
+        _typ: i32,
+        _pid: u32,
     ) -> FsResult<ReplyLock> {
         self.trigger_on_operation().await?;
 
@@ -1001,15 +1005,15 @@ where
 
     async fn setlk(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        lock_owner: u64,
-        start: u64,
-        end: u64,
-        typ: i32,
-        pid: u32,
-        sleep: bool,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _lock_owner: u64,
+        _start: u64,
+        _end: u64,
+        _typ: i32,
+        _pid: u32,
+        _sleep: bool,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -1019,10 +1023,10 @@ where
 
     async fn bmap(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        blocksize: NumBytes,
-        idx: u64,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _blocksize: NumBytes,
+        _idx: u64,
     ) -> FsResult<ReplyBmap> {
         self.trigger_on_operation().await?;
 
@@ -1033,13 +1037,13 @@ where
     /// control device
     async fn ioctl(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        flags: u32,
-        cmd: u32,
-        in_data: &[u8],
-        out_size: u32,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _flags: u32,
+        _cmd: u32,
+        _in_data: &[u8],
+        _out_size: u32,
     ) -> FsResult<ReplyIoctl> {
         self.trigger_on_operation().await?;
 
@@ -1049,12 +1053,12 @@ where
 
     async fn fallocate(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        offset: NumBytes,
-        length: NumBytes,
-        mode: Mode,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _offset: NumBytes,
+        _length: NumBytes,
+        _mode: Mode,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -1064,11 +1068,11 @@ where
 
     async fn lseek(
         &self,
-        req: &RequestInfo,
-        ino: InodeNumber,
-        fh: FileHandle,
-        offset: NumBytes,
-        whence: i32,
+        _req: &RequestInfo,
+        _ino: InodeNumber,
+        _fh: FileHandle,
+        _offset: NumBytes,
+        _whence: i32,
     ) -> FsResult<ReplyLseek> {
         self.trigger_on_operation().await?;
 
@@ -1078,15 +1082,15 @@ where
 
     async fn copy_file_range(
         &self,
-        req: &RequestInfo,
-        ino_in: InodeNumber,
-        fh_in: FileHandle,
-        offset_in: NumBytes,
-        ino_out: InodeNumber,
-        fh_out: FileHandle,
-        offset_out: NumBytes,
-        len: NumBytes,
-        flags: u32,
+        _req: &RequestInfo,
+        _ino_in: InodeNumber,
+        _fh_in: FileHandle,
+        _offset_in: NumBytes,
+        _ino_out: InodeNumber,
+        _fh_out: FileHandle,
+        _offset_out: NumBytes,
+        _len: NumBytes,
+        _flags: u32,
     ) -> FsResult<ReplyWrite> {
         self.trigger_on_operation().await?;
 

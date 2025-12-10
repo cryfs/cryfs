@@ -35,25 +35,12 @@ where
         })
     }
 
-    /// Blocks the given handle from being used for new entries.
-    /// Panics if the handle is already used for an entry.
-    pub fn block_handle(&mut self, handle: Handle) {
-        self.available_handles.acquire_specific(handle);
-    }
-
     pub fn add(&mut self, file: AsyncDropGuard<T>) -> HandleWithGeneration<Handle> {
         let handle = self.available_handles.acquire();
         self.objects
             .try_insert(handle.handle.clone(), file)
             .expect("Tried to add a file to the HandleMap but the handle was already in use");
         handle
-    }
-
-    pub fn insert(&mut self, handle: Handle, file: AsyncDropGuard<T>) {
-        self.available_handles.acquire_specific(handle.clone());
-        self.objects
-            .try_insert(handle, file)
-            .expect("Tried to insert a file to the HandleMap but the handle was already in use");
     }
 
     pub fn remove(&mut self, handle: Handle) -> AsyncDropGuard<T> {
@@ -65,29 +52,11 @@ where
         file
     }
 
-    pub fn try_remove(&mut self, handle: Handle) -> Option<AsyncDropGuard<T>> {
-        let Some(file) = self.objects.remove(&handle) else {
-            return None;
-        };
-        self.available_handles.release(handle);
-        Some(file)
-    }
-
     pub fn get(&self, handle: Handle) -> Option<&AsyncDropGuard<T>> {
         self.objects.get(&handle)
     }
 
-    pub fn get_mut(&mut self, handle: Handle) -> Option<&mut AsyncDropGuard<T>> {
-        self.objects.get_mut(&handle)
-    }
-
     #[cfg(feature = "testutils")]
-    pub fn drain(&mut self) -> impl Iterator<Item = (Handle, AsyncDropGuard<T>)> {
-        self.available_handles = HandlePool::new();
-        self.objects.drain()
-    }
-
-    #[cfg(any(test, feature = "testutils"))]
     pub fn iter(&self) -> impl Iterator<Item = (&Handle, &AsyncDropGuard<T>)> {
         self.objects.iter()
     }

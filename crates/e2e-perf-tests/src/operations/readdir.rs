@@ -91,7 +91,7 @@ fn rootdir_with_entries(test_driver: impl TestDriver) -> impl TestReady {
         .test(async |fixture, ()| {
             fixture.filesystem.readdir(None).await.unwrap();
         })
-        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
+        .expect_op_counts(|_fixture_type, _atime_behavior| ActionCounts {
             blobstore: BlobStoreActionCounts {
                 // TODO Check if these counts are what we'd expect
                 store_load: 1,

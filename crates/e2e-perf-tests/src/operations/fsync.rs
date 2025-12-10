@@ -110,7 +110,6 @@ fn unchanged_empty_file_in_rootdir<const DATASYNC: bool, const CLOSE_AFTER: bool
             maybe_close::<CLOSE_AFTER, _>(fixture, file, fh).await;
         })
         .expect_op_counts(|fixture_type, _atime_behavior| {
-            let datasync = if DATASYNC { 1 } else { 0 };
             let close_after = if CLOSE_AFTER { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -183,7 +182,6 @@ fn unchanged_file_with_data_in_rootdir<const DATASYNC: bool, const CLOSE_AFTER: 
             maybe_close::<CLOSE_AFTER, _>(fixture, file, fh).await;
         })
         .expect_op_counts(|fixture_type, _atime_behavior| {
-            let datasync = if DATASYNC { 1 } else { 0 };
             let close_after = if CLOSE_AFTER { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -256,7 +254,6 @@ fn unchanged_large_file_in_rootdir<const DATASYNC: bool, const CLOSE_AFTER: bool
             maybe_close::<CLOSE_AFTER, _>(fixture, file, fh).await;
         })
         .expect_op_counts(|fixture_type, _atime_behavior| {
-            let datasync = if DATASYNC { 1 } else { 0 };
             let close_after = if CLOSE_AFTER { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -329,7 +326,6 @@ fn unchanged_file_in_nested_dir<const DATASYNC: bool, const CLOSE_AFTER: bool>(
             maybe_close::<CLOSE_AFTER, _>(fixture, file, fh).await;
         })
         .expect_op_counts(|fixture_type, _atime_behavior| {
-            let datasync = if DATASYNC { 1 } else { 0 };
             let close_after = if CLOSE_AFTER { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {
@@ -410,7 +406,6 @@ fn unchanged_file_in_deeply_nested_dir<const DATASYNC: bool, const CLOSE_AFTER: 
             maybe_close::<CLOSE_AFTER, _>(fixture, file, fh).await;
         })
         .expect_op_counts(|fixture_type, _atime_behavior| {
-            let datasync = if DATASYNC { 1 } else { 0 };
             let close_after = if CLOSE_AFTER { 1 } else { 0 };
             ActionCounts {
                 blobstore: BlobStoreActionCounts {

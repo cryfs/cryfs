@@ -32,7 +32,6 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     path::{AbsolutePath, AbsolutePathBuf, PathComponent},
 };
-use std::os::unix::io::AsRawFd;
 
 pub trait MountingBackend {
     type Session: BackgroundSession + Send + 'static;

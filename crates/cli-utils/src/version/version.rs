@@ -1,8 +1,11 @@
 use console::style;
 use std::io::Write;
 
+#[cfg(feature = "check_for_updates")]
 use crate::env::Environment;
-use cryfs_version::{Version, VersionInfo};
+#[cfg(feature = "check_for_updates")]
+use cryfs_version::Version;
+use cryfs_version::VersionInfo;
 
 #[cfg(feature = "check_for_updates")]
 use super::http_client::HttpClient;
@@ -14,12 +17,13 @@ fn warning(content: &str) -> String {
 }
 
 pub fn show_version(
-    env: &Environment,
+    #[cfg(feature = "check_for_updates")] env: &Environment,
     name: &str,
     #[cfg(feature = "check_for_updates")] http_client: impl HttpClient,
     version_info: VersionInfo<&str>,
 ) {
     _show_version(
+        #[cfg(feature = "check_for_updates")]
         env,
         name,
         #[cfg(feature = "check_for_updates")]
@@ -30,7 +34,7 @@ pub fn show_version(
 }
 
 fn _show_version(
-    env: &Environment,
+    #[cfg(feature = "check_for_updates")] env: &Environment,
     name: &str,
     #[cfg(feature = "check_for_updates")] http_client: impl HttpClient,
     version_info: VersionInfo<&str>,
@@ -125,8 +129,10 @@ fn _maybe_check_for_updates<'a>(
 
 #[cfg(test)]
 mod tests {
+    use cryfs_version::Version;
     use cryfs_version::{GitInfo, TagInfo};
     use std::io::BufWriter;
+    #[cfg(feature = "check_for_updates")]
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[cfg(feature = "check_for_updates")]
@@ -135,13 +141,14 @@ mod tests {
     use super::*;
 
     fn show_version_capture_output(
-        env: &Environment,
+        #[cfg(feature = "check_for_updates")] env: &Environment,
         name: &str,
         #[cfg(feature = "check_for_updates")] http_client: impl HttpClient,
         version_info: VersionInfo<&str>,
     ) -> String {
         let mut output = BufWriter::new(Vec::new());
         _show_version(
+            #[cfg(feature = "check_for_updates")]
             env,
             name,
             #[cfg(feature = "check_for_updates")]
@@ -181,6 +188,7 @@ mod tests {
         http_client
     }
 
+    #[cfg(feature = "check_for_updates")]
     fn environment() -> Environment {
         Environment {
             is_noninteractive: false,
@@ -267,6 +275,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -285,6 +294,7 @@ mod tests {
             let version = Version::parse_const("1.2.3").unwrap();
             let version_info = VersionInfo::new(version, None);
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -313,6 +323,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -341,6 +352,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -369,6 +381,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -397,6 +410,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -415,6 +429,7 @@ mod tests {
             let version = Version::parse_const("1.2.3-rc1").unwrap();
             let version_info = VersionInfo::new(version, None);
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -443,6 +458,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -471,6 +487,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -499,6 +516,7 @@ mod tests {
                 }),
             );
             let output = show_version_capture_output(
+                #[cfg(feature = "check_for_updates")]
                 &environment(),
                 "AppName",
                 #[cfg(feature = "check_for_updates")]
@@ -527,6 +545,7 @@ mod tests {
             assert_eq!(0, http_request_counter.load(Ordering::SeqCst));
         }
 
+        #[cfg(feature = "check_for_updates")]
         fn assert_did_do_update_check(
             output: &str,
             http_request_counter: &AtomicUsize,
@@ -541,6 +560,7 @@ mod tests {
             assert_eq!(1, http_request_counter.load(Ordering::SeqCst));
         }
 
+        #[cfg(feature = "check_for_updates")]
         fn assert_did_do_update_check_and_failed(output: &str, http_request_counter: &AtomicUsize) {
             assert!(output.contains("Failed to check for updates"));
             assert_eq!(1, http_request_counter.load(Ordering::SeqCst));
@@ -551,11 +571,7 @@ mod tests {
         fn update_check_disabled_by_compile_flag() {
             let version = Version::parse_const("1.2.3").unwrap();
             let version_info = VersionInfo::new(version, None);
-            let env = Environment {
-                is_noninteractive: false,
-                local_state_dir: std::path::PathBuf::new(),
-            };
-            let output = show_version_capture_output(&env, "AppName", version_info);
+            let output = show_version_capture_output("AppName", version_info);
             assert_didnt_do_update_check(&output);
         }
 
@@ -564,11 +580,7 @@ mod tests {
         fn update_check_disabled_by_compile_flag_and_noninteractive_mode() {
             let version = Version::parse_const("1.2.3").unwrap();
             let version_info = VersionInfo::new(version, None);
-            let env = Environment {
-                is_noninteractive: true,
-                local_state_dir: std::path::PathBuf::new(),
-            };
-            let output = show_version_capture_output(&env, "AppName", version_info);
+            let output = show_version_capture_output("AppName", version_info);
             assert_didnt_do_update_check(&output);
         }
 
@@ -657,6 +669,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "check_for_updates")]
     mod security_warnings {
         use super::*;
 
@@ -675,7 +688,6 @@ mod tests {
             assert!(!output.contains(security_warning));
         }
 
-        #[cfg(feature = "check_for_updates")]
         #[test]
         fn no_security_warning() {
             let version = Version::parse_const("1.2.3").unwrap();
@@ -690,7 +702,6 @@ mod tests {
             assert_doesnt_contain_security_warning(&output, SECURITY_WARNING);
         }
 
-        #[cfg(feature = "check_for_updates")]
         #[test]
         fn security_warning() {
             let version = Version::parse_const("1.2.3").unwrap();
@@ -709,7 +720,6 @@ mod tests {
             assert_contains_security_warning(&output, SECURITY_WARNING);
         }
 
-        #[cfg(feature = "check_for_updates")]
         #[test]
         fn security_warning_for_different_version() {
             let version = Version::parse_const("1.2.3").unwrap();

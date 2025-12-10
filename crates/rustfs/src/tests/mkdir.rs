@@ -222,7 +222,7 @@ mod result {
             &path,
             async move |driver| {
                 let result = driver.mkdir(&path, Mode::default()).await.unwrap_err();
-                assert_eq!(Errno::from_i32(expected_error_code), result);
+                assert_eq!(Errno::from_raw(expected_error_code), result);
                 Ok(())
             },
             |_, _req, _parent_ino, _name, _mode, _umask| Err(error),
@@ -252,7 +252,7 @@ mod result {
                 .mkdir(path("/some/nested/dir"), Mode::default())
                 .await
                 .unwrap_err();
-            assert_eq!(Errno::from_i32(expected_error_code), result);
+            assert_eq!(Errno::from_raw(expected_error_code), result);
         }
 
         #[rstest]
@@ -273,7 +273,7 @@ mod result {
                 .mkdir(path("/some/nested/dir"), Mode::default())
                 .await
                 .unwrap_err();
-            assert_eq!(Errno::from_i32(expected_error_code), result);
+            assert_eq!(Errno::from_raw(expected_error_code), result);
         }
 
         #[rstest]
@@ -290,7 +290,7 @@ mod result {
                 .mkdir(path("/some/nested/dir"), Mode::default())
                 .await
                 .unwrap_err();
-            assert_eq!(Errno::from_i32(libc::EEXIST), result);
+            assert_eq!(Errno::from_raw(libc::EEXIST), result);
         }
 
         #[tokio::test]
@@ -304,7 +304,7 @@ mod result {
                 .mkdir(path("/some/nested/dir"), Mode::default())
                 .await
                 .unwrap_err();
-            assert_eq!(Errno::from_i32(libc::ENOTDIR), result);
+            assert_eq!(Errno::from_raw(libc::ENOTDIR), result);
         }
     }
 }

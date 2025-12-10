@@ -1,6 +1,7 @@
 mod interface;
 pub use interface::{Device, Dir, File, Node, OpenFile, Symlink};
 
+#[cfg(any(feature = "fuser", feature = "fuse_mt"))]
 mod utils;
 #[cfg(feature = "fuser")]
 pub use utils::FUSE_ROOT_ID;

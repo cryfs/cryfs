@@ -30,6 +30,7 @@
 
 #![cfg(any(test, feature = "benchmark"))]
 
+#[cfg(not(feature = "benchmark"))]
 mod env_logger;
 mod filesystem_driver;
 mod filesystem_fixture;

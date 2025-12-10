@@ -43,7 +43,7 @@ where
 
     async fn into_open(
         this: AsyncDropGuard<Self>,
-        flags: OpenInFlags,
+        _flags: OpenInFlags,
     ) -> FsResult<AsyncDropGuard<CryOpenFile<B>>> {
         // TODO Share the NodeInfo instance between CryFile and CryOpenFile with an Arc so that [CryFile::truncate] will not have to load the parent blob
         //      if CryOpenFile already did (or the other way round)

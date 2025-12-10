@@ -15,6 +15,7 @@ use crate::{
 };
 
 /// Abstracts over the backend that can run a [Device] based file system.
+#[allow(async_fn_in_trait)]
 pub trait RustfsBackend: Send + Sync {
     type BackgroundSession: BackgroundSession + Send + 'static;
 

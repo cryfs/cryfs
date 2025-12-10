@@ -52,7 +52,7 @@ fuser = { workspace = true, features = ["libfuse"] }
 default = ["fuser"]
 fuse_mt = ["dep:fuse_mt"]
 fuser = []
-testutils = []
+testutils = ["cryfs-utils/testutils"]
 
 [[example]]
 name = "inmemory"

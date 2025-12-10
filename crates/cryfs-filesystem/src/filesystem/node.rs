@@ -1,5 +1,7 @@
 use async_trait::async_trait;
+#[cfg(feature = "testutils")]
 use cryfs_utils::with_async_drop_2;
+#[cfg(feature = "testutils")]
 use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;

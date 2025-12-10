@@ -47,8 +47,9 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
 
     let env = Environment::read_env()?;
 
-    let show_version = |env| {
+    let show_version = |#[cfg(feature = "check_for_updates")] env| {
         show_version(
+            #[cfg(feature = "check_for_updates")]
             &env,
             App::NAME,
             #[cfg(feature = "check_for_updates")]
@@ -62,7 +63,10 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
             // TODO We probably should initialize logging here before showing the version,
             // so that any http requests we do for checking for updates have a working logging backend.
             // Same for the cases below that don't initialize logging yet.
-            show_version(env);
+            show_version(
+                #[cfg(feature = "check_for_updates")]
+                env,
+            );
             Ok(())
         }
         Ok(ParseArgsResult::Normal { log, args }) => {
@@ -71,16 +75,25 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
                 log.or_default(app.default_log_config()),
                 DEFAULT_LOG_LEVEL
             );
-            show_version(env);
+            show_version(
+                #[cfg(feature = "check_for_updates")]
+                env,
+            );
             app.main()
         }
         Err(ArgParseError::Clap(err)) => {
-            show_version(env);
+            show_version(
+                #[cfg(feature = "check_for_updates")]
+                env,
+            );
             // clap error types can display colored output if exiting this way, otherwise they wouldn't
             err.exit();
         }
         Err(ArgParseError::Other(err)) => {
-            show_version(env);
+            show_version(
+                #[cfg(feature = "check_for_updates")]
+                env,
+            );
             Err(err)
         }
     }

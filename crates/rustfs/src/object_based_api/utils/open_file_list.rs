@@ -61,7 +61,7 @@ where
         open_files.remove(fh)
     }
 
-    #[cfg(any(test, feature = "testutils"))]
+    #[cfg(all(feature = "testutils", any(feature = "fuser", feature = "fuse_mt")))]
     pub async fn for_each(&self, callback: impl ForEachCallback<OF>) -> Result<(), FsError> {
         use cryfs_utils::stream::for_each_unordered;
 
@@ -70,7 +70,7 @@ where
     }
 }
 
-#[cfg(any(test, feature = "testutils"))]
+#[cfg(all(feature = "testutils", any(feature = "fuser", feature = "fuse_mt")))]
 pub trait ForEachCallback<OF>
 where
     OF: OpenFile,

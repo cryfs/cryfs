@@ -32,7 +32,11 @@ mod uid;
 pub use uid::Uid;
 
 mod handles;
-pub use handles::{HandleMap, HandlePool, HandleTrait, HandleWithGeneration};
+#[cfg(feature = "fuser")]
+pub use handles::HandlePool;
+pub use handles::HandleWithGeneration;
+#[cfg(any(feature = "fuser", feature = "fuse_mt"))]
+pub use handles::{HandleMap, HandleTrait};
 
 mod file_handle;
 pub use file_handle::FileHandle;

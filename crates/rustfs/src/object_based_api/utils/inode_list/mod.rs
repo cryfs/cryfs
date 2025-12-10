@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use core::panic;
-use cryfs_utils::concurrent_store::{
-    ConcurrentStore, LoadedEntryGuard, RequestImmediateDropResult,
-};
+#[cfg(feature = "testutils")]
+use cryfs_utils::concurrent_store::RequestImmediateDropResult;
+use cryfs_utils::concurrent_store::{ConcurrentStore, LoadedEntryGuard};
 use cryfs_utils::stream::for_each_unordered;
 use cryfs_utils::with_async_drop_2;
 use derive_more::{Display, Error};

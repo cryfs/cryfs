@@ -5,14 +5,14 @@ use assert_cmd::Command;
 use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;
 use predicates::str::ContainsPredicate;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // TODO Use indoc! for multiline strings
 
 lazy_static! {
     // Don't use escargot for getting the path of the executable built with same settings as the
     // test was built, because that one is already built by cargo and we don't need to re-build it.
-    static ref CRYFS_CMD_PATH_CURRENT: PathBuf = assert_cmd::cargo::cargo_bin("cryfs");
+    static ref CRYFS_CMD_PATH_CURRENT: &'static Path = assert_cmd::cargo::cargo_bin!("cryfs");
     static ref CRYFS_CMD_PATH_DEBUG: PathBuf = escargot::CargoBuild::new()
         .current_target()
         .bin("cryfs")

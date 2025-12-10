@@ -170,7 +170,7 @@ impl Node for PassthroughNode {
     }
 
     #[cfg(feature = "testutils")]
-    async fn fsync(&self, datasync: bool) -> FsResult<()> {
+    async fn fsync(&self, _datasync: bool) -> FsResult<()> {
         // No-op for passthrough filesystem
         Ok(())
     }

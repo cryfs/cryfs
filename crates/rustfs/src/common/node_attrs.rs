@@ -30,6 +30,7 @@ pub struct NodeAttrs {
     pub ctime: SystemTime,
 }
 
+#[allow(dead_code)] // false positive warning, this is used in #[debug] above
 fn format_datetime(time: SystemTime) -> String {
     let datetime: OffsetDateTime = time.into();
     datetime

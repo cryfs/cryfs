@@ -45,6 +45,7 @@ impl<BS: BackgroundSession> RunningFilesystem<BS>
 where
     BS: BackgroundSession + Send + 'static,
 {
+    #[cfg(any(feature = "fuser", feature = "fuse_mt"))]
     pub(super) fn new(session: BS) -> Self {
         let session = Arc::new(Mutex::new(Some(session)));
         let session_clone = session.clone();

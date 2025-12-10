@@ -2,6 +2,7 @@ use std::{cmp::PartialOrd, num::NonZeroU64};
 
 use derive_more::{Display, From, Into};
 
+#[cfg(any(feature = "fuser", feature = "fuse_mt"))]
 use crate::common::HandleTrait;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From, Into, Display)]
@@ -23,6 +24,7 @@ impl InodeNumber {
     }
 }
 
+#[cfg(any(feature = "fuser", feature = "fuse_mt"))]
 impl HandleTrait for InodeNumber {
     const MIN: Self = Self { v: NonZeroU64::MIN };
     const MAX: Self = Self { v: NonZeroU64::MAX };

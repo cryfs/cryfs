@@ -1,17 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::Hash;
 
-use derive_more::Display;
-
+use crate::common::HandleWithGeneration;
 use crate::common::handles::handle_trait::HandleTrait;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display)]
-#[display("{handle}.{generation}")]
-pub struct HandleWithGeneration<Handle> {
-    pub handle: Handle,
-    pub generation: u64,
-}
 
 /// A [HandlePool] can be used to acquire and release unique handles, e.g. inodes.
 /// Each handle is a unique number and [Self::acquire] will return a different number
