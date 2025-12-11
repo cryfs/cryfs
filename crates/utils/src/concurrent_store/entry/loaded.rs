@@ -15,7 +15,7 @@ where
     V: AsyncDrop + Debug + Send + 'static,
 {
     entry: AsyncDropGuard<AsyncDropArc<V>>,
-    /// Number of tasks that started waiting for this entry when it was in [Entry::Loading],
+    /// Number of tasks that started waiting for this entry when it was in [super::EntryState::Loading],
     /// but haven't yet incremented the refcount of [Self::entry].
     /// This gets never increased, only initialized when the entry is loaded and decreased when a waiter gets its clone of the AsyncDropArc.
     /// If this is non-zero, then we shouldn't prune the entry yet even if the refcount is zero.

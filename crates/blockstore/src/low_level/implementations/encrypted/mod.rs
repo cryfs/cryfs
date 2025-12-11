@@ -11,7 +11,7 @@ use crate::{
     BlockId, Overhead,
     low_level::{
         BlockStoreDeleter, BlockStoreReader, LLBlockStore, OptimizedBlockStoreWriter,
-        interface::block_data::IBlockData,
+        interface::block_data::{IBlockData, create_block_data_wrapper},
     },
     utils::{RemoveResult, TryCreateResult},
 };

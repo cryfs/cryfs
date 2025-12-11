@@ -7,6 +7,7 @@ use std::fmt::{self, Debug};
 use std::sync::RwLock;
 use sysinfo::System;
 
+use crate::low_level::interface::block_data::create_block_data_wrapper;
 use crate::{
     BlockId, Overhead, RemoveResult, TryCreateResult,
     low_level::{

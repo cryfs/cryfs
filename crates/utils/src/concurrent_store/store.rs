@@ -265,8 +265,8 @@ where
     /// Check if an entry is either loading or loaded, and if yes return it.
     /// If the entry is not loading or loaded, return None.
     ///
-    /// The caller is expected to await the returned [EntryLoadingWaiter] (in [LoadingOrLoaded::Loading])
-    /// through [EntryLoadingWaiter::wait_until_loaded], and to drop the returned [AsyncDropGuard] in [LoadingOrLoaded::Loaded].
+    /// The caller is expected to await the returned [EntryLoadingWaiter] (in the loading state of [LoadingOrLoaded])
+    /// through [EntryLoadingWaiter::wait_until_loaded], and to drop the returned [AsyncDropGuard] in the loaded state of [LoadingOrLoaded].
     pub fn get_if_loading_or_loaded(&self, key: K) -> LoadingOrLoaded<K, V, E> {
         let mut entries = self.inner.entries.lock().unwrap();
         match entries.get_mut(&key) {

@@ -16,7 +16,7 @@ use crate::{
 /// It is an RAII type that ensures that the number of waiters is correctly tracked.
 ///
 /// Note: This type MUST NOT BE CLONE because each instance created has to increase the number of waiters
-/// in the corresponding [EntryStateLoading].
+/// in the corresponding [super::EntryStateLoading].
 #[must_use]
 pub struct EntryLoadingWaiter<K, E>
 where

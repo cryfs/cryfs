@@ -1,4 +1,4 @@
-/// Scrypt memory usage (from reading code at https://github.com/RustCrypto/password-hashes/blob/master/scrypt/src/lib.rs):
+/// Scrypt memory usage (from reading code at <https://github.com/RustCrypto/password-hashes/blob/master/scrypt/src/lib.rs>):
 /// * single threaded
 ///   128 * r * (p + n + 1)
 /// * multi threaded

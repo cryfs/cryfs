@@ -16,7 +16,7 @@ use crate::{
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 /// This macro instantiates all blockstore tests for a given blockstore.
-/// See [Fixture] for how to invoke it.
+/// See [LLFixture] for how to invoke it.
 #[macro_export]
 macro_rules! instantiate_lowlevel_blockstore_specific_tests {
     ($target: ty) => {

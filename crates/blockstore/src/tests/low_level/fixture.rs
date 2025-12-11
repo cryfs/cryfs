@@ -3,7 +3,7 @@ use cryfs_utils::async_drop::AsyncDropGuard;
 
 use crate::LLBlockStore;
 
-/// By writing a [LLFixture] implementation and using the [instantiate_lowlevel_blockstore_tests!](crate::instantiate_lowlevel_blockstore_tests!) macro,
+/// By writing a [LLFixture] implementation and using the [instantiate_lowlevel_blockstore_specific_tests!](crate::instantiate_lowlevel_blockstore_specific_tests!) macro,
 /// our suite of low level block store tests is instantiated for a given block store.
 ///
 /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources

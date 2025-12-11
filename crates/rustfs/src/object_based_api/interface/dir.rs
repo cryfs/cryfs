@@ -20,8 +20,8 @@ pub trait Dir: AsyncDrop + Debug + Sized {
 
     async fn entries(&self) -> FsResult<Vec<DirEntry>>;
 
-    /// If the child doesn't exist, this must fail with [FsError::NodeDoesNotExist] rather than returning a [Node]
-    /// object that throws [FsError::NodeDoesNotExist] when any of its members that require existence are called.
+    /// If the child doesn't exist, this must fail with [crate::FsError::NodeDoesNotExist] rather than returning a [super::Node]
+    /// object that throws [crate::FsError::NodeDoesNotExist] when any of its members that require existence are called.
     async fn lookup_child(
         &self,
         name: &PathComponent,

@@ -85,7 +85,7 @@ impl DataFixture {
 
 /// Splits a mutable slice into mutable subslices of the given `block_size`
 /// (except for the first one, which may have a different size).
-/// TODO Replace this with https://doc.rust-lang.org/std/primitive.slice.html#method.as_chunks_mut once stable
+/// TODO Replace this with <https://doc.rust-lang.org/std/primitive.slice.html#method.as_chunks_mut> once stable
 fn subslices<'a, T>(
     arr: &'a mut [T],
     first_block_size: usize,

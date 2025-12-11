@@ -88,12 +88,11 @@ pub trait LLBlockStore:
 /// important invariant for [OptimizedBlockStoreWriter], namely that the data stored
 /// has enough prefix bytes available and can be grown during the writing process
 /// to e.g. add a block header without requiring the block data to be copied.
-/// Such BlockData instances can be created with the [create_block_data_wrapper!] macro.
+/// Such BlockData instances can be created with the [block_data::create_block_data_wrapper!] macro.
 ///
 /// This not being public is an important part of our safety net.
 /// Only things in the blockstore module can create instances of this,
 /// so we can make sure the invariants are always kept.
-#[macro_use]
 pub(crate) mod block_data {
     use cryfs_utils::data::Data;
 
@@ -103,7 +102,7 @@ pub(crate) mod block_data {
         fn extract(self) -> Data;
     }
 
-    macro_rules! create_block_data_wrapper {
+    macro_rules! create_block_data_wrapper_ {
         ($name: ident) => {
             #[derive(Clone)]
             pub struct $name(Data);
@@ -131,4 +130,5 @@ pub(crate) mod block_data {
             }
         };
     }
+    pub(crate) use create_block_data_wrapper_ as create_block_data_wrapper;
 }

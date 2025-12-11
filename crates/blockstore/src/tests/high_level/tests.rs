@@ -1,9 +1,10 @@
 #![allow(non_snake_case)]
 
-//! This module contains common test cases for the high level [LockingBlockStore] API.
+//! This module contains common test cases for the high level [crate::LockingBlockStore] API.
 //! It implements most tests by building a adapter to implement the low level [BlockStore] API
-//! for [LockingBlockStore], and then uses [super::low_level] to run the common low level
-//! tests on [LockingBlockStore] as well. On top of that, we add some tests that are specific to [LockingBlockStore].
+//! for [crate::LockingBlockStore], and then uses [super::super::low_level] to run the common low level
+//! tests on [crate::LockingBlockStore] as well. On top of that, we add some tests that are
+//! specific to [crate::LockingBlockStore].
 
 use byte_unit::Byte;
 use std::fmt::Debug;
@@ -17,7 +18,7 @@ use cryfs_utils::{async_drop::AsyncDropGuard, testutils::asserts::assert_data_ra
 // TODO Other functions to test? e.g. Block::remove(self) instead of just BlockStore::remove(&self, blockid)
 
 /// This macro instantiates all LockingBlockStore tests for a given blockstore.
-/// See [crate::tests::Fixture] and [HLFixture] for how to invoke it.
+/// See [crate::tests::low_level::LLFixture] and [HLFixture] for how to invoke it.
 #[macro_export]
 macro_rules! instantiate_highlevel_blockstore_specific_tests {
     ($target: ty) => {

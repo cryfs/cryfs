@@ -31,7 +31,7 @@ where
 }
 
 pub enum LoadingResult<E> {
-    /// The entry was successfully loaded. This loading result means the entry state was already changed to [Entry::Loaded] and can be accessed immediately.
+    /// The entry was successfully loaded. This loading result means the entry state was already changed to [super::EntryState::Loaded] and can be accessed immediately.
     Loaded,
 
     /// The entry was not found. The entry was removed from the map.

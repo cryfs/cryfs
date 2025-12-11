@@ -4,6 +4,8 @@ use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
 
+use super::HLFixture;
+use crate::tests::low_level::LLFixture;
 use crate::{
     BlockId, Overhead,
     high_level::{Block as _, BlockStore},
@@ -13,8 +15,6 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     data::Data,
 };
-
-use super::HLFixture;
 
 /// Wrap a [BlockStore] into a [LLBlockStore] so that we can run the low level block store tests on it.
 pub struct BlockStoreToLLBlockStoreAdapter<
@@ -121,7 +121,7 @@ pub struct FixtureAdapterForLLTests<F: HLFixture + Sync, const FLUSH_CACHE_ON_YI
 impl<
     F: HLFixture<ConcreteBlockStore: AsyncDrop<Error = anyhow::Error>> + Send + Sync,
     const FLUSH_CACHE_ON_YIELD: bool,
-> crate::tests::low_level::LLFixture for FixtureAdapterForLLTests<F, FLUSH_CACHE_ON_YIELD>
+> LLFixture for FixtureAdapterForLLTests<F, FLUSH_CACHE_ON_YIELD>
 {
     type ConcreteBlockStore = BlockStoreToLLBlockStoreAdapter<F::ConcreteBlockStore>;
     fn new() -> Self {

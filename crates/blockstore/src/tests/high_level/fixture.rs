@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use crate::BlockStore;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-/// By writing a [HLFixture] implementation and using the [instantiate_highlevel_blockstore_tests!](crate::instantiate_highlevel_blockstore_tests!) macro,
+/// By writing a [HLFixture] implementation and using the [instantiate_highlevel_blockstore_specific_tests!](crate::instantiate_highlevel_blockstore_specific_tests!) macro,
 /// our suite of high level block store tests is instantiated for a given block store.
 ///
 /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources

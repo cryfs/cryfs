@@ -75,9 +75,8 @@ impl IntegrityData {
     }
 
     /// This function returns all blocks that we expect to exist, i.e. we have
-    /// seen them before and we haven't deleted it. Note that, similar to
-    /// [IntegrityData::should_block_exist], this can return blocks that
-    /// have been correctly deleted by other authorized clients.
+    /// seen them before and we haven't deleted it. Note that, this can return
+    /// blocks that have been correctly deleted by other authorized clients.
     pub fn existing_blocks(&self) -> Vec<BlockId> {
         self._known_block_versions().existing_blocks()
     }

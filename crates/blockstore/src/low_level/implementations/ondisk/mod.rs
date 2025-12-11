@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs::DirEntry;
 use tokio_stream::wrappers::ReadDirStream;
 
+use crate::low_level::interface::block_data::create_block_data_wrapper;
 use crate::{
     BLOCKID_LEN, BlockId, Overhead,
     low_level::{

@@ -17,13 +17,13 @@ use crate::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 /// Same as [futures::future::Shared], but the future can return an [AsyncDrop] type.
 /// Implementation is mostly copy&paste from [futures-util] 0.3.31, but with some feature removed (e.g. [futures::future::WeakShared] removed)
 ///
-/// One main difference is that the inner future is supposed to return AsyncDropGuard<O>,
-/// and awaiting the [AsyncDropShared] future always returns AsyncDropGuard<AsyncDropArc<O>>.
-/// The optimization in [futures::future::Shared] where a refcount=1 [Shared] future returns
-/// its result without a reference (and then invalidates future clones) is not implemented here.
+/// One main difference is that the inner future is supposed to return `AsyncDropGuard<O>`,
+/// and awaiting the [AsyncDropShared] future always returns `AsyncDropGuard<AsyncDropArc<O>>`.
+/// The optimization in [futures::future::Shared] where a refcount=1 future returns its result
+/// without a reference (and then invalidates future clones) is not implemented here.
 /// Futures can be freely cloned and will still return their value, even after being polled to completion.
 /// TODO We could implement that optimization here as well, but it would complicate the AsyncDropArc handling a bit,
-///      most likely our version of [futures::future::shared::Inner::take_or_clone_output] would have to be async
+///      most likely our version of `futures::future::shared::Inner::take_or_clone_output` would have to be async
 ///      because it has to call async_drop() on `inner`. Or alternatively, we'll have to find a way for AsyncDropArc::try_unwrap()
 ///      to return a reference to the inner value in its Err(_) if there are other Arc's alive (and then internally drop the Arc without async).
 #[must_use = "futures do nothing unless you `.await` or poll them"]
@@ -170,9 +170,9 @@ where
     O: Debug + AsyncDrop + Send + Sync,
     Fut: Future<Output = AsyncDropGuard<O>> + Send,
 {
-    /// Returns [`Some`] containing a reference to this [`Shared`]'s output if
+    /// Returns [`Some`] containing a reference to this [`AsyncDropShared`]'s output if
     /// it has already been computed by a clone or [`None`] if it hasn't been
-    /// computed yet or this [`Shared`] already returned its output from
+    /// computed yet or this [`AsyncDropShared`] already returned its output from
     /// [`poll`](Future::poll).
     pub fn peek(&self) -> Option<&AsyncDropGuard<AsyncDropArc<O>>> {
         if let Some(inner) = self.inner.as_ref() {

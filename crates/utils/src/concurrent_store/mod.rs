@@ -1,4 +1,5 @@
 // TODO Move to a separate crate
+#![allow(rustdoc::private_intra_doc_links)] // TODO Remove this, we probably don't want private links in the documentation.
 
 mod entry;
 mod guard;

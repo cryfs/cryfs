@@ -6,7 +6,7 @@ use crate::{FsError, common::handles::handle_trait::HandleTrait};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 
 /// A [HandleMap] stores objects keyed by a unique handle. You can add
-/// new objects to the map using [Self::insert], which will return the
+/// new objects to the map using [Self::add], which will return the
 /// handle of the new entry for you.
 #[derive(Debug)]
 pub struct HandleMap<Handle, T>

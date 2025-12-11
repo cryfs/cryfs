@@ -17,12 +17,12 @@
 //!
 //! # Implementation details
 //! Performance tests are pretty fast and are
-//! - implemented on top of an [InMemoryBlockStore]
-//! - executed by directly calling the [rustfs] filesystem API. No need to mount it or use fuse
+//! - implemented on top of an [InMemoryBlockStore](cryfs_blockstore::InMemoryBlockStore)
+//! - executed by directly calling the [cryfs_rustfs] filesystem API. No need to mount it or use fuse
 //!
 //! Benchmarks aim to be more realistic and are
-//! - implemented on top of a [TempDirBlockStore] (i.e. blocks are stored on the real file system)
-//! - executed by mounting CryFS using [fuse] or [fuse_mt] and executing filesystem operations through real OS syscalls
+//! - implemented on top of a [TempDirBlockStore](cryfs_blockstore::TempDirBlockStore) (i.e. blocks are stored on the real file system)
+//! - executed by mounting CryFS using [fuser] or `fuse_mt` and executing filesystem operations through real OS syscalls
 //!
 //! A lot of the code in this crate is annotated by either
 //! - #[cfg(feature = "benchmark")]      // Code only necessary for benchmarks
