@@ -1,11 +1,12 @@
 use anyhow::Result;
 use std::{fmt::Debug, hash::Hash};
 
-use crate::{
+use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner},
     safe_panic, with_async_drop_2_infallible,
 };
+
+use crate::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner};
 
 /// Represents a newly inserted entry that is currently in the process of being inserted.
 #[must_use]

@@ -31,6 +31,7 @@ tokio-util.workspace = true
 lockable.workspace = true
 itertools.workspace = true
 time = {workspace = true, features = ["formatting"]}
+cryfs-concurrent-store = { path = "../concurrent-store" }
 
 [dev-dependencies]
 rstest.workspace = true
@@ -52,7 +53,7 @@ fuser = { workspace = true, features = ["libfuse"] }
 default = ["fuser"]
 fuse_mt = ["dep:fuse_mt"]
 fuser = []
-testutils = ["cryfs-utils/testutils"]
+testutils = ["cryfs-utils/testutils", "cryfs-concurrent-store/testutils"]
 
 [[example]]
 name = "inmemory"

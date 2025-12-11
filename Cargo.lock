@@ -1065,6 +1065,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cryfs-concurrent-store"
+version = "2.0.0-alpha3"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cryfs-utils",
+ "futures",
+ "lockable",
+ "log",
+ "tokio",
+]
+
+[[package]]
 name = "cryfs-e2e-perf-tests"
 version = "2.0.0-alpha3"
 dependencies = [
@@ -1105,6 +1118,7 @@ dependencies = [
  "byte-unit",
  "cryfs-blobstore",
  "cryfs-blockstore",
+ "cryfs-concurrent-store",
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
@@ -1154,6 +1168,7 @@ version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cryfs-concurrent-store",
  "cryfs-utils",
  "derive_more",
  "env_logger",

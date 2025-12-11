@@ -3,10 +3,9 @@ use lockable::Never;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use crate::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::{RequestImmediateDropResult, store::ConcurrentStoreInner},
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+
+use crate::{RequestImmediateDropResult, store::ConcurrentStoreInner};
 
 /// Guard for a loaded entry in a ConcurrentStore.
 /// This ensures that the entry remains loaded while the guard is held,

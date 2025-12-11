@@ -6,13 +6,14 @@ use futures::{
     future::{BoxFuture, Shared},
 };
 
-use crate::{
+use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    concurrent_store::entry::{
-        immediate_drop_request::{ImmediateDropRequest, ImmediateDropRequestResponse},
-        waiter::EntryLoadingWaiter,
-    },
     event::Event,
+};
+
+use crate::entry::{
+    immediate_drop_request::{ImmediateDropRequest, ImmediateDropRequestResponse},
+    waiter::EntryLoadingWaiter,
 };
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::async_drop::AsyncDrop;
+use cryfs_utils::async_drop::AsyncDrop;
 
 mod dropping;
 mod immediate_drop_request;
@@ -18,7 +18,7 @@ where
     Dropping(EntryStateDropping),
 }
 
-pub use crate::concurrent_store::entry::{
+pub use crate::entry::{
     dropping::EntryStateDropping,
     loaded::EntryStateLoaded,
     loading::{EntryStateLoading, LoadingResult},

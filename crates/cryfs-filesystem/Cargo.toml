@@ -21,6 +21,7 @@ cryfs-blockstore = {path = "../blockstore"}
 cryfs-rustfs = {path = "../rustfs", default-features = false}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
+cryfs-concurrent-store = { path = "../concurrent-store" }
 derive_more.workspace = true
 futures.workspace = true
 hex.workspace = true

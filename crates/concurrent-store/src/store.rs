@@ -7,20 +7,18 @@ use std::collections::hash_map::Entry;
 use std::marker::PhantomData;
 use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Mutex};
 
-use crate::concurrent_store::Inserting;
-use crate::concurrent_store::LoadingOrLoaded;
-use crate::concurrent_store::entry::{
+use crate::Inserting;
+use crate::LoadingOrLoaded;
+use crate::entry::EntryState;
+use crate::entry::{
     EntryLoadingWaiter, EntryStateDropping, EntryStateLoaded, EntryStateLoading,
     ImmediateDropRequest, ImmediateDropRequestResponse, LoadingResult,
 };
-use crate::concurrent_store::guard::LoadedEntryGuard;
-use crate::event::Event;
-use crate::stream::for_each_unordered;
-use crate::with_async_drop_2;
-use crate::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::entry::EntryState,
-};
+use crate::guard::LoadedEntryGuard;
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::event::Event;
+use cryfs_utils::stream::for_each_unordered;
+use cryfs_utils::with_async_drop_2;
 
 // TODO This is currently not cancellation safe. If a task waiting for an entry to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 

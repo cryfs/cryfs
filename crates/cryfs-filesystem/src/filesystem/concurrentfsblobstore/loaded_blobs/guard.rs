@@ -2,11 +2,9 @@ use std::{fmt::Debug, sync::Arc};
 
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
+use cryfs_concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult};
 use cryfs_rustfs::{FsError, FsResult};
-use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex},
-    concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult},
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
 use lockable::InfallibleUnwrap as _;
 
 use crate::filesystem::fsblobstore::FsBlob;

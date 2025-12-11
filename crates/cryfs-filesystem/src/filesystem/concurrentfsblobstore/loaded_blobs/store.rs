@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use cryfs_concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use cryfs_rustfs::{FsError, FsResult};
-use cryfs_utils::concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use futures::future::{BoxFuture, Shared};
 use lockable::InfallibleUnwrap as _;
 use std::fmt::Debug;

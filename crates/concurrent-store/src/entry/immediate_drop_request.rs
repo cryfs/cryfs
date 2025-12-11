@@ -4,7 +4,7 @@ use futures::{
 };
 use std::fmt::Debug;
 
-use crate::{
+use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     event::Event,
 };

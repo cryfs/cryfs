@@ -4,7 +4,6 @@
 pub mod async_drop;
 pub mod at_exit;
 pub mod binary;
-pub mod concurrent_store;
 pub mod concurrent_task;
 pub mod containers;
 pub mod crypto;

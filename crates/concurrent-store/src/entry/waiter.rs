@@ -3,13 +3,12 @@ use futures::future::{BoxFuture, Shared};
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use crate::{
+use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::{
-        entry::loading::LoadingResult, guard::LoadedEntryGuard, store::ConcurrentStoreInner,
-    },
     safe_panic,
 };
+
+use crate::{entry::loading::LoadingResult, guard::LoadedEntryGuard, store::ConcurrentStoreInner};
 
 /// Handle for a task waiting for an entry to be loaded.
 /// This can be redeemed against the entry once loading is completed.

@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
-use crate::{
+use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::entry::{
-        immediate_drop_request::{ImmediateDropRequest, ImmediateDropRequestResponse},
-        loading::EntryStateLoading,
-    },
     event::Event,
+};
+
+use crate::entry::{
+    immediate_drop_request::{ImmediateDropRequest, ImmediateDropRequestResponse},
+    loading::EntryStateLoading,
 };
 
 #[derive(Debug)]

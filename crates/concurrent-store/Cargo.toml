@@ -1,0 +1,23 @@
+[package]
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "cryfs-concurrent-store"
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+lockable.workspace = true
+cryfs-utils = { path = "../utils" }
+tokio.workspace = true
+log.workspace = true
+
+[features]
+default = []
+testutils = []

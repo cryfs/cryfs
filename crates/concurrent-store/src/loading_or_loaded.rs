@@ -1,11 +1,12 @@
 use anyhow::Result;
 use std::{fmt::Debug, hash::Hash};
 
-use crate::{
+use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    concurrent_store::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner},
     safe_panic, with_async_drop_2_infallible,
 };
+
+use crate::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner};
 
 /// Represents the result of trying to get an entry from the store,
 /// which may be in the process of loading, already loaded, or not found.

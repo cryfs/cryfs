@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: ["blobstore", "blockstore", "check", "cli-utils", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "e2e-perf-tests", "rustfs", "tempproject", "utils"]
+        crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "e2e-perf-tests", "rustfs", "tempproject", "utils"]
         targets: ["", "--tests", "--examples", "--benches"]
         features: ["", "--no-default-features", "--all-features"]
         profile: ["", "--release"]

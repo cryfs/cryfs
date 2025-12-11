@@ -1,6 +1,6 @@
 use async_trait::async_trait;
+use cryfs_concurrent_store::LoadedEntryGuard;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropResult, AsyncDropShared};
-use cryfs_utils::concurrent_store::LoadedEntryGuard;
 use futures::future::BoxFuture;
 use std::fmt::Debug;
 
