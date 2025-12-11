@@ -5,9 +5,10 @@ use rand::{RngCore, SeedableRng, rngs::StdRng};
 use generic_array::typenum::{U12, U16};
 use lockable::InfallibleUnwrap;
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+use super::aesgcm::LibsodiumAes256GcmNonce12;
 use super::aesgcm::{
-    AeadAes128Gcm, AeadAes256Gcm, Aes128Gcm, Aes256Gcm, LibsodiumAes256GcmNonce12,
-    OpensslAes128Gcm, OpensslAes256Gcm,
+    AeadAes128Gcm, AeadAes256Gcm, Aes128Gcm, Aes256Gcm, OpensslAes128Gcm, OpensslAes256Gcm,
 };
 use super::xchacha20poly1305::{
     AeadXChaCha20Poly1305, LibsodiumXChaCha20Poly1305, XChaCha20Poly1305,

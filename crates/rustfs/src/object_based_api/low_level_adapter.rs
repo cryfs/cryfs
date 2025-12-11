@@ -1099,7 +1099,7 @@ where
     }
 
     #[cfg(target_os = "macos")]
-    async fn setvolname(&self, req: &RequestInfo, name: &str) -> FsResult<()> {
+    async fn setvolname(&self, _req: &RequestInfo, _name: &str) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
         // TODO
@@ -1109,12 +1109,12 @@ where
     #[cfg(target_os = "macos")]
     async fn exchange(
         &self,
-        req: &RequestInfo,
-        parent_ino: InodeNumber,
-        name: &PathComponent,
-        newparent_ino: InodeNumber,
-        newname: &PathComponent,
-        options: u64,
+        _req: &RequestInfo,
+        _parent_ino: InodeNumber,
+        _name: &PathComponent,
+        _newparent_ino: InodeNumber,
+        _newname: &PathComponent,
+        _options: u64,
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
@@ -1123,7 +1123,7 @@ where
     }
 
     #[cfg(target_os = "macos")]
-    async fn getxtimes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyXTimes> {
+    async fn getxtimes(&self, _req: &RequestInfo, _ino: InodeNumber) -> FsResult<ReplyXTimes> {
         self.trigger_on_operation().await?;
 
         // TODO

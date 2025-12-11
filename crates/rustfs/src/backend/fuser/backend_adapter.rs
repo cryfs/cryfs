@@ -1437,10 +1437,10 @@ where
             reply,
             async move |fs| {
                 // TODO InvalidPath is the wrong error here
-                let name = name
-                    .to_os_string()
-                    .into_string()
-                    .map_err(|err| FsError::InvalidPath)?;
+                let name = name.to_os_string().into_string().map_err(|err| {
+                    log::error!("Failed to parse name in setvolname: {err:?}");
+                    FsError::InvalidPath
+                })?;
                 fs.setvolname(&req, &name).await
             },
         );
@@ -1459,20 +1459,26 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let parent_ino = parse_inode(parent_ino)?;
         let name = name.to_owned();
-        let newparent_ino = parse_inode(newparent_ino)?;
         let newname = newname.to_owned();
         self.run_async_reply_empty(
             format!("exchange(parent={parent_ino}, name={name:?}, newparent={newparent_ino}, newname={newname:?}, options={options})"),
             reply,
             async move |fs| {
+                let parent_ino = parse_inode(parent_ino)?;
+                let newparent_ino = parse_inode(newparent_ino)?;
                 // TODO InvalidPath is the wrong error here
                 let name: PathComponentBuf =
-                    name.try_into().map_err(|err| FsError::InvalidPath)?;
+                    name.try_into().map_err(|err| {
+                        log::error!("Failed to parse name in exchange: {err:?}");
+                        FsError::InvalidPath
+                })?;
                 // TODO InvalidPath is the wrong error here
                 let newname: PathComponentBuf =
-                    newname.try_into().map_err(|err| FsError::InvalidPath)?;
+                    newname.try_into().map_err(|err|  {
+                        log::error!("Failed to parse newname in exchange: {err:?}");
+                        FsError::InvalidPath
+                    })?;
                 fs.exchange(&req, parent_ino, &name, newparent_ino, &newname, options)
                     .await
             },
@@ -1484,8 +1490,8 @@ where
     #[cfg(target_os = "macos")]
     fn getxtimes(&mut self, req: &Request<'_>, ino: u64, reply: ReplyXTimes) {
         let req = RequestInfo::from(req);
-        let ino = parse_inode(ino)?;
         self.run_async_reply_xtimes(format!("getxtimes(ino={ino})"), reply, async move |fs| {
+            let ino = parse_inode(ino)?;
             fs.getxtimes(&req, ino).await
         });
     }
