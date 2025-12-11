@@ -6,10 +6,7 @@ use std::time::SystemTime;
 
 use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
 use super::{
-    device::CryDevice,
-    node::CryNode,
-    node_info::{NodeInfo},
-    open_file::CryOpenFile,
+    device::CryDevice, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
     symlink::CrySymlink,
 };
 use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
@@ -18,13 +15,12 @@ use crate::filesystem::fsblobstore::FlushBehavior;
 use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
-    object_based_api::Dir,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid, object_based_api::Dir,
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
-    with_async_drop_2,
     path::PathComponent,
+    with_async_drop_2,
 };
 
 #[derive(Debug)]
@@ -80,11 +76,13 @@ where
     async fn create_dir_blob(&self, parent: &BlobId) -> Result<BlobId, FsError> {
         let mut blob = self
             .blobstore
-            .create_dir_blob(parent,
+            .create_dir_blob(
+                parent,
                 // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
                 // This way, we make sure the filesystem stays consistent even if it crashes mid way.
                 // Dropping by itself isn't enough to flush because it may go into a cache.
-                FlushBehavior::FlushImmediately)
+                FlushBehavior::FlushImmediately,
+            )
             .await
             .map_err(|err| {
                 log::error!("Error creating dir blob: {err:?}");
@@ -99,11 +97,13 @@ where
     async fn create_file_blob(&self, parent: &BlobId) -> Result<BlobId, FsError> {
         let mut blob = self
             .blobstore
-            .create_file_blob(parent,
+            .create_file_blob(
+                parent,
                 // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
                 // This way, we make sure the filesystem stays consistent even if it crashes mid way.
                 // Dropping by itself isn't enough to flush because it may go into a cache.
-                FlushBehavior::FlushImmediately)
+                FlushBehavior::FlushImmediately,
+            )
             .await
             .map_err(|err| {
                 log::error!("Error creating file blob: {err:?}");
@@ -118,11 +118,13 @@ where
     async fn create_symlink_blob(&self, target: &str, parent: &BlobId) -> Result<BlobId, FsError> {
         let mut blob = self
             .blobstore
-            .create_symlink_blob(parent, target,
+            .create_symlink_blob(
+                parent,
+                target,
                 // Make sure we flush this before the call site gets a chance to add this as an entry to its directory entry list.
                 // This way, we make sure the filesystem stays consistent even if it crashes mid way.
                 // Dropping by itself isn't enough to flush because it may go into a cache.
-                FlushBehavior::FlushImmediately
+                FlushBehavior::FlushImmediately,
             )
             .await
             .map_err(|err| {
@@ -159,9 +161,7 @@ where
         child_to_move: &BlobId,
         newparent: &Self,
     ) -> FsResult<()> {
-        let dest_ancestors = newparent
-            .node_info
-            .ancestors_and_self();
+        let dest_ancestors = newparent.node_info.ancestors_and_self();
 
         // Check we're not moving a directory into itself or one of its own subdirectories
         // TODO Do we handle moving /path/to/file to /path/to/file/newname correctly? Or does it only work with /path/to/dir ?
@@ -208,9 +208,7 @@ where
 
         let blob_details = self_blob
             .with_lock(async |self_blob| {
-                let self_dir = self_blob
-                    .as_dir()
-                    .expect("Parent blob is not a directory");
+                let self_dir = self_blob.as_dir().expect("Parent blob is not a directory");
                 let entry = self_dir
                     .entry_by_name(name)
                     .ok_or_else(|| FsError::NodeDoesNotExist)?;
@@ -233,7 +231,8 @@ where
 
         let node_info = NodeInfo::new_non_root_dir(
             self_blob,
-            #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
+            #[cfg(feature = "ancestor_checks_on_move")]
+            self.node_info.ancestors_and_self().ancestors_and_self(),
             name.to_owned(),
             blob_id,
             blob_type,
@@ -247,20 +246,25 @@ where
 
     async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent( async || {
+            .concurrently_update_modification_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
                 with_async_drop_2!(blob, {
                     blob.with_lock(async |blob| {
                         Self::blob_as_dir_mut(&mut *blob)?
-                            .rename_entry_by_name(oldname, newname.to_owned(), async |overwritten_blobid, blob_type| {
-                                check_were_not_overwriting_nonempty_dir(
-                                    &self.blobstore,
-                                    overwritten_blobid,
-                                    blob_type,
-                                )
-                                .await?;
-                                self.on_rename_overwrites_destination(*overwritten_blobid).await
-                            })
+                            .rename_entry_by_name(
+                                oldname,
+                                newname.to_owned(),
+                                async |overwritten_blobid, blob_type| {
+                                    check_were_not_overwriting_nonempty_dir(
+                                        &self.blobstore,
+                                        overwritten_blobid,
+                                        blob_type,
+                                    )
+                                    .await?;
+                                    self.on_rename_overwrites_destination(*overwritten_blobid)
+                                        .await
+                                },
+                            )
                             .await
                     })
                     .await
@@ -283,7 +287,7 @@ where
         with_async_drop_2!(newparent, {
             let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
             let (source_parent, dest_parent) =
-                flatten_async_drop::<FsError,_,_,_,_>(source_parent, dest_parent).await?;
+                flatten_async_drop::<FsError, _, _, _, _>(source_parent, dest_parent).await?;
             // TODO Drop source_parent, dest_parent, newparent and self_blob concurrently
             with_async_drop_2!(source_parent, {
                 with_async_drop_2!(dest_parent, {
@@ -301,26 +305,29 @@ where
                     #[cfg(feature = "ancestor_checks_on_move")]
                     {
                         // TODO This can happen concurrently with the load_blob above
-                        self
-                            .validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
+                        self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
                             .await?;
                     }
 
                     // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
                     //      But it likely has some dependency with source_parent_blob.
-                    let self_blob = self.blobstore.load(self_blob_id).await
+                    let self_blob = self
+                        .blobstore
+                        .load(self_blob_id)
+                        .await
                         .map_err(|err| {
                             log::error!("Error loading blob: {:?}", err);
                             FsError::UnknownError
                         })?
                         .ok_or(
                             // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
-                            FsError::NodeDoesNotExist
+                            FsError::NodeDoesNotExist,
                         )?;
                     with_async_drop_2!(self_blob, {
                         let entry = source_parent
                             .with_lock(async |source_parent_dir| {
-                                Self::blob_as_dir_mut(source_parent_dir)?.remove_entry_by_name(oldname)
+                                Self::blob_as_dir_mut(source_parent_dir)?
+                                    .remove_entry_by_name(oldname)
                             })
                             .await
                             .map_err(|err| {
@@ -345,8 +352,12 @@ where
                                                 &self.blobstore,
                                                 overwritten_blobid,
                                                 blob_type,
-                                            ).await?;
-                                            self.on_rename_overwrites_destination(*overwritten_blobid).await
+                                            )
+                                            .await?;
+                                            self.on_rename_overwrites_destination(
+                                                *overwritten_blobid,
+                                            )
+                                            .await
                                         },
                                     )
                                     .await
@@ -359,7 +370,9 @@ where
                             })?;
 
                         self_blob
-                            .with_lock(async |self_blob| self_blob.set_parent(&dest_parent.blob_id()).await)
+                            .with_lock(async |self_blob| {
+                                self_blob.set_parent(&dest_parent.blob_id()).await
+                            })
                             .await
                             .map_err(|err| {
                                 // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
@@ -371,8 +384,7 @@ where
                         // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
                         //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
                         let (source_update, dest_update) = join!(
-                            self.node_info
-                                .update_modification_timestamp_in_parent(),
+                            self.node_info.update_modification_timestamp_in_parent(),
                             newparent
                                 .node_info
                                 .update_modification_timestamp_in_parent(),
@@ -425,7 +437,7 @@ where
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryDir<'_, B>>)> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent( async || {
+            .concurrently_update_modification_timestamp_in_parent(async || {
                 let self_blob_id = self.node_info.blob_id();
                 let (blob, new_dir_blob_id) =
                     join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
@@ -495,10 +507,11 @@ where
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
+                        #[cfg(feature = "ancestor_checks_on_move")]
+                        self.node_info.ancestors_and_self().ancestors_and_self(),
                         name,
                         new_dir_blob_id,
-                        BlobType::Dir, 
+                        BlobType::Dir,
                         self.node_info.atime_update_behavior(),
                     )),
                 );
@@ -571,7 +584,7 @@ where
                         }
                     };
                     assert_eq!(*removed_entry.blob_id(), child_blob.blob_id());
-                    
+
                     let remove_result = ConcurrentFsBlob::remove(child_blob).await;
                     match remove_result {
                         Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
@@ -600,7 +613,7 @@ where
         gid: Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CrySymlink<B>>)> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent( async || {
+            .concurrently_update_modification_timestamp_in_parent(async || {
                 // TODO What should NumBytes be? Also, no unwrap?
                 let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
@@ -676,7 +689,8 @@ where
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
+                        #[cfg(feature = "ancestor_checks_on_move")]
+                        self.node_info.ancestors_and_self().ancestors_and_self(),
                         name,
                         new_symlink_blob_id,
                         BlobType::Symlink,
@@ -742,7 +756,7 @@ where
         AsyncDropGuard<CryOpenFile<B>>,
     )> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent( async || {
+            .concurrently_update_modification_timestamp_in_parent(async || {
                 let self_blob_id = self.node_info.blob_id();
                 let (blob, new_file_blob_id) =
                     join!(self.load_blob(), self.create_file_blob(&self_blob_id),);
@@ -808,7 +822,8 @@ where
                 };
                 let node_info = AsyncDropArc::new(NodeInfo::new_non_root_dir(
                     blob,
-                    #[cfg(feature = "ancestor_checks_on_move")] self.node_info.ancestors_and_self().ancestors_and_self(),
+                    #[cfg(feature = "ancestor_checks_on_move")]
+                    self.node_info.ancestors_and_self().ancestors_and_self(),
                     name.to_owned(),
                     new_file_blob_id,
                     BlobType::File,

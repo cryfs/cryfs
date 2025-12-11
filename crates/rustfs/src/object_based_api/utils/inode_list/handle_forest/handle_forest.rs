@@ -64,7 +64,8 @@ where
     }
 
     pub fn get_mut(&mut self, index: &Handle) -> Option<&mut Node<Handle, EdgeKey, NodeValue>> {
-        let node: &mut AsyncDropGuard<Node<Handle, EdgeKey, NodeValue>> = self.nodes.get_mut(index)?;
+        let node: &mut AsyncDropGuard<Node<Handle, EdgeKey, NodeValue>> =
+            self.nodes.get_mut(index)?;
         Some(&mut **node)
     }
 
