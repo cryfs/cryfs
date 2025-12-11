@@ -17,6 +17,7 @@ pub mod periodic_task;
 pub mod progress;
 pub mod stream;
 pub mod tempfile;
+pub mod threadpool;
 
 #[cfg(any(test, feature = "testutils"))]
 pub mod testutils;

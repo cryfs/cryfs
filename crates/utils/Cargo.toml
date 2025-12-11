@@ -35,6 +35,7 @@ thiserror.workspace = true
 rand.workspace = true
 hex.workspace = true
 lockable.workspace = true
+tinypool.workspace = true
 
 [dev-dependencies]
 common_macros.workspace = true

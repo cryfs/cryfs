@@ -70,6 +70,9 @@ where
 
 fn num_threads() -> usize {
     std::thread::available_parallelism()
-        .unwrap_or(NonZeroUsize::new(2).unwrap())
+        .unwrap_or_else(|err| {
+            log::warn!("Could not determine number of cpu cores. Falling back to a parallelism factor of 2. Error: {err:?}");
+            NonZeroUsize::new(2).unwrap()
+        })
         .get()
 }

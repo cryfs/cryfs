@@ -1250,6 +1250,7 @@ dependencies = [
  "slab",
  "tempdir",
  "thiserror 2.0.17",
+ "tinypool",
  "tokio",
  "tokio-util",
 ]
@@ -4540,6 +4541,12 @@ dependencies = [
  "num-conv",
  "time-core",
 ]
+
+[[package]]
+name = "tinypool"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "394605d62059f9bad6e5745ebd77acd2fb54506594973eab730e775829cbbe6b"
 
 [[package]]
 name = "tinystr"
