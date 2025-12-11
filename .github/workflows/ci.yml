@@ -14,11 +14,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-11
-          - macos-12
-          - macos-13
-          - ubuntu-20.04
+          - macos-14
+          - macos-15
+          - macos-15-intel
+          - macos-26
           - ubuntu-22.04
+          - ubuntu-24.04
         command: ["test"]
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
