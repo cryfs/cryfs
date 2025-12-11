@@ -579,19 +579,6 @@ where
         })
     }
 
-    // TODO For some reason, there's a weird bug in readdir() with the fuse_mt backend:
-    // $ cd mountdir
-    // $ mkdir bla
-    // $ cd bla
-    // $ echo content > newfile
-    // $ ls
-    // [doesn't show `newfile`]
-    // $ cd ..
-    // $ cd bla
-    // $ ls
-    // [now shows `newfile`]
-    // Not sure if this is a bug in fuse_mt (check if it applies to inmemory/passthrough too) or our adapter.
-    // Not sure if this also happens for the fuser backend.
     async fn readdir(
         &self,
         _req: RequestInfo,
