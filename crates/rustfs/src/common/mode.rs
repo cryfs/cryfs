@@ -21,17 +21,17 @@ const S_IXOTH: Mode = Mode(0o000001);
 
 #[allow(non_snake_case)]
 const fn S_ISREG(mode: Mode) -> bool {
-    return (mode.0 & S_IFMT.0) == S_IFREG.0;
+    (mode.0 & S_IFMT.0) == S_IFREG.0
 }
 
 #[allow(non_snake_case)]
 const fn S_ISDIR(mode: Mode) -> bool {
-    return (mode.0 & S_IFMT.0) == S_IFDIR.0;
+    (mode.0 & S_IFMT.0) == S_IFDIR.0
 }
 
 #[allow(non_snake_case)]
 const fn S_ISLNK(mode: Mode) -> bool {
-    return (mode.0 & S_IFMT.0) == S_IFLNK.0;
+    (mode.0 & S_IFMT.0) == S_IFLNK.0
 }
 
 #[derive(

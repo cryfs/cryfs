@@ -863,8 +863,8 @@ where
         // Transform Future<Stream<Result<BlockId>>> into Stream<Result<BlockId>>
         child_stream.flatten_stream().boxed()
     });
-    let subtree_stream = stream::select_all(subtree_stream).boxed();
-    subtree_stream
+
+    stream::select_all(subtree_stream).boxed()
 }
 
 // TODO Tests

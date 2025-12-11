@@ -346,15 +346,14 @@ impl Cli {
                 expected_id,
                 actual_id,
             );
-            if !allow_replaced_filesystem {
-                if !self
+            if !allow_replaced_filesystem
+                && !self
                     .console()
                     .ask_allow_replaced_filesystem()
                     .map_cli_error(CliErrorKind::UnspecifiedError)?
                 {
                     return Err(check_result).map_cli_error(|_| CliErrorKind::FilesystemIdChanged);
                 }
-            }
         }
         // Update local state (or create it if it didn't exist yet)
         basedir_metadata

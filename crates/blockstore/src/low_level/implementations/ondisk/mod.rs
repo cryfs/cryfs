@@ -307,7 +307,7 @@ async fn _create_dir_if_doesnt_exist(dir: &Path) -> Result<()> {
 }
 
 fn _is_allowed_blockid_character(c: char) -> bool {
-    ('0'..='9').contains(&c) || ('A'..='F').contains(&c)
+    c.is_ascii_digit() || ('A'..='F').contains(&c)
 }
 
 async fn _store(path: &Path, data: BlockData) -> Result<()> {

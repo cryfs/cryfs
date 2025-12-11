@@ -23,11 +23,11 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Bl
     }
 
     fn _tree(&self) -> &DataTree<B> {
-        &*self.tree
+        &self.tree
     }
 
     fn _tree_mut(&mut self) -> &mut DataTree<B> {
-        &mut *self.tree
+        &mut self.tree
     }
 
     #[cfg(any(test, feature = "testutils"))]

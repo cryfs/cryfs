@@ -93,8 +93,7 @@ impl<B: BlockStore> DataInnerNode<B> {
 
     pub fn children(
         &self,
-    ) -> impl Iterator<Item = BlockId>
-    + ExactSizeIterator
+    ) -> impl ExactSizeIterator<Item = BlockId>
     + use<
         '_,
         // TODO Because of a shortcoming in rust 1.82, we have to list all generic types here. Remove this later.
@@ -124,7 +123,7 @@ impl<B: BlockStore> DataInnerNode<B> {
             .copy_from_slice(new_child.data());
     }
 
-    fn _children_mut_raw(&mut self) -> impl Iterator<Item = &mut [u8]> + ExactSizeIterator {
+    fn _children_mut_raw(&mut self) -> impl ExactSizeIterator<Item = &mut [u8]> {
         let view = node::View::new(self.block.data_mut().as_mut());
         let children_data: &mut [u8] = view.into_data().into_slice();
         children_data.chunks_exact_mut(BLOCKID_LEN)

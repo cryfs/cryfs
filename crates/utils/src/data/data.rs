@@ -247,9 +247,8 @@ impl<'a, const ALLOW_REALLOCATE: bool> Write for DataAppendWriter<'a, ALLOW_REAL
             self.data
                 .grow_region_fail_if_reallocation_necessary(0, buf.len())
                 .map_err(|_| {
-                    std::io::Error::new(
+                    std::io::Error::other(
                         // TODO Switch to std::io::ErrorKind::StorageFull
-                        std::io::ErrorKind::Other,
                         "Not enough suffix bytes available in Data instance",
                     )
                 })?;

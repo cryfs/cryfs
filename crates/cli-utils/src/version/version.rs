@@ -51,21 +51,20 @@ fn _show_version(
     let mut has_shown_warnings = false;
     let mut show_warning = |message: &str| {
         if !has_shown_warnings {
-            write!(stderr, "\n").unwrap();
+            writeln!(stderr).unwrap();
             has_shown_warnings = true;
         }
-        write!(stderr, "{}\n", warning(message)).unwrap();
+        writeln!(stderr, "{}", warning(message)).unwrap();
     };
 
     if let Some(gitinfo) = version_info.gitinfo() {
-        if let Some(tag_info) = gitinfo.tag_info {
-            if tag_info.commits_since_tag > 0 {
+        if let Some(tag_info) = gitinfo.tag_info
+            && tag_info.commits_since_tag > 0 {
                 show_warning(&format!(
                     "This is a development version based on git commit {}. Please don't use in production.",
                     gitinfo.commit_id,
                 ));
             }
-        }
         if gitinfo.modified {
             show_warning(
                 "There were uncommitted changes in the repository when building this version.",
@@ -86,22 +85,22 @@ fn _show_version(
 }
 
 #[cfg(feature = "check_for_updates")]
-fn _maybe_check_for_updates<'a>(
+fn _maybe_check_for_updates(
     env: &Environment,
     http_client: impl HttpClient,
-    version: Version<&'a str>,
+    version: Version<&str>,
     stderr: &mut (impl Write + ?Sized),
 ) {
     use super::update_checker::UpdateCheckResult;
 
     if env.no_update_check {
-        write!(
+        writeln!(
             stderr,
-            "Automatic checking for security vulnerabilities and updates is disabled.\n"
+            "Automatic checking for security vulnerabilities and updates is disabled."
         )
         .unwrap();
     } else if env.is_noninteractive {
-        write!(stderr, "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode.\n").unwrap();
+        writeln!(stderr, "Automatic checking for security vulnerabilities and updates is disabled in noninteractive mode.").unwrap();
     } else {
         match super::update_checker::check_for_updates(http_client, version) {
             Ok(UpdateCheckResult {
@@ -109,9 +108,9 @@ fn _maybe_check_for_updates<'a>(
                 security_warning,
             }) => {
                 if let Some(released_newer_version) = released_newer_version {
-                    write!(
+                    writeln!(
                         stderr,
-                        "A newer version of CryFS is available: {}. You are using version {}.\n",
+                        "A newer version of CryFS is available: {}. You are using version {}.",
                         released_newer_version, version
                     )
                     .unwrap();
@@ -121,7 +120,7 @@ fn _maybe_check_for_updates<'a>(
                 }
             }
             Err(e) => {
-                write!(stderr, "Failed to check for updates: {e}\n").unwrap();
+                writeln!(stderr, "Failed to check for updates: {e}").unwrap();
             }
         }
     }

@@ -21,13 +21,14 @@ impl PasswordBasedKDF for ScryptScrypt {
         )
         .expect("Invalid scrypt parameters");
         EncryptionKey::new(key_size, |key_data| {
-            Ok(scrypt::scrypt(
+            scrypt::scrypt(
                 password.as_bytes(),
                 kdf_parameters.salt(),
                 &params,
                 key_data,
             )
-            .expect("Error in scrypt"))
+            .expect("Error in scrypt");
+            Ok(())
         })
         .infallible_unwrap()
     }

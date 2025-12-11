@@ -86,10 +86,8 @@ where
                 if gitinfo.modified {
                     write!(f, ".modified")?;
                 }
-            } else {
-                if gitinfo.modified {
-                    write!(f, "+modified")?;
-                }
+            } else if gitinfo.modified {
+                write!(f, "+modified")?;
             }
         }
         Ok(())

@@ -512,7 +512,7 @@ where
     }
 
     fn destroy(&mut self) {
-        Self::run_blocking(&self.runtime, &format!("destroy"), async || {
+        Self::run_blocking(&self.runtime, "destroy", async || {
             let mut fs = self.fs_write().await?;
             fs.destroy().await;
             fs.async_drop().await.unwrap();
@@ -620,7 +620,6 @@ where
                 Ok(ino) => fs.readlink(&req, ino, callback).await,
                 Err(err) => {
                     callback.error(err);
-                    return;
                 }
             },
         );
@@ -855,13 +854,11 @@ where
                             }
                             Err(err) => {
                                 callback.error(err);
-                                return;
                             }
                         }
                     },
                     Err(err) => {
                         callback.error(err);
-                        return;
                     }
                 }
             },

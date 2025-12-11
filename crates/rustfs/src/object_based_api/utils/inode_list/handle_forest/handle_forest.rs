@@ -200,7 +200,7 @@ where
             let Some(parent_node) = self.nodes.get_mut(parent_handle) else {
                 panic!("Invariant B1 violated");
             };
-            match parent_node.try_remove_child_by_handle(&handle, &edge_from_parent) {
+            match parent_node.try_remove_child_by_handle(&handle, edge_from_parent) {
                 Ok(RemoveResult::NoChildrenLeft) => TryRemoveResult::JustRemovedLastChildOfParent {
                     parent_handle: parent_handle.clone(),
                 },
@@ -238,12 +238,12 @@ where
     {
         let parent_node = self
             .nodes
-            .get_mut(&parent_handle)
-            .ok_or_else(|| MakeOrphanError::ParentNotFound)?;
+            .get_mut(parent_handle)
+            .ok_or(MakeOrphanError::ParentNotFound)?;
 
         let (_removed_handle, remove_result) = parent_node
             .try_remove_child(edge)
-            .ok_or_else(|| MakeOrphanError::ChildNotFound)?;
+            .ok_or(MakeOrphanError::ChildNotFound)?;
         match remove_result {
             RemoveResult::NoChildrenLeft | RemoveResult::StillHasChildren => { /* ok */ }
         }

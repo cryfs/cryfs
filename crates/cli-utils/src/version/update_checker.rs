@@ -9,9 +9,9 @@ use super::http_client::HttpClient;
 const UPDATE_INFO_URL: &str = "https://www.cryfs.org/version_info.json";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 
-pub fn check_for_updates<'a>(
+pub fn check_for_updates(
     http_client: impl HttpClient,
-    current_version: Version<&'a str>,
+    current_version: Version<&str>,
 ) -> Result<UpdateCheckResult> {
     // TODO can we make this async?
     let response_json = http_client.get(UPDATE_INFO_URL, REQUEST_TIMEOUT)?;
@@ -50,9 +50,9 @@ struct VersionResponseVersionInfo {
     current: String,
 }
 
-fn parse_warning<'a>(
+fn parse_warning(
     warnings: &Option<HashMap<String, String>>,
-    version: Version<&'a str>,
+    version: Version<&str>,
 ) -> Option<String> {
     let warnings = warnings.as_ref()?;
 

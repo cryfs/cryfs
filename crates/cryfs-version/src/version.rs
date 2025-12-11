@@ -91,7 +91,7 @@ where
         return lhs.patch.cmp(&rhs.patch);
     }
     match (&lhs.prerelease, &rhs.prerelease) {
-        (Some(lhs), Some(rhs)) => lhs.borrow().cmp(&rhs.borrow()),
+        (Some(lhs), Some(rhs)) => lhs.borrow().cmp(rhs.borrow()),
         (None, None) => Ordering::Equal,
         (Some(_), None) => Ordering::Less,
         (None, Some(_)) => Ordering::Greater,

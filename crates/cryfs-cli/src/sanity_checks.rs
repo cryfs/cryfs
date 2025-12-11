@@ -69,11 +69,10 @@ async fn dir_contains_file(
     expected_filename: &str,
 ) -> Result<bool> {
     while let Some(entry) = dir_entries.next_entry().await? {
-        if let Some(filename) = entry.path().file_name() {
-            if filename == expected_filename {
+        if let Some(filename) = entry.path().file_name()
+            && filename == expected_filename {
                 return Ok(true);
             }
-        }
     }
     Ok(false)
 }

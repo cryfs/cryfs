@@ -129,7 +129,7 @@ impl<C: CipherType> Cipher for AeadCipher<C> {
         let plaintext_output = decrypt_aead(
             self.cipher,
             self.encryption_key.as_bytes(),
-            Some(&nonce),
+            Some(nonce),
             &[],
             cipherdata,
             auth_tag,

@@ -63,7 +63,7 @@ impl AbsolutePath {
         };
 
         let new_path = AbsolutePathBuf::root_with_capacity(capacity);
-        let new_path = new_path.push_all(&self);
+        let new_path = new_path.push_all(self);
         let new_path = new_path.push(component);
         assert_eq!(capacity, new_path.len());
         new_path
@@ -87,7 +87,7 @@ impl AbsolutePath {
     #[inline]
     pub fn iter(
         &self,
-    ) -> impl Iterator<Item = &PathComponent> + DoubleEndedIterator + FusedIterator + ExactSizeIterator
+    ) -> impl DoubleEndedIterator<Item = &PathComponent> + FusedIterator + ExactSizeIterator
     {
         self.into_iter()
     }
@@ -101,7 +101,7 @@ impl AbsolutePath {
         if chars.next() != Some((0, '/')) {
             if path.is_empty() {
                 return Err(ParsePathError::EmptyComponent);
-            } else if path.contains(|c| c == '\\' || c == '\0') {
+            } else if path.contains(['\\', '\0']) {
                 // Even if it's not absolute, InvalidFormat takes precedence.
                 return Err(ParsePathError::InvalidFormat);
             } else {

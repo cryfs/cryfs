@@ -27,7 +27,7 @@ impl PasswordBasedKDF for ScryptOpenssl {
         // TODO What does MAXMEM do exactly? Would setting it to a lower value allow it to work on lower end hardware without crashing? Or would it just move the crash to a different code location?
         const MAXMEM: u64 = u64::MAX;
         EncryptionKey::new(key_size, |key_data| {
-            Ok(openssl::pkcs5::scrypt(
+            openssl::pkcs5::scrypt(
                 password.as_bytes(),
                 kdf_parameters.salt(),
                 n,
@@ -36,7 +36,8 @@ impl PasswordBasedKDF for ScryptOpenssl {
                 MAXMEM,
                 key_data,
             )
-            .expect("Error in scrypt"))
+            .expect("Error in scrypt");
+            Ok(())
         })
         .infallible_unwrap()
     }

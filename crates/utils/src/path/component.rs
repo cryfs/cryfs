@@ -29,7 +29,7 @@ impl PathComponent {
 
     #[inline]
     pub fn try_from_str(name: &str) -> Result<&Self, ParsePathError> {
-        PathComponent::check_invariants(&name)?;
+        PathComponent::check_invariants(name)?;
         Ok(Self::new_without_invariant_check(name))
     }
 
@@ -59,7 +59,7 @@ impl PathComponent {
     pub(super) fn check_invariants_except_contains_slash_or_null(
         component: &str,
     ) -> Result<(), ParsePathError> {
-        if component.len() == 0 {
+        if component.is_empty() {
             return Err(ParsePathError::EmptyComponent);
         }
         if component == "." {

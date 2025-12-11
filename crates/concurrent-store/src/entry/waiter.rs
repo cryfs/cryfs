@@ -44,7 +44,7 @@ where
         EntryLoadingWaiter {
             inner: Some(EntryLoadingWaiterInner {
                 key,
-                loading_result: loading_result,
+                loading_result,
             }),
         }
     }

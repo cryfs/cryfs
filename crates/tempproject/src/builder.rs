@@ -45,7 +45,7 @@ impl TempProjectBuilder {
                 "You must call TempProjectBuilder::cargo before calling TempProjectBuilder::build"
             );
         };
-        std::fs::write(&self.folder.path().join("Cargo.toml"), cargo)?;
+        std::fs::write(self.folder.path().join("Cargo.toml"), cargo)?;
         Ok(())
     }
 

@@ -15,7 +15,7 @@ impl<'a> ComponentIter<'a> {
     #[inline]
     pub(super) fn new(path: &'a AbsolutePath) -> Self {
         let path_str: &str = path.as_ref();
-        assert!(path_str.chars().next() == Some('/'));
+        assert!(path_str.starts_with('/'));
         Self {
             path: &path_str[1..],
         }

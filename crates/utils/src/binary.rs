@@ -64,8 +64,7 @@ where
 }
 
 fn ensure_stream_is_complete(stream: &mut (impl Read + Seek)) -> Result<()> {
-    let cur_pos = stream
-        .seek(SeekFrom::Current(0))
+    let cur_pos = stream.stream_position()
         .context("Tried to get current stream pos")?;
     let end_pos = stream
         .seek(SeekFrom::End(0))
@@ -122,7 +121,7 @@ where
 /// ```
 ///
 pub fn read_bool<R: Read + Seek>(reader: &mut R, endian: Endian, _: ()) -> BinResult<bool> {
-    let pos = reader.seek(SeekFrom::Current(0))?;
+    let pos = reader.stream_position()?;
     let value = u8::read_options(reader, endian, ())?;
     match value {
         0 => Ok(false),
@@ -246,7 +245,7 @@ pub fn read_null_string<R: Read + Seek>(
     _endian: Endian,
     _: (),
 ) -> BinResult<Vec<NonZeroU8>> {
-    let pos = reader.seek(SeekFrom::Current(0))?;
+    let pos = reader.stream_position()?;
     let mut reader = reader.bytes().peekable();
     let data: BinResult<Vec<NonZeroU8>> = reader
         .by_ref()
@@ -304,7 +303,7 @@ pub fn read_nonzerou32<R: Read + Seek>(
     endian: Endian,
     _: (),
 ) -> BinResult<NonZeroU32> {
-    let pos = reader.seek(SeekFrom::Current(0))?;
+    let pos = reader.stream_position()?;
     let value = u32::read_options(reader, endian, ())?;
     NonZeroU32::new(value).ok_or_else(|| binrw::Error::AssertFail {
         pos,
@@ -359,7 +358,7 @@ pub fn read_timespec<R: Read + Seek>(
 ) -> BinResult<SystemTime> {
     TimeSpec::read_options(reader, endian, ()).and_then(|time| {
         SystemTime::try_from(time).map_err(|err| binrw::Error::Custom {
-            pos: reader.seek(SeekFrom::Current(0)).unwrap(),
+            pos: reader.stream_position().unwrap(),
             err: Box::new(err),
         })
     })
@@ -375,7 +374,7 @@ pub fn write_timespec(
 ) -> Result<(), binrw::Error> {
     TimeSpec::try_from(*v)
         .map_err(|err| binrw::Error::Custom {
-            pos: writer.seek(SeekFrom::Current(0)).unwrap(),
+            pos: writer.stream_position().unwrap(),
             err: Box::new(err),
         })?
         .write_options(writer, endian, args)

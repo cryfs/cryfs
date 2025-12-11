@@ -44,7 +44,7 @@ impl Console for InteractiveConsole {
             "This filesystem uses file system format {current_filesystem_format_version}. You're running a CryFS version using format {new_filesystem_format_version}. It is recommended to create a new filesystem with CryFS {cryfs_version} and copy your files into it. If you don't want to do that, we can also attempt to migrate the existing filesystem, but that can take a long time, you might not get some of the performance advantages of the new release series, and if the migration fails, your data may be lost. If you decide to continue, please make sure you have a backup of your data."
         );
         let prompt = "Do you want to attempt a migration now?";
-        ask_yes_no(Some(&explanation), &prompt, false)
+        ask_yes_no(Some(&explanation), prompt, false)
     }
 
     fn ask_allow_replaced_filesystem(&self) -> Result<bool> {
@@ -62,7 +62,7 @@ impl Console for InteractiveConsole {
     fn ask_disable_single_client_mode(&self) -> Result<bool> {
         let explanation = "This filesystem is setup to treat missing blocks as integrity violations and therefore only works in single-client mode. You are trying to access it from a different client.\nYou can disable this integrity feature and stop treating missing blocks as integrity violations?\nChoosing yes will not affect the confidentiality of your data, but in future you might not notice if an attacker deletes one of your files.";
         let prompt = "Do you want to stop treating missing blocks as integrity violations?";
-        ask_yes_no(Some(explanation), &prompt, false)
+        ask_yes_no(Some(explanation), prompt, false)
     }
 
     fn ask_single_client_mode_for_new_filesystem(&self) -> Result<bool> {
@@ -74,7 +74,7 @@ impl Console for InteractiveConsole {
 
         let explanation = "Most integrity checks are enabled by default. However, by default CryFS does not treat missing blocks as integrity violations.\nThat is, if CryFS finds a block missing, it will assume that this is due to a synchronization delay and not because an attacker deleted the block.\nIf you are in a single-client setting, you can let it treat missing blocks as integrity violations, which will ensure that you notice if an attacker deletes one of your files.\nHowever, in this case, you will not be able to use the file system with other devices anymore.";
         let prompt = "Do you want to treat missing blocks as integrity violations?";
-        ask_yes_no(Some(explanation), &prompt, DEFAULT)
+        ask_yes_no(Some(explanation), prompt, DEFAULT)
     }
 
     /// We're in the process of creating a new file system and need to ask the user for the scrypt settings to use
@@ -168,7 +168,7 @@ impl Console for InteractiveConsole {
         // TODO Formatting. e.g. can we somehow highlight the path? By color or font? Also check other questions here for what we can do. The console or dialoguer crates could be useful.
         let explanation = format!("Could not find the vault at '{}'.", path.display());
         let prompt = "Do you want to create a new vault?";
-        ask_yes_no(Some(&explanation), &prompt, true)
+        ask_yes_no(Some(&explanation), prompt, true)
     }
 
     fn ask_create_mountdir(&self, path: &Path) -> Result<bool> {
@@ -177,7 +177,7 @@ impl Console for InteractiveConsole {
             path.display()
         );
         let prompt = "Do you want to create a new directory?";
-        ask_yes_no(Some(&explanation), &prompt, true)
+        ask_yes_no(Some(&explanation), prompt, true)
     }
 }
 
@@ -188,7 +188,7 @@ fn ask_yes_no(explanation: Option<&str>, prompt: &str, default: bool) -> Result<
     }
     loop {
         let response = Confirm::with_theme(&ColorfulTheme::default())
-            .with_prompt(format!("{prompt}"))
+            .with_prompt(prompt.to_string())
             .default(default)
             .show_default(true)
             .interact_opt()?;
@@ -220,14 +220,12 @@ where
 
     let response = Select::with_theme(&ColorfulTheme::default())
         .clear(false) // TODO Should we clear(true)?
-        .with_prompt(format!("{prompt}"))
+        .with_prompt(prompt.to_string())
         .default(default)
         .items(&options_str)
         .interact()?;
     let response = options_t
-        .into_iter()
-        .skip(response)
-        .next()
+        .into_iter().nth(response)
         .expect("Out of bounds");
     Ok(response)
 }

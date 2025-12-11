@@ -15,8 +15,7 @@ use super::guard::BlockCacheEntryGuard;
 use crate::BlockId;
 use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
 
-// TODO Replace unsafe{NonZeroUSize::new_unchecked(_)} with NonZeroUsize::new(_).unwrap() once unwrap is const
-const MAX_CACHE_ENTRIES: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(10240) };
+const MAX_CACHE_ENTRIES: NonZeroUsize = NonZeroUsize::new(10240).unwrap();
 
 pub struct BlockCacheImpl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // Only None while it is being dropped

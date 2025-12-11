@@ -9,6 +9,12 @@ pub struct Event {
     inner: Arc<EventImpl>,
 }
 
+impl Default for Event {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Event {
     pub fn new() -> Self {
         Self {

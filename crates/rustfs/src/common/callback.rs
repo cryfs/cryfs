@@ -45,7 +45,7 @@ pub trait Callback<T, R> {
 /// ```
 pub struct CallbackImpl<T, F>
 where
-    F: FnOnce(T) -> (),
+    F: FnOnce(T),
 {
     f: F,
     _phantom: PhantomData<T>,
@@ -53,7 +53,7 @@ where
 
 impl<T, F> CallbackImpl<T, F>
 where
-    F: FnOnce(T) -> (),
+    F: FnOnce(T),
 {
     pub fn new(f: F) -> Self {
         Self {
@@ -65,7 +65,7 @@ where
 
 impl<T, F> Callback<T, ()> for CallbackImpl<T, F>
 where
-    F: FnOnce(T) -> (),
+    F: FnOnce(T),
 {
     fn call(self, v: T) {
         (self.f)(v)

@@ -57,12 +57,12 @@ where
             log::info!("Received exit signal, unmounting filesystem...done");
         });
 
-        let fs = Self {
+        
+
+        Self {
             session,
             unmount_atexit,
-        };
-
-        fs
+        }
     }
 
     pub fn unmount_join(&self) {

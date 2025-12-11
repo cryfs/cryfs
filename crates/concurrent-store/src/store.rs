@@ -195,10 +195,10 @@ where
         // We only get here if the entry was already Loading or Loaded.
         // We now released the lock on entries. Return the error.
         value.async_drop().await.unwrap(); // TODO No unwrap
-        return Err(anyhow::anyhow!(
+        Err(anyhow::anyhow!(
             "Entry with key {:?} is already loaded even though we just created it",
             key
-        ));
+        ))
     }
 
     /// Load an entry if it is not already loaded, or return the existing loaded entry.
@@ -215,7 +215,7 @@ where
     {
         loop {
             let entry_state =
-                self._clone_or_create_entry_state(key.clone(), &loading_fn_input, loading_fn);
+                self._clone_or_create_entry_state(key.clone(), loading_fn_input, loading_fn);
             // Now the lock on `this.entries` is released, so we can await the loading future without blocking other operations.
 
             match entry_state {
@@ -622,7 +622,7 @@ where
         loaded: EntryStateLoaded<V>,
     ) -> Shared<BoxFuture<'static, ()>> {
         let (immediate_drop_request, mut entry) = loaded.into_inner();
-        let this = AsyncDropArc::clone(&this);
+        let this = AsyncDropArc::clone(this);
         async move {
             with_async_drop_2!(this, {
                 // This will be awaited after the lock on entries is released, so we can concurrently drop
@@ -657,7 +657,7 @@ where
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        let this = AsyncDropArc::clone(&this);
+        let this = AsyncDropArc::clone(this);
         async move {
             with_async_drop_2!(this, {
                 Self::_execute_immediate_drop(&this, key, None, drop_fn).await;

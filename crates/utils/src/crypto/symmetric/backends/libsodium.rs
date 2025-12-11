@@ -223,11 +223,11 @@ fn _decrypt<
     let nonce = nonce_from_slice_fn(nonce).expect("Wrong nonce size");
     let auth_tag = auth_tag_from_slice_fn(auth_tag).expect("Wrong auth tag size");
     open_fn(
-        cipherdata.as_mut(),
+        cipherdata,
         None,
         &auth_tag,
         &nonce,
-        &encryption_key,
+        encryption_key,
     )
     .map_err(|()| anyhow!("Decrypting data failed"))?;
     let mut plaintext = ciphertext;

@@ -28,8 +28,8 @@ where
     #[must_use]
     pub fn await_task(self) -> impl Future<Output = Result<T, JoinError>> {
         let mut this = ManuallyDrop::new(self);
-        let task = unsafe { ManuallyDrop::take(&mut this.task) };
-        task
+        
+        unsafe { ManuallyDrop::take(&mut this.task) }
     }
 }
 

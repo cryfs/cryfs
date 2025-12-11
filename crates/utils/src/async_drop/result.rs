@@ -22,10 +22,7 @@ where
     }
 
     pub fn err(&self) -> Option<&E> {
-        match &self.v {
-            Ok(_) => None,
-            Err(e) => Some(e),
-        }
+        self.v.as_ref().err()
     }
 
     pub fn ok(&self) -> Option<&T> {

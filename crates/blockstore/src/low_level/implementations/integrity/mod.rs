@@ -116,8 +116,7 @@ impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockSt
                     return Err(
                         IntegrityBlockStoreInitError::IntegrityViolationInPreviousRun {
                             integrity_file_path: integrity_file_path.clone(),
-                        }
-                        .into(),
+                        },
                     );
                 }
             }
@@ -156,13 +155,12 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
             None => {
                 match self.config.missing_block_is_integrity_violation {
                     MissingBlockIsIntegrityViolation::IsAViolation => {
-                        if let Some(block_info) = block_info_guard.value() {
-                            if block_info.block_is_expected_to_exist() {
+                        if let Some(block_info) = block_info_guard.value()
+                            && block_info.block_is_expected_to_exist() {
                                 self._integrity_violation_detected(
                                     IntegrityViolationError::MissingBlock { block: *block_id },
                                 )?;
                             }
-                        }
                     }
                     MissingBlockIsIntegrityViolation::IsNotAViolation => {
                         // do nothing

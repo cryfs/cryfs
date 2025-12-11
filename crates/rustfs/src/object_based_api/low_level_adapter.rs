@@ -360,10 +360,7 @@ where
         let target = match inode.as_symlink().await {
             Ok(inode_symlink) => with_async_drop_2!(inode_symlink, {
                 let target = inode_symlink.target();
-                match target.await {
-                    Ok(target) => Ok(target),
-                    Err(err) => Err(err),
-                }
+                target.await
             }),
             Err(err) => Err(err),
         };
@@ -412,7 +409,7 @@ where
             // TODO Can we avoid the async_drop here by using something like dir.into_create_child_dir() ?
             with_async_drop_2!(parent_dir, {
                 let (attrs, child) = parent_dir
-                    .create_child_dir(&name, mode, req.uid, req.gid)
+                    .create_child_dir(name, mode, req.uid, req.gid)
                     .await?;
                 Ok::<_, FsError>((attrs, Dir::into_node(child)))
             })
@@ -426,7 +423,7 @@ where
         Ok(ReplyEntry {
             ttl: TTL_GETATTR,
             attr,
-            ino: ino,
+            ino,
         })
     }
 
@@ -442,7 +439,7 @@ where
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
             with_async_drop_2!(parent_dir, {
-                parent_dir.remove_child_file_or_symlink(&name).await?;
+                parent_dir.remove_child_file_or_symlink(name).await?;
                 self._orphan_inode(parent_ino, name).await;
                 Ok::<_, FsError>(())
             })?;
@@ -462,7 +459,7 @@ where
         with_async_drop_2!(parent, {
             let parent_dir = parent.as_dir().await?;
             with_async_drop_2!(parent_dir, {
-                parent_dir.remove_child_dir(&name).await?;
+                parent_dir.remove_child_dir(name).await?;
                 self._orphan_inode(parent_ino, name).await;
                 Ok::<_, FsError>(())
             })?;
@@ -487,7 +484,7 @@ where
             // TODO Can we avoid the async_drop here by using something like dir.into_create_child_symlink()?
             with_async_drop_2!(parent_dir, {
                 let (attrs, child) = parent_dir
-                    .create_child_symlink(&name, link, req.uid, req.gid)
+                    .create_child_symlink(name, link, req.uid, req.gid)
                     .await?;
                 Ok::<_, FsError>((attrs, Symlink::into_node(child)))
             })
@@ -523,7 +520,7 @@ where
             with_async_drop_2!(shared_parent, {
                 let parent_dir = shared_parent.as_dir().await?;
                 with_async_drop_2!(parent_dir, {
-                    parent_dir.rename_child(&oldname, &newname).await?;
+                    parent_dir.rename_child(oldname, newname).await?;
                     self._move_inode(oldparent_ino, oldname, newparent_ino, newname)
                         .await?;
                     Ok::<_, FsError>(())
@@ -535,7 +532,7 @@ where
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
             let (mut oldparent, mut newparent) =
                 flatten_async_drop::<FsError, _, _, _, _>(oldparent, newparent).await?;
-            let result = (async || {
+            let result = async {
                 let oldparent_dir = oldparent.as_dir().await?;
                 with_async_drop_2!(oldparent_dir, {
                     let newparent_dir = newparent.as_dir().await?;
@@ -546,7 +543,7 @@ where
                         .await?;
                     Ok::<_, FsError>(())
                 })
-            })()
+            }
             .await;
             // TODO Drop concurrently and drop latter even if first one fails
             oldparent.async_drop().await?;
@@ -731,14 +728,14 @@ where
 
         let dir_cache_entry = self.open_dirs.get(OpenDirHandle::from(fh)).ok_or_else(|| {
             log::error!("Tried to access a file descriptor for a directory that isn't opened");
-            FsError::InvalidFileDescriptor { fh: fh.into() }
+            FsError::InvalidFileDescriptor { fh }
         })?;
         if dir_cache_entry.dir_ino() != ino {
             log::error!(
                 "Tried to access a directory with inode {ino:?} using a file descriptor for inode {:?}",
                 dir_cache_entry.dir_ino()
             );
-            return Err(FsError::InvalidFileDescriptor { fh: fh.into() });
+            return Err(FsError::InvalidFileDescriptor { fh });
         }
 
         let (node, parent_ino) = self.get_inode_and_parent_ino(ino).await?;
@@ -789,7 +786,7 @@ where
                         let offset = offset + 3;
 
                         let offset = i64::try_from(offset).unwrap(); // TODO No unwrap
-                        let buffer_is_full = reply.add(ino.into(), offset, entry.kind, &entry.name);
+                        let buffer_is_full = reply.add(ino, offset, entry.kind, &entry.name);
                         match buffer_is_full {
                             ReplyDirectoryAddResult::Full => {
                                 // TODO Test the scenario where a directory has lots of entries, the buffer gets full and fuser calls readdir() multiple times
@@ -964,7 +961,7 @@ where
             // TODO Can we avoid the async_drop here by using something like dir.into_create_and_open_file() ?
             let (attr, child_node, open_file) = with_async_drop_2!(parent_dir, {
                 parent_dir
-                    .create_and_open_file(&name, mode, req.uid, req.gid, flags)
+                    .create_and_open_file(name, mode, req.uid, req.gid, flags)
                     .await
             })?;
 

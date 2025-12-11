@@ -47,7 +47,7 @@ pub struct InvalidBlockSizeError {
 }
 impl InvalidBlockSizeError {
     pub fn new(message: String) -> Self {
-        Self { message: message }
+        Self { message }
     }
 }
 

@@ -186,7 +186,7 @@ where
         &self,
         ino: InodeNumber,
     ) -> FsResult<(AsyncDropGuard<AsyncDropArc<Fs::Node>>, InodeNumber)> {
-        let mut inner = self.inner.lock().await;
+        let inner = self.inner.lock().await;
         let inode_tree_node = inner.inode_forest.get(&ino).ok_or_else(|| {
             log::error!("inode {ino}: Tried to get inode info for unknown inode");
             FsError::InvalidOperation
@@ -195,7 +195,7 @@ where
             .parent_handle()
             .copied()
             .unwrap_or(PARENT_OF_ROOT_INO);
-        let node = Self::_get_node(&mut inner, ino).await?;
+        let node = Self::_get_node(&inner, ino).await?;
         // Fulfilling Invariant B: The user gave us `ino`, i.e. we handed it out before and know with B2 that its ancestors are also loaded.
         Ok((node, parent_ino))
     }

@@ -198,7 +198,7 @@ where
     pub fn strong_count(&self) -> Option<usize> {
         self.inner
             .as_ref()
-            .map(|arc| AsyncDropArc::strong_count(arc))
+            .map(AsyncDropArc::strong_count)
     }
 
     /// Hashes the internal state of this `Shared` in a way that's compatible with `ptr_eq`.
@@ -232,7 +232,7 @@ where
 
     pub fn clone(this: &AsyncDropGuard<Self>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            inner: this.inner.as_ref().map(|inner| AsyncDropArc::clone(inner)),
+            inner: this.inner.as_ref().map(AsyncDropArc::clone),
             waker_key: NULL_WAKER_KEY,
         })
     }
@@ -408,15 +408,12 @@ where
     type Error = <O as AsyncDrop>::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        if self.waker_key != NULL_WAKER_KEY {
-            if let Some(ref inner) = self.inner {
-                if let Ok(mut wakers) = inner.notifier.wakers.lock() {
-                    if let Some(wakers) = wakers.as_mut() {
+        if self.waker_key != NULL_WAKER_KEY
+            && let Some(ref inner) = self.inner
+                && let Ok(mut wakers) = inner.notifier.wakers.lock()
+                    && let Some(wakers) = wakers.as_mut() {
                         wakers.remove(self.waker_key);
                     }
-                }
-            }
-        }
 
         if let Some(inner) = &mut self.inner {
             inner.async_drop().await?;

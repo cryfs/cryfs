@@ -48,7 +48,7 @@ impl EncryptionKey {
     // TODO #[cfg(test)]
     pub fn from_hex(hex_str: &str) -> Result<Self> {
         ensure!(
-            hex_str.len() % 2 == 0,
+            hex_str.len().is_multiple_of(2),
             "Hex string must have an even length"
         );
         let num_bytes = hex_str.len() / 2;
