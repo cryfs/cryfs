@@ -115,6 +115,9 @@ set(cryptopp_SOURCES
     pkcspad.cpp
     poly1305.cpp
     polynomi.cpp
+    power7_ppc.cpp
+    power8_ppc.cpp
+    power9_ppc.cpp
     ppc_simd.cpp
     primetab.cpp
     pssr.cpp
