@@ -31,7 +31,6 @@ libc.workspace = true
 nix = {workspace = true, features = ["fs"] }
 pretty_assertions.workspace = true
 tempdir.workspace = true
-tokio-util.workspace = true
 tokio.workspace = true
 env_logger.workspace = true
 log.workspace = true

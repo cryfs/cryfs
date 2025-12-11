@@ -12,7 +12,6 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 atomic-time.workspace = true
-byte-unit.workspace = true
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-rustfs = { path = "../rustfs", default-features=false}

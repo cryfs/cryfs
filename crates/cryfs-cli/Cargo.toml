@@ -14,7 +14,6 @@ name = "cryfs"
 
 [dependencies]
 anyhow.workspace = true
-async-trait.workspace = true
 byte-unit.workspace = true
 color-print.workspace = true
 clap = { workspace = true, features = ["derive"] }
@@ -29,7 +28,6 @@ cryfs-version = { path = "../cryfs-version" }
 dialoguer.workspace = true
 humantime.workspace = true
 itertools.workspace = true
-konst.workspace = true
 log.workspace = true
 once_cell.workspace = true
 tokio.workspace = true

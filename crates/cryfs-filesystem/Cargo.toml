@@ -22,10 +22,8 @@ cryfs-rustfs = {path = "../rustfs", default-features = false}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 derive_more.workspace = true
-derive-where.workspace = true
 futures.workspace = true
 hex.workspace = true
-indicatif.workspace = true
 konst.workspace = true
 libc.workspace = true
 lockable.workspace = true

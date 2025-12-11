@@ -17,7 +17,6 @@ clap = { workspace = true, features = ["derive"] }
 clap-logflag.workspace = true
 console.workspace = true
 cryfs-filesystem = { path = "../cryfs-filesystem" }
-cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-version = { path = "../cryfs-version" }
 cryfs-utils = { path = "../utils" }
@@ -27,7 +26,6 @@ human-panic.workspace = true
 log.workspace = true
 path-absolutize.workspace = true
 rpassword.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 reqwest = { workspace = true, optional = true, features = ["blocking", "json"] }
 serde.workspace = true
 serde_json = { workspace = true, optional = true }

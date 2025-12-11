@@ -910,7 +910,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "cryfs-blobstore"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -936,7 +936,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-blockstore"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -971,7 +971,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-check"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -988,7 +988,6 @@ dependencies = [
  "cryfs-version",
  "derivative",
  "futures",
- "indicatif",
  "itertools 0.14.0",
  "log",
  "pretty_assertions",
@@ -1003,11 +1002,10 @@ dependencies = [
 
 [[package]]
 name = "cryfs-cli"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "async-trait",
  "byte-unit",
  "clap",
  "clap-logflag",
@@ -1023,7 +1021,6 @@ dependencies = [
  "escargot",
  "humantime",
  "itertools 0.14.0",
- "konst 0.4.3",
  "lazy_static",
  "log",
  "once_cell",
@@ -1034,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-cli-utils"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1043,7 +1040,6 @@ dependencies = [
  "clap",
  "clap-logflag",
  "console",
- "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-filesystem",
  "cryfs-utils",
@@ -1066,12 +1062,11 @@ dependencies = [
  "serde_json",
  "tempdir",
  "tempproject",
- "tokio",
 ]
 
 [[package]]
 name = "cryfs-e2e-perf-tests"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1096,12 +1091,11 @@ dependencies = [
  "pretty_assertions",
  "tempdir",
  "tokio",
- "tokio-util",
 ]
 
 [[package]]
 name = "cryfs-filesystem"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1114,11 +1108,9 @@ dependencies = [
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
- "derive-where",
  "derive_more",
  "futures",
  "hex",
- "indicatif",
  "konst 0.4.3",
  "libc",
  "lockable",
@@ -1135,12 +1127,11 @@ dependencies = [
 
 [[package]]
 name = "cryfs-runner"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "atomic-time",
  "bincode",
- "byte-unit",
  "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-cli-utils",
@@ -1159,7 +1150,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-rustfs"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1188,7 +1179,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-utils"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -1229,7 +1220,7 @@ dependencies = [
 
 [[package]]
 name = "cryfs-version"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "derive_more",
  "git2version",
@@ -1339,17 +1330,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "derive-where"
-version = "1.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef941ded77d15ca19b40374869ac6000af1c9f2a4c0f3d4c70926287e6364a8f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.111",
 ]
 
 [[package]]
@@ -4417,7 +4397,7 @@ dependencies = [
 
 [[package]]
 name = "tempproject"
-version = "2.0.0-alpha1"
+version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "assert_cmd",
