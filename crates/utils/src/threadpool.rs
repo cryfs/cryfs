@@ -1,41 +1,36 @@
-use std::sync::Mutex;
-
 use anyhow::Result;
+use std::fmt::Debug;
 
 /// A simple thread pool that can run CPU bound jobs and integrate them with async code.
 pub struct ThreadPool {
-    // TODO Better thread pool implementation that doesn't require a Mutex?
-    //      Maybe the `threadpool` crate? But it should also have a clean shutdown on drop, which the `threadpool` crate doesn't seem to have.
-    //      Maybe rayon's threadpool?
-    pool: Mutex<tinypool::ThreadPool>,
+    pool: rayon::ThreadPool,
 }
 
 impl ThreadPool {
     /// Create a new thread pool with a given name
-    pub fn new() -> Result<Self> {
-        Self::new_with_num_threads(num_threads())
+    pub fn new(name: &'static str) -> Result<Self> {
+        Self::new_with_num_threads(name, num_threads())
     }
 
-    pub fn new_with_num_threads(num_threads: usize) -> Result<Self> {
+    pub fn new_with_num_threads(name: &'static str, num_threads: usize) -> Result<Self> {
         Ok(Self {
-            pool: Mutex::new(tinypool::ThreadPool::new(Some(num_threads))?),
+            pool: rayon::ThreadPoolBuilder::new()
+                .num_threads(num_threads)
+                .thread_name(move |i| format!("{name} ({i})"))
+                .build()?,
         })
     }
 
     /// Run a job on the thread pool and asynchronously wait for it to complete
     pub async fn execute_job<R>(&self, job: impl FnOnce() -> R + Send + 'static) -> R
     where
-        R: Send + 'static,
+        R: Send + Debug + 'static,
     {
         let (sender, receiver) = tokio::sync::oneshot::channel();
-        {
-            let pool = self.pool.lock().unwrap();
-            pool.add_to_queue(move || {
-                let result = job();
-                let _ = sender.send(result);
-            });
-            // free lock on pool
-        }
+        self.pool.spawn_fifo(move || {
+            let result = job();
+            sender.send(result).unwrap();
+        });
         receiver.await.expect("Thread pool task panicked")
     }
 }
@@ -65,14 +60,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_simple_job() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let result = pool.execute_job(|| 42).await;
         assert_eq!(result, 42);
     }
 
     #[tokio::test]
     async fn test_execute_job_with_computation() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let result = pool
             .execute_job(|| {
                 let mut sum = 0;
@@ -87,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_multiple_jobs_sequentially() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
 
         let result1 = pool.execute_job(|| 1 + 1).await;
         let result2 = pool.execute_job(|| 2 * 3).await;
@@ -100,7 +95,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_multiple_jobs_concurrently() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let counter = Arc::new(AtomicU32::new(0));
 
         let mut futures = vec![];
@@ -119,14 +114,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_job_with_string_return() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let result = pool.execute_job(|| String::from("hello world")).await;
         assert_eq!(result, "hello world");
     }
 
     #[tokio::test]
     async fn test_execute_job_with_complex_type() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let result = pool
             .execute_job(|| {
                 vec![1, 2, 3, 4, 5]
@@ -140,7 +135,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_job_captures_environment() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let value = 100;
         let result = pool.execute_job(move || value * 2).await;
         assert_eq!(result, 200);
@@ -148,7 +143,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_blocking_operation() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let start = std::time::Instant::now();
 
         let result = pool
@@ -165,7 +160,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_thread_pool_reuse() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
 
         for i in 0..20 {
             let result = pool.execute_job(move || i * 2).await;
@@ -175,7 +170,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_jobs_with_shared_state() {
-        let pool = ThreadPool::new().unwrap();
+        let pool = ThreadPool::new("test-pool").unwrap();
         let counter = Arc::new(AtomicU32::new(0));
 
         let mut futures = vec![];
@@ -202,14 +197,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_new_thread_pool_creation() {
-        let result = ThreadPool::new();
+        let result = ThreadPool::new("test-pool");
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_jobs_execute_in_parallel() {
         // Create a pool with at least 2 threads
-        let pool = ThreadPool::new_with_num_threads(2).unwrap();
+        let pool = ThreadPool::new_with_num_threads("test-pool", 2).unwrap();
 
         // Create a barrier that requires 2 threads to reach it
         let barrier = Arc::new(std::sync::Barrier::new(2));

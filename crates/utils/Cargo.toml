@@ -21,7 +21,7 @@ human-panic.workspace = true
 indicatif.workspace = true
 itertools.workspace = true
 log.workspace = true
-rayon = { workspace = true, optional = true }
+rayon.workspace = true
 signal-hook.workspace = true
 slab.workspace = true
 tokio = { workspace = true, features = [
@@ -35,13 +35,11 @@ thiserror.workspace = true
 rand.workspace = true
 hex.workspace = true
 lockable.workspace = true
-tinypool.workspace = true
 
 [dev-dependencies]
 common_macros.workspace = true
 criterion.workspace = true
 divrem.workspace = true
-rayon.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
 tempdir.workspace = true
@@ -50,7 +48,7 @@ rand = { workspace = true, features = ["small_rng"] }
 lockable = {workspace = true, features = ["slow_assertions"]}
 
 [features]
-testutils = ["divrem", "rayon"]
+testutils = ["dep:divrem"]
 
 [[bench]]
 harness = false

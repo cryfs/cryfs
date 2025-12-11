@@ -49,7 +49,7 @@ impl<
         AsyncDropGuard::new(Self {
             underlying_block_store,
             cipher: Arc::new(cipher),
-            crypto_task_pool: ThreadPool::new()
+            crypto_task_pool: ThreadPool::new("EncryptedBlockStore")
                 .expect("Failed to create thread pool for crypto tasks"),
             _phantom: PhantomData,
         })
