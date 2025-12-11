@@ -27,7 +27,7 @@ jobs:
         toolchain: ["stable", "nightly", "1.89"]
     runs-on: ${{matrix.os}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Install Dependencies (Linux)
         if: ${{ runner.os == 'Linux' }}
         # TODO We may be able to remove libfuse3-dev here because rust fuser doesn't use libfuse anymore (on Linux at least)
@@ -56,7 +56,7 @@ jobs:
         features: ["", "--no-default-features", "--all-features"]
         profile: ["", "--release"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - name: Install Dependencies
         run: sudo apt-get install -y fuse3 libfuse3-dev
       - uses: actions-rs/toolchain@v1
@@ -72,7 +72,7 @@ jobs:
   #   permissions:
   #     checks: write
   #   steps:
-  #     - uses: actions/checkout@v3
+  #     - uses: actions/checkout@v6
   #     - name: Install Dependencies
   #       run: sudo apt-get install -y fuse3 libfuse3-dev
   #     - uses: actions-rs/toolchain@v1
@@ -88,7 +88,7 @@ jobs:
     name: Code Formatter (rustfmt)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -101,7 +101,7 @@ jobs:
   #   name: Sync README.md (cargo sync-readme)
   #   runs-on: ubuntu-latest
   #   steps:
-  #   - uses: actions/checkout@v3
+  #   - uses: actions/checkout@v6
   #   - run: cargo install cargo-rdme
   #   - run: ./gen_readme.sh
   #   # Fail job if gen_readme.sh introduced changes. If this fails, then we need to run gen_readme.sh locally and add it to the commit.
@@ -110,7 +110,7 @@ jobs:
     name: Find dead doc links
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - name: Install Dependencies
       run: sudo apt-get install -y fuse3 libfuse3-dev
     - uses: actions-rs/toolchain@v1
@@ -122,7 +122,7 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
