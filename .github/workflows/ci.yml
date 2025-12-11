@@ -27,6 +27,9 @@ jobs:
         toolchain: ["stable", "nightly", "1.89"]
     runs-on: ${{matrix.os}}
     steps:
+      - name: Free Disk Space (Ubuntu)
+        if: ${{ runner.os == 'Linux' }}
+        uses: jlumbroso/free-disk-space@v1.3.1
       - uses: actions/checkout@v6
       - name: Install Dependencies (Linux)
         if: ${{ runner.os == 'Linux' }}
@@ -56,6 +59,9 @@ jobs:
         features: ["", "--no-default-features", "--all-features"]
         profile: ["", "--release"]
     steps:
+      - name: Free Disk Space (Ubuntu)
+        if: ${{ runner.os == 'Linux' }}
+        uses: jlumbroso/free-disk-space@v1.3.1
       - uses: actions/checkout@v6
       - name: Install Dependencies
         run: sudo apt-get install -y fuse3 libfuse3-dev
@@ -122,6 +128,9 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        if: ${{ runner.os == 'Linux' }}
+        uses: jlumbroso/free-disk-space@v1.3.1
       - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
