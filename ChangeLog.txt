@@ -1,6 +1,7 @@
 Version 1.0.2 (unreleased)
 ---------------
 * Fix building with Boost 1.88 (see https://github.com/cryfs/cryfs/pull/494 )
+* Fix building on PowerPC (see https://github.com/cryfs/cryfs/pull/506 )
 
 Version 1.0.1
 ---------------
