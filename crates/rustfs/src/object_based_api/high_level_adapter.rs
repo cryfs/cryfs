@@ -752,7 +752,7 @@ where
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_and_open_file() ?
                 // TODO No need to return the node just to immediately async_drop it below
                 parent_dir
-                    .create_and_open_file(&name, mode, req.uid, req.gid)
+                    .create_and_open_file(&name, mode, req.uid, req.gid, flags)
                     .await
             })?;
             node.async_drop().await?;

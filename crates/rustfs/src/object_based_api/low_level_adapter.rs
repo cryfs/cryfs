@@ -964,7 +964,7 @@ where
             // TODO Can we avoid the async_drop here by using something like dir.into_create_and_open_file() ?
             let (attr, child_node, open_file) = with_async_drop_2!(parent_dir, {
                 parent_dir
-                    .create_and_open_file(&name, mode, req.uid, req.gid)
+                    .create_and_open_file(&name, mode, req.uid, req.gid, flags)
                     .await
             })?;
 

@@ -319,6 +319,7 @@ impl Dir for InMemoryDirRef {
         mode: Mode,
         uid: Uid,
         gid: Gid,
+        _flags: OpenInFlags,
     ) -> FsResult<(
         NodeAttrs,
         AsyncDropGuard<InMemoryNodeRef>,

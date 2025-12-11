@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use cryfs_rustfs::NumBytes;
+use cryfs_rustfs::{NumBytes, OpenInFlags};
 use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
@@ -735,6 +735,7 @@ where
         mode: Mode,
         uid: Uid,
         gid: Gid,
+        _flags: OpenInFlags, // TODO Use flags
     ) -> FsResult<(
         NodeAttrs,
         AsyncDropGuard<CryNode<B>>,

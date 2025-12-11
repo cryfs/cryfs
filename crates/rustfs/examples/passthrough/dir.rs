@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use cryfs_rustfs::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid,
+    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, OpenInFlags, Uid,
     object_based_api::{Dir, Node},
 };
 use cryfs_utils::{
@@ -191,6 +191,7 @@ impl Dir for PassthroughDir {
         mode: Mode,
         uid: Uid,
         gid: Gid,
+        _flags: OpenInFlags,
     ) -> FsResult<(
         NodeAttrs,
         AsyncDropGuard<PassthroughNode>,

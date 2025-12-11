@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, Uid};
+use crate::{
+    OpenInFlags,
+    common::{DirEntry, FsResult, Gid, Mode, NodeAttrs, Uid},
+};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::PathComponent,
@@ -66,6 +69,7 @@ pub trait Dir: AsyncDrop + Debug + Sized {
         mode: Mode,
         uid: Uid,
         gid: Gid,
+        flags: OpenInFlags,
     ) -> FsResult<(
         NodeAttrs,
         // TODO Should we return `File` instead of `Node`?
