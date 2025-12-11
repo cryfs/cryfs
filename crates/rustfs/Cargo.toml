@@ -44,6 +44,8 @@ mockall.workspace = true
 tempdir.workspace = true
 cryfs-utils = { path = "../utils", features = ["testutils"] }
 users.workspace = true
+# TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
+lockable = {workspace = true, features = ["slow_assertions"]}
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Building fuser without linking libfuse currently only works on Linux, not on macos. Macos requires the `libfuse` feature to link against the library
