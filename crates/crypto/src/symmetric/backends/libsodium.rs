@@ -9,8 +9,9 @@ use sodiumoxide::crypto::aead::{
 use std::sync::Once;
 
 use super::super::{Cipher, CipherDef, EncryptionKey};
+use crate::symmetric::InvalidKeySizeError;
 
-use crate::{crypto::symmetric::InvalidKeySizeError, data::Data};
+use cryfs_utils::data::Data;
 
 static INIT_LIBSODIUM: Once = Once::new();
 

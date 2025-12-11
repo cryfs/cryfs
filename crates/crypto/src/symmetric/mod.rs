@@ -1,7 +1,8 @@
-use crate::data::Data;
 use anyhow::Result;
 use derive_more::{Display, Error};
 use static_assertions::const_assert;
+
+use cryfs_utils::data::Data;
 
 pub trait Cipher {
     // TODO Can we make this API safer? It requires the data block passed in to have at least CIPHERTEXT_OVERHEAD prefix bytes available.

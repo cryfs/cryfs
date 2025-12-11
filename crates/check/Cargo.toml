@@ -22,6 +22,7 @@ clap-logflag.workspace = true
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
+cryfs-crypto = { path = "../crypto" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }

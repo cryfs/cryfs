@@ -2,10 +2,10 @@ use anyhow::Result;
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
 
-use crate::crypto::kdf::PasswordBasedKDF;
-use crate::crypto::kdf::scrypt::params::ScryptParams;
-use crate::crypto::kdf::scrypt::settings::ScryptSettings;
-use crate::crypto::symmetric::EncryptionKey;
+use crate::kdf::PasswordBasedKDF;
+use crate::kdf::scrypt::params::ScryptParams;
+use crate::kdf::scrypt::settings::ScryptSettings;
+use crate::symmetric::EncryptionKey;
 
 pub struct ScryptScrypt;
 

@@ -21,6 +21,7 @@ clap-logflag.workspace = true
 # TODO Now that we have the cryfs-runner crate, can we remove other cryfs dependencies? Can we remove tokio? Maybe go through all of our crates and minimize inter-crate dependencies
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
+cryfs-crypto = { path = "../crypto" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }

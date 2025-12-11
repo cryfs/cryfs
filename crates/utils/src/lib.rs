@@ -6,7 +6,6 @@ pub mod at_exit;
 pub mod binary;
 pub mod concurrent_task;
 pub mod containers;
-pub mod crypto;
 pub mod data;
 pub mod event;
 pub mod mr_oneshot_channel;

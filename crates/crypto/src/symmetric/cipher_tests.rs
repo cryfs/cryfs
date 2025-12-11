@@ -14,7 +14,7 @@ use super::xchacha20poly1305::{
     AeadXChaCha20Poly1305, LibsodiumXChaCha20Poly1305, XChaCha20Poly1305,
 };
 use super::{Cipher, CipherDef, EncryptionKey};
-use crate::data::Data;
+use cryfs_utils::data::Data;
 
 pub fn key(num_bytes: usize, seed: u64) -> EncryptionKey {
     let mut rng = StdRng::seed_from_u64(seed);

@@ -7,7 +7,7 @@ use rand::{RngCore, rng};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
-use crate::data::Data;
+use cryfs_utils::data::Data;
 
 // TODO The aes-gcm crate currently needs
 // > RUSTFLAGS="-Ctarget-cpu=sandybridge -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"

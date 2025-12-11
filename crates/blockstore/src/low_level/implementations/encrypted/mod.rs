@@ -15,9 +15,9 @@ use crate::{
     },
     utils::{RemoveResult, TryCreateResult},
 };
+use cryfs_crypto::symmetric::CipherDef;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::CipherDef,
     data::Data,
 };
 
@@ -265,12 +265,10 @@ mod tests {
         low_level::LLFixture,
         utils::{blockid, data},
     };
-    use cryfs_utils::{
-        async_drop::AsyncDropArc,
-        crypto::symmetric::{
-            Aes128Gcm, Aes256Gcm, DefaultNonceSize, EncryptionKey, XChaCha20Poly1305,
-        },
+    use cryfs_crypto::symmetric::{
+        Aes128Gcm, Aes256Gcm, DefaultNonceSize, EncryptionKey, XChaCha20Poly1305,
     };
+    use cryfs_utils::async_drop::AsyncDropArc;
     // TODO Separate out InfallibleUnwrap from lockable and depend on that instead of on lockable
     use lockable::InfallibleUnwrap;
 

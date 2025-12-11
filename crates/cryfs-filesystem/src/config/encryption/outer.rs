@@ -2,13 +2,11 @@ use anyhow::{Context, Result, ensure};
 use binrw::{BinRead, BinWrite, NullString, binrw, helpers::until_eof};
 use std::io::{Cursor, Read, Seek, Write};
 
-use cryfs_utils::{
-    crypto::{
-        kdf::KDFParameters,
-        symmetric::{Cipher, CipherDef, EncryptionKey},
-    },
-    data::Data,
+use cryfs_crypto::{
+    kdf::KDFParameters,
+    symmetric::{Cipher, CipherDef, EncryptionKey},
 };
+use cryfs_utils::data::Data;
 
 use super::padding::{add_padding, remove_padding};
 use super::{inner::InnerConfig, padding::PADDING_OVERHEAD_PREFIX};
@@ -17,7 +15,7 @@ const HEADER: &str = "cryfs.config;1;scrypt";
 
 // TODO Add argon as an alternative to scrypt
 
-pub type OuterCipher = cryfs_utils::crypto::symmetric::Aes256Gcm;
+pub type OuterCipher = cryfs_crypto::symmetric::Aes256Gcm;
 
 // Outer config data is grown to this size before encryption to hide its actual size
 const CONFIG_SIZE: usize = 1024;

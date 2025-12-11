@@ -20,6 +20,7 @@ cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-version = { path = "../cryfs-version" }
 cryfs-utils = { path = "../utils" }
+cryfs-crypto = { path = "../crypto" }
 derive_more.workspace = true
 dirs.workspace = true
 human-panic.workspace = true

@@ -52,7 +52,7 @@ mod tests {
     use rstest::rstest;
 
     use super::ScryptSettings;
-    use crate::crypto::kdf::scrypt::ScryptParams;
+    use crate::kdf::scrypt::ScryptParams;
 
     #[rstest]
     fn params_are_valid(

@@ -6,7 +6,7 @@ use std::path::Path;
 use thiserror::Error;
 
 use cryfs_blockstore::ClientId;
-use cryfs_utils::crypto::{
+use cryfs_crypto::{
     hash::{Digest, Hash, Salt, hash},
     symmetric::EncryptionKey,
 };

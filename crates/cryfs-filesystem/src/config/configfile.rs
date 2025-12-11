@@ -5,10 +5,8 @@ use std::io::{BufReader, BufWriter, ErrorKind};
 use std::path::PathBuf;
 use thiserror::Error;
 
-use cryfs_utils::{
-    crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings},
-    progress::ProgressBarManager,
-};
+use cryfs_crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
+use cryfs_utils::progress::ProgressBarManager;
 
 use super::cryconfig::CryConfig;
 use super::encryption::ConfigEncryptionKey;

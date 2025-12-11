@@ -8,7 +8,8 @@ use rand::{RngCore, rng};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
-use crate::data::Data;
+
+use cryfs_utils::data::Data;
 
 #[allow(non_camel_case_types)]
 pub trait CipherType {

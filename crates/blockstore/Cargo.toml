@@ -18,6 +18,7 @@ binrw.workspace = true
 byte-unit.workspace = true
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
+cryfs-crypto = { path = "../crypto" }
 derive_more.workspace = true
 errno.workspace = true
 futures.workspace = true

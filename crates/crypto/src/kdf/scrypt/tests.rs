@@ -1,4 +1,4 @@
-use crate::crypto::kdf::{
+use crate::kdf::{
     KDFParameters, PasswordBasedKDF,
     scrypt::{ScryptParams, ScryptSettings},
 };
@@ -111,12 +111,12 @@ mod generic {
         assert_ne!(derived_key_1.to_hex(), derived_key_2.to_hex());
     }
 
-    #[instantiate_tests(<crate::crypto::kdf::scrypt::Scrypt>)]
+    #[instantiate_tests(<crate::kdf::scrypt::Scrypt>)]
     mod scrypt_default {}
 
-    #[instantiate_tests(<crate::crypto::kdf::scrypt::backends::scrypt::ScryptScrypt>)]
+    #[instantiate_tests(<crate::kdf::scrypt::backends::scrypt::ScryptScrypt>)]
     mod scrypt_scrypt {}
 
-    #[instantiate_tests(<crate::crypto::kdf::scrypt::backends::openssl::ScryptOpenssl>)]
+    #[instantiate_tests(<crate::kdf::scrypt::backends::openssl::ScryptOpenssl>)]
     mod scrypt_openssl {}
 }

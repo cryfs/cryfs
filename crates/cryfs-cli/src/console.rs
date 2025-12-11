@@ -4,8 +4,8 @@ use dialoguer::{Confirm, Select, console::style, theme::ColorfulTheme};
 use once_cell::unsync::OnceCell;
 use std::{fmt::Display, path::Path};
 
+use cryfs_crypto::kdf::scrypt::ScryptSettings;
 use cryfs_filesystem::config::Console;
-use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 
 // TODO Put default block size & cipher into a central place so we can share it with the code that creates file systems with "use default settings? yes"

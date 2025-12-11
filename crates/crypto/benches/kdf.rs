@@ -1,7 +1,7 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
-use cryfs_utils::crypto::kdf::{
+use cryfs_crypto::kdf::{
     PasswordBasedKDF,
     scrypt::{
         ScryptSettings,

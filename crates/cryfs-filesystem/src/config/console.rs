@@ -2,7 +2,7 @@ use anyhow::Result;
 use byte_unit::Byte;
 use std::path::Path;
 
-use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
+use cryfs_crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 
 /// Interface for cryfs to interact with the user, e.g. ask questions and get answers on the terminal

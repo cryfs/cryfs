@@ -1,0 +1,46 @@
+[package]
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "cryfs-crypto"
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+derive_more.workspace = true
+hex.workspace = true
+rand.workspace = true
+openssl = { workspace = true, features = ["vendored"] }
+static_assertions.workspace = true
+cryfs-utils = { path = "../utils" }
+log.workspace = true
+lockable.workspace = true
+region.workspace = true
+sodiumoxide.workspace = true
+generic-array.workspace = true
+chacha20poly1305.workspace = true
+aead.workspace = true
+aes-gcm.workspace = true
+scrypt.workspace = true
+binrw.workspace = true
+
+[dev-dependencies]
+generic-tests.workspace = true
+rstest.workspace = true
+criterion.workspace = true
+
+[features]
+default = []
+testutils = ["rand/small_rng"]
+
+[[bench]]
+harness = false
+name = "symmetric"
+
+[[bench]]
+harness = false
+name = "kdf"

@@ -5,15 +5,13 @@ use cryfs_blockstore::{
     IntegrityBlockStoreInitError, IntegrityConfig, LLBlockStore, LockingBlockStore,
     OptimizedBlockStoreWriter,
 };
+use cryfs_crypto::symmetric::{CipherDef, EncryptionKey};
 use cryfs_filesystem::config::{
     CryConfig,
     ciphers::{AsyncCipherCallback, UnknownCipherError, lookup_cipher_async},
 };
 use cryfs_filesystem::localstate::LocalStateDir;
-use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard},
-    crypto::symmetric::{CipherDef, EncryptionKey},
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 use crate::{CliError, CliErrorKind, CliResultExt, CliResultExtFn};
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use derive_more::{Display, Error};
 
-use cryfs_utils::crypto::symmetric::{
+use cryfs_crypto::symmetric::{
     Aes128Gcm, Aes256Gcm, Cipher, CipherDef, EncryptionKey, InvalidKeySizeError, XChaCha20Poly1305,
 };
 

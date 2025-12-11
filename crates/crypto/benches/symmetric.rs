@@ -5,10 +5,8 @@ use std::hint::black_box;
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
 
-use cryfs_utils::{
-    crypto::symmetric::{self, Cipher, CipherDef, EncryptionKey, LibsodiumAes256GcmNonce12},
-    data::Data,
-};
+use cryfs_crypto::symmetric::{self, Cipher, CipherDef, EncryptionKey, LibsodiumAes256GcmNonce12};
+use cryfs_utils::data::Data;
 
 type Aes256Gcm = symmetric::Aes256Gcm;
 type AeadAes256Gcm = symmetric::AeadAes256Gcm;

@@ -13,7 +13,8 @@ use super::creator::ConfigCreateError;
 use super::password_provider::PasswordProvider;
 use crate::localstate::{FilesystemMetadata, LocalStateDir};
 use cryfs_blockstore::ClientId;
-use cryfs_utils::{crypto::symmetric::EncryptionKey, progress::ProgressBarManager};
+use cryfs_crypto::symmetric::EncryptionKey;
+use cryfs_utils::progress::ProgressBarManager;
 use cryfs_version::{Version, VersionInfo};
 
 use crate::config::FILESYSTEM_FORMAT_VERSION;

@@ -2,7 +2,8 @@ use anyhow::{Context, Result, ensure};
 use binrw::{BinRead, BinWrite, NullString, binrw, helpers::until_eof};
 use std::io::{Cursor, Read, Seek, Write};
 
-use cryfs_utils::{crypto::symmetric::EncryptionKey, data::Data};
+use cryfs_crypto::symmetric::EncryptionKey;
+use cryfs_utils::data::Data;
 
 use super::super::{ciphers::lookup_cipher_dyn, cryconfig::CryConfig};
 use super::padding::{PADDING_OVERHEAD_PREFIX, add_padding, remove_padding};

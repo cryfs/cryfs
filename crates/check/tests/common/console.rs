@@ -2,8 +2,8 @@ use anyhow::Result;
 use byte_unit::Byte;
 use std::path::Path;
 
+use cryfs_crypto::kdf::scrypt::ScryptSettings;
 use cryfs_filesystem::config::Console;
-use cryfs_utils::crypto::kdf::scrypt::ScryptSettings;
 use cryfs_version::{Version, VersionInfo};
 
 pub struct FixtureCreationConsole;

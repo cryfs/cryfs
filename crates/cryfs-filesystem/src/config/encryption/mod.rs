@@ -2,13 +2,11 @@ use anyhow::{Context, Result};
 use std::io::{Read, Seek, Write};
 
 use crate::config::CryConfig;
-use cryfs_utils::{
-    crypto::{
-        kdf::{KDFParameters, PasswordBasedKDF},
-        symmetric::{CipherDef, EncryptionKey},
-    },
-    progress::{ProgressBarManager, Spinner},
+use cryfs_crypto::{
+    kdf::{KDFParameters, PasswordBasedKDF},
+    symmetric::{CipherDef, EncryptionKey},
 };
+use cryfs_utils::progress::{ProgressBarManager, Spinner};
 use inner::InnerConfig;
 use outer::{OuterCipher, OuterConfig};
 
@@ -82,7 +80,7 @@ pub struct ConfigEncryptionKey {
 
 impl ConfigEncryptionKey {
     const OUTER_KEY_SIZE: usize = OuterCipher::KEY_SIZE;
-    const INNER_MAX_KEY_SIZE: usize = cryfs_utils::crypto::symmetric::MAX_KEY_SIZE;
+    const INNER_MAX_KEY_SIZE: usize = cryfs_crypto::symmetric::MAX_KEY_SIZE;
     const COMBINED_KEY_SIZE: usize = Self::OUTER_KEY_SIZE + Self::INNER_MAX_KEY_SIZE;
 
     pub fn derive<KDF: PasswordBasedKDF>(
@@ -124,7 +122,7 @@ mod tests {
     use crate::config::CryConfig;
     use crate::config::FilesystemId;
     use byte_unit::Byte;
-    use cryfs_utils::crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
+    use cryfs_crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
     use cryfs_utils::progress::SilentProgressBarManager;
     use std::io::Cursor;
 

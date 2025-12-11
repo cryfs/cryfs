@@ -11,7 +11,7 @@ use crate::config::{FILESYSTEM_FORMAT_VERSION, FilesystemId};
 use crate::localstate::{FilesystemMetadata, LocalStateDir};
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::ClientId;
-use cryfs_utils::crypto::symmetric::{CipherDef, EncryptionKey};
+use cryfs_crypto::symmetric::{CipherDef, EncryptionKey};
 
 #[derive(Error, Debug)]
 pub enum ConfigCreateError {
