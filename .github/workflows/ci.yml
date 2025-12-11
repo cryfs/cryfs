@@ -122,28 +122,20 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Dependencies
-        run: sudo apt-get install -y fuse3 libfuse3-dev
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           default: true
-      - uses: actions-rs/cargo@v1
+      # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
         with:
-          command: test
-          # TODO --all-features for code coverage would be better but takes too long because of the blockstore tests
-          args: --no-fail-fast
-        env:
-          # Setup taken from https://github.com/actions-rs/grcov/tree/d9881ad44979aa34f846a82abb764b2b8cfbd715
-          CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
-          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off'
-      - id: coverage
-        uses: actions-rs/grcov@v0.1
-      - uses: codecov/codecov-action@v3
-        with:
-          #token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          files: ${{ steps.coverage.outputs.report }}
+          token: ${{ secrets.CODECOV_TOKEN }}  # not required for public repos, but leaving it here because it seems we run into rate limit issues on Codecov's API without it.
+          files: lcov.info
           fail_ci_if_error: true
           verbose: true
