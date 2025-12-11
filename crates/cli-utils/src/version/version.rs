@@ -59,12 +59,13 @@ fn _show_version(
 
     if let Some(gitinfo) = version_info.gitinfo() {
         if let Some(tag_info) = gitinfo.tag_info
-            && tag_info.commits_since_tag > 0 {
-                show_warning(&format!(
-                    "This is a development version based on git commit {}. Please don't use in production.",
-                    gitinfo.commit_id,
-                ));
-            }
+            && tag_info.commits_since_tag > 0
+        {
+            show_warning(&format!(
+                "This is a development version based on git commit {}. Please don't use in production.",
+                gitinfo.commit_id,
+            ));
+        }
         if gitinfo.modified {
             show_warning(
                 "There were uncommitted changes in the repository when building this version.",

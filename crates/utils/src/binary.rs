@@ -64,7 +64,8 @@ where
 }
 
 fn ensure_stream_is_complete(stream: &mut (impl Read + Seek)) -> Result<()> {
-    let cur_pos = stream.stream_position()
+    let cur_pos = stream
+        .stream_position()
         .context("Tried to get current stream pos")?;
     let end_pos = stream
         .seek(SeekFrom::End(0))

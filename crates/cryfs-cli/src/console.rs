@@ -224,9 +224,7 @@ where
         .default(default)
         .items(&options_str)
         .interact()?;
-    let response = options_t
-        .into_iter().nth(response)
-        .expect("Out of bounds");
+    let response = options_t.into_iter().nth(response).expect("Out of bounds");
     Ok(response)
 }
 

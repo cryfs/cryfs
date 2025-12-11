@@ -156,11 +156,12 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
                 match self.config.missing_block_is_integrity_violation {
                     MissingBlockIsIntegrityViolation::IsAViolation => {
                         if let Some(block_info) = block_info_guard.value()
-                            && block_info.block_is_expected_to_exist() {
-                                self._integrity_violation_detected(
-                                    IntegrityViolationError::MissingBlock { block: *block_id },
-                                )?;
-                            }
+                            && block_info.block_is_expected_to_exist()
+                        {
+                            self._integrity_violation_detected(
+                                IntegrityViolationError::MissingBlock { block: *block_id },
+                            )?;
+                        }
                     }
                     MissingBlockIsIntegrityViolation::IsNotAViolation => {
                         // do nothing

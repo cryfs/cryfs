@@ -57,8 +57,6 @@ where
             log::info!("Received exit signal, unmounting filesystem...done");
         });
 
-        
-
         Self {
             session,
             unmount_atexit,

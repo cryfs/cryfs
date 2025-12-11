@@ -196,9 +196,7 @@ where
     /// and acting on the result.
     #[allow(clippy::unnecessary_safety_doc)]
     pub fn strong_count(&self) -> Option<usize> {
-        self.inner
-            .as_ref()
-            .map(AsyncDropArc::strong_count)
+        self.inner.as_ref().map(AsyncDropArc::strong_count)
     }
 
     /// Hashes the internal state of this `Shared` in a way that's compatible with `ptr_eq`.
@@ -410,10 +408,11 @@ where
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         if self.waker_key != NULL_WAKER_KEY
             && let Some(ref inner) = self.inner
-                && let Ok(mut wakers) = inner.notifier.wakers.lock()
-                    && let Some(wakers) = wakers.as_mut() {
-                        wakers.remove(self.waker_key);
-                    }
+            && let Ok(mut wakers) = inner.notifier.wakers.lock()
+            && let Some(wakers) = wakers.as_mut()
+        {
+            wakers.remove(self.waker_key);
+        }
 
         if let Some(inner) = &mut self.inner {
             inner.async_drop().await?;

@@ -351,9 +351,9 @@ impl Cli {
                     .console()
                     .ask_allow_replaced_filesystem()
                     .map_cli_error(CliErrorKind::UnspecifiedError)?
-                {
-                    return Err(check_result).map_cli_error(|_| CliErrorKind::FilesystemIdChanged);
-                }
+            {
+                return Err(check_result).map_cli_error(|_| CliErrorKind::FilesystemIdChanged);
+            }
         }
         // Update local state (or create it if it didn't exist yet)
         basedir_metadata

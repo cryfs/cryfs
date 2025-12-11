@@ -222,14 +222,8 @@ fn _decrypt<
     let (cipherdata, auth_tag) = rest.split_at_mut(rest.len() - CIPHERTEXT_OVERHEAD_SUFFIX);
     let nonce = nonce_from_slice_fn(nonce).expect("Wrong nonce size");
     let auth_tag = auth_tag_from_slice_fn(auth_tag).expect("Wrong auth tag size");
-    open_fn(
-        cipherdata,
-        None,
-        &auth_tag,
-        &nonce,
-        encryption_key,
-    )
-    .map_err(|()| anyhow!("Decrypting data failed"))?;
+    open_fn(cipherdata, None, &auth_tag, &nonce, encryption_key)
+        .map_err(|()| anyhow!("Decrypting data failed"))?;
     let mut plaintext = ciphertext;
     plaintext.shrink_to_subregion(
         CIPHERTEXT_OVERHEAD_PREFIX..(plaintext.len() - CIPHERTEXT_OVERHEAD_SUFFIX),

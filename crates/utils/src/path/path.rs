@@ -87,8 +87,7 @@ impl AbsolutePath {
     #[inline]
     pub fn iter(
         &self,
-    ) -> impl DoubleEndedIterator<Item = &PathComponent> + FusedIterator + ExactSizeIterator
-    {
+    ) -> impl DoubleEndedIterator<Item = &PathComponent> + FusedIterator + ExactSizeIterator {
         self.into_iter()
     }
 
