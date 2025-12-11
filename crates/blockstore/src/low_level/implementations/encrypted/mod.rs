@@ -1,11 +1,13 @@
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use byte_unit::Byte;
+use cryfs_utils::threadpool::ThreadPool;
 use futures::stream::BoxStream;
 use std::borrow::Borrow;
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::ops::Deref;
+use std::sync::Arc;
 
 use crate::{
     BlockId, Overhead,
@@ -26,12 +28,13 @@ use cryfs_utils::{
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
 
 pub struct EncryptedBlockStore<
-    C: 'static + CipherDef,
+    C: 'static + CipherDef + Sync,
     _B: Debug,
     B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
 > {
     underlying_block_store: AsyncDropGuard<B>,
-    cipher: C,
+    cipher: Arc<C>,
+    crypto_task_pool: ThreadPool,
     _phantom: PhantomData<_B>,
 }
 
@@ -45,7 +48,9 @@ impl<
     pub fn new(underlying_block_store: AsyncDropGuard<B>, cipher: C) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             underlying_block_store,
-            cipher,
+            cipher: Arc::new(cipher),
+            crypto_task_pool: ThreadPool::new()
+                .expect("Failed to create thread pool for crypto tasks"),
             _phantom: PhantomData,
         })
     }
@@ -213,20 +218,29 @@ impl<
 }
 
 impl<
-    C: 'static + CipherDef,
-    _B: Debug,
+    C: 'static + CipherDef + Send + Sync,
+    _B: Debug + Sync,
     B: 'static + Debug + AsyncDrop<Error = anyhow::Error> + Borrow<_B> + Send + Sync,
 > EncryptedBlockStore<C, _B, B>
 {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
-        // TODO block_in_place allows other tasks to run, but blocks concurrent jobs in the same task. We should probably use spawn_blocking instead, or move it to a dedicated threadpool. Same for decryption.
-        let ciphertext = tokio::task::block_in_place(move || self.cipher.encrypt(plaintext))?;
-        Ok(_prepend_header(ciphertext))
+        let cipher = Arc::clone(&self.cipher);
+        self.crypto_task_pool
+            .execute_job(move || {
+                let ciphertext = tokio::task::block_in_place(move || cipher.encrypt(plaintext))?;
+                Ok(_prepend_header(ciphertext))
+            })
+            .await
     }
 
     async fn _decrypt(&self, ciphertext: Data) -> Result<Data> {
-        let ciphertext = _check_and_remove_header(ciphertext)?;
-        tokio::task::block_in_place(move || self.cipher.decrypt(ciphertext))
+        let cipher = Arc::clone(&self.cipher);
+        self.crypto_task_pool
+            .execute_job(move || {
+                let ciphertext = _check_and_remove_header(ciphertext)?;
+                cipher.decrypt(ciphertext)
+            })
+            .await
     }
 }
 
