@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install Dependencies (Linux)
         if: ${{ runner.os == 'Linux' }}
+        # TODO We may be able to remove libfuse3-dev here because rust fuser doesn't use libfuse anymore (on Linux at least)
         run: sudo apt-get install -y fuse3 libfuse3-dev
       - name: Install Dependencies (MacOS)
         if: ${{ runner.os == 'macOS' }}
@@ -49,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: ["blobstore", "blockstore", "check", "cryfs", "cryfs-cli", "cryfs-version", "rustfs", "tempproject", "utils", "e2e-perf-tests"]
+        crate: ["blobstore", "blockstore", "check", "cli-utils", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "e2e-perf-tests", "rustfs", "tempproject", "utils"]
         targets: ["", "--tests", "--examples", "--benches"]
         features: ["", "--no-default-features", "--all-features"]
         profile: ["", "--release"]
