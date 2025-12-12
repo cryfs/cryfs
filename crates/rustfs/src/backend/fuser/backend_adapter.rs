@@ -132,7 +132,7 @@ where
                     Ok(ok)
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     Err(err.system_error_code())
                 }
             }
@@ -156,7 +156,7 @@ where
                     log::info!("{log_msg}...success");
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                 }
             }
         });
@@ -179,7 +179,7 @@ where
                     fuser_reply.ok();
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -207,7 +207,7 @@ where
                     );
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -231,7 +231,7 @@ where
                     fuser_reply.attr(&reply.ttl, &convert_node_attrs(reply.attr, reply.ino));
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -256,7 +256,7 @@ where
                     fuser_reply.opened(NonZeroU64::from(reply.fh).get(), flags);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -282,7 +282,7 @@ where
                     fuser_reply.written(num_written.unwrap());
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -316,7 +316,7 @@ where
                     fuser_reply.statfs(blocks, bfree, bavail, files, ffree, bsize, namelen, frsize);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -346,7 +346,7 @@ where
                     );
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -370,7 +370,7 @@ where
                     fuser_reply.locked(reply.start.into(), reply.end.into(), reply.typ, reply.pid);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -394,7 +394,7 @@ where
                     fuser_reply.bmap(reply.block);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -418,7 +418,7 @@ where
                     fuser_reply.ioctl(reply.result, &reply.data);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -445,7 +445,7 @@ where
                     fuser_reply.offset(offset);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -470,7 +470,7 @@ where
                     fuser_reply.xtimes(reply.bkuptime, reply.crtime);
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     fuser_reply.error(err.system_error_code())
                 }
             }
@@ -539,7 +539,7 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in lookup: {err:?}");
+                    log::warn!("Failed to parse path component in lookup: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.lookup(&req, parent_ino, &name).await
@@ -646,7 +646,7 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in mknod: {err:?}");
+                    log::warn!("Failed to parse path component in mknod: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.mknod(&req, parent_ino, &name, mode, umask, rdev).await
@@ -675,7 +675,7 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in mkdir: {err:?}");
+                    log::warn!("Failed to parse path component in mkdir: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.mkdir(&req, parent_ino, &name, mode, umask).await
@@ -692,7 +692,7 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in unlink: {err:?}");
+                    log::warn!("Failed to parse path component in unlink: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.unlink(&req, parent_ino, &name).await
@@ -709,7 +709,7 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in rmdir: {err:?}");
+                    log::warn!("Failed to parse path component in rmdir: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.rmdir(&req, parent_ino, &name).await
@@ -734,11 +734,11 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in symlink: {err:?}");
+                    log::warn!("Failed to parse path component in symlink: {err:?}");
                     FsError::InvalidPath
                 })?;
                 let link = link.into_os_string().into_string().map_err(|err| {
-                    log::error!("Failed to parse symlink target path in symlink: {err:?}");
+                    log::warn!("Failed to parse symlink target path in symlink: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.symlink(&req, parent_ino, &name, &link).await
@@ -766,12 +766,12 @@ where
                 let parent_ino = parse_inode(parent_ino)?;
                 let newparent = parse_inode(newparent)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component for old name in rename: {err:?}");
+                    log::warn!("Failed to parse path component for old name in rename: {err:?}");
                     FsError::InvalidPath
                 })?;
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err| {
-                        log::error!("Failed to parse path component for new name in rename: {err:?}");
+                        log::warn!("Failed to parse path component for new name in rename: {err:?}");
                         FsError::InvalidPath
                     })?;
                 fs.rename(&req, parent_ino, &name, newparent, &newname, flags)
@@ -797,7 +797,7 @@ where
                 let ino = parse_inode(ino)?;
                 let newparent = parse_inode(newparent)?;
                 let newname: PathComponentBuf = newname.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component for new name in link: {err:?}");
+                    log::warn!("Failed to parse path component for new name in link: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.link(&req, ino, newparent, &newname).await
@@ -1086,7 +1086,7 @@ where
                 let ino = parse_inode(ino)?;
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| {
-                    log::error!("Failed to parse xattr name in setxattr: {err:?}");
+                    log::warn!("Failed to parse xattr name in setxattr: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.setxattr(&req, ino, &name, &value, flags, position)
@@ -1107,7 +1107,7 @@ where
         let name = match parse_xattr_name(name) {
             Ok(name) => name.to_owned(),
             Err(err) => {
-                log::warn!("getxattr(ino={ino}, name={name:?})...failed: {err:?}");
+                log::info!("getxattr(ino={ino}, name={name:?})...failed: {err:?}");
                 reply.error(err.system_error_code());
                 return;
             }
@@ -1195,7 +1195,7 @@ where
                 // TODO Here (and in other operations), it would be better to do error handling of path conversion or similar things before we lock the file system unnecessarily.
                 // TODO InvalidPath is probably the wrong error here
                 let name = PathComponentBuf::try_from(name).map_err(|err| {
-                    log::error!("Failed to parse xattr name in removexattr: {err:?}");
+                    log::warn!("Failed to parse xattr name in removexattr: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.removexattr(&req, ino, &name).await
@@ -1237,7 +1237,7 @@ where
             async move |fs| {
                 let parent_ino = parse_inode(parent_ino)?;
                 let name: PathComponentBuf = name.try_into().map_err(|err| {
-                    log::error!("Failed to parse path component in create: {err:?}");
+                    log::warn!("Failed to parse path component in create: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.create(&req, parent_ino, &name, mode, umask, flags)
@@ -1435,7 +1435,7 @@ where
             async move |fs| {
                 // TODO InvalidPath is the wrong error here
                 let name = name.to_os_string().into_string().map_err(|err| {
-                    log::error!("Failed to parse name in setvolname: {err:?}");
+                    log::warn!("Failed to parse name in setvolname: {err:?}");
                     FsError::InvalidPath
                 })?;
                 fs.setvolname(&req, &name).await
@@ -1467,13 +1467,13 @@ where
                 // TODO InvalidPath is the wrong error here
                 let name: PathComponentBuf =
                     name.try_into().map_err(|err| {
-                        log::error!("Failed to parse name in exchange: {err:?}");
+                        log::warn!("Failed to parse name in exchange: {err:?}");
                         FsError::InvalidPath
                 })?;
                 // TODO InvalidPath is the wrong error here
                 let newname: PathComponentBuf =
                     newname.try_into().map_err(|err|  {
-                        log::error!("Failed to parse newname in exchange: {err:?}");
+                        log::warn!("Failed to parse newname in exchange: {err:?}");
                         FsError::InvalidPath
                     })?;
                 fs.exchange(&req, parent_ino, &name, newparent_ino, &newname, options)
@@ -1651,12 +1651,12 @@ fn convert_permission_bits(mode: Mode) -> u16 {
 fn parse_xattr_name(name: &OsStr) -> FsResult<&PathComponent> {
     // TODO We should probably introduce a custom wrapper type for XattrName, similar to how we have a PathComponent type, and enforce invariants there.
     let name = name.to_str().ok_or_else(|| {
-        log::error!("xattr name is not valid UTF-8");
+        log::warn!("xattr name is not valid UTF-8");
         // TODO Better error return type
         FsError::UnknownError
     })?;
     <&PathComponent>::try_from(name).map_err(|err| {
-        log::error!("xattr name is not valid: {}", err);
+        log::warn!("xattr name is not valid: {}", err);
         // TODO InvalidPath is probably the wrong error here
         FsError::InvalidPath
     })
@@ -1669,7 +1669,7 @@ struct DataCallback {
 
 impl DataCallback {
     fn error(self, err: FsError) {
-        log::warn!("{}...failed: {err:?}", self.log_msg);
+        log::info!("{}...failed: {err:?}", self.log_msg);
         self.reply.error(err.system_error_code());
     }
 }

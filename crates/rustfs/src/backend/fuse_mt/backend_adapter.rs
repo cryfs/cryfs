@@ -84,7 +84,7 @@ where
                     Ok(ok)
                 }
                 Err(err) => {
-                    log::warn!("{log_msg}...failed: {err:?}");
+                    log::info!("{log_msg}...failed: {err:?}");
                     Err(err.system_error_code())
                 }
             }
@@ -320,7 +320,7 @@ where
                 // TODO Use custom path type for target than can represent absolute-or-relative paths and enforces its invariants,
                 //      similar to how we have an `AbsolutePath` type. Then we won't need these manual checks here anymore.
                 let target = target.to_str().ok_or_else(|| {
-                    log::error!("Symlink target is not utf-8");
+                    log::warn!("Symlink target is not utf-8");
                     FsError::InvalidPath
                 })?;
                 let response = self.fs().await?.symlink(req.into(), &path, target).await?;
@@ -768,14 +768,14 @@ fn convert_dir_entries(
 
 fn parse_absolute_path(path: &Path) -> FsResult<&AbsolutePath> {
     path.try_into().map_err(|err| {
-        log::error!("Invalid path '{path:?}': {err}");
+        log::warn!("Invalid path '{path:?}': {err}");
         FsError::InvalidPath
     })
 }
 
 fn parse_path_component(component: &OsStr) -> FsResult<&PathComponent> {
     component.try_into().map_err(|err| {
-        log::error!("Invalid path component '{component:?}': {err}");
+        log::warn!("Invalid path component '{component:?}': {err}");
         FsError::InvalidPath
     })
 }
@@ -791,7 +791,7 @@ fn parse_absolute_path_with_last_component(
 fn parse_xattr_name(name: &OsStr) -> FsResult<&str> {
     // TODO We should probably introduce a custom wrapper type for XattrName, similar to how we have a PathComponent type, and enforce invariants there.
     name.to_str().ok_or_else(|| {
-        log::error!("xattr name is not valid UTF-8");
+        log::warn!("xattr name is not valid UTF-8");
         // TODO Better error return type
         FsError::UnknownError
     })
@@ -917,7 +917,7 @@ where
             }
             Err(err) => {
                 *self.result = Some((self.callback)(Err(err.system_error_code())));
-                log::warn!("{}...failed: {err:?}", self.log_msg);
+                log::info!("{}...failed: {err:?}", self.log_msg);
             }
         }
     }
