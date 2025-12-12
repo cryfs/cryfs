@@ -128,6 +128,7 @@ See further below in this README for instructions on how to build a .deb/.rpm pa
 
         $ git clone https://github.com/cryfs/cryfs.git cryfs
         $ cd cryfs
+        $ git checkout release/1.0
 
  2. Build
 
@@ -212,6 +213,7 @@ If you want to create a .rpm package, you need to install rpmbuild.
 
         $ git clone https://github.com/cryfs/cryfs.git cryfs
         $ cd cryfs
+        $ git checkout release/1.0
 
  2. Make sure you have the required dependencies
 
