@@ -1,6 +1,3 @@
-// cryfs-cli only makes sense if either fuser or fuse_mt is enabled
-#![cfg(any(feature = "fuser", feature = "fuse_mt"))]
-
 use assert_cmd::Command;
 use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;

@@ -18,8 +18,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::backend::Backend;
 use crate::unmount_trigger::{TriggerReason, UnmountTrigger};
+
+// Run with the fuser backend. This can be switched to fuse-mt if desired.
+pub type Backend = cryfs_rustfs::object_based_api::RustfsFuserBackend;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CreateOrLoad {

@@ -14,7 +14,7 @@ anyhow.workspace = true
 atomic-time.workspace = true
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
-cryfs-rustfs = { path = "../rustfs", default-features=false}
+cryfs-rustfs = { path = "../rustfs", default-features=false, features=["fuser"]}
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-utils = { path = "../utils" }
@@ -30,4 +30,3 @@ tokio-util.workspace = true
 
 [features]
 fuse_mt = ["cryfs-rustfs/fuse_mt"]
-fuser = ["cryfs-rustfs/fuser"]
