@@ -32,7 +32,7 @@ runs:
     - name: Install conan
       uses: ./.github/workflows/actions/pipx/install
       with:
-        packages: conan~=2.7.0 --force
+        packages: conan~=2.23.0 --force
     - name: Configure conan profile
       uses: ./.github/workflows/actions/conan/configure_profile
       with:
