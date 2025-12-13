@@ -10,10 +10,10 @@ impl HashAlgorithm<{ OpensslSha512::DIGEST_LEN }, { OpensslSha512::SALT_LEN }> f
         data: &[u8],
         salt: Salt<{ OpensslSha512::SALT_LEN }>,
     ) -> Hash<{ OpensslSha512::DIGEST_LEN }, { OpensslSha512::SALT_LEN }> {
-        let mut salted_data = vec![0; data.len() + salt.get().len()];
-        salted_data[..salt.get().len()].copy_from_slice(salt.get());
-        salted_data[salt.get().len()..].copy_from_slice(data);
-        let digest = Digest::new(openssl::sha::sha512(&salted_data));
+        let mut hasher = openssl::sha::Sha512::new();
+        hasher.update(salt.get());
+        hasher.update(data);
+        let digest = Digest::new(hasher.finish());
 
         Hash { digest, salt }
     }

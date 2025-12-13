@@ -12,10 +12,10 @@ impl HashAlgorithm<{ Sha2Sha512::DIGEST_LEN }, { Sha2Sha512::SALT_LEN }> for Sha
         data: &[u8],
         salt: Salt<{ Sha2Sha512::SALT_LEN }>,
     ) -> Hash<{ Sha2Sha512::DIGEST_LEN }, { Sha2Sha512::SALT_LEN }> {
-        let mut salted_data = vec![0; data.len() + salt.get().len()];
-        salted_data[..salt.get().len()].copy_from_slice(salt.get());
-        salted_data[salt.get().len()..].copy_from_slice(data);
-        let digest = Digest::new(sha2::Sha512::digest(&salted_data).into());
+        let mut hasher = sha2::Sha512::new();
+        hasher.update(salt.get());
+        hasher.update(data);
+        let digest = Digest::new(hasher.finalize().into());
 
         Hash { digest, salt }
     }

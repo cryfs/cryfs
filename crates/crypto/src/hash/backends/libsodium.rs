@@ -12,10 +12,10 @@ impl HashAlgorithm<{ LibsodiumSha512::DIGEST_LEN }, { LibsodiumSha512::SALT_LEN 
         data: &[u8],
         salt: Salt<{ LibsodiumSha512::SALT_LEN }>,
     ) -> Hash<{ LibsodiumSha512::DIGEST_LEN }, { LibsodiumSha512::SALT_LEN }> {
-        let mut salted_data = vec![0; data.len() + salt.get().len()];
-        salted_data[..salt.get().len()].copy_from_slice(salt.get());
-        salted_data[salt.get().len()..].copy_from_slice(data);
-        let digest = Digest::new(sodiumoxide::crypto::hash::sha512::hash(&salted_data).0);
+        let mut hasher = sodiumoxide::crypto::hash::sha512::State::new();
+        hasher.update(salt.get());
+        hasher.update(data);
+        let digest = Digest::new(hasher.finalize().0);
 
         Hash { digest, salt }
     }
