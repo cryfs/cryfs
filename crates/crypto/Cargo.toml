@@ -42,6 +42,10 @@ testutils = ["rand/small_rng"]
 
 [[bench]]
 harness = false
+name = "hash"
+
+[[bench]]
+harness = false
 name = "symmetric"
 
 [[bench]]
