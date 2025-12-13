@@ -86,4 +86,19 @@ mod tests {
         assert!(debug_str.contains("Salt"));
         assert!(debug_str.contains(&salt.to_hex()));
     }
+
+    #[test]
+    fn test_hex_format() {
+        // Test with specific byte pattern to verify exact hex encoding
+        let bytes = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
+        let salt = Salt::new(bytes);
+
+        // Verify to_hex produces the expected hex string
+        let hex = salt.to_hex();
+        assert_eq!(hex, "0123456789abcdef");
+
+        // Verify from_hex can parse it back
+        let restored = Salt::from_hex(&hex).unwrap();
+        assert_eq!(salt, restored);
+    }
 }
