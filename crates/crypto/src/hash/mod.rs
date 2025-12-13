@@ -19,6 +19,6 @@ pub trait HashAlgorithm<const DIGEST_LEN: usize, const SALT_LEN: usize> {
     fn hash(data: &[u8], salt: Salt<SALT_LEN>) -> Hash<DIGEST_LEN, SALT_LEN>;
 }
 
-pub use backends::{OpensslSha512, Sha2Sha512};
+pub use backends::{LibsodiumSha512, OpensslSha512, Sha2Sha512};
 
 pub type Sha512 = backends::OpensslSha512;

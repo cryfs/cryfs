@@ -2,7 +2,9 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use rand::{RngCore, SeedableRng, rngs::StdRng};
 use std::hint::black_box;
 
-use cryfs_crypto::hash::{HashAlgorithm as _, OpensslSha512, Salt, Sha2Sha512, Sha512};
+use cryfs_crypto::hash::{
+    HashAlgorithm as _, LibsodiumSha512, OpensslSha512, Salt, Sha2Sha512, Sha512,
+};
 use cryfs_utils::data::Data;
 
 fn data(size: usize, seed: u64) -> Data {
@@ -30,6 +32,11 @@ fn bench_hash(c: &mut Criterion) {
             let salt = Salt::generate_random();
             let data = data(size, 42);
             b.iter(|| black_box(OpensslSha512::hash(&data, salt)));
+        });
+        group.bench_with_input(BenchmarkId::new("libsodium", size), &size, |b, &size| {
+            let salt = Salt::generate_random();
+            let data = data(size, 42);
+            b.iter(|| black_box(LibsodiumSha512::hash(&data, salt)));
         });
     }
 }

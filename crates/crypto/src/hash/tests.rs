@@ -3,6 +3,7 @@ mod tests {
     use crate::hash::HashAlgorithm;
     use crate::hash::Salt;
     use crate::hash::Sha512;
+    use crate::hash::backends::LibsodiumSha512;
     use crate::hash::backends::OpensslSha512;
     use crate::hash::backends::Sha2Sha512;
 
@@ -98,4 +99,7 @@ mod tests {
 
     #[instantiate_tests(<Sha2Sha512>)]
     mod sha2 {}
+
+    #[instantiate_tests(<LibsodiumSha512>)]
+    mod libsodium {}
 }
