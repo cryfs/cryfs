@@ -12,6 +12,9 @@ pub use salt::Salt;
 #[cfg(test)]
 mod tests;
 
+// TODO Once Rust has const generic expressions stabilized, we should just have one `impl HashAlgorithmDef for Sha512` instead of one per backend.
+//      Also, we should use the HashAlgorithmDef as a type parameter for HashAlgorithm instead of repeating the consts.
+//      And backends would just do `impl HashAlgorithm<Sha512> for Sha512Backend`.
 pub trait HashAlgorithmDef {
     const DIGEST_LEN: usize;
     const SALT_LEN: usize;
