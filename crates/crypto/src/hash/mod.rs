@@ -7,6 +7,8 @@ pub use digest::Digest;
 pub use hash::Hash;
 pub use salt::Salt;
 
+// TODO Consider hardening by (1) increasing salt size to a full hash block and (2) switching to SHA3
+
 #[cfg(test)]
 mod tests;
 
