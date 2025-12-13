@@ -27,6 +27,7 @@ aead = {workspace = true, features = ["std"]}
 aes-gcm.workspace = true
 scrypt.workspace = true
 binrw.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 generic-tests.workspace = true

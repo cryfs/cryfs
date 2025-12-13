@@ -4,6 +4,7 @@ mod tests {
     use crate::hash::Salt;
     use crate::hash::Sha512;
     use crate::hash::backends::OpensslSha512;
+    use crate::hash::backends::Sha2Sha512;
 
     const DIGEST_LEN: usize = 64;
     const SALT_LEN: usize = 8;
@@ -94,4 +95,7 @@ mod tests {
 
     #[instantiate_tests(<OpensslSha512>)]
     mod openssl {}
+
+    #[instantiate_tests(<Sha2Sha512>)]
+    mod sha2 {}
 }
