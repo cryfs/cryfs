@@ -1,3 +1,13 @@
+use cryfs_utils::data::Data;
+use rand::{RngCore as _, SeedableRng as _, rngs::StdRng};
+
+fn data(size: usize, seed: u64) -> Data {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let mut res = vec![0; size];
+    rng.fill_bytes(&mut res);
+    res.into()
+}
+
 #[generic_tests::define]
 mod tests {
     use crate::hash::HashAlgorithm;
@@ -88,6 +98,23 @@ mod tests {
 
         // Verify the exact digest value (SHA-512 of salt + empty data)
         let expected_digest = "245a64d8d9f7be46dcfabcfb0cbfa48d78077f18f4c2408e0f36517bdbb94f0f675c6c089d68e24862f9d238636a28adeaf022ae23b7db282455da537215d734";
+        assert_eq!(hash_result.digest.to_hex(), expected_digest);
+    }
+
+    #[test]
+    fn test_backwards_compatibility_longer_data<Hasher: HashAlgorithm<DIGEST_LEN, SALT_LEN>>() {
+        // This test ensures the hash function output doesn't change for longer input
+        // Generated with data(1024, 42)
+        let data = super::data(1024, 42);
+        let salt = Salt::new([0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]);
+
+        let hash_result = Hasher::hash(&data, salt);
+
+        // Verify the salt is preserved
+        assert_eq!(hash_result.salt, salt);
+
+        // Verify the exact digest value (SHA-512 of salt + data(1024, 42))
+        let expected_digest = "eb5f22586068f42aa01ef8f48530837a745991c7402360001adbb5ce06627e439d4c15564280df686f9a68781b9e70adbf7e97225c9946ba8b4f20bda6a7dc72";
         assert_eq!(hash_result.digest.to_hex(), expected_digest);
     }
 
