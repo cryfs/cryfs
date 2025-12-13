@@ -4,10 +4,12 @@ use std::fmt::Debug;
 pub struct Digest<const DIGEST_LEN: usize>([u8; DIGEST_LEN]);
 
 impl<const DIGEST_LEN: usize> Digest<DIGEST_LEN> {
+    #[inline]
     pub fn new(bytes: [u8; DIGEST_LEN]) -> Self {
         Self(bytes)
     }
 
+    #[inline]
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }

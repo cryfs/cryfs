@@ -6,14 +6,17 @@ use std::fmt::Debug;
 pub struct Salt<const SALT_LEN: usize>([u8; SALT_LEN]);
 
 impl<const SALT_LEN: usize> Salt<SALT_LEN> {
+    #[inline]
     pub fn new(bytes: [u8; SALT_LEN]) -> Self {
         Self(bytes)
     }
 
+    #[inline]
     pub fn get(&self) -> &[u8; SALT_LEN] {
         &self.0
     }
 
+    #[inline]
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
@@ -28,6 +31,7 @@ impl<const SALT_LEN: usize> Salt<SALT_LEN> {
         Ok(Self(array))
     }
 
+    #[inline]
     pub fn generate_random() -> Self {
         Self(rng().random())
     }
