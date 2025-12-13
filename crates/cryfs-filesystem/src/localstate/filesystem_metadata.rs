@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use cryfs_blockstore::ClientId;
 use cryfs_crypto::{
-    hash::{Digest, Hash, Salt, hash},
+    hash::{Digest, Hash, HashAlgorithm, Salt, Sha512},
     symmetric::EncryptionKey,
 };
 
@@ -34,7 +34,7 @@ pub struct FilesystemMetadata {
 
     #[serde_as(as = "TryFromInto<SerializedHash>")]
     #[serde(rename = "encryptionKey")]
-    encryption_key: Hash,
+    encryption_key: <Sha512 as HashAlgorithm>::Hash,
 }
 
 impl FilesystemMetadata {
@@ -52,7 +52,7 @@ impl FilesystemMetadata {
             .join("metadata");
         match Self::_load(&metadata_file_path).context("Tried to load local filesystem metadata")? {
             Some(mut metadata) => {
-                if hash(encryption_key.as_bytes(), metadata.encryption_key.salt)
+                if Sha512::hash(encryption_key.as_bytes(), metadata.encryption_key.salt)
                     != metadata.encryption_key
                 {
                     if !allow_replaced_file_system {
@@ -62,7 +62,7 @@ impl FilesystemMetadata {
                         return Err(FilesystemMetadataError::EncryptionKeyChanged.into());
                     }
                     metadata.encryption_key =
-                        hash(encryption_key.as_bytes(), Salt::generate_random());
+                        Sha512::hash(encryption_key.as_bytes(), Salt::generate_random());
                     metadata
                         ._save(&metadata_file_path)
                         .context("Tried to save updated local filesystem metadata")?;
@@ -88,7 +88,7 @@ impl FilesystemMetadata {
 
     fn _generate(metadata_file_path: &Path, encryption_key: &EncryptionKey) -> Result<Self> {
         let my_client_id = ClientId::generate_random();
-        let encryption_key_hash = hash(encryption_key.as_bytes(), Salt::generate_random());
+        let encryption_key_hash = Sha512::hash(encryption_key.as_bytes(), Salt::generate_random());
         let metadata = Self {
             my_client_id,
             encryption_key: encryption_key_hash,
@@ -119,8 +119,14 @@ pub struct SerializedHash {
     salt: String,
 }
 
-impl From<Hash> for SerializedHash {
-    fn from(hash: Hash) -> Self {
+type Sha512Hash = Hash<
+    { <Sha512 as HashAlgorithm>::Hash::DIGEST_LEN },
+    { <Sha512 as HashAlgorithm>::Hash::SALT_LEN },
+>;
+// TODO Why doesn't this compile? type Sha512Hash = <Sha512 as HashAlgorithm>::Hash;
+
+impl From<Sha512Hash> for SerializedHash {
+    fn from(hash: Hash<64, 8>) -> Self {
         Self {
             digest: hash.digest.to_hex(),
             salt: hash.salt.to_hex(),
@@ -128,7 +134,7 @@ impl From<Hash> for SerializedHash {
     }
 }
 
-impl TryFrom<SerializedHash> for Hash {
+impl TryFrom<SerializedHash> for Sha512Hash {
     type Error = anyhow::Error;
 
     fn try_from(hashed_key: SerializedHash) -> Result<Self> {

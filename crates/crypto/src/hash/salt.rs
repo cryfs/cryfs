@@ -2,12 +2,10 @@ use derive_more::From;
 use rand::{Rng as _, rng};
 use std::fmt::Debug;
 
-pub const SALT_LEN: usize = 8;
-
 #[derive(Clone, Copy, Eq, PartialEq, From)]
-pub struct Salt([u8; SALT_LEN]);
+pub struct Salt<const SALT_LEN: usize>([u8; SALT_LEN]);
 
-impl Salt {
+impl<const SALT_LEN: usize> Salt<SALT_LEN> {
     pub fn new(bytes: [u8; SALT_LEN]) -> Self {
         Self(bytes)
     }
@@ -35,7 +33,7 @@ impl Salt {
     }
 }
 
-impl Debug for Salt {
+impl<const SALT_LEN: usize> Debug for Salt<SALT_LEN> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Salt").field(&hex::encode(self.0)).finish()
     }
@@ -44,6 +42,8 @@ impl Debug for Salt {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const SALT_LEN: usize = 8;
 
     #[test]
     fn test_to_hex_and_from_hex() {
@@ -60,19 +60,19 @@ mod tests {
     #[test]
     fn test_from_hex_invalid_length() {
         // Too short
-        let result = Salt::from_hex("ab");
+        let result = Salt::<SALT_LEN>::from_hex("ab");
         assert!(result.is_err());
 
         // Too long
         let too_long = "a".repeat(SALT_LEN * 2 + 2);
-        let result = Salt::from_hex(&too_long);
+        let result = Salt::<SALT_LEN>::from_hex(&too_long);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_generate_random() {
-        let salt1 = Salt::generate_random();
-        let salt2 = Salt::generate_random();
+        let salt1 = Salt::<SALT_LEN>::generate_random();
+        let salt2 = Salt::<SALT_LEN>::generate_random();
 
         // Random salts should be different (with very high probability)
         assert_ne!(salt1, salt2);

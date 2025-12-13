@@ -1,12 +1,28 @@
 use crate::hash::{Digest, Hash, Salt};
 
-pub fn hash(data: &[u8], salt: Salt) -> Hash {
-    let mut salted_data = vec![0; data.len() + salt.get().len()];
-    salted_data[..salt.get().len()].copy_from_slice(salt.get());
-    salted_data[salt.get().len()..].copy_from_slice(data);
-    let digest = Digest::new(openssl::sha::sha512(&salted_data));
+pub const DIGEST_LEN: usize = 64;
+pub const SALT_LEN: usize = 8;
 
-    Hash { digest, salt }
+pub trait HashAlgorithm {
+    type Salt;
+    type Hash;
+
+    fn hash(data: &[u8], salt: Self::Salt) -> Self::Hash;
+}
+
+pub struct Sha512;
+impl HashAlgorithm for Sha512 {
+    type Salt = Salt<SALT_LEN>;
+    type Hash = Hash<DIGEST_LEN, SALT_LEN>;
+
+    fn hash(data: &[u8], salt: Self::Salt) -> Self::Hash {
+        let mut salted_data = vec![0; data.len() + salt.get().len()];
+        salted_data[..salt.get().len()].copy_from_slice(salt.get());
+        salted_data[salt.get().len()..].copy_from_slice(data);
+        let digest = Digest::new(openssl::sha::sha512(&salted_data));
+
+        Hash { digest, salt }
+    }
 }
 
 #[cfg(test)]
@@ -18,8 +34,8 @@ mod tests {
         let data = b"test data";
         let salt = Salt::new([1, 2, 3, 4, 5, 6, 7, 8]);
 
-        let hash1 = hash(data, salt);
-        let hash2 = hash(data, salt);
+        let hash1 = Sha512::hash(data, salt);
+        let hash2 = Sha512::hash(data, salt);
 
         assert_eq!(hash1.digest, hash2.digest);
         assert_eq!(hash1.salt, hash2.salt);
@@ -31,8 +47,8 @@ mod tests {
         let salt1 = Salt::new([1, 2, 3, 4, 5, 6, 7, 8]);
         let salt2 = Salt::new([8, 7, 6, 5, 4, 3, 2, 1]);
 
-        let hash1 = hash(data, salt1);
-        let hash2 = hash(data, salt2);
+        let hash1 = Sha512::hash(data, salt1);
+        let hash2 = Sha512::hash(data, salt2);
 
         assert_ne!(hash1.digest, hash2.digest);
         assert_eq!(hash1.salt, salt1);
@@ -43,8 +59,8 @@ mod tests {
     fn test_hash_different_with_different_data() {
         let salt = Salt::new([1, 2, 3, 4, 5, 6, 7, 8]);
 
-        let hash1 = hash(b"data1", salt);
-        let hash2 = hash(b"data2", salt);
+        let hash1 = Sha512::hash(b"data1", salt);
+        let hash2 = Sha512::hash(b"data2", salt);
 
         assert_ne!(hash1.digest, hash2.digest);
         assert_eq!(hash1.salt, salt);
@@ -54,7 +70,7 @@ mod tests {
     #[test]
     fn test_hash_empty_data() {
         let salt = Salt::generate_random();
-        let hash_result = hash(b"", salt);
+        let hash_result = Sha512::hash(b"", salt);
 
         assert_eq!(hash_result.salt, salt);
         // Should produce a valid digest even for empty data
@@ -68,7 +84,7 @@ mod tests {
         let data = b"Hello, CryFS!";
         let salt = Salt::new([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]);
 
-        let hash_result = hash(data, salt);
+        let hash_result = Sha512::hash(data, salt);
 
         // Verify the salt is preserved
         assert_eq!(hash_result.salt, salt);
@@ -84,7 +100,7 @@ mod tests {
         let data = b"";
         let salt = Salt::new([0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10]);
 
-        let hash_result = hash(data, salt);
+        let hash_result = Sha512::hash(data, salt);
 
         // Verify the salt is preserved
         assert_eq!(hash_result.salt, salt);
