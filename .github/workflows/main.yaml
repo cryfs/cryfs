@@ -88,9 +88,11 @@ jobs:
         run_clang_tidy: [false]
         gtest_args: [""]
         exclude:
-          # MacOS 14 doesn't have Clang 13 anymore. And GCC versions are often incompatible, so we don't support them officially.
+          # MacOS 14 doesn't have Clang 13 anymore. Clang 18 seems broken (maybe https://github.com/llvm/llvm-project/issues/92121), and GCC versions are often incompatible, so we don't support them officially.
           - os: macos-14
             compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev", homebrew_package: llvm@13}
+          - os: macos-14
+            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev", homebrew_package: llvm@18}
           - os: macos-14
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-14
@@ -120,6 +122,8 @@ jobs:
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
           - os: macos-15-intel
             compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev", homebrew_package: llvm@13}
+          - os: macos-15-intel
+            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev", homebrew_package: llvm@18}
           - os: macos-15-intel
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-15-intel
@@ -176,13 +180,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -195,13 +199,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: Debug
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
@@ -213,13 +217,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
@@ -232,13 +236,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: RelWithDebInfo
             extra_conan_flags: "-o '&:update_checks=False'"
             extra_cxxflags: '[]'
@@ -251,13 +255,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -270,16 +274,16 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               # Using libstdc++11 instead of libc++ for ASAN because of
               # - https://github.com/llvm/llvm-project/issues/52771
               # - https://github.com/llvm/llvm-project/issues/59432
               libcxx: libstdc++11
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
@@ -292,13 +296,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -311,13 +315,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -331,13 +335,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 17
+              version: 18
               libcxx: libc++
-              cc: clang-17
-              cxx: clang++-17
-              macos_cc: llvm@17/bin/clang
-              macos_cxx: llvm@17/bin/clang++
-              apt_package: clang-17 clang-tidy-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
+              cc: clang-18
+              cxx: clang++-18
+              macos_cc: llvm@18/bin/clang
+              macos_cxx: llvm@18/bin/clang++
+              apt_package: clang-18 clang-tidy-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
