@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use cryfs_crypto::hash::HashAlgorithmDef;
 use serde::{Deserialize, Serialize};
 use serde_with::{TryFromInto, serde_as};
 use std::io::{BufReader, BufWriter};
@@ -34,7 +35,10 @@ pub struct FilesystemMetadata {
 
     #[serde_as(as = "TryFromInto<SerializedHash>")]
     #[serde(rename = "encryptionKey")]
-    encryption_key: <Sha512 as HashAlgorithm>::Hash,
+    encryption_key: Hash<
+        { <Sha512 as HashAlgorithmDef>::DIGEST_LEN },
+        { <Sha512 as HashAlgorithmDef>::SALT_LEN },
+    >,
 }
 
 impl FilesystemMetadata {
@@ -119,11 +123,8 @@ pub struct SerializedHash {
     salt: String,
 }
 
-type Sha512Hash = Hash<
-    { <Sha512 as HashAlgorithm>::Hash::DIGEST_LEN },
-    { <Sha512 as HashAlgorithm>::Hash::SALT_LEN },
->;
-// TODO Why doesn't this compile? type Sha512Hash = <Sha512 as HashAlgorithm>::Hash;
+type Sha512Hash =
+    Hash<{ <Sha512 as HashAlgorithmDef>::DIGEST_LEN }, { <Sha512 as HashAlgorithmDef>::SALT_LEN }>;
 
 impl From<Sha512Hash> for SerializedHash {
     fn from(hash: Hash<64, 8>) -> Self {
