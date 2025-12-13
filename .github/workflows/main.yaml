@@ -65,6 +65,15 @@ jobs:
             macos_cxx: llvm@17/bin/clang++
             apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp5-17 libomp-17-dev
             homebrew_package: llvm@17
+          - compiler: clang
+            version: 18
+            libcxx: libc++
+            cc: clang-18
+            cxx: clang++-18
+            macos_cc: llvm@18/bin/clang
+            macos_cxx: llvm@18/bin/clang++
+            apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
+            homebrew_package: llvm@18
           # Apple Clang
 #           - compiler: apple-clang
 #             version: xxx
