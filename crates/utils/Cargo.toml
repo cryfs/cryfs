@@ -40,6 +40,7 @@ lockable.workspace = true
 common_macros.workspace = true
 criterion.workspace = true
 divrem.workspace = true
+libc.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
 tempdir.workspace = true
