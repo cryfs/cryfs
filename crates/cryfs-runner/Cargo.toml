@@ -27,6 +27,3 @@ libc.workspace = true
 log.workspace = true
 serde.workspace = true
 tokio-util.workspace = true
-
-[features]
-fuse_mt = ["cryfs-rustfs/fuse_mt"]
