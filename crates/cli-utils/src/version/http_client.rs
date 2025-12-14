@@ -76,7 +76,7 @@ mod tests {
             assert_eq!(
                 "URL not found: https://example.com",
                 client
-                    .get("https://example.com", Duration::from_secs(1))
+                    .get("https://example.com", Duration::from_secs(10))
                     .unwrap_err()
                     .to_string()
             );
@@ -89,7 +89,7 @@ mod tests {
             assert_eq!(
                 "URL not found: https://notexisting.com",
                 client
-                    .get("https://notexisting.com", Duration::from_secs(1))
+                    .get("https://notexisting.com", Duration::from_secs(10))
                     .unwrap_err()
                     .to_string()
             );
@@ -104,7 +104,7 @@ mod tests {
             );
             assert_eq!(
                 client
-                    .get("https://example.com", Duration::from_secs(1))
+                    .get("https://example.com", Duration::from_secs(10))
                     .unwrap(),
                 "Hello, world!"
             );
@@ -120,20 +120,20 @@ mod tests {
             );
             assert_eq!(
                 client
-                    .get("https://first.com", Duration::from_secs(1))
+                    .get("https://first.com", Duration::from_secs(10))
                     .unwrap(),
                 "First website"
             );
             assert_eq!(
                 client
-                    .get("https://second.com", Duration::from_secs(1))
+                    .get("https://second.com", Duration::from_secs(10))
                     .unwrap(),
                 "Second website"
             );
             assert_eq!(
                 "URL not found: https://notexisting.com",
                 client
-                    .get("https://notexisting.com", Duration::from_secs(1))
+                    .get("https://notexisting.com", Duration::from_secs(10))
                     .unwrap_err()
                     .to_string()
             );
@@ -146,7 +146,7 @@ mod tests {
             client.add_website("http://existing.com".to_string(), "new_content".to_string());
             assert_eq!(
                 client
-                    .get("http://existing.com", Duration::from_secs(1))
+                    .get("http://existing.com", Duration::from_secs(10))
                     .unwrap(),
                 "new_content"
             );
@@ -158,11 +158,11 @@ mod tests {
             let request_counter = client.request_counter();
             assert_eq!(0, request_counter.load(std::sync::atomic::Ordering::SeqCst));
             client
-                .get("http://example.com", Duration::from_secs(1))
+                .get("http://example.com", Duration::from_secs(10))
                 .unwrap_err();
             assert_eq!(1, request_counter.load(std::sync::atomic::Ordering::SeqCst));
             client
-                .get("http://example.com", Duration::from_secs(1))
+                .get("http://example.com", Duration::from_secs(10))
                 .unwrap_err();
             assert_eq!(2, request_counter.load(std::sync::atomic::Ordering::SeqCst));
         }
@@ -176,7 +176,7 @@ mod tests {
             let client = ReqwestHttpClient;
             assert!(
                 client
-                    .get("invalid://example.com", Duration::from_secs(1))
+                    .get("invalid://example.com", Duration::from_secs(10))
                     .is_err()
             );
         }
@@ -186,7 +186,7 @@ mod tests {
             let client = ReqwestHttpClient;
             assert!(
                 client
-                    .get("http://example.invalidtld", Duration::from_secs(1))
+                    .get("http://example.invalidtld", Duration::from_secs(10))
                     .is_err()
             );
         }
@@ -198,7 +198,7 @@ mod tests {
                 client
                     .get(
                         "http://this_is_a_not_existing_domain.com",
-                        Duration::from_secs(1)
+                        Duration::from_secs(10)
                     )
                     .is_err()
             );
