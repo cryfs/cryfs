@@ -823,9 +823,7 @@ mod tests {
         #[test]
         fn success_epoch() {
             test_serialize_deserialize(
-                MyStruct {
-                    field: UNIX_EPOCH,
-                },
+                MyStruct { field: UNIX_EPOCH },
                 &[&binary(&[&0u64.to_le_bytes(), &0u32.to_le_bytes()])],
             );
         }
