@@ -20,8 +20,7 @@ jobs:
           - macos-26
           - ubuntu-22.04
           - ubuntu-24.04
-        # TODO `command: ["test"]` to run tests of all crates. But for some reason, that deadlocks at the moment.
-        command: ["test -p cryfs-blobstore -p cryfs-blockstore -p cryfs-cli-utils -p cryfs-concurrent-store -p cryfs-cli -p cryfs-filesystem -p cryfs-runner -p cryfs-version -p cryfs-crypto -p cryfs-rustfs -p fsblobstore -p tempproject -p cryfs-utils"]
+        command: ["test"]
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         features: ["", "--no-default-features"]
@@ -46,7 +45,8 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: ${{ matrix.command }}
-          args: ${{ matrix.features }} ${{ matrix.profile }}
+          # TODO `args: ${{ matrix.features }} ${{ matrix.profile }}` without the `-p` arguments, to run tests of all crates. But for some reason, that deadlocks at the moment.
+          args: ${{ matrix.features }} ${{ matrix.profile }} -p cryfs-blobstore -p cryfs-blockstore -p cryfs-cli-utils -p cryfs-concurrent-store -p cryfs-cli -p cryfs-filesystem -p cryfs-runner -p cryfs-version -p cryfs-crypto -p fsblobstore -p tempproject -p cryfs-utils
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
