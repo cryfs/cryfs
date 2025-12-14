@@ -297,8 +297,22 @@ pub fn write_null_string(
     u8::write_options(&0, writer, endian, args)
 }
 
-/// TODO Docs
-/// TODO Tests
+/// Deserialize a [NonZeroU32] field with [binrw].
+///
+/// This function reads a u32 and verifies it is not zero.
+///
+/// # Examples
+/// ```
+/// use binrw::BinRead;
+/// use std::num::NonZeroU32;
+/// use cryfs_utils::binary::read_nonzerou32;
+///
+/// #[derive(BinRead)]
+/// struct MyStruct {
+///   #[br(parse_with = read_nonzerou32)]
+///   nonzero_field: NonZeroU32,
+/// }
+/// ```
 pub fn read_nonzerou32<R: Read + Seek>(
     reader: &mut R,
     endian: Endian,
@@ -312,8 +326,20 @@ pub fn read_nonzerou32<R: Read + Seek>(
     })
 }
 
-/// TODO Docs
-/// TODO Tests
+/// Serialize a [NonZeroU32] field with [binrw].
+///
+/// # Examples
+/// ```
+/// use binrw::BinWrite;
+/// use std::num::NonZeroU32;
+/// use cryfs_utils::binary::write_nonzerou32;
+///
+/// #[derive(BinWrite)]
+/// struct MyStruct {
+///   #[bw(write_with(write_nonzerou32))]
+///   nonzero_field: NonZeroU32,
+/// }
+/// ```
 pub fn write_nonzerou32(
     v: &NonZeroU32,
     writer: &mut (impl Write + Seek),
@@ -350,8 +376,23 @@ impl TryFrom<TimeSpec> for SystemTime {
     }
 }
 
-/// TODO Docs
-/// TODO Tests
+/// Deserialize a [SystemTime] field with [binrw].
+///
+/// This function reads a timespec (seconds and nanoseconds since UNIX epoch)
+/// and converts it to a [SystemTime].
+///
+/// # Examples
+/// ```
+/// use binrw::BinRead;
+/// use std::time::SystemTime;
+/// use cryfs_utils::binary::read_timespec;
+///
+/// #[derive(BinRead)]
+/// struct MyStruct {
+///   #[br(parse_with = read_timespec)]
+///   timestamp: SystemTime,
+/// }
+/// ```
 pub fn read_timespec<R: Read + Seek>(
     reader: &mut R,
     endian: Endian,
@@ -365,8 +406,23 @@ pub fn read_timespec<R: Read + Seek>(
     })
 }
 
-/// TODO Docs
-/// TODO Tests
+/// Serialize a [SystemTime] field with [binrw].
+///
+/// This function converts a [SystemTime] to a timespec (seconds and nanoseconds
+/// since UNIX epoch) and writes it to the stream.
+///
+/// # Examples
+/// ```
+/// use binrw::BinWrite;
+/// use std::time::SystemTime;
+/// use cryfs_utils::binary::write_timespec;
+///
+/// #[derive(BinWrite)]
+/// struct MyStruct {
+///   #[bw(write_with(write_timespec))]
+///   timestamp: SystemTime,
+/// }
+/// ```
 pub fn write_timespec(
     v: &SystemTime,
     writer: &mut (impl Write + Seek),
@@ -690,6 +746,138 @@ mod tests {
                 error_msg.contains(
                     "Expected string to be terminated by a nullbyte but found EOF instead."
                 ),
+                "Wrong error message: {:?}",
+                error_msg
+            );
+        }
+    }
+
+    mod read_write_nonzerou32 {
+        use super::*;
+
+        #[derive(BinRead, BinWrite, Debug, PartialEq)]
+        #[brw(little)]
+        struct MyStruct {
+            #[br(parse_with = read_nonzerou32)]
+            #[bw(write_with = write_nonzerou32)]
+            field: NonZeroU32,
+        }
+
+        #[test]
+        fn success() {
+            test_serialize_deserialize(
+                MyStruct {
+                    field: NonZeroU32::new(42).unwrap(),
+                },
+                &[&binary(&[&42u32.to_le_bytes()])],
+            );
+        }
+
+        #[test]
+        fn success_large_value() {
+            test_serialize_deserialize(
+                MyStruct {
+                    field: NonZeroU32::new(u32::MAX).unwrap(),
+                },
+                &[&binary(&[&u32::MAX.to_le_bytes()])],
+            );
+        }
+
+        #[test]
+        fn error_zero_value() {
+            let error = deserialize::<MyStruct>(&binary(&[&0u32.to_le_bytes()])).unwrap_err();
+            let error_msg = format!("{:?}", error);
+
+            assert!(
+                error_msg.contains("Tried to read '0' as a NonZeroU32 value. Must not be zero."),
+                "Wrong error message: {:?}",
+                error_msg
+            );
+        }
+
+        #[test]
+        fn error_too_short() {
+            let error = deserialize::<MyStruct>(&binary(&[&42u16.to_le_bytes()])).unwrap_err();
+            let error_msg = format!("{:?}", error);
+
+            assert!(
+                error_msg.contains("Not enough data in the stream to read the object"),
+                "Wrong error message: {:?}",
+                error_msg
+            );
+        }
+    }
+
+    mod read_write_timespec {
+        use super::*;
+        use std::time::UNIX_EPOCH;
+
+        #[derive(BinRead, BinWrite, Debug, PartialEq)]
+        #[brw(little)]
+        struct MyStruct {
+            #[br(parse_with = read_timespec)]
+            #[bw(write_with = write_timespec)]
+            field: SystemTime,
+        }
+
+        #[test]
+        fn success_epoch() {
+            test_serialize_deserialize(
+                MyStruct {
+                    field: UNIX_EPOCH,
+                },
+                &[&binary(&[&0u64.to_le_bytes(), &0u32.to_le_bytes()])],
+            );
+        }
+
+        #[test]
+        fn success_with_seconds() {
+            let time = UNIX_EPOCH + Duration::from_secs(1234567890);
+            test_serialize_deserialize(
+                MyStruct { field: time },
+                &[&binary(&[
+                    &1234567890u64.to_le_bytes(),
+                    &0u32.to_le_bytes(),
+                ])],
+            );
+        }
+
+        #[test]
+        fn success_with_nanoseconds() {
+            let time = UNIX_EPOCH + Duration::new(1234567890, 987654321);
+            test_serialize_deserialize(
+                MyStruct { field: time },
+                &[&binary(&[
+                    &1234567890u64.to_le_bytes(),
+                    &987654321u32.to_le_bytes(),
+                ])],
+            );
+        }
+
+        #[test]
+        fn error_too_short() {
+            let error = deserialize::<MyStruct>(&binary(&[&1234u64.to_le_bytes()])).unwrap_err();
+            let error_msg = format!("{:?}", error);
+
+            assert!(
+                error_msg.contains("Not enough data in the stream to read the object"),
+                "Wrong error message: {:?}",
+                error_msg
+            );
+        }
+
+        #[test]
+        fn error_overflow() {
+            // Test overflow when adding duration to UNIX_EPOCH
+            let error = deserialize::<MyStruct>(&binary(&[
+                &u64::MAX.to_le_bytes(),
+                &999_999_999u32.to_le_bytes(),
+            ]))
+            .unwrap_err();
+            let error_msg = format!("{:?}", error);
+
+            assert!(
+                error_msg.contains("Overflow") || error_msg.contains("overflow"),
                 "Wrong error message: {:?}",
                 error_msg
             );
