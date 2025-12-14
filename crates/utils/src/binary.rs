@@ -9,8 +9,6 @@ use std::num::{NonZeroU8, NonZeroU32};
 use std::path::Path;
 use std::time::{Duration, SystemTime, SystemTimeError};
 
-// TODO Re-enable doc tests. They're likely broken.
-
 /// Extension trait to deserialize an object from a stream
 pub trait BinaryReadExt: Sized {
     /// Deserialize the object from the given stream and ensure that the stream
@@ -110,13 +108,13 @@ where
 /// Deserialize a bool field with [binrw].
 ///
 /// # Examples
-/// ```ignore
+/// ```
 /// use binrw::BinRead;
-/// use cryfs_blockstore::utils::binary::read_bool;
+/// use cryfs_utils::binary::read_bool;
 ///
 /// #[derive(BinRead)]
 /// struct MyStruct {
-///   #[binread(parse_with = read_bool)]
+///   #[br(parse_with = read_bool)]
 ///   bool_field: bool,
 /// }
 /// ```
@@ -140,13 +138,13 @@ pub fn read_bool<R: Read + Seek>(reader: &mut R, endian: Endian, _: ()) -> BinRe
 /// Serialize a bool field with [binrw].
 ///
 /// # Examples
-/// ```ignore
+/// ```
 /// use binrw::BinWrite;
-/// use cryfs_blockstore::utils::binary::write_bool;
+/// use cryfs_utils::binary::write_bool;
 ///
 /// #[derive(BinWrite)]
 /// struct MyStruct {
-///   #[binwrite(with(write_bool))]
+///   #[bw(write_with(write_bool))]
 ///   bool_field: bool,
 /// }
 /// ```
@@ -164,15 +162,15 @@ pub fn write_bool(
 /// Deserialize a hashmap with [binrw].
 ///
 /// # Examples
-/// ```ignore
+/// ```
 /// use binrw::BinRead;
 /// use std::collections::HashMap;
-/// use cryfs_blockstore::utils::binary::read_hashmap;
+/// use cryfs_utils::binary::read_hashmap;
 ///
 /// #[derive(BinRead)]
 /// struct MyStruct {
-///   #[binread(parse_with = read_hashmap)]
-///   some_map: HashMap<String, i64>,
+///   #[br(parse_with = read_hashmap)]
+///   some_map: HashMap<i64, i64>,
 /// }
 /// ```
 pub fn read_hashmap<K, V, R>(reader: &mut R, endian: Endian, _: ()) -> BinResult<HashMap<K, V>>
@@ -194,15 +192,15 @@ where
 /// Serialize a hashmap with [binrw].
 ///
 /// # Examples
-/// ```ignore
+/// ```
 /// use binrw::BinWrite;
 /// use std::collections::HashMap;
-/// use cryfs_blockstore::utils::binary::write_hashmap;
+/// use cryfs_utils::binary::write_hashmap;
 ///
 /// #[derive(BinWrite)]
 /// struct MyStruct {
-///   #[binwrite(with(write_hashmap))]
-///   some_map: HashMap<String, i64>,
+///   #[bw(write_with(write_hashmap))]
+///   some_map: HashMap<i64, i64>,
 /// }
 /// ```
 pub fn write_hashmap<K, V>(
@@ -224,21 +222,22 @@ where
     Ok(())
 }
 
-/// Deerialize a [String] with [binrw].
+/// Deserialize a [String] with [binrw].
 ///
 /// [binrw] offers [NullString](binrw::NullString) which is similar, but [NullString](binrw::NullString)
 /// succeeds on reading a string even if it is terminated by EOF instead
 /// of NULL. This function is more strict and always expects a NULL in the end.
 ///
 /// # Examples
-/// ```ignore
+/// ```
 /// use binrw::BinRead;
-/// use cryfs_blockstore::utils::binary::read_null_string;
+/// use std::num::NonZeroU8;
+/// use cryfs_utils::binary::read_null_string;
 ///
 /// #[derive(BinRead)]
 /// struct MyStruct {
-///   #[binread(parse_with = read_null_string)]
-///   some_str: String,
+///   #[br(parse_with = read_null_string)]
+///   some_str: Vec<NonZeroU8>,
 /// }
 /// ```
 pub fn read_null_string<R: Read + Seek>(
@@ -274,14 +273,15 @@ pub fn read_null_string<R: Read + Seek>(
 /// You can use this helper to serialize it.
 ///
 /// # Examples
-/// ```ignore
+/// ```
 /// use binrw::BinWrite;
-/// use cryfs_blockstore::utils::binary::write_null_string;
+/// use std::num::NonZeroU8;
+/// use cryfs_utils::binary::write_null_string;
 ///
 /// #[derive(BinWrite)]
 /// struct MyStruct {
-///   #[binwrite(with(write_null_string))]
-///   some_str: String,
+///   #[bw(write_with(write_null_string))]
+///   some_str: Vec<NonZeroU8>,
 /// }
 /// ```
 pub fn write_null_string(
