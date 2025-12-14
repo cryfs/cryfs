@@ -15,7 +15,7 @@ const DOUBLE_SIGNAL_THRESHOLD: Duration = Duration::from_secs(1);
 static DOUBLE_SIGNAL_HANDLER: LazyLock<AtExitHandler> = LazyLock::new(|| {
     let mut last_term_signal_time: Option<Instant> = None;
 
-    AtExitHandler::_new(move || {
+    AtExitHandler::_new("double-signal-handler", move || {
         let now = Instant::now();
         if let Some(last_term_signal_time) = last_term_signal_time {
             let elapsed = now.duration_since(last_term_signal_time);
@@ -41,30 +41,33 @@ pub struct AtExitHandler {
 }
 
 impl AtExitHandler {
-    pub fn new(func: impl FnMut() + Send + 'static) -> AtExitHandler {
+    pub fn new(name: &str, func: impl FnMut() + Send + 'static) -> AtExitHandler {
         // Ensure the double signal handler is initialized
         LazyLock::force(&DOUBLE_SIGNAL_HANDLER);
-        Self::_new(func)
+        Self::_new(name, func)
     }
 
-    fn _new(mut func: impl FnMut() + Send + 'static) -> AtExitHandler {
+    fn _new(name: &str, mut func: impl FnMut() + Send + 'static) -> AtExitHandler {
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
         let signals_handle = signals.handle();
 
-        let join_handle = thread::spawn(move || {
-            while !signals.is_closed() {
-                for signal in signals.wait() {
-                    let signal_name = match signal {
-                        SIGTERM => "SIGTERM".to_string(),
-                        SIGINT => "SIGINT".to_string(),
-                        SIGQUIT => "SIGQUIT".to_string(),
-                        _ => format!("signal {}", signal),
-                    };
-                    log::warn!("Received {signal_name}");
-                    func();
+        let join_handle = thread::Builder::new()
+            .name(format!("atexit:{name}"))
+            .spawn(move || {
+                while !signals.is_closed() {
+                    for signal in signals.wait() {
+                        let signal_name = match signal {
+                            SIGTERM => "SIGTERM".to_string(),
+                            SIGINT => "SIGINT".to_string(),
+                            SIGQUIT => "SIGQUIT".to_string(),
+                            _ => format!("signal {}", signal),
+                        };
+                        log::warn!("Received {signal_name}");
+                        func();
+                    }
                 }
-            }
-        });
+            })
+            .expect("Failed to spawn AtExitHandler thread");
         AtExitHandler {
             join_handle: Some(join_handle),
             signals_handle,
@@ -116,7 +119,7 @@ mod tests {
             let called = Arc::new(AtomicBool::new(false));
             let called_clone = called.clone();
 
-            let handler = AtExitHandler::new(move || {
+            let handler = AtExitHandler::new("test", move || {
                 called_clone.store(true, Ordering::SeqCst);
             });
 
@@ -136,7 +139,7 @@ mod tests {
             let called = Arc::new(AtomicBool::new(false));
             let called_clone = called.clone();
 
-            let _handler = AtExitHandler::new(move || {
+            let _handler = AtExitHandler::new("test", move || {
                 called_clone.store(true, Ordering::SeqCst);
             });
 
@@ -158,7 +161,7 @@ mod tests {
             let call_count = Arc::new(AtomicUsize::new(0));
             let call_count_clone = call_count.clone();
 
-            let _handler = AtExitHandler::new(move || {
+            let _handler = AtExitHandler::new("test", move || {
                 call_count_clone.fetch_add(1, Ordering::SeqCst);
             });
 
@@ -190,7 +193,7 @@ mod tests {
             let messages = Arc::new(std::sync::Mutex::new(Vec::new()));
             let messages_clone = messages.clone();
 
-            let _handler = AtExitHandler::new(move || {
+            let _handler = AtExitHandler::new("test", move || {
                 messages_clone
                     .lock()
                     .unwrap()
@@ -220,15 +223,15 @@ mod tests {
             let call_count3 = Arc::new(AtomicUsize::new(0));
             let call_count3_clone = call_count3.clone();
 
-            let _handler1 = AtExitHandler::new(move || {
+            let _handler1 = AtExitHandler::new("test", move || {
                 call_count1_clone.fetch_add(1, Ordering::SeqCst);
             });
 
-            let _handler2 = AtExitHandler::new(move || {
+            let _handler2 = AtExitHandler::new("test", move || {
                 call_count2_clone.fetch_add(1, Ordering::SeqCst);
             });
 
-            let _handler3 = AtExitHandler::new(move || {
+            let _handler3 = AtExitHandler::new("test", move || {
                 call_count3_clone.fetch_add(1, Ordering::SeqCst);
             });
 
@@ -258,14 +261,14 @@ mod tests {
     #[test]
     fn test_handler_drop_before_signal() {
         signal_test(|| {
-            let _handler = AtExitHandler::new(|| {
+            let _handler = AtExitHandler::new("test", || {
                 // Extra handler to ensure that the process doesn't crash
                 // even after the main handler is dropped
             });
 
             let called = Arc::new(AtomicUsize::new(0));
             let called_clone = called.clone();
-            let handler = AtExitHandler::new(move || {
+            let handler = AtExitHandler::new("test", move || {
                 called.fetch_add(1, Ordering::SeqCst);
             });
 
@@ -291,6 +294,31 @@ mod tests {
                 called_clone.load(Ordering::SeqCst),
                 1,
                 "Handler was called after drop"
+            );
+        });
+    }
+
+    #[test]
+    fn test_thread_name() {
+        signal_test(|| {
+            let thread_name = Arc::new(std::sync::Mutex::new(None));
+            let thread_name_clone = thread_name.clone();
+
+            let _handler = AtExitHandler::new("my-custom-handler", move || {
+                let name = thread::current().name().map(|s| s.to_string());
+                *thread_name_clone.lock().unwrap() = name;
+            });
+
+            unsafe {
+                libc::raise(SIGINT);
+            }
+            thread::sleep(Duration::from_millis(100));
+
+            let captured_name = thread_name.lock().unwrap();
+            assert_eq!(
+                captured_name.as_deref(),
+                Some("atexit:my-custom-handler"),
+                "Thread name should be 'atexit:my-custom-handler'"
             );
         });
     }

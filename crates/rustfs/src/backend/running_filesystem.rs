@@ -49,7 +49,7 @@ where
     pub(super) fn new(session: BS) -> Self {
         let session = Arc::new(Mutex::new(Some(session)));
         let session_clone = session.clone();
-        let unmount_atexit = AtExitHandler::new(move || {
+        let unmount_atexit = AtExitHandler::new("RunningFilesystem.unmount", move || {
             log::info!("Received exit signal, unmounting filesystem...");
             if let Some(session) = session_clone.lock().unwrap().take() {
                 session.join();
