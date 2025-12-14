@@ -208,7 +208,7 @@ mod tests {
         fn test_get_valid_http() {
             let client = ReqwestHttpClient;
             let response = client
-                .get("http://example.com", Duration::from_secs(1))
+                .get("http://example.com", Duration::from_secs(10))
                 .unwrap();
             assert!(response.contains("Example Domain"));
         }
@@ -217,7 +217,7 @@ mod tests {
         fn test_get_valid_https() {
             let client = ReqwestHttpClient;
             let response = client
-                .get("https://example.com", Duration::from_secs(1))
+                .get("https://example.com", Duration::from_secs(10))
                 .unwrap();
             assert!(response.contains("Example Domain"));
         }
