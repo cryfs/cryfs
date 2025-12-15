@@ -1,11 +1,13 @@
 use anyhow::Result;
 use cryfs_utils::async_drop::AsyncDrop;
+use derive_more::{Display, Error};
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::time::SystemTime;
 
 use super::super::base_blob::BaseBlob;
 use super::entry::{DirEntry, EntryType};
+use crate::fsblobstore::fsblob::dir_entries::entry::ValidationFailed;
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult};
@@ -211,7 +213,7 @@ impl DirEntryList {
         self.dirty = true;
     }
 
-    pub async fn add_or_overwrite(
+    pub async fn add_or_overwrite<E>(
         &mut self,
         name: PathComponentBuf,
         id: BlobId,
@@ -222,8 +224,8 @@ impl DirEntryList {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
         // TODO Return overwritten entry instead of taking an on_overwritten callback
-        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
-    ) -> Result<()> {
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
+    ) -> Result<(), AddOrOverwriteError<E>> {
         let already_exists = self._get_by_name_with_index(&name);
         let entry = DirEntry::new(
             entry_type,
@@ -235,15 +237,16 @@ impl DirEntryList {
             last_access_time,
             last_modification_time,
             SystemTime::now(),
-        )?;
+        )
+        .map_err(AddOrOverwriteError::ValidationFailed)?;
         if let Some((index, old_entry)) = already_exists {
-            // TODO on_overwritten returns an FsError with good error codes, but we convert it to anyhow::Error here and lose that information.
             on_overwritten(
                 entry.entry_type(),
                 old_entry.entry_type(),
                 old_entry.blob_id(),
             )
-            .await?;
+            .await
+            .map_err(AddOrOverwriteError::OnOverwriteError)?;
             self._overwrite(index, entry);
         } else {
             self._add(entry);
@@ -261,14 +264,14 @@ impl DirEntryList {
         self._add(entry);
     }
 
-    pub async fn rename_by_name(
+    pub async fn rename_by_name<E>(
         &mut self,
         old_name: &PathComponent,
         new_name: PathComponentBuf,
-        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
-    ) -> cryfs_rustfs::FsResult<()> {
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
+    ) -> Result<(), RenameError<E>> {
         let Some((mut source_index, source_entry)) = self._get_by_name_with_index(old_name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
+            return Err(RenameError::NodeDoesNotExist);
         };
         let source_blob_id = *source_entry.blob_id();
 
@@ -289,7 +292,8 @@ impl DirEntryList {
                 found_same_name.entry_type(),
                 found_same_name.blob_id(),
             )
-            .await?;
+            .await
+            .map_err(RenameError::OnOverwriteError)?;
 
             self.dirty = true;
             self.entries.remove(found_same_name_index);
@@ -310,16 +314,17 @@ impl DirEntryList {
 
     // TODO If we add hard links, we can have multiple entries with the same blob id.
     //      This function should be removed and call sites should use [Self::rename_by_name] instead.
-    pub async fn rename(
+    pub async fn rename<E>(
         &mut self,
         blob_id: &BlobId,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
-    ) -> FsResult<()> {
+        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
+    ) -> Result<(), RenameError<E>> {
         let Some(old_entry) = self.get_by_id(blob_id) else {
-            return Err(FsError::NodeDoesNotExist);
+            return Err(RenameError::NodeDoesNotExist);
         };
         let old_name = old_entry.name().to_owned();
+        // TODO rename_by_name looks up the entry again. We could optimize that
         self.rename_by_name(
             &old_name,
             new_name,
@@ -427,4 +432,16 @@ impl DirEntryList {
 pub enum SerializeIfDirtyResult {
     Serialized,
     NotSerialized,
+}
+
+#[derive(Debug, Display, Error)]
+pub enum AddOrOverwriteError<E> {
+    ValidationFailed(ValidationFailed),
+    OnOverwriteError(E),
+}
+
+#[derive(Debug, Display, Error)]
+pub enum RenameError<E> {
+    NodeDoesNotExist,
+    OnOverwriteError(E),
 }

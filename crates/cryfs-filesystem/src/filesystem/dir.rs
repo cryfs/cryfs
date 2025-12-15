@@ -12,7 +12,7 @@ use super::{
 };
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-use cryfs_fsblobstore::fsblobstore::FlushBehavior;
+use cryfs_fsblobstore::fsblobstore::{AddOrOverwriteError, FlushBehavior, RenameError};
 use cryfs_fsblobstore::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
 use cryfs_fsblobstore::{Gid, Mode, Uid};
 use cryfs_rustfs::{DirEntry, FsError, FsResult, NodeAttrs, NodeKind, object_based_api::Dir};
@@ -268,6 +268,10 @@ where
                                 },
                             )
                             .await
+                            .map_err(|err| match err {
+                                RenameError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                                RenameError::OnOverwriteError(e) => e,
+                            })
                     })
                     .await
                 })
@@ -363,13 +367,20 @@ where
                                         },
                                     )
                                     .await
-                            })
-                            .await
-                            .map_err(|err| {
-                                // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
-                                log::error!("Error in add_or_overwrite_entry: {err:?}");
-                                FsError::UnknownError
-                            })?;
+                                    .map_err(|err| {
+                                        // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
+                                        match err {
+                                            AddOrOverwriteError::ValidationFailed(fs_err) => {
+                                                log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
+                                                FsError::internal_error(fs_err.into()) // This shouldn't happen because we are moving an already validated entry
+                                            }
+                                            AddOrOverwriteError::OnOverwriteError(err) => {
+                                                log::error!("Error in add_or_overwrite_entry on_overwritten: {err:?}");
+                                                err
+                                            }
+                                        }
+                                    })
+                            }).await?;
 
                         self_blob
                             .with_lock(async |self_blob| {

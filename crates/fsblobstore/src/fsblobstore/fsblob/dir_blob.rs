@@ -7,7 +7,10 @@ use std::time::SystemTime;
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::{
-    fsblobstore::fsblob::dir_entries::SerializeIfDirtyResult,
+    fsblobstore::{
+        RenameError,
+        fsblob::dir_entries::{AddOrOverwriteError, SerializeIfDirtyResult},
+    },
     utils::fs_types::{Gid, Mode, Uid},
 };
 use cryfs_blobstore::{BlobId, BlobStore};
@@ -137,22 +140,22 @@ where
         self.entries.get_by_name_mut(name)
     }
 
-    pub async fn rename_entry(
+    pub async fn rename_entry<E>(
         &mut self,
         blob_id: &BlobId,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
-    ) -> FsResult<()> {
+        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
+    ) -> Result<(), RenameError<E>> {
         self.entries.rename(blob_id, new_name, on_overwritten).await
     }
 
-    pub async fn rename_entry_by_name(
+    pub async fn rename_entry_by_name<E>(
         &mut self,
         old_name: &PathComponent,
         new_name: PathComponentBuf,
         // TODO Instead of passing in on_overwritten, would be better to return the overwritten blob id with #[must_use]
-        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
-    ) -> FsResult<()> {
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
+    ) -> Result<(), RenameError<E>> {
         self.entries
             .rename_by_name(old_name, new_name, on_overwritten)
             .await
@@ -264,7 +267,7 @@ where
         )
     }
 
-    pub async fn add_or_overwrite_entry(
+    pub async fn add_or_overwrite_entry<E>(
         &mut self,
         name: PathComponentBuf,
         id: BlobId,
@@ -274,8 +277,8 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
-    ) -> Result<()> {
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
+    ) -> Result<(), AddOrOverwriteError<E>> {
         self.entries
             .add_or_overwrite(
                 name,
