@@ -22,6 +22,7 @@ pub enum AtimeUpdateBehavior {
 }
 
 impl AtimeUpdateBehavior {
+    #[inline]
     pub fn should_update_atime_on_file_or_symlink_read(
         self,
         old_atime: SystemTime,
@@ -37,6 +38,7 @@ impl AtimeUpdateBehavior {
         }
     }
 
+    #[inline]
     pub fn should_update_atime_on_directory_read(
         self,
         old_atime: SystemTime,

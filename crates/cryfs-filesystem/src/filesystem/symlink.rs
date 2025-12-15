@@ -72,19 +72,23 @@ where
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(blob, {
-                    blob.with_lock(async |mut blob| {
-                        let blob = Self::blob_as_symlink_mut(&mut blob)?;
-                        let target = blob.target().await.map_err(|err| {
-                            FsError::CorruptedFilesystem {
-                                // TODO Add to message what it actually is
-                                message: format!("Unparseable symlink blob: {err:?}"),
-                            }
-                        });
-                        Ok::<_, FsError>(target)
-                    })
-                    .await
-                })?
+                with_async_drop_2!(
+                    blob,
+                    {
+                        blob.with_lock(async |mut blob| {
+                            let blob = Self::blob_as_symlink_mut(&mut blob)?;
+                            let target = blob.target().await.map_err(|err| {
+                                FsError::CorruptedFilesystem {
+                                    // TODO Add to message what it actually is
+                                    message: format!("Unparseable symlink blob: {err:?}"),
+                                }
+                            });
+                            Ok::<_, FsError>(target)
+                        })
+                        .await
+                    },
+                    FsError::internal_error
+                )?
             })
             .await
     }

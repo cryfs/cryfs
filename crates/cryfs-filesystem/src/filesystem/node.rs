@@ -65,15 +65,19 @@ where
     async fn flush_blob(&self) -> FsResult<()> {
         // TODO We'd only have to flush it if it's actually in some cache, but it might be far down the stack in some blockstore cache.
         let blob = self.node_info.load_blob(&self.blobstore).await?;
-        with_async_drop_2!(blob, {
-            blob.with_lock(async |blob| {
-                blob.flush().await.map_err(|err| {
-                    log::error!("Failed to fsync node: {err:?}");
-                    FsError::UnknownError
+        with_async_drop_2!(
+            blob,
+            {
+                blob.with_lock(async |blob| {
+                    blob.flush().await.map_err(|err| {
+                        log::error!("Failed to fsync node: {err:?}");
+                        FsError::UnknownError
+                    })
                 })
-            })
-            .await
-        })?;
+                .await
+            },
+            FsError::internal_error
+        )?;
         Ok(())
     }
 }
@@ -179,6 +183,9 @@ where
 
     async fn async_drop_impl(&mut self) -> Result<(), FsError> {
         self.node_info.async_drop().await?;
-        self.blobstore.async_drop().await
+        self.blobstore
+            .async_drop()
+            .await
+            .map_err(FsError::internal_error)
     }
 }

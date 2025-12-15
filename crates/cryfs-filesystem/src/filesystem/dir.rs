@@ -12,7 +12,9 @@ use super::{
 };
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-use cryfs_fsblobstore::fsblobstore::{AddOrOverwriteError, FlushBehavior, RenameError};
+use cryfs_fsblobstore::fsblobstore::{
+    AddError, AddOrOverwriteError, FlushBehavior, RemoveError, RenameError,
+};
 use cryfs_fsblobstore::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
 use cryfs_fsblobstore::{Gid, Mode, Uid};
 use cryfs_rustfs::{DirEntry, FsError, FsResult, NodeAttrs, NodeKind, object_based_api::Dir};
@@ -89,7 +91,7 @@ where
             })?;
 
         let blob_id = blob.blob_id();
-        blob.async_drop().await?;
+        blob.async_drop().await.map_err(FsError::internal_error)?;
         Ok(blob_id)
     }
 
@@ -110,7 +112,7 @@ where
             })?;
 
         let blob_id = blob.blob_id();
-        blob.async_drop().await?;
+        blob.async_drop().await.map_err(FsError::internal_error)?;
         Ok(blob_id)
     }
 
@@ -132,7 +134,7 @@ where
             })?;
 
         let blob_id = blob.blob_id();
-        blob.async_drop().await?;
+        blob.async_drop().await.map_err(FsError::internal_error)?;
         Ok(blob_id)
     }
 
@@ -143,7 +145,8 @@ where
         let result = self
             .blobstore
             .remove_by_id(&old_destination_blob_id)
-            .await?;
+            .await
+            .map_err(FsError::internal_error)?;
         match result {
             RemoveResult::SuccessfullyRemoved => Ok(()),
             RemoveResult::NotRemovedBecauseItDoesntExist => {
@@ -223,7 +226,10 @@ where
         let (blob_id, blob_type) = match blob_details {
             Ok(blob_details) => blob_details,
             Err(err) => {
-                self_blob.async_drop().await?;
+                self_blob
+                    .async_drop()
+                    .await
+                    .map_err(FsError::internal_error)?;
                 return Err(err);
             }
         };
@@ -247,34 +253,38 @@ where
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(blob, {
-                    blob.with_lock(async |blob| {
-                        Self::blob_as_dir_mut(&mut *blob)?
-                            .rename_entry_by_name(
-                                oldname,
-                                newname.to_owned(),
-                                async |source_blob_type,
-                                       overwritten_blob_type,
-                                       overwritten_blobid| {
-                                    check_entry_overwrite_allowed(
-                                        &self.blobstore,
-                                        source_blob_type,
-                                        overwritten_blob_type,
-                                        overwritten_blobid,
-                                    )
-                                    .await?;
-                                    self.on_rename_overwrites_destination(*overwritten_blobid)
-                                        .await
-                                },
-                            )
-                            .await
-                            .map_err(|err| match err {
-                                RenameError::NodeDoesNotExist => FsError::NodeDoesNotExist,
-                                RenameError::OnOverwriteError(e) => e,
-                            })
-                    })
-                    .await
-                })
+                with_async_drop_2!(
+                    blob,
+                    {
+                        blob.with_lock(async |blob| {
+                            Self::blob_as_dir_mut(&mut *blob)?
+                                .rename_entry_by_name(
+                                    oldname,
+                                    newname.to_owned(),
+                                    async |source_blob_type,
+                                           overwritten_blob_type,
+                                           overwritten_blobid| {
+                                        check_entry_overwrite_allowed(
+                                            &self.blobstore,
+                                            source_blob_type,
+                                            overwritten_blob_type,
+                                            overwritten_blobid,
+                                        )
+                                        .await?;
+                                        self.on_rename_overwrites_destination(*overwritten_blobid)
+                                            .await
+                                    },
+                                )
+                                .await
+                                .map_err(|err| match err {
+                                    RenameError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                                    RenameError::OnOverwriteError(e) => e,
+                                })
+                        })
+                        .await
+                    },
+                    FsError::internal_error
+                )
             })
             .await
     }
@@ -293,123 +303,140 @@ where
         with_async_drop_2!(newparent, {
             let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
             let (source_parent, dest_parent) =
-                flatten_async_drop::<FsError, _, _, _, _>(source_parent, dest_parent).await?;
+                flatten_async_drop::<anyhow::Error, _, _, _, _>(source_parent, dest_parent)
+                    .await
+                    .map_err(FsError::internal_error)?;
             // TODO Drop source_parent, dest_parent, newparent and self_blob concurrently
-            with_async_drop_2!(source_parent, {
-                with_async_drop_2!(dest_parent, {
-                    let entry = source_parent
-                        .with_lock(async |source_parent_dir| {
-                            let source_parent_dir = Self::blob_as_dir_mut(&mut *source_parent_dir)?;
-                            let entry = source_parent_dir
-                                .entry_by_name(oldname)
-                                .ok_or(FsError::NodeDoesNotExist)?;
-                            Ok::<_, FsError>(entry.clone()) // TODO No clone
-                        })
-                        .await?;
+            with_async_drop_2!(
+                source_parent,
+                {
+                    with_async_drop_2!(
+                        dest_parent,
+                        {
+                            let entry = source_parent
+                                .with_lock(async |source_parent_dir| {
+                                    let source_parent_dir =
+                                        Self::blob_as_dir_mut(&mut *source_parent_dir)?;
+                                    let entry = source_parent_dir
+                                        .entry_by_name(oldname)
+                                        .ok_or(FsError::NodeDoesNotExist)?;
+                                    Ok::<_, FsError>(entry.clone()) // TODO No clone
+                                })
+                                .await?;
 
-                    let self_blob_id = entry.blob_id();
-                    #[cfg(feature = "ancestor_checks_on_move")]
-                    {
-                        // TODO This can happen concurrently with the load_blob above
-                        self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
-                            .await?;
-                    }
+                            let self_blob_id = entry.blob_id();
+                            #[cfg(feature = "ancestor_checks_on_move")]
+                            {
+                                // TODO This can happen concurrently with the load_blob above
+                                self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
+                                    .await?;
+                            }
 
-                    // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
-                    //      But it likely has some dependency with source_parent_blob.
-                    let self_blob = self
-                        .blobstore
-                        .load(self_blob_id)
-                        .await
-                        .map_err(|err| {
-                            log::error!("Error loading blob: {:?}", err);
-                            FsError::UnknownError
-                        })?
-                        .ok_or(
-                            // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
-                            FsError::NodeDoesNotExist,
-                        )?;
-                    with_async_drop_2!(self_blob, {
-                        let entry = source_parent
-                            .with_lock(async |source_parent_dir| {
-                                Self::blob_as_dir_mut(source_parent_dir)?
-                                    .remove_entry_by_name(oldname)
-                            })
-                            .await
-                            .map_err(|err| {
-                                log::error!("Error in remove_entry_by_name: {err:?}");
-                                FsError::UnknownError
-                            })?;
-                        dest_parent
-                            .with_lock(async |dest_parent_dir| {
-                                Self::blob_as_dir_mut(dest_parent_dir)?
-                                    .add_or_overwrite_entry(
-                                        newname.to_owned(),
-                                        *entry.blob_id(),
-                                        entry.entry_type(),
-                                        entry.mode(),
-                                        entry.uid(),
-                                        entry.gid(),
-                                        entry.last_access_time(),
-                                        entry.last_modification_time(),
-                                        async |source_blob_type, overwritten_blob_type, overwritten_blobid| {
-                                            check_entry_overwrite_allowed(
-                                                &self.blobstore,
-                                                source_blob_type,
-                                                overwritten_blob_type,
-                                                overwritten_blobid,
-                                            )
-                                            .await?;
-                                            self.on_rename_overwrites_destination(
-                                                *overwritten_blobid,
-                                            )
-                                            .await
-                                        },
-                                    )
-                                    .await
-                                    .map_err(|err| {
-                                        // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
-                                        match err {
-                                            AddOrOverwriteError::ValidationFailed(fs_err) => {
-                                                log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
-                                                FsError::internal_error(fs_err.into()) // This shouldn't happen because we are moving an already validated entry
-                                            }
-                                            AddOrOverwriteError::OnOverwriteError(err) => {
-                                                log::error!("Error in add_or_overwrite_entry on_overwritten: {err:?}");
-                                                err
-                                            }
-                                        }
-                                    })
-                            }).await?;
+                            // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
+                            //      But it likely has some dependency with source_parent_blob.
+                            let self_blob = self
+                                .blobstore
+                                .load(self_blob_id)
+                                .await
+                                .map_err(|err| {
+                                    log::error!("Error loading blob: {:?}", err);
+                                    FsError::UnknownError
+                                })?
+                                .ok_or(
+                                    // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
+                                    FsError::NodeDoesNotExist,
+                                )?;
+                            with_async_drop_2!(
+                                self_blob,
+                                {
+                                    let entry = source_parent
+                                        .with_lock(async |source_parent_dir| {
+                                            Self::blob_as_dir_mut(source_parent_dir)?
+                                                .remove_entry_by_name(oldname)
+                                                .map_err(|err| match err {
+                                                    RemoveError::NodeDoesNotExist => {
+                                                        FsError::NodeDoesNotExist
+                                                    }
+                                                })
+                                        })
+                                        .await?;
+                                    dest_parent
+                                        .with_lock(async |dest_parent_dir| {
+                                            Self::blob_as_dir_mut(dest_parent_dir)?
+                                                .add_or_overwrite_entry(
+                                                    newname.to_owned(),
+                                                    *entry.blob_id(),
+                                                    entry.entry_type(),
+                                                    entry.mode(),
+                                                    entry.uid(),
+                                                    entry.gid(),
+                                                    entry.last_access_time(),
+                                                    entry.last_modification_time(),
+                                                    async |source_blob_type, overwritten_blob_type, overwritten_blobid| {
+                                                        // Other checks (ensuring we don't overwrite a dir with a non-dir or a non-dir with a dir) is done in [DirEntryList::_check_allowed_overwrite].
+                                                        check_entry_overwrite_allowed(
+                                                            &self.blobstore,
+                                                            source_blob_type,
+                                                            overwritten_blob_type,
+                                                            overwritten_blobid,
+                                                        )
+                                                        .await?;
+                                                        self.on_rename_overwrites_destination(
+                                                            *overwritten_blobid,
+                                                        )
+                                                        .await
+                                                    },
+                                                )
+                                                .await
+                                                .map_err(|err| {
+                                                    // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
+                                                    match err {
+                                                        AddOrOverwriteError::ValidationFailed(fs_err) => {
+                                                            log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
+                                                            FsError::internal_error(fs_err.into()) // This shouldn't happen because we are moving an already validated entry
+                                                        }
+                                                        AddOrOverwriteError::OnOverwriteError(err) => {
+                                                            log::error!("Error in add_or_overwrite_entry on_overwritten: {err:?}");
+                                                            err
+                                                        }
+                                                    }
+                                                })
+                                        }).await?;
 
-                        self_blob
-                            .with_lock(async |self_blob| {
-                                self_blob.set_parent(&dest_parent.blob_id()).await
-                            })
-                            .await
-                            .map_err(|err| {
-                                // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
-                                log::error!("Error setting parent: {err:?}");
-                                FsError::UnknownError
-                            })?;
+                                    self_blob
+                                        .with_lock(async |self_blob| {
+                                            self_blob.set_parent(&dest_parent.blob_id()).await
+                                        })
+                                        .await
+                                        .map_err(|err| {
+                                            // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
+                                            log::error!("Error setting parent: {err:?}");
+                                            FsError::UnknownError
+                                        })?;
 
-                        // TODO We can probably do this concurrently with the other modifications further up
-                        // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
-                        //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
-                        let (source_update, dest_update) = join!(
-                            self.node_info.update_modification_timestamp_in_parent(),
-                            newparent
-                                .node_info
-                                .update_modification_timestamp_in_parent(),
-                        );
+                                    // TODO We can probably do this concurrently with the other modifications further up
+                                    // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
+                                    //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
+                                    let (source_update, dest_update) = join!(
+                                        self.node_info.update_modification_timestamp_in_parent(),
+                                        newparent
+                                            .node_info
+                                            .update_modification_timestamp_in_parent(),
+                                    );
 
-                        source_update?;
-                        dest_update?;
+                                    source_update?;
+                                    dest_update?;
 
-                        Ok::<(), FsError>(())
-                    })
-                })
-            })?;
+                                    Ok::<(), FsError>(())
+                                },
+                                FsError::internal_error
+                            )
+                        },
+                        FsError::internal_error
+                    )
+                },
+                FsError::internal_error
+            )?;
 
             Ok(())
         })
@@ -420,24 +447,28 @@ where
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(blob, {
-                    blob.with_lock(async |blob| {
-                        let blob = Self::blob_as_dir(blob)?;
-                        let result = blob
-                            .entries()
-                            .map(|entry| cryfs_rustfs::DirEntry {
-                                name: entry.name().to_owned(),
-                                kind: match entry.entry_type() {
-                                    EntryType::Dir => NodeKind::Dir,
-                                    EntryType::File => NodeKind::File,
-                                    EntryType::Symlink => NodeKind::Symlink,
-                                },
-                            })
-                            .collect();
-                        Ok(result)
-                    })
-                    .await
-                })
+                with_async_drop_2!(
+                    blob,
+                    {
+                        blob.with_lock(async |blob| {
+                            let blob = Self::blob_as_dir(blob)?;
+                            let result = blob
+                                .entries()
+                                .map(|entry| cryfs_rustfs::DirEntry {
+                                    name: entry.name().to_owned(),
+                                    kind: match entry.entry_type() {
+                                        EntryType::Dir => NodeKind::Dir,
+                                        EntryType::File => NodeKind::File,
+                                        EntryType::Symlink => NodeKind::Symlink,
+                                    },
+                                })
+                                .collect();
+                            Ok(result)
+                        })
+                        .await
+                    },
+                    FsError::internal_error
+                )
             })
             .await
     }
@@ -469,7 +500,7 @@ where
                 let new_dir_blob_id = match new_dir_blob_id {
                     Ok(new_dir_blob_id) => new_dir_blob_id,
                     Err(err) => {
-                        blob.async_drop().await?;
+                        blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(err);
                     }
                 };
@@ -490,7 +521,14 @@ where
                             Gid::from(u32::from(gid)),
                             atime,
                             mtime,
-                        )?;
+                        )
+                        .map_err(|err| {
+                            log::error!("Error in add_entry_dir: {err:?}");
+                            match err {
+                                AddError::NodeAlreadyExists => FsError::NodeAlreadyExists,
+                                AddError::ValidationFailed(_) => FsError::InvalidOperation,
+                            }
+                        })?;
 
                         // TODO Deduplicate this with the logic that looks up getattr for dir nodes and creates NodeAttrs from them there
                         Ok(NodeAttrs {
@@ -512,7 +550,7 @@ where
                     Err(err) => {
                         log::error!("Error adding dir entry: {err:?}");
                         self.remove_just_created_blob(new_dir_blob_id).await;
-                        blob.async_drop().await?;
+                        blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(FsError::UnknownError);
                     }
                 };
@@ -566,7 +604,7 @@ where
                         Ok(())
                     }).await;
                     if let Err(err) = entries_check {
-                        child_blob.async_drop().await?;
+                        child_blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(err);
                     }
 
@@ -578,7 +616,10 @@ where
 
                     let removed_entry = self_blob.with_lock(async |self_blob| {
                         let self_blob = Self::blob_as_dir_mut(&mut *self_blob)?;
-                        let entry = self_blob.remove_entry_by_name(name)?;
+                        let entry = self_blob.remove_entry_by_name(name)
+                            .map_err(|err| match err {
+                                RemoveError::NodeDoesNotExist => FsError::NodeDoesNotExist
+                            })?;
                         match self_blob.flush().await {
                             Err(err) => {
                                 log::error!("Error flushing blob: {err:?}");
@@ -592,7 +633,7 @@ where
                     let removed_entry = match removed_entry {
                         Ok(removed_entry) => removed_entry,
                         Err(err) => {
-                            child_blob.async_drop().await?;
+                            child_blob.async_drop().await.map_err(FsError::internal_error)?;
                             return Err(err);
                         }
                     };
@@ -613,7 +654,7 @@ where
                             Err(FsError::UnknownError)
                         }
                     }
-                })
+                }, FsError::internal_error)
             })
             .await
     }
@@ -652,7 +693,7 @@ where
                     Ok(id) => id,
                     Err(err) => {
                         log::error!("Error creating symlink blob: {err:?}");
-                        blob.async_drop().await?;
+                        blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(err);
                     }
                 };
@@ -672,7 +713,14 @@ where
                             Gid::from(u32::from(gid)),
                             atime,
                             mtime,
-                        )?;
+                        )
+                        .map_err(|err| {
+                            log::error!("Error in add_entry_symlink: {err:?}");
+                            match err {
+                                AddError::NodeAlreadyExists => FsError::NodeAlreadyExists,
+                                AddError::ValidationFailed(_) => FsError::InvalidOperation,
+                            }
+                        })?;
 
                         // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
                         Ok(NodeAttrs {
@@ -694,7 +742,7 @@ where
                     Err(err) => {
                         log::error!("Error adding dir entry: {err:?}");
                         self.remove_just_created_blob(new_symlink_blob_id).await;
-                        blob.async_drop().await?;
+                        blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(FsError::UnknownError);
                     }
                 };
@@ -725,7 +773,10 @@ where
                     // First remove the entry, then flush that change, and only then remove the blob.
                     // This is to make sure the file system doesn't end up in an invalid state
                     // where the blob is removed but the entry is still there.
-                    let removed = blob.remove_entry_by_name(name)?;
+                    let removed = blob.remove_entry_by_name(name)
+                        .map_err(|err| match err {
+                            RemoveError::NodeDoesNotExist => FsError::NodeDoesNotExist
+                        })?;
                     blob.flush().await.map_err(|err| {
                         log::error!("Error flushing blob: {err:?}");
                         FsError::UnknownError
@@ -739,7 +790,7 @@ where
                         Err(FsError::NodeIsADirectory)
                     }
                     EntryType::File | EntryType::Symlink => {
-                        let remove_result = self.blobstore.remove_by_id(blob_id).await?;
+                        let remove_result = self.blobstore.remove_by_id(blob_id).await.map_err(FsError::internal_error)?;
                         match remove_result {
                             RemoveResult::SuccessfullyRemoved => Ok(()),
                             RemoveResult::NotRemovedBecauseItDoesntExist => {
@@ -752,7 +803,7 @@ where
                         }
                     }
                 }
-            })
+            }, FsError::internal_error)
         }).await
     }
 
@@ -787,7 +838,7 @@ where
                 let new_file_blob_id = match new_file_blob_id {
                     Ok(id) => id,
                     Err(err) => {
-                        blob.async_drop().await?;
+                        blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(err);
                     }
                 };
@@ -808,7 +859,14 @@ where
                             Gid::from(u32::from(gid)),
                             atime,
                             mtime,
-                        )?;
+                        )
+                        .map_err(|err| {
+                            log::error!("Error in add_entry_file: {err:?}");
+                            match err {
+                                AddError::NodeAlreadyExists => FsError::NodeAlreadyExists,
+                                AddError::ValidationFailed(_) => FsError::InvalidOperation,
+                            }
+                        })?;
 
                         // TODO Deduplicate this with the logic that looks up getattr for symlink nodes and creates NodeAttrs from them there
                         Ok(NodeAttrs {
@@ -829,7 +887,7 @@ where
                     Err(err) => {
                         log::error!("Error adding dir entry: {err:?}");
                         self.remove_just_created_blob(new_file_blob_id).await;
-                        blob.async_drop().await?;
+                        blob.async_drop().await.map_err(FsError::internal_error)?;
                         return Err(FsError::UnknownError);
                     }
                 };

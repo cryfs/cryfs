@@ -23,7 +23,6 @@ use cryfs_fsblobstore::{
     Gid, Mode, Uid,
     fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
 };
-use cryfs_rustfs::FsError;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::AbsolutePathBuf,
@@ -79,9 +78,9 @@ where
     B: BlobStore + Debug + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(&mut self) -> Result<()> {
         self.blob.async_drop().await
     }
 }
@@ -158,9 +157,9 @@ where
     B: BlobStore + Debug + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(&mut self) -> Result<()> {
         self.blob.async_drop().await
     }
 }
@@ -203,9 +202,9 @@ where
     B: BlobStore + Debug + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(&mut self) -> Result<()> {
         self.blob.async_drop().await
     }
 }

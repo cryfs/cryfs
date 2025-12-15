@@ -3,7 +3,6 @@ use std::{fmt::Debug, sync::Arc};
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult};
-use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
 use lockable::InfallibleUnwrap as _;
 
@@ -45,7 +44,9 @@ where
         f(&mut *guard).await
     }
 
-    pub async fn remove(mut this: AsyncDropGuard<Self>) -> FsResult<RemoveResult> {
+    pub async fn remove(
+        mut this: AsyncDropGuard<Self>,
+    ) -> Result<RemoveResult, Arc<anyhow::Error>> {
         loop {
             match this.loaded_blob.request_immediate_drop(
                 |blob| async move {
@@ -53,7 +54,7 @@ where
                         panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
                     };
                     let blob = AsyncDropTokioMutex::into_inner(blob);
-                    FsBlob::remove(blob).await.map_err(|error| FsError::internal_error(error))?;
+                    FsBlob::remove(blob).await?;
                     Ok(RemoveResult::SuccessfullyRemoved)
                 },
             ) {
@@ -62,10 +63,7 @@ where
                     this.async_drop().await?;
                     std::mem::drop(this);
                     // Wait until the blob is removed. If there are other readers, this will wait.
-                    return drop_result
-                        .await
-                        // TODO Weird to return Arc when FsError is cloneable
-                        .map_err(|err: Arc<FsError>| (*err).clone());
+                    return drop_result.await;
                 }
                 RequestImmediateDropResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry
@@ -83,7 +81,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         self.loaded_blob.async_drop().await.infallible_unwrap();

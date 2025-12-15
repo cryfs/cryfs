@@ -20,6 +20,16 @@ macro_rules! with_async_drop_2 {
         }
         .await
     };
+    ($value:ident, $f:block, $err_map:expr) => {
+        async {
+            // TODO Now that we use an async closure here, can we simplify some call sites? Or can we simplify this function here? Why two async?
+            let result = (async || $f)().await;
+            let mut value = $value;
+            value.async_drop().await.map_err($err_map)?;
+            result
+        }
+        .await
+    };
 }
 
 /// Variant of [with_async_drop_2] for types that return a `Never` error in their async_drop

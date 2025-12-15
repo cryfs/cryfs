@@ -1,7 +1,7 @@
 use binrw::{BinRead, BinWrite};
 use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, From, Into};
 
-// TODO Unify this with cryfs_rustfs types
+// TODO Unify this with cryfs_rustfs types? But don't reintroduce a fsblobstore->rustfs dependency, that would reintroduce a cryfs-check->rustfs dependency.
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, BinRead, BinWrite, From, Into)]
 pub struct Uid(u32);

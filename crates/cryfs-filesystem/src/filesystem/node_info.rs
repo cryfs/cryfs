@@ -6,8 +6,10 @@ use tokio::join;
 
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-use cryfs_fsblobstore::fsblobstore::BlobType;
-use cryfs_fsblobstore::fsblobstore::{DIR_LSTAT_SIZE, DirBlob, DirEntry, FileBlob, FsBlob};
+use cryfs_fsblobstore::fsblobstore::{
+    BlobType, DIR_LSTAT_SIZE, DirBlob, DirEntry, FileBlob, FsBlob, SetAttrError,
+    UpdateTimestampError,
+};
 use cryfs_fsblobstore::{Gid, Mode, Uid};
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, NodeAttrs, NumBytes};
 use cryfs_utils::{
@@ -197,7 +199,7 @@ where
                 Err(FsError::UnknownError)
             }
         };
-        blob.async_drop().await?;
+        blob.async_drop().await.map_err(FsError::internal_error)?;
         result
     }
 
@@ -287,11 +289,24 @@ where
                             .expect("Parent dir is not a directory");
                         let result = parent_dir
                             .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime)
-                            .map(|result| dir_entry_to_node_attrs(result, lstat_size));
+                            .map(|result| dir_entry_to_node_attrs(result, lstat_size))
+                            .map_err(|err| {
+                                log::error!("Error setting attributes of entry: {:?}", err);
+                                match err {
+                                    SetAttrError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                                    SetAttrError::ValidationFailed(_) => FsError::InvalidOperation,
+                                }
+                            });
                         // Even if other fields are `None` (i.e. we don't run chmod, chown, utime), we still need to update the mtime in a truncate operation
                         if size.is_some() {
                             // TODO Don't look up the entry by name twice when we have attrs and size.is_some(). Looking it up once should be enough.
-                            parent_dir.update_modification_timestamp_by_name(name)?;
+                            parent_dir
+                                .update_modification_timestamp_by_name(name)
+                                .map_err(|err| match err {
+                                    UpdateTimestampError::NodeDoesNotExist => {
+                                        FsError::NodeDoesNotExist
+                                    }
+                                })?;
                         }
                         result
                     })
@@ -306,16 +321,20 @@ where
         new_size: NumBytes,
     ) -> FsResult<()> {
         let blob = self.load_blob(blobstore).await?;
-        with_async_drop_2!(blob, {
-            blob.with_lock(async |mut blob| {
-                let file = Self::as_file_mut(&mut blob)?;
-                file.resize(new_size.into()).await.map_err(|err| {
-                    log::error!("Error resizing file blob: {err:?}");
-                    FsError::UnknownError
+        with_async_drop_2!(
+            blob,
+            {
+                blob.with_lock(async |mut blob| {
+                    let file = Self::as_file_mut(&mut blob)?;
+                    file.resize(new_size.into()).await.map_err(|err| {
+                        log::error!("Error resizing file blob: {err:?}");
+                        FsError::UnknownError
+                    })
                 })
-            })
-            .await
-        })
+                .await
+            },
+            FsError::internal_error
+        )
     }
 
     pub async fn concurrently_maybe_update_access_timestamp_in_parent<F>(
@@ -347,14 +366,25 @@ where
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> FsResult<()> {
         self._update_in_parent(|parent, blob_id| {
-            parent.maybe_update_access_timestamp_of_entry(blob_id, atime_update_behavior)
+            parent
+                .maybe_update_access_timestamp_of_entry(
+                    blob_id,
+                    AtimeUpdateBehaviorAdapter(atime_update_behavior),
+                )
+                .map_err(|err| match err {
+                    UpdateTimestampError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                })
         })
         .await
     }
 
     pub async fn update_modification_timestamp_in_parent(&self) -> FsResult<()> {
         self._update_in_parent(|parent, blob_id| {
-            parent.update_modification_timestamp_of_entry(blob_id)
+            parent
+                .update_modification_timestamp_of_entry(blob_id)
+                .map_err(|err| match err {
+                    UpdateTimestampError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                })
         })
         .await
     }
@@ -433,7 +463,10 @@ where
         match &mut self.inner {
             NodeInfoImpl::IsRootDir { .. } => (),
             NodeInfoImpl::IsNotRootDir { parent_blob, .. } => {
-                parent_blob.async_drop().await?;
+                parent_blob
+                    .async_drop()
+                    .await
+                    .map_err(FsError::internal_error)?;
             }
         }
         Ok(())
@@ -475,5 +508,31 @@ impl AncestorChain {
     pub fn ancestors_and_self(self) -> Box<[BlobId]> {
         // Return the stored ancestors
         self.ancestors_and_self
+    }
+}
+
+struct AtimeUpdateBehaviorAdapter(cryfs_rustfs::AtimeUpdateBehavior);
+
+impl cryfs_fsblobstore::fsblobstore::AtimeUpdateBehavior for AtimeUpdateBehaviorAdapter {
+    #[inline]
+    fn should_update_atime_on_file_or_symlink_read(
+        self,
+        old_atime: SystemTime,
+        old_mtime: SystemTime,
+        new_atime: SystemTime,
+    ) -> bool {
+        self.0
+            .should_update_atime_on_file_or_symlink_read(old_atime, old_mtime, new_atime)
+    }
+
+    #[inline]
+    fn should_update_atime_on_directory_read(
+        self,
+        old_atime: SystemTime,
+        old_mtime: SystemTime,
+        new_atime: SystemTime,
+    ) -> bool {
+        self.0
+            .should_update_atime_on_directory_read(old_atime, old_mtime, new_atime)
     }
 }

@@ -210,8 +210,7 @@ where
     ) -> LoadingOrLoaded<K, V, E>
     where
         F: Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
-        I: AsyncDrop + Debug + Send,
-        <I as AsyncDrop>::Error: std::error::Error + Send + Sync + 'static,
+        I: AsyncDrop<Error = anyhow::Error> + Debug + Send,
     {
         loop {
             let entry_state =
@@ -329,8 +328,7 @@ where
     where
         F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send,
         R: Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
-        I: AsyncDrop + Debug + Send,
-        <I as AsyncDrop>::Error: std::error::Error + Send + Sync + 's,
+        I: AsyncDrop<Error = anyhow::Error> + Debug + Send,
     {
         let mut entries = self.inner.entries.lock().unwrap();
         match entries.entry(key.clone()) {

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use cryfs_rustfs::FsError;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -103,12 +102,10 @@ where
     B: BlobStore + Debug,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blob.async_drop().await.map_err(|err| {
-            FsError::internal_error(err.context("Error in SymlinkBlob::async_drop_impl"))
-        })?;
+        self.blob.async_drop().await?;
         Ok(())
     }
 }

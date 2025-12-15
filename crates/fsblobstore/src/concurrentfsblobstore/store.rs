@@ -1,7 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
-use cryfs_rustfs::{FsError, FsResult};
 use std::{fmt::Debug, sync::Arc};
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
@@ -132,7 +131,7 @@ where
         self.blobstore.logical_block_size_bytes()
     }
 
-    pub async fn remove_by_id(&self, id: &BlobId) -> FsResult<RemoveResult> {
+    pub async fn remove_by_id(&self, id: &BlobId) -> anyhow::Result<RemoveResult> {
         loop {
             match self.loaded_blobs.request_removal(*id, &self.blobstore) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {
@@ -172,14 +171,11 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
         // First drop all loaded blobs
-        self.loaded_blobs
-            .async_drop()
-            .await
-            .map_err(FsError::internal_error)?;
+        self.loaded_blobs.async_drop().await?;
 
         // Then drop the underlying blobstore
         self.blobstore.async_drop().await?;

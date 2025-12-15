@@ -1,6 +1,5 @@
 use anyhow::{Result, bail};
 use async_trait::async_trait;
-use cryfs_rustfs::{FsError, FsResult};
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
@@ -24,7 +23,10 @@ mod symlink_blob;
 pub use symlink_blob::SymlinkBlob;
 
 mod dir_entries;
-pub use dir_entries::{AddOrOverwriteError, DirEntry, EntryType, RenameError};
+pub use dir_entries::{
+    AddError, AddOrOverwriteError, AtimeUpdateBehavior, DirEntry, EntryType, RemoveError,
+    RenameError, SetAttrError, UpdateTimestampError,
+};
 
 // TODO Now that FileBlob, DirBlob and SymlinkBlob are only ever returned as references,
 //      we can probably store BaseBlob directly in here and just have FileBlob, DirBlob and SymlinkBlob
@@ -184,9 +186,9 @@ where
     B: BlobStore + Debug + 'static,
     B::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> FsResult<()> {
+    async fn async_drop_impl(&mut self) -> Result<()> {
         match &mut self {
             Self::File(blob) => {
                 blob.async_drop().await?;

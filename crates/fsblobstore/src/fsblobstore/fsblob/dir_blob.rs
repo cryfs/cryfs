@@ -8,14 +8,18 @@ use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::{
     fsblobstore::{
-        RenameError,
-        fsblob::dir_entries::{AddOrOverwriteError, SerializeIfDirtyResult},
+        RemoveError, RenameError,
+        fsblob::{
+            AddError, UpdateTimestampError,
+            dir_entries::{
+                AddOrOverwriteError, AtimeUpdateBehavior, SerializeIfDirtyResult, SetAttrError,
+            },
+        },
     },
     utils::fs_types::{Gid, Mode, Uid},
 };
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_blockstore::BlockId;
-use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::{PathComponent, PathComponentBuf},
@@ -152,7 +156,10 @@ where
             .await
     }
 
-    pub fn update_modification_timestamp_of_entry(&mut self, blob_id: &BlobId) -> FsResult<()> {
+    pub fn update_modification_timestamp_of_entry(
+        &mut self,
+        blob_id: &BlobId,
+    ) -> Result<(), UpdateTimestampError> {
         self.entries.update_modification_timestamp(blob_id)
     }
 
@@ -164,28 +171,28 @@ where
         gid: Option<Gid>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
-    ) -> FsResult<&'s DirEntry> {
+    ) -> Result<&'s DirEntry, SetAttrError> {
         self.entries
             .set_attr_by_name(name, mode, uid, gid, atime, mtime)
     }
 
-    pub fn update_modification_timestamp_by_name(&mut self, name: &PathComponent) -> FsResult<()> {
+    pub fn update_modification_timestamp_by_name(
+        &mut self,
+        name: &PathComponent,
+    ) -> Result<(), UpdateTimestampError> {
         self.entries.update_modification_timestamp_by_name(name)
     }
 
     pub fn maybe_update_access_timestamp_of_entry(
         &mut self,
         blob_id: &BlobId,
-        atime_update_behavior: AtimeUpdateBehavior,
-    ) -> FsResult<()> {
+        atime_update_behavior: impl AtimeUpdateBehavior,
+    ) -> Result<(), UpdateTimestampError> {
         self.entries
             .maybe_update_access_timestamp(blob_id, atime_update_behavior)
     }
 
-    pub fn remove_entry_by_name(
-        &mut self,
-        name: &PathComponent,
-    ) -> Result<DirEntry, cryfs_rustfs::FsError> {
+    pub fn remove_entry_by_name(&mut self, name: &PathComponent) -> Result<DirEntry, RemoveError> {
         self.entries.remove_by_name(name)
     }
 
@@ -202,7 +209,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> FsResult<()> {
+    ) -> Result<(), AddError> {
         self.entries.add(
             name,
             id,
@@ -224,7 +231,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> FsResult<()> {
+    ) -> Result<(), AddError> {
         self.entries.add(
             name,
             id,
@@ -245,7 +252,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> FsResult<()> {
+    ) -> Result<(), AddError> {
         self.entries.add(
             name,
             id,
@@ -336,18 +343,11 @@ where
     B: BlobStore + Debug,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
-    type Error = FsError;
+    type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.writeback().await.map_err(|err| {
-            FsError::internal_error(
-                // TODO Instead of map_err, have flush return FsError
-                err.context("Error in DirBlob::async_drop_impl"),
-            )
-        })?;
-        self.blob.async_drop().await.map_err(|err| {
-            FsError::internal_error(err.context("Error in DirBlob::async_drop_impl"))
-        })?;
+    async fn async_drop_impl(&mut self) -> Result<()> {
+        self.writeback().await?;
+        self.blob.async_drop().await?;
         Ok(())
     }
 }

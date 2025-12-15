@@ -1,7 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use cryfs_concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
-use cryfs_rustfs::{FsError, FsResult};
 use futures::future::{BoxFuture, Shared};
 use lockable::InfallibleUnwrap as _;
 use std::fmt::Debug;
@@ -112,9 +111,7 @@ where
             .request_immediate_drop(blob_id, move |blob| async move {
                 if let Some(blob) = blob {
                     let blob = AsyncDropTokioMutex::into_inner(blob);
-                    let remove_result = FsBlob::remove(blob)
-                        .await
-                        .map_err(|error| FsError::internal_error(error));
+                    let remove_result = FsBlob::remove(blob).await;
                     blobstore.async_drop().await?;
                     remove_result?;
                     Ok(RemoveResult::SuccessfullyRemoved)
@@ -122,10 +119,7 @@ where
                     // The blob wasn't loaded, we can just remove it from the base store
                     // We're doing this within the drop handler of `request_immediate_drop()`, because that gives us
                     // exclusive access and blocks other tasks from loading this blob.
-                    let result = blobstore
-                        .remove_by_id(&blob_id)
-                        .await
-                        .map_err(|error| FsError::internal_error(error));
+                    let result = blobstore.remove_by_id(&blob_id).await;
                     blobstore.async_drop().await?;
                     result
                 }
@@ -163,7 +157,7 @@ pub enum RequestRemovalResult {
         /// on_removed will be completed once the entry has been fully dropped
         /// The caller is expected to drive this future to completion,
         /// otherwise we may be stuck forever waiting for the drop to complete.
-        on_removed: BoxFuture<'static, FsResult<RemoveResult>>,
+        on_removed: BoxFuture<'static, Result<RemoveResult>>,
     },
     /// Removal failed because the entry is already in dropping state.
     AlreadyDropping {

@@ -1194,7 +1194,6 @@ dependencies = [
  "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-concurrent-store",
- "cryfs-rustfs",
  "cryfs-utils",
  "derive_more",
  "futures",

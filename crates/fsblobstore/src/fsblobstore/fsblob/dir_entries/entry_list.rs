@@ -7,10 +7,10 @@ use std::time::SystemTime;
 
 use super::super::base_blob::BaseBlob;
 use super::entry::{DirEntry, EntryType};
+use crate::fsblobstore::fsblob::dir_entries::AtimeUpdateBehavior;
 use crate::fsblobstore::fsblob::dir_entries::entry::ValidationFailed;
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult};
 use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
 #[derive(Debug)]
@@ -183,9 +183,9 @@ impl DirEntryList {
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-    ) -> FsResult<()> {
+    ) -> Result<(), AddError> {
         if self.get_by_name(&name).is_some() {
-            return Err(FsError::NodeAlreadyExists);
+            return Err(AddError::NodeAlreadyExists);
         }
         self._add(
             DirEntry::new(
@@ -199,10 +199,7 @@ impl DirEntryList {
                 last_modification_time,
                 SystemTime::now(),
             )
-            .map_err(|err| {
-                log::error!("DirEntry validation failed: {:?}", err);
-                FsError::InvalidOperation
-            })?,
+            .map_err(AddError::ValidationFailed)?,
         );
         Ok(())
     }
@@ -320,26 +317,23 @@ impl DirEntryList {
         gid: Option<Gid>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
-    ) -> FsResult<&'s DirEntry> {
+    ) -> Result<&'s DirEntry, SetAttrError> {
         let Some(entry) = self.get_by_name_mut(name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
+            return Err(SetAttrError::NodeDoesNotExist);
         };
         entry
             .set_attr(mode, uid, gid, atime, mtime)
-            .map_err(|err| {
-                log::error!("DirEntry validation failed: {:?}", err);
-                FsError::InvalidOperation
-            })?;
+            .map_err(SetAttrError::ValidationFailed)?;
         Ok(entry)
     }
 
     pub fn maybe_update_access_timestamp(
         &mut self,
         blob_id: &BlobId,
-        atime_update_behavior: AtimeUpdateBehavior,
-    ) -> FsResult<()> {
+        atime_update_behavior: impl AtimeUpdateBehavior,
+    ) -> Result<(), UpdateTimestampError> {
         let Some(index) = self._get_index_by_id(blob_id) else {
-            return Err(FsError::NodeDoesNotExist);
+            return Err(UpdateTimestampError::NodeDoesNotExist);
         };
         let entry = &self.entries[index];
         let last_access_time = entry.last_access_time();
@@ -367,25 +361,31 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn update_modification_timestamp(&mut self, blob_id: &BlobId) -> FsResult<()> {
+    pub fn update_modification_timestamp(
+        &mut self,
+        blob_id: &BlobId,
+    ) -> Result<(), UpdateTimestampError> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
-            return Err(FsError::NodeDoesNotExist);
+            return Err(UpdateTimestampError::NodeDoesNotExist);
         };
         entry.update_modification_time();
         Ok(())
     }
 
-    pub fn update_modification_timestamp_by_name(&mut self, name: &PathComponent) -> FsResult<()> {
+    pub fn update_modification_timestamp_by_name(
+        &mut self,
+        name: &PathComponent,
+    ) -> Result<(), UpdateTimestampError> {
         let Some(entry) = self.get_by_name_mut(name) else {
-            return Err(FsError::NodeDoesNotExist);
+            return Err(UpdateTimestampError::NodeDoesNotExist);
         };
         entry.update_modification_time();
         Ok(())
     }
 
-    pub fn remove_by_name(&mut self, name: &PathComponent) -> FsResult<DirEntry> {
+    pub fn remove_by_name(&mut self, name: &PathComponent) -> Result<DirEntry, RemoveError> {
         let Some((index, _entry)) = self._get_by_name_with_index(name) else {
-            return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
+            return Err(RemoveError::NodeDoesNotExist);
         };
         self.dirty = true;
         let removed = self.entries.remove(index);
@@ -416,6 +416,28 @@ pub enum SerializeIfDirtyResult {
 pub enum AddOrOverwriteError<E> {
     ValidationFailed(ValidationFailed),
     OnOverwriteError(E),
+}
+
+#[derive(Debug, Display, Error)]
+pub enum AddError {
+    NodeAlreadyExists,
+    ValidationFailed(ValidationFailed),
+}
+
+#[derive(Debug, Display, Error)]
+pub enum SetAttrError {
+    NodeDoesNotExist,
+    ValidationFailed(ValidationFailed),
+}
+
+#[derive(Debug, Display, Error)]
+pub enum UpdateTimestampError {
+    NodeDoesNotExist,
+}
+
+#[derive(Debug, Display, Error)]
+pub enum RemoveError {
+    NodeDoesNotExist,
 }
 
 #[derive(Debug, Display, Error)]
