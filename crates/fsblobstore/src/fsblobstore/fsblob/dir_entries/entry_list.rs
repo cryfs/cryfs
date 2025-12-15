@@ -312,28 +312,6 @@ impl DirEntryList {
         Ok(())
     }
 
-    // TODO If we add hard links, we can have multiple entries with the same blob id.
-    //      This function should be removed and call sites should use [Self::rename_by_name] instead.
-    pub async fn rename<E>(
-        &mut self,
-        blob_id: &BlobId,
-        new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
-    ) -> Result<(), RenameError<E>> {
-        let Some(old_entry) = self.get_by_id(blob_id) else {
-            return Err(RenameError::NodeDoesNotExist);
-        };
-        let old_name = old_entry.name().to_owned();
-        // TODO rename_by_name looks up the entry again. We could optimize that
-        self.rename_by_name(
-            &old_name,
-            new_name,
-            // TODO Why does future::Ready not work here?
-            async move |st, dt, db| on_overwritten(st, dt, db),
-        )
-        .await
-    }
-
     pub fn set_attr_by_name<'s>(
         &'s mut self,
         name: &PathComponent,

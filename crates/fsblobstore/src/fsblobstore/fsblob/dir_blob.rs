@@ -140,15 +140,6 @@ where
         self.entries.get_by_name_mut(name)
     }
 
-    pub async fn rename_entry<E>(
-        &mut self,
-        blob_id: &BlobId,
-        new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> Result<(), E>,
-    ) -> Result<(), RenameError<E>> {
-        self.entries.rename(blob_id, new_name, on_overwritten).await
-    }
-
     pub async fn rename_entry_by_name<E>(
         &mut self,
         old_name: &PathComponent,
