@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use cryfs_blobstore::BlobId;
 use cryfs_blockstore::BlockStore;
-use cryfs_filesystem::filesystem::fsblobstore::{BlobType, EntryType, FsBlob};
+use cryfs_fsblobstore::fsblobstore::{BlobType, EntryType, FsBlob};
 use cryfs_utils::{async_drop::AsyncDrop, peekable::PeekableExt};
 
 use super::{

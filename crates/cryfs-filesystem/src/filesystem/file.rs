@@ -1,10 +1,9 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::filesystem::concurrentfsblobstore::ConcurrentFsBlobStore;
-
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
 use cryfs_blobstore::BlobStore;
+use cryfs_fsblobstore::concurrentfsblobstore::ConcurrentFsBlobStore;
 use cryfs_rustfs::{FsError, FsResult, OpenInFlags, object_based_api::File};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 

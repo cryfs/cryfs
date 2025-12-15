@@ -4,9 +4,7 @@ use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
-use crate::filesystem::{
-    concurrentfsblobstore::loaded_blobs::LoadedBlobGuard, fsblobstore::BlobType,
-};
+use crate::{concurrentfsblobstore::loaded_blobs::LoadedBlobGuard, fsblobstore::BlobType};
 
 #[derive(Debug)]
 pub struct ConcurrentFsBlob<B>
@@ -37,7 +35,7 @@ where
 
     pub async fn with_lock<R, F>(&self, f: F) -> R
     where
-        F: AsyncFnOnce(&mut crate::filesystem::fsblobstore::FsBlob<B>) -> R,
+        F: AsyncFnOnce(&mut crate::fsblobstore::FsBlob<B>) -> R,
     {
         self.blob.with_lock(f).await
     }
@@ -46,10 +44,7 @@ where
     /// This is deadlock-free because it enforces an order of locking based on the blob id.
     pub async fn with_locks_2<R, F>(blob1: &Self, blob2: &Self, f: F) -> R
     where
-        F: AsyncFnOnce(
-            &mut crate::filesystem::fsblobstore::FsBlob<B>,
-            &mut crate::filesystem::fsblobstore::FsBlob<B>,
-        ) -> R,
+        F: AsyncFnOnce(&mut crate::fsblobstore::FsBlob<B>, &mut crate::fsblobstore::FsBlob<B>) -> R,
     {
         assert!(
             blob1.blob_id() != blob2.blob_id(),

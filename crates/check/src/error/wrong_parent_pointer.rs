@@ -1,4 +1,4 @@
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::BlobType;
 use std::collections::BTreeSet;
 use std::fmt::{Debug, Display, Formatter};
 use thiserror::Error;
@@ -42,7 +42,7 @@ impl Display for WrongParentPointerError {
 #[cfg(test)]
 mod tests {
     use console::strip_ansi_codes;
-    use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+    use cryfs_fsblobstore::fsblobstore::BlobType;
     use cryfs_utils::path::AbsolutePathBuf;
 
     use super::*;

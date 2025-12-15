@@ -7,7 +7,7 @@ use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
 use lockable::InfallibleUnwrap as _;
 
-use crate::filesystem::fsblobstore::FsBlob;
+use crate::fsblobstore::FsBlob;
 
 #[derive(Debug)]
 pub struct LoadedBlobGuard<B>

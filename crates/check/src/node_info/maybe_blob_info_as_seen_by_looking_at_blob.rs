@@ -1,5 +1,5 @@
 use cryfs_blobstore::BlobId;
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::BlobType;
 
 use super::BlobInfoAsSeenByLookingAtBlob;
 

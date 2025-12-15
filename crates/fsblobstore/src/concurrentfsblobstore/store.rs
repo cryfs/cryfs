@@ -10,7 +10,7 @@ use cryfs_utils::{
     with_async_drop_2,
 };
 
-use crate::filesystem::{
+use crate::{
     concurrentfsblobstore::{
         ConcurrentFsBlob,
         loaded_blobs::{LoadedBlobs, RequestRemovalResult},

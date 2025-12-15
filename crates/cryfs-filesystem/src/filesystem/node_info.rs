@@ -4,12 +4,12 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::join;
 
-use super::fsblobstore::{DIR_LSTAT_SIZE, DirBlob, DirEntry, FileBlob, FsBlob};
-use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-use crate::filesystem::fsblobstore::BlobType;
-use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, Mode, NodeAttrs, NumBytes};
+use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::{DIR_LSTAT_SIZE, DirBlob, DirEntry, FileBlob, FsBlob};
+use cryfs_fsblobstore::{Gid, Mode, Uid};
+use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, NodeAttrs, NumBytes};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::PathComponentBuf,
@@ -251,7 +251,7 @@ where
     pub async fn setattr(
         &self,
         blobstore: &ConcurrentFsBlobStore<B>,
-        mode: Option<Mode>,
+        mode: Option<cryfs_rustfs::Mode>,
         uid: Option<cryfs_rustfs::Uid>,
         gid: Option<cryfs_rustfs::Gid>,
         size: Option<NumBytes>,
@@ -276,9 +276,9 @@ where
                 parent_blob, name, ..
             } => {
                 // TODO No Mode/Uid/Gid conversion
-                let mode = mode.map(|mode| fs_types::Mode::from(u32::from(mode)));
-                let uid = uid.map(|uid| fs_types::Uid::from(u32::from(uid)));
-                let gid = gid.map(|gid| fs_types::Gid::from(u32::from(gid)));
+                let mode = mode.map(|mode| Mode::from(u32::from(mode)));
+                let uid = uid.map(|uid| Uid::from(u32::from(uid)));
+                let gid = gid.map(|gid| Gid::from(u32::from(gid)));
                 let lstat_size = self.load_lstat_size(blobstore).await?;
                 parent_blob
                     .with_lock(async |parent_blob| {

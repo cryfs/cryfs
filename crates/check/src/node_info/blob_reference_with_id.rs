@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug, Display};
 
 use cryfs_blobstore::BlobId;
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::BlobType;
 
 use crate::node_info::BlobReference;
 

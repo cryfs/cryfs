@@ -1,14 +1,12 @@
 use async_trait::async_trait;
 use std::fmt::Debug;
 
-use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-
-use super::{
-    device::CryDevice,
+use cryfs_fsblobstore::{
+    concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore},
     fsblobstore::{FsBlob, SymlinkBlob},
-    node::CryNode,
-    node_info::NodeInfo,
 };
+
+use super::{device::CryDevice, node::CryNode, node_info::NodeInfo};
 use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{FsError, FsResult, object_based_api::Symlink};
 use cryfs_utils::{

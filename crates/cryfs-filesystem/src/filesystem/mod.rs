@@ -1,7 +1,3 @@
-// TODO Make private
-pub mod concurrentfsblobstore;
-pub mod fsblobstore;
-
 mod device;
 mod dir;
 mod file;

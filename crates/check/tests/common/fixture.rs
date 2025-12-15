@@ -12,9 +12,9 @@ use cryfs_check::{
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
 use cryfs_filesystem::{
     config::{CommandLineFlags, ConfigLoadResult, FixedPasswordProvider},
-    filesystem::fsblobstore::{BlobType, FsBlob, FsBlobStore},
     localstate::LocalStateDir,
 };
+use cryfs_fsblobstore::fsblobstore::{BlobType, FsBlob, FsBlobStore};
 use cryfs_utils::path::AbsolutePathBuf;
 use cryfs_utils::{
     async_drop::{AsyncDropGuard, SyncDrop},

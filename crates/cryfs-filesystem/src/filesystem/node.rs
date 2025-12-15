@@ -9,12 +9,10 @@ use std::time::SystemTime;
 use super::CryDevice;
 use super::node_info::NodeInfo;
 use super::{dir::CryDir, file::CryFile, symlink::CrySymlink};
-use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-use crate::filesystem::fsblobstore::BlobType;
 use cryfs_blobstore::BlobStore;
-use cryfs_rustfs::{
-    FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Node,
-};
+use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::fsblobstore::BlobType;
+use cryfs_rustfs::{FsError, FsResult, NodeAttrs, NumBytes, object_based_api::Node};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
 pub struct CryNode<B>
@@ -131,9 +129,9 @@ where
 
     async fn setattr(
         &self,
-        mode: Option<Mode>,
-        uid: Option<Uid>,
-        gid: Option<Gid>,
+        mode: Option<cryfs_rustfs::Mode>,
+        uid: Option<cryfs_rustfs::Uid>,
+        gid: Option<cryfs_rustfs::Gid>,
         size: Option<NumBytes>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,

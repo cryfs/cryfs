@@ -8,9 +8,9 @@ use std::time::SystemTime;
 
 use cryfs_blobstore::{BlobId, BlobOnBlocks, DataTree};
 use cryfs_check::{CorruptedError, NodeInfoAsSeenByLookingAtNode, NodeUnreferencedError};
-use cryfs_filesystem::{
-    filesystem::fsblobstore::{FlushBehavior, FsBlob},
-    utils::fs_types::{Gid, Uid},
+use cryfs_fsblobstore::{
+    Gid, Uid,
+    fsblobstore::{FlushBehavior, FsBlob},
 };
 use cryfs_utils::path::AbsolutePathBuf;
 use cryfs_utils::{

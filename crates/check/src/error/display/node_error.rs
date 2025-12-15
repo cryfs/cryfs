@@ -6,7 +6,7 @@ use crate::{
     NodeAndBlobReference,
 };
 use cryfs_blockstore::BlockId;
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::BlobType;
 
 use super::ErrorTitle;
 

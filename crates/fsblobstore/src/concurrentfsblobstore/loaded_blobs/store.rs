@@ -7,8 +7,8 @@ use lockable::InfallibleUnwrap as _;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::filesystem::concurrentfsblobstore::loaded_blobs::guard::LoadedBlobGuard;
-use crate::filesystem::fsblobstore::{FsBlob, FsBlobStore};
+use crate::concurrentfsblobstore::loaded_blobs::guard::LoadedBlobGuard;
+use crate::fsblobstore::{FsBlob, FsBlobStore};
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex};
 

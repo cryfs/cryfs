@@ -6,7 +6,7 @@ use std::iter;
 use cryfs_check::{
     BlobReferenceWithId, BlobUnreadableError, NodeAndBlobReference, NodeMissingError,
 };
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::BlobType;
 use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
 mod common;

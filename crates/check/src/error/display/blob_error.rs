@@ -2,7 +2,7 @@ use console::style;
 use std::fmt::{self, Formatter};
 
 use cryfs_blobstore::BlobId;
-use cryfs_filesystem::filesystem::fsblobstore::BlobType;
+use cryfs_fsblobstore::fsblobstore::BlobType;
 
 use super::ErrorTitle;
 use crate::{BlobReference, MaybeBlobInfoAsSeenByLookingAtBlob};

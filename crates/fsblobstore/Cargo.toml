@@ -1,0 +1,32 @@
+[package]
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+name = "cryfs-fsblobstore"
+readme.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+binary-layout.workspace = true
+binrw.workspace = true
+byte-unit.workspace = true
+cryfs-blockstore = { path = "../blockstore" }
+cryfs-blobstore = { path = "../blobstore" }
+cryfs-concurrent-store = { path = "../concurrent-store" }
+cryfs-rustfs = { path = "../rustfs" }
+cryfs-utils = { path = "../utils" }
+derive_more.workspace = true
+futures.workspace = true
+lockable.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+
+[features]
+default = []
+testutils = ["cryfs-blobstore/testutils"]

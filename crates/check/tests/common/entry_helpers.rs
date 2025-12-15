@@ -18,10 +18,10 @@ use cryfs_check::{
     BlobReference, BlobReferenceWithId, CorruptedError, NodeInfoAsSeenByLookingAtNode,
     NodeUnreferencedError,
 };
-use cryfs_filesystem::filesystem::fsblobstore::{BlobType, FlushBehavior};
-use cryfs_filesystem::{
-    filesystem::fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
-    utils::fs_types::{Gid, Mode, Uid},
+use cryfs_fsblobstore::fsblobstore::{BlobType, FlushBehavior};
+use cryfs_fsblobstore::{
+    Gid, Mode, Uid,
+    fsblobstore::{DirBlob, FileBlob, FsBlob, FsBlobStore, SymlinkBlob},
 };
 use cryfs_rustfs::FsError;
 use cryfs_utils::{

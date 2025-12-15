@@ -14,7 +14,7 @@ use cryfs_utils::{
 };
 
 use super::node_info::NodeInfo;
-use crate::filesystem::{
+use cryfs_fsblobstore::{
     concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore},
     fsblobstore::{FileBlob, FsBlob},
 };

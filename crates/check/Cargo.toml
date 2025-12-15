@@ -24,6 +24,7 @@ cryfs-blobstore = { path = "../blobstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-crypto = { path = "../crypto" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
+cryfs-fsblobstore = { path = "../fsblobstore" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 # TODO cryfs-rustfs should not be needed with fuser, or actually at all
@@ -40,6 +41,7 @@ itertools.workspace = true
 [dev-dependencies]
 tempdir.workspace = true
 cryfs-filesystem = { path = "../cryfs-filesystem", features = ["testutils"] }
+cryfs-fsblobstore = { path = "../fsblobstore", features = ["testutils"] }
 cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
 itertools.workspace = true
 rand.workspace = true

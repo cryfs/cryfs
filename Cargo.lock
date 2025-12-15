@@ -994,6 +994,7 @@ dependencies = [
  "cryfs-cli-utils",
  "cryfs-crypto",
  "cryfs-filesystem",
+ "cryfs-fsblobstore",
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
@@ -1160,6 +1161,7 @@ dependencies = [
  "cryfs-blockstore",
  "cryfs-concurrent-store",
  "cryfs-crypto",
+ "cryfs-fsblobstore",
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
@@ -1178,6 +1180,26 @@ dependencies = [
  "serde_with",
  "thiserror 2.0.17",
  "tokio",
+]
+
+[[package]]
+name = "cryfs-fsblobstore"
+version = "2.0.0-alpha3"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "binary-layout",
+ "binrw",
+ "byte-unit",
+ "cryfs-blobstore",
+ "cryfs-blockstore",
+ "cryfs-concurrent-store",
+ "cryfs-rustfs",
+ "cryfs-utils",
+ "derive_more",
+ "futures",
+ "lockable",
+ "log",
 ]
 
 [[package]]

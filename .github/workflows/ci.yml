@@ -21,7 +21,7 @@ jobs:
           - ubuntu-22.04
           - ubuntu-24.04
         # TODO `command: ["test"]` to run tests of all crates. But for some reason, that deadlocks at the moment.
-        command: ["test -p cryfs-blobstore -p cryfs-blockstore -p cryfs-cli-utils -p cryfs-concurrent-store -p cryfs-cli -p cryfs-filesystem -p cryfs-runner -p cryfs-version -p cryfs-crypto -p cryfs-rustfs -p tempproject -p cryfs-utils"]
+        command: ["test -p cryfs-blobstore -p cryfs-blockstore -p cryfs-cli-utils -p cryfs-concurrent-store -p cryfs-cli -p cryfs-filesystem -p cryfs-runner -p cryfs-version -p cryfs-crypto -p cryfs-rustfs -p fsblobstore -p tempproject -p cryfs-utils"]
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         features: ["", "--no-default-features"]
@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "crypto", "e2e-perf-tests", "rustfs", "tempproject", "utils"]
+        crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "crypto", "e2e-perf-tests", "fsblobstore", "rustfs", "tempproject", "utils"]
         targets: ["", "--tests", "--examples", "--benches"]
         features: ["", "--no-default-features", "--all-features"]
         profile: ["", "--release"]

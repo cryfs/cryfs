@@ -22,8 +22,8 @@ use super::{
     dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
     symlink::CrySymlink,
 };
-use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
-use crate::filesystem::fsblobstore::{BlobType, EntryType, FsBlob, FsBlobStore};
+use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::fsblobstore::{BlobType, EntryType, FsBlob, FsBlobStore};
 
 pub struct CryDevice<B>
 where

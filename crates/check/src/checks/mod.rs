@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use cryfs_blobstore::{BlobId, BlobStoreOnBlocks, DataNode};
 use cryfs_blockstore::{BlockId, BlockStore};
-use cryfs_filesystem::filesystem::fsblobstore::FsBlob;
+use cryfs_fsblobstore::fsblobstore::FsBlob;
 
 use super::assertion::Assertion;
 use super::error::{CheckError, CorruptedError};

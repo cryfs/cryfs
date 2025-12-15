@@ -4,19 +4,17 @@ use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use super::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
 use super::{
     device::CryDevice, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
     symlink::CrySymlink,
 };
-use crate::filesystem::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
 use crate::filesystem::device::check_were_not_overwriting_nonempty_dir;
-use crate::filesystem::fsblobstore::FlushBehavior;
-use crate::utils::fs_types;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
-use cryfs_rustfs::{
-    DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, Uid, object_based_api::Dir,
-};
+use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::fsblobstore::FlushBehavior;
+use cryfs_fsblobstore::fsblobstore::{BlobType, DirBlob, EntryType, FsBlob, MODE_NEW_SYMLINK};
+use cryfs_fsblobstore::{Gid, Mode, Uid};
+use cryfs_rustfs::{DirEntry, FsError, FsResult, NodeAttrs, NodeKind, object_based_api::Dir};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     path::PathComponent,
@@ -432,9 +430,9 @@ where
     async fn create_child_dir(
         &self,
         name: &PathComponent,
-        mode: Mode,
-        uid: Uid,
-        gid: Gid,
+        mode: cryfs_rustfs::Mode,
+        uid: cryfs_rustfs::Uid,
+        gid: cryfs_rustfs::Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryDir<'_, B>>)> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(async || {
@@ -472,9 +470,9 @@ where
                             name.clone(),
                             new_dir_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                            fs_types::Mode::from(u32::from(mode)),
-                            fs_types::Uid::from(u32::from(uid)),
-                            fs_types::Gid::from(u32::from(gid)),
+                            Mode::from(u32::from(mode)),
+                            Uid::from(u32::from(uid)),
+                            Gid::from(u32::from(gid)),
                             atime,
                             mtime,
                         )?;
@@ -609,8 +607,8 @@ where
         &self,
         name: &PathComponent,
         target: &str,
-        uid: Uid,
-        gid: Gid,
+        uid: cryfs_rustfs::Uid,
+        gid: cryfs_rustfs::Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CrySymlink<B>>)> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(async || {
@@ -655,8 +653,8 @@ where
                             name.clone(),
                             new_symlink_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                            fs_types::Uid::from(u32::from(uid)),
-                            fs_types::Gid::from(u32::from(gid)),
+                            Uid::from(u32::from(uid)),
+                            Gid::from(u32::from(gid)),
                             atime,
                             mtime,
                         )?;
@@ -746,9 +744,9 @@ where
     async fn create_and_open_file(
         &self,
         name: &PathComponent,
-        mode: Mode,
-        uid: Uid,
-        gid: Gid,
+        mode: cryfs_rustfs::Mode,
+        uid: cryfs_rustfs::Uid,
+        gid: cryfs_rustfs::Gid,
         _flags: OpenInFlags, // TODO Use flags
     ) -> FsResult<(
         NodeAttrs,
@@ -790,9 +788,9 @@ where
                             name.to_owned(),
                             new_file_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
-                            fs_types::Mode::from(u32::from(mode)),
-                            fs_types::Uid::from(u32::from(uid)),
-                            fs_types::Gid::from(u32::from(gid)),
+                            Mode::from(u32::from(mode)),
+                            Uid::from(u32::from(uid)),
+                            Gid::from(u32::from(gid)),
                             atime,
                             mtime,
                         )?;

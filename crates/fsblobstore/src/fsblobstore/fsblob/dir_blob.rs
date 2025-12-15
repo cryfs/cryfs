@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use super::base_blob::BaseBlob;
 use super::layout::BlobType;
 use crate::{
-    filesystem::fsblobstore::fsblob::dir_entries::SerializeIfDirtyResult,
+    fsblobstore::fsblob::dir_entries::SerializeIfDirtyResult,
     utils::fs_types::{Gid, Mode, Uid},
 };
 use cryfs_blobstore::{BlobId, BlobStore};
