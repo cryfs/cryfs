@@ -22,16 +22,16 @@ use super::dir_entries::{DirEntry, DirEntryList, EntryType};
 
 pub const DIR_LSTAT_SIZE: u64 = 4096;
 pub const MODE_NEW_SYMLINK: Mode = Mode::zero()
-    .add_symlink_flag()
-    .add_user_read_flag()
-    .add_user_write_flag()
-    .add_user_exec_flag()
-    .add_group_read_flag()
-    .add_group_write_flag()
-    .add_group_exec_flag()
-    .add_other_read_flag()
-    .add_other_write_flag()
-    .add_other_exec_flag();
+    .with_symlink_flag()
+    .with_user_read_flag()
+    .with_user_write_flag()
+    .with_user_exec_flag()
+    .with_group_read_flag()
+    .with_group_write_flag()
+    .with_group_exec_flag()
+    .with_other_read_flag()
+    .with_other_write_flag()
+    .with_other_exec_flag();
 
 pub struct DirBlob<B>
 where

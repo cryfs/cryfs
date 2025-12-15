@@ -64,10 +64,10 @@ impl DirEntry {
         last_modification_time: SystemTime,
         last_metadata_change_time: SystemTime,
     ) -> FsResult<Self> {
-        match entry_type {
-            EntryType::File => mode.add_file_flag(),
-            EntryType::Dir => mode.add_dir_flag(),
-            EntryType::Symlink => mode.add_symlink_flag(),
+        let mode = match entry_type {
+            EntryType::File => mode.with_file_flag(),
+            EntryType::Dir => mode.with_dir_flag(),
+            EntryType::Symlink => mode.with_symlink_flag(),
         };
         let result = Self {
             inner: DirEntryImpl {

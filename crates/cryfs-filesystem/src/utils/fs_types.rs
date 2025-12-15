@@ -63,62 +63,62 @@ impl Mode {
         (self.0 & S_IFMT.0) == S_IFLNK.0
     }
 
-    pub const fn add_file_flag(mut self) -> Self {
+    pub const fn with_file_flag(mut self) -> Self {
         self.0 |= S_IFREG.0;
         self
     }
 
-    pub const fn add_dir_flag(mut self) -> Self {
+    pub const fn with_dir_flag(mut self) -> Self {
         self.0 |= S_IFDIR.0;
         self
     }
 
-    pub const fn add_symlink_flag(mut self) -> Self {
+    pub const fn with_symlink_flag(mut self) -> Self {
         self.0 |= S_IFLNK.0;
         self
     }
 
-    pub const fn add_user_read_flag(mut self) -> Self {
+    pub const fn with_user_read_flag(mut self) -> Self {
         self.0 |= S_IRUSR.0;
         self
     }
 
-    pub const fn add_user_write_flag(mut self) -> Self {
+    pub const fn with_user_write_flag(mut self) -> Self {
         self.0 |= S_IWUSR.0;
         self
     }
 
-    pub const fn add_user_exec_flag(mut self) -> Self {
+    pub const fn with_user_exec_flag(mut self) -> Self {
         self.0 |= S_IXUSR.0;
         self
     }
 
-    pub const fn add_group_read_flag(mut self) -> Self {
+    pub const fn with_group_read_flag(mut self) -> Self {
         self.0 |= S_IRGRP.0;
         self
     }
 
-    pub const fn add_group_write_flag(mut self) -> Self {
+    pub const fn with_group_write_flag(mut self) -> Self {
         self.0 |= S_IWGRP.0;
         self
     }
 
-    pub const fn add_group_exec_flag(mut self) -> Self {
+    pub const fn with_group_exec_flag(mut self) -> Self {
         self.0 |= S_IXGRP.0;
         self
     }
 
-    pub const fn add_other_read_flag(mut self) -> Self {
+    pub const fn with_other_read_flag(mut self) -> Self {
         self.0 |= S_IROTH.0;
         self
     }
 
-    pub const fn add_other_write_flag(mut self) -> Self {
+    pub const fn with_other_write_flag(mut self) -> Self {
         self.0 |= S_IWOTH.0;
         self
     }
 
-    pub const fn add_other_exec_flag(mut self) -> Self {
+    pub const fn with_other_exec_flag(mut self) -> Self {
         self.0 |= S_IXOTH.0;
         self
     }

@@ -271,7 +271,7 @@ where
         .add_entry_dir(
             name.to_string().try_into().unwrap(),
             blob_id,
-            Mode::zero().add_dir_flag(),
+            Mode::zero().with_dir_flag(),
             Uid::from(1000),
             Gid::from(1000),
             SystemTime::now(),
@@ -307,7 +307,7 @@ where
         .add_entry_file(
             name.to_string().try_into().unwrap(),
             blob_id,
-            Mode::zero().add_file_flag(),
+            Mode::zero().with_file_flag(),
             Uid::from(1000),
             Gid::from(1000),
             SystemTime::now(),
