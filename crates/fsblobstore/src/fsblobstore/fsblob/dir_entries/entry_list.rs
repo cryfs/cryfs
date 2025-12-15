@@ -185,17 +185,23 @@ impl DirEntryList {
         if self.get_by_name(&name).is_some() {
             return Err(FsError::NodeAlreadyExists);
         }
-        self._add(DirEntry::new(
-            entry_type,
-            name,
-            id,
-            mode,
-            uid,
-            gid,
-            last_access_time,
-            last_modification_time,
-            SystemTime::now(),
-        )?);
+        self._add(
+            DirEntry::new(
+                entry_type,
+                name,
+                id,
+                mode,
+                uid,
+                gid,
+                last_access_time,
+                last_modification_time,
+                SystemTime::now(),
+            )
+            .map_err(|err| {
+                log::error!("DirEntry validation failed: {:?}", err);
+                FsError::InvalidOperation
+            })?,
+        );
         Ok(())
     }
 
@@ -329,7 +335,12 @@ impl DirEntryList {
         let Some(entry) = self.get_by_name_mut(name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
         };
-        entry.set_attr(mode, uid, gid, atime, mtime)?;
+        entry
+            .set_attr(mode, uid, gid, atime, mtime)
+            .map_err(|err| {
+                log::error!("DirEntry validation failed: {:?}", err);
+                FsError::InvalidOperation
+            })?;
         Ok(entry)
     }
 

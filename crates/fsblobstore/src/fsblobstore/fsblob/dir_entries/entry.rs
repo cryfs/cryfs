@@ -1,5 +1,6 @@
-use anyhow::{Result, ensure};
+use anyhow::Result;
 use binrw::{BinRead, BinResult, BinWrite, Endian};
+use derive_more::{Display, Error};
 use std::fmt::Debug;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::num::NonZeroU8;
@@ -7,7 +8,6 @@ use std::time::SystemTime;
 
 use crate::utils::fs_types::{Gid, Mode, Uid};
 use cryfs_blobstore::BlobId;
-use cryfs_rustfs::{FsError, FsResult};
 use cryfs_utils::{
     binary::{read_null_string, read_timespec, write_null_string, write_timespec},
     path::{PathComponent, PathComponentBuf},
@@ -63,7 +63,7 @@ impl DirEntry {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
         last_metadata_change_time: SystemTime,
-    ) -> FsResult<Self> {
+    ) -> Result<Self, ValidationFailed> {
         let mode = match entry_type {
             EntryType::File => mode.with_file_flag(),
             EntryType::Dir => mode.with_dir_flag(),
@@ -82,7 +82,7 @@ impl DirEntry {
                 blob_id,
             },
         };
-        result.validate().map_err(FsError::internal_error)?;
+        result.validate()?;
         Ok(result)
     }
 
@@ -101,26 +101,27 @@ impl DirEntry {
         Ok(())
     }
 
-    fn validate(&self) -> Result<()> {
-        ensure!(
-            ((self.inner.entry_type == EntryType::File)
-                && self.inner.mode.has_file_flag()
-                && !self.inner.mode.has_dir_flag()
+    fn validate(&self) -> Result<(), ValidationFailed> {
+        let is_valid = ((self.inner.entry_type == EntryType::File)
+            && self.inner.mode.has_file_flag()
+            && !self.inner.mode.has_dir_flag()
+            && !self.inner.mode.has_symlink_flag())
+            || ((self.inner.entry_type == EntryType::Dir)
+                && !self.inner.mode.has_file_flag()
+                && self.inner.mode.has_dir_flag()
                 && !self.inner.mode.has_symlink_flag())
-                || ((self.inner.entry_type == EntryType::Dir)
-                    && !self.inner.mode.has_file_flag()
-                    && self.inner.mode.has_dir_flag()
-                    && !self.inner.mode.has_symlink_flag())
-                || ((self.inner.entry_type == EntryType::Symlink)
-                    && !self.inner.mode.has_file_flag()
-                    && !self.inner.mode.has_dir_flag()
-                    && self.inner.mode.has_symlink_flag()),
-            "Wrong mode bit set. Entry type is {:?} and mode bits say is_file={}, is_dir={}, is_symlink={}",
-            self.inner.entry_type,
-            self.inner.mode.has_file_flag(),
-            self.inner.mode.has_dir_flag(),
-            self.inner.mode.has_symlink_flag(),
-        );
+            || ((self.inner.entry_type == EntryType::Symlink)
+                && !self.inner.mode.has_file_flag()
+                && !self.inner.mode.has_dir_flag()
+                && self.inner.mode.has_symlink_flag());
+        if !is_valid {
+            return Err(ValidationFailed::WrongModeBits {
+                entry_type: self.inner.entry_type,
+                is_file: self.inner.mode.has_file_flag(),
+                is_dir: self.inner.mode.has_dir_flag(),
+                is_symlink: self.inner.mode.has_symlink_flag(),
+            });
+        }
         Ok(())
     }
 
@@ -135,7 +136,7 @@ impl DirEntry {
         gid: Option<Gid>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
-    ) -> FsResult<()> {
+    ) -> Result<(), ValidationFailed> {
         // TODO Direct implementation would be faster because it'd avoid multiple _update_metadata_change_time calls. Maybe we could even remove the other setters and only have this one?
         if let Some(mode) = mode {
             self.set_mode(mode)?;
@@ -155,7 +156,7 @@ impl DirEntry {
         Ok(())
     }
 
-    pub fn set_mode(&mut self, mode: Mode) -> FsResult<()> {
+    pub fn set_mode(&mut self, mode: Mode) -> Result<(), ValidationFailed> {
         let old_mode = self.inner.mode;
         if old_mode == mode {
             // shortcut, so we don't update metadata change time here.
@@ -171,8 +172,7 @@ impl DirEntry {
             // Restore old values
             self.inner.mode = old_mode;
             self.inner.last_metadata_change_time = old_last_metadata_change_time;
-            log::error!("Mode validation failed: {:?}", e);
-            FsError::InvalidOperation
+            e
         })
     }
 
@@ -291,4 +291,17 @@ fn write_path_component(
         })
         .collect();
     write_null_string(&bytes, writer, endian, args)
+}
+
+#[derive(Error, Display, Debug)]
+pub enum ValidationFailed {
+    #[display(
+        "Wrong mode bit set. Entry type is {entry_type:?} and mode bits say is_file={is_file}, is_dir={is_dir}, is_symlink={is_symlink}"
+    )]
+    WrongModeBits {
+        entry_type: EntryType,
+        is_file: bool,
+        is_dir: bool,
+        is_symlink: bool,
+    },
 }
