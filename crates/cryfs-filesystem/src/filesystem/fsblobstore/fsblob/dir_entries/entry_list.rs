@@ -231,6 +231,7 @@ impl DirEntryList {
             SystemTime::now(),
         )?;
         if let Some((index, old_entry)) = already_exists {
+            // TODO on_overwritten returns an FsError with good error codes, but we convert it to anyhow::Error here and lose that information.
             on_overwritten(old_entry.blob_id(), old_entry.entry_type()).await?;
             self._overwrite(index, entry)?;
         } else {
