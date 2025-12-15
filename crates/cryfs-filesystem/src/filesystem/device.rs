@@ -330,25 +330,28 @@ where
                 return Err(FsError::InvalidOperation);
             };
 
-            let on_overwritten = async move |overwritten_blobid: &BlobId, blob_type: EntryType| {
-                // Other checks (ensuring we don't overwrite a dir with a non-dir or a non-dir with a dir) is done in [DirEntryList::_check_allowed_overwrite].
-                check_were_not_overwriting_nonempty_dir(
-                    &self.blobstore,
-                    overwritten_blobid,
-                    blob_type,
-                )
-                .await?;
+            let on_overwritten =
+                async move |source_blob_type: EntryType,
+                            overwritten_blob_type: EntryType,
+                            overwritten_blobid: &BlobId| {
+                    check_entry_overwrite_allowed(
+                        &self.blobstore,
+                        source_blob_type,
+                        overwritten_blob_type,
+                        overwritten_blobid,
+                    )
+                    .await?;
 
-                match self.blobstore.remove_by_id(&overwritten_blobid).await? {
-                    RemoveResult::SuccessfullyRemoved => Ok(()),
-                    RemoveResult::NotRemovedBecauseItDoesntExist => {
-                        log::error!(
-                            "During rename->overwrite, tried to remove blob that doesn't exist"
-                        );
-                        Err(FsError::UnknownError)
+                    match self.blobstore.remove_by_id(&overwritten_blobid).await? {
+                        RemoveResult::SuccessfullyRemoved => Ok(()),
+                        RemoveResult::NotRemovedBecauseItDoesntExist => {
+                            log::error!(
+                                "During rename->overwrite, tried to remove blob that doesn't exist"
+                            );
+                            Err(FsError::UnknownError)
+                        }
                     }
-                }
-            };
+                };
 
             match self.load_two_blobs(source_parent, dest_parent).await? {
                 LoadTwoBlobsResult::AreSameBlob(blob) => {
@@ -491,7 +494,40 @@ where
     }
 }
 
-pub async fn check_were_not_overwriting_nonempty_dir<B>(
+pub async fn check_entry_overwrite_allowed<B>(
+    blobstore: &AsyncDropArc<ConcurrentFsBlobStore<B>>,
+    source_blob_type: EntryType,
+    overwritten_blob_type: EntryType,
+    overwritten_blobid: &BlobId,
+) -> FsResult<()>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    check_blob_type_transition_allowed(source_blob_type, overwritten_blob_type)?;
+    check_were_not_overwriting_nonempty_dir(blobstore, overwritten_blobid, overwritten_blob_type)
+        .await?;
+    Ok(())
+}
+
+fn check_blob_type_transition_allowed(
+    source_blob_type: EntryType,
+    overwritten_blob_type: EntryType,
+) -> FsResult<()> {
+    if overwritten_blob_type != source_blob_type {
+        if overwritten_blob_type == EntryType::Dir {
+            // new path is an existing directory, but old path is not a directory
+            return Err(cryfs_rustfs::FsError::CannotOverwriteDirectoryWithNonDirectory);
+        }
+        if source_blob_type == EntryType::Dir {
+            // oldpath is a directory, and newpath exists but is not a directory.
+            return Err(cryfs_rustfs::FsError::CannotOverwriteNonDirectoryWithDirectory);
+        }
+    }
+    Ok(())
+}
+
+async fn check_were_not_overwriting_nonempty_dir<B>(
     blobstore: &AsyncDropArc<ConcurrentFsBlobStore<B>>,
     overwritten_blobid: &BlobId,
     blob_type: EntryType,

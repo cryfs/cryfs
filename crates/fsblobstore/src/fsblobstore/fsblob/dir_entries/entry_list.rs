@@ -222,7 +222,7 @@ impl DirEntryList {
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
         // TODO Return overwritten entry instead of taking an on_overwritten callback
-        on_overwritten: impl AsyncFnOnce(&BlobId, EntryType) -> FsResult<()>,
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
     ) -> Result<()> {
         let already_exists = self._get_by_name_with_index(&name);
         let entry = DirEntry::new(
@@ -238,32 +238,34 @@ impl DirEntryList {
         )?;
         if let Some((index, old_entry)) = already_exists {
             // TODO on_overwritten returns an FsError with good error codes, but we convert it to anyhow::Error here and lose that information.
-            on_overwritten(old_entry.blob_id(), old_entry.entry_type()).await?;
-            self._overwrite(index, entry)?;
+            on_overwritten(
+                entry.entry_type(),
+                old_entry.entry_type(),
+                old_entry.blob_id(),
+            )
+            .await?;
+            self._overwrite(index, entry);
         } else {
             self._add(entry);
         }
         Ok(())
     }
 
-    fn _overwrite(&mut self, index: usize, entry: DirEntry) -> Result<()> {
+    fn _overwrite(&mut self, index: usize, entry: DirEntry) {
         assert_eq!(self.entries[index].name(), entry.name());
-        Self::_check_allowed_overwrite(self.entries[index].entry_type(), entry.entry_type())?;
 
         // The new entry has possibly a different blockId, so it has to be in a different list position (list is ordered by blockIds).
         // That's why we remove-and-add instead of just modifying the existing entry.
         // TODO Removing moves the whole tail of elements, while it would be more performant to move the elements between the old and the new position.
         self.entries.remove(index);
         self._add(entry);
-
-        Ok(())
     }
 
     pub async fn rename_by_name(
         &mut self,
         old_name: &PathComponent,
         new_name: PathComponentBuf,
-        on_overwritten: impl AsyncFnOnce(&BlobId, EntryType) -> FsResult<()>,
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
     ) -> cryfs_rustfs::FsResult<()> {
         let Some((mut source_index, source_entry)) = self._get_by_name_with_index(old_name) else {
             return Err(cryfs_rustfs::FsError::NodeDoesNotExist);
@@ -282,8 +284,12 @@ impl DirEntryList {
             }
 
             let source = &self.entries[source_index];
-            Self::_check_allowed_overwrite(found_same_name.entry_type(), source.entry_type())?;
-            on_overwritten(found_same_name.blob_id(), found_same_name.entry_type()).await?;
+            on_overwritten(
+                source.entry_type(),
+                found_same_name.entry_type(),
+                found_same_name.blob_id(),
+            )
+            .await?;
 
             self.dirty = true;
             self.entries.remove(found_same_name_index);
@@ -308,7 +314,7 @@ impl DirEntryList {
         &mut self,
         blob_id: &BlobId,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(&BlobId, EntryType) -> FsResult<()>,
+        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
     ) -> FsResult<()> {
         let Some(old_entry) = self.get_by_id(blob_id) else {
             return Err(FsError::NodeDoesNotExist);
@@ -318,7 +324,7 @@ impl DirEntryList {
             &old_name,
             new_name,
             // TODO Why does future::Ready not work here?
-            async move |b, t| on_overwritten(b, t),
+            async move |st, dt, db| on_overwritten(st, dt, db),
         )
         .await
     }
@@ -415,20 +421,6 @@ impl DirEntryList {
                 assert_ne!(self.entries[index].blob_id(), blob_id);
             }
         };
-    }
-
-    fn _check_allowed_overwrite(prev_dest_type: EntryType, source_type: EntryType) -> FsResult<()> {
-        if prev_dest_type != source_type {
-            if prev_dest_type == EntryType::Dir {
-                // new path is an existing directory, but old path is not a directory
-                return Err(cryfs_rustfs::FsError::CannotOverwriteDirectoryWithNonDirectory);
-            }
-            if source_type == EntryType::Dir {
-                // oldpath is a directory, and newpath exists but is not a directory.
-                return Err(cryfs_rustfs::FsError::CannotOverwriteNonDirectoryWithDirectory);
-            }
-        }
-        Ok(())
     }
 }
 

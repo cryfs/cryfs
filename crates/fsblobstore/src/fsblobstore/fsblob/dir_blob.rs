@@ -141,7 +141,7 @@ where
         &mut self,
         blob_id: &BlobId,
         new_name: PathComponentBuf,
-        on_overwritten: impl FnOnce(&BlobId, EntryType) -> FsResult<()>,
+        on_overwritten: impl FnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
     ) -> FsResult<()> {
         self.entries.rename(blob_id, new_name, on_overwritten).await
     }
@@ -151,7 +151,7 @@ where
         old_name: &PathComponent,
         new_name: PathComponentBuf,
         // TODO Instead of passing in on_overwritten, would be better to return the overwritten blob id with #[must_use]
-        on_overwritten: impl AsyncFnOnce(&BlobId, EntryType) -> FsResult<()>,
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
     ) -> FsResult<()> {
         self.entries
             .rename_by_name(old_name, new_name, on_overwritten)
@@ -274,7 +274,7 @@ where
         gid: Gid,
         last_access_time: SystemTime,
         last_modification_time: SystemTime,
-        on_overwritten: impl AsyncFnOnce(&BlobId, EntryType) -> FsResult<()>,
+        on_overwritten: impl AsyncFnOnce(EntryType, EntryType, &BlobId) -> FsResult<()>,
     ) -> Result<()> {
         self.entries
             .add_or_overwrite(

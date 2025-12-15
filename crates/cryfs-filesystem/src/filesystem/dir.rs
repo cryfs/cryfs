@@ -4,11 +4,12 @@ use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
+use crate::filesystem::device::check_entry_overwrite_allowed;
+
 use super::{
     device::CryDevice, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
     symlink::CrySymlink,
 };
-use crate::filesystem::device::check_were_not_overwriting_nonempty_dir;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
 use cryfs_fsblobstore::fsblobstore::FlushBehavior;
@@ -252,11 +253,14 @@ where
                             .rename_entry_by_name(
                                 oldname,
                                 newname.to_owned(),
-                                async |overwritten_blobid, blob_type| {
-                                    check_were_not_overwriting_nonempty_dir(
+                                async |source_blob_type,
+                                       overwritten_blob_type,
+                                       overwritten_blobid| {
+                                    check_entry_overwrite_allowed(
                                         &self.blobstore,
+                                        source_blob_type,
+                                        overwritten_blob_type,
                                         overwritten_blobid,
-                                        blob_type,
                                     )
                                     .await?;
                                     self.on_rename_overwrites_destination(*overwritten_blobid)
@@ -344,12 +348,12 @@ where
                                         entry.gid(),
                                         entry.last_access_time(),
                                         entry.last_modification_time(),
-                                        async |overwritten_blobid, blob_type| {
-                                            // Other checks (ensuring we don't overwrite a dir with a non-dir or a non-dir with a dir) is done in [DirEntryList::_check_allowed_overwrite].
-                                            check_were_not_overwriting_nonempty_dir(
+                                        async |source_blob_type, overwritten_blob_type, overwritten_blobid| {
+                                            check_entry_overwrite_allowed(
                                                 &self.blobstore,
+                                                source_blob_type,
+                                                overwritten_blob_type,
                                                 overwritten_blobid,
-                                                blob_type,
                                             )
                                             .await?;
                                             self.on_rename_overwrites_destination(
