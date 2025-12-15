@@ -24,7 +24,7 @@ mod symlink_blob;
 pub use symlink_blob::SymlinkBlob;
 
 mod dir_entries;
-pub use dir_entries::{AddOrOverwriteError, EntryType, RenameError, DirEntry};
+pub use dir_entries::{AddOrOverwriteError, DirEntry, EntryType, RenameError};
 
 // TODO Now that FileBlob, DirBlob and SymlinkBlob are only ever returned as references,
 //      we can probably store BaseBlob directly in here and just have FileBlob, DirBlob and SymlinkBlob
