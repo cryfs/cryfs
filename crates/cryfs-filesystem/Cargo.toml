@@ -10,7 +10,8 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-# TODO Cleaner dependency graph with fewer edges between different cryfs crates. For example, cryfs-filesystem already depends on cryfs-fsblobstore - why does it have to depend on blobstore and blockstore too? cryfs-fsblobstore should not depend on rustfs. And there should be no need to have an (indirect) dependency from cryfs-check to cryfs-rustfs.
+# TODO Cleaner dependency graph with fewer edges between different cryfs crates. For example, cryfs-filesystem already depends on cryfs-fsblobstore - why does it have to depend on blobstore and blockstore too? Also, why does cryfs-config need to depend on blockstore? And so on...
+# TODO Can we remove dependencies here now that we split out fblobstore and cryfs-config into separate crates?
 anyhow.workspace = true
 async-trait.workspace = true
 atomic-time.workspace = true
@@ -19,6 +20,7 @@ binrw.workspace = true
 byte-unit = {workspace = true, features = ["serde"]}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
+cryfs-config = {path = "../cryfs-config"}
 cryfs-rustfs = {path = "../rustfs", default-features = false}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}

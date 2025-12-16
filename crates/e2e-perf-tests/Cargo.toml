@@ -18,6 +18,7 @@ criterion = {workspace = true, features = ["async_tokio"]}
 cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
 cryfs-blockstore = {path = "../blockstore", features = ["testutils"]}
 cryfs-cli-utils = {path = "../cli-utils"}
+cryfs-config = {path = "../cryfs-config"}
 cryfs-filesystem = {path = "../cryfs-filesystem", features = ["testutils"]}
 # TODO e2e-perf-tests shouldn't depend on cryfs-runner. Can we remove this dependency?
 cryfs-runner = {path = "../cryfs-runner"}

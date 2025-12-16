@@ -12,12 +12,12 @@ use cryfs_blockstore::{
     Overhead,
 };
 use cryfs_cli_utils::setup_blockstore_stack_dyn;
-use cryfs_filesystem::{
+use cryfs_config::{
     CRYFS_VERSION,
     config::{CryConfig, FILESYSTEM_FORMAT_VERSION, FilesystemId},
-    filesystem::CryDevice,
     localstate::LocalStateDir,
 };
+use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};

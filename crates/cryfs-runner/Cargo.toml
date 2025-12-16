@@ -14,6 +14,7 @@ anyhow.workspace = true
 atomic-time.workspace = true
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
+cryfs-config = { path = "../cryfs-config" }
 cryfs-rustfs = { path = "../rustfs", default-features=false, features=["fuser"]}
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }

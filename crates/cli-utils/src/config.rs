@@ -2,7 +2,7 @@ use byte_unit::{Byte, UnitType};
 use console::{StyledObject, style};
 use std::fmt::Display;
 
-use cryfs_filesystem::config::ConfigLoadResult;
+use cryfs_config::config::ConfigLoadResult;
 
 // TODO Integration test the outputs of print_config
 pub fn print_config(config: &ConfigLoadResult) {

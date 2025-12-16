@@ -4,8 +4,8 @@ use dialoguer::{Confirm, Select, console::style, theme::ColorfulTheme};
 use once_cell::unsync::OnceCell;
 use std::{fmt::Display, path::Path};
 
+use cryfs_config::config::Console;
 use cryfs_crypto::kdf::scrypt::ScryptSettings;
-use cryfs_filesystem::config::Console;
 use cryfs_version::{Version, VersionInfo};
 
 // TODO Put default block size & cipher into a central place so we can share it with the code that creates file systems with "use default settings? yes"
@@ -126,13 +126,13 @@ impl Console for InteractiveConsole {
         const DEFAULT_CIPHER_INDEX: usize = 0;
 
         if self._use_default_creation_settings()? {
-            return Ok(cryfs_filesystem::ALL_CIPHERS[DEFAULT_CIPHER_INDEX].to_string());
+            return Ok(cryfs_config::ALL_CIPHERS[DEFAULT_CIPHER_INDEX].to_string());
         }
 
         ask_multiple_choice(
             None,
             "Which cipher do you want to use to encrypt your file system?",
-            cryfs_filesystem::ALL_CIPHERS
+            cryfs_config::ALL_CIPHERS
                 .iter()
                 .map(|cipher| (cipher.to_string(), cipher.to_string())),
             DEFAULT_CIPHER_INDEX,

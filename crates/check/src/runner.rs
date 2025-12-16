@@ -24,7 +24,7 @@ use cryfs_blobstore::{
 };
 use cryfs_blockstore::{BlockId, BlockStore, LLBlockStore, LockingBlockStore};
 use cryfs_cli_utils::BlockstoreCallback;
-use cryfs_filesystem::config::ConfigLoadResult;
+use cryfs_config::config::ConfigLoadResult;
 use cryfs_fsblobstore::fsblobstore::EntryType;
 use cryfs_fsblobstore::fsblobstore::{BlobType, FsBlob, FsBlobStore};
 use cryfs_utils::{

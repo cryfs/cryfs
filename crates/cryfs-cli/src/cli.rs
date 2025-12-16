@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use anyhow::{Context as _, Result};
 use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
-use cryfs_filesystem::config::CryConfigFile;
-use cryfs_filesystem::localstate::{BasedirMetadata, CheckFilesystemIdError};
+use cryfs_config::config::CryConfigFile;
+use cryfs_config::localstate::{BasedirMetadata, CheckFilesystemIdError};
 use cryfs_runner::{CreateOrLoad, Mounter};
 use log::LevelFilter;
 
@@ -16,8 +16,8 @@ use cryfs_cli_utils::password_provider::{
 use cryfs_cli_utils::{
     Application, CliError, CliErrorKind, CliResultExt, CliResultExtFn, Environment, print_config,
 };
-use cryfs_filesystem::CRYFS_VERSION;
-use cryfs_filesystem::{
+use cryfs_config::CRYFS_VERSION;
+use cryfs_config::{
     config::{
         CommandLineFlags, ConfigCreateError, ConfigLoadError, ConfigLoadResult, Console,
         CreateConfigFileError, LoadConfigFileError, PasswordProvider, SaveConfigFileError,
@@ -55,7 +55,7 @@ impl Application for Cli {
     fn new(args: CryfsArgs, env: Environment) -> Result<Self, CliError> {
         let is_noninteractive = env.is_noninteractive;
         // TODO Make sure we have tests for the local_state_dir location
-        let local_state_dir = cryfs_filesystem::localstate::LocalStateDir::new(env.local_state_dir);
+        let local_state_dir = cryfs_config::localstate::LocalStateDir::new(env.local_state_dir);
 
         Ok(Self {
             is_noninteractive,
@@ -225,7 +225,7 @@ impl Cli {
     }
 
     fn show_ciphers(&self) {
-        for cipher in cryfs_filesystem::config::ALL_CIPHERS {
+        for cipher in cryfs_config::config::ALL_CIPHERS {
             println!("{}", cipher);
         }
     }
@@ -238,7 +238,7 @@ impl Cli {
     ) -> Result<ConfigLoadResult, CliError> {
         let mount_args = self.mount_args();
         let config_file_location = self.config_file_location();
-        let config = cryfs_filesystem::config::load_or_create(
+        let config = cryfs_config::config::load_or_create(
             config_file_location.to_owned(),
             self.password_provider(),
             &self.console(),

@@ -2,8 +2,8 @@ use anyhow::Result;
 use byte_unit::Byte;
 use std::path::Path;
 
+use cryfs_config::config::Console;
 use cryfs_crypto::kdf::scrypt::ScryptSettings;
-use cryfs_filesystem::config::Console;
 use cryfs_version::{Version, VersionInfo};
 
 // TODO What to do in these cases?
