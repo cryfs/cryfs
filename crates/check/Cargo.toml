@@ -27,8 +27,6 @@ cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-fsblobstore = { path = "../fsblobstore" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
-# TODO cryfs-rustfs should not be needed with fuser, or actually at all
-cryfs-rustfs = { path = "../rustfs", default-features=false }
 derivative.workspace = true
 log.workspace = true
 futures.workspace = true

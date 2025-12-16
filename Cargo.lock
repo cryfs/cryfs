@@ -995,7 +995,6 @@ dependencies = [
  "cryfs-crypto",
  "cryfs-filesystem",
  "cryfs-fsblobstore",
- "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
  "derivative",
