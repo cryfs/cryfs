@@ -11,40 +11,25 @@ version.workspace = true
 
 [dependencies]
 # TODO Cleaner dependency graph with fewer edges between different cryfs crates. For example, cryfs-filesystem already depends on cryfs-fsblobstore - why does it have to depend on blobstore and blockstore too? Also, why does cryfs-config need to depend on blockstore? And so on...
-# TODO Can we remove dependencies here now that we split out fblobstore and cryfs-config into separate crates?
 anyhow.workspace = true
 async-trait.workspace = true
 atomic-time.workspace = true
-binary-layout.workspace = true
-binrw.workspace = true
-byte-unit = {workspace = true, features = ["serde"]}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-rustfs = {path = "../rustfs", default-features = false}
 cryfs-utils = {path = "../utils"}
 cryfs-version = {path = "../cryfs-version"}
 cryfs-fsblobstore = { path = "../fsblobstore" }
-derive_more.workspace = true
 futures.workspace = true
-hex.workspace = true
-konst.workspace = true
 libc.workspace = true
-lockable.workspace = true
 log.workspace = true
 maybe-owned.workspace = true
 nix = {workspace = true, features = ["user"] }
-rand.workspace = true
-serde = {workspace = true, features = ["derive"]}
-serde_json.workspace = true
-serde_with = {workspace = true, features = ["hex"]}
-thiserror.workspace = true
 tokio = {workspace = true, features = ["sync"]}
 
 [dev-dependencies]
 cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
 tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
-# TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
-lockable = {workspace = true, features = ["slow_assertions"]}
 
 [features]
 ancestor_checks_on_move = []
