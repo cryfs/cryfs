@@ -17,7 +17,6 @@ cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 divrem = { workspace = true, optional = true }
 futures.workspace = true
-human-panic.workspace = true
 indicatif.workspace = true
 itertools.workspace = true
 log.workspace = true

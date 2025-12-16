@@ -1213,7 +1213,6 @@ dependencies = [
  "derive_more",
  "futures",
  "lockable",
- "log",
 ]
 
 [[package]]
@@ -1285,7 +1284,6 @@ dependencies = [
  "divrem",
  "futures",
  "hex",
- "human-panic",
  "indicatif",
  "itertools 0.14.0",
  "libc",
