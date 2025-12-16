@@ -23,7 +23,6 @@ cryfs-blockstore = { path = "../blockstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-crypto = { path = "../crypto" }
 cryfs-config = { path = "../cryfs-config" }
-cryfs-filesystem = { path = "../cryfs-filesystem" }  # TODO Do we still need the filesystem dependency?
 cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }

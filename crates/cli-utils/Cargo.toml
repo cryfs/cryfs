@@ -16,7 +16,6 @@ byte-unit.workspace = true
 clap = { workspace = true, features = ["derive"] }
 clap-logflag.workspace = true
 console.workspace = true
-cryfs-filesystem = { path = "../cryfs-filesystem" } # TODO Do we still need the dependency to cryfs-filesystem?
 cryfs-config = { path = "../cryfs-config" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-version = { path = "../cryfs-version" }

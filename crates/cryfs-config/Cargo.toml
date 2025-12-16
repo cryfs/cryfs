@@ -13,7 +13,7 @@ version.workspace = true
 anyhow.workspace = true
 binrw.workspace = true
 binary-layout.workspace = true
-byte-unit.workspace = true
+byte-unit = {workspace = true, features = ["serde"]}
 cryfs-blockstore = {path = "../blockstore"}
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-crypto = {path = "../crypto"}
