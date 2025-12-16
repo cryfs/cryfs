@@ -1,4 +1,5 @@
 // TODO #![deny(missing_docs)]
+// TODO Forbid unsafe code?
 
 pub mod object_based_api;
 
@@ -29,3 +30,5 @@ mod tests;
 // TODO Test RunningFilesystem::unmount_join correctly unmounts and SIGINT correctly unmounts.
 // TODO Test the file system mountpoint is correctly freed after unmounting (e.g. we can re-mount to the same directory)
 // TODO pjdfs could be useful for testing POSIX conformity. The fuser crate seems to use the fork here https://github.com/fleetfs/pjdfstest
+
+cryfs_version::assert_cargo_version_equals_git_version!();

@@ -15,6 +15,7 @@ async-trait.workspace = true
 futures.workspace = true
 lockable.workspace = true
 cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
 tokio.workspace = true
 log.workspace = true
 

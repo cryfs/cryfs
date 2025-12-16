@@ -19,6 +19,7 @@ cryfs-blockstore = { path = "../blockstore" }
 cryfs-blobstore = { path = "../blobstore" }
 cryfs-concurrent-store = { path = "../concurrent-store" }
 cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 futures.workspace = true
 lockable.workspace = true

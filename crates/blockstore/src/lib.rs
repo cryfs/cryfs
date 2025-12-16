@@ -1,4 +1,5 @@
 // TODO #![deny(missing_docs)]
+// TODO Forbid unsafe code?
 
 mod block_id;
 pub use block_id::{BLOCKID_LEN, BlockId};

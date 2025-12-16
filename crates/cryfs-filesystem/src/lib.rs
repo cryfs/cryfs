@@ -6,3 +6,5 @@
 pub mod filesystem;
 
 // TODO Throughout the whole codebase, check for short functions that should be `#[inline]`
+
+cryfs_version::assert_cargo_version_equals_git_version!();

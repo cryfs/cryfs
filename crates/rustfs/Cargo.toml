@@ -13,6 +13,7 @@ version.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 fuse_mt = { workspace = true, optional = true }
 # TODO Which ABI feature to set for Fuse?

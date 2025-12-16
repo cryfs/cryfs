@@ -17,6 +17,7 @@ rand.workspace = true
 openssl = { workspace = true, features = ["vendored"] }
 static_assertions.workspace = true
 cryfs-utils = { path = "../utils" }
+cryfs-version = { path = "../cryfs-version" }
 log.workspace = true
 lockable.workspace = true
 region.workspace = true
