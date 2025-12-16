@@ -74,6 +74,15 @@ jobs:
             macos_cxx: llvm@18/bin/clang++
             apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev
             homebrew_package: llvm@18
+          - compiler: clang
+            version: 19
+            libcxx: libc++
+            cc: clang-19
+            cxx: clang++-19
+            macos_cc: llvm@19/bin/clang
+            macos_cxx: llvm@19/bin/clang++
+            apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp5-19 libomp-19-dev
+            homebrew_package: llvm@19
           # Apple Clang
 #           - compiler: apple-clang
 #             version: xxx
@@ -88,11 +97,13 @@ jobs:
         run_clang_tidy: [false]
         gtest_args: [""]
         exclude:
-          # MacOS 14 doesn't have Clang 13 anymore. Clang 18 seems broken (maybe https://github.com/llvm/llvm-project/issues/92121), and GCC versions are often incompatible, so we don't support them officially.
+          # MacOS 14 doesn't have Clang 13 anymore. Clang 18, 19 seems broken (maybe https://github.com/llvm/llvm-project/issues/92121), and GCC versions are often incompatible, so we don't support them officially.
           - os: macos-14
             compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp5-13 libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-14
             compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libomp5-18 libomp-18-dev", homebrew_package: llvm@18}
+          - os: macos-14
+            compiler: {compiler: clang, version: 19, libcxx: libc++, cc: clang-19, cxx: clang++-19, macos_cc: llvm@19/bin/clang, macos_cxx: llvm@19/bin/clang++, apt_package: "clang-19 libc++-19-dev libc++abi-19-dev libomp5-19 libomp-19-dev", homebrew_package: llvm@19}
           - os: macos-14
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-14
