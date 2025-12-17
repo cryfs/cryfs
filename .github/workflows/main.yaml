@@ -20,6 +20,48 @@ jobs:
           - Release
           - RelWithDebInfo
         compiler:
+          - compiler: gcc
+            version: 9
+            libcxx: libstdc++11
+            cc: gcc-9
+            cxx: g++-9
+            apt_package: g++-9
+            homebrew_package: gcc@9
+          - compiler: gcc
+            version: 10
+            libcxx: libstdc++11
+            cc: gcc-10
+            cxx: g++-10
+            apt_package: g++-10
+            homebrew_package: gcc@10
+          - compiler: gcc
+            version: 11
+            libcxx: libstdc++11
+            cc: gcc-11
+            cxx: g++-11
+            apt_package: g++-11
+            homebrew_package: gcc@11
+          - compiler: gcc
+            version: 12
+            libcxx: libstdc++11
+            cc: gcc-12
+            cxx: g++-12
+            apt_package: g++-12
+            homebrew_package: gcc@12
+          - compiler: gcc
+            version: 13
+            libcxx: libstdc++11
+            cc: gcc-13
+            cxx: g++-13
+            apt_package: g++-13
+            homebrew_package: gcc@13
+          - compiler: gcc
+            version: 14
+            libcxx: libstdc++11
+            cc: gcc-14
+            cxx: g++-14
+            apt_package: g++-14
+            homebrew_package: gcc@14
           - compiler: clang
             version: 13
             libcxx: libc++
@@ -205,6 +247,23 @@ jobs:
             install_dependencies_manually: true
             run_build: true
             run_tests: true
+            run_cpack: false
+          - name: Werror gcc
+            os: ubuntu-24.04
+            compiler:
+              compiler: gcc
+              version: 14
+              libcxx: libstdc++
+              cc: gcc-14
+              cxx: g++-14
+              apt_package: g++-14
+            # build_type cannot be debug because gcc checks for some errors in optimization passes
+            build_type: RelWithDebInfo
+            extra_conan_flags: "-o '&:use_werror=True'"
+            extra_cxxflags: '[]'
+            install_dependencies_manually: false
+            run_build: true
+            run_tests: false
             run_cpack: false
           - name: Werror clang
             os: ubuntu-24.04
@@ -483,5 +542,99 @@ jobs:
       - name: CPack
         if: ${{ matrix.run_cpack }}
         uses: ./.github/workflows/actions/cpack
+        with:
+          build_type: ${{matrix.build_type}}
+
+  windows:
+    name: CI
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [""]
+        os:
+          - windows-2019
+          - windows-2022
+        build_type:
+          - Debug
+          - Release
+          - RelWithDebInfo
+    runs-on: ${{matrix.os}}
+    env:
+      # Setting conan cache dir to a location where our Github Cache Action can find it
+      CONAN_HOME: "D:/.conan/"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history because we need that to determine our version number
+          fetch-depth: 0
+      #TODO Ideally, all the setup actions would be in their own subaction, but Github doesn't support using third party actions (e.g. cache) from nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Setup Windows
+        uses: ./.github/workflows/actions/setup_windows
+      - name: Get ccache dir
+        id: ccache_dir
+        shell: bash
+        run: |
+          # Windows CI has backwards slashes in github.workspace, so we need to convert that to forward slashes
+          CCACHE_DIR="${{github.workspace}}/.ccache"
+          echo "ccache_dir=${CCACHE_DIR//\\//}" >> $GITHUB_OUTPUT
+      - name: Setup ccache
+        uses: ./.github/workflows/actions/ccache/setup
+        with:
+          ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.build_type}}__
+      # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
+      - name: Restore conan cache
+        uses: ./.github/workflows/actions/conan/cache
+        with:
+          action: load
+          cache_key: v9-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.build_type}}__
+      # Setup conan is after restoring the conan cache so that the cache doesn't overwrite the conan profile
+      - name: Setup conan
+        uses: ./.github/workflows/actions/conan/setup
+        with:
+          arch: "x86_64"
+          compiler: "msvc"
+          compiler_version: ${{ matrix.os == 'windows-2022' && '194' || '192' }}
+          build_type: ${{ matrix.build_type }}
+      - name: Install dependencies
+        uses: ./.github/workflows/actions/conan/install_dependencies
+      - name: Build
+        uses: ./.github/workflows/actions/conan/build
+        with:
+          extra_conan_flags: "-o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.2.0'"
+      - name: Save ccache
+        uses: ./.github/workflows/actions/ccache/cache
+        with:
+          action: 'save'
+          ccache_dir: ${{steps.ccache_dir.outputs.ccache_dir}}
+          cache_key: v2-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.build_type}}__
+          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+      - name: Save conan cache
+        uses: ./.github/workflows/actions/conan/cache
+        with:
+          action: save
+          secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
+          secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
+          cache_key: v9-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.build_type}}__
+      - name: Test
+        shell: bash
+        run: |
+          set -v
+          set -e
+          cd build/${{matrix.build_type}}/test
+          ./gitversion/gitversion-test.exe
+          ./cpp-utils/cpp-utils-test.exe
+          # ./fspp/fspp-test.exe
+          ./parallelaccessstore/parallelaccessstore-test.exe
+          ./blockstore/blockstore-test.exe
+          ./blobstore/blobstore-test.exe
+          ./cryfs/cryfs-test.exe
+          # TODO Enable cryfs-cli-test on Windows
+          # ./cryfs-cli/cryfs-cli-test.exe
+      - name: CPack
+        uses: ./.github/workflows/actions/cpack
+        if: ${{ matrix.os == 'windows-2022' }}
         with:
           build_type: ${{matrix.build_type}}
