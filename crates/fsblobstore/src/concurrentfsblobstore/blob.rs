@@ -39,27 +39,6 @@ where
         self.blob.with_lock(f).await
     }
 
-    /// Locks two blobs in a deadlock-free manner and returns guards for both.
-    /// This is deadlock-free because it enforces an order of locking based on the blob id.
-    pub async fn with_locks_2<R, F>(blob1: &Self, blob2: &Self, f: F) -> R
-    where
-        F: AsyncFnOnce(&mut crate::fsblobstore::FsBlob<B>, &mut crate::fsblobstore::FsBlob<B>) -> R,
-    {
-        assert!(
-            blob1.blob_id() != blob2.blob_id(),
-            "with_locks_2 must be called with two different blobs"
-        );
-        if blob1.blob_id() < blob2.blob_id() {
-            blob1
-                .with_lock(async |blob1| blob2.with_lock(async |blob2| f(blob1, blob2).await).await)
-                .await
-        } else {
-            blob2
-                .with_lock(async |blob2| blob1.with_lock(async |blob1| f(blob1, blob2).await).await)
-                .await
-        }
-    }
-
     pub async fn remove(this: AsyncDropGuard<Self>) -> Result<RemoveResult, Arc<anyhow::Error>> {
         LoadedBlobGuard::remove(this.unsafe_into_inner_dont_drop().blob).await
     }
