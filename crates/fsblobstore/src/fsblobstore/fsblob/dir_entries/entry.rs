@@ -218,7 +218,7 @@ impl DirEntry {
 
     pub fn set_last_modification_time(&mut self, last_modification_time: SystemTime) {
         self.inner.last_modification_time = last_modification_time;
-        self._update_metadata_change_time();
+        self._update_metadata_change_time(); // TODO Should ctime be updated here? The comment above says mtime doesn't count as metadata.
     }
 
     pub fn update_modification_time(&mut self) {
