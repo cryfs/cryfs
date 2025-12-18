@@ -3,6 +3,7 @@
 
 // TODO Figure out what the public API of this module should be
 
+pub mod cachingfsblobstore;
 pub mod concurrentfsblobstore;
 pub mod fsblobstore;
 mod utils;
