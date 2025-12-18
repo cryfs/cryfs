@@ -24,6 +24,8 @@ derive_more.workspace = true
 futures.workspace = true
 lockable.workspace = true
 log.workspace = true
+lru.workspace = true
+tokio.workspace = true
 
 [features]
 default = []

@@ -1292,6 +1292,8 @@ dependencies = [
  "futures",
  "lockable",
  "log",
+ "lru 0.12.5",
+ "tokio",
 ]
 
 [[package]]
@@ -2858,7 +2860,7 @@ dependencies = [
  "derive_more",
  "futures",
  "itertools 0.14.0",
- "lru",
+ "lru 0.14.0",
  "tokio",
 ]
 
@@ -2869,6 +2871,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "616ec5685824bcc94416c6d4a7a446eea774a31efd7062c8480ba6fd06d7a6e5"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "lru"
+version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
+dependencies = [
+ "hashbrown 0.15.5",
 ]
 
 [[package]]
