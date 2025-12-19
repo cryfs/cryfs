@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex};
 
 use super::cache::BlobCache;
 use crate::concurrentfsblobstore::ConcurrentFsBlob;
@@ -19,7 +19,7 @@ where
     /// The underlying blob. This is an Option so we can take it during async_drop.
     blob: Option<AsyncDropGuard<ConcurrentFsBlob<B>>>,
     /// Reference to the cache for putting the blob back when dropped.
-    cache: AsyncDropGuard<AsyncDropArc<BlobCache<B>>>,
+    cache: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<BlobCache<B>>>>,
 }
 
 impl<B> CachingFsBlob<B>
@@ -29,7 +29,7 @@ where
 {
     pub(super) fn new(
         blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
-        cache: AsyncDropGuard<AsyncDropArc<BlobCache<B>>>,
+        cache: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<BlobCache<B>>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             blob: Some(blob),
@@ -70,21 +70,37 @@ where
     ///
     /// This bypasses the cache - the blob will be removed from the underlying store.
     pub async fn remove(this: AsyncDropGuard<Self>) -> Result<RemoveResult, Arc<anyhow::Error>> {
-        let inner = this.unsafe_into_inner_dont_drop();
+        let mut inner = this.unsafe_into_inner_dont_drop();
         let blob = inner.blob.expect("blob should be present");
+        let blob_id = blob.blob_id();
+        let cache = &inner.cache;
 
-        // It's possible that we have another instance in the cache, when another task loaded it.
-        // Let's remove that instance too.
-        // Note: If another task is currently using the blob, it will check is_removal_requested()
-        // in async_drop_impl and won't put it back in the cache but immediately drop it.
-        let from_cache = inner.cache.remove(&blob.blob_id());
-        if let Some(mut cached_blob) = from_cache {
-            cached_blob.async_drop().await?;
+        // Hold the lock until the removal flag is set and we removed from the cache.
+        // This ensures that any concurrent task calling async_drop or remove for the same blob will either:
+        // - Complete before we take the lock (we'll remove the cached blob)
+        // - Wait until we release the lock (will see is_removal_requested() == true)
+        let (remove_future, to_drop) = {
+            let mut cache = cache.lock().await;
+            // Now remove - this sets the removal flag while we hold the lock
+            let remove_future = ConcurrentFsBlob::request_removal(blob).await;
+
+            // If there are any cached blob, we need to drop it as well
+            let from_cache = cache.try_get(&blob_id);
+            (remove_future, from_cache)
+
+            // Lock released here, now both the removal flag is set and we removed from the cache
+        };
+
+        // First drop it from the cache so we don't deadlock (removal waits for all users to release the blob)
+        if let Some(mut blob_to_drop) = to_drop {
+            blob_to_drop.async_drop().await?;
         }
 
-        // Don't put back in cache - we're removing it
-        // ConcurrentFsBlobStore will wait for all references to be dropped before removing
-        ConcurrentFsBlob::remove(blob).await
+        inner.cache.async_drop().await?;
+
+        // Then wait for the removal to complete
+        let remove_result = remove_future?.await?;
+        Ok(remove_result)
     }
 }
 
@@ -109,18 +125,25 @@ where
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let mut blob = self.blob.take().expect("blob should be present");
+        let blob = self.blob.take().expect("blob should be present");
 
-        // Only cache if NOT marked for removal
-        if blob.is_removal_requested() {
-            // Just drop without caching - a removal is in progress
+        // Hold the lock while checking the removal flag AND putting in cache.
+        // This ensures that if a removal is in progress, we'll see is_removal_requested() == true.
+        // Other tasks are blocked from requesting removals or dropping the blob until we're done.
+        let to_drop = {
+            let mut cache = self.cache.lock().await;
+            if blob.is_removal_requested() {
+                // Don't cache, return blob to be dropped
+                Some(blob)
+            } else {
+                // Put in cache, return evicted blob if any
+                cache.put(blob)
+            }
+            // Lock released here
+        };
 
-            blob.async_drop().await?;
-        } else {
-            // TODO There is still a race condition here where another task could request removal right after we confirmed here that removal is not in progress but before we put it back in the cache.
-
-            // Put the blob back in the cache
-            self.cache.put(blob).await;
+        if let Some(mut blob_to_drop) = to_drop {
+            blob_to_drop.async_drop().await?;
         }
 
         self.cache.async_drop().await?;

@@ -131,12 +131,17 @@ where
         self.blobstore.logical_block_size_bytes()
     }
 
-    pub async fn remove_by_id(&self, id: &BlobId) -> anyhow::Result<RemoveResult> {
+    /// Request removal of a blob by ID.
+    /// Immediately marks the blob as being removed so no new users can acquire it.
+    /// Returns a future that completes when the removal is done.
+    pub async fn request_removal_by_id(
+        &self,
+        id: &BlobId,
+    ) -> impl Future<Output = anyhow::Result<RemoveResult>> {
         loop {
             match self.loaded_blobs.request_removal(*id, &self.blobstore) {
                 RequestRemovalResult::RemovalRequested { on_removed } => {
-                    // Wait until the blob is removed
-                    return on_removed.await;
+                    return on_removed;
                 }
                 RequestRemovalResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry

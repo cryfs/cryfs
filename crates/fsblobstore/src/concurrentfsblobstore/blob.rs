@@ -44,8 +44,13 @@ where
         self.blob.is_removal_requested()
     }
 
-    pub async fn remove(this: AsyncDropGuard<Self>) -> Result<RemoveResult, Arc<anyhow::Error>> {
-        LoadedBlobGuard::remove(this.unsafe_into_inner_dont_drop().blob).await
+    /// Request removal of this blob.
+    /// Immediately marks the blob as being removed so no new users can acquire it.
+    /// Returns a future that completes when the removal is done.
+    pub async fn request_removal(
+        this: AsyncDropGuard<Self>,
+    ) -> Result<impl Future<Output = Result<RemoveResult, Arc<anyhow::Error>>>, anyhow::Error> {
+        LoadedBlobGuard::request_removal(this.unsafe_into_inner_dont_drop().blob).await
     }
 }
 
