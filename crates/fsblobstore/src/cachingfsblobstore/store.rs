@@ -30,6 +30,11 @@ const MAX_ENTRY_AGE: Duration = Duration::from_secs(1);
 /// by a consumer, it goes into the cache instead of being immediately dropped.
 /// Periodically, old entries are evicted from the cache.
 ///
+/// The main purpose of this caching layer is to delay the drop of blobs in the underlying
+/// ConcurrentFsBlobStore. For synchronization, we rely on ConcurrentFsBlobStore. CachingFsBlobStore
+/// itself allows multiple CachingFsBlob instances for the same blob ID to exist concurrently,
+/// but ConcurrentFsBlobStore will ensure that they refer to the same underlying blob instance.
+///
 /// Blobs, when loaded or created, are removed from the cache and returned to the caller.
 /// When the caller drops the blob, it is put back into the cache.
 /// This means that if a blob is loaded while another task already loaded it, we don't have
