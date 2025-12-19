@@ -80,6 +80,8 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
         let blocksize = self.config.config.config().blocksize;
         let mut blobstore = FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize).await?);
 
+        // TODO Would it make sense to wrap blobstore into ConcurrentFsBlobStore and CachingFsBlobStore?
+
         let pb = self
             .progress_bar_manager
             .new_progress_bar("Checking all reachable blobs", 1);
