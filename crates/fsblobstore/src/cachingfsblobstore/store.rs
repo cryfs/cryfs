@@ -1,13 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
+use cryfs_utils::with_async_drop_2;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::time::Duration;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropWeak};
 use cryfs_utils::periodic_task::PeriodicTask;
 
 use super::blob::CachingFsBlob;
@@ -55,13 +56,16 @@ where
         let cache = AsyncDropArc::new(BlobCache::new(MAX_CACHE_ENTRIES));
 
         // Spawn the eviction task
-        let cache_for_task = AsyncDropArc::clone(&cache);
+        let cache_for_task = AsyncDropArc::downgrade(&cache);
         let eviction_task = PeriodicTask::spawn(
             "CachingFsBlobStore eviction",
             EVICTION_INTERVAL,
             move || {
-                let cache = AsyncDropArc::clone(&cache_for_task);
-                async move { cache.evict_old_entries(MAX_ENTRY_AGE).await }
+                let cache = AsyncDropWeak::clone(&cache_for_task);
+                async move {
+                    let cache = cache.upgrade().expect("This can't happen because CachingFsBlobStore drops the PeriodicTask before it drops its strng reference to the cache");
+                    with_async_drop_2!(cache, { cache.evict_old_entries(MAX_ENTRY_AGE).await })
+                }
             },
         );
 

@@ -11,7 +11,7 @@ use super::{
     symlink::CrySymlink,
 };
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
-use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::cachingfsblobstore::{CachingFsBlob, CachingFsBlobStore};
 use cryfs_fsblobstore::fsblobstore::{
     AddError, AddOrOverwriteError, FlushBehavior, RemoveError, RenameError,
 };
@@ -31,7 +31,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Here and in others, can we just store &FsBlobStore instead of &AsyncDropGuard?
-    blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
     node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
@@ -41,7 +41,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
         node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
@@ -50,7 +50,7 @@ where
         })
     }
 
-    async fn load_blob(&self) -> Result<AsyncDropGuard<ConcurrentFsBlob<B>>, FsError> {
+    async fn load_blob(&self) -> Result<AsyncDropGuard<CachingFsBlob<B>>, FsError> {
         self.node_info.load_blob(self.blobstore).await
     }
 
@@ -146,7 +146,7 @@ where
             .blobstore
             .remove_by_id(&old_destination_blob_id)
             .await
-            .map_err(FsError::internal_error)?;
+            .map_err(FsError::internal_error_arc)?;
         match result {
             RemoveResult::SuccessfullyRemoved => Ok(()),
             RemoveResult::NotRemovedBecauseItDoesntExist => {
@@ -639,7 +639,7 @@ where
                     };
                     assert_eq!(*removed_entry.blob_id(), child_blob.blob_id());
 
-                    let remove_result = ConcurrentFsBlob::remove(child_blob).await;
+                    let remove_result = CachingFsBlob::remove(child_blob).await;
                     match remove_result {
                         Ok(RemoveResult::SuccessfullyRemoved) => Ok(()),
                         Ok(RemoveResult::NotRemovedBecauseItDoesntExist) => {
@@ -790,7 +790,7 @@ where
                         Err(FsError::NodeIsADirectory)
                     }
                     EntryType::File | EntryType::Symlink => {
-                        let remove_result = self.blobstore.remove_by_id(blob_id).await.map_err(FsError::internal_error)?;
+                        let remove_result = self.blobstore.remove_by_id(blob_id).await.map_err(FsError::internal_error_arc)?;
                         match remove_result {
                             RemoveResult::SuccessfullyRemoved => Ok(()),
                             RemoveResult::NotRemovedBecauseItDoesntExist => {

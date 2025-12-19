@@ -22,7 +22,8 @@ use super::{
     dir::CryDir, file::CryFile, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
     symlink::CrySymlink,
 };
-use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::cachingfsblobstore::{CachingFsBlob, CachingFsBlobStore};
+use cryfs_fsblobstore::concurrentfsblobstore::ConcurrentFsBlobStore;
 use cryfs_fsblobstore::fsblobstore::{
     AddOrOverwriteError, BlobType, EntryType, FsBlob, FsBlobStore, RemoveError, RenameError,
 };
@@ -32,7 +33,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+    blobstore: AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
     root_blob_id: BlobId,
 
     atime_update_behavior: AtimeUpdateBehavior,
@@ -52,7 +53,9 @@ where
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            blobstore: AsyncDropArc::new(ConcurrentFsBlobStore::new(FsBlobStore::new(blobstore))),
+            blobstore: AsyncDropArc::new(CachingFsBlobStore::new(ConcurrentFsBlobStore::new(
+                FsBlobStore::new(blobstore),
+            ))),
             root_blob_id,
             atime_update_behavior,
             last_access_time: Arc::new(AtomicInstant::now()),
@@ -64,7 +67,8 @@ where
         root_blob_id: BlobId,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> Result<AsyncDropGuard<Self>, Arc<anyhow::Error>> {
-        let mut fsblobstore = ConcurrentFsBlobStore::new(FsBlobStore::new(blobstore));
+        let mut fsblobstore =
+            CachingFsBlobStore::new(ConcurrentFsBlobStore::new(FsBlobStore::new(blobstore)));
         match fsblobstore.create_root_dir_blob(&root_blob_id).await {
             Ok(()) => Ok(AsyncDropGuard::new(Self {
                 blobstore: AsyncDropArc::new(fsblobstore),
@@ -94,7 +98,7 @@ where
     async fn load_blob(
         &self,
         path: impl IntoIterator<Item = &PathComponent>,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+    ) -> FsResult<AsyncDropGuard<CachingFsBlob<B>>> {
         let mut root_blob = self
             .blobstore
             .load(&self.root_blob_id)
@@ -127,9 +131,9 @@ where
 
     async fn load_blob_from_relative_path_owned(
         &self,
-        anchor: AsyncDropGuard<ConcurrentFsBlob<B>>,
+        anchor: AsyncDropGuard<CachingFsBlob<B>>,
         relative_path: impl Iterator<Item = &PathComponent>,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+    ) -> FsResult<AsyncDropGuard<CachingFsBlob<B>>> {
         match self
             .load_blob_from_relative_path(MaybeOwned::Owned(anchor), relative_path)
             .await?
@@ -145,9 +149,9 @@ where
     // If `anchor` is owned or `relative_path` is non-empty, the returned blob will be owned.
     async fn load_blob_from_relative_path<'b>(
         &self,
-        anchor: MaybeOwned<'b, AsyncDropGuard<ConcurrentFsBlob<B>>>,
+        anchor: MaybeOwned<'b, AsyncDropGuard<CachingFsBlob<B>>>,
         relative_path: impl Iterator<Item = &PathComponent>,
-    ) -> FsResult<MaybeOwned<'b, AsyncDropGuard<ConcurrentFsBlob<B>>>> {
+    ) -> FsResult<MaybeOwned<'b, AsyncDropGuard<CachingFsBlob<B>>>> {
         let mut current_blob = anchor;
 
         for path_component in relative_path {
@@ -366,7 +370,7 @@ where
                         .blobstore
                         .remove_by_id(&overwritten_blobid)
                         .await
-                        .map_err(FsError::internal_error)?
+                        .map_err(FsError::internal_error_arc)?
                     {
                         RemoveResult::SuccessfullyRemoved => Ok(()),
                         RemoveResult::NotRemovedBecauseItDoesntExist => {
@@ -550,7 +554,7 @@ where
 }
 
 pub async fn check_entry_overwrite_allowed<B>(
-    blobstore: &AsyncDropArc<ConcurrentFsBlobStore<B>>,
+    blobstore: &AsyncDropArc<CachingFsBlobStore<B>>,
     source_blob_type: EntryType,
     overwritten_blob_type: EntryType,
     overwritten_blobid: &BlobId,
@@ -583,7 +587,7 @@ fn check_blob_type_transition_allowed(
 }
 
 async fn check_were_not_overwriting_nonempty_dir<B>(
-    blobstore: &AsyncDropArc<ConcurrentFsBlobStore<B>>,
+    blobstore: &AsyncDropArc<CachingFsBlobStore<B>>,
     overwritten_blobid: &BlobId,
     blob_type: EntryType,
 ) -> FsResult<()>
@@ -645,9 +649,9 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    AreSameBlob(AsyncDropGuard<ConcurrentFsBlob<B>>),
+    AreSameBlob(AsyncDropGuard<CachingFsBlob<B>>),
     AreDifferentBlobs(
-        AsyncDropGuard<ConcurrentFsBlob<B>>,
-        AsyncDropGuard<ConcurrentFsBlob<B>>,
+        AsyncDropGuard<CachingFsBlob<B>>,
+        AsyncDropGuard<CachingFsBlob<B>>,
     ),
 }
