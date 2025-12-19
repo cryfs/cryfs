@@ -75,9 +75,8 @@ where
 
         // It's possible that we have another instance in the cache, when another task loaded it.
         // Let's remove that instance too.
-        // TODO This won't capture the case where a task is currently using it and will then return it to the cache
-        //      after our remove operation. How should we handle that? Right now, it just goes back into the cache,
-        //      unnecessarily delaying the actual removal.
+        // Note: If another task is currently using the blob, it will check is_removal_requested()
+        // in async_drop_impl and won't put it back in the cache but immediately drop it.
         let from_cache = inner.cache.remove(&blob.blob_id());
         if let Some(mut cached_blob) = from_cache {
             cached_blob.async_drop().await?;
@@ -110,10 +109,19 @@ where
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let blob = self.blob.take().expect("blob should be present");
+        let mut blob = self.blob.take().expect("blob should be present");
 
-        // Put the blob back in the cache
-        self.cache.put(blob).await;
+        // Only cache if NOT marked for removal
+        if blob.is_removal_requested() {
+            // Just drop without caching - a removal is in progress
+
+            blob.async_drop().await?;
+        } else {
+            // TODO There is still a race condition here where another task could request removal right after we confirmed here that removal is not in progress but before we put it back in the cache.
+
+            // Put the blob back in the cache
+            self.cache.put(blob).await;
+        }
 
         self.cache.async_drop().await?;
 

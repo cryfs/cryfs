@@ -695,6 +695,20 @@ where
         };
     }
 
+    /// Check if an immediate drop has been requested for the given key.
+    /// Returns true if the entry exists and an immediate drop is in progress.
+    pub fn is_immediate_drop_requested(
+        this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
+        key: &K,
+    ) -> bool {
+        let entries = this.entries.lock().unwrap();
+        entries.get(key).map_or(false, |entry| match entry {
+            EntryState::Loaded(loaded) => loaded.immediate_drop_requested().is_some(),
+            EntryState::Loading(loading) => loading.immediate_drop_requested().is_some(),
+            EntryState::Dropping(_) => true,
+        })
+    }
+
     pub(super) fn _finalize_waiter(
         this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
