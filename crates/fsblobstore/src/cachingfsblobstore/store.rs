@@ -8,8 +8,11 @@ use std::sync::Arc;
 use tokio::time::Duration;
 
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropWeak};
+use cryfs_utils::async_drop::{
+    AsyncDrop, AsyncDropArc, AsyncDropGuard, AsyncDropTokioMutex, AsyncDropWeak,
+};
 use cryfs_utils::periodic_task::PeriodicTask;
+use cryfs_utils::stream::for_each_unordered;
 
 use super::blob::CachingFsBlob;
 use super::cache::BlobCache;
@@ -35,14 +38,13 @@ const MAX_ENTRY_AGE: Duration = Duration::from_secs(1);
 /// return a reference to the already loaded blob. When the first task drops the blob, it goes
 /// into the cache, and when the second task drops its instance, it will replace the instance
 /// in the cache.
-#[derive(Debug)]
 pub struct CachingFsBlobStore<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     underlying: AsyncDropGuard<ConcurrentFsBlobStore<B>>,
-    cache: AsyncDropGuard<AsyncDropArc<BlobCache<B>>>,
+    cache: AsyncDropGuard<AsyncDropArc<AsyncDropTokioMutex<BlobCache<B>>>>,
     eviction_task: Option<AsyncDropGuard<PeriodicTask>>,
 }
 
@@ -53,7 +55,7 @@ where
 {
     /// Create a new caching blob store
     pub fn new(underlying: AsyncDropGuard<ConcurrentFsBlobStore<B>>) -> AsyncDropGuard<Self> {
-        let cache = AsyncDropArc::new(BlobCache::new(MAX_CACHE_ENTRIES));
+        let cache = AsyncDropArc::new(AsyncDropTokioMutex::new(BlobCache::new(MAX_CACHE_ENTRIES)));
 
         // Spawn the eviction task
         let cache_for_task = AsyncDropArc::downgrade(&cache);
@@ -64,7 +66,14 @@ where
                 let cache = AsyncDropWeak::clone(&cache_for_task);
                 async move {
                     let cache = cache.upgrade().expect("This can't happen because CachingFsBlobStore drops the PeriodicTask before it drops its strng reference to the cache");
-                    with_async_drop_2!(cache, { cache.evict_old_entries(MAX_ENTRY_AGE).await })
+                    let evicted = with_async_drop_2!(cache, {
+                        // Lock, evict, unlock, then drop evicted blobs
+                        Ok::<_, anyhow::Error>(cache.lock().await.evict_old_entries(MAX_ENTRY_AGE))
+                    })?;
+                    for_each_unordered(evicted.into_iter(), |mut blob| async move {
+                        blob.async_drop().await
+                    })
+                    .await
                 }
             },
         );
@@ -133,7 +142,11 @@ where
         blob_id: &BlobId,
     ) -> Result<Option<AsyncDropGuard<CachingFsBlob<B>>>, Arc<anyhow::Error>> {
         // First check the cache
-        if let Some(blob) = self.cache.try_get(blob_id) {
+        // TODO This is technically not needed since the underlying store is a ConcurrentFsBlobStore
+        //      and it's ok to have multiple references. The main purpose of CachingFsBlobStore is to delay
+        //      the drop of blobs to avoid frequent reloads. Check if performance is better if we don't check
+        //      the cache here.
+        if let Some(blob) = self.cache.lock().await.try_get(blob_id) {
             return Ok(Some(CachingFsBlob::new(
                 blob,
                 AsyncDropArc::clone(&self.cache),
@@ -164,12 +177,27 @@ where
     ///
     /// This removes the blob from both the cache and the underlying store.
     pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult, Arc<anyhow::Error>> {
-        if let Some(blob) = self.cache.remove(id) {
-            // Note: If another task is currently using the blob, it will check is_removal_requested()
-            // in CachingFsBlob::async_drop_impl and won't put it back in the cache but immediately drop it.
-            ConcurrentFsBlob::remove(blob).await
+        // Hold the lock until the removal flag is set and we removed from the cache.
+        // This ensures that any concurrent task calling async_drop or remove for the same blob will either:
+        // - Complete before we take the lock (we'll remove the cached blob)
+        // - Wait until we release the lock (will see is_removal_requested() == true)
+        let mut cache = self.cache.lock().await;
+        if let Some(cached_blob) = cache.try_get(id) {
+            let removal_future = ConcurrentFsBlob::request_removal(cached_blob).await?;
+
+            // Now the removal flag is set and it's removed from the cache, we can release the lock
+            drop(cache);
+
+            // Now wait for the removal
+            removal_future.await
         } else {
-            self.underlying.remove_by_id(id).await.map_err(Arc::new)
+            let removal_future = self.underlying.request_removal_by_id(id).await;
+
+            // Now the removal flag is set, we can release the lock
+            drop(cache);
+
+            // Now wait for the removal
+            removal_future.await.map_err(Arc::new)
         }
     }
 
@@ -183,7 +211,24 @@ where
     /// This is primarily useful for testing.
     #[cfg(feature = "testutils")]
     pub async fn clear_cache(&self) -> Result<()> {
-        self.cache.evict_all().await
+        let evicted = self.cache.lock().await.evict_all();
+        for_each_unordered(evicted.into_iter(), |mut blob| async move {
+            blob.async_drop().await
+        })
+        .await
+    }
+}
+
+impl<B> Debug for CachingFsBlobStore<B>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CachingFsBlobStore")
+            .field("underlying", &self.underlying)
+            .field("cache", &"<locked>")
+            .finish()
     }
 }
 
