@@ -161,8 +161,8 @@ where
     /// This removes the blob from both the cache and the underlying store.
     pub async fn remove_by_id(&self, id: &BlobId) -> Result<RemoveResult, Arc<anyhow::Error>> {
         if let Some(blob) = self.cache.remove(id) {
-            // TODO This won't capture the case where a task is currently using it and will then return it to the cache
-            //      after our remove operation. See also the TODO in CachingFsBlob::remove.
+            // Note: If another task is currently using the blob, it will check is_removal_requested()
+            // in CachingFsBlob::async_drop_impl and won't put it back in the cache but immediately drop it.
             ConcurrentFsBlob::remove(blob).await
         } else {
             self.underlying.remove_by_id(id).await.map_err(Arc::new)

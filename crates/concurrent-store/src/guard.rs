@@ -54,6 +54,10 @@ where
     {
         ConcurrentStoreInner::request_immediate_drop(&self.store, self.key.clone(), drop_fn)
     }
+
+    pub fn is_immediate_drop_requested(&self) -> bool {
+        ConcurrentStoreInner::is_immediate_drop_requested(&self.store, &self.key)
+    }
 }
 
 #[async_trait]

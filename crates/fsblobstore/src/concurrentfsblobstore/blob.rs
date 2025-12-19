@@ -39,6 +39,11 @@ where
         self.blob.with_lock(f).await
     }
 
+    /// Check if a removal is in progress for this blob.
+    pub fn is_removal_requested(&self) -> bool {
+        self.blob.is_removal_requested()
+    }
+
     pub async fn remove(this: AsyncDropGuard<Self>) -> Result<RemoveResult, Arc<anyhow::Error>> {
         LoadedBlobGuard::remove(this.unsafe_into_inner_dont_drop().blob).await
     }

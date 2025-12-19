@@ -44,6 +44,12 @@ where
         f(&mut *guard).await
     }
 
+    /// Check if a removal is in progress for this blob.
+    pub fn is_removal_requested(&self) -> bool {
+        // The only scenario where we request an immediate drop is when a removal is in progress
+        self.loaded_blob.is_immediate_drop_requested()
+    }
+
     pub async fn remove(
         mut this: AsyncDropGuard<Self>,
     ) -> Result<RemoveResult, Arc<anyhow::Error>> {
