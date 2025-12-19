@@ -3,7 +3,7 @@ use futures::future::BoxFuture;
 use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::ops::Deref;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use super::{AsyncDrop, AsyncDropGuard};
 
@@ -11,6 +11,15 @@ use super::{AsyncDrop, AsyncDropGuard};
 pub struct AsyncDropArc<T: AsyncDrop + Debug + Send> {
     // Always Some except during destruction
     v: Option<Arc<AsyncDropGuard<T>>>,
+}
+
+/// A weak reference to an `AsyncDropArc<T>`.
+///
+/// Does not prevent the value from being dropped. When upgraded,
+/// returns an `AsyncDropArc` to ensure proper async drop semantics.
+#[derive(Debug)]
+pub struct AsyncDropWeak<T: AsyncDrop + Debug + Send> {
+    v: Weak<AsyncDropGuard<T>>,
 }
 
 impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
@@ -47,6 +56,13 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
         let rhs = b.v.as_ref().expect("Already dropped");
         Arc::ptr_eq(lhs, rhs)
     }
+
+    /// Creates a weak reference to this `AsyncDropArc`.
+    pub fn downgrade(this: &AsyncDropGuard<Self>) -> AsyncDropWeak<T> {
+        AsyncDropWeak {
+            v: Arc::downgrade(this.v.as_ref().expect("Already destructed")),
+        }
+    }
 }
 
 #[async_trait]
@@ -82,6 +98,35 @@ impl<T: AsyncDrop + Debug + Send> Borrow<T> for AsyncDropArc<T> {
             self.v.as_ref().expect("Already destructed"),
         ))
         .borrow()
+    }
+}
+
+impl<T: AsyncDrop + Debug + Send> AsyncDropWeak<T> {
+    /// Attempts to upgrade the weak reference to an `AsyncDropArc`.
+    ///
+    /// Returns `None` if the inner value has already been dropped,
+    /// or `Some(AsyncDropGuard<AsyncDropArc<T>>)` if there are still
+    /// strong references.
+    pub fn upgrade(&self) -> Option<AsyncDropGuard<AsyncDropArc<T>>> {
+        self.v
+            .upgrade()
+            .map(|arc| AsyncDropGuard::new(AsyncDropArc { v: Some(arc) }))
+    }
+
+    /// Returns the number of strong references to the value.
+    pub fn strong_count(&self) -> usize {
+        self.v.strong_count()
+    }
+
+    /// Returns the number of weak references to the value.
+    pub fn weak_count(&self) -> usize {
+        self.v.weak_count()
+    }
+}
+
+impl<T: AsyncDrop + Debug + Send> Clone for AsyncDropWeak<T> {
+    fn clone(&self) -> Self {
+        AsyncDropWeak { v: self.v.clone() }
     }
 }
 

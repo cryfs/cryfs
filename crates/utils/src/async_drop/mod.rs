@@ -5,7 +5,7 @@ mod async_drop_guard;
 pub use async_drop_guard::AsyncDropGuard;
 
 mod async_drop_arc;
-pub use async_drop_arc::AsyncDropArc;
+pub use async_drop_arc::{AsyncDropArc, AsyncDropWeak};
 
 mod async_drop_tokio_mutex;
 pub use async_drop_tokio_mutex::AsyncDropTokioMutex;
