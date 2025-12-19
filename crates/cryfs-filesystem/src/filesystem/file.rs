@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
 use cryfs_blobstore::BlobStore;
-use cryfs_fsblobstore::concurrentfsblobstore::ConcurrentFsBlobStore;
+use cryfs_fsblobstore::cachingfsblobstore::CachingFsBlobStore;
 use cryfs_rustfs::{FsError, FsResult, OpenInFlags, object_based_api::File};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
@@ -12,7 +12,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
     node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
@@ -22,7 +22,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
         node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {

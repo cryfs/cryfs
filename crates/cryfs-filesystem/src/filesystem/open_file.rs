@@ -15,7 +15,7 @@ use cryfs_utils::{
 
 use super::node_info::NodeInfo;
 use cryfs_fsblobstore::{
-    concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore},
+    cachingfsblobstore::{CachingFsBlob, CachingFsBlobStore},
     fsblobstore::{FileBlob, FsBlob},
 };
 
@@ -26,7 +26,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+    blobstore: AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
     node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
@@ -36,7 +36,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+        blobstore: AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
         node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
@@ -45,7 +45,7 @@ where
         })
     }
 
-    async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+    async fn load_blob(&self) -> FsResult<AsyncDropGuard<CachingFsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 

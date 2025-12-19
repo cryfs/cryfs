@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::fmt::Debug;
 
 use cryfs_fsblobstore::{
-    concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore},
+    cachingfsblobstore::{CachingFsBlob, CachingFsBlobStore},
     fsblobstore::{FsBlob, SymlinkBlob},
 };
 
@@ -21,7 +21,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     // TODO Do we need to store blobstore + node_info here or can we just store the target directly?
-    blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+    blobstore: &'a AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
     node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
 }
 
@@ -31,7 +31,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: &'a AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+        blobstore: &'a AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
         node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
@@ -40,7 +40,7 @@ where
         })
     }
 
-    async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+    async fn load_blob(&self) -> FsResult<AsyncDropGuard<CachingFsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 

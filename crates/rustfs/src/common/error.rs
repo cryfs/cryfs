@@ -85,9 +85,11 @@ pub enum FsError {
 
 impl FsError {
     pub fn internal_error(error: anyhow::Error) -> Self {
-        FsError::InternalError {
-            error: Arc::new(error),
-        }
+        Self::internal_error_arc(Arc::new(error))
+    }
+
+    pub fn internal_error_arc(error: Arc<anyhow::Error>) -> Self {
+        FsError::InternalError { error }
     }
 
     pub fn system_error_code(&self) -> libc::c_int {
