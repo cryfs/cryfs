@@ -5,7 +5,7 @@ use std::time::SystemTime;
 use tokio::join;
 
 use cryfs_blobstore::{BlobId, BlobStore};
-use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::cachingfsblobstore::{CachingFsBlob, CachingFsBlobStore};
 use cryfs_fsblobstore::fsblobstore::{
     BlobType, DIR_LSTAT_SIZE, DirBlob, DirEntry, FileBlob, FsBlob, SetAttrError,
     UpdateTimestampError,
@@ -38,7 +38,7 @@ where
         atime_update_behavior: AtimeUpdateBehavior,
     },
     IsNotRootDir {
-        parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
+        parent_blob: AsyncDropGuard<CachingFsBlob<B>>,
         // TODO It probably makes sense to store the self_blob here as well, maybe optional (OnceCell?) so it isn't unnecessarily loaded, but once it's loaded it's cached and doesn't have to be re-loaded.
         //      But we need to be careful with deadlocks, given that NodeInfo is stored in fuser in the inode list and the open file list.
         /// ancestors.first() is the root blob id, ancestors.last() is the immediate parent of this node.
@@ -82,7 +82,7 @@ where
     }
 
     pub fn new_non_root_dir(
-        parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
+        parent_blob: AsyncDropGuard<CachingFsBlob<B>>,
         #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
         name: PathComponentBuf,
         blob_id: BlobId,
@@ -109,7 +109,7 @@ where
         }
     }
 
-    pub fn parent_blob(&self) -> Option<&AsyncDropGuard<ConcurrentFsBlob<B>>> {
+    pub fn parent_blob(&self) -> Option<&AsyncDropGuard<CachingFsBlob<B>>> {
         match &self.inner {
             NodeInfoImpl::IsRootDir { .. } => None,
             NodeInfoImpl::IsNotRootDir { parent_blob, .. } => Some(parent_blob),
@@ -152,8 +152,8 @@ where
 
     pub async fn load_blob(
         &self,
-        blobstore: &ConcurrentFsBlobStore<B>,
-    ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+        blobstore: &CachingFsBlobStore<B>,
+    ) -> FsResult<AsyncDropGuard<CachingFsBlob<B>>> {
         let blob_id = self.blob_id();
         blobstore
             .load(&blob_id)
@@ -170,7 +170,7 @@ where
             })
     }
 
-    pub async fn flush_if_cached(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<()> {
+    pub async fn flush_if_cached(&self, blobstore: &CachingFsBlobStore<B>) -> FsResult<()> {
         let blob_id = self.blob_id();
         blobstore.flush_if_cached(*blob_id).await.map_err(|err| {
             log::error!("Error flushing blob {:?}: {:?}", blob_id, err);
@@ -188,7 +188,7 @@ where
         })
     }
 
-    async fn load_lstat_size(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NumBytes> {
+    async fn load_lstat_size(&self, blobstore: &CachingFsBlobStore<B>) -> FsResult<NumBytes> {
         let mut blob = self.load_blob(blobstore).await?;
         let lstat_size = blob.with_lock(async |blob| blob.lstat_size().await).await;
         let result = match lstat_size {
@@ -203,7 +203,7 @@ where
         result
     }
 
-    pub async fn getattr(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NodeAttrs> {
+    pub async fn getattr(&self, blobstore: &CachingFsBlobStore<B>) -> FsResult<NodeAttrs> {
         match &self.inner {
             NodeInfoImpl::IsRootDir {
                 root_blob_id: _,
@@ -252,7 +252,7 @@ where
 
     pub async fn setattr(
         &self,
-        blobstore: &ConcurrentFsBlobStore<B>,
+        blobstore: &CachingFsBlobStore<B>,
         mode: Option<cryfs_rustfs::Mode>,
         uid: Option<cryfs_rustfs::Uid>,
         gid: Option<cryfs_rustfs::Gid>,
@@ -317,7 +317,7 @@ where
 
     pub async fn truncate_file(
         &self,
-        blobstore: &ConcurrentFsBlobStore<B>,
+        blobstore: &CachingFsBlobStore<B>,
         new_size: NumBytes,
     ) -> FsResult<()> {
         let blob = self.load_blob(blobstore).await?;

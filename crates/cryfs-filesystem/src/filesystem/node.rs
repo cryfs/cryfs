@@ -10,7 +10,7 @@ use super::CryDevice;
 use super::node_info::NodeInfo;
 use super::{dir::CryDir, file::CryFile, symlink::CrySymlink};
 use cryfs_blobstore::BlobStore;
-use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
+use cryfs_fsblobstore::cachingfsblobstore::{CachingFsBlob, CachingFsBlobStore};
 use cryfs_fsblobstore::fsblobstore::BlobType;
 use cryfs_rustfs::{FsError, FsResult, NodeAttrs, NumBytes, object_based_api::Node};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
@@ -20,7 +20,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+    blobstore: AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
 
     // node_info is an `Arc` so that when we call [Self::as_dir], [Self::as_file] or [Self::as_symlink]
     // and those instances change the `NodeInfo` (e.g. load its cache), that loaded cache transfers to
@@ -34,7 +34,7 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    pub async fn load_blob(&self) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
+    pub async fn load_blob(&self) -> FsResult<AsyncDropGuard<CachingFsBlob<B>>> {
         self.node_info.load_blob(&self.blobstore).await
     }
 }
@@ -45,14 +45,14 @@ where
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     pub fn new(
-        blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+        blobstore: AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
         node_info: AsyncDropGuard<NodeInfo<B>>,
     ) -> AsyncDropGuard<Self> {
         Self::new_internal(blobstore, AsyncDropArc::new(node_info))
     }
 
     pub(super) fn new_internal(
-        blobstore: AsyncDropGuard<AsyncDropArc<ConcurrentFsBlobStore<B>>>,
+        blobstore: AsyncDropGuard<AsyncDropArc<CachingFsBlobStore<B>>>,
         node_info: AsyncDropGuard<AsyncDropArc<NodeInfo<B>>>,
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
