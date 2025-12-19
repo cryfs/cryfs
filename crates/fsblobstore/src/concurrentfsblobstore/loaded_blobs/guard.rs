@@ -3,7 +3,10 @@ use std::{fmt::Debug, sync::Arc};
 use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex},
+    with_async_drop_2,
+};
 use lockable::InfallibleUnwrap as _;
 
 use crate::fsblobstore::FsBlob;
@@ -50,11 +53,15 @@ where
         self.loaded_blob.is_immediate_drop_requested()
     }
 
-    pub async fn remove(
-        mut this: AsyncDropGuard<Self>,
-    ) -> Result<RemoveResult, Arc<anyhow::Error>> {
-        loop {
-            match this.loaded_blob.request_immediate_drop(
+    /// Request removal of the blob.
+    /// Immediately marks the blob as being removed so no new users can acquire it.
+    /// Returns a future that completes when the removal is done.
+    pub async fn request_removal(
+        this: AsyncDropGuard<Self>,
+    ) -> Result<impl Future<Output = Result<RemoveResult, Arc<anyhow::Error>>>, anyhow::Error> {
+        with_async_drop_2!(this, {
+            loop {
+                match this.loaded_blob.request_immediate_drop(
                 |blob| async move {
                     let Some(blob) = blob else {
                         panic!("The blob wasn't loaded. This can't happen because we hold the LoadedBlobGuard");
@@ -65,11 +72,7 @@ where
                 },
             ) {
                 RequestImmediateDropResult::ImmediateDropRequested { drop_result } => {
-                    // Drop the blob so we don't hold a lock on it, which would prevent the removal. Removal waits until all readers relinquished their blob.
-                    this.async_drop().await?;
-                    std::mem::drop(this);
-                    // Wait until the blob is removed. If there are other readers, this will wait.
-                    return drop_result.await;
+                    return Ok(drop_result);
                 }
                 RequestImmediateDropResult::AlreadyDropping { future } => {
                     // Blob is currently dropping, let's wait until that is done and then retry
@@ -77,7 +80,8 @@ where
                     continue;
                 }
             }
-        }
+            }
+        })
     }
 }
 
