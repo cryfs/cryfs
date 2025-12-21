@@ -51,8 +51,8 @@ To ensure compatiblity with CryFS 1.0, CryFS 2.0 does not add any features that 
 File systems are **fully forward and backward compatible** between CryFS 1.0 and 2.0, with important caveats:
 
 ✅ **Compatible:**
-- File systems created with XChaCha20 cipher (the default in 1.0)
-- File systems created with AES cipher
+- File systems created with XChaCha20 cipher (the default in 1.0 and 2.0)
+- File systems created with AES-256-GCM cipher
 - Integrity checks using block versioning are fully compatible
 
 ⚠️ **Partially Compatible:**
