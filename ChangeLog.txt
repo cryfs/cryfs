@@ -1,8 +1,14 @@
+Version 1.0.3
+---------------
+* No changes, just needed to re-create the GitHub release to be able to add asset files to it
+
+
 Version 1.0.2
 ---------------
 * Fix building with Boost 1.88 (see https://github.com/cryfs/cryfs/pull/494 )
 * Fix building with Boost 1.89 (see https://github.com/cryfs/cryfs/pull/500 )
 * Fix building on PowerPC (see https://github.com/cryfs/cryfs/pull/506 )
+
 
 Version 1.0.1
 ---------------
