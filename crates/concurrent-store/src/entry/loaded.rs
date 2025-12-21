@@ -51,6 +51,20 @@ where
         }
     }
 
+    /// Create a new Loaded state from a DroppingThenLoading state.
+    /// Takes the num_waiters and immediate_drop_request from the DTL state.
+    pub fn new_from_dropping_then_loading(
+        entry: AsyncDropGuard<V>,
+        num_unfulfilled_waiters: usize,
+        immediate_drop_request: ImmediateDropRequest<V>,
+    ) -> Self {
+        EntryStateLoaded {
+            entry: AsyncDropArc::new(entry),
+            num_unfulfilled_waiters,
+            immediate_drop_request,
+        }
+    }
+
     pub fn get_entry(&self) -> AsyncDropGuard<AsyncDropArc<V>> {
         AsyncDropArc::clone(&self.entry)
     }

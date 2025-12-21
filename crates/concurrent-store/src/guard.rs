@@ -54,6 +54,49 @@ where
     {
         ConcurrentStoreInner::request_immediate_drop(&self.store, self.key.clone(), drop_fn)
     }
+
+    /// Helper method that retries request_immediate_drop if the entry is already dropping.
+    /// Returns once the immediate drop completes.
+    ///
+    /// This is useful when you need to ensure the drop happens, even if the entry
+    /// is currently being dropped by another task.
+    ///
+    /// The `make_drop_fn` factory is called on each attempt because `FnOnce` closures
+    /// are consumed when used.
+    pub async fn request_immediate_drop_and_wait<D, G, F>(
+        &self,
+        make_drop_fn: impl Fn() -> G + Send,
+    ) -> D
+    where
+        D: Debug + Send + 'static,
+        G: FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
+        F: Future<Output = D> + Send + 'static,
+    {
+        loop {
+            match self.request_immediate_drop(make_drop_fn()) {
+                RequestImmediateDropResult::ImmediateDropRequested { drop_result } => {
+                    return drop_result.await;
+                }
+                RequestImmediateDropResult::AlreadyDropping { future } => {
+                    future.await;
+                    continue;
+                }
+            }
+        }
+    }
+
+    /// Check if immediate drop was requested for this entry.
+    ///
+    /// This is useful for implementing caching layers that need to check
+    /// whether a guard should be cached after use.
+    ///
+    /// **Synchronization guarantee**: This check happens under the `entries` lock,
+    /// same as `request_immediate_drop`, so concurrent calls are properly synchronized.
+    /// While you hold a guard, the entry stays in Loaded state (refcount > 0),
+    /// ensuring the check is valid.
+    pub fn immediate_drop_requested(&self) -> bool {
+        ConcurrentStoreInner::is_immediate_drop_requested(&self.store, &self.key)
+    }
 }
 
 #[async_trait]

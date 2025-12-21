@@ -46,8 +46,7 @@ where
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
         let mut inserted = self
             .loaded_blobs
-            .try_insert_loading(blob_id, loading_fn)
-            .await?
+            .try_insert_loading(blob_id, loading_fn)?
             .wait_until_inserted()
             .await?;
         inserted.async_drop().await.infallible_unwrap();
@@ -58,10 +57,21 @@ where
         &self,
         blob: AsyncDropGuard<FsBlob<B>>,
     ) -> Result<AsyncDropGuard<LoadedBlobGuard<B>>> {
-        self.loaded_blobs
-            .try_insert_loaded(blob.blob_id(), AsyncDropTokioMutex::new(blob))
-            .await
-            .map(LoadedBlobGuard::new)
+        let blob_id = blob.blob_id();
+        match self
+            .loaded_blobs
+            .try_insert_loaded(blob_id, AsyncDropTokioMutex::new(blob))
+        {
+            Ok(guard) => Ok(LoadedBlobGuard::new(guard)),
+            Err(mut value) => {
+                // Entry already exists - async_drop the value and return error
+                value.async_drop().await?;
+                Err(anyhow::anyhow!(
+                    "Blob with id {:?} already exists",
+                    blob_id
+                ))
+            }
+        }
     }
 
     pub async fn get_loaded_or_insert_loading<F>(
