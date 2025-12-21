@@ -7,7 +7,7 @@ target_link_libraries(CryfsDependencies_range-v3 INTERFACE range-v3::range-v3)
 set(Boost_USE_STATIC_LIBS OFF)
 find_package(Boost 1.84.0
         REQUIRED
-        COMPONENTS filesystem system thread chrono program_options)
+        COMPONENTS filesystem thread chrono program_options)
 add_library(CryfsDependencies_boost INTERFACE)
 target_link_libraries(CryfsDependencies_boost INTERFACE Boost::boost Boost::filesystem Boost::thread Boost::chrono Boost::program_options)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
