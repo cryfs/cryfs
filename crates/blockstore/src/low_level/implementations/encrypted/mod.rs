@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use byte_unit::Byte;
+use cryfs_utils::lazy_reclaim::LazyReclaim;
 use cryfs_utils::threadpool::ThreadPool;
 use futures::stream::BoxStream;
 use std::borrow::Borrow;
@@ -23,6 +24,15 @@ use cryfs_utils::{
     data::Data,
 };
 
+/// A global thread pool for crypto operations in EncryptedBlockStore
+/// to avoid creating a new thread pool for each instance.
+/// This is necessary for scenarios where many EncryptedBlockStore instances are created,
+/// e.g. in tests that run heavily in parallel. Without this, tests can slow down
+/// significantly because the number of threads explodes.
+static CRYPTO_THREAD_POOL: LazyReclaim<ThreadPool> = LazyReclaim::new(|| {
+    ThreadPool::new("EncryptedBlockStore").expect("Failed to create crypto pool")
+});
+
 // TODO Here and in other files: Add more .context() to errors
 
 const FORMAT_VERSION_HEADER: &[u8; 2] = &1u16.to_ne_bytes();
@@ -34,7 +44,7 @@ pub struct EncryptedBlockStore<
 > {
     underlying_block_store: AsyncDropGuard<B>,
     cipher: Arc<C>,
-    crypto_task_pool: ThreadPool,
+    threadpool: Arc<ThreadPool>,
     _phantom: PhantomData<_B>,
 }
 
@@ -49,8 +59,7 @@ impl<
         AsyncDropGuard::new(Self {
             underlying_block_store,
             cipher: Arc::new(cipher),
-            crypto_task_pool: ThreadPool::new("EncryptedBlockStore")
-                .expect("Failed to create thread pool for crypto tasks"),
+            threadpool: CRYPTO_THREAD_POOL.get_or_init(),
             _phantom: PhantomData,
         })
     }
@@ -225,7 +234,7 @@ impl<
 {
     async fn _encrypt(&self, plaintext: Data) -> Result<Data> {
         let cipher = Arc::clone(&self.cipher);
-        self.crypto_task_pool
+        self.threadpool
             .execute_job(move || {
                 let ciphertext = cipher.encrypt(plaintext)?;
                 Ok(_prepend_header(ciphertext))
@@ -235,7 +244,7 @@ impl<
 
     async fn _decrypt(&self, ciphertext: Data) -> Result<Data> {
         let cipher = Arc::clone(&self.cipher);
-        self.crypto_task_pool
+        self.threadpool
             .execute_job(move || {
                 let ciphertext = _check_and_remove_header(ciphertext)?;
                 cipher.decrypt(ciphertext)
