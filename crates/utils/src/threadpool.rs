@@ -230,4 +230,30 @@ mod tests {
         assert_eq!(result1, 1);
         assert_eq!(result2, 2);
     }
+
+    /// Test that the threadpool works correctly when called from futures::executor::block_on
+    /// This is important because some code paths (like InodeGuardInner::drop) use futures::executor
+    /// instead of tokio.
+    #[test]
+    fn test_execute_job_from_futures_executor() {
+        let pool = ThreadPool::new("test-pool").unwrap();
+
+        // Simulate the problematic scenario: calling execute_job from within futures::executor::block_on
+        let result = futures::executor::block_on(async { pool.execute_job(|| 42).await });
+
+        assert_eq!(result, 42);
+    }
+
+    /// Test multiple sequential calls from futures::executor::block_on
+    #[test]
+    fn test_multiple_jobs_from_futures_executor() {
+        let pool = ThreadPool::new("test-pool").unwrap();
+
+        futures::executor::block_on(async {
+            let r1 = pool.execute_job(|| 1).await;
+            let r2 = pool.execute_job(|| 2).await;
+            let r3 = pool.execute_job(|| 3).await;
+            assert_eq!(r1 + r2 + r3, 6);
+        });
+    }
 }
