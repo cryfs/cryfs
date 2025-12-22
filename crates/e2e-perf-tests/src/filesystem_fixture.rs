@@ -252,7 +252,12 @@ where
     FS: FilesystemDriver,
 {
     fn drop(&mut self) {
-        futures::executor::block_on(self.filesystem.destroy());
+        // Use block_in_place if inside tokio runtime to avoid deadlocks.
+        // See SyncDrop::Drop for detailed explanation.
+        let handle = tokio::runtime::Handle::try_current().expect("No tokio runtime running");
+        tokio::task::block_in_place(|| {
+            handle.block_on(self.filesystem.destroy());
+        });
     }
 }
 

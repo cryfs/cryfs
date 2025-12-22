@@ -469,11 +469,14 @@ where
     #[cfg(feature = "benchmark")]
     fn run_benchmark(&self, b: &mut criterion::Bencher) {
         let setup_fn = || {
-            // Need to use futures instead of tokio because tokio can't start a runtime inside a runtime and criterion calls this from within a runtime (but doesn't allow us to pass in an async function).
-            futures::executor::block_on(async {
-                let mut filesystem = (self.filesystem)().await;
-                let setup_result = (self.setup_fn)(&mut filesystem).await;
-                RefCell::new(Some((filesystem, setup_result)))
+            // criterion calls this from within a runtime (but doesn't allow us to pass in an async function)
+            let handle = tokio::runtime::Handle::try_current().expect("No tokio runtime running");
+            tokio::task::block_in_place(|| {
+                handle.block_on(async {
+                    let mut filesystem = (self.filesystem)().await;
+                    let setup_result = (self.setup_fn)(&mut filesystem).await;
+                    RefCell::new(Some((filesystem, setup_result)))
+                })
             })
         };
         let test_fn = |input: &mut RefCell<Option<(FilesystemFixture<B, FS>, SetupResult)>>| {
