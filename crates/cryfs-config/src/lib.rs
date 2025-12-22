@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
+#![allow(rustdoc::private_intra_doc_links)] // TODO Remove this?
 
 // TODO Figure out what the public API of this module should be
-
 pub mod config;
 pub mod localstate;
 mod version;
