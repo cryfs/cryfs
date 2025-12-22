@@ -27,7 +27,19 @@ impl<T: Debug + AsyncDrop> SyncDrop<T> {
 impl<T: Debug + AsyncDrop> Drop for SyncDrop<T> {
     fn drop(&mut self) {
         if let Some(mut v) = self.0.take() {
-            futures::executor::block_on(v.async_drop()).unwrap();
+            // Use block_in_place if we're inside a tokio runtime to avoid deadlocks.
+            // The async_drop code may use tokio::sync primitives that require other
+            // tokio tasks to make progress (e.g., releasing contended locks).
+            // If we just use futures::executor::block_on, we block the tokio worker
+            // thread, preventing those tasks from running, causing a deadlock.
+            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                tokio::task::block_in_place(|| {
+                    handle.block_on(v.async_drop()).unwrap();
+                });
+            } else {
+                // No tokio runtime, use futures executor
+                futures::executor::block_on(v.async_drop()).unwrap();
+            }
         }
     }
 }
