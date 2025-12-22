@@ -223,9 +223,16 @@ impl InodeGuard {
 
 impl Drop for InodeGuardInner {
     fn drop(&mut self) {
-        futures::executor::block_on(async move {
-            self.fs.forget(&request_info(), self.ino, 1).await.unwrap();
-            self.fs.async_drop().await.unwrap();
+        // Use block_in_place to allow blocking from within an async context.
+        // This is needed because the test runs inside a tokio runtime, and
+        // blocking the thread with a different executor like futures::executor
+        // could starve the tokio runtime.
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            handle.block_on(async {
+                self.fs.forget(&request_info(), self.ino, 1).await.unwrap();
+                self.fs.async_drop().await.unwrap();
+            });
         });
     }
 }
