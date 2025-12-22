@@ -28,7 +28,6 @@
 //! - #[cfg(feature = "benchmark")]      // Code only necessary for benchmarks
 //! - #[cfg(not(feature = "benchmark"))] // Code only necessary for perf tests
 
-#![forbid(unsafe_code)]
 // TODO #![deny(missing_docs)]
 #![cfg(any(test, feature = "benchmark"))]
 
