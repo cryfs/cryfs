@@ -15,6 +15,7 @@ pub mod path;
 pub mod peekable;
 pub mod periodic_task;
 pub mod progress;
+pub mod lazy_reclaim;
 pub mod stream;
 pub mod tempfile;
 pub mod threadpool;
