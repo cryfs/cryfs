@@ -32,12 +32,15 @@ impl<T: Debug + AsyncDrop> Drop for SyncDrop<T> {
             // tokio tasks to make progress (e.g., releasing contended locks).
             // If we just use futures::executor::block_on, we block the tokio worker
             // thread, preventing those tasks from running, causing a deadlock.
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
+            if let Ok(handle) = tokio::runtime::Handle::try_current()
+                && handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread
+            {
                 tokio::task::block_in_place(|| {
                     handle.block_on(v.async_drop()).unwrap();
                 });
             } else {
                 // No tokio runtime, use futures executor
+                // Single threaded tokio runtime doesn't support block_on, so we also use this path.
                 futures::executor::block_on(v.async_drop()).unwrap();
             }
         }
