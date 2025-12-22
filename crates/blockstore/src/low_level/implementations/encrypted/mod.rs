@@ -227,7 +227,7 @@ impl<
         let cipher = Arc::clone(&self.cipher);
         self.crypto_task_pool
             .execute_job(move || {
-                let ciphertext = tokio::task::block_in_place(move || cipher.encrypt(plaintext))?;
+                let ciphertext = cipher.encrypt(plaintext)?;
                 Ok(_prepend_header(ciphertext))
             })
             .await
