@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "fill-labs.dependi",
-        "jjk.jjk"
+        "jjk.jjk",
+        "anthropic.claude-code"
     ]
 }

@@ -19,7 +19,8 @@
 			},
 			"extensions": [
 				"fill-labs.dependi",
-				"jjk.jjk"
+				"jjk.jjk",
+				"Anthropic.claude-code"
 			]
 		}
 	}
