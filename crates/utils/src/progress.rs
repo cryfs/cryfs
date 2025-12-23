@@ -1,8 +1,19 @@
+//! Progress bar and spinner abstractions.
+//!
+//! This module provides traits and implementations for showing progress to users.
+//! It includes:
+//!
+//! - [`ProgressBarManager`]: Factory trait for creating spinners and progress bars
+//! - [`Spinner`]: A progress indicator for tasks with unknown duration
+//! - [`Progress`]: A progress bar for tasks with known total steps
+//!
+//! Two implementations are provided:
+//! - Console implementations that display visual progress using the `indicatif` crate
+//! - Silent implementations that do nothing (useful for non-interactive contexts or tests)
+
 use indicatif::{ProgressBar, ProgressStyle};
 use std::sync::Arc;
 use std::time::Duration;
-
-// TODO Use [https://docs.rs/indicatif-log-bridge/latest/indicatif_log_bridge/] so log messages don't destroy the progress bar
 
 const AUTOTICK_INTERVAL: Duration = Duration::from_millis(50);
 
@@ -176,5 +187,85 @@ impl Drop for ConsoleProgressImpl {
     fn drop(&mut self) {
         self.pb
             .finish_with_message(format!("{}...done\n", self.message));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_silent_spinner_finish() {
+        let spinner = SilentSpinner;
+        // Should not panic
+        spinner.finish();
+    }
+
+    #[test]
+    fn test_silent_spinner_clone() {
+        let spinner1 = SilentSpinner;
+        let spinner2 = spinner1;
+        // Both should work independently
+        spinner1.finish();
+        spinner2.finish();
+    }
+
+    #[test]
+    fn test_silent_progress_inc() {
+        let progress = SilentProgress;
+        // Should not panic
+        progress.inc(1);
+        progress.inc(100);
+    }
+
+    #[test]
+    fn test_silent_progress_inc_length() {
+        let progress = SilentProgress;
+        // Should not panic
+        progress.inc_length(50);
+    }
+
+    #[test]
+    fn test_silent_progress_finish() {
+        let progress = SilentProgress;
+        // Should not panic
+        progress.finish();
+    }
+
+    #[test]
+    fn test_silent_progress_clone() {
+        let progress1 = SilentProgress;
+        let progress2 = progress1;
+        // Both should work independently
+        progress1.inc(1);
+        progress2.inc(2);
+        progress1.finish();
+        progress2.finish();
+    }
+
+    #[test]
+    fn test_silent_progress_bar_manager_creates_silent_spinner() {
+        let manager = SilentProgressBarManager;
+        let spinner = manager.new_spinner_autotick("test");
+        spinner.finish();
+    }
+
+    #[test]
+    fn test_silent_progress_bar_manager_creates_silent_progress() {
+        let manager = SilentProgressBarManager;
+        let progress = manager.new_progress_bar("test", 100);
+        progress.inc(50);
+        progress.finish();
+    }
+
+    #[test]
+    fn test_silent_progress_bar_manager_clone() {
+        let manager1 = SilentProgressBarManager;
+        let manager2 = manager1;
+        // Both should create working spinners
+        let spinner1 = manager1.new_spinner_autotick("test1");
+        let spinner2 = manager2.new_spinner_autotick("test2");
+        spinner1.finish();
+        spinner2.finish();
     }
 }

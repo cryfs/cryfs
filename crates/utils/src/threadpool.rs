@@ -185,7 +185,7 @@ mod tests {
 
         futures::future::join_all(futures).await;
 
-        let expected_sum = (0..100).sum();
+        let expected_sum: u32 = (0..100).sum();
         assert_eq!(counter.load(Ordering::SeqCst), expected_sum);
     }
 

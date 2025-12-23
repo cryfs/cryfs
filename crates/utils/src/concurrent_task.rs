@@ -1,3 +1,11 @@
+//! Concurrent task execution with guaranteed completion.
+//!
+//! This module provides [`ConcurrentTask`], which wraps a tokio task with compile-time
+//! enforcement that the task must be awaited. Unlike raw tokio tasks which can be
+//! dropped without awaiting, a `ConcurrentTask` will cause a compilation error if
+//! not properly awaited.
+
+use std::future::Future;
 use std::mem::ManuallyDrop;
 
 use tokio::task::{JoinError, JoinHandle};
