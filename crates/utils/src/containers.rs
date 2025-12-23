@@ -1,3 +1,9 @@
+//! Extension traits for standard library collections.
+//!
+//! This module provides extension traits that add `try_insert` methods to
+//! [`HashMap`] and [`HashSet`], allowing for fallible insertion that returns
+//! an error if the key/item already exists.
+
 use anyhow::{Result, ensure};
 use std::collections::hash_map::{Entry, HashMap, OccupiedEntry};
 use std::collections::hash_set::HashSet;
@@ -78,4 +84,105 @@ impl<K: Debug + PartialEq + Eq + Hash> HashSetExt<K> for HashSet<K> {
     }
 }
 
-// TODO Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod hashmap_ext {
+        use super::*;
+
+        #[test]
+        fn test_try_insert_new_key_succeeds() {
+            let mut map: HashMap<i32, &str> = HashMap::new();
+
+            let result = map.try_insert(1, "one");
+
+            assert!(result.is_ok());
+            assert_eq!(Some(&"one"), map.get(&1));
+        }
+
+        #[test]
+        fn test_try_insert_returns_mutable_reference() {
+            let mut map: HashMap<i32, String> = HashMap::new();
+
+            let value_ref = map.try_insert(1, String::from("one")).unwrap();
+            value_ref.push_str(" modified");
+
+            assert_eq!(Some(&String::from("one modified")), map.get(&1));
+        }
+
+        #[test]
+        fn test_try_insert_existing_key_fails() {
+            let mut map: HashMap<i32, &str> = HashMap::new();
+            map.insert(1, "one");
+
+            let result = map.try_insert(1, "uno");
+
+            assert!(result.is_err());
+            // Original value should be unchanged
+            assert_eq!(Some(&"one"), map.get(&1));
+        }
+
+        #[test]
+        fn test_occupied_error_contains_key_and_values() {
+            let mut map: HashMap<i32, &str> = HashMap::new();
+            map.insert(1, "one");
+
+            let err = map.try_insert(1, "uno").unwrap_err();
+
+            assert_eq!(&1, err.entry.key());
+            assert_eq!(&"one", err.entry.get());
+            assert_eq!("uno", err.value);
+        }
+
+        #[test]
+        fn test_occupied_error_display() {
+            let mut map: HashMap<i32, &str> = HashMap::new();
+            map.insert(1, "one");
+
+            let err = map.try_insert(1, "uno").unwrap_err();
+            let display = format!("{}", err);
+
+            assert!(display.contains("1"));
+            assert!(display.contains("one"));
+            assert!(display.contains("uno"));
+        }
+    }
+
+    mod hashset_ext {
+        use super::*;
+
+        #[test]
+        fn test_try_insert_new_item_succeeds() {
+            let mut set: HashSet<i32> = HashSet::new();
+
+            let result = set.try_insert(1);
+
+            assert!(result.is_ok());
+            assert!(set.contains(&1));
+        }
+
+        #[test]
+        fn test_try_insert_existing_item_fails() {
+            let mut set: HashSet<i32> = HashSet::new();
+            set.insert(1);
+
+            let result = set.try_insert(1);
+
+            assert!(result.is_err());
+            let err_msg = format!("{:?}", result.unwrap_err());
+            assert!(err_msg.contains("already exists"));
+        }
+
+        #[test]
+        fn test_try_insert_multiple_items() {
+            let mut set: HashSet<i32> = HashSet::new();
+
+            assert!(set.try_insert(1).is_ok());
+            assert!(set.try_insert(2).is_ok());
+            assert!(set.try_insert(3).is_ok());
+
+            assert_eq!(3, set.len());
+        }
+    }
+}

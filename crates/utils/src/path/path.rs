@@ -53,7 +53,6 @@ impl AbsolutePath {
         &self.path == "/"
     }
 
-    // TODO Test
     #[inline]
     pub fn join(&self, component: &PathComponent) -> AbsolutePathBuf {
         let capacity = if &self.path != "/" {
@@ -74,7 +73,6 @@ impl AbsolutePath {
         &self.path
     }
 
-    // TODO Test is_ancestor_of, including the case that "/fo" is not an ancestor of "/foo"
     #[inline]
     pub fn is_ancestor_of(&self, other: &AbsolutePath) -> bool {
         match other.path.strip_prefix(&self.path) {
@@ -260,7 +258,6 @@ impl AbsolutePathBuf {
         AbsolutePath::root().to_owned()
     }
 
-    // TODO Test
     #[inline]
     pub fn root_with_capacity(capacity_num_bytes: usize) -> Self {
         let mut path = String::with_capacity(capacity_num_bytes);
@@ -284,7 +281,6 @@ impl AbsolutePathBuf {
         self
     }
 
-    // TODO Test
     #[inline]
     pub fn push_all(mut self, components: &AbsolutePath) -> Self {
         if self.is_root() {
@@ -925,6 +921,141 @@ mod tests {
                 ],
                 path.into_iter().collect::<Vec<_>>()
             );
+        }
+    }
+
+    mod join {
+        use super::*;
+
+        #[test]
+        fn join_from_root() {
+            let path = AbsolutePath::root();
+            let component = PathComponent::try_from_str("foo").unwrap();
+            let result = path.join(component);
+            assert_eq!("/foo", result.as_str());
+        }
+
+        #[test]
+        fn join_from_single_component_path() {
+            let path = AbsolutePath::try_from_str("/foo").unwrap();
+            let component = PathComponent::try_from_str("bar").unwrap();
+            let result = path.join(component);
+            assert_eq!("/foo/bar", result.as_str());
+        }
+
+        #[test]
+        fn join_from_multi_component_path() {
+            let path = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            let component = PathComponent::try_from_str("baz").unwrap();
+            let result = path.join(component);
+            assert_eq!("/foo/bar/baz", result.as_str());
+        }
+    }
+
+    mod is_ancestor_of {
+        use super::*;
+
+        #[test]
+        fn parent_is_ancestor_of_child() {
+            let parent = AbsolutePath::try_from_str("/foo").unwrap();
+            let child = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            assert!(parent.is_ancestor_of(child));
+        }
+
+        #[test]
+        fn grandparent_is_ancestor_of_grandchild() {
+            let grandparent = AbsolutePath::try_from_str("/foo").unwrap();
+            let grandchild = AbsolutePath::try_from_str("/foo/bar/baz").unwrap();
+            assert!(grandparent.is_ancestor_of(grandchild));
+        }
+
+        #[test]
+        fn path_is_not_ancestor_of_itself() {
+            let path = AbsolutePath::try_from_str("/foo").unwrap();
+            assert!(!path.is_ancestor_of(path));
+        }
+
+        #[test]
+        fn root_is_not_ancestor_of_itself() {
+            let root = AbsolutePath::root();
+            assert!(!root.is_ancestor_of(root));
+        }
+
+        #[test]
+        fn child_is_not_ancestor_of_parent() {
+            let parent = AbsolutePath::try_from_str("/foo").unwrap();
+            let child = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            assert!(!child.is_ancestor_of(parent));
+        }
+
+        #[test]
+        fn unrelated_paths_are_not_ancestors() {
+            let path1 = AbsolutePath::try_from_str("/foo").unwrap();
+            let path2 = AbsolutePath::try_from_str("/bar").unwrap();
+            assert!(!path1.is_ancestor_of(path2));
+            assert!(!path2.is_ancestor_of(path1));
+        }
+
+        #[test]
+        fn prefix_path_but_not_ancestor() {
+            // "/fo" is NOT an ancestor of "/foo" because "/foo" is not a child of "/fo"
+            let not_ancestor = AbsolutePath::try_from_str("/fo").unwrap();
+            let path = AbsolutePath::try_from_str("/foo").unwrap();
+            assert!(!not_ancestor.is_ancestor_of(path));
+        }
+    }
+
+    mod root_with_capacity {
+        use super::*;
+
+        #[test]
+        fn creates_root_path() {
+            let path = AbsolutePathBuf::root_with_capacity(10);
+            assert_eq!("/", path.as_str());
+            assert!(path.is_root());
+        }
+
+        #[test]
+        fn zero_capacity() {
+            // Even with 0 capacity, it should work (String will allocate)
+            let path = AbsolutePathBuf::root_with_capacity(0);
+            assert_eq!("/", path.as_str());
+        }
+    }
+
+    mod push_all {
+        use super::*;
+
+        #[test]
+        fn push_all_from_root_onto_root() {
+            let base = AbsolutePathBuf::root();
+            let to_push = AbsolutePath::root();
+            let result = base.push_all(to_push);
+            assert_eq!("/", result.as_str());
+        }
+
+        #[test]
+        fn push_all_path_onto_root() {
+            let base = AbsolutePathBuf::root();
+            let to_push = AbsolutePath::try_from_str("/foo/bar").unwrap();
+            let result = base.push_all(to_push);
+            assert_eq!("/foo/bar", result.as_str());
+        }
+
+        #[test]
+        fn push_all_root_onto_path() {
+            let base = AbsolutePathBuf::try_from_string("/foo".to_string()).unwrap();
+            let to_push = AbsolutePath::root();
+            let result = base.push_all(to_push);
+            assert_eq!("/foo/", result.as_str());
+        }
+
+        #[test]
+        fn push_all_path_onto_path() {
+            let base = AbsolutePathBuf::try_from_string("/foo".to_string()).unwrap();
+            let to_push = AbsolutePath::try_from_str("/bar/baz").unwrap();
+            let result = base.push_all(to_push);
+            assert_eq!("/foo/bar/baz", result.as_str());
         }
     }
 }

@@ -64,32 +64,32 @@ mod tests {
         #[test]
         fn empty() {
             let (lhs_only, rhs_only, both) = difference_partition::<u8>(vec![], vec![]);
-            assert_eq!(lhs_only, vec![]);
-            assert_eq!(rhs_only, vec![]);
-            assert_eq!(both, vec![]);
+            assert_eq!(lhs_only, Vec::<u8>::new());
+            assert_eq!(rhs_only, Vec::<u8>::new());
+            assert_eq!(both, Vec::<u8>::new());
         }
 
         #[test]
         fn lhs_only() {
             let (lhs_only, rhs_only, both) = difference_partition(vec![1, 2, 3], vec![]);
             assert_eq!(lhs_only, vec![1, 2, 3]);
-            assert_eq!(rhs_only, vec![]);
-            assert_eq!(both, vec![]);
+            assert_eq!(rhs_only, Vec::<i32>::new());
+            assert_eq!(both, Vec::<i32>::new());
         }
 
         #[test]
         fn rhs_only() {
             let (lhs_only, rhs_only, both) = difference_partition(vec![], vec![1, 2, 3]);
-            assert_eq!(lhs_only, vec![]);
+            assert_eq!(lhs_only, Vec::<i32>::new());
             assert_eq!(rhs_only, vec![1, 2, 3]);
-            assert_eq!(both, vec![]);
+            assert_eq!(both, Vec::<i32>::new());
         }
 
         #[test]
         fn both() {
             let (lhs_only, rhs_only, both) = difference_partition(vec![1, 2, 3], vec![2, 3, 1]);
-            assert_eq!(lhs_only, vec![]);
-            assert_eq!(rhs_only, vec![]);
+            assert_eq!(lhs_only, Vec::<i32>::new());
+            assert_eq!(rhs_only, Vec::<i32>::new());
             assert_eq!(both, vec![1, 2, 3]);
         }
 
@@ -97,14 +97,14 @@ mod tests {
         fn lhs_and_both() {
             let (lhs_only, rhs_only, both) = difference_partition(vec![1, 2, 3], vec![2, 3]);
             assert_eq!(lhs_only, vec![1]);
-            assert_eq!(rhs_only, vec![]);
+            assert_eq!(rhs_only, Vec::<i32>::new());
             assert_eq!(both, vec![2, 3]);
         }
 
         #[test]
         fn rhs_and_both() {
             let (lhs_only, rhs_only, both) = difference_partition(vec![1, 2], vec![2, 3, 1]);
-            assert_eq!(lhs_only, vec![]);
+            assert_eq!(lhs_only, Vec::<i32>::new());
             assert_eq!(rhs_only, vec![3]);
             assert_eq!(both, vec![1, 2]);
         }
@@ -114,7 +114,7 @@ mod tests {
             let (lhs_only, rhs_only, both) = difference_partition(vec![1, 2], vec![3, 4]);
             assert_eq!(lhs_only, vec![1, 2]);
             assert_eq!(rhs_only, vec![3, 4]);
-            assert_eq!(both, vec![]);
+            assert_eq!(both, Vec::<i32>::new());
         }
 
         #[test]

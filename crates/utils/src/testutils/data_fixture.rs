@@ -144,7 +144,7 @@ mod tests {
             let fixture = DataFixture::new(0);
             let mut data = vec![0; 0];
             fixture.generate(0, &mut data);
-            assert_eq!(data, vec![]);
+            assert_eq!(data, Vec::<u8>::new());
         }
 
         #[test]
@@ -253,7 +253,7 @@ mod tests {
         fn get_empty() {
             let fixture = DataFixture::new(0);
             let data = fixture.get(0);
-            assert_eq!(data, vec![]);
+            assert_eq!(data, Vec::<u8>::new());
         }
 
         #[test]
