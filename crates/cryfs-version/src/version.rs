@@ -5,14 +5,48 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::num::ParseIntError;
 
+/// A semantic version with major, minor, patch, and optional prerelease components.
+///
+/// The generic parameter `P` represents the string type used for the prerelease
+/// identifier. Common instantiations are `Version<&str>` for borrowed strings
+/// and `Version<String>` for owned strings.
+///
+/// # Version Format
+///
+/// Versions follow the format `major.minor.patch[-prerelease]`:
+/// - `1.2.3` - stable release
+/// - `1.2.3-alpha` - prerelease version
+///
+/// # Ordering
+///
+/// Versions are ordered by major, then minor, then patch. Prerelease versions
+/// are considered less than their corresponding stable release (e.g., `1.0.0-alpha < 1.0.0`).
+///
+/// # Example
+///
+/// ```
+/// use cryfs_version::Version;
+///
+/// let v1 = Version::parse("1.2.3").unwrap();
+/// let v2 = Version::parse("1.2.3-alpha").unwrap();
+///
+/// assert!(v2 < v1); // prerelease < stable
+/// assert_eq!(v1.major, 1);
+/// assert_eq!(v1.prerelease, None);
+/// assert_eq!(v2.prerelease, Some("alpha"));
+/// ```
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Version<P>
 where
     P: Borrow<str>,
 {
+    /// The major version number.
     pub major: u32,
+    /// The minor version number.
     pub minor: u32,
+    /// The patch version number.
     pub patch: u32,
+    /// The optional prerelease identifier (e.g., "alpha", "beta", "rc1").
     pub prerelease: Option<P>,
 }
 
@@ -99,6 +133,35 @@ where
 }
 
 impl<'a> Version<&'a str> {
+    /// Parses a version string into a [`Version`].
+    ///
+    /// The version string should be in the format `major[.minor[.patch]][-prerelease]`.
+    /// Missing minor and patch components default to 0.
+    ///
+    /// # Arguments
+    ///
+    /// * `version` - A version string to parse (e.g., "1.2.3", "1.0", "2.0.0-beta")
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Version)` on success, or `Err(ParseVersionError)` if the
+    /// version string contains invalid numeric components.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_version::Version;
+    ///
+    /// let v = Version::parse("1.2.3-alpha").unwrap();
+    /// assert_eq!(v.major, 1);
+    /// assert_eq!(v.minor, 2);
+    /// assert_eq!(v.patch, 3);
+    /// assert_eq!(v.prerelease, Some("alpha"));
+    ///
+    /// // Partial versions are supported
+    /// let v2 = Version::parse("1.2").unwrap();
+    /// assert_eq!(v2.patch, 0);
+    /// ```
     pub fn parse(version: &'a str) -> Result<Self, ParseVersionError<'a>> {
         let (major_minor_patch, prerelease) = match version.split_once('-') {
             Some((major_minor_patch, prerelease)) => (major_minor_patch, Some(prerelease)),
@@ -126,6 +189,32 @@ impl<'a> Version<&'a str> {
         }
     }
 
+    /// Parses a version string at compile time.
+    ///
+    /// This is a `const fn` version of [`Self::parse`] that can be used in
+    /// const contexts. It has a simpler error type ([`ParseIntError`]) since
+    /// const functions have limited support for complex error types.
+    ///
+    /// # Arguments
+    ///
+    /// * `version` - A version string to parse (e.g., "1.2.3", "1.0", "2.0.0-beta")
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(Version)` on success, or `Err(ParseIntError)` if the
+    /// version string contains invalid numeric components.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_version::Version;
+    ///
+    /// const VERSION: Version<&str> = match Version::parse_const("1.2.3") {
+    ///     Ok(v) => v,
+    ///     Err(_) => panic!("Invalid version"),
+    /// };
+    /// assert_eq!(VERSION.major, 1);
+    /// ```
     // TODO Merge this with [Self::parse] once const support is good enough
     pub const fn parse_const(version: &'a str) -> Result<Self, ParseIntError> {
         use konst::string;
@@ -157,6 +246,21 @@ impl<'a> Version<&'a str> {
         }
     }
 
+    /// Compares two versions for equality in a const context.
+    ///
+    /// This is a `const fn` alternative to the `PartialEq` implementation
+    /// for use in const contexts where trait methods cannot be called.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_version::Version;
+    ///
+    /// const V1: Version<&str> = Version { major: 1, minor: 2, patch: 3, prerelease: None };
+    /// const V2: Version<&str> = Version { major: 1, minor: 2, patch: 3, prerelease: None };
+    /// const ARE_EQUAL: bool = V1.eq_const(&V2);
+    /// assert!(ARE_EQUAL);
+    /// ```
     pub const fn eq_const(&self, rhs: &Self) -> bool {
         if self.major != rhs.major || self.minor != rhs.minor || self.patch != rhs.patch {
             return false;
@@ -169,6 +273,19 @@ impl<'a> Version<&'a str> {
         }
     }
 
+    /// Converts a borrowed version to an owned version.
+    ///
+    /// Creates a new [`Version<String>`] with owned copies of all string data.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_version::Version;
+    ///
+    /// let borrowed: Version<&str> = Version::parse("1.2.3-alpha").unwrap();
+    /// let owned: Version<String> = borrowed.to_owned();
+    /// assert_eq!(owned.prerelease, Some("alpha".to_string()));
+    /// ```
     pub fn to_owned(&self) -> Version<String> {
         Version {
             major: self.major,
@@ -178,12 +295,38 @@ impl<'a> Version<&'a str> {
         }
     }
 
+    /// Converts a borrowed version to an owned version, consuming self.
+    ///
+    /// This is equivalent to [`Self::to_owned`] but consumes the original version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_version::Version;
+    ///
+    /// let borrowed: Version<&str> = Version::parse("1.2.3").unwrap();
+    /// let owned: Version<String> = borrowed.into_owned();
+    /// assert_eq!(owned.major, 1);
+    /// ```
     pub fn into_owned(self) -> Version<String> {
         self.to_owned()
     }
 }
 
 impl Version<String> {
+    /// Converts an owned version to a borrowed version.
+    ///
+    /// Creates a [`Version<&str>`] that borrows the string data from this version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_version::Version;
+    ///
+    /// let owned: Version<String> = Version::parse("1.2.3-alpha").unwrap().to_owned();
+    /// let borrowed: Version<&str> = owned.to_borrowed();
+    /// assert_eq!(borrowed.prerelease, Some("alpha"));
+    /// ```
     pub fn to_borrowed(&self) -> Version<&str> {
         Version {
             major: self.major,
@@ -194,6 +337,22 @@ impl Version<String> {
     }
 }
 
+/// Error returned when parsing a version string fails.
+///
+/// This error is returned by [`Version::parse`] when the version string
+/// contains invalid numeric components (e.g., non-numeric characters in
+/// the major, minor, or patch fields).
+///
+/// # Example
+///
+/// ```
+/// use cryfs_version::Version;
+///
+/// let result = Version::parse("invalid");
+/// assert!(result.is_err());
+/// let err = result.unwrap_err();
+/// println!("Error: {}", err); // "Failed to parse version `invalid`: ..."
+/// ```
 #[derive(Error, Display, Debug, PartialEq, Eq)]
 #[display("Failed to parse version `{version}`: {error}")]
 pub struct ParseVersionError<'a> {
@@ -513,6 +672,172 @@ mod tests {
 
             assert_less_than("1.2.3-beta", "1.2.4-alpha");
             assert_less_than("1.2.3", "1.2.4-alpha");
+        }
+    }
+
+    mod serde {
+        use super::*;
+
+        #[test]
+        fn roundtrip_borrowed_no_prerelease() {
+            let original: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: None,
+            };
+            let serialized = serde_json::to_string(&original).unwrap();
+            let deserialized: Version<String> = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(original, deserialized);
+        }
+
+        #[test]
+        fn roundtrip_borrowed_with_prerelease() {
+            let original: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: Some("alpha"),
+            };
+            let serialized = serde_json::to_string(&original).unwrap();
+            let deserialized: Version<String> = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(original, deserialized);
+        }
+
+        #[test]
+        fn roundtrip_owned_no_prerelease() {
+            let original: Version<String> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: None,
+            };
+            let serialized = serde_json::to_string(&original).unwrap();
+            let deserialized: Version<String> = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(original, deserialized);
+        }
+
+        #[test]
+        fn roundtrip_owned_with_prerelease() {
+            let original: Version<String> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: Some("beta".to_string()),
+            };
+            let serialized = serde_json::to_string(&original).unwrap();
+            let deserialized: Version<String> = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(original, deserialized);
+        }
+
+        #[test]
+        fn json_format() {
+            let version: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: Some("alpha"),
+            };
+            let serialized = serde_json::to_string(&version).unwrap();
+            assert_eq!(
+                r#"{"major":1,"minor":2,"patch":3,"prerelease":"alpha"}"#,
+                serialized
+            );
+        }
+    }
+
+    mod ownership {
+        use super::*;
+
+        #[test]
+        fn to_owned_no_prerelease() {
+            let borrowed: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: None,
+            };
+            let owned: Version<String> = borrowed.to_owned();
+            assert_eq!(borrowed.major, owned.major);
+            assert_eq!(borrowed.minor, owned.minor);
+            assert_eq!(borrowed.patch, owned.patch);
+            assert_eq!(borrowed.prerelease, owned.prerelease.as_deref());
+        }
+
+        #[test]
+        fn to_owned_with_prerelease() {
+            let borrowed: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: Some("alpha"),
+            };
+            let owned: Version<String> = borrowed.to_owned();
+            assert_eq!(borrowed, owned);
+            assert_eq!(Some("alpha".to_string()), owned.prerelease);
+        }
+
+        #[test]
+        fn into_owned_no_prerelease() {
+            let borrowed: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: None,
+            };
+            let owned: Version<String> = borrowed.into_owned();
+            assert_eq!(1, owned.major);
+            assert_eq!(2, owned.minor);
+            assert_eq!(3, owned.patch);
+            assert_eq!(None, owned.prerelease);
+        }
+
+        #[test]
+        fn into_owned_with_prerelease() {
+            let borrowed: Version<&str> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: Some("beta"),
+            };
+            let owned: Version<String> = borrowed.into_owned();
+            assert_eq!(Some("beta".to_string()), owned.prerelease);
+        }
+
+        #[test]
+        fn to_borrowed_no_prerelease() {
+            let owned: Version<String> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: None,
+            };
+            let borrowed: Version<&str> = owned.to_borrowed();
+            assert_eq!(owned.major, borrowed.major);
+            assert_eq!(owned.minor, borrowed.minor);
+            assert_eq!(owned.patch, borrowed.patch);
+            assert_eq!(owned.prerelease.as_deref(), borrowed.prerelease);
+        }
+
+        #[test]
+        fn to_borrowed_with_prerelease() {
+            let owned: Version<String> = Version {
+                major: 1,
+                minor: 2,
+                patch: 3,
+                prerelease: Some("gamma".to_string()),
+            };
+            let borrowed: Version<&str> = owned.to_borrowed();
+            assert_eq!(owned, borrowed);
+            assert_eq!(Some("gamma"), borrowed.prerelease);
+        }
+
+        #[test]
+        fn roundtrip_borrowed_to_owned_to_borrowed() {
+            let original: Version<&str> = Version::parse("1.2.3-alpha").unwrap();
+            let owned = original.to_owned();
+            let reborrowed = owned.to_borrowed();
+            assert_eq!(original, reborrowed);
         }
     }
 }
