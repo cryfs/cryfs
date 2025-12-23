@@ -13,17 +13,37 @@ use generic_array::typenum::U16;
 /// * Now with random nonces, using a 16 bytes nonce, even if hashed, is better than using a 12 bytes nonce because it reduces the chance of collisions.
 pub type DefaultNonceSize = U16;
 
+/// AES-256-GCM implementation using libsodium with a fixed 12-byte nonce.
+///
+/// This implementation uses libsodium's hardware-accelerated AES-GCM.
+/// Note: libsodium only supports a 12-byte nonce for AES-GCM.
 pub type LibsodiumAes256GcmNonce12 = super::backends::libsodium::Aes256Gcm;
+
+/// AES-256-GCM implementation using the `aes-gcm` pure Rust crate.
+///
+/// This implementation is portable and doesn't require external libraries.
 pub type AeadAes256Gcm<NonceSize = DefaultNonceSize> =
     super::backends::aead::AeadCipher<aes_gcm::AesGcm<aes_gcm::aes::Aes256, NonceSize>>;
+
+/// AES-256-GCM implementation using OpenSSL.
+///
+/// This is generally the fastest implementation as it leverages OpenSSL's
+/// optimized code and hardware acceleration (AES-NI) when available.
 pub type OpensslAes256Gcm<NonceSize = DefaultNonceSize> =
     super::backends::openssl::AeadCipher<super::backends::openssl::Aes256Gcm<NonceSize>>;
 
-/// Default aes-256-gcm implementation
+/// Default AES-256-GCM implementation (currently uses OpenSSL).
 pub type Aes256Gcm<NonceSize = DefaultNonceSize> = OpensslAes256Gcm<NonceSize>;
 
+/// AES-128-GCM implementation using OpenSSL.
+///
+/// Uses OpenSSL's optimized code with hardware acceleration when available.
 pub type OpensslAes128Gcm<NonceSize = DefaultNonceSize> =
     super::backends::openssl::AeadCipher<super::backends::openssl::Aes128Gcm<NonceSize>>;
+
+/// AES-128-GCM implementation using the `aes-gcm` pure Rust crate.
+///
+/// This implementation is portable and doesn't require external libraries.
 pub type AeadAes128Gcm<NonceSize = DefaultNonceSize> =
     super::backends::aead::AeadCipher<aes_gcm::AesGcm<aes_gcm::aes::Aes128, NonceSize>>;
 

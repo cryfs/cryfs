@@ -1,3 +1,5 @@
+//! OpenSSL-based scrypt implementation.
+
 use anyhow::Result;
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
@@ -8,6 +10,10 @@ use crate::kdf::{
 };
 use crate::symmetric::EncryptionKey;
 
+/// Scrypt implementation using OpenSSL.
+///
+/// This implementation uses OpenSSL's scrypt function, which may provide
+/// better performance on some platforms due to optimized assembly code.
 pub struct ScryptOpenssl;
 
 impl PasswordBasedKDF for ScryptOpenssl {

@@ -1,3 +1,9 @@
+//! OpenSSL-based AEAD cipher implementations.
+//!
+//! This module provides AES-GCM implementations using OpenSSL. These implementations
+//! are generally the fastest option as they leverage OpenSSL's optimized code and
+//! hardware acceleration (AES-NI) when available.
+
 use anyhow::{Context, Result, ensure};
 use generic_array::{
     ArrayLength, GenericArray,
@@ -11,14 +17,27 @@ use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};
 
 use cryfs_utils::data::Data;
 
+/// Trait defining the properties of an OpenSSL cipher type.
+///
+/// This trait is used to parameterize [`AeadCipher`] with specific cipher algorithms.
 #[allow(non_camel_case_types)]
 pub trait CipherType {
+    /// The key size in bytes.
     const KEY_SIZE: usize;
+    /// The nonce size as a type-level number.
     type NONCE_SIZE: ArrayLength;
+    /// The authentication tag size as a type-level number.
     type AUTH_TAG_SIZE: ArrayLength;
 
+    /// Creates the OpenSSL cipher instance.
     fn instantiate() -> OpenSSLCipher;
 }
+
+/// AES-256-GCM cipher type configuration for OpenSSL.
+///
+/// # Type Parameters
+///
+/// - `NonceSize`: The nonce size (typically 12 or 16 bytes)
 pub struct Aes256Gcm<NonceSize: ArrayLength> {
     _n: PhantomData<NonceSize>,
 }
@@ -31,6 +50,12 @@ impl<NonceSize: ArrayLength> CipherType for Aes256Gcm<NonceSize> {
         OpenSSLCipher::aes_256_gcm()
     }
 }
+
+/// AES-128-GCM cipher type configuration for OpenSSL.
+///
+/// # Type Parameters
+///
+/// - `NonceSize`: The nonce size (typically 12 or 16 bytes)
 pub struct Aes128Gcm<NonceSize: ArrayLength> {
     _n: PhantomData<NonceSize>,
 }
@@ -44,6 +69,15 @@ impl<NonceSize: ArrayLength> CipherType for Aes128Gcm<NonceSize> {
     }
 }
 
+/// Generic AEAD cipher implementation using OpenSSL.
+///
+/// This struct wraps OpenSSL's AEAD cipher operations to provide authenticated
+/// encryption. It is parameterized by a [`CipherType`] to support different
+/// cipher algorithms and configurations.
+///
+/// # Type Parameters
+///
+/// - `C`: The cipher type configuration implementing [`CipherType`]
 pub struct AeadCipher<C: CipherType> {
     encryption_key: EncryptionKey,
     cipher: OpenSSLCipher,

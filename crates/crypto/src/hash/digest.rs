@@ -1,19 +1,73 @@
 use std::fmt::Debug;
 
+/// A cryptographic hash digest (the output of a hash function).
+///
+/// A `Digest` wraps a fixed-size byte array containing the raw hash output.
+/// It provides methods for hex encoding/decoding to facilitate storage and
+/// display of hash values.
+///
+/// # Type Parameters
+///
+/// - `DIGEST_LEN`: The length of the digest in bytes (e.g., 64 for SHA-512)
+///
+/// # Example
+///
+/// ```
+/// use cryfs_crypto::hash::Digest;
+///
+/// // Create a digest from raw bytes
+/// let bytes = [0xab; 64];
+/// let digest = Digest::new(bytes);
+///
+/// // Convert to hex string
+/// let hex_str = digest.to_hex();
+/// assert!(hex_str.len() == 128); // 64 bytes = 128 hex chars
+///
+/// // Parse back from hex
+/// let parsed = Digest::<64>::from_hex(&hex_str).unwrap();
+/// assert_eq!(digest, parsed);
+/// ```
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Digest<const DIGEST_LEN: usize>([u8; DIGEST_LEN]);
 
 impl<const DIGEST_LEN: usize> Digest<DIGEST_LEN> {
+    /// Creates a new digest from raw bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes` - The raw digest bytes
     #[inline]
     pub fn new(bytes: [u8; DIGEST_LEN]) -> Self {
         Self(bytes)
     }
 
+    /// Encodes the digest as a lowercase hexadecimal string.
+    ///
+    /// # Returns
+    ///
+    /// A string containing the hex-encoded digest. The length will be
+    /// `DIGEST_LEN * 2` characters.
     #[inline]
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
 
+    /// Parses a digest from a hexadecimal string.
+    ///
+    /// # Arguments
+    ///
+    /// * `hex` - A hex string representing the digest (case-insensitive)
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Digest)` if parsing succeeds
+    /// - `Err(FromHexError)` if the string is not valid hex or has wrong length
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The string contains non-hexadecimal characters
+    /// - The string length is not exactly `DIGEST_LEN * 2`
     pub fn from_hex(hex: &str) -> Result<Self, hex::FromHexError> {
         let bytes = hex::decode(hex)?;
         if bytes.len() != DIGEST_LEN {

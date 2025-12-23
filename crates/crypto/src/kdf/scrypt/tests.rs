@@ -111,6 +111,60 @@ mod generic {
         assert_ne!(derived_key_1.to_hex(), derived_key_2.to_hex());
     }
 
+    #[test]
+    fn empty_password_produces_valid_key<S>()
+    where
+        S: PasswordBasedKDF<Settings = ScryptSettings, Parameters = ScryptParams>,
+    {
+        let params = S::generate_parameters(&ScryptSettings::TEST).unwrap();
+        let derived_key = S::derive_key(32, "", &params);
+
+        // Empty password should still produce a valid key
+        assert_eq!(derived_key.num_bytes(), 32);
+
+        // Key should be reproducible
+        let rederived_key = S::derive_key(32, "", &params);
+        assert_eq!(derived_key.to_hex(), rederived_key.to_hex());
+    }
+
+    #[test]
+    fn unicode_password_produces_valid_key<S>()
+    where
+        S: PasswordBasedKDF<Settings = ScryptSettings, Parameters = ScryptParams>,
+    {
+        let params = S::generate_parameters(&ScryptSettings::TEST).unwrap();
+
+        // Test with emoji and multi-byte characters
+        let unicode_password = "пароль🔐密码";
+        let derived_key = S::derive_key(32, unicode_password, &params);
+
+        // Unicode password should produce a valid key
+        assert_eq!(derived_key.num_bytes(), 32);
+
+        // Key should be reproducible
+        let rederived_key = S::derive_key(32, unicode_password, &params);
+        assert_eq!(derived_key.to_hex(), rederived_key.to_hex());
+    }
+
+    #[test]
+    fn long_password_produces_valid_key<S>()
+    where
+        S: PasswordBasedKDF<Settings = ScryptSettings, Parameters = ScryptParams>,
+    {
+        let params = S::generate_parameters(&ScryptSettings::TEST).unwrap();
+
+        // Test with a password longer than 1KB
+        let long_password = "a".repeat(2048);
+        let derived_key = S::derive_key(32, &long_password, &params);
+
+        // Long password should produce a valid key
+        assert_eq!(derived_key.num_bytes(), 32);
+
+        // Key should be reproducible
+        let rederived_key = S::derive_key(32, &long_password, &params);
+        assert_eq!(derived_key.to_hex(), rederived_key.to_hex());
+    }
+
     #[instantiate_tests(<crate::kdf::scrypt::Scrypt>)]
     mod scrypt_default {}
 
