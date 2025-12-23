@@ -10,8 +10,8 @@
 //! 7. Concurrent Access - Multi-threaded race scenarios
 //! 8. Error Handling - Error propagation and cleanup
 
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -41,10 +41,6 @@ impl TestValue {
             id,
             dropped: Arc::new(AtomicBool::new(false)),
         }
-    }
-
-    fn with_drop_tracker(id: usize, dropped: Arc<AtomicBool>) -> Self {
-        Self { id, dropped }
     }
 }
 
@@ -103,8 +99,10 @@ fn simple_loader(
     id: usize,
 ) -> impl FnOnce(
     AsyncDropGuard<AsyncDropArc<TestInput>>,
-) -> futures::future::BoxFuture<'static, Result<Option<AsyncDropGuard<TestValue>>, TestError>>
-{
+) -> futures::future::BoxFuture<
+    'static,
+    Result<Option<AsyncDropGuard<TestValue>>, TestError>,
+> {
     move |mut input| {
         async move {
             input.async_drop().await.unwrap();
@@ -121,8 +119,10 @@ fn signaled_loader(
     notify: Arc<Notify>,
 ) -> impl FnOnce(
     AsyncDropGuard<AsyncDropArc<TestInput>>,
-) -> futures::future::BoxFuture<'static, Result<Option<AsyncDropGuard<TestValue>>, TestError>>
-{
+) -> futures::future::BoxFuture<
+    'static,
+    Result<Option<AsyncDropGuard<TestValue>>, TestError>,
+> {
     move |mut input| {
         async move {
             input.async_drop().await.unwrap();
@@ -139,8 +139,10 @@ fn failing_loader(
     error: TestError,
 ) -> impl FnOnce(
     AsyncDropGuard<AsyncDropArc<TestInput>>,
-) -> futures::future::BoxFuture<'static, Result<Option<AsyncDropGuard<TestValue>>, TestError>>
-{
+) -> futures::future::BoxFuture<
+    'static,
+    Result<Option<AsyncDropGuard<TestValue>>, TestError>,
+> {
     move |mut input| {
         async move {
             input.async_drop().await.unwrap();
@@ -153,8 +155,10 @@ fn failing_loader(
 /// Create a loading function that returns NotFound.
 fn not_found_loader() -> impl FnOnce(
     AsyncDropGuard<AsyncDropArc<TestInput>>,
-) -> futures::future::BoxFuture<'static, Result<Option<AsyncDropGuard<TestValue>>, TestError>>
-{
+) -> futures::future::BoxFuture<
+    'static,
+    Result<Option<AsyncDropGuard<TestValue>>, TestError>,
+> {
     move |mut input| {
         async move {
             input.async_drop().await.unwrap();
@@ -170,8 +174,10 @@ fn counting_loader(
     counter: Arc<AtomicUsize>,
 ) -> impl FnOnce(
     AsyncDropGuard<AsyncDropArc<TestInput>>,
-) -> futures::future::BoxFuture<'static, Result<Option<AsyncDropGuard<TestValue>>, TestError>>
-{
+) -> futures::future::BoxFuture<
+    'static,
+    Result<Option<AsyncDropGuard<TestValue>>, TestError>,
+> {
     move |mut input| {
         async move {
             input.async_drop().await.unwrap();
@@ -184,11 +190,11 @@ fn counting_loader(
 }
 
 /// Create a drop function that does nothing (but properly async_drops the value).
-fn noop_drop_fn(
-) -> impl FnOnce(Option<AsyncDropGuard<TestValue>>) -> futures::future::BoxFuture<'static, ()>
-       + Send
-       + Sync
-       + 'static {
+fn noop_drop_fn()
+-> impl FnOnce(Option<AsyncDropGuard<TestValue>>) -> futures::future::BoxFuture<'static, ()>
++ Send
++ Sync
++ 'static {
     |value| {
         async move {
             if let Some(mut v) = value {
@@ -203,9 +209,9 @@ fn noop_drop_fn(
 fn signaling_drop_fn(
     signal: Arc<AtomicBool>,
 ) -> impl FnOnce(Option<AsyncDropGuard<TestValue>>) -> futures::future::BoxFuture<'static, ()>
-       + Send
-       + Sync
-       + 'static {
++ Send
++ Sync
++ 'static {
     move |value| {
         async move {
             if let Some(mut v) = value {
@@ -221,9 +227,9 @@ fn signaling_drop_fn(
 fn waiting_drop_fn(
     notify: Arc<Notify>,
 ) -> impl FnOnce(Option<AsyncDropGuard<TestValue>>) -> futures::future::BoxFuture<'static, ()>
-       + Send
-       + Sync
-       + 'static {
++ Send
++ Sync
++ 'static {
     move |value| {
         async move {
             if let Some(mut v) = value {
@@ -758,8 +764,11 @@ mod chain_walking {
 
         // Get sets reload
         let reload_notify = Arc::new(Notify::new());
-        let result1 =
-            store.get_loaded_or_insert_loading(1, &input, signaled_loader(10, reload_notify.clone()));
+        let result1 = store.get_loaded_or_insert_loading(
+            1,
+            &input,
+            signaled_loader(10, reload_notify.clone()),
+        );
 
         // Second drop request - should set new_intent on reload
         let drop_result2 = store.request_immediate_drop(1, signaling_drop_fn(drop2_called.clone()));
@@ -851,8 +860,11 @@ mod chain_walking {
 
         // First get - should set reload on the intent
         let reload1_notify = Arc::new(Notify::new());
-        let result1 =
-            store.get_loaded_or_insert_loading(1, &input, signaled_loader(10, reload1_notify.clone()));
+        let result1 = store.get_loaded_or_insert_loading(
+            1,
+            &input,
+            signaled_loader(10, reload1_notify.clone()),
+        );
 
         // Second get - should add waiter to same reload
         let result2 = store.get_loaded_or_insert_loading(1, &input, simple_loader(20));
@@ -903,15 +915,21 @@ mod chain_walking {
         let _drop1 = store.request_immediate_drop(1, waiting_drop_fn(drop1_notify.clone()));
 
         // Get 1 (reload on intent)
-        let result1 =
-            store.get_loaded_or_insert_loading(1, &input, signaled_loader(10, reload1_notify.clone()));
+        let result1 = store.get_loaded_or_insert_loading(
+            1,
+            &input,
+            signaled_loader(10, reload1_notify.clone()),
+        );
 
         // Drop request 2 (new_intent on reload)
         let _drop2 = store.request_immediate_drop(1, waiting_drop_fn(drop2_notify.clone()));
 
         // Get 2 (reload on new_intent) - this tests deep chain walking
-        let result2 =
-            store.get_loaded_or_insert_loading(1, &input, signaled_loader(20, reload2_notify.clone()));
+        let result2 = store.get_loaded_or_insert_loading(
+            1,
+            &input,
+            signaled_loader(20, reload2_notify.clone()),
+        );
 
         // Release original guard in a spawned task so we can signal the notifies
         let guard_drop = tokio::spawn(async move {

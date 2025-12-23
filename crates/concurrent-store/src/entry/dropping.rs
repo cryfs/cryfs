@@ -74,16 +74,6 @@ where
         &self.on_dropped
     }
 
-    /// Check if a reload is pending.
-    pub fn has_reload(&self) -> bool {
-        self.reload.is_some()
-    }
-
-    /// Get a reference to the reload info, if any.
-    pub fn reload(&self) -> Option<&ReloadInfo<V, E>> {
-        self.reload.as_ref()
-    }
-
     /// Get a mutable reference to the reload info, if any.
     pub fn reload_mut(&mut self) -> Option<&mut ReloadInfo<V, E>> {
         self.reload.as_mut()

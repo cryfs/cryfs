@@ -98,11 +98,6 @@ where
         self.intent.is_some()
     }
 
-    /// Get a reference to the intent, if any.
-    pub fn intent(&self) -> Option<&Intent<V, E>> {
-        self.intent.as_ref()
-    }
-
     /// Get a mutable reference to the intent, if any.
     pub fn intent_mut(&mut self) -> Option<&mut Intent<V, E>> {
         self.intent.as_mut()
@@ -110,7 +105,10 @@ where
 
     /// Set an intent (drop request) for this loaded entry.
     /// Returns the on_dropped event that will be triggered when the drop completes.
-    pub fn set_intent<F>(&mut self, drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static) -> Event
+    pub fn set_intent<F>(
+        &mut self,
+        drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
+    ) -> Event
     where
         F: Future<Output = ()> + Send + 'static,
     {

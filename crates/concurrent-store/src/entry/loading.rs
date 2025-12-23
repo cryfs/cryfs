@@ -104,11 +104,6 @@ where
         self.intent.is_some()
     }
 
-    /// Get a reference to the intent, if any.
-    pub fn intent(&self) -> Option<&Intent<V, E>> {
-        self.intent.as_ref()
-    }
-
     /// Get a mutable reference to the intent, if any.
     pub fn intent_mut(&mut self) -> Option<&mut Intent<V, E>> {
         self.intent.as_mut()
@@ -119,9 +114,9 @@ where
     pub fn set_intent<F>(
         &mut self,
         drop_fn: impl FnOnce(Option<cryfs_utils::async_drop::AsyncDropGuard<V>>) -> F
-            + Send
-            + Sync
-            + 'static,
+        + Send
+        + Sync
+        + 'static,
     ) -> Event
     where
         F: Future<Output = ()> + Send + 'static,
@@ -137,9 +132,9 @@ where
     pub fn request_immediate_drop<F>(
         &mut self,
         drop_fn: impl FnOnce(Option<cryfs_utils::async_drop::AsyncDropGuard<V>>) -> F
-            + Send
-            + Sync
-            + 'static,
+        + Send
+        + Sync
+        + 'static,
     ) -> RequestImmediateDropResponse
     where
         F: Future<Output = ()> + Send + 'static,
@@ -161,9 +156,9 @@ where
     fn walk_intent_chain_for_drop<F>(
         intent: &mut Intent<V, E>,
         drop_fn: impl FnOnce(Option<cryfs_utils::async_drop::AsyncDropGuard<V>>) -> F
-            + Send
-            + Sync
-            + 'static,
+        + Send
+        + Sync
+        + 'static,
     ) -> RequestImmediateDropResponse
     where
         F: Future<Output = ()> + Send + 'static,

@@ -57,16 +57,6 @@ where
         &self.on_dropped
     }
 
-    /// Check if this intent has a reload pending.
-    pub fn has_reload(&self) -> bool {
-        self.reload.is_some()
-    }
-
-    /// Get a reference to the reload info, if any.
-    pub fn reload(&self) -> Option<&ReloadInfo<V, E>> {
-        self.reload.as_ref()
-    }
-
     /// Get a mutable reference to the reload info, if any.
     pub fn reload_mut(&mut self) -> Option<&mut ReloadInfo<V, E>> {
         self.reload.as_mut()
@@ -76,17 +66,6 @@ where
     pub fn set_reload(&mut self, reload: ReloadInfo<V, E>) {
         assert!(self.reload.is_none(), "Reload already set");
         self.reload = Some(reload);
-    }
-
-    /// Consume this intent and return its components.
-    pub fn into_parts(
-        self,
-    ) -> (
-        Box<dyn FnOnce(Option<AsyncDropGuard<V>>) -> BoxFuture<'static, ()> + Send + Sync>,
-        Event,
-        Option<ReloadInfo<V, E>>,
-    ) {
-        (self.drop_fn, self.on_dropped, self.reload)
     }
 
     /// Execute the drop function with the given value and trigger the on_dropped event.
@@ -147,20 +126,10 @@ where
         &self.reload_future
     }
 
-    /// Get the number of waiters.
-    pub fn num_waiters(&self) -> usize {
-        self.num_waiters
-    }
-
     /// Add a waiter and return the reload future.
     pub fn add_waiter(&mut self) -> Shared<BoxFuture<'static, LoadingResult<E>>> {
         self.num_waiters += 1;
         self.reload_future.clone()
-    }
-
-    /// Check if this reload has a new intent pending.
-    pub fn has_new_intent(&self) -> bool {
-        self.new_intent.is_some()
     }
 
     /// Get a reference to the new intent, if any.
