@@ -29,3 +29,15 @@ EOF
 # Initialize jujutsu in colocated mode for the workspace
 cd /workspaces/cryfs
 jj git init --colocate
+
+# Sync git user configuration to jujutsu
+git_name=$(git config --get user.name 2>/dev/null || true)
+git_email=$(git config --get user.email 2>/dev/null || true)
+
+if [ -n "$git_name" ]; then
+    jj config set --user user.name "$git_name"
+fi
+
+if [ -n "$git_email" ]; then
+    jj config set --user user.email "$git_email"
+fi
