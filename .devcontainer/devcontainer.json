@@ -6,9 +6,8 @@
 			"profile": "default"
 		},
 		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-			"packages": "fuse3,libfuse3-dev"
-		},
-		"ghcr.io/meaningful-ooo/devcontainer-features/fish:1": {}
+			"packages": "fuse3,libfuse3-dev,fish"
+		}
 	},
 	"postCreateCommand": ".devcontainer/setup_fish.sh",
 	"customizations": {
