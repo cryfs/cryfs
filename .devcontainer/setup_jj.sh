@@ -29,6 +29,7 @@ EOF
 # Initialize jujutsu in colocated mode for the workspace
 cd /workspaces/cryfs
 jj git init --colocate
+jj bookmark track main@origin
 
 # Sync git user configuration to jujutsu
 git_name=$(git config --get user.name 2>/dev/null || true)
