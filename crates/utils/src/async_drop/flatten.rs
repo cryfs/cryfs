@@ -34,9 +34,7 @@ where
             second.async_drop().await?;
             Err(first.into())
         }
-        (Err(first), Err(_second)) => {
-            Err(first.into())
-        }
+        (Err(first), Err(_second)) => Err(first.into()),
     }
 }
 
@@ -44,8 +42,8 @@ where
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Debug)]
     struct TestValue {

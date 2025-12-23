@@ -87,8 +87,8 @@ impl<T: Debug + AsyncDrop> DerefMut for SyncDrop<T> {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Debug)]
     struct TestValue {

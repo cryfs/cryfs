@@ -89,8 +89,8 @@ where
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Debug)]
     struct TestValue {
@@ -150,9 +150,7 @@ mod tests {
         let counter = Arc::new(AtomicUsize::new(0));
         let value = TestValue::new(42, Arc::clone(&counter));
 
-        let result: Result<i32, &'static str> = with_async_drop_2!(value, {
-            Ok(84)
-        });
+        let result: Result<i32, &'static str> = with_async_drop_2!(value, { Ok(84) });
 
         assert_eq!(Ok(84), result);
         assert_eq!(1, counter.load(Ordering::SeqCst));
@@ -163,8 +161,8 @@ mod tests {
         let counter = Arc::new(AtomicUsize::new(0));
         let value = TestValue::new(42, Arc::clone(&counter));
 
-        let result: Result<i32, String> = with_async_drop_2!(value, { Ok(84) }, |e: &str| e
-            .to_string());
+        let result: Result<i32, String> =
+            with_async_drop_2!(value, { Ok(84) }, |e: &str| e.to_string());
 
         assert_eq!(Ok(84), result);
         assert_eq!(1, counter.load(Ordering::SeqCst));

@@ -106,7 +106,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_to_completion_multiple_errors_returns_first() {
-        let stream = stream::iter(vec![Err(TestError(1)), Err(TestError(2)), Err(TestError(3))]);
+        let stream = stream::iter(vec![
+            Err(TestError(1)),
+            Err(TestError(2)),
+            Err(TestError(3)),
+        ]);
         let result = run_to_completion(stream).await;
         // Should return the first error
         assert_eq!(Err(TestError(1)), result);
@@ -131,11 +135,7 @@ mod tests {
     async fn test_for_each_unordered_with_error() {
         let items = vec![1, 2, 3];
         let result = for_each_unordered(items.into_iter(), |i| async move {
-            if i == 2 {
-                Err(TestError(i))
-            } else {
-                Ok(())
-            }
+            if i == 2 { Err(TestError(i)) } else { Ok(()) }
         })
         .await;
         assert_eq!(Err(TestError(2)), result);
