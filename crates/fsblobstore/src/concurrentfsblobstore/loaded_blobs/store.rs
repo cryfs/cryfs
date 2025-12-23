@@ -66,10 +66,7 @@ where
             Err(mut value) => {
                 // Entry already exists - async_drop the value and return error
                 value.async_drop().await?;
-                Err(anyhow::anyhow!(
-                    "Blob with id {:?} already exists",
-                    blob_id
-                ))
+                Err(anyhow::anyhow!("Blob with id {:?} already exists", blob_id))
             }
         }
     }

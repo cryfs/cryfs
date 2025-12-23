@@ -277,10 +277,7 @@ where
                                 loading_fn_input,
                                 loading_fn,
                             );
-                            LoadingOrLoaded::new_loading(
-                                AsyncDropArc::clone(&self.inner),
-                                waiter,
-                            )
+                            LoadingOrLoaded::new_loading(AsyncDropArc::clone(&self.inner), waiter)
                         }
                     }
                 }
@@ -301,10 +298,7 @@ where
                                 loading_fn_input,
                                 loading_fn,
                             );
-                            LoadingOrLoaded::new_loading(
-                                AsyncDropArc::clone(&self.inner),
-                                waiter,
-                            )
+                            LoadingOrLoaded::new_loading(AsyncDropArc::clone(&self.inner), waiter)
                         }
                     }
                 }
@@ -319,13 +313,12 @@ where
                                 loading_fn,
                             );
                             let reload = ReloadInfo::new(reload_future.clone());
-                            let waiter =
-                                EntryLoadingWaiter::new(key.clone(), reload.reload_future().clone());
+                            let waiter = EntryLoadingWaiter::new(
+                                key.clone(),
+                                reload.reload_future().clone(),
+                            );
                             dropping.set_reload(reload);
-                            LoadingOrLoaded::new_loading(
-                                AsyncDropArc::clone(&self.inner),
-                                waiter,
-                            )
+                            LoadingOrLoaded::new_loading(AsyncDropArc::clone(&self.inner), waiter)
                         }
                         Some(reload) => {
                             // Has reload - walk the chain
@@ -335,10 +328,7 @@ where
                                 loading_fn_input,
                                 loading_fn,
                             );
-                            LoadingOrLoaded::new_loading(
-                                AsyncDropArc::clone(&self.inner),
-                                waiter,
-                            )
+                            LoadingOrLoaded::new_loading(AsyncDropArc::clone(&self.inner), waiter)
                         }
                     }
                 }
@@ -885,7 +875,10 @@ where
                 }
             }
             _ => {
-                panic!("Entry with key {:?} is in unexpected state: {:?}", key, entry);
+                panic!(
+                    "Entry with key {:?} is in unexpected state: {:?}",
+                    key, entry
+                );
             }
         }
     }

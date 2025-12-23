@@ -396,37 +396,38 @@ where
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
         let inodes = inner.inodes.clone_ref();
         let (new_child_ino, new_node) = with_async_drop_2!(inodes, {
-            let insert_result =
-                inner
-                    .inode_forest
-                    .try_insert(
-                        parent_ino,
-                        name,
-                        parent_node,
-                        async |parent_node, new_child_ino| {
-                            let inserting = inodes
-                                .try_insert_loading(new_child_ino.handle, async move || {
-                                    // It's ok to capture the parent_node in this lambda, because
-                                    // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
-                                    // * If try_insert returns Err, the lambda is never executed, but we panic below anyways.
-                                    with_async_drop_2!(parent_node, {
-                                        let node = loading_fn(&parent_node).await?;
-                                        Ok(node)
-                                    })
+            let insert_result = inner
+                .inode_forest
+                .try_insert(
+                    parent_ino,
+                    name,
+                    parent_node,
+                    async |parent_node, new_child_ino| {
+                        let inserting = inodes
+                            .try_insert_loading(new_child_ino.handle, async move || {
+                                // It's ok to capture the parent_node in this lambda, because
+                                // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
+                                // * If try_insert returns Err, the lambda is never executed, but we panic below anyways.
+                                with_async_drop_2!(parent_node, {
+                                    let node = loading_fn(&parent_node).await?;
+                                    Ok(node)
                                 })
-                                .expect(
-                                    "Invariant D violated: entry for a new inode number already exists",
-                                );
+                            })
+                            .expect(
+                                "Invariant D violated: entry for a new inode number already exists",
+                            );
 
-                            InodeTreeNode::new(AsyncDropShared::new(
+                        InodeTreeNode::new(
+                            AsyncDropShared::new(
                                 async move {
                                     AsyncDropResult::new(inserting.wait_until_inserted().await)
                                 }
                                 .boxed(),
-                            ))
-                        },
-                    )
-                    .await;
+                            ),
+                        )
+                    },
+                )
+                .await;
 
             match insert_result {
                 Ok((new_child_ino, new_node)) => Ok((new_child_ino, new_node)),
