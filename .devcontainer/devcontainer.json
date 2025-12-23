@@ -9,7 +9,7 @@
 			"packages": "fuse3,libfuse3-dev,fish"
 		}
 	},
-	"postCreateCommand": ".devcontainer/setup_fish.sh",
+	"postCreateCommand": ".devcontainer/setup.sh",
 	"customizations": {
 		"vscode": {
 			"settings": {
