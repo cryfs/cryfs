@@ -34,6 +34,13 @@ This project uses **Jujutsu (jj)** for version control, colocated with git. Use 
 
 **Recommended workflow**: Work with a "staging" commit and a "working copy" commit on top. File modifications automatically go into the working copy. Use `jj squash` to move completed changes into the staging commit. When done, leave the staging commit as final and create a new one for the next task.
 
+### Branch Naming Conventions
+
+Branches follow git flow patterns:
+- `main` - main branch
+- `feature/{feature}` - feature branches
+- `release/{release}` - release branches
+
 ## Architecture
 
 The architecture is layered. Dependencies flow downward (higher layers depend on lower layers):
