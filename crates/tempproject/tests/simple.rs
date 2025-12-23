@@ -289,3 +289,30 @@ mod build_then_run_release {
         expect_run_release_fails_at_build_time(&project);
     }
 }
+
+mod edge_cases {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "You must call TempProjectBuilder::cargo")]
+    fn build_without_cargo_panics() {
+        let builder = TempProjectBuilder::new().unwrap();
+        let builder = builder.main("fn main() {}");
+        let _ = builder.build();
+    }
+
+    #[test]
+    #[should_panic(expected = "You must call TempProjectBuilder::main")]
+    fn build_without_main_panics() {
+        let builder = TempProjectBuilder::new().unwrap();
+        let builder = builder.cargo("[package]\nname = \"test\"\nversion = \"0.1.0\"");
+        let _ = builder.build();
+    }
+
+    #[test]
+    #[should_panic(expected = "You must call TempProjectBuilder::cargo")]
+    fn build_without_both_panics_on_cargo_first() {
+        let builder = TempProjectBuilder::new().unwrap();
+        let _ = builder.build();
+    }
+}
