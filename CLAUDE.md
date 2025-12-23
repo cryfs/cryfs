@@ -9,6 +9,31 @@ CryFS is an encrypted filesystem for cloud storage (Dropbox, iCloud, OneDrive). 
 - Rust workspace with several crates
 - Targets newest Rust edition and version
 
+## Version Control
+
+This project uses **Jujutsu (jj)** for version control, colocated with git. Use `jj` commands instead of `git`:
+
+| Git command | Jujutsu equivalent |
+|-------------|-------------------|
+| `git status` | `jj status` or `jj st` |
+| `git diff` | `jj diff` |
+| `git log` | `jj log` |
+| `git add . && git commit` | `jj commit -m "message"` |
+| `git push` | `jj git push` |
+| `git pull` | `jj git fetch` then `jj rebase -d main@origin` |
+| `git branch` | `jj bookmark list` |
+
+### Key Differences from Git
+
+**No staging area**: Jujutsu automatically tracks all file modifications into the current "working copy" commit. There's no `git add` equivalent - changes are always included.
+
+**Commit workflow**:
+- `jj commit -m "message"` finalizes the current commit and creates a new empty commit on top for the next set of changes
+- `jj new <commit>` jumps to any commit and creates an empty commit on top, so modifications don't alter the existing commit
+- `jj squash` moves changes from the current commit into its parent
+
+**Recommended workflow**: Work with a "staging" commit and a "working copy" commit on top. File modifications automatically go into the working copy. Use `jj squash` to move completed changes into the staging commit. When done, leave the staging commit as final and create a new one for the next task.
+
 ## Architecture
 
 The architecture is layered. Dependencies flow downward (higher layers depend on lower layers):
