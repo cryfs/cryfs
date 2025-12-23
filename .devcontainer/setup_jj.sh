@@ -15,6 +15,17 @@ cargo binstall --no-confirm jj-cli
 mkdir -p ~/.config/fish/completions
 jj util completion fish > ~/.config/fish/completions/jj.fish
 
+# Set up jj aliases for fish
+mkdir -p ~/.config/fish/conf.d
+cat > ~/.config/fish/conf.d/jj_aliases.fish << 'EOF'
+alias jbm 'jj bookmark move --to @-'
+alias jd 'jj diff'
+alias jl 'jj log'
+alias jn 'jj next'
+alias jp 'jj prev'
+alias js 'jj st'
+EOF
+
 # Initialize jujutsu in colocated mode for the workspace
 cd /workspaces/cryfs
 jj git init --colocate
