@@ -1,5 +1,6 @@
 use anyhow::{Result, ensure};
 use log::warn;
+use rand::{Rng as _, rng};
 
 // TODO Separate InfallibleUnwrap from the lockable crate and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
@@ -17,6 +18,20 @@ pub struct EncryptionKey {
 }
 
 impl EncryptionKey {
+    /// Creates a new encryption key with the specified size.
+    ///
+    /// The key is stored in protected memory that is locked to prevent swapping
+    /// and will be zeroed when dropped. The `init` function is called to
+    /// initialize the key data.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_bytes` - The size of the key in bytes
+    /// * `init` - A function that initializes the key data
+    ///
+    /// # Returns
+    ///
+    /// The new encryption key, or an error if initialization fails
     pub fn new<E>(
         num_bytes: usize,
         init: impl FnOnce(&mut [u8]) -> Result<(), E>,
@@ -45,7 +60,7 @@ impl EncryptionKey {
     /// but it circumvents the protection because the data exists somewhere else
     /// before creating the EncryptionKey object. So we're making sure it's actually
     /// only available to test cases using cfg(test).
-    // TODO #[cfg(test)]
+    /// TODO Make this actually true and add a #[cfg(test)] here
     pub fn from_hex(hex_str: &str) -> Result<Self> {
         ensure!(
             hex_str.len().is_multiple_of(2),
@@ -66,10 +81,15 @@ impl EncryptionKey {
         hex::encode_upper(&self.key_data)
     }
 
+    /// Returns the key data as a byte slice.
+    ///
+    /// This method provides read-only access to the raw key bytes for use
+    /// in cryptographic operations.
     pub fn as_bytes(&self) -> &[u8] {
         &self.key_data
     }
 
+    /// Returns the size of the key in bytes.
     pub fn num_bytes(&self) -> usize {
         self.key_data.len()
     }
@@ -87,6 +107,29 @@ impl EncryptionKey {
     pub fn skip_bytes(&self, num_bytes: usize) -> EncryptionKey {
         Self::new(self.key_data.len() - num_bytes, |data| {
             data.copy_from_slice(&self.key_data[num_bytes..]);
+            Ok(())
+        })
+        .infallible_unwrap()
+    }
+
+    /// Generates a cryptographically random encryption key.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `KEY_SIZE` - The size of the key in bytes
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cryfs_crypto::symmetric::{EncryptionKey, Aes256Gcm, CipherDef, DefaultNonceSize};
+    ///
+    /// // Generate a key for AES-256-GCM
+    /// let key = EncryptionKey::generate_random::<{Aes256Gcm::<DefaultNonceSize>::KEY_SIZE}>();
+    /// assert_eq!(key.num_bytes(), 32);
+    /// ```
+    pub fn generate_random<const KEY_SIZE: usize>() -> Self {
+        Self::new(KEY_SIZE, |data| {
+            rng().fill(data);
             Ok(())
         })
         .infallible_unwrap()

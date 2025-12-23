@@ -1,3 +1,5 @@
+//! OpenSSL-based scrypt implementation.
+
 use anyhow::Result;
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
@@ -8,6 +10,10 @@ use crate::kdf::{
 };
 use crate::symmetric::EncryptionKey;
 
+/// Scrypt implementation using OpenSSL.
+///
+/// This implementation uses OpenSSL's scrypt function, which may provide
+/// better performance on some platforms due to optimized assembly code.
 pub struct ScryptOpenssl;
 
 impl PasswordBasedKDF for ScryptOpenssl {
@@ -15,6 +21,7 @@ impl PasswordBasedKDF for ScryptOpenssl {
     type Parameters = ScryptParams;
 
     fn derive_key(key_size: usize, password: &str, kdf_parameters: &ScryptParams) -> EncryptionKey {
+        // TODO Is this implementation parallelized? Our other backend is but not sure about this one.
         let log_n = kdf_parameters.log_n();
         assert!(
             log_n < 64,

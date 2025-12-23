@@ -1,3 +1,5 @@
+//! Scrypt parameter storage and serialization.
+
 use anyhow::{Result, ensure};
 use binrw::{BinRead, BinWrite, binrw, helpers::until_eof};
 use rand::{RngCore, rng};
@@ -7,6 +9,36 @@ use std::io::Cursor;
 use super::super::KDFParameters;
 use super::ScryptSettings;
 
+/// Parameters for the scrypt key derivation function.
+///
+/// `ScryptParams` contains all the information needed to derive the same key
+/// from a password: the cost parameters (N, r, p) and the random salt. These
+/// parameters must be stored alongside encrypted data to enable decryption.
+///
+/// # Serialization Format
+///
+/// The parameters are serialized in little-endian binary format:
+/// - `n` (8 bytes): CPU/memory cost as `2^log_n`
+/// - `r` (4 bytes): Block size parameter
+/// - `p` (4 bytes): Parallelization parameter
+/// - `salt` (remaining bytes): Random salt
+///
+/// # Example
+///
+/// ```
+/// use cryfs_crypto::kdf::scrypt::{ScryptParams, ScryptSettings};
+/// use cryfs_crypto::kdf::KDFParameters;
+///
+/// // Generate new parameters
+/// let params = ScryptParams::generate(&ScryptSettings::TEST).unwrap();
+///
+/// // Serialize for storage
+/// let serialized = params.serialize();
+///
+/// // Later, deserialize to derive the same key
+/// let restored = ScryptParams::deserialize(&serialized).unwrap();
+/// assert_eq!(params.log_n(), restored.log_n());
+/// ```
 #[derive(Clone, PartialEq, Eq)]
 #[binrw]
 #[brw(little)]
@@ -24,6 +56,16 @@ pub struct ScryptParams {
 }
 
 impl ScryptParams {
+    /// Generates new scrypt parameters with a random salt.
+    ///
+    /// # Arguments
+    ///
+    /// * `settings` - The cost settings (log_n, r, p, salt_len)
+    ///
+    /// # Returns
+    ///
+    /// New parameters with a randomly generated salt, or an error if
+    /// the settings are invalid (e.g., log_n >= 64).
     pub fn generate(settings: &ScryptSettings) -> Result<Self> {
         ensure!(
             settings.log_n < 64,
@@ -40,18 +82,24 @@ impl ScryptParams {
         })
     }
 
+    /// Returns the CPU/memory cost parameter as log2(N).
+    ///
+    /// The actual N value used by scrypt is `2^log_n`.
     pub fn log_n(&self) -> u8 {
         self.log_n
     }
 
+    /// Returns the block size parameter (r).
     pub fn r(&self) -> u32 {
         self.r
     }
 
+    /// Returns the parallelization parameter (p).
     pub fn p(&self) -> u32 {
         self.p
     }
 
+    /// Returns the random salt used for key derivation.
     pub fn salt(&self) -> &[u8] {
         &self.salt
     }

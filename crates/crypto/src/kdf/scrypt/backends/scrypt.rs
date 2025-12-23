@@ -1,3 +1,5 @@
+//! Pure Rust scrypt implementation using the `scrypt` crate.
+
 use anyhow::Result;
 // TODO Separate out InfallibleUnwrap from lockable and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
@@ -7,6 +9,10 @@ use crate::kdf::scrypt::params::ScryptParams;
 use crate::kdf::scrypt::settings::ScryptSettings;
 use crate::symmetric::EncryptionKey;
 
+/// Scrypt implementation using the pure Rust `scrypt` crate.
+///
+/// This is the default scrypt implementation and provides good portability
+/// without requiring external libraries.
 pub struct ScryptScrypt;
 
 impl PasswordBasedKDF for ScryptScrypt {

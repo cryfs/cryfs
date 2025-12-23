@@ -1,5 +1,17 @@
+//! SHA-512 implementation using libsodium.
+
 use crate::hash::{Digest, Hash, HashAlgorithm, HashAlgorithmDef, Salt};
 
+/// SHA-512 hash algorithm using libsodium (via sodiumoxide).
+///
+/// This implementation uses the libsodium library, which is known for its
+/// high-quality, security-focused cryptographic implementations. The library
+/// provides constant-time operations to prevent timing attacks.
+///
+/// # Constants
+///
+/// - Digest length: 64 bytes (512 bits)
+/// - Salt length: 8 bytes
 pub struct LibsodiumSha512;
 impl HashAlgorithmDef for LibsodiumSha512 {
     const DIGEST_LEN: usize = 64;
