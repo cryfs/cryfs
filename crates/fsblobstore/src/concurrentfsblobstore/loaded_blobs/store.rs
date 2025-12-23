@@ -92,7 +92,6 @@ where
         Ok(self
             .loaded_blobs
             .get_loaded_or_insert_loading(blob_id, blobstore, loading_fn)
-            .await
             .wait_until_loaded()
             .await?
             .map(LoadedBlobGuard::new))
