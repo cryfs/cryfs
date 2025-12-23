@@ -5,6 +5,7 @@
 			"version": "latest",
 			"profile": "default"
 		},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
 			"packages": "fuse3,libfuse3-dev,fish"
 		}
