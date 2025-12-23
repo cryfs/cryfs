@@ -40,7 +40,7 @@ criterion = "^0.8"
 daemonize = "^0.5.0"
 derivative = "^2.2.0"
 derive-where = "^1.5.0"
-derive_more = {version = "^2.0.1", features = ["full"]}
+derive_more = { version = "^2.0.1", features = ["full"] }
 dialoguer = "^0.12.0"
 dirs = "^6.0.0"
 divrem = "^1.0.0"
@@ -53,7 +53,7 @@ fuser = "^0.16"
 futures = "^0.3.31"
 generic-array = "^1.3"
 generic-tests = "^0.1.3"
-git2version = "^0.4.0"
+git2version = "^0.5.0"
 hex = "^0.4.3"
 human-panic = "^2.0.2"
 humantime = "^2.2.0"
@@ -86,10 +86,12 @@ rpassword = "^7.3.1"
 rstest = "^0.26"
 rstest_reuse = "^0.7.0"
 # TODO Go to stable scrypt version once a version with https://github.com/RustCrypto/password-hashes/pull/733 is released
-scrypt = {version = "0.12.0-rc.4", default-features = false, features = ["rayon"]}
+scrypt = { version = "0.12.0-rc.4", default-features = false, features = [
+    "rayon",
+] }
 serde = "^1.0.219"
 serde_json = "^1.0.140"
-serde_with = {version = "^3.12.0", features = ["hex"]}
+serde_with = { version = "^3.12.0", features = ["hex"] }
 sha2 = "^0.10"
 signal-hook = "^0.3.17"
 slab = "^0.4.11"

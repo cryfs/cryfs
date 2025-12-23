@@ -1062,7 +1062,7 @@ dependencies = [
  "envtestkit",
  "human-panic",
  "indoc",
- "konst 0.4.3",
+ "konst",
  "lazy_static",
  "log",
  "path-absolutize",
@@ -1106,7 +1106,7 @@ dependencies = [
  "cryfs-version",
  "derive_more",
  "hex",
- "konst 0.4.3",
+ "konst",
  "lockable",
  "log",
  "rand 0.9.2",
@@ -1307,7 +1307,7 @@ version = "2.0.0-alpha3"
 dependencies = [
  "derive_more",
  "git2version",
- "konst 0.4.3",
+ "konst",
  "predicates",
  "serde",
  "serde_json",
@@ -1948,9 +1948,9 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "git2"
-version = "0.18.3"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "232e6a7bfe35766bf715e55a88b39a700596c0ccfd88cd3680b4cdb40d66ef70"
+checksum = "3e2b37e2f62729cdada11f0e6b3b6fe383c69c29fc619e391223e12856af308c"
 dependencies = [
  "bitflags 2.10.0",
  "libc",
@@ -1963,12 +1963,12 @@ dependencies = [
 
 [[package]]
 name = "git2version"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5238931cff44c3bd9a107691fd5e6d5692f3a78482ae31f1b1ed1713d9d9662"
+checksum = "366ded79a9ef8d881eb1f6f48c72c313e222929500cadd335e4872e82c200868"
 dependencies = [
  "git2",
- "konst 0.3.16",
+ "konst",
  "serde",
 ]
 
@@ -2579,41 +2579,14 @@ dependencies = [
 
 [[package]]
 name = "konst"
-version = "0.3.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4381b9b00c55f251f2ebe9473aef7c117e96828def1a7cb3bd3f0f903c6894e9"
-dependencies = [
- "const_panic",
- "konst_kernel",
- "konst_proc_macros 0.3.10",
- "typewit",
-]
-
-[[package]]
-name = "konst"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f660d5f887e3562f9ab6f4a14988795b694099d66b4f5dedc02d197ba9becb1d"
 dependencies = [
  "const_panic",
- "konst_proc_macros 0.4.1",
+ "konst_proc_macros",
  "typewit",
 ]
-
-[[package]]
-name = "konst_kernel"
-version = "0.3.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4b1eb7788f3824c629b1116a7a9060d6e898c358ebff59070093d51103dcc3c"
-dependencies = [
- "typewit",
-]
-
-[[package]]
-name = "konst_proc_macros"
-version = "0.3.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00af7901ba50898c9e545c24d5c580c96a982298134e8037d8978b6594782c07"
 
 [[package]]
 name = "konst_proc_macros"
@@ -2635,9 +2608,9 @@ checksum = "37c93d8daa9d8a012fd8ab92f088405fb202ea0b6ab73ee2482ae66af4f42091"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.16.2+1.7.2"
+version = "0.18.3+1.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee4126d8b4ee5c9d9ea891dd875cfdc1e9d0950437179104b183d7d8a74d24e8"
+checksum = "c9b3acc4b91781bb0b3386669d325163746af5f6e4f73e6d2d630e09a35f3487"
 dependencies = [
  "cc",
  "libc",
@@ -4957,15 +4930,6 @@ name = "typewit"
 version = "1.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8c1ae7cc0fdb8b842d65d127cb981574b0d2b249b74d1c7a2986863dc134f71"
-dependencies = [
- "typewit_proc_macros",
-]
-
-[[package]]
-name = "typewit_proc_macros"
-version = "1.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e36a83ea2b3c704935a01b4642946aadd445cea40b10935e3f8bd8052b8193d6"
 
 [[package]]
 name = "unicode-ident"
