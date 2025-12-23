@@ -13,4 +13,7 @@ pub use inserting::Inserting;
 pub use loading_or_loaded::LoadingOrLoaded;
 pub use store::{ConcurrentStore, RequestImmediateDropResult};
 
+#[cfg(test)]
+mod tests;
+
 cryfs_version::assert_cargo_version_equals_git_version!();

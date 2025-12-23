@@ -22,6 +22,7 @@ log.workspace = true
 [dev-dependencies]
 # TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
 lockable = {workspace = true, features = ["slow_assertions"]}
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread", "sync", "time"] }
 
 [features]
 default = []
