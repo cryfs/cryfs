@@ -11,6 +11,7 @@
 		}
 	},
 	"postCreateCommand": ".devcontainer/setup.sh",
+	"postStartCommand": ".devcontainer/setup_claude.sh",
 	"customizations": {
 		"vscode": {
 			"settings": {
