@@ -6,7 +6,7 @@ use cryfs_utils::{
 };
 
 use crate::entry::{
-    intent::{Intent, RequestImmediateDropResponse},
+    intent::{DropIntent, RequestImmediateDropResponse},
     loading::EntryStateLoading,
 };
 
@@ -23,9 +23,9 @@ where
     /// If this is non-zero, then we shouldn't prune the entry yet even if the refcount is zero.
     num_unfulfilled_waiters: usize,
 
-    /// Intent to drop the value, with optional reload.
-    /// If Some, when all guards are released the value will be dropped using the intent's drop_fn.
-    intent: Option<Intent<V, E>>,
+    /// DropIntent to drop the value, with optional reload.
+    /// If Some, when all guards are released the value will be dropped using the drop_intent's drop_fn.
+    drop_intent: Option<DropIntent<V, E>>,
 }
 
 impl<V, E> EntryStateLoaded<V, E>
@@ -40,7 +40,7 @@ where
         EntryStateLoaded {
             entry: AsyncDropArc::new(entry),
             num_unfulfilled_waiters: loading.num_waiters(),
-            intent: loading.into_intent(),
+            drop_intent: loading.into_drop_intent(),
         }
     }
 
@@ -48,7 +48,7 @@ where
         EntryStateLoaded {
             entry: AsyncDropArc::new(entry),
             num_unfulfilled_waiters: 0,
-            intent: None,
+            drop_intent: None,
         }
     }
 
@@ -56,12 +56,12 @@ where
     pub fn new_from_reload(
         entry: AsyncDropGuard<V>,
         num_unfulfilled_waiters: usize,
-        intent: Option<Intent<V, E>>,
+        drop_intent: Option<DropIntent<V, E>>,
     ) -> Self {
         EntryStateLoaded {
             entry: AsyncDropArc::new(entry),
             num_unfulfilled_waiters,
-            intent,
+            drop_intent,
         }
     }
 
@@ -83,38 +83,38 @@ where
         self.num_unfulfilled_waiters + AsyncDropArc::strong_count(&self.entry) - 1
     }
 
-    /// Consume this state and return the intent (if any) and the entry.
-    pub fn into_inner(self) -> (Option<Intent<V, E>>, AsyncDropGuard<V>) {
+    /// Consume this state and return the drop intent (if any) and the entry.
+    pub fn into_inner(self) -> (Option<DropIntent<V, E>>, AsyncDropGuard<V>) {
         assert!(
             self.num_unfulfilled_waiters == 0,
             "Cannot consume EntryStateLoaded while there are unfulfilled waiters"
         );
         let entry = AsyncDropArc::into_inner(self.entry).unwrap();
-        (self.intent, entry)
+        (self.drop_intent, entry)
     }
 
-    /// Get a mutable reference to the intent, if any.
-    pub fn intent_mut(&mut self) -> Option<&mut Intent<V, E>> {
-        self.intent.as_mut()
+    /// Get a mutable reference to the drop intent, if any.
+    pub fn drop_intent_mut(&mut self) -> Option<&mut DropIntent<V, E>> {
+        self.drop_intent.as_mut()
     }
 
-    /// Set an intent (drop request) for this loaded entry.
+    /// Set a drop intent for this loaded entry.
     /// Returns the on_dropped event that will be triggered when the drop completes.
-    pub fn set_intent<F>(
+    pub fn set_drop_intent<F>(
         &mut self,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> Event
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        assert!(self.intent.is_none(), "Intent already set");
-        let (intent, on_dropped) = Intent::new(drop_fn);
-        self.intent = Some(intent);
+        assert!(self.drop_intent.is_none(), "DropIntent already set");
+        let (drop_intent, on_dropped) = DropIntent::new(drop_fn);
+        self.drop_intent = Some(drop_intent);
         on_dropped
     }
 
-    /// Request immediate drop. Walks the intent/reload chain to find the deepest level
-    /// and either sets a new intent or returns AlreadyDropping.
+    /// Request immediate drop. Walks the drop_intent/reload chain to find the deepest level
+    /// and either sets a new drop intent or returns AlreadyDropping.
     pub fn request_immediate_drop<F>(
         &mut self,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
@@ -122,22 +122,22 @@ where
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        match &mut self.intent {
+        match &mut self.drop_intent {
             None => {
-                // No intent - set one
-                let on_dropped = self.set_intent(drop_fn);
+                // No drop intent - set one
+                let on_dropped = self.set_drop_intent(drop_fn);
                 RequestImmediateDropResponse::Requested { on_dropped }
             }
-            Some(intent) => {
+            Some(drop_intent) => {
                 // Walk the chain to find where to attach
-                Self::walk_intent_chain_for_drop(intent, drop_fn)
+                Self::walk_drop_intent_chain_for_drop(drop_intent, drop_fn)
             }
         }
     }
 
-    /// Walk the intent/reload chain to find where to set a new intent.
-    fn walk_intent_chain_for_drop<F>(
-        intent: &mut Intent<V, E>,
+    /// Walk the drop_intent/reload chain to find where to set a new drop intent.
+    fn walk_drop_intent_chain_for_drop<F>(
+        drop_intent: &mut DropIntent<V, E>,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> RequestImmediateDropResponse
     where
@@ -145,10 +145,10 @@ where
     {
         use futures::FutureExt as _;
 
-        match intent.reload_mut() {
+        match drop_intent.reload_mut() {
             None => {
                 // No reload pending - can't attach, drop already pending
-                let on_dropped = intent.on_dropped().clone();
+                let on_dropped = drop_intent.on_dropped().clone();
                 RequestImmediateDropResponse::AlreadyDropping {
                     on_current_drop_complete: async move { on_dropped.wait().await }
                         .boxed()
@@ -156,17 +156,17 @@ where
                 }
             }
             Some(reload) => {
-                // Has reload - check new_intent
-                match reload.new_intent_mut() {
+                // Has reload - check next_drop_intent
+                match reload.next_drop_intent_mut() {
                     None => {
-                        // No new intent - set it here
-                        let (new_intent, on_dropped) = Intent::new(drop_fn);
-                        reload.set_new_intent(new_intent);
+                        // No next drop intent - set it here
+                        let (next_drop_intent, on_dropped) = DropIntent::new(drop_fn);
+                        reload.set_next_drop_intent(next_drop_intent);
                         RequestImmediateDropResponse::Requested { on_dropped }
                     }
-                    Some(new_intent) => {
-                        // Has new intent - recurse
-                        Self::walk_intent_chain_for_drop(new_intent, drop_fn)
+                    Some(next_drop_intent) => {
+                        // Has next drop intent - recurse
+                        Self::walk_drop_intent_chain_for_drop(next_drop_intent, drop_fn)
                     }
                 }
             }
@@ -175,7 +175,7 @@ where
 
     /// Check if immediate drop was requested for this entry.
     pub fn immediate_drop_requested(&self) -> Option<&Event> {
-        self.intent.as_ref().map(|i| i.on_dropped())
+        self.drop_intent.as_ref().map(|i| i.on_dropped())
     }
 }
 
@@ -188,7 +188,7 @@ where
         f.debug_struct("EntryStateLoaded")
             .field("entry", &self.entry)
             .field("num_unfulfilled_waiters", &self.num_unfulfilled_waiters)
-            .field("intent", &self.intent)
+            .field("drop_intent", &self.drop_intent)
             .finish()
     }
 }

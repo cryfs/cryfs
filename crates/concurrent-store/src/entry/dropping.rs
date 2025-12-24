@@ -10,7 +10,7 @@ use cryfs_utils::{
     event::Event,
 };
 
-use crate::entry::intent::{Intent, ReloadInfo, RequestImmediateDropResponse};
+use crate::entry::intent::{DropIntent, ReloadInfo, RequestImmediateDropResponse};
 
 /// Represents an entry that is currently being dropped (async drop in progress).
 pub struct EntryStateDropping<V, E>
@@ -116,7 +116,7 @@ where
         }
     }
 
-    /// Walk the reload chain to find where to set a new intent.
+    /// Walk the reload chain to find where to set a new drop intent.
     fn walk_reload_chain_for_drop<F>(
         reload: &mut ReloadInfo<V, E>,
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
@@ -124,19 +124,19 @@ where
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        match reload.new_intent_mut() {
+        match reload.next_drop_intent_mut() {
             None => {
-                // No new intent - set it here
-                let (new_intent, on_dropped) = Intent::new(drop_fn);
-                reload.set_new_intent(new_intent);
+                // No next drop intent - set it here
+                let (next_drop_intent, on_dropped) = DropIntent::new(drop_fn);
+                reload.set_next_drop_intent(next_drop_intent);
                 RequestImmediateDropResponse::Requested { on_dropped }
             }
-            Some(new_intent) => {
-                // Has new intent - check if it has a reload
-                match new_intent.reload_mut() {
+            Some(next_drop_intent) => {
+                // Has next drop intent - check if it has a reload
+                match next_drop_intent.reload_mut() {
                     None => {
-                        // No reload in new_intent - can't attach, drop already pending
-                        let on_dropped = new_intent.on_dropped().clone();
+                        // No reload in next_drop_intent - can't attach, drop already pending
+                        let on_dropped = next_drop_intent.on_dropped().clone();
                         RequestImmediateDropResponse::AlreadyDropping {
                             on_current_drop_complete: async move { on_dropped.wait().await }
                                 .boxed()
@@ -154,10 +154,10 @@ where
 
     /// Check if immediate drop was requested for this entry (via reload chain).
     pub fn immediate_drop_requested(&self) -> Option<&Event> {
-        // Check if there's any intent in the reload chain
+        // Check if there's any drop intent in the reload chain
         self.reload
             .as_ref()
-            .and_then(|r| r.new_intent())
+            .and_then(|r| r.next_drop_intent())
             .map(|i| i.on_dropped())
     }
 }

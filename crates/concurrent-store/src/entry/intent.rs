@@ -10,8 +10,8 @@ use cryfs_utils::{
 use crate::entry::loading::LoadingResult;
 
 /// Intent to drop the current value, with optional reload afterwards.
-/// Having an Intent means drop WILL happen.
-pub struct Intent<V, E>
+/// Having a DropIntent means drop WILL happen.
+pub struct DropIntent<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
     E: Clone + Debug + Send + Sync + 'static,
@@ -30,12 +30,12 @@ where
     reload: Option<ReloadInfo<V, E>>,
 }
 
-impl<V, E> Intent<V, E>
+impl<V, E> DropIntent<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
     E: Clone + Debug + Send + Sync + 'static,
 {
-    /// Create a new Intent with a drop function and no reload.
+    /// Create a new DropIntent with a drop function and no reload.
     pub fn new<F>(
         drop_fn: impl FnOnce(Option<AsyncDropGuard<V>>) -> F + Send + Sync + 'static,
     ) -> (Self, Event)
@@ -44,12 +44,12 @@ where
     {
         let on_dropped = Event::new();
         let on_dropped_clone = on_dropped.clone();
-        let intent = Self {
+        let drop_intent = Self {
             drop_fn: Box::new(move |value| Box::pin(drop_fn(value))),
             on_dropped,
             reload: None,
         };
-        (intent, on_dropped_clone)
+        (drop_intent, on_dropped_clone)
     }
 
     /// Get a reference to the on_dropped event.
@@ -62,7 +62,7 @@ where
         self.reload.as_mut()
     }
 
-    /// Set the reload info for this intent.
+    /// Set the reload info for this drop intent.
     pub fn set_reload(&mut self, reload: ReloadInfo<V, E>) {
         assert!(self.reload.is_none(), "Reload already set");
         self.reload = Some(reload);
@@ -76,20 +76,20 @@ where
     }
 }
 
-impl<V, E> Debug for Intent<V, E>
+impl<V, E> Debug for DropIntent<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
     E: Clone + Debug + Send + Sync + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Intent")
+        f.debug_struct("DropIntent")
             .field("reload", &self.reload.as_ref().map(|_| "Some(...)"))
             .finish_non_exhaustive()
     }
 }
 
 /// Info about a pending reload operation.
-/// Note: new_intent can recursively contain another reload, allowing unbounded depth.
+/// Note: next_drop_intent can recursively contain another reload, allowing unbounded depth.
 pub struct ReloadInfo<V, E>
 where
     V: AsyncDrop + Debug + Send + 'static,
@@ -102,9 +102,9 @@ where
     /// Number of tasks waiting for this reload to complete.
     num_waiters: usize,
 
-    /// Intent for the reloaded value (recursive).
+    /// DropIntent for the reloaded value (recursive).
     /// This allows unbounded nesting of drop/reload cycles.
-    new_intent: Option<Box<Intent<V, E>>>,
+    next_drop_intent: Option<Box<DropIntent<V, E>>>,
 }
 
 impl<V, E> ReloadInfo<V, E>
@@ -117,7 +117,7 @@ where
         Self {
             reload_future,
             num_waiters: 1,
-            new_intent: None,
+            next_drop_intent: None,
         }
     }
 
@@ -132,34 +132,34 @@ where
         self.reload_future.clone()
     }
 
-    /// Get a reference to the new intent, if any.
-    pub fn new_intent(&self) -> Option<&Intent<V, E>> {
-        self.new_intent.as_ref().map(|b| b.as_ref())
+    /// Get a reference to the next drop intent, if any.
+    pub fn next_drop_intent(&self) -> Option<&DropIntent<V, E>> {
+        self.next_drop_intent.as_ref().map(|b| b.as_ref())
     }
 
-    /// Get a mutable reference to the new intent, if any.
-    pub fn new_intent_mut(&mut self) -> Option<&mut Intent<V, E>> {
-        self.new_intent.as_mut().map(|b| b.as_mut())
+    /// Get a mutable reference to the next drop intent, if any.
+    pub fn next_drop_intent_mut(&mut self) -> Option<&mut DropIntent<V, E>> {
+        self.next_drop_intent.as_mut().map(|b| b.as_mut())
     }
 
-    /// Check if there's a deeper reload in the chain (intent with reload).
+    /// Check if there's a deeper reload in the chain (drop intent with reload).
     /// Used to enable iterative chain walking without borrow conflicts.
     pub fn has_deeper_reload(&self) -> bool {
-        self.new_intent
+        self.next_drop_intent
             .as_ref()
-            .is_some_and(|intent| intent.reload.is_some())
+            .is_some_and(|drop_intent| drop_intent.reload.is_some())
     }
 
-    /// Check if there's a new intent (regardless of whether it has a reload).
+    /// Check if there's a next drop intent (regardless of whether it has a reload).
     /// Used to enable iterative chain walking without borrow conflicts.
-    pub fn has_new_intent(&self) -> bool {
-        self.new_intent.is_some()
+    pub fn has_next_drop_intent(&self) -> bool {
+        self.next_drop_intent.is_some()
     }
 
-    /// Set the new intent for this reload.
-    pub fn set_new_intent(&mut self, intent: Intent<V, E>) {
-        assert!(self.new_intent.is_none(), "New intent already set");
-        self.new_intent = Some(Box::new(intent));
+    /// Set the next drop intent for this reload.
+    pub fn set_next_drop_intent(&mut self, drop_intent: DropIntent<V, E>) {
+        assert!(self.next_drop_intent.is_none(), "Next drop intent already set");
+        self.next_drop_intent = Some(Box::new(drop_intent));
     }
 
     /// Consume this reload info and return its components.
@@ -168,9 +168,9 @@ where
     ) -> (
         Shared<BoxFuture<'static, LoadingResult<E>>>,
         usize,
-        Option<Box<Intent<V, E>>>,
+        Option<Box<DropIntent<V, E>>>,
     ) {
-        (self.reload_future, self.num_waiters, self.new_intent)
+        (self.reload_future, self.num_waiters, self.next_drop_intent)
     }
 }
 
@@ -182,7 +182,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ReloadInfo")
             .field("num_waiters", &self.num_waiters)
-            .field("new_intent", &self.new_intent.as_ref().map(|_| "Some(...)"))
+            .field("next_drop_intent", &self.next_drop_intent.as_ref().map(|_| "Some(...)"))
             .finish_non_exhaustive()
     }
 }

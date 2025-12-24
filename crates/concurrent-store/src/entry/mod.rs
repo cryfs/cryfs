@@ -43,7 +43,7 @@ where
 
 pub use crate::entry::{
     dropping::EntryStateDropping,
-    intent::{Intent, ReloadInfo, RequestImmediateDropResponse},
+    intent::{DropIntent, ReloadInfo, RequestImmediateDropResponse},
     loaded::EntryStateLoaded,
     loading::{EntryStateLoading, LoadingResult},
 };
