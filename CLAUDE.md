@@ -158,6 +158,7 @@ See `crates/cli-utils/src/blockstore_setup.rs` for the setup code.
 - **Library crates**: Define detailed error types with `thiserror`, NOT `anyhow`
 - **CLI/application crates**: May use `anyhow` for error propagation with `.context()`
 - **Calling code responsibility**: When calling library functions, check for errors and wrap/map them to your own error types where appropriate
+- Use panics (e.g. `unwrap()`, `expect()`) only for unrecoverable errors, e.g. invariant violatons that should not be possible to happen.
 - Note: Current codebase doesn't fully follow this yet, but new code should
 
 ## AsyncDrop Pattern
