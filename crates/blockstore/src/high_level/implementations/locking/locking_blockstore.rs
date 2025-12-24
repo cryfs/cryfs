@@ -74,8 +74,18 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
 
     pub async fn into_inner_block_store(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B>> {
         let mut this = this.unsafe_into_inner_dont_drop();
-        // TODO Exception safety. Drop base_store if dropping the cache fails.
-        this.cache.async_drop().await?;
+        if let Err(e) = this.cache.async_drop().await {
+            let base_store = this.base_store.take().expect("Already destructed");
+            // After th cache was dropped, there should be only our own reference left and Arc::try_unwrap should succeed.
+            // However, since dropping the cache failed, we don't know what the exact state is.
+            // Let's clean up as a best effort.
+            if let Ok(mut base_store) = Arc::try_unwrap(base_store) {
+                if let Err(drop_err) = base_store.async_drop().await {
+                    log::error!("Error dropping base_store: {:?}", drop_err);
+                }
+            }
+            return Err(e);
+        }
 
         let base_store = this.base_store.take().expect("Already destructed");
         let base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");

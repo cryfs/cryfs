@@ -391,8 +391,15 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
 
     pub async fn remove(mut this: AsyncDropGuard<Self>) -> Result<()> {
         let root_node = this.root_node.take().expect("DataTree.root_node is None");
-        Self::_remove_subtree(&*this.node_store, root_node).await?;
-        this.async_drop().await.unwrap(); // TODO No unwrap
+        if let Err(e) = Self::_remove_subtree(&*this.node_store, root_node).await {
+            if let Err(drop_err) = this.async_drop().await {
+                log::error!("Error in async_drop: {:?}", drop_err);
+            }
+            return Err(e);
+        }
+        if let Err(drop_err) = this.async_drop().await {
+            log::error!("Error in async_drop: {:?}", drop_err);
+        }
         Ok(())
     }
 

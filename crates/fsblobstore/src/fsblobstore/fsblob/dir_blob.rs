@@ -317,7 +317,12 @@ where
     pub async fn into_raw(
         mut this: AsyncDropGuard<Self>,
     ) -> Result<AsyncDropGuard<B::ConcreteBlob>> {
-        this.writeback().await?;
+        if let Err(e) = this.writeback().await {
+            if let Err(drop_err) = this.async_drop().await {
+                log::error!("Error in async_drop: {:?}", drop_err);
+            }
+            return Err(e);
+        }
         let this = this.unsafe_into_inner_dont_drop();
         Ok(BaseBlob::into_raw(this.blob))
     }
