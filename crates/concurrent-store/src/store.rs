@@ -508,11 +508,11 @@ where
     }
 
     /// Walk the reload chain to find where to set a reload or add a waiter.
-    /// Recursively walks through reload→intent→reload→... to find the deepest level.
+    /// Iteratively walks through reload→intent→reload→... to find the deepest level.
     fn walk_reload_chain_for_reload<F, R, I>(
         &self,
         key: K,
-        reload: &mut ReloadInfo<V, E>,
+        mut reload: &mut ReloadInfo<V, E>,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         loading_fn: F,
     ) -> EntryLoadingWaiter<K, E>
@@ -521,39 +521,34 @@ where
         R: Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
         I: AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     {
-        match reload.new_intent_mut() {
-            Some(next_intent) => {
-                match next_intent.reload_mut() {
-                    Some(next_reload) => {
-                        // Has deeper reload - continue walking (self-recursion)
-                        self.walk_reload_chain_for_reload(
-                            key,
-                            next_reload,
-                            loading_fn_input,
-                            loading_fn,
-                        )
-                    }
-                    None => {
-                        // Intent has no reload - create one there
-                        let reload_future = self.make_reload_future(
-                            key.clone(),
-                            next_intent.on_dropped().clone(),
-                            loading_fn_input,
-                            loading_fn,
-                        );
-                        let new_reload = ReloadInfo::new(reload_future.clone());
-                        let waiter =
-                            EntryLoadingWaiter::new(key, new_reload.reload_future().clone());
-                        next_intent.set_reload(new_reload);
-                        waiter
-                    }
-                }
-            }
-            None => {
-                // No new intent - add waiter to this reload
-                let future = reload.add_waiter();
-                EntryLoadingWaiter::new(key, future)
-            }
+        // Walk to the deepest reload in the chain
+        while reload.has_deeper_reload() {
+            reload = reload
+                .new_intent_mut()
+                .expect("has_deeper_reload returned true")
+                .reload_mut()
+                .expect("has_deeper_reload returned true");
+        }
+        // Now we're at the deepest reload. Check if it has an intent without reload.
+        if reload.has_new_intent() {
+            // Intent exists but has no reload - create one there
+            let next_intent = reload
+                .new_intent_mut()
+                .expect("has_new_intent returned true");
+            let reload_future = self.make_reload_future(
+                key.clone(),
+                next_intent.on_dropped().clone(),
+                loading_fn_input,
+                loading_fn,
+            );
+            let new_reload = ReloadInfo::new(reload_future.clone());
+            let waiter = EntryLoadingWaiter::new(key, new_reload.reload_future().clone());
+            next_intent.set_reload(new_reload);
+            waiter
+        } else {
+            // No new intent - add waiter to this reload
+            let future = reload.add_waiter();
+            EntryLoadingWaiter::new(key, future)
         }
     }
 
@@ -572,31 +567,22 @@ where
 
     /// Walk the reload chain to find where to add a waiter for an existing reload.
     /// Used by `get_if_loading_or_loaded` when a reload is already scheduled.
-    /// Recursively walks through reload→intent→reload→... to find the deepest reload.
+    /// Iteratively walks through reload→intent→reload→... to find the deepest reload.
     fn walk_reload_chain_for_existing_waiter(
         key: K,
-        reload: &mut ReloadInfo<V, E>,
+        mut reload: &mut ReloadInfo<V, E>,
     ) -> EntryLoadingWaiter<K, E> {
-        match reload.new_intent_mut() {
-            Some(next_intent) => {
-                match next_intent.reload_mut() {
-                    Some(next_reload) => {
-                        // Has deeper reload - continue walking (self-recursion)
-                        Self::walk_reload_chain_for_existing_waiter(key, next_reload)
-                    }
-                    None => {
-                        // Intent has no reload - add waiter to current reload
-                        let future = reload.add_waiter();
-                        EntryLoadingWaiter::new(key, future)
-                    }
-                }
-            }
-            None => {
-                // No new intent - add waiter to this reload
-                let future = reload.add_waiter();
-                EntryLoadingWaiter::new(key, future)
-            }
+        // Walk to the deepest reload in the chain
+        while reload.has_deeper_reload() {
+            reload = reload
+                .new_intent_mut()
+                .expect("has_deeper_reload returned true")
+                .reload_mut()
+                .expect("has_deeper_reload returned true");
         }
+        // Add waiter to the deepest reload
+        let future = reload.add_waiter();
+        EntryLoadingWaiter::new(key, future)
     }
 
     /// Create a reload future that waits for on_dropped, then loads the entry.

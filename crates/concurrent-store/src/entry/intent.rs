@@ -142,6 +142,20 @@ where
         self.new_intent.as_mut().map(|b| b.as_mut())
     }
 
+    /// Check if there's a deeper reload in the chain (intent with reload).
+    /// Used to enable iterative chain walking without borrow conflicts.
+    pub fn has_deeper_reload(&self) -> bool {
+        self.new_intent
+            .as_ref()
+            .is_some_and(|intent| intent.reload.is_some())
+    }
+
+    /// Check if there's a new intent (regardless of whether it has a reload).
+    /// Used to enable iterative chain walking without borrow conflicts.
+    pub fn has_new_intent(&self) -> bool {
+        self.new_intent.is_some()
+    }
+
     /// Set the new intent for this reload.
     pub fn set_new_intent(&mut self, intent: Intent<V, E>) {
         assert!(self.new_intent.is_none(), "New intent already set");
