@@ -29,7 +29,28 @@ use cryfs_utils::with_async_drop_2;
 /// If any tasks want to load it while it is being dropped, the state machine will queue a reload
 /// that executes after the drop completes, allowing the caller to get a waiter immediately.
 ///
-/// Parameters:
+/// # Atomicity Guarantee
+///
+/// All public methods on this store are **synchronous** and update state atomically under a mutex.
+/// This means that if you call one operation and then immediately call another operation on the
+/// same thread (without awaiting the returned future), the second operation will immediately see
+/// the state changes made by the first operation.
+///
+/// For example:
+/// - After calling `get_loaded_or_insert_loading()`, a subsequent call to `get_if_loading_or_loaded()`
+///   will see the entry in Loading state, even before the loading future is awaited.
+/// - request_immediate_drop immediately changes the entry into a "drop requested" state and later operations
+///   will treat the entry as if it is already dropped (e.g. it get_if_loading_or_loaded will not return it,
+///   get_loaded_or_insert_loading will schedule a new loading operation).
+/// - Exception: is_fully_absent() will only return true if the item is not currently being dropped.
+/// - After executing async_drop().await on the last LoadedEntryGuard for an entry, dropping has completed
+///   and the entry is now fully absent (i.e. `is_fully_absent()` returns true).
+///
+/// This guarantee is essential for correct concurrent behavior and is enforced by the mutex
+/// protecting the internal state.
+///
+/// # Parameters
+///
 /// * K: Key type for the entries in the store.
 /// * V: Value type for the entries in the store.
 /// * E: Error type for loading operations.
@@ -85,6 +106,12 @@ where
     ///
     /// This is a sync function that returns immediately. The actual loading happens
     /// when the caller awaits the returned [Inserting].
+    ///
+    /// The Loading state is immediately visible to subsequent calls (e.g., `get_if_loading_or_loaded`
+    /// will see it), even before the returned future is awaited.
+    ///
+    /// Warning: This function has an exception to the atomicity guarantee. If an entry has been loaded before
+    /// and is currently dropping, i.e. dropping hasn't completed yet, it will not succeed the insert operation but will fail.
     pub fn try_insert_loading<F>(
         &self,
         key: K,
@@ -97,7 +124,7 @@ where
         match entries.entry(key) {
             Entry::Occupied(entry) => match entry.get() {
                 EntryState::Loading(_) | EntryState::Loaded(_) => Err(anyhow::anyhow!(
-                    "Key {key:?} is already loading",
+                    "Key {key:?} is already loading or loaded",
                     key = entry.key()
                 )),
                 EntryState::Dropping(_) => {
@@ -129,6 +156,12 @@ where
     /// This will return an Error if the key already exists in any state.
     ///
     /// On error, the value is returned to the caller, who is responsible for async_drop.
+    ///
+    /// The Loaded state is immediately visible to subsequent calls (e.g., `get_if_loading_or_loaded`
+    /// will see it).
+    ///
+    /// Warning: This function has an exception to the atomicity guarantee. If an entry has been loaded before
+    /// and is currently dropping, i.e. dropping hasn't completed yet, it will not succeed the insert operation but will fail.
     pub fn try_insert_loaded(
         &self,
         key: K,
@@ -159,6 +192,10 @@ where
     /// Load an entry if it is not already loaded, or return the existing loaded entry.
     /// This function is synchronous and returns immediately - the actual loading happens
     /// when the caller awaits the returned [LoadingOrLoaded].
+    ///
+    /// The state change (to Loading if starting a new load, or staying at Loaded/Loading if
+    /// joining an existing one) is immediately visible to subsequent calls, even before the
+    /// returned future is awaited.
     pub fn get_loaded_or_insert_loading<'a, F, I>(
         &self,
         key: K,
@@ -174,6 +211,9 @@ where
 
     /// Check if an entry is either loading or loaded, and if yes return it.
     /// If the entry is not loading or loaded, return None.
+    ///
+    /// This will see Loading/Loaded states set by prior calls (e.g., `get_loaded_or_insert_loading`
+    /// or `try_insert_loading`), even if those calls' futures haven't been awaited yet.
     pub fn get_if_loading_or_loaded(&self, key: K) -> LoadingOrLoaded<K, V, E> {
         let mut entries = self.inner.entries.lock().unwrap();
         match entries.get_mut(&key) {
@@ -231,6 +271,11 @@ where
         result
     }
 
+    /// Returns `true` if the entry with the given key is completely absent from the store.
+    ///
+    /// Returns `false` if the entry is in any state (Loading, Loaded, or Dropping).
+    /// This reflects the current state, including pending operations from prior calls
+    /// whose futures haven't been awaited yet.
     pub fn is_fully_absent(&self, key: &K) -> bool {
         let entries = self.inner.entries.lock().unwrap();
         !entries.contains_key(key)
@@ -544,6 +589,15 @@ where
         EntryStateLoading::new(loading_task.boxed())
     }
 
+    /// Request immediate drop of the entry with the given key.
+    ///
+    /// This is a synchronous function that returns immediately. The entry transitions to
+    /// Dropping state (or sets an intent to drop if still Loading/Loaded with references).
+    /// The actual drop happens asynchronously when the returned future is awaited.
+    ///
+    /// The state change is immediately visible to subsequent calls. For example,
+    /// `is_fully_absent()` called immediately after will return `false` because the entry
+    /// is in Dropping state, even before the drop completes.
     pub fn request_immediate_drop<D, F>(
         &self,
         key: K,

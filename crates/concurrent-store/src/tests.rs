@@ -1283,3 +1283,396 @@ mod error_handling {
         store.async_drop().await.unwrap();
     }
 }
+
+// ============================================================================
+// Category 9: Atomicity Tests - State Changes Immediately Visible
+// ============================================================================
+
+mod atomicity {
+    //! Tests verifying that state changes from one operation are immediately
+    //! visible to subsequent operations, even before awaiting futures.
+    //!
+    //! This is a critical invariant: all public methods are synchronous and
+    //! update state under a mutex, so sequential calls on the same thread
+    //! must see prior state changes.
+
+    use super::*;
+
+    /// After calling get_loaded_or_insert_loading(), get_if_loading_or_loaded()
+    /// should immediately see the Loading state, even before awaiting the future.
+    #[tokio::test]
+    async fn test_get_insert_immediately_visible_to_get_if() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let notify = Arc::new(Notify::new());
+
+        // Start loading with a signaled loader (that blocks until we signal it)
+        let result1 =
+            store.get_loaded_or_insert_loading(1, &input, signaled_loader(1, notify.clone()));
+
+        // Do NOT await result1 - immediately call get_if_loading_or_loaded
+        let result2 = store.get_if_loading_or_loaded(1);
+
+        // result2 should see the Loading state and return a waiter, not NotFound
+        // We can verify this by checking that awaiting result2 gives us the same value
+        // as result1 (not None)
+
+        // Signal the loader to complete
+        notify.notify_one();
+
+        // Both should resolve to the same loaded value
+        let mut guard1 = result1.wait_until_loaded().await.unwrap().unwrap();
+        let mut guard2 = result2.wait_until_loaded().await.unwrap().unwrap();
+
+        assert_eq!(guard1.value().id, 1);
+        assert_eq!(guard2.value().id, 1);
+
+        guard1.async_drop().await.unwrap();
+        guard2.async_drop().await.unwrap();
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After calling get_loaded_or_insert_loading(), a second call should immediately
+    /// see the Loading state and not call the loader again.
+    #[tokio::test]
+    async fn test_get_insert_immediately_visible_to_second_get_insert() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let notify = Arc::new(Notify::new());
+        let load_count = Arc::new(AtomicUsize::new(0));
+
+        // Start loading with a signaled loader
+        let result1 =
+            store.get_loaded_or_insert_loading(1, &input, signaled_loader(1, notify.clone()));
+
+        // Do NOT await result1 - immediately call get_loaded_or_insert_loading again
+        let result2 =
+            store.get_loaded_or_insert_loading(1, &input, counting_loader(999, load_count.clone()));
+
+        // The second loader should NOT have been called - state was already Loading
+        assert_eq!(load_count.load(Ordering::SeqCst), 0);
+
+        // Signal the first loader to complete
+        notify.notify_one();
+
+        // Both should resolve to the same value (from the first loader)
+        let mut guard1 = result1.wait_until_loaded().await.unwrap().unwrap();
+        let mut guard2 = result2.wait_until_loaded().await.unwrap().unwrap();
+
+        assert_eq!(guard1.value().id, 1);
+        assert_eq!(guard2.value().id, 1);
+        // The counting loader should still not have been called
+        assert_eq!(load_count.load(Ordering::SeqCst), 0);
+
+        guard1.async_drop().await.unwrap();
+        guard2.async_drop().await.unwrap();
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After calling request_immediate_drop(), is_fully_absent() should immediately
+    /// return false (entry is Dropping), even before the drop completes.
+    #[tokio::test]
+    async fn test_request_drop_immediately_visible_to_is_fully_absent() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let drop_notify = Arc::new(Notify::new());
+
+        // Load an entry and release the guard
+        let result = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let mut guard = result.wait_until_loaded().await.unwrap().unwrap();
+        guard.async_drop().await.unwrap();
+
+        // Wait briefly for the automatic cleanup to potentially start
+        tokio::time::sleep(Duration::from_millis(5)).await;
+
+        // Request immediate drop with a waiting drop function
+        let drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // Do NOT await drop_result - immediately check is_fully_absent
+        // The entry should be in Dropping state, so is_fully_absent should return false
+        assert!(
+            !store.is_fully_absent(&1),
+            "Entry should be in Dropping state, not fully absent"
+        );
+
+        // Signal the drop to complete
+        drop_notify.notify_one();
+
+        // Wait for drop to complete
+        if let RequestImmediateDropResult::ImmediateDropRequested { drop_result } = drop_result {
+            drop_result.await;
+        }
+
+        // Now the entry should be fully absent
+        assert!(
+            store.is_fully_absent(&1),
+            "Entry should be fully absent after drop completes"
+        );
+
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After calling try_insert_loading(), get_if_loading_or_loaded() should immediately
+    /// see the Loading state.
+    #[tokio::test]
+    async fn test_try_insert_loading_immediately_visible_to_get_if() {
+        let mut store = test_store();
+        let notify = Arc::new(Notify::new());
+
+        // Insert via try_insert_loading with a signaled loader
+        let notify_clone = notify.clone();
+        let inserting = store
+            .try_insert_loading(1, move || {
+                let notify = notify_clone;
+                async move {
+                    notify.notified().await;
+                    Ok(AsyncDropGuard::new(TestValue::new(42)))
+                }
+            })
+            .unwrap();
+
+        // Do NOT await inserting - immediately call get_if_loading_or_loaded
+        let result = store.get_if_loading_or_loaded(1);
+
+        // result should see the Loading state (not NotFound)
+        // Signal the loader to complete
+        notify.notify_one();
+
+        // Both should resolve to the same value
+        let mut guard1 = inserting.wait_until_inserted().await.unwrap();
+        let guard2_result = result.wait_until_loaded().await.unwrap();
+
+        assert!(
+            guard2_result.is_some(),
+            "get_if_loading_or_loaded should have found the Loading entry"
+        );
+        let mut guard2 = guard2_result.unwrap();
+
+        assert_eq!(guard1.value().id, 42);
+        assert_eq!(guard2.value().id, 42);
+
+        guard1.async_drop().await.unwrap();
+        guard2.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After calling try_insert_loaded(), get_if_loading_or_loaded() should immediately
+    /// see the Loaded state.
+    #[tokio::test]
+    async fn test_try_insert_loaded_immediately_visible_to_get_if() {
+        let mut store = test_store();
+
+        // Insert a pre-loaded value
+        let value = AsyncDropGuard::new(TestValue::new(42));
+        let mut guard1 = store.try_insert_loaded(1, value).unwrap();
+
+        // Immediately call get_if_loading_or_loaded (no async operations in between)
+        let result = store.get_if_loading_or_loaded(1);
+
+        // result should see the Loaded state
+        let guard2_result = result.wait_until_loaded().await.unwrap();
+        assert!(
+            guard2_result.is_some(),
+            "get_if_loading_or_loaded should have found the Loaded entry"
+        );
+        let mut guard2 = guard2_result.unwrap();
+
+        assert_eq!(guard1.value().id, 42);
+        assert_eq!(guard2.value().id, 42);
+
+        guard1.async_drop().await.unwrap();
+        guard2.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// Comprehensive test that chains multiple operations and verifies each sees
+    /// the state changes from prior operations.
+    #[tokio::test]
+    async fn test_sequential_operations_see_prior_state_changes() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let load_notify = Arc::new(Notify::new());
+        let drop_notify = Arc::new(Notify::new());
+
+        // Step 1: Start loading
+        let result1 =
+            store.get_loaded_or_insert_loading(1, &input, signaled_loader(1, load_notify.clone()));
+
+        // Step 2: Verify get_if_loading_or_loaded sees Loading state
+        let result2 = store.get_if_loading_or_loaded(1);
+        // We'll verify this resolved correctly after signaling
+
+        // Step 3: Signal loader to complete
+        load_notify.notify_one();
+
+        // Verify both results resolve
+        let mut guard1 = result1.wait_until_loaded().await.unwrap().unwrap();
+        let mut guard2 = result2.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(guard1.value().id, 1);
+        assert_eq!(guard2.value().id, 1);
+
+        // Step 4: Release one guard
+        guard2.async_drop().await.unwrap();
+
+        // Step 5: get_if_loading_or_loaded should still see Loaded state
+        let result3 = store.get_if_loading_or_loaded(1);
+        let mut guard3 = result3.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(guard3.value().id, 1);
+
+        // Step 6: Release remaining guards
+        guard1.async_drop().await.unwrap();
+        guard3.async_drop().await.unwrap();
+
+        // Wait briefly for automatic drop to potentially start
+        tokio::time::sleep(Duration::from_millis(5)).await;
+
+        // Step 7: Request immediate drop
+        let drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // Step 8: is_fully_absent should return false (Dropping state)
+        assert!(
+            !store.is_fully_absent(&1),
+            "Entry should be in Dropping state after request_immediate_drop"
+        );
+
+        // Step 9: Signal drop to complete
+        drop_notify.notify_one();
+        if let RequestImmediateDropResult::ImmediateDropRequested { drop_result } = drop_result {
+            drop_result.await;
+        }
+
+        // Step 10: is_fully_absent should return true
+        assert!(
+            store.is_fully_absent(&1),
+            "Entry should be fully absent after drop completes"
+        );
+
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After calling request_immediate_drop() on a Loaded entry, get_if_loading_or_loaded()
+    /// should immediately return None (treating it as dropped), even before drop completes.
+    #[tokio::test]
+    async fn test_request_drop_makes_get_if_return_none() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let drop_notify = Arc::new(Notify::new());
+
+        // Load an entry
+        let result = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let mut guard = result.wait_until_loaded().await.unwrap().unwrap();
+
+        // Request immediate drop with a waiting drop function
+        let drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // Do NOT await drop_result - immediately call get_if_loading_or_loaded
+        // The entry has an intent to drop, so it should be treated as dropped
+        let get_result = store.get_if_loading_or_loaded(1);
+        let loaded = get_result.wait_until_loaded().await.unwrap();
+
+        assert!(
+            loaded.is_none(),
+            "get_if_loading_or_loaded should return None for entry with drop intent"
+        );
+
+        // Signal drop to complete
+        drop_notify.notify_one();
+
+        // Wait for drop to complete
+        guard.async_drop().await.unwrap();
+        if let RequestImmediateDropResult::ImmediateDropRequested { drop_result } = drop_result {
+            drop_result.await;
+        }
+
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After calling request_immediate_drop() on a Loaded entry, get_loaded_or_insert_loading()
+    /// should schedule a new load (queued after the drop completes).
+    #[tokio::test]
+    async fn test_request_drop_makes_get_insert_schedule_new_load() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let drop_notify = Arc::new(Notify::new());
+        let load_count = Arc::new(AtomicUsize::new(0));
+
+        // Load an entry with value id=1
+        let result = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let mut guard = result.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(guard.value().id, 1);
+
+        // Request immediate drop with a waiting drop function
+        let drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // Do NOT await drop_result - immediately call get_loaded_or_insert_loading with a new loader
+        // This should schedule a reload with value id=2
+        let result2 =
+            store.get_loaded_or_insert_loading(1, &input, counting_loader(2, load_count.clone()));
+
+        // The new loader should be called (it's scheduled as a reload)
+        // Note: The loader might be called lazily when we await, so we check after signaling
+
+        // Signal drop to complete
+        drop_notify.notify_one();
+
+        // Wait for drop to complete
+        guard.async_drop().await.unwrap();
+        if let RequestImmediateDropResult::ImmediateDropRequested { drop_result } = drop_result {
+            drop_result.await;
+        }
+
+        // Await the reload result - should get the new value (id=2)
+        let mut guard2 = result2.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(guard2.value().id, 2, "Should get the reloaded value");
+        assert_eq!(
+            load_count.load(Ordering::SeqCst),
+            1,
+            "The new loader should have been called"
+        );
+
+        guard2.async_drop().await.unwrap();
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// After the last guard's async_drop().await completes, the entry is fully absent.
+    #[tokio::test]
+    async fn test_last_guard_async_drop_makes_fully_absent() {
+        let mut store = test_store();
+        let mut input = test_input();
+
+        // Load an entry and get a guard
+        let result1 = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let mut guard1 = result1.wait_until_loaded().await.unwrap().unwrap();
+
+        // Get a second guard for the same entry
+        let result2 = store.get_if_loading_or_loaded(1);
+        let mut guard2 = result2.wait_until_loaded().await.unwrap().unwrap();
+
+        // async_drop first guard - entry should NOT be fully absent yet
+        guard1.async_drop().await.unwrap();
+        assert!(
+            !store.is_fully_absent(&1),
+            "Entry should not be fully absent while second guard exists"
+        );
+
+        // async_drop second (last) guard - entry should NOW be fully absent
+        guard2.async_drop().await.unwrap();
+
+        // Wait briefly for the drop to complete
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        assert!(
+            store.is_fully_absent(&1),
+            "Entry should be fully absent after last guard is dropped"
+        );
+
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+}
