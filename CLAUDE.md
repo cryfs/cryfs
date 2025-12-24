@@ -201,6 +201,17 @@ See `crates/cli-utils/src/blockstore_setup.rs` for the setup code.
 - Frameworks: `#[tokio::test]`, rstest, mockall, assert_cmd
 - Macro-generated test suites for testing multiple implementations
 
+### Test-Driven Development
+
+Use test-driven development (TDD) where it makes sense:
+
+1. **Write the test first** - Before implementing a feature or modification, write a test that specifies the expected behavior
+2. **Verify the test fails** - Run the test and confirm it fails (this validates the test is actually testing something)
+3. **Write the implementation** - Implement the feature or modification to make the test pass
+4. **Verify the test passes** - Run the test and confirm it now passes
+
+If you need to modify the test after writing the implementation, you must verify that the updated test still fails against the code *before* your implementation. This ensures the test is valid and not just passing due to a testing error.
+
 ## Build Commands
 
 ```bash
