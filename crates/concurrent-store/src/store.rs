@@ -214,57 +214,139 @@ where
     ///
     /// This will see Loading/Loaded states set by prior calls (e.g., `get_loaded_or_insert_loading`
     /// or `try_insert_loading`), even if those calls' futures haven't been awaited yet.
+    ///
+    /// If the entry has a drop intent but also has a reload scheduled (via `get_loaded_or_insert_loading`),
+    /// this method will return a waiter for that reload rather than None.
     pub fn get_if_loading_or_loaded(&self, key: K) -> LoadingOrLoaded<K, V, E> {
         let mut entries = self.inner.entries.lock().unwrap();
         match entries.get_mut(&key) {
             Some(EntryState::Loaded(loaded)) => {
-                if loaded.has_intent() {
-                    // Entry is loaded but has an intent (will be dropped), treat as not found
-                    LoadingOrLoaded::new_not_found()
-                } else {
-                    LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
-                        AsyncDropArc::clone(&self.inner),
-                        key,
-                        loaded.get_entry(),
-                    ))
+                match loaded.intent_mut() {
+                    None => {
+                        // No intent - return the loaded entry
+                        LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
+                            AsyncDropArc::clone(&self.inner),
+                            key,
+                            loaded.get_entry(),
+                        ))
+                    }
+                    Some(intent) => {
+                        // Has intent - walk the chain to find any existing reload
+                        match Self::walk_chain_for_existing_reload(key.clone(), intent) {
+                            Some(waiter) => LoadingOrLoaded::new_loading(
+                                AsyncDropArc::clone(&self.inner),
+                                waiter,
+                            ),
+                            None => LoadingOrLoaded::new_not_found(),
+                        }
+                    }
                 }
             }
             Some(EntryState::Loading(loading)) => {
-                if loading.has_intent() {
-                    // Entry is loading but has an intent (will be dropped), treat as not found
-                    LoadingOrLoaded::new_not_found()
-                } else {
-                    LoadingOrLoaded::new_loading(
-                        AsyncDropArc::clone(&self.inner),
-                        loading.add_waiter(key),
-                    )
+                match loading.intent_mut() {
+                    None => {
+                        // No intent - add waiter to this loading
+                        LoadingOrLoaded::new_loading(
+                            AsyncDropArc::clone(&self.inner),
+                            loading.add_waiter(key),
+                        )
+                    }
+                    Some(intent) => {
+                        // Has intent - walk the chain to find any existing reload
+                        match Self::walk_chain_for_existing_reload(key.clone(), intent) {
+                            Some(waiter) => LoadingOrLoaded::new_loading(
+                                AsyncDropArc::clone(&self.inner),
+                                waiter,
+                            ),
+                            None => LoadingOrLoaded::new_not_found(),
+                        }
+                    }
                 }
             }
-            None | Some(EntryState::Dropping(_)) => LoadingOrLoaded::new_not_found(),
+            Some(EntryState::Dropping(dropping)) => {
+                // Check if there's a reload scheduled
+                match dropping.reload_mut() {
+                    Some(reload) => {
+                        // Has reload - walk the chain to find where to add a waiter
+                        let waiter =
+                            Self::walk_reload_chain_for_existing_waiter(key.clone(), reload);
+                        LoadingOrLoaded::new_loading(AsyncDropArc::clone(&self.inner), waiter)
+                    }
+                    None => LoadingOrLoaded::new_not_found(),
+                }
+            }
+            None => LoadingOrLoaded::new_not_found(),
         }
     }
 
-    /// Return all entries that are loading, loaded.
+    /// Return all entries that are loading or loaded.
+    ///
+    /// If an entry has a drop intent but also has a reload scheduled (via `get_loaded_or_insert_loading`),
+    /// this method will include a waiter for that reload rather than excluding the entry.
     pub fn all_loading_or_loaded(&self) -> Vec<LoadingOrLoaded<K, V, E>> {
         let mut entries = self.inner.entries.lock().unwrap();
         let mut result = Vec::with_capacity(entries.len());
         for (key, entry_state) in entries.iter_mut() {
             match entry_state {
-                EntryState::Loaded(loaded) if !loaded.has_intent() => {
-                    result.push(LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
-                        AsyncDropArc::clone(&self.inner),
-                        key.clone(),
-                        loaded.get_entry(),
-                    )));
+                EntryState::Loaded(loaded) => {
+                    match loaded.intent_mut() {
+                        None => {
+                            // No intent - return the loaded entry
+                            result.push(LoadingOrLoaded::new_loaded(LoadedEntryGuard::new(
+                                AsyncDropArc::clone(&self.inner),
+                                key.clone(),
+                                loaded.get_entry(),
+                            )));
+                        }
+                        Some(intent) => {
+                            // Has intent - walk the chain to find any existing reload
+                            if let Some(waiter) =
+                                Self::walk_chain_for_existing_reload(key.clone(), intent)
+                            {
+                                result.push(LoadingOrLoaded::new_loading(
+                                    AsyncDropArc::clone(&self.inner),
+                                    waiter,
+                                ));
+                            }
+                            // If no reload found, skip this entry
+                        }
+                    }
                 }
-                EntryState::Loading(loading) if !loading.has_intent() => {
-                    result.push(LoadingOrLoaded::new_loading(
-                        AsyncDropArc::clone(&self.inner),
-                        loading.add_waiter(key.clone()),
-                    ));
+                EntryState::Loading(loading) => {
+                    match loading.intent_mut() {
+                        None => {
+                            // No intent - add waiter to this loading
+                            result.push(LoadingOrLoaded::new_loading(
+                                AsyncDropArc::clone(&self.inner),
+                                loading.add_waiter(key.clone()),
+                            ));
+                        }
+                        Some(intent) => {
+                            // Has intent - walk the chain to find any existing reload
+                            if let Some(waiter) =
+                                Self::walk_chain_for_existing_reload(key.clone(), intent)
+                            {
+                                result.push(LoadingOrLoaded::new_loading(
+                                    AsyncDropArc::clone(&self.inner),
+                                    waiter,
+                                ));
+                            }
+                            // If no reload found, skip this entry
+                        }
+                    }
                 }
-                _ => {
-                    // Dropping, or has intent - ignore
+                EntryState::Dropping(dropping) => {
+                    // Check if there's a reload scheduled
+                    if let Some(reload) = dropping.reload_mut() {
+                        // Has reload - walk the chain to find where to add a waiter
+                        let waiter =
+                            Self::walk_reload_chain_for_existing_waiter(key.clone(), reload);
+                        result.push(LoadingOrLoaded::new_loading(
+                            AsyncDropArc::clone(&self.inner),
+                            waiter,
+                        ));
+                    }
+                    // If no reload, skip this entry
                 }
             }
         }
@@ -426,6 +508,7 @@ where
     }
 
     /// Walk the reload chain to find where to set a reload or add a waiter.
+    /// Recursively walks through reload→intent→reload→... to find the deepest level.
     fn walk_reload_chain_for_reload<F, R, I>(
         &self,
         key: K,
@@ -439,14 +522,79 @@ where
         I: AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     {
         match reload.new_intent_mut() {
+            Some(next_intent) => {
+                match next_intent.reload_mut() {
+                    Some(next_reload) => {
+                        // Has deeper reload - continue walking (self-recursion)
+                        self.walk_reload_chain_for_reload(
+                            key,
+                            next_reload,
+                            loading_fn_input,
+                            loading_fn,
+                        )
+                    }
+                    None => {
+                        // Intent has no reload - create one there
+                        let reload_future = self.make_reload_future(
+                            key.clone(),
+                            next_intent.on_dropped().clone(),
+                            loading_fn_input,
+                            loading_fn,
+                        );
+                        let new_reload = ReloadInfo::new(reload_future.clone());
+                        let waiter =
+                            EntryLoadingWaiter::new(key, new_reload.reload_future().clone());
+                        next_intent.set_reload(new_reload);
+                        waiter
+                    }
+                }
+            }
             None => {
                 // No new intent - add waiter to this reload
                 let future = reload.add_waiter();
                 EntryLoadingWaiter::new(key, future)
             }
-            Some(new_intent) => {
-                // Has new intent - continue walking
-                self.walk_chain_for_reload(key, new_intent, loading_fn_input, loading_fn)
+        }
+    }
+
+    /// Walk the intent chain to find an existing reload (without creating a new one).
+    /// Used by `get_if_loading_or_loaded` to find scheduled reloads.
+    /// Returns None if no reload exists in the chain.
+    fn walk_chain_for_existing_reload(
+        key: K,
+        intent: &mut Intent<V, E>,
+    ) -> Option<EntryLoadingWaiter<K, E>> {
+        // First check if the intent has a reload
+        let reload = intent.reload_mut()?;
+        // If yes, walk the reload chain iteratively
+        Some(Self::walk_reload_chain_for_existing_waiter(key, reload))
+    }
+
+    /// Walk the reload chain to find where to add a waiter for an existing reload.
+    /// Used by `get_if_loading_or_loaded` when a reload is already scheduled.
+    /// Recursively walks through reload→intent→reload→... to find the deepest reload.
+    fn walk_reload_chain_for_existing_waiter(
+        key: K,
+        reload: &mut ReloadInfo<V, E>,
+    ) -> EntryLoadingWaiter<K, E> {
+        match reload.new_intent_mut() {
+            Some(next_intent) => {
+                match next_intent.reload_mut() {
+                    Some(next_reload) => {
+                        // Has deeper reload - continue walking (self-recursion)
+                        Self::walk_reload_chain_for_existing_waiter(key, next_reload)
+                    }
+                    None => {
+                        // Intent has no reload - add waiter to current reload
+                        let future = reload.add_waiter();
+                        EntryLoadingWaiter::new(key, future)
+                    }
+                }
+            }
+            None => {
+                // No new intent - add waiter to this reload
+                let future = reload.add_waiter();
+                EntryLoadingWaiter::new(key, future)
             }
         }
     }

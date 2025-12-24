@@ -1675,4 +1675,118 @@ mod atomicity {
         input.async_drop().await.unwrap();
         store.async_drop().await.unwrap();
     }
+
+    /// When an entry has a drop intent but also has a reload scheduled (via get_loaded_or_insert_loading),
+    /// get_if_loading_or_loaded should return a waiter for that reload, not None.
+    #[tokio::test]
+    async fn test_get_if_sees_reload_in_intent_chain() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let drop_notify = Arc::new(Notify::new());
+
+        // 1. Load an entry with value id=1
+        let result = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let mut guard = result.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(guard.value().id, 1);
+
+        // 2. Request immediate drop (sets intent on the entry)
+        let drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // 3. Call get_loaded_or_insert_loading with new loader (sets reload in intent)
+        let reload_result = store.get_loaded_or_insert_loading(1, &input, simple_loader(2));
+
+        // 4. Call get_if_loading_or_loaded - this should see the reload and return a waiter
+        let get_if_result = store.get_if_loading_or_loaded(1);
+
+        // 5. Signal drop to complete
+        drop_notify.notify_one();
+
+        // Wait for drop to complete
+        guard.async_drop().await.unwrap();
+        if let RequestImmediateDropResult::ImmediateDropRequested { drop_result } = drop_result {
+            drop_result.await;
+        }
+
+        // 6. get_if_loading_or_loaded should have returned a waiter (Some), not None
+        let get_if_loaded = get_if_result.wait_until_loaded().await.unwrap();
+        assert!(
+            get_if_loaded.is_some(),
+            "get_if_loading_or_loaded should return Some when there's a reload in the intent chain"
+        );
+        let mut get_if_guard = get_if_loaded.unwrap();
+
+        // Should get the reloaded value (id=2)
+        assert_eq!(
+            get_if_guard.value().id, 2,
+            "Should see the reloaded value"
+        );
+
+        // Also verify reload_result gets the same value
+        let mut reload_guard = reload_result.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(reload_guard.value().id, 2);
+
+        get_if_guard.async_drop().await.unwrap();
+        reload_guard.async_drop().await.unwrap();
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
+
+    /// When an entry has a drop intent but also has a reload scheduled (via get_loaded_or_insert_loading),
+    /// all_loading_or_loaded should include a waiter for that reload, not exclude the entry.
+    #[tokio::test]
+    async fn test_all_loading_or_loaded_sees_reload_in_intent_chain() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let drop_notify = Arc::new(Notify::new());
+
+        // 1. Load an entry with value id=1
+        let result = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let mut guard = result.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(guard.value().id, 1);
+
+        // 2. Request immediate drop (sets intent on the entry)
+        let drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // 3. Call get_loaded_or_insert_loading with new loader (sets reload in intent)
+        let reload_result = store.get_loaded_or_insert_loading(1, &input, simple_loader(2));
+
+        // 4. Call all_loading_or_loaded - this should see the reload and include it
+        let all_entries = store.all_loading_or_loaded();
+
+        // 5. Should return 1 entry (the reload), not empty
+        assert_eq!(
+            all_entries.len(),
+            1,
+            "all_loading_or_loaded should return 1 entry when there's a reload in the intent chain"
+        );
+
+        // 6. Signal drop to complete
+        drop_notify.notify_one();
+
+        // Wait for drop to complete
+        guard.async_drop().await.unwrap();
+        if let RequestImmediateDropResult::ImmediateDropRequested { drop_result } = drop_result {
+            drop_result.await;
+        }
+
+        // 7. The entry from all_loading_or_loaded should resolve to the reloaded value
+        let mut all_guard = all_entries
+            .into_iter()
+            .next()
+            .unwrap()
+            .wait_until_loaded()
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(all_guard.value().id, 2, "Should see the reloaded value");
+
+        // Also verify reload_result gets the same value
+        let mut reload_guard = reload_result.wait_until_loaded().await.unwrap().unwrap();
+        assert_eq!(reload_guard.value().id, 2);
+
+        all_guard.async_drop().await.unwrap();
+        reload_guard.async_drop().await.unwrap();
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
 }

@@ -99,11 +99,6 @@ where
         self.num_waiters
     }
 
-    /// Check if an intent (drop request) exists.
-    pub fn has_intent(&self) -> bool {
-        self.intent.is_some()
-    }
-
     /// Get a mutable reference to the intent, if any.
     pub fn intent_mut(&mut self) -> Option<&mut Intent<V, E>> {
         self.intent.as_mut()
