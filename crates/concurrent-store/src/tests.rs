@@ -963,6 +963,73 @@ mod chain_walking {
         input.async_drop().await.unwrap();
         store.async_drop().await.unwrap();
     }
+
+    /// Test that when an entry has a reload on drop_intent (R1) and another task
+    /// adds a reload on the Dropping state (R2), both waiters get the loaded value
+    /// and waiter counts are correctly merged.
+    ///
+    /// This tests the fix for the bug where R2's waiters would be lost because
+    /// make_drop_future_for_loaded_entry only used R1 and ignored R2.
+    #[tokio::test]
+    async fn test_reload_on_dropping_state_merged_with_intent_reload() {
+        let mut store = test_store();
+        let mut input = test_input();
+        let drop_notify = Arc::new(Notify::new());
+
+        // Load entry
+        let result = store.get_loaded_or_insert_loading(1, &input, simple_loader(1));
+        let guard = result.wait_until_loaded().await.unwrap().unwrap();
+
+        // Request drop while still holding guard (creates drop_intent on Loaded)
+        let _drop_result = store.request_immediate_drop(1, waiting_drop_fn(drop_notify.clone()));
+
+        // First get while in Loaded state with drop_intent -> creates reload R1 on drop_intent
+        let reload_notify = Arc::new(Notify::new());
+        let result1 = store.get_loaded_or_insert_loading(
+            1,
+            &input,
+            signaled_loader(10, reload_notify.clone()),
+        );
+
+        // Release guard so drop starts -> entry transitions to Dropping
+        let guard_drop = tokio::spawn(async move {
+            let mut guard = guard;
+            guard.async_drop().await.unwrap()
+        });
+
+        // Give time for the drop to start and entry to transition to Dropping
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        // Second get while in Dropping state -> this previously created R2 on Dropping state
+        // which was lost. Now it should be merged with R1.
+        let load2_count = Arc::new(AtomicUsize::new(0));
+        let result2 =
+            store.get_loaded_or_insert_loading(1, &input, counting_loader(20, load2_count.clone()));
+
+        // Signal drop to complete
+        drop_notify.notify_one();
+
+        // Signal reload to complete
+        reload_notify.notify_one();
+
+        // Both waiters should get the reload value from R1
+        // If the bug existed, the second waiter would panic when decrementing waiter count
+        let mut guard1 = result1.wait_until_loaded().await.unwrap().unwrap();
+        let mut guard2 = result2.wait_until_loaded().await.unwrap().unwrap();
+
+        assert_eq!(guard1.value().id, 10);
+        assert_eq!(guard2.value().id, 10);
+
+        // Note: R2's reload_future will still run (its loader is called, wasted work)
+        // but its result is ignored. The waiter counts were merged so both waiters
+        // get access without panicking.
+
+        guard1.async_drop().await.unwrap();
+        guard2.async_drop().await.unwrap();
+        guard_drop.await.unwrap();
+        input.async_drop().await.unwrap();
+        store.async_drop().await.unwrap();
+    }
 }
 
 // ============================================================================

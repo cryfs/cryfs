@@ -596,45 +596,58 @@ where
                 let result = loading_fn.await;
 
                 match result {
-                    Ok(Some(entry)) => {
+                    Ok(Some(mut entry)) => {
                         // Loading succeeded. Transition to Loaded.
-                        let mut entries = inner.entries.lock().unwrap();
-                        let Some(state) = entries.get_mut(&key) else {
-                            // Entry was removed - this can happen if reload was cancelled
-                            return Ok(LoadingResult::NotFound);
+                        // We need to check if another reload already completed (Loaded case)
+                        // and handle async cleanup outside the lock.
+                        let already_loaded = {
+                            let mut entries = inner.entries.lock().unwrap();
+                            let Some(state) = entries.get_mut(&key) else {
+                                // Entry was removed - this can happen if reload was cancelled
+                                return Ok(LoadingResult::NotFound);
+                            };
+
+                            // The entry could be in various states depending on what happened
+                            // while we were loading. Find the reload we belong to and consume it.
+                            match state {
+                                EntryState::Dropping(dropping) => {
+                                    // We're the first reload after the drop
+                                    let reload = dropping.take_reload().expect(
+                                        "Expected reload in Dropping state after reload completes",
+                                    );
+                                    let (_, num_waiters, new_intent) = reload.into_parts();
+                                    *state = EntryState::Loaded(EntryStateLoaded::new_from_reload(
+                                        entry,
+                                        num_waiters,
+                                        new_intent.map(|b| *b),
+                                    ));
+                                    return Ok(LoadingResult::Loaded);
+                                }
+                                EntryState::Loading(loading) => {
+                                    // This shouldn't happen in normal flow, but handle gracefully
+                                    let loading =
+                                        std::mem::replace(loading, EntryStateLoading::new_dummy());
+                                    *state = EntryState::Loaded(
+                                        EntryStateLoaded::new_from_just_finished_loading(
+                                            entry, loading,
+                                        ),
+                                    );
+                                    return Ok(LoadingResult::Loaded);
+                                }
+                                EntryState::Loaded(_) => {
+                                    // Another reload already finished and transitioned to Loaded.
+                                    // This can happen when a reload was set on the Dropping state
+                                    // (R2) while a reload from drop_intent (R1) also existed.
+                                    // R2's waiters were merged into R1, so they're already counted.
+                                    // We need to discard R2's loaded entry outside the lock.
+                                    true
+                                }
+                            }
                         };
 
-                        // The entry could be in various states depending on what happened
-                        // while we were loading. Find the reload we belong to and consume it.
-                        match state {
-                            EntryState::Dropping(dropping) => {
-                                // We're the first reload after the drop
-                                let reload = dropping.take_reload().expect(
-                                    "Expected reload in Dropping state after reload completes",
-                                );
-                                let (_, num_waiters, new_intent) = reload.into_parts();
-                                *state = EntryState::Loaded(EntryStateLoaded::new_from_reload(
-                                    entry,
-                                    num_waiters,
-                                    new_intent.map(|b| *b),
-                                ));
-                            }
-                            EntryState::Loading(loading) => {
-                                // This shouldn't happen in normal flow, but handle gracefully
-                                let loading =
-                                    std::mem::replace(loading, EntryStateLoading::new_dummy());
-                                *state = EntryState::Loaded(
-                                    EntryStateLoaded::new_from_just_finished_loading(
-                                        entry, loading,
-                                    ),
-                                );
-                            }
-                            _ => {
-                                panic!(
-                                    "Unexpected state {:?} after reload completes for key {:?}",
-                                    state, key
-                                );
-                            }
+                        if already_loaded {
+                            // Discard R2's loaded entry - R1's value is already in place.
+                            entry.async_drop().await.unwrap(); // TODO: handle error
                         }
 
                         Ok(LoadingResult::Loaded)
@@ -969,16 +982,24 @@ where
                         // Execute the drop function and handle reload if any
                         let reload = drop_intent.execute_drop(Some(entry)).await;
 
-                        if let Some(reload) = reload {
+                        if let Some(mut reload) = reload {
                             // There's a reload pending - transition to Loading
                             let mut entries = this.entries.lock().unwrap();
                             if let Some(state) = entries.get_mut(&key) {
+                                // Check if a reload was also set on the Dropping state
+                                // (by a task that called get_loaded_or_insert_loading while we were dropping).
+                                // If so, merge it into our reload so those waiters are counted.
+                                if let EntryState::Dropping(dropping) = state {
+                                    if let Some(dropping_reload) = dropping.take_reload() {
+                                        reload.merge_from(dropping_reload);
+                                    }
+                                }
                                 *state =
                                     EntryState::Loading(EntryStateLoading::new_from_reload(reload));
                             }
                             // Note: The reload future will handle the actual loading
                         } else {
-                            // No reload - remove the entry
+                            // No reload from drop_intent - check if one was set on Dropping state
                             Self::_remove_dropping_entry(&this, &key).await;
                         }
                     }

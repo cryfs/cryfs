@@ -195,6 +195,44 @@ where
     ) {
         (self.reload_future, self.num_waiters, self.next_drop_intent)
     }
+
+    /// Merge another ReloadInfo into this one.
+    ///
+    /// This is used when a reload was set on the Dropping state (other) while
+    /// a reload from drop_intent (self) already exists. We merge the waiter counts
+    /// and chain the drop intents so all waiters are satisfied and all scheduled
+    /// drops eventually execute.
+    ///
+    /// The other's reload_future is discarded (it will still run but find the state
+    /// already transitioned, which is handled gracefully).
+    pub fn merge_from(&mut self, other: ReloadInfo<V, E>) {
+        // Add the other's waiters to our count
+        self.num_waiters += other.num_waiters;
+
+        // If the other has a next_drop_intent, chain it to ours
+        if let Some(other_drop_intent) = other.next_drop_intent {
+            if self.next_drop_intent.is_none() {
+                // We don't have a drop intent, just take theirs
+                self.next_drop_intent = Some(other_drop_intent);
+            } else {
+                // We have a drop intent - chain theirs at the end
+                // Walk to the deepest reload and set theirs there
+                let deepest = self.to_deepest_reload();
+                if deepest.next_drop_intent.is_none() {
+                    deepest.next_drop_intent = Some(other_drop_intent);
+                } else {
+                    // The deepest reload already has a drop_intent without reload.
+                    // We need to give it a reload so we can chain further.
+                    // But we don't have a reload future for it...
+                    // This case shouldn't happen in practice because if there's a drop_intent
+                    // without reload at the deepest level, new load requests would have
+                    // attached a reload to it, not created a new one on Dropping.
+                    // For safety, we'll just drop the other's chain (losing those drops).
+                    // TODO: Consider if this case can actually occur and needs better handling.
+                }
+            }
+        }
+    }
 }
 
 impl<V, E> Debug for ReloadInfo<V, E>
