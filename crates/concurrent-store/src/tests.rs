@@ -1783,10 +1783,7 @@ mod atomicity {
         let mut get_if_guard = get_if_loaded.unwrap();
 
         // Should get the reloaded value (id=2)
-        assert_eq!(
-            get_if_guard.value().id, 2,
-            "Should see the reloaded value"
-        );
+        assert_eq!(get_if_guard.value().id, 2, "Should see the reloaded value");
 
         // Also verify reload_result gets the same value
         let mut reload_guard = reload_result.wait_until_loaded().await.unwrap().unwrap();
