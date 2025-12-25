@@ -141,15 +141,16 @@ See `crates/cli-utils/src/blockstore_setup.rs` for the setup code.
 
 ## AsyncDrop Pattern
 
-- Types needing async cleanup implement the `AsyncDrop` trait
-- **Every `AsyncDropGuard<T>`** must have `async_drop()` called before being dropped (panics otherwise)
-- Passing `AsyncDropGuard<T>` by value is ok and transfers responsibility for calling `async_drop()` to the called function. Returning `AsyncDropGuard<T>` transfers responsibility to the calling function.
-- **Factory methods** (e.g., `Self::new()`) for AsyncDrop types should return `AsyncDropGuard<Self>`, never plain `Self`
-- **Types holding `AsyncDropGuard` members** should themselves implement `AsyncDrop` to call `async_drop()` on their members
-- The `with_async_drop_2!` macro can simplify code by automatically calling `async_drop()` on scope exit and is the preferred solution if it works, but it doesn't fit all scenarios.
-- When the macro doesn't work, call `async_drop()` manually - be very careful to call it on **each possible scope exit** (including early returns and errors)
-  - Exception: We treat panics (e.g. `unwrap()` or `expect()`) as unrecoverable errors that should never happen. It's ok if a panic causes a scope exit that omits `async_drop()`.
-- See `crates/utils/src/async_drop/` for implementation
+Types needing async cleanup use `AsyncDropGuard<T>`. See the async-drop skill for comprehensive documentation.
+
+**Essential rules**:
+- Every `AsyncDropGuard<T>` must have `async_drop()` called before drop (panics otherwise)
+- Factory methods return `AsyncDropGuard<Self>`, never plain `Self`
+- Types with guard members must implement `AsyncDrop` to delegate
+- Use `with_async_drop_2!` macro when possible; otherwise call `async_drop()` on all exit paths
+- Panics are exceptions - ok to skip `async_drop()` on panic paths
+
+**Implementation**: `crates/utils/src/async_drop/`
 
 ## Type-Driven Invariants
 
