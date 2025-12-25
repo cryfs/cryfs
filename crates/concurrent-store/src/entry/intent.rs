@@ -57,6 +57,11 @@ where
         &self.on_dropped
     }
 
+    /// Return whether the DropIntent has a reload set
+    pub fn has_reload(&self) -> bool {
+        self.reload.is_some()
+    }
+
     /// Get a mutable reference to the reload info, if any.
     pub fn reload_mut(&mut self) -> Option<&mut ReloadInfo<V, E>> {
         self.reload.as_mut()
@@ -144,7 +149,7 @@ where
 
     /// Check if there's a deeper reload in the chain (drop intent with reload).
     /// Used to enable iterative chain walking without borrow conflicts.
-    pub fn has_deeper_reload(&self) -> bool {
+    fn has_deeper_reload(&self) -> bool {
         self.next_drop_intent
             .as_ref()
             .is_some_and(|drop_intent| drop_intent.reload.is_some())
@@ -156,9 +161,27 @@ where
         self.next_drop_intent.is_some()
     }
 
+    /// Walk down the chain of drop intents and reloads, and return the deepest [ReloadInfo].
+    /// This [ReloadInfo] may or may not have a [DropIntent], but if it does, then that
+    /// [DropIntent] does not have a reload set.
+    pub fn to_deepest_reload(&mut self) -> &mut Self {
+        let mut current = self;
+        while current.has_deeper_reload() {
+            current = current
+                .next_drop_intent_mut()
+                .expect("has_deeper_reload returned true")
+                .reload_mut()
+                .expect("has_deeper_reload returned true");
+        }
+        current
+    }
+
     /// Set the next drop intent for this reload.
     pub fn set_next_drop_intent(&mut self, drop_intent: DropIntent<V, E>) {
-        assert!(self.next_drop_intent.is_none(), "Next drop intent already set");
+        assert!(
+            self.next_drop_intent.is_none(),
+            "Next drop intent already set"
+        );
         self.next_drop_intent = Some(Box::new(drop_intent));
     }
 
@@ -182,7 +205,10 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ReloadInfo")
             .field("num_waiters", &self.num_waiters)
-            .field("next_drop_intent", &self.next_drop_intent.as_ref().map(|_| "Some(...)"))
+            .field(
+                "next_drop_intent",
+                &self.next_drop_intent.as_ref().map(|_| "Some(...)"),
+            )
             .finish_non_exhaustive()
     }
 }

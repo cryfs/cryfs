@@ -232,7 +232,10 @@ where
                     }
                     Some(drop_intent) => {
                         // Has drop intent - walk the chain to find any existing reload
-                        match Self::walk_drop_intent_chain_for_existing_reload(key.clone(), drop_intent) {
+                        match Self::walk_drop_intent_chain_for_existing_reload(
+                            key.clone(),
+                            drop_intent,
+                        ) {
                             Some(waiter) => LoadingOrLoaded::new_loading(
                                 AsyncDropArc::clone(&self.inner),
                                 waiter,
@@ -253,7 +256,10 @@ where
                     }
                     Some(drop_intent) => {
                         // Has drop intent - walk the chain to find any existing reload
-                        match Self::walk_drop_intent_chain_for_existing_reload(key.clone(), drop_intent) {
+                        match Self::walk_drop_intent_chain_for_existing_reload(
+                            key.clone(),
+                            drop_intent,
+                        ) {
                             Some(waiter) => LoadingOrLoaded::new_loading(
                                 AsyncDropArc::clone(&self.inner),
                                 waiter,
@@ -300,9 +306,10 @@ where
                         }
                         Some(drop_intent) => {
                             // Has drop intent - walk the chain to find any existing reload
-                            if let Some(waiter) =
-                                Self::walk_drop_intent_chain_for_existing_reload(key.clone(), drop_intent)
-                            {
+                            if let Some(waiter) = Self::walk_drop_intent_chain_for_existing_reload(
+                                key.clone(),
+                                drop_intent,
+                            ) {
                                 result.push(LoadingOrLoaded::new_loading(
                                     AsyncDropArc::clone(&self.inner),
                                     waiter,
@@ -323,9 +330,10 @@ where
                         }
                         Some(drop_intent) => {
                             // Has drop intent - walk the chain to find any existing reload
-                            if let Some(waiter) =
-                                Self::walk_drop_intent_chain_for_existing_reload(key.clone(), drop_intent)
-                            {
+                            if let Some(waiter) = Self::walk_drop_intent_chain_for_existing_reload(
+                                key.clone(),
+                                drop_intent,
+                            ) {
                                 result.push(LoadingOrLoaded::new_loading(
                                     AsyncDropArc::clone(&self.inner),
                                     waiter,
@@ -436,8 +444,7 @@ where
                             let reload_future = self.make_reload_future(
                                 key.clone(),
                                 dropping.on_dropped().clone(),
-                                loading_fn_input,
-                                loading_fn,
+                                loading_fn(AsyncDropArc::clone(loading_fn_input)),
                             );
                             let reload = ReloadInfo::new(reload_future.clone());
                             let waiter = EntryLoadingWaiter::new(
@@ -492,8 +499,7 @@ where
                 let reload_future = self.make_reload_future(
                     key.clone(),
                     drop_intent.on_dropped().clone(),
-                    loading_fn_input,
-                    loading_fn,
+                    loading_fn(AsyncDropArc::clone(loading_fn_input)),
                 );
                 let reload = ReloadInfo::new(reload_future.clone());
                 let waiter = EntryLoadingWaiter::new(key, reload.reload_future().clone());
@@ -512,7 +518,7 @@ where
     fn walk_reload_chain_for_reload<F, R, I>(
         &self,
         key: K,
-        mut reload: &mut ReloadInfo<V, E>,
+        reload: &mut ReloadInfo<V, E>,
         loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
         loading_fn: F,
     ) -> EntryLoadingWaiter<K, E>
@@ -522,24 +528,18 @@ where
         I: AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     {
         // Walk to the deepest reload in the chain
-        while reload.has_deeper_reload() {
-            reload = reload
-                .next_drop_intent_mut()
-                .expect("has_deeper_reload returned true")
-                .reload_mut()
-                .expect("has_deeper_reload returned true");
-        }
+        let reload = reload.to_deepest_reload();
         // Now we're at the deepest reload. Check if it has a drop intent without reload.
         if reload.has_next_drop_intent() {
             // Drop intent exists but has no reload - create one there
             let next_drop_intent = reload
                 .next_drop_intent_mut()
                 .expect("has_next_drop_intent returned true");
+            assert!(!next_drop_intent.has_reload());
             let reload_future = self.make_reload_future(
                 key.clone(),
                 next_drop_intent.on_dropped().clone(),
-                loading_fn_input,
-                loading_fn,
+                loading_fn(AsyncDropArc::clone(loading_fn_input)),
             );
             let new_reload = ReloadInfo::new(reload_future.clone());
             let waiter = EntryLoadingWaiter::new(key, new_reload.reload_future().clone());
@@ -570,43 +570,30 @@ where
     /// Iteratively walks through reload→drop_intent→reload→... to find the deepest reload.
     fn walk_reload_chain_for_existing_waiter(
         key: K,
-        mut reload: &mut ReloadInfo<V, E>,
+        reload: &mut ReloadInfo<V, E>,
     ) -> EntryLoadingWaiter<K, E> {
         // Walk to the deepest reload in the chain
-        while reload.has_deeper_reload() {
-            reload = reload
-                .next_drop_intent_mut()
-                .expect("has_deeper_reload returned true")
-                .reload_mut()
-                .expect("has_deeper_reload returned true");
-        }
+        let reload = reload.to_deepest_reload();
         // Add waiter to the deepest reload
         let future = reload.add_waiter();
         EntryLoadingWaiter::new(key, future)
     }
 
     /// Create a reload future that waits for on_dropped, then loads the entry.
-    fn make_reload_future<F, R, I>(
+    fn make_reload_future(
         &self,
         key: K,
         on_dropped: Event,
-        loading_fn_input: &AsyncDropGuard<AsyncDropArc<I>>,
-        loading_fn: F,
-    ) -> Shared<BoxFuture<'static, LoadingResult<E>>>
-    where
-        F: FnOnce(AsyncDropGuard<AsyncDropArc<I>>) -> R + Send + 'static,
-        R: Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
-        I: AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
-    {
+        loading_fn: impl Future<Output = Result<Option<AsyncDropGuard<V>>, E>> + Send + 'static,
+    ) -> Shared<BoxFuture<'static, LoadingResult<E>>> {
         let inner = AsyncDropArc::clone(&self.inner);
-        let loading_fn_input = AsyncDropArc::clone(loading_fn_input);
         let reload_task = async move {
             // Wait for the drop to complete
             on_dropped.wait().await;
 
             // Now load the entry
             with_async_drop_2!(inner, {
-                let result = loading_fn(loading_fn_input).await;
+                let result = loading_fn.await;
 
                 match result {
                     Ok(Some(entry)) => {
