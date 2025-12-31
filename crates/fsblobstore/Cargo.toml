@@ -23,8 +23,7 @@ cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 futures.workspace = true
 lockable.workspace = true
-
-[dev-dependencies]
+log.workspace = true
 
 [features]
 default = []

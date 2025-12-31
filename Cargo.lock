@@ -1213,6 +1213,7 @@ dependencies = [
  "derive_more",
  "futures",
  "lockable",
+ "log",
 ]
 
 [[package]]
