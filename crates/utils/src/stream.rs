@@ -79,7 +79,7 @@ where
     E: Debug,
 {
     let tasks: FuturesUnordered<_> = items.map(func).collect();
-     // TODO Is stream::iter().buffer_unordered() here faster than FuturesUnordered? It was in other places.
+    // TODO Is stream::iter().buffer_unordered() here faster than FuturesUnordered? It was in other places.
     run_to_completion(tasks).await
 }
 
