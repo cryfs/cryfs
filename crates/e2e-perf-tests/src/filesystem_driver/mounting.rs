@@ -411,7 +411,7 @@ where
 
         asyncify(move || {
             let real_path = std::ffi::CString::new(real_path.to_str().unwrap()).unwrap();
-            let mode = u32::from(mode);
+            let mode = u32::from(mode).try_into().unwrap();
             let result = unsafe { libc::chmod(real_path.as_ptr(), mode) };
             if 0 == result {
                 Ok(())
@@ -434,7 +434,7 @@ where
         let open_file = open_file.try_clone().await.unwrap();
 
         asyncify(move || {
-            let mode = u32::from(mode.remove_file_flag());
+            let mode = u32::from(mode.remove_file_flag()).try_into().unwrap();
             let mode = nix::sys::stat::Mode::from_bits(mode).unwrap();
             nix::sys::stat::fchmod(open_file, mode)
                 .map_err(|error| std::io::Error::from_raw_os_error(error as i32))
@@ -617,11 +617,11 @@ where
         Ok(Statfs {
             max_filename_length: u32::try_from(result.name_max()).unwrap(),
             blocksize: u32::try_from(result.block_size()).unwrap(),
-            num_total_blocks: result.blocks(),
-            num_free_blocks: result.blocks_free(),
-            num_available_blocks: result.blocks_available(),
-            num_total_inodes: result.files(),
-            num_free_inodes: result.files_free(),
+            num_total_blocks: result.blocks().into(),
+            num_free_blocks: result.blocks_free().try_into().unwrap(),
+            num_available_blocks: result.blocks_available().try_into().unwrap(),
+            num_total_inodes: result.files().try_into().unwrap(),
+            num_free_inodes: result.files_free().try_into().unwrap(),
         })
     }
 
