@@ -1,21 +1,15 @@
 use anyhow::{Result, bail};
-use bincode::{
-    config::{Fixint, LittleEndian, NoLimit},
-    error::DecodeError,
-};
 use interprocess::os::unix::unnamed_pipe::UnnamedPipeExt;
 use serde::{Serialize, de::DeserializeOwned};
 use std::{
+    io::{Read, Write},
     marker::PhantomData,
     thread,
     time::{Duration, Instant},
 };
 
-const BINCODE_CONFIG: bincode::config::Configuration<LittleEndian, Fixint, NoLimit> =
-    bincode::config::standard()
-        .with_little_endian()
-        .with_fixed_int_encoding()
-        .with_no_limit();
+/// Maximum message size (1 MiB). Protects against DoS from malicious/buggy senders.
+const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
 
 /// Create a new pipe that can be used across forking for interprocess communication.
 ///
@@ -48,7 +42,16 @@ where
     }
 
     pub fn send(&mut self, data: &T) -> Result<()> {
-        bincode::serde::encode_into_std_write(data, &mut self.sender, BINCODE_CONFIG)?;
+        let bytes = postcard::to_stdvec(data)?;
+        if bytes.len() > MAX_MESSAGE_SIZE {
+            bail!(
+                "Message size {} exceeds maximum {MAX_MESSAGE_SIZE}",
+                bytes.len()
+            );
+        }
+        let len = bytes.len() as u32;
+        self.sender.write_all(&len.to_le_bytes())?;
+        self.sender.write_all(&bytes)?;
         Ok(())
     }
 }
@@ -74,10 +77,15 @@ where
 
     pub fn recv(&mut self) -> Result<T> {
         self.recver.set_nonblocking(false)?;
-        Ok(bincode::serde::decode_from_std_read(
-            &mut self.recver,
-            BINCODE_CONFIG,
-        )?)
+        let mut len_bytes = [0u8; 4];
+        self.recver.read_exact(&mut len_bytes)?;
+        let len = u32::from_le_bytes(len_bytes) as usize;
+        if len > MAX_MESSAGE_SIZE {
+            bail!("Message size {len} exceeds maximum {MAX_MESSAGE_SIZE}");
+        }
+        let mut buf = vec![0u8; len];
+        self.recver.read_exact(&mut buf)?;
+        Ok(postcard::from_bytes(&buf)?)
     }
 
     pub fn recv_timeout(&mut self, timeout: Duration) -> Result<T>
@@ -86,29 +94,41 @@ where
     {
         self.recver.set_nonblocking(true)?;
         let timeout_at = Instant::now() + timeout;
-        loop {
-            let received = bincode::serde::decode_from_std_read(&mut self.recver, BINCODE_CONFIG);
-            match received {
-                Ok(data) => return Ok(data),
-                Err(error) => match error {
-                    DecodeError::Io { inner, .. }
-                        if inner.kind() == std::io::ErrorKind::WouldBlock =>
-                    {
-                        if Instant::now() >= timeout_at {
-                            bail!("Timeout in ipc::Receiver::recv_timeout");
-                        }
-                        thread::sleep(Duration::from_millis(1));
-                    }
-                    DecodeError::Io { inner, .. }
-                        if inner.kind() == std::io::ErrorKind::UnexpectedEof =>
-                    {
-                        bail!("Sender closed the pipe");
-                    }
-                    _ => bail!(anyhow::anyhow!("{error:?}")),
-                },
+
+        let mut len_bytes = [0u8; 4];
+        read_exact_with_timeout(&mut self.recver, &mut len_bytes, timeout_at)?;
+
+        let len = u32::from_le_bytes(len_bytes) as usize;
+        if len > MAX_MESSAGE_SIZE {
+            bail!("Message size {len} exceeds maximum {MAX_MESSAGE_SIZE}");
+        }
+        let mut buf = vec![0u8; len];
+        read_exact_with_timeout(&mut self.recver, &mut buf, timeout_at)?;
+
+        Ok(postcard::from_bytes(&buf)?)
+    }
+}
+
+fn read_exact_with_timeout(
+    reader: &mut impl Read,
+    buf: &mut [u8],
+    timeout_at: Instant,
+) -> Result<()> {
+    let mut bytes_read = 0;
+    while bytes_read < buf.len() {
+        match reader.read(&mut buf[bytes_read..]) {
+            Ok(0) => bail!("Sender closed the pipe"),
+            Ok(n) => bytes_read += n,
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                if Instant::now() >= timeout_at {
+                    bail!("Timeout in ipc::Receiver::recv_timeout");
+                }
+                thread::sleep(Duration::from_millis(1));
             }
+            Err(e) => bail!(e),
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
