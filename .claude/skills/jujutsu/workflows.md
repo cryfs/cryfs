@@ -148,20 +148,64 @@ jj bookmark set feature/my-feature
 jj commit -m "Part 1"
 jj commit -m "Part 2"
 
-# Bookmark automatically follows your commits!
+# Move bookmark to current commit
+jj bookmark move feature/my-feature --to @-
 ```
 
 ### Pushing to Remote
 
 ```bash
-# First push of a new bookmark
-jj git push --bookmark feature/my-feature --allow-new
+# Create bookmark and push in one command (recommended for new bookmarks)
+jj git push --named feature/my-feature=@
 
 # Subsequent pushes
 jj git push --bookmark feature/my-feature
 
 # Or push all tracked bookmarks
 jj git push
+```
+
+## Creating Pull Requests
+
+### Full PR Workflow (Recommended)
+
+```bash
+# 1. Ensure your changes are committed
+jj log  # Review your commits
+
+# 2. Create bookmark and push in one command
+jj git push --named feature/my-feature=@
+
+# 3. Create the PR using GitHub CLI
+gh pr create --title "My feature" --body "Description" --base main --head feature/my-feature
+```
+
+### Alternative: Create Bookmark First
+
+```bash
+# Create bookmark separately
+jj bookmark create -r @ feature/my-feature
+
+# Track and push (required for new bookmarks)
+jj bookmark track feature/my-feature@origin
+jj git push --bookmark feature/my-feature
+```
+
+### Key Points
+
+- **--named flag**: Creates bookmark, tracks it, and pushes in one step (recommended)
+- **Multiple commits**: The bookmark points to the tip; all ancestor commits up to main are included
+- **Subsequent pushes**: Just use `jj git push --bookmark name`
+
+### Updating a PR
+
+```bash
+# Make changes to your commits (edit, squash, etc.)
+jj edit <change-id>
+# ... make changes ...
+
+# Push the updated bookmark
+jj git push --bookmark feature/my-feature
 ```
 
 ### Updating from Main
