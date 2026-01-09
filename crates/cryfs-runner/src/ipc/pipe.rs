@@ -129,10 +129,7 @@ fn read_exact_with_timeout<R: Read + AsFd>(
                     }
 
                     let poll_fd = PollFd::new(reader.as_fd(), PollFlags::POLLIN);
-                    let timeout_ms: u16 = remaining
-                        .as_millis()
-                        .try_into()
-                        .unwrap_or(u16::MAX);
+                    let timeout_ms: u16 = remaining.as_millis().try_into().unwrap_or(u16::MAX);
                     match poll(&mut [poll_fd], PollTimeout::from(timeout_ms)) {
                         Ok(0) => bail!("Timeout in ipc::Receiver::recv_timeout"),
                         Ok(_) => break, // Data available, retry read
