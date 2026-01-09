@@ -1,6 +1,6 @@
 ---
 name: jujutsu
-description: Guide to Jujutsu (jj) version control system. Use when working with commits, branches, version control, rebasing, or when the user mentions jj, git, or version control operations.
+description: Guide to Jujutsu (jj) version control system. Use when working with commits, branches, pull requests, PRs, version control, rebasing, pushing, or when the user mentions jj, git, or version control operations.
 ---
 
 # Jujutsu (jj) Version Control Guide
@@ -31,6 +31,8 @@ Jujutsu is a modern, Git-compatible version control system. This project uses jj
 | Undo last operation | `jj undo` |
 | Fetch from remote | `jj git fetch` |
 | Push to remote | `jj git push` |
+| Create & push bookmark | `jj git push --named name=@` |
+| Push existing bookmark | `jj git push --bookmark name` |
 
 ## Working Copy Model
 
