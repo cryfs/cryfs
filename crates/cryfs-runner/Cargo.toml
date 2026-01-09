@@ -28,3 +28,4 @@ libc.workspace = true
 log.workspace = true
 serde.workspace = true
 tokio-util.workspace = true
+nix = { workspace = true, features = ["poll"] }

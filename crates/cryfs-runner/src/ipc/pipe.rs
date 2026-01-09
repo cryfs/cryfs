@@ -1,10 +1,11 @@
 use anyhow::{Result, bail};
 use interprocess::os::unix::unnamed_pipe::UnnamedPipeExt;
+use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use serde::{Serialize, de::DeserializeOwned};
 use std::{
     io::{Read, Write},
     marker::PhantomData,
-    thread,
+    os::fd::AsFd,
     time::{Duration, Instant},
 };
 
@@ -109,8 +110,8 @@ where
     }
 }
 
-fn read_exact_with_timeout(
-    reader: &mut impl Read,
+fn read_exact_with_timeout<R: Read + AsFd>(
+    reader: &mut R,
     buf: &mut [u8],
     timeout_at: Instant,
 ) -> Result<()> {
@@ -120,10 +121,25 @@ fn read_exact_with_timeout(
             Ok(0) => bail!("Sender closed the pipe"),
             Ok(n) => bytes_read += n,
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                if Instant::now() >= timeout_at {
-                    bail!("Timeout in ipc::Receiver::recv_timeout");
+                // Wait for data using poll() instead of busy-waiting
+                loop {
+                    let remaining = timeout_at.saturating_duration_since(Instant::now());
+                    if remaining.is_zero() {
+                        bail!("Timeout in ipc::Receiver::recv_timeout");
+                    }
+
+                    let poll_fd = PollFd::new(reader.as_fd(), PollFlags::POLLIN);
+                    let timeout_ms: u16 = remaining
+                        .as_millis()
+                        .try_into()
+                        .unwrap_or(u16::MAX);
+                    match poll(&mut [poll_fd], PollTimeout::from(timeout_ms)) {
+                        Ok(0) => bail!("Timeout in ipc::Receiver::recv_timeout"),
+                        Ok(_) => break, // Data available, retry read
+                        Err(nix::errno::Errno::EINTR) => continue, // Interrupted, retry poll
+                        Err(e) => bail!("poll error: {e}"),
+                    }
                 }
-                thread::sleep(Duration::from_millis(1));
             }
             Err(e) => bail!(e),
         }
