@@ -151,6 +151,7 @@ fn read_exact_with_timeout<R: Read + AsFd>(
 mod tests {
     use super::*;
     use serde::Deserialize;
+    use std::thread;
 
     #[test]
     fn dropped_recver() {
@@ -301,6 +302,175 @@ mod tests {
                 error
                     .to_string()
                     .contains("Timeout in ipc::Receiver::recv_timeout"),
+                "Unexpected error: {:?}",
+                error,
+            );
+        }
+
+        #[test]
+        fn zero_timeout_with_data_ready() {
+            // Data already in pipe, zero timeout should still succeed
+            let (mut sender, mut recver) = pipe::<u32>().unwrap();
+            sender.send(&42).unwrap();
+            assert_eq!(recver.recv_timeout(Duration::ZERO).unwrap(), 42);
+        }
+
+        #[test]
+        fn zero_timeout_without_data() {
+            // No data, zero timeout should fail immediately
+            let (_sender, mut recver) = pipe::<u32>().unwrap();
+            let error = recver.recv_timeout(Duration::ZERO).unwrap_err();
+            assert!(
+                error.to_string().contains("Timeout"),
+                "Unexpected error: {:?}",
+                error,
+            );
+        }
+
+        #[test]
+        fn very_short_timeout_without_data() {
+            // Very short timeout (1ms) without data
+            let (_sender, mut recver) = pipe::<u32>().unwrap();
+            let start = Instant::now();
+            let error = recver.recv_timeout(Duration::from_millis(1)).unwrap_err();
+            let elapsed = start.elapsed();
+            assert!(
+                error.to_string().contains("Timeout"),
+                "Unexpected error: {:?}",
+                error,
+            );
+            // Should complete quickly, not hang
+            assert!(elapsed < Duration::from_secs(1));
+        }
+
+        #[test]
+        fn large_message() {
+            // Large message that may require multiple read chunks
+            // Note: pipe buffers are typically 64KB, so we need to send/recv concurrently
+            let (mut sender, mut recver) = pipe::<Vec<u8>>().unwrap();
+            let large_data: Vec<u8> = (0..100_000).map(|i| (i % 256) as u8).collect();
+            let expected = large_data.clone();
+
+            // Send in a separate thread to avoid blocking on full pipe buffer
+            let send_thread = thread::spawn(move || {
+                sender.send(&large_data).unwrap();
+            });
+
+            let received = recver.recv_timeout(Duration::from_secs(5)).unwrap();
+            send_thread.join().unwrap();
+            assert_eq!(received, expected);
+        }
+
+        #[test]
+        fn multiple_sequential_messages() {
+            // Multiple messages in sequence
+            let (mut sender, mut recver) = pipe::<u32>().unwrap();
+            for i in 0..10 {
+                sender.send(&i).unwrap();
+            }
+            for i in 0..10 {
+                assert_eq!(recver.recv_timeout(Duration::from_secs(1)).unwrap(), i);
+            }
+        }
+
+        #[test]
+        fn timeout_waiting_for_length_bytes() {
+            // Sender sends nothing, timeout waiting for length prefix
+            // This is essentially the same as the `timeout` test but with explicit timing check
+            let (_sender, mut recver) = pipe::<u32>().unwrap();
+            let start = Instant::now();
+            let error = recver.recv_timeout(Duration::from_millis(50)).unwrap_err();
+            let elapsed = start.elapsed();
+            assert!(
+                error.to_string().contains("Timeout"),
+                "Unexpected error: {:?}",
+                error,
+            );
+            // Verify timeout was respected (within reasonable margin)
+            // Use >= 40ms to account for timing jitter
+            assert!(
+                elapsed >= Duration::from_millis(40),
+                "Timeout returned too quickly: {:?}",
+                elapsed
+            );
+            assert!(
+                elapsed < Duration::from_millis(500),
+                "Timeout took too long: {:?}",
+                elapsed
+            );
+        }
+
+        #[test]
+        fn timeout_waiting_for_payload() {
+            // Sender sends length but not payload - tests timeout during payload read
+            use interprocess::unnamed_pipe::pipe as raw_pipe;
+            use std::io::Write;
+
+            let (mut raw_sender, raw_recver) = raw_pipe().unwrap();
+            let mut recver: Receiver<u32> = Receiver::new(raw_recver);
+
+            // Send only the length prefix (4 bytes), not the payload
+            let fake_len: u32 = 100;
+            raw_sender.write_all(&fake_len.to_le_bytes()).unwrap();
+
+            // Keep sender alive to prevent EOF
+            let _keep_sender = raw_sender;
+
+            let start = Instant::now();
+            let error = recver.recv_timeout(Duration::from_millis(50)).unwrap_err();
+            let elapsed = start.elapsed();
+            assert!(
+                error.to_string().contains("Timeout"),
+                "Unexpected error: {:?}",
+                error,
+            );
+            // Use >= 40ms to account for timing jitter
+            assert!(
+                elapsed >= Duration::from_millis(40),
+                "Timeout returned too quickly: {:?}",
+                elapsed
+            );
+        }
+
+        #[test]
+        fn sender_closes_after_partial_length() {
+            // Sender sends partial length then closes
+            use interprocess::unnamed_pipe::pipe as raw_pipe;
+            use std::io::Write;
+
+            let (mut raw_sender, raw_recver) = raw_pipe().unwrap();
+            let mut recver: Receiver<u32> = Receiver::new(raw_recver);
+
+            // Send only 2 of 4 length bytes, then close
+            raw_sender.write_all(&[1, 2]).unwrap();
+            drop(raw_sender);
+
+            let error = recver.recv_timeout(Duration::from_secs(1)).unwrap_err();
+            assert!(
+                error.to_string().contains("Sender closed the pipe"),
+                "Unexpected error: {:?}",
+                error,
+            );
+        }
+
+        #[test]
+        fn sender_closes_after_partial_payload() {
+            // Sender sends length + partial payload then closes
+            use interprocess::unnamed_pipe::pipe as raw_pipe;
+            use std::io::Write;
+
+            let (mut raw_sender, raw_recver) = raw_pipe().unwrap();
+            let mut recver: Receiver<Vec<u8>> = Receiver::new(raw_recver);
+
+            // Send length indicating 100 bytes, but only send 10
+            let len: u32 = 100;
+            raw_sender.write_all(&len.to_le_bytes()).unwrap();
+            raw_sender.write_all(&[0u8; 10]).unwrap();
+            drop(raw_sender);
+
+            let error = recver.recv_timeout(Duration::from_secs(1)).unwrap_err();
+            assert!(
+                error.to_string().contains("Sender closed the pipe"),
                 "Unexpected error: {:?}",
                 error,
             );
