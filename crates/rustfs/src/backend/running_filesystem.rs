@@ -41,8 +41,10 @@ where
 
     /// This holds the `AtExitHandler` instance which makes sure the filesystem is unmounted if the process receives a SIGTERM, SIGINT, or SIGQUIT signal.
     /// We need to keep this alive as a RAII guard, when [RunningFilesystem] is destructed, the exit handler will be dropped as well.
+    ///
+    /// In test builds, this is None to avoid signal handler cross-contamination between tests.
     #[allow(dead_code)]
-    unmount_atexit: AtExitHandler,
+    unmount_atexit: Option<AtExitHandler>,
 }
 
 impl<BS: BackgroundSession> RunningFilesystem<BS>
@@ -62,22 +64,18 @@ where
         let unmount_atexit = {
             let session_clone = session.clone();
             let runtime_clone = runtime.clone();
-            AtExitHandler::new("RunningFilesystem.unmount", move || {
+            Some(AtExitHandler::new("RunningFilesystem.unmount", move || {
                 log::info!("Received exit signal, unmounting filesystem...");
                 if let Some(session) = session_clone.lock().unwrap().take() {
                     Self::join_session_blocking(session, &runtime_clone);
                 }
                 log::info!("Received exit signal, unmounting filesystem...done");
-            })
+            }))
         };
 
-        // In tests, create a no-op handler that doesn't register signal handlers
+        // In tests, don't create any signal handler at all
         #[cfg(test)]
-        let unmount_atexit = {
-            AtExitHandler::new("RunningFilesystem.unmount.test_noop", || {
-                // No-op: tests handle cleanup through Drop, not signals
-            })
-        };
+        let unmount_atexit = None;
 
         Self {
             session,
