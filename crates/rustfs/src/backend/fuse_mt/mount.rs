@@ -41,7 +41,7 @@ pub async fn spawn_mount<Fs>(
 where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    let backend = BackendAdapter::new(fs, runtime);
+    let backend = BackendAdapter::new(fs, runtime.clone());
 
     // We need to keep a handle to the internal arc because we need to manually async drop it if fuser::spawn_mount2 fails.
     // This is because usually, the internal Arc is dropped in BackendAdapter::destroy() but if fuser::spawn_mount2 fails,
@@ -65,7 +65,7 @@ where
         }
     };
 
-    Ok(RunningFilesystem::new(session))
+    Ok(RunningFilesystem::new(session, runtime))
 }
 
 fn num_threads() -> usize {
