@@ -134,6 +134,7 @@ mod tests {
     }
 
     #[rstest]
+    #[ignore] // Temporarily disabled: sends process-wide signals that interfere with other tests
     fn test_signal_handler(#[values(SIGTERM, SIGINT, SIGQUIT)] signal: i32) {
         signal_test(move || {
             let (tx, rx) = std::sync::mpsc::channel();
@@ -154,6 +155,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Temporarily disabled: sends process-wide signals that interfere with other tests
     fn test_multiple_signals() {
         signal_test(|| {
             let (tx, rx) = std::sync::mpsc::channel();

@@ -52,16 +52,32 @@ where
     #[cfg(any(feature = "fuser", feature = "fuse_mt"))]
     pub(super) fn new(session: BS, runtime: tokio::runtime::Handle) -> Self {
         let session = Arc::new(Mutex::new(Some(session)));
-        let session_clone = session.clone();
-        let runtime_clone = runtime.clone();
 
-        let unmount_atexit = AtExitHandler::new("RunningFilesystem.unmount", move || {
-            log::info!("Received exit signal, unmounting filesystem...");
-            if let Some(session) = session_clone.lock().unwrap().take() {
-                Self::join_session_blocking(session, &runtime_clone);
-            }
-            log::info!("Received exit signal, unmounting filesystem...done");
-        });
+        // IMPORTANT: In test builds, skip creating signal handlers to avoid cross-test interference.
+        // When tests run concurrently, signal handler tests in cryfs-utils send process-wide signals
+        // via libc::raise(SIGTERM/SIGINT/SIGQUIT), which trigger ALL registered signal handlers
+        // including FUSE cleanup handlers. This causes unexpected unmount attempts mid-test leading
+        // to deadlocks. In tests, cleanup happens through Drop, not through signals.
+        #[cfg(not(test))]
+        let unmount_atexit = {
+            let session_clone = session.clone();
+            let runtime_clone = runtime.clone();
+            AtExitHandler::new("RunningFilesystem.unmount", move || {
+                log::info!("Received exit signal, unmounting filesystem...");
+                if let Some(session) = session_clone.lock().unwrap().take() {
+                    Self::join_session_blocking(session, &runtime_clone);
+                }
+                log::info!("Received exit signal, unmounting filesystem...done");
+            })
+        };
+
+        // In tests, create a no-op handler that doesn't register signal handlers
+        #[cfg(test)]
+        let unmount_atexit = {
+            AtExitHandler::new("RunningFilesystem.unmount.test_noop", || {
+                // No-op: tests handle cleanup through Drop, not signals
+            })
+        };
 
         Self {
             session,
