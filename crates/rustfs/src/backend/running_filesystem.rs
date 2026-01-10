@@ -52,7 +52,8 @@ where
         let unmount_atexit = AtExitHandler::new("RunningFilesystem.unmount", move || {
             log::info!("Received exit signal, unmounting filesystem...");
             if let Some(session) = session_clone.lock().unwrap().take() {
-                session.join();
+                // Drop without join() to avoid deadlocks (see unmount_join for detailed explanation)
+                drop(session);
             }
             log::info!("Received exit signal, unmounting filesystem...done");
         });
@@ -67,7 +68,20 @@ where
         // TODO For unmount to work correctly, we may have to do DokanRemoveMountPoint in Dokan. That's what C++ CryFS did at least.
 
         if let Some(session) = self.session.lock().unwrap().take() {
-            session.join();
+            // IMPORTANT: We don't call session.join() here because it can cause deadlocks when called
+            // from within a tokio runtime context. The FUSE background thread uses runtime.block_on()
+            // for async operations. If we block on join() from a tokio worker thread, and the FUSE
+            // thread is waiting for tokio workers to make progress, we create a circular dependency.
+            //
+            // Instead, we simply drop the session without calling join(). When BackgroundSession
+            // is dropped, it:
+            // 1. Drops the Mount, which triggers unmount (fusermount -u or libc::umount)
+            // 2. Detaches the background thread (by dropping JoinHandle without calling join())
+            //
+            // The FUSE background thread will continue running until Session::run() receives ENODEV
+            // from the kernel (triggered by the unmount), then cleanly exits. This is safe and avoids
+            // the deadlock.
+            drop(session);
         }
     }
 
@@ -76,7 +90,8 @@ where
         tokio::task::spawn(async move {
             unmount_trigger.cancelled().await;
             if let Some(session) = session_clone.lock().unwrap().take() {
-                session.join();
+                // Drop without join() to avoid deadlocks (see unmount_join for detailed explanation)
+                drop(session);
             }
         });
     }
