@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::{Context as _, Result};
 use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_config::config::CryConfigFile;
-use cryfs_config::localstate::{BasedirMetadata, CheckFilesystemIdError};
+use cryfs_config::localstate::{CheckFilesystemIdError, VaultdirMetadata};
 use cryfs_runner::{CreateOrLoad, Mounter};
 use log::LevelFilter;
 
@@ -29,7 +29,7 @@ use cryfs_version::VersionInfo;
 
 // TODO Check (and add tests for) error messages make sense, e.g. when
 //   - wrong password
-//   - basedir/mountdir don't exist
+//   - vaultdir/mountdir don't exist
 //   - ...
 
 // TODO Cryfs currently panics in fuse when mountdir is not empty or already mounted. We should either check that beforehand, or even better, display fuse errors without a panic.
@@ -118,7 +118,7 @@ impl Application for Cli {
 
 impl Cli {
     async fn async_main(self, mounter: Mounter) -> Result<(), CliError> {
-        // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating basedirs or loading the config.
+        // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating vaultdirs or loading the config.
         self.sanity_checks().await?;
         self.run_filesystem(mounter, ConsoleProgressBarManager)
             .await?;
@@ -128,16 +128,16 @@ impl Cli {
 
     async fn sanity_checks(&self) -> Result<(), CliError> {
         let mount_args = self.mount_args();
-        super::sanity_checks::check_mountdir_doesnt_contain_basedir(mount_args)
-            .map_cli_error(CliErrorKind::BaseDirInsideMountDir)?;
+        super::sanity_checks::check_mountdir_doesnt_contain_vaultdir(mount_args)
+            .map_cli_error(CliErrorKind::VaultDirInsideMountDir)?;
         super::sanity_checks::check_dir_accessible(
-            &mount_args.basedir,
+            &mount_args.vaultdir,
             "vault",
-            mount_args.create_missing_basedir,
-            |path| self.console().ask_create_basedir(path),
+            mount_args.create_missing_vaultdir,
+            |path| self.console().ask_create_vaultdir(path),
         )
         .await
-        .map_cli_error(CliErrorKind::InaccessibleBaseDir)?;
+        .map_cli_error(CliErrorKind::InaccessibleVaultDir)?;
         // TODO C++ had special handling of Windows drive letters here. We should probably re-add that
         super::sanity_checks::check_dir_accessible(
             &mount_args.mountdir,
@@ -192,7 +192,7 @@ impl Cli {
         mounter
             .mount_filesystem(
                 cryfs_runner::MountArgs {
-                    basedir: mount_args.basedir.clone(),
+                    vaultdir: mount_args.vaultdir.clone(),
                     mountdir: mount_args.mountdir.clone(),
                     allow_integrity_violations: if mount_args.allow_integrity_violations {
                         AllowIntegrityViolations::AllowViolations
@@ -318,7 +318,7 @@ impl Cli {
         mount_args
             .config
             .clone()
-            .unwrap_or_else(|| mount_args.basedir.join("cryfs.config"))
+            .unwrap_or_else(|| mount_args.vaultdir.join("cryfs.config"))
     }
 
     fn check_config_integrity(
@@ -327,22 +327,22 @@ impl Cli {
         allow_replaced_filesystem: bool,
     ) -> Result<(), CliError> {
         let mount_args = self.mount_args();
-        let mut basedir_metadata = BasedirMetadata::load(&self.local_state_dir)
+        let mut vaultdir_metadata = VaultdirMetadata::load(&self.local_state_dir)
             .context("Failed to load local state")
             .map_cli_error(CliErrorKind::UnspecifiedError)?;
-        let check_result = basedir_metadata.filesystem_id_for_basedir_is_correct(
-            &mount_args.basedir,
+        let check_result = vaultdir_metadata.filesystem_id_for_vaultdir_is_correct(
+            &mount_args.vaultdir,
             &config.config().filesystem_id,
         );
         if let Err(check_result) = check_result {
             let CheckFilesystemIdError::FilesystemIdIncorrect {
-                basedir,
+                vaultdir,
                 expected_id,
                 actual_id,
             } = &check_result;
             log::warn!(
-                "Filesystem id for basedir {} has changed: expected {:?}, got {:?}",
-                basedir.display(),
+                "Filesystem id for vault directory {} has changed: expected {:?}, got {:?}",
+                vaultdir.display(),
                 expected_id,
                 actual_id,
             );
@@ -356,9 +356,9 @@ impl Cli {
             }
         }
         // Update local state (or create it if it didn't exist yet)
-        basedir_metadata
-            .update_filesystem_id_for_basedir(
-                &mount_args.basedir,
+        vaultdir_metadata
+            .update_filesystem_id_for_vaultdir(
+                &mount_args.vaultdir,
                 config.config().filesystem_id,
                 &self.local_state_dir,
             )

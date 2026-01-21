@@ -32,7 +32,7 @@ pub enum CreateOrLoad {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MountArgs {
-    pub basedir: PathBuf,
+    pub vaultdir: PathBuf,
     pub mountdir: PathBuf,
     pub config: CryConfig,
     pub allow_integrity_violations: AllowIntegrityViolations,
@@ -66,7 +66,7 @@ pub async fn mount_filesystem(
     let unmount_trigger_clone = unmount_trigger.clone();
     let trigger_reason = Arc::clone(unmount_trigger.trigger_reason());
     setup_blockstore_stack(
-        OnDiskBlockStore::new(mount_args.basedir.to_owned()),
+        OnDiskBlockStore::new(mount_args.vaultdir.to_owned()),
         &mount_args.config,
         mount_args.my_client_id,
         &mount_args.local_state_dir,
@@ -78,7 +78,7 @@ pub async fn mount_filesystem(
             }),
         },
         FilesystemRunner {
-            basedir: &mount_args.basedir,
+            vaultdir: &mount_args.vaultdir,
             mountdir: &mount_args.mountdir,
             config: &mount_args.config,
             create_or_load: mount_args.create_or_load,
@@ -105,8 +105,8 @@ pub async fn mount_filesystem(
     }
 }
 
-struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
-    pub basedir: &'b Path,
+struct FilesystemRunner<'v, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
+    pub vaultdir: &'v Path,
     pub mountdir: &'m Path,
     pub config: &'c CryConfig,
     pub create_or_load: CreateOrLoad,
@@ -117,8 +117,8 @@ struct FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> {
     pub atime_behavior: AtimeUpdateBehavior,
 }
 
-impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
-    for FilesystemRunner<'b, 'm, 'c, OnSuccessfullyMounted>
+impl<'v, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
+    for FilesystemRunner<'v, 'm, 'c, OnSuccessfullyMounted>
 {
     type Result = Result<(), CliError>;
 
@@ -153,7 +153,7 @@ impl<'b, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             AtimeUpdateBehavior::Noatime => MountOption::NoAtime,
         };
         let mount_options = [
-            MountOption::FSName(format!("cryfs@{}", self.basedir.display())),
+            MountOption::FSName(format!("cryfs@{}", self.vaultdir.display())),
             MountOption::Subtype("cryfs".to_string()),
             // let the kernel handle permission checking based on permission flags instead of calling the `access()` function of the fuse filesystem
             MountOption::DefaultPermissions,

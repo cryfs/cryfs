@@ -46,7 +46,7 @@ impl Console for FixtureCreationConsole {
         Ok(Byte::from_u64(104))
     }
 
-    fn ask_create_basedir(&self, path: &Path) -> Result<bool> {
+    fn ask_create_vaultdir(&self, path: &Path) -> Result<bool> {
         panic!("unused")
     }
 

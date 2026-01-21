@@ -78,12 +78,12 @@ async fn dir_contains_file(
     Ok(false)
 }
 
-pub fn check_mountdir_doesnt_contain_basedir(mount_args: &super::args::MountArgs) -> Result<()> {
-    if mount_args.basedir.starts_with(&mount_args.mountdir) {
+pub fn check_mountdir_doesnt_contain_vaultdir(mount_args: &super::args::MountArgs) -> Result<()> {
+    if mount_args.vaultdir.starts_with(&mount_args.mountdir) {
         // TODO Return error with error code
         bail!(
             "Vault directory '{}' cannot be inside of the mountpoint '{}'",
-            mount_args.basedir.display(),
+            mount_args.vaultdir.display(),
             mount_args.mountdir.display(),
         )
     }

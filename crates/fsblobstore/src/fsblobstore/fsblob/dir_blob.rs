@@ -90,7 +90,7 @@ where
         )
         .await?
         .ok_or_else(|| anyhow!("Root blob {:?} already exists", root_blob_id))?;
-        blob.flush().await?; // Don't cache, but directly write the root blob (this    causes it to fail early if the base directory is not accessible)
+        blob.flush().await?; // Don't cache, but directly write the root blob (this    causes it to fail early if the vault directory is not accessible)
         Ok(AsyncDropGuard::new(Self {
             blob,
             entries: DirEntryList::empty(),

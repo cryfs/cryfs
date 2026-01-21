@@ -25,7 +25,7 @@ pub trait Console {
     fn ask_allow_changed_encryption_key(&self) -> Result<bool>;
 
     /// We're in the process of opening a filesystem but the filesystem id is different than the last time
-    /// we opened a file system from this basedir. Maybe an attacker replaced the whole file system.
+    /// we opened a file system from this vault directory. Maybe an attacker replaced the whole file system.
     /// Ask the user whether they want to continue.
     fn ask_allow_replaced_filesystem(&self) -> Result<bool>;
 
@@ -49,8 +49,8 @@ pub trait Console {
     /// We're in the process of creating a new file system and need to ask the user for the block size to use
     fn ask_blocksize_bytes_for_new_filesystem(&self) -> Result<Byte>;
 
-    /// We've tried to load a file system but the basedir doesn't exist. Ask whether we should create it.
-    fn ask_create_basedir(&self, path: &Path) -> Result<bool>;
+    /// We've tried to load a file system but the vaultdir doesn't exist. Ask whether we should create it.
+    fn ask_create_vaultdir(&self, path: &Path) -> Result<bool>;
 
     /// We've tried to mount a file system but the mountdir doesn't exist. Ask whether we should create it.
     fn ask_create_mountdir(&self, path: &Path) -> Result<bool>;

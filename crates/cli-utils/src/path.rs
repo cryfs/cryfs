@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 /// #[derive(Parser, Debug)]
 /// pub struct CryfsArgs {
 ///    #[arg(value_parser=parse_path)]
-///    pub basedir: PathBuf,
+///    pub vaultdir: PathBuf,
 /// }
 /// ```
 pub fn parse_path(s: &str) -> Result<PathBuf, String> {

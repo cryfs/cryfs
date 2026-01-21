@@ -68,13 +68,13 @@ impl RecoverCli {
         println!(
             "Checking filesystem at {}",
             self.args
-                .basedir
+                .vaultdir
                 .to_str()
                 .expect("Invalid utf-8 in filesystem path")
         );
 
-        let config_file_path = self.args.basedir.join("cryfs.config");
-        let blockstore = OnDiskBlockStore::new(self.args.basedir);
+        let config_file_path = self.args.vaultdir.join("cryfs.config");
+        let blockstore = OnDiskBlockStore::new(self.args.vaultdir);
 
         // TODO Allow NonInteractivePasswordProvider like cryfs-cli does?
         let password_provider = InteractivePasswordProvider;
