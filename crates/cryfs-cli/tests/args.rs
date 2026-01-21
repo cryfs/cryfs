@@ -92,9 +92,9 @@ mod version {
     }
 
     #[test]
-    fn show_version_long_and_basedir_mountdir() {
+    fn show_version_long_and_vaultdir_mountdir() {
         cryfs_cmd()
-            .args(["--version", "basedir", "mountdir"])
+            .args(["--version", "vaultdir", "mountdir"])
             .assert()
             .failure()
             .stderr(predicates::str::contains(
@@ -103,9 +103,9 @@ mod version {
     }
 
     #[test]
-    fn show_version_short_and_basedir_mountdir() {
+    fn show_version_short_and_vaultdir_mountdir() {
         cryfs_cmd()
-            .args(["-V", "basedir", "mountdir"])
+            .args(["-V", "vaultdir", "mountdir"])
             .assert()
             .failure()
             .stderr(predicates::str::contains(
@@ -149,14 +149,14 @@ mod show_ciphers {
     }
 
     #[test]
-    fn show_ciphers_and_basedir_mountdir() {
+    fn show_ciphers_and_vaultdir_mountdir() {
         cryfs_cmd()
-            .args(["--show-ciphers", "basedir", "mountdir"])
+            .args(["--show-ciphers", "vaultdir", "mountdir"])
             .assert()
             .failure()
             .stderr(predicates::str::contains(
                 r#"error: the argument '--show-ciphers' cannot be used with:
-  <BASEDIR>
+  <VAULTDIR>
   <MOUNTDIR>
 "#,
             ));
@@ -188,7 +188,7 @@ mod show_ciphers {
 mod foreground {
     use super::*;
 
-    mod missing_basedir_and_mountdir {
+    mod missing_vaultdir_and_mountdir {
         use super::*;
 
         #[test]
@@ -214,43 +214,43 @@ mod foreground {
         use super::*;
 
         #[test]
-        fn short_after_basedir() {
+        fn short_after_vaultdir() {
             cryfs_cmd()
-                .args(["basedir", "-f"])
+                .args(["vaultdir", "-f"])
                 .assert()
                 .failure()
                 .stderr(predicates::str::contains("Usage:"));
         }
 
         #[test]
-        fn short_before_basedir() {
+        fn short_before_vaultdir() {
             cryfs_cmd()
-                .args(["-f", "basedir"])
+                .args(["-f", "vaultdir"])
                 .assert()
                 .failure()
                 .stderr(predicates::str::contains("Usage:"));
         }
 
         #[test]
-        fn long_after_basedir() {
+        fn long_after_vaultdir() {
             cryfs_cmd()
-                .args(["basedir", "--foreground"])
+                .args(["vaultdir", "--foreground"])
                 .assert()
                 .failure()
                 .stderr(predicates::str::contains("Usage:"));
         }
 
         #[test]
-        fn long_before_basedir() {
+        fn long_before_vaultdir() {
             cryfs_cmd()
-                .args(["--foreground", "basedir"])
+                .args(["--foreground", "vaultdir"])
                 .assert()
                 .failure()
                 .stderr(predicates::str::contains("Usage:"));
         }
     }
 
-    // TODO Test -f flag with both basedir and mountdir present, i.e. successfully mounts. In different orderings.
+    // TODO Test -f flag with both vaultdir and mountdir present, i.e. successfully mounts. In different orderings.
 }
 
 mod debug_build_warning {
@@ -282,7 +282,7 @@ mod debug_build_warning {
 }
 
 // TODO Test that invalid arguments show the usage info (but with an error exit code)
-//    - missing basedir/mountdir
+//    - missing vaultdir/mountdir
 //    - ...
 // TODO Test that help shows environment var info
 // TODO Test cli shows version info when mounting a file system

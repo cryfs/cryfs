@@ -71,7 +71,7 @@ The following command line arguments have changed:
 | `--unmount-idle 10` | `--unmount-idle 10m` | Now requires unit: `5m`, `1h30m`, etc. |
 | `--blocksize 16384` | `--blocksize 16KiB` | Now requires unit: `16KiB`, `1MiB`, etc. |
 | `--logfile /path/to/file.log` | `--log file:/path/to/file.log` | More generic logging format |
-| `cryfs basedir mountdir -- -o allow_other` | `cryfs basedir mountdir -o allow_other` | Double-dash syntax removed |
+| `cryfs vaultdir mountdir -- -o allow_other` | `cryfs vaultdir mountdir -o allow_other` | Double-dash syntax removed |
 
 The list of supported FUSE options that can be passed in with `-o` is now limited to options that are known to work well with CryFS. See `cryfs --help` for the complete list.
 

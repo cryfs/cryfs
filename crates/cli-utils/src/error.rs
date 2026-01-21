@@ -85,8 +85,8 @@ pub enum CliErrorKind {
     /// The file system uses a different blocksize than the one specified on the command line using the --blocksize argument.
     WrongBlocksize,
 
-    /// Base directory doesn't exist or is inaccessible (i.e. not read or writable or not a directory)
-    InaccessibleBaseDir,
+    /// Vault directory doesn't exist or is inaccessible (i.e. not read or writable or not a directory)
+    InaccessibleVaultDir,
 
     /// Mount directory doesn't exist or is inaccessible (i.e. not read or writable or not a directory)
     InaccessibleMountDir,
@@ -97,13 +97,13 @@ pub enum CliErrorKind {
     /// The local state directory is in an invalid state.
     InvalidLocalState,
 
-    /// Base directory can't be a subdirectory of the mount directory
-    BaseDirInsideMountDir,
+    /// Vault directory can't be a subdirectory of the mount directory
+    VaultDirInsideMountDir,
 
     /// Something's wrong with the file system.
     InvalidFilesystem,
 
-    /// The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This could mean an attacker replaced the file system with a different one. You can pass the --allow-replaced-filesystem option to allow this.
+    /// The filesystem id in the config file is different to the last time we loaded a filesystem from this vault directory. This could mean an attacker replaced the file system with a different one. You can pass the --allow-replaced-filesystem option to allow this.
     FilesystemIdChanged,
 
     /// The filesystem encryption key differs from the last time we loaded this filesystem. This could mean an attacker replaced the file system with a different one. You can pass the --allow-replaced-filesystem option to allow this.
@@ -134,9 +134,9 @@ impl CliErrorKind {
             Self::TooNewFilesystemFormat => 13,
             Self::TooOldFilesystemFormat => 14,
             Self::WrongCipher => 15,
-            Self::InaccessibleBaseDir => 16,
+            Self::InaccessibleVaultDir => 16,
             Self::InaccessibleMountDir => 17,
-            Self::BaseDirInsideMountDir => 18,
+            Self::VaultDirInsideMountDir => 18,
             Self::InvalidFilesystem => 19,
             Self::FilesystemIdChanged => 20,
             Self::EncryptionKeyChanged => 21,

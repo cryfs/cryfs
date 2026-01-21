@@ -48,7 +48,7 @@ impl Console for InteractiveConsole {
     }
 
     fn ask_allow_replaced_filesystem(&self) -> Result<bool> {
-        let explanation = "The filesystem id in the config file is different to the last time we loaded a filesystem from this basedir. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did.";
+        let explanation = "The filesystem id in the config file is different to the last time we loaded a filesystem from this vault directory. This can be genuine if you replaced the filesystem with a different one. If you didn't do that, it is possible that an attacker did.";
         let prompt = "Do you want to continue loading the file system?";
         ask_yes_no(Some(explanation), prompt, false)
     }
@@ -164,7 +164,7 @@ impl Console for InteractiveConsole {
         )
     }
 
-    fn ask_create_basedir(&self, path: &Path) -> Result<bool> {
+    fn ask_create_vaultdir(&self, path: &Path) -> Result<bool> {
         // TODO Formatting. e.g. can we somehow highlight the path? By color or font? Also check other questions here for what we can do. The console or dialoguer crates could be useful.
         let explanation = format!("Could not find the vault at '{}'.", path.display());
         let prompt = "Do you want to create a new vault?";

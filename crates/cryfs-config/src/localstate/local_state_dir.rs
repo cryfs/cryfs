@@ -24,16 +24,16 @@ impl LocalStateDir {
         Ok(this_filesystem_dir)
     }
 
-    /// Location for a file that stores the list of all basedirs
+    /// Location for a file that stores the list of all vaultdirs
     /// and their filesystem ids so we can recognize if a filesystem
     /// gets replaced with a different filesystem by an adversary
-    pub fn for_basedir_metadata(&self) -> Result<PathBuf> {
+    pub fn for_vaultdir_metadata(&self) -> Result<PathBuf> {
         std::fs::create_dir_all(&self.app_dir)
             .context("Tried to create directories for the local cryfs state")?;
-        // We're not able to load CryFS 1.x basedir metadata, so let's call our file _v2
-        let basedirs_file = self.app_dir.join("basedirs_v2.json");
+        // We're not able to load CryFS 1.x vaultdir metadata, so let's call our file _v2
+        let vaultdirs_file = self.app_dir.join("vaultdirs_v2.json");
 
-        Ok(basedirs_file)
+        Ok(vaultdirs_file)
     }
 }
 

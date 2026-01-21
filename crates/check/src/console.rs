@@ -49,7 +49,7 @@ impl Console for RecoverConsole {
         todo!()
     }
 
-    fn ask_create_basedir(&self, _path: &Path) -> Result<bool> {
+    fn ask_create_vaultdir(&self, _path: &Path) -> Result<bool> {
         todo!()
     }
 

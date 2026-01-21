@@ -11,7 +11,7 @@ use super::fuse_option::FuseOption;
 pub struct MountArgs {
     /// The directory containing the encrypted vault.
     #[arg(value_parser=parse_path)]
-    pub basedir: PathBuf,
+    pub vaultdir: PathBuf,
 
     /// The directory to mount the plaintext filesystem to.
     #[arg(value_parser=parse_path)]
@@ -27,7 +27,7 @@ pub struct MountArgs {
 
     /// Creates the vault directory if it doesn't exist yet, skipping the normal confirmation message asking whether it should be created.
     #[arg(long)]
-    pub create_missing_basedir: bool,
+    pub create_missing_vaultdir: bool,
 
     /// Creates the mount directory if it doesn't exist yet, skipping the normal confirmation message asking whether it should be created.
     #[arg(long)]
