@@ -155,6 +155,8 @@ cryfs --help
 
 CryFS can be used through GUI applications:
 - [SiriKali](https://mhogomchungu.github.io/sirikali/)
+- [Vaults](https://flathub.org/en/apps/io.github.mpobaschnig.Vaults)
+- [DroidFS](https://f-droid.org/en/packages/sushi.hardcore.droidfs/) (for Android)
 - Plasma Vault (included in KDE Plasma 5.11+)
 
 Note: GUI compatibility with CryFS 2.0 has not been tested yet.
