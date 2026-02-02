@@ -1,6 +1,6 @@
 #pragma once
-#ifndef MESSMER_CPPUTILS_RANDOM_PSEUDORANDOMPOOL_H
-#define MESSMER_CPPUTILS_RANDOM_PSEUDORANDOMPOOL_H
+#ifndef MESSMER_CPPUTILS_RANDOM_CSPRNGPOOL_H
+#define MESSMER_CPPUTILS_RANDOM_CSPRNGPOOL_H
 
 #include "RandomGenerator.h"
 #include "RandomGeneratorThread.h"
@@ -11,9 +11,9 @@
 
 namespace cpputils {
     //TODO Test
-    class PseudoRandomPool final : public RandomGenerator {
+    class CsprngPool final : public RandomGenerator {
     public:
-        PseudoRandomPool();
+        CsprngPool();
 
     protected:
         void _get(void *target, size_t bytes) override;
@@ -24,15 +24,15 @@ namespace cpputils {
 
         ThreadsafeRandomDataBuffer _buffer;
         RandomGeneratorThread _refillThread;
-        DISALLOW_COPY_AND_ASSIGN(PseudoRandomPool);
+        DISALLOW_COPY_AND_ASSIGN(CsprngPool);
     };
 
 
-    inline void PseudoRandomPool::_get(void *target, size_t bytes) {
+    inline void CsprngPool::_get(void *target, size_t bytes) {
         _buffer.get(target, bytes);
     }
 
-    inline PseudoRandomPool::PseudoRandomPool(): _buffer(), _refillThread(&_buffer, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE) {
+    inline CsprngPool::CsprngPool(): _buffer(), _refillThread(&_buffer, MIN_BUFFER_SIZE, MAX_BUFFER_SIZE) {
         _refillThread.start();
     }
 }

@@ -45,8 +45,8 @@ public:
     CryConfigCreatorTest()
             : console(make_shared<NiceMock<MockConsole>>()),
               tempLocalStateDir(), localStateDir(tempLocalStateDir.path()),
-              creator(console, cpputils::Random::PseudoRandom(), localStateDir),
-              noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::PseudoRandom(), localStateDir) {
+              creator(console, cpputils::Random::Csprng(), localStateDir),
+              noninteractiveCreator(make_shared<NoninteractiveConsole>(console), cpputils::Random::Csprng(), localStateDir) {
         EXPECT_CALL(*console, ask(HasSubstr("block cipher"), testing::_)).WillRepeatedly(ChooseAnyCipher());
         EXPECT_CALL(*console, ask(HasSubstr("block size"), testing::_)).WillRepeatedly(Return(0));
     }
