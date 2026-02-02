@@ -122,7 +122,7 @@ Tests mirror the `src/` structure:
 
 | Directory | Purpose |
 |-----------|---------|
-| `cryptopp/` | Crypto++ library v8.9.0 for cryptographic operations |
+| `cryptopp/` | Crypto++ library for cryptographic operations |
 
 ## Key Abstractions
 
@@ -247,15 +247,17 @@ enum class ErrorCode : int {
 
 ## Build System
 
-### Dependencies (via Conan)
+### Dependencies
 
-| Library | Version | Purpose |
-|---------|---------|---------|
-| Boost | 1.84.0 | Filesystem, threading, program options |
-| spdlog | 1.14.1 | Logging |
-| range-v3 | cci.20240905 | C++ ranges |
-| libcurl | 8.9.1 | HTTP for update checks (optional) |
-| GTest | 1.15.0 | Unit testing (if tests enabled) |
+Dependencies are managed via Conan. See `conanfile.py` for current versions.
+
+| Library | Purpose |
+|---------|---------|
+| Boost | Filesystem, threading, program options |
+| spdlog | Logging |
+| range-v3 | C++ ranges |
+| libcurl | HTTP for update checks (optional) |
+| GTest | Unit testing (if tests enabled) |
 
 ### Platform Dependencies
 
@@ -263,13 +265,13 @@ enum class ErrorCode : int {
 |----------|-----------|---------|
 | Linux/macOS | libFUSE >= 2.9 | Filesystem in Userspace |
 | macOS | macFUSE | FUSE for macOS |
-| Windows | Dokan 2.2.0 | Windows filesystem driver |
+| Windows | Dokan | Windows filesystem driver (see README for version) |
 
 ### Build Commands
 
 ```bash
-# Install conan (first time)
-pipx install conan~=2.7.0
+# Install conan (first time) - see README.md for current version
+pipx install conan
 conan profile detect
 
 # Build release
