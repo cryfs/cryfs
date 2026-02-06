@@ -85,6 +85,6 @@ namespace cryfs {
     }
 
     CryConfig::FilesystemID CryConfigCreator::_generateFilesystemID() {
-        return Random::PseudoRandom()->getFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
+        return Random::Csprng()->getFixedSize<CryConfig::FilesystemID::BINARY_LENGTH>();
     }
 }

@@ -2,7 +2,7 @@
 #ifndef MESSMER_CPPUTILS_RANDOM_RANDOM_H
 #define MESSMER_CPPUTILS_RANDOM_RANDOM_H
 
-#include "PseudoRandomPool.h"
+#include "CsprngPool.h"
 #include "OSRandomGenerator.h"
 #include "../data/FixedSizeData.h"
 #include "../data/Data.h"
@@ -11,9 +11,9 @@
 namespace cpputils {
     class Random final {
     public:
-        static PseudoRandomPool *PseudoRandom() {
+        static CsprngPool *Csprng() {
             const std::unique_lock <std::mutex> lock(_mutex);
-            static PseudoRandomPool random;
+            static CsprngPool random;
             return &random;
         }
 

@@ -75,7 +75,7 @@ public:
 
     CryConfigLoader loader(const string &password, bool noninteractive, const optional<string> &cipher = none) {
         auto _console = noninteractive ? shared_ptr<Console>(make_shared<NoninteractiveConsole>(console)) : shared_ptr<Console>(console);
-        return CryConfigLoader(_console, cpputils::Random::PseudoRandom(), keyProvider(password), localStateDir, cipher, none, none);
+        return CryConfigLoader(_console, cpputils::Random::Csprng(), keyProvider(password), localStateDir, cipher, none, none);
     }
 
     unique_ref<CryConfigFile> Create(const string &password = "mypassword", const optional<string> &cipher = none, bool noninteractive = false) {

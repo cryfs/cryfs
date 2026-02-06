@@ -32,7 +32,7 @@ set(SOURCES
         random/Random.cpp
         random/RandomGeneratorThread.cpp
         random/OSRandomGenerator.cpp
-        random/PseudoRandomPool.cpp
+        random/CsprngPool.cpp
         random/RandomDataBuffer.cpp
         random/RandomGenerator.cpp
         lock/LockPool.cpp
