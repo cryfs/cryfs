@@ -29,8 +29,10 @@ void* UnswappableAllocator::allocate(size_t size) {
 }
 
 void UnswappableAllocator::free(void* data, size_t size) {
-	// overwrite the memory with zeroes before we free it
-	std::memset(data, 0, size);
+	// overwrite the memory with zeroes before we free it.
+	// SecureZeroMemory is guaranteed not to be optimized away by the compiler,
+	// unlike std::memset which can be removed as a dead store.
+	SecureZeroMemory(data, size);
 
 	// unlock allocated pages from RAM
 	BOOL success = ::VirtualUnlock(data, size);

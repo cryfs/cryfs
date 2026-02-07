@@ -3,6 +3,7 @@
 #include "memory.h"
 #include <sys/mman.h>
 #include <errno.h>
+#include <string.h>
 #include <stdexcept>
 #include <cpp-utils/logging/logging.h>
 
@@ -25,8 +26,10 @@ void UnswappableAllocator::free(void* data, size_t size) {
         LOG(WARN, "Error calling munlock. Errno: {}", errno);
     }
 
-    // overwrite the memory with zeroes before we free it
-    std::memset(data, 0, size);
+    // overwrite the memory with zeroes before we free it.
+    // explicit_bzero is guaranteed not to be optimized away by the compiler,
+    // unlike std::memset which can be removed as a dead store.
+    explicit_bzero(data, size);
 
     DefaultAllocator().free(data, size);
 }
