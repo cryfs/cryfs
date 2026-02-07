@@ -18,7 +18,6 @@ using std::ostream;
 using std::string;
 using blockstore::integrity::KnownBlockVersions;
 using cpputils::hash::Hash;
-using cpputils::Data;
 using cpputils::Random;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
