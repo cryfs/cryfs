@@ -18,7 +18,6 @@ struct Hash final {
 
 
 Salt generateSalt();
-Hash hash(const void* data, size_t size, Salt salt);
 Hash hash(const cpputils::Data& data, Salt salt);
 
 

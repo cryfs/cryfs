@@ -6,6 +6,7 @@
 #include <memory>
 #include <cpp-utils/system/memory.h>
 #include <cpp-utils/random/RandomGenerator.h>
+#include <cpp-utils/crypto/hash/Hash.h>
 
 namespace cpputils {
 
@@ -87,6 +88,10 @@ public:
         auto result = std::make_shared<Data>(numTaken, make_unique_ref<UnswappableAllocator>());
         std::memcpy(result->data(), _keyData->data(), numTaken);
         return EncryptionKey(std::move(result));
+    }
+
+    cpputils::hash::Hash hash(cpputils::hash::Salt salt) const {
+        return cpputils::hash::hash(*_keyData, salt);
     }
 
     EncryptionKey drop(size_t numDropped) const {

@@ -36,7 +36,7 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
     return generate_(metadataFile, encryptionKey);
   }
 
-  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey.data(), encryptionKey.binaryLength(), loaded->_encryptionKeyHash.salt).digest) {
+  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != encryptionKey.hash(loaded->_encryptionKeyHash.salt).digest) {
     throw CryfsException("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?", ErrorCode::EncryptionKeyChanged);
   }
   return *loaded;
@@ -93,7 +93,7 @@ LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePat
   }
 #endif
 
-  LocalStateMetadata result(myClientId, cpputils::hash::hash(encryptionKey.data(), encryptionKey.binaryLength(), cpputils::hash::generateSalt()));
+  LocalStateMetadata result(myClientId, encryptionKey.hash(cpputils::hash::generateSalt()));
   result.save_(metadataFilePath);
   return result;
 }
