@@ -93,23 +93,23 @@ TEST_F(CryConfigFileTest, RootBlob_SaveAndLoad) {
 
 TEST_F(CryConfigFileTest, EncryptionKey_Init) {
     unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
-    EXPECT_EQ("", created->config()->EncryptionKey());
+    EXPECT_EQ("", created->config()->EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigFileTest, EncryptionKey_CreateAndLoad) {
     CryConfig cfg = Config();
-    cfg.SetEncryptionKey("encryptionkey");
+    cfg.SetEncryptionKey(cpputils::EncryptionKey::FromString("AABB0011223344"));
     Create(std::move(cfg));
     unique_ref<CryConfigFile> loaded = std::move(Load().value());
-    EXPECT_EQ("encryptionkey", loaded->config()->EncryptionKey());
+    EXPECT_EQ("AABB0011223344", loaded->config()->EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigFileTest, EncryptionKey_SaveAndLoad) {
     unique_ref<CryConfigFile> created = CreateAndLoadEmpty();
-    created->config()->SetEncryptionKey("encryptionkey");
+    created->config()->SetEncryptionKey(cpputils::EncryptionKey::FromString("AABB0011223344"));
     created->save();
     unique_ref<CryConfigFile> loaded = std::move(Load().value());
-    EXPECT_EQ("encryptionkey", loaded->config()->EncryptionKey());
+    EXPECT_EQ("AABB0011223344", loaded->config()->EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigFileTest, Cipher_Init) {

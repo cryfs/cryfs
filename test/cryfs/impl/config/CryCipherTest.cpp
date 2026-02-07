@@ -37,19 +37,19 @@ public:
     void EXPECT_CREATES_CORRECT_ENCRYPTED_BLOCKSTORE(const string &cipherName) {
         const auto &actualCipher = CryCiphers::find(cipherName);
         Data dataFixture = DataFixture::generate(1024);
-        const string encKey = ExpectedCipher::EncryptionKey::CreateKey(Random::Csprng(), ExpectedCipher::KEYSIZE).ToString();
+        const EncryptionKey encKey = ExpectedCipher::EncryptionKey::CreateKey(Random::Csprng(), ExpectedCipher::KEYSIZE);
         EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE_<ExpectedCipher>(actualCipher, encKey, std::move(dataFixture));
     }
 
     template<class ExpectedCipher>
-    void EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE_(const CryCipher &actualCipher, const std::string &encKey, Data dataFixture) {
+    void EXPECT_ENCRYPTS_WITH_ACTUAL_BLOCKSTORE_DECRYPTS_CORRECTLY_WITH_EXPECTED_BLOCKSTORE_(const CryCipher &actualCipher, const EncryptionKey &encKey, Data dataFixture) {
         const blockstore::BlockId blockId = blockstore::BlockId::Random();
         Data encrypted = _encryptUsingEncryptedBlockStoreWithCipher(actualCipher, encKey, blockId, dataFixture.copy());
         const Data decrypted = _decryptUsingEncryptedBlockStoreWithCipher<ExpectedCipher>(encKey, blockId, std::move(encrypted));
         EXPECT_EQ(dataFixture, decrypted);
     }
 
-    Data _encryptUsingEncryptedBlockStoreWithCipher(const CryCipher &cipher, const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
+    Data _encryptUsingEncryptedBlockStoreWithCipher(const CryCipher &cipher, const EncryptionKey &encKey, const blockstore::BlockId &blockId, Data data) {
         unique_ref<InMemoryBlockStore2> _baseStore = make_unique_ref<InMemoryBlockStore2>();
         InMemoryBlockStore2 *baseStore = _baseStore.get();
         unique_ref<BlockStore2> encryptedStore = cipher.createEncryptedBlockstore(std::move(_baseStore), encKey);
@@ -59,11 +59,11 @@ public:
     }
 
     template<class Cipher>
-    Data _decryptUsingEncryptedBlockStoreWithCipher(const std::string &encKey, const blockstore::BlockId &blockId, Data data) {
+    Data _decryptUsingEncryptedBlockStoreWithCipher(const EncryptionKey &encKey, const blockstore::BlockId &blockId, Data data) {
         unique_ref<InMemoryBlockStore2> baseStore = make_unique_ref<InMemoryBlockStore2>();
         const bool created = baseStore->tryCreate(blockId, data);
         EXPECT_TRUE(created);
-        EncryptedBlockStore2<Cipher> encryptedStore(std::move(baseStore), Cipher::EncryptionKey::FromString(encKey));
+        EncryptedBlockStore2<Cipher> encryptedStore(std::move(baseStore), encKey);
         return _loadBlock(&encryptedStore, blockId);
     }
 
@@ -119,13 +119,13 @@ TEST_F(CryCipherTest, ThereIsACipherWithIntegrityWarning) {
 }
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_448) {
-    EXPECT_EQ(Mars448_GCM::STRING_KEYSIZE, CryCiphers::find("mars-448-gcm").createKey(Random::Csprng()).size());
+    EXPECT_EQ(Mars448_GCM::STRING_KEYSIZE, CryCiphers::find("mars-448-gcm").createKey(Random::Csprng()).stringLength());
 }
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_256) {
-    EXPECT_EQ(AES256_GCM::STRING_KEYSIZE, CryCiphers::find("aes-256-gcm").createKey(Random::Csprng()).size());
+    EXPECT_EQ(AES256_GCM::STRING_KEYSIZE, CryCiphers::find("aes-256-gcm").createKey(Random::Csprng()).stringLength());
 }
 
 TEST_F(CryCipherTest, EncryptionKeyHasCorrectSize_128) {
-    EXPECT_EQ(AES128_GCM::STRING_KEYSIZE, CryCiphers::find("aes-128-gcm").createKey(Random::Csprng()).size());
+    EXPECT_EQ(AES128_GCM::STRING_KEYSIZE, CryCiphers::find("aes-128-gcm").createKey(Random::Csprng()).stringLength());
 }

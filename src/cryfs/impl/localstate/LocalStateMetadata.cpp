@@ -5,6 +5,8 @@
 #include <boost/filesystem.hpp>
 #include <blockstore/implementations/integrity/KnownBlockVersions.h>
 #include <cryfs/impl/CryfsException.h>
+#include <cpp-utils/system/memory.h>
+#include <cstring>
 
 using boost::optional;
 using boost::none;
@@ -25,10 +27,18 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
+namespace {
+Data _encryptionKeyToData(const cpputils::EncryptionKey& key) {
+  Data result(key.binaryLength(), cpputils::make_unique_ref<cpputils::UnswappableAllocator>());
+  std::memcpy(result.data(), key.data(), key.binaryLength());
+  return result;
+}
+}
+
 LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHash)
 : _myClientId(myClientId), _encryptionKeyHash(encryptionKeyHash) {}
 
-LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey, bool allowReplacedFilesystem) {
+LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const cpputils::EncryptionKey& encryptionKey, bool allowReplacedFilesystem) {
   auto metadataFile = statePath / "metadata";
   auto loaded = load_(metadataFile);
   if (loaded == none) {
@@ -36,7 +46,8 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
     return generate_(metadataFile, encryptionKey);
   }
 
-  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
+  auto keyData = _encryptionKeyToData(encryptionKey);
+  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(keyData, loaded->_encryptionKeyHash.salt).digest) {
     throw CryfsException("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?", ErrorCode::EncryptionKeyChanged);
   }
   return *loaded;
@@ -83,7 +94,7 @@ optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePa
 #endif
 }
 
-LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePath, const Data& encryptionKey) {
+LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePath, const cpputils::EncryptionKey& encryptionKey) {
   uint32_t myClientId = generateClientId_();
 #ifndef CRYFS_NO_COMPATIBILITY
   // In the old format, this was stored in a "myClientId" file. If that file exists, load it from there.
@@ -93,7 +104,8 @@ LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePat
   }
 #endif
 
-  LocalStateMetadata result(myClientId, cpputils::hash::hash(encryptionKey, cpputils::hash::generateSalt()));
+  auto keyData = _encryptionKeyToData(encryptionKey);
+  LocalStateMetadata result(myClientId, cpputils::hash::hash(keyData, cpputils::hash::generateSalt()));
   result.save_(metadataFilePath);
   return result;
 }

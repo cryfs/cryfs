@@ -38,12 +38,12 @@ public:
         return _warning;
     }
 
-    unique_ref<BlockStore2> createEncryptedBlockstore(unique_ref<BlockStore2> baseBlockStore, const string &encKey) const override {
-        return make_unique_ref<EncryptedBlockStore2<Cipher>>(std::move(baseBlockStore), Cipher::EncryptionKey::FromString(encKey));
+    unique_ref<BlockStore2> createEncryptedBlockstore(unique_ref<BlockStore2> baseBlockStore, const cpputils::EncryptionKey &encKey) const override {
+        return make_unique_ref<EncryptedBlockStore2<Cipher>>(std::move(baseBlockStore), encKey);
     }
 
-    string createKey(cpputils::RandomGenerator *randomGenerator) const override {
-        return Cipher::EncryptionKey::CreateKey(randomGenerator, Cipher::KEYSIZE).ToString();
+    cpputils::EncryptionKey createKey(cpputils::RandomGenerator *randomGenerator) const override {
+        return Cipher::EncryptionKey::CreateKey(randomGenerator, Cipher::KEYSIZE);
     }
 
     unique_ref<InnerEncryptor> createInnerConfigEncryptor(const EncryptionKey& key) const override {

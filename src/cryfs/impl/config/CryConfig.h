@@ -7,6 +7,7 @@
 #include <cpp-utils/data/Data.h>
 #include <iostream>
 #include <cpp-utils/data/FixedSizeData.h>
+#include <cpp-utils/crypto/symmetric/EncryptionKey.h>
 
 namespace cryfs {
 
@@ -22,8 +23,8 @@ public:
   const std::string &RootBlob() const;
   void SetRootBlob(std::string value);
 
-  const std::string &EncryptionKey() const;
-  void SetEncryptionKey(std::string value);
+  const cpputils::EncryptionKey &EncryptionKey() const;
+  void SetEncryptionKey(cpputils::EncryptionKey value);
 
   const std::string &Cipher() const;
   void SetCipher(std::string value);
@@ -68,7 +69,7 @@ public:
 
 private:
   std::string _rootBlob;
-  std::string _encKey;
+  cpputils::EncryptionKey _encKey;
   std::string _cipher;
   std::string _version;
   std::string _createdWithVersion;

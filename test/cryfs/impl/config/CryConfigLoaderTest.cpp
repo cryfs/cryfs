@@ -137,7 +137,7 @@ public:
 
     void ChangeEncryptionKey(const string &encKey, const string& password = "mypassword") {
         auto cfg = CryConfigFile::load(file.path(), keyProvider(password).get(), CryConfigFile::Access::ReadWrite).right();
-        cfg->config()->SetEncryptionKey(encKey);
+        cfg->config()->SetEncryptionKey(cpputils::EncryptionKey::FromString(encKey));
         cfg->save();
     }
 
@@ -247,7 +247,7 @@ TEST_F(CryConfigLoaderTest, RootBlob_Create) {
 TEST_F(CryConfigLoaderTest, EncryptionKey_Load) {
     CreateWithEncryptionKey("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3");
     auto loaded = LoadOrCreate().right();
-    EXPECT_EQ("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3", loaded->config()->EncryptionKey());
+    EXPECT_EQ("3B4682CF22F3CA199E385729B9F3CA19D325229E385729B9443CA19D325229E3", loaded->config()->EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Load_whenKeyChanged_thenFails) {
@@ -261,7 +261,8 @@ TEST_F(CryConfigLoaderTest, EncryptionKey_Load_whenKeyChanged_thenFails) {
 
 TEST_F(CryConfigLoaderTest, EncryptionKey_Create) {
     auto created = Create();
-    cpputils::AES256_GCM::EncryptionKey::FromString(created->config()->EncryptionKey()); // This crashes if key is invalid
+    // Verify key has the correct size for AES-256-GCM
+    EXPECT_EQ(cpputils::AES256_GCM::KEYSIZE, created->config()->EncryptionKey().binaryLength());
 }
 
 TEST_F(CryConfigLoaderTest, Cipher_Load) {
