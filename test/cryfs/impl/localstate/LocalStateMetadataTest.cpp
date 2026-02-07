@@ -4,23 +4,17 @@
 #include <cpp-utils/tempfile/TempDir.h>
 #include <fstream>
 #include <cpp-utils/crypto/symmetric/EncryptionKey.h>
-#include <cpp-utils/random/Random.h>
+#include <cpp-utils/data/DataFixture.h>
 
 using cpputils::TempDir;
 using cpputils::EncryptionKey;
+using cpputils::DataFixture;
 using cryfs::LocalStateMetadata;
 using std::ofstream;
 
 namespace {
-EncryptionKey generateKey(unsigned int seed) {
-    // Generate a deterministic key by repeating the seed byte
-    std::string hex;
-    for (size_t i = 0; i < 32; ++i) {
-        char buf[3];
-        snprintf(buf, sizeof(buf), "%02X", (seed + i) & 0xFF);
-        hex += buf;
-    }
-    return EncryptionKey::FromString(hex);
+EncryptionKey generateKey(size_t size, unsigned int seed = 1) {
+    return EncryptionKey::FromString(DataFixture::generate(size, seed).ToString());
 }
 }
 
@@ -54,15 +48,15 @@ TEST_F(LocalStateMetadataTest, myClientId_TakesLegacyValueIfSpecified) {
 #endif
 
 TEST_F(LocalStateMetadataTest, encryptionKeyHash_whenLoadingWithSameKey_thenDoesntCrash) {
-  const auto key = generateKey(1);
+  const auto key = generateKey(1024);
   LocalStateMetadata::loadOrGenerate(stateDir.path(), key, false);
   LocalStateMetadata::loadOrGenerate(stateDir.path(), key, false);
 }
 
 TEST_F(LocalStateMetadataTest, encryptionKeyHash_whenLoadingWithDifferentKey_thenCrashes) {
-  LocalStateMetadata::loadOrGenerate(stateDir.path(), generateKey(1), false);
+  LocalStateMetadata::loadOrGenerate(stateDir.path(), generateKey(1024, 1), false);
   EXPECT_THROW(
-    LocalStateMetadata::loadOrGenerate(stateDir.path(), generateKey(2), false),
+    LocalStateMetadata::loadOrGenerate(stateDir.path(), generateKey(1024, 2), false),
     std::runtime_error
   );
 }
