@@ -3,6 +3,7 @@
 #include "memory.h"
 #include <Windows.h>
 #include <stdexcept>
+#include <vendor_cryptopp/misc.h>
 #include <cpp-utils/logging/logging.h>
 
 using namespace cpputils::logging;
@@ -29,8 +30,10 @@ void* UnswappableAllocator::allocate(size_t size) {
 }
 
 void UnswappableAllocator::free(void* data, size_t size) {
-	// overwrite the memory with zeroes before we free it
-	std::memset(data, 0, size);
+	// overwrite the memory with zeroes before we free it.
+	// SecureWipeBuffer is guaranteed not to be optimized away by the compiler,
+	// unlike std::memset which can be removed as a dead store.
+	CryptoPP::SecureWipeBuffer(static_cast<CryptoPP::byte*>(data), size);
 
 	// unlock allocated pages from RAM
 	BOOL success = ::VirtualUnlock(data, size);
