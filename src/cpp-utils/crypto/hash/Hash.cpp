@@ -7,10 +7,10 @@ using CryptoPP::SHA512;
 namespace cpputils {
 namespace hash {
 
-Hash hash(const Data& data, Salt salt) {
+Hash hash(const void* data, size_t size, Salt salt) {
   SHA512 hasher; // NOLINT (workaround for clang-warning in libcrypto++)
   hasher.Update(static_cast<const CryptoPP::byte*>(salt.data()), Salt::BINARY_LENGTH);
-  hasher.Update(static_cast<const CryptoPP::byte*>(data.data()), data.size());
+  hasher.Update(static_cast<const CryptoPP::byte*>(data), size);
 
   Digest digest = Digest::Null();
   hasher.Final(static_cast<CryptoPP::byte*>(digest.data()));
@@ -19,6 +19,10 @@ Hash hash(const Data& data, Salt salt) {
       digest,
       salt
   };
+}
+
+Hash hash(const Data& data, Salt salt) {
+  return hash(data.data(), data.size(), salt);
 }
 
 Salt generateSalt() {

@@ -5,8 +5,6 @@
 #include <boost/filesystem.hpp>
 #include <blockstore/implementations/integrity/KnownBlockVersions.h>
 #include <cryfs/impl/CryfsException.h>
-#include <cpp-utils/system/memory.h>
-#include <cstring>
 
 using boost::optional;
 using boost::none;
@@ -27,14 +25,6 @@ using namespace cpputils::logging;
 
 namespace cryfs {
 
-namespace {
-Data _encryptionKeyToData(const cpputils::EncryptionKey& key) {
-  Data result(key.binaryLength(), cpputils::make_unique_ref<cpputils::UnswappableAllocator>());
-  std::memcpy(result.data(), key.data(), key.binaryLength());
-  return result;
-}
-}
-
 LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHash)
 : _myClientId(myClientId), _encryptionKeyHash(encryptionKeyHash) {}
 
@@ -46,8 +36,7 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
     return generate_(metadataFile, encryptionKey);
   }
 
-  auto keyData = _encryptionKeyToData(encryptionKey);
-  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(keyData, loaded->_encryptionKeyHash.salt).digest) {
+  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey.data(), encryptionKey.binaryLength(), loaded->_encryptionKeyHash.salt).digest) {
     throw CryfsException("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?", ErrorCode::EncryptionKeyChanged);
   }
   return *loaded;
@@ -104,8 +93,7 @@ LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePat
   }
 #endif
 
-  auto keyData = _encryptionKeyToData(encryptionKey);
-  LocalStateMetadata result(myClientId, cpputils::hash::hash(keyData, cpputils::hash::generateSalt()));
+  LocalStateMetadata result(myClientId, cpputils::hash::hash(encryptionKey.data(), encryptionKey.binaryLength(), cpputils::hash::generateSalt()));
   result.save_(metadataFilePath);
   return result;
 }
