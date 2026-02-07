@@ -64,6 +64,7 @@
 
 pub mod hash;
 pub mod kdf;
+pub mod sensitive_string;
 pub mod symmetric;
 
 cryfs_version::assert_cargo_version_equals_git_version!();

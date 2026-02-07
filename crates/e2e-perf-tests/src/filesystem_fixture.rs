@@ -264,7 +264,7 @@ where
 fn config(blocksize: Byte) -> CryConfig {
     CryConfig {
         root_blob: "4a7a231be5055939468cb4a17087053e".to_string(),
-        enc_key: "4e4f500b608039d5385f9f977f785288522c7f2f7e1af18a1974dce9c454720e".to_string(),
+        enc_key: cryfs_crypto::sensitive_string::SensitiveString::new("4e4f500b608039d5385f9f977f785288522c7f2f7e1af18a1974dce9c454720e".to_string()),
         cipher: "aes-256-gcm".to_string(),
         format_version: FILESYSTEM_FORMAT_VERSION.to_string(),
         created_with_version: CRYFS_VERSION.to_string(),

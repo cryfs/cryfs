@@ -21,6 +21,7 @@ cryfs-version = { path = "../cryfs-version" }
 log.workspace = true
 lockable.workspace = true
 region.workspace = true
+serde.workspace = true
 sodiumoxide.workspace = true
 generic-array.workspace = true
 chacha20poly1305.workspace = true
@@ -34,6 +35,7 @@ sha2.workspace = true
 generic-tests.workspace = true
 rstest.workspace = true
 criterion.workspace = true
+serde_json.workspace = true
 # TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
 lockable = {workspace = true, features = ["slow_assertions"]}
 

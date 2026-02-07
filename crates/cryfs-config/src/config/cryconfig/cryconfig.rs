@@ -1,4 +1,5 @@
 use byte_unit::Byte;
+use cryfs_crypto::sensitive_string::SensitiveString;
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
@@ -18,11 +19,10 @@ pub struct CryConfig {
     /// // TODO Store this as a BlobId struct instead of String
     pub root_blob: String,
 
-    /// Encryption Key used for encrypting the blocks of the file system
-    /// TODO Protect enc_key with mlock, etc. (see cryfs_utils::crypto::symmetric::key::EncryptionKey)
-    ///      We can probably change the type of this member to `EncryptionKey`, but need to be careful
-    ///      that (de)serialization still keeps it protected.
-    pub enc_key: String,
+    /// Encryption Key used for encrypting the blocks of the file system.
+    /// Stored as a hex-encoded string in a [`SensitiveString`] so the key
+    /// material is memory-locked and zeroed on drop.
+    pub enc_key: SensitiveString,
 
     /// Cipher used for encrypting the blocks of the file system
     /// TODO Store cipher as an enum instead of String

@@ -73,12 +73,13 @@ impl EncryptionKey {
         })
     }
 
-    /// Create a hex string with the key data. This can be super helpful for test cases
-    /// but it circumvents the protection because the data gets copied to an unprotected
-    /// string. So we're making sure it's actually only available to test cases using cfg(test).
-    /// TODO Make this actually true and add a #[cfg(test)] here
-    pub fn to_hex(&self) -> String {
-        hex::encode_upper(&self.key_data)
+    /// Create a hex string with the key data.
+    ///
+    /// The returned [`SensitiveString`](crate::sensitive_string::SensitiveString)
+    /// is memory-locked and zeroed on drop, so the hex-encoded key material
+    /// is protected while in memory.
+    pub fn to_hex(&self) -> crate::sensitive_string::SensitiveString {
+        crate::sensitive_string::SensitiveString::new(hex::encode_upper(&self.key_data))
     }
 
     /// Returns the key data as a byte slice.
@@ -150,8 +151,27 @@ impl Drop for EncryptionKey {
 
 impl PartialEq for EncryptionKey {
     fn eq(&self, other: &Self) -> bool {
-        self.key_data == other.key_data
+        // Use constant-time comparison to prevent timing side-channel attacks.
+        // A variable-time comparison could leak information about the key
+        // through measurable timing differences.
+        constant_time_eq(&self.key_data, &other.key_data)
     }
 }
 
 impl Eq for EncryptionKey {}
+
+/// Constant-time byte slice comparison.
+///
+/// Returns `true` if both slices have the same length and contents.
+/// The comparison always examines all bytes regardless of where
+/// differences occur, preventing timing side-channel attacks.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut result: u8 = 0;
+    for (x, y) in a.iter().zip(b.iter()) {
+        result |= x ^ y;
+    }
+    result == 0
+}

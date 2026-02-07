@@ -45,8 +45,6 @@ pub fn encrypt<KDF: PasswordBasedKDF>(
 
 pub fn decrypt<KDF: PasswordBasedKDF>(
     source: &mut (impl Read + Seek),
-    // TODO Here and throughout the whole function stack, protect password similar to how we protect `EncryptionKey` (mprotect, etc.)
-    //      Maybe we also have to protect CryConfig or at least make sure that the key is never unprotected on its way from/to the file into/from the key member of the CryConfig instance
     password: &str,
     progress_bars: impl ProgressBarManager,
 ) -> Result<(ConfigEncryptionKey, KDF::Parameters, CryConfig)> {
@@ -123,6 +121,7 @@ mod tests {
     use crate::config::FilesystemId;
     use byte_unit::Byte;
     use cryfs_crypto::kdf::scrypt::{Scrypt, ScryptParams, ScryptSettings};
+    use cryfs_crypto::sensitive_string::SensitiveString;
     use cryfs_utils::progress::SilentProgressBarManager;
     use std::io::Cursor;
 
@@ -140,8 +139,8 @@ mod tests {
             config.2,
             CryConfig {
                 root_blob: "B7847BAA5663DE6A3155A8017B5A8AC2".to_string(),
-                enc_key: "F8294D3955FF8CC06B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772"
-                    .to_string(),
+                enc_key: SensitiveString::new("F8294D3955FF8CC06B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772"
+                    .to_string()),
                 cipher: "xchacha20-poly1305".to_string(),
                 format_version: "0.10".to_string(),
                 created_with_version: "0.11.2".to_string(),
@@ -158,7 +157,7 @@ mod tests {
         // Test that we can encrypt and then decrypt a config file and get the same result
         let config = CryConfig {
             root_blob: "6A3155A8017B5A8AC2B7847BAA5663DE".to_string(),
-            enc_key: "6B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772F8294D3955FF8CC0".to_string(),
+            enc_key: SensitiveString::new("6B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772F8294D3955FF8CC0".to_string()),
             cipher: "aes-256-gcm".to_string(),
             format_version: "0.10".to_string(),
             created_with_version: "0.10.2".to_string(),

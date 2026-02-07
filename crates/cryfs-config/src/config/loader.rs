@@ -155,7 +155,6 @@ pub fn load_or_create(
     progress_bars: impl ProgressBarManager,
 ) -> Result<ConfigLoadResult, ConfigLoadError> {
     if filename.exists() {
-        // TODO Protect password similar to how we protect EncryptionKey
         let password = password
             .password_for_existing_filesystem()
             .map_err(ConfigLoadError::InteractionError)?;
@@ -171,7 +170,6 @@ pub fn load_or_create(
             allow_replaced_filesystem,
         )
     } else {
-        // TODO Protect password similar to how we protect EncryptionKey
         let password = password
             .password_for_new_filesystem()
             .map_err(ConfigLoadError::InteractionError)?;

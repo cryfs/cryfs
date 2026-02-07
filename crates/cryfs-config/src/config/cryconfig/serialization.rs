@@ -1,4 +1,5 @@
 use byte_unit::Byte;
+use cryfs_crypto::sensitive_string::SensitiveString;
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
 use std::cmp::Ordering;
@@ -41,7 +42,7 @@ pub fn serialize(config: CryConfig, writer: impl Write) -> Result<(), serde_json
         &SerializableCryConfig {
             cryfs: SerializableCryConfigInner {
                 root_blob: config.root_blob,
-                enc_key: config.enc_key,
+                enc_key: config.enc_key.as_str().to_string(),
                 cipher: config.cipher,
                 format_version: Some(config.format_version),
                 created_with_version: Some(config.created_with_version),
@@ -127,7 +128,7 @@ pub fn deserialize(reader: impl Read) -> Result<CryConfig, DeserializationError>
 
     Ok(CryConfig {
         root_blob: config.cryfs.root_blob,
-        enc_key: config.cryfs.enc_key,
+        enc_key: SensitiveString::new(config.cryfs.enc_key),
         cipher: config.cryfs.cipher,
         format_version: format_version.to_string(),
         created_with_version,
