@@ -22,7 +22,7 @@ constexpr const char* CryConfig::FilesystemFormatVersion;
 
 CryConfig::CryConfig()
 : _rootBlob("")
-, _encKey("")
+, _encKey(cpputils::EncryptionKey::Null(0))
 , _cipher("")
 , _version("")
 , _createdWithVersion("")
@@ -46,7 +46,7 @@ CryConfig CryConfig::load(const Data &data) {
 
   CryConfig cfg;
   cfg._rootBlob = pt.get<string>("cryfs.rootblob");
-  cfg._encKey = pt.get<string>("cryfs.key");
+  cfg._encKey = cpputils::EncryptionKey::FromString(pt.get<string>("cryfs.key"));
   cfg._cipher = pt.get<string>("cryfs.cipher");
   cfg._version = pt.get<string>("cryfs.version", "0.8"); // CryFS 0.8 didn't specify this field, so if the field doesn't exist, it's 0.8.
   cfg._createdWithVersion = pt.get<string>("cryfs.createdWithVersion", cfg._version); // In CryFS <= 0.9.2, we didn't have this field, but also didn't update cryfs.version, so we can use this field instead.
@@ -72,7 +72,7 @@ Data CryConfig::save() const {
   ptree pt;
 
   pt.put<string>("cryfs.rootblob", _rootBlob);
-  pt.put<string>("cryfs.key", _encKey);
+  pt.put<string>("cryfs.key", _encKey.ToString());
   pt.put<string>("cryfs.cipher", _cipher);
   pt.put<string>("cryfs.version", _version);
   pt.put<string>("cryfs.createdWithVersion", _createdWithVersion);
@@ -100,11 +100,11 @@ void CryConfig::SetRootBlob(std::string value) {
   _rootBlob = std::move(value);
 }
 
-const string &CryConfig::EncryptionKey() const {
+const cpputils::EncryptionKey &CryConfig::EncryptionKey() const {
   return _encKey;
 }
 
-void CryConfig::SetEncryptionKey(std::string value) {
+void CryConfig::SetEncryptionKey(cpputils::EncryptionKey value) {
   _encKey = std::move(value);
 }
 

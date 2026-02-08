@@ -18,7 +18,6 @@ using std::ostream;
 using std::string;
 using blockstore::integrity::KnownBlockVersions;
 using cpputils::hash::Hash;
-using cpputils::Data;
 using cpputils::Random;
 namespace bf = boost::filesystem;
 using namespace cpputils::logging;
@@ -28,7 +27,7 @@ namespace cryfs {
 LocalStateMetadata::LocalStateMetadata(uint32_t myClientId, Hash encryptionKeyHash)
 : _myClientId(myClientId), _encryptionKeyHash(encryptionKeyHash) {}
 
-LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const Data& encryptionKey, bool allowReplacedFilesystem) {
+LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath, const cpputils::EncryptionKey& encryptionKey, bool allowReplacedFilesystem) {
   auto metadataFile = statePath / "metadata";
   auto loaded = load_(metadataFile);
   if (loaded == none) {
@@ -36,7 +35,7 @@ LocalStateMetadata LocalStateMetadata::loadOrGenerate(const bf::path &statePath,
     return generate_(metadataFile, encryptionKey);
   }
 
-  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != cpputils::hash::hash(encryptionKey, loaded->_encryptionKeyHash.salt).digest) {
+  if (!allowReplacedFilesystem && loaded->_encryptionKeyHash.digest != encryptionKey.hash(loaded->_encryptionKeyHash.salt).digest) {
     throw CryfsException("The filesystem encryption key differs from the last time we loaded this filesystem. Did an attacker replace the file system?", ErrorCode::EncryptionKeyChanged);
   }
   return *loaded;
@@ -83,7 +82,7 @@ optional<uint32_t> _tryLoadClientIdFromLegacyFile(const bf::path &metadataFilePa
 #endif
 }
 
-LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePath, const Data& encryptionKey) {
+LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePath, const cpputils::EncryptionKey& encryptionKey) {
   uint32_t myClientId = generateClientId_();
 #ifndef CRYFS_NO_COMPATIBILITY
   // In the old format, this was stored in a "myClientId" file. If that file exists, load it from there.
@@ -93,7 +92,7 @@ LocalStateMetadata LocalStateMetadata::generate_(const bf::path &metadataFilePat
   }
 #endif
 
-  LocalStateMetadata result(myClientId, cpputils::hash::hash(encryptionKey, cpputils::hash::generateSalt()));
+  LocalStateMetadata result(myClientId, encryptionKey.hash(cpputils::hash::generateSalt()));
   result.save_(metadataFilePath);
   return result;
 }

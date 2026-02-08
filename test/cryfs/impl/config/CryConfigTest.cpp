@@ -48,30 +48,30 @@ TEST_F(CryConfigTest, RootBlob_AfterSaveAndLoad) {
 }
 
 TEST_F(CryConfigTest, EncryptionKey_Init) {
-    EXPECT_EQ("", cfg.EncryptionKey());
+    EXPECT_EQ("", cfg.EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigTest, EncryptionKey) {
-    cfg.SetEncryptionKey("enckey");
-    EXPECT_EQ("enckey", cfg.EncryptionKey());
+    cfg.SetEncryptionKey(cpputils::EncryptionKey::FromString("AABB01"));
+    EXPECT_EQ("AABB01", cfg.EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigTest, EncryptionKey_AfterMove) {
-    cfg.SetEncryptionKey("enckey");
+    cfg.SetEncryptionKey(cpputils::EncryptionKey::FromString("AABB01"));
     const CryConfig moved = std::move(cfg);
-    EXPECT_EQ("enckey", moved.EncryptionKey());
+    EXPECT_EQ("AABB01", moved.EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigTest, EncryptionKey_AfterCopy) {
-    cfg.SetEncryptionKey("enckey");
+    cfg.SetEncryptionKey(cpputils::EncryptionKey::FromString("AABB01"));
     const CryConfig copy = cfg;
-    EXPECT_EQ("enckey", copy.EncryptionKey());
+    EXPECT_EQ("AABB01", copy.EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigTest, EncryptionKey_AfterSaveAndLoad) {
-    cfg.SetEncryptionKey("enckey");
+    cfg.SetEncryptionKey(cpputils::EncryptionKey::FromString("AABB01"));
     const CryConfig loaded = SaveAndLoad(std::move(cfg));
-    EXPECT_EQ("enckey", loaded.EncryptionKey());
+    EXPECT_EQ("AABB01", loaded.EncryptionKey().ToString());
 }
 
 TEST_F(CryConfigTest, Cipher_Init) {

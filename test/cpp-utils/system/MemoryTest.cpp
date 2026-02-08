@@ -16,3 +16,9 @@ TEST(MemoryTest, LockingLargeMemoryDoesntCrash) {
     void *data = allocator.allocate(10240);
     allocator.free(data, 10240);
 }
+
+TEST(MemoryTest, LockingZeroMemoryDoesntCrash) {
+    UnswappableAllocator allocator;
+    void *data = allocator.allocate(0);
+    allocator.free(data, 0);
+}

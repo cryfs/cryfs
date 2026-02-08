@@ -29,7 +29,7 @@ namespace cryfs {
         config.SetRootBlob(_generateRootBlobId());
         config.SetFilesystemId(_generateFilesystemID());
         auto encryptionKey = _generateEncKey(config.Cipher());
-        auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.FilesystemId()), cpputils::Data::FromString(encryptionKey), allowReplacedFilesystem);
+        auto localState = LocalStateMetadata::loadOrGenerate(_localStateDir.forFilesystemId(config.FilesystemId()), encryptionKey, allowReplacedFilesystem);
         const uint32_t myClientId = localState.myClientId();
         config.SetEncryptionKey(std::move(encryptionKey));
         config.SetExclusiveClientId(_generateExclusiveClientId(missingBlockIsIntegrityViolationFromCommandLine, myClientId));
@@ -72,7 +72,7 @@ namespace cryfs {
         }
     }
 
-    string CryConfigCreator::_generateEncKey(const std::string &cipher) {
+    cpputils::EncryptionKey CryConfigCreator::_generateEncKey(const std::string &cipher) {
         _console->print("\nGenerating secure encryption key. This can take some time...");
         auto key = CryCiphers::find(cipher).createKey(_encryptionKeyGenerator);
         _console->print("done\n");

@@ -1,12 +1,19 @@
 Version 1.0.4 (unreleased)
 ---------------
-* Fixed: UnswappableAllocator used std::memset to zero sensitive memory (e.g. encryption keys) on
-  deallocation, which the compiler could optimize away as a dead store. Now uses
-  CryptoPP::SecureWipeBuffer, which is guaranteed not to be elided. Note that this is not a
-  vulnerability in CryFS's threat model, since keys lingering in memory do not allow a cloud storage
-  provider to break the encryption. It would only matter in scenarios where the local machine is
-  already compromised (e.g. memory disclosure exploits), which is outside CryFS's threat model.
-  However, it is still good practice to zero key material as early as possible.
+* Improved protection and zeroing of encryption key material in CryFS process memory while the
+  file system is mounted. Note that this is not a vulnerability in CryFS's threat model, since keys
+  lingering in memory do not allow a cloud storage provider to break the encryption. It would only
+  matter in scenarios where the local machine is already compromised (e.g. memory disclosure
+  exploits), which is outside CryFS's threat model. However, it is still good practice to protect
+  and zero key material as early as possible.
+  - Fixed: UnswappableAllocator used std::memset to zero sensitive memory on deallocation, which the
+    compiler could optimize away as a dead store. Now uses CryptoPP::SecureWipeBuffer, which is
+    guaranteed not to be elided.
+  - Use the EncryptionKey class (which locks memory with mlock and zeroes on free) consistently
+    throughout the codebase. Previously, encryption keys already used this class in most places,
+    but there were a few exceptions (e.g. config file handling) where keys were converted to plain
+    std::string, bypassing the memory protections. Keys are now only converted to/from hex strings
+    at serialization boundaries (config file I/O).
 
 
 Version 1.0.3

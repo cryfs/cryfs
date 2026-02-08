@@ -159,7 +159,8 @@ TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_448) {
     IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("mars-448-gcm"));
     const CryConfig config = creator.create(none, none, none, false).config;
-    cpputils::Mars448_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+    // Verify key has the correct size for Mars-448-GCM
+    EXPECT_EQ(cpputils::Mars448_GCM::KEYSIZE, config.EncryptionKey().binaryLength());
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
@@ -167,7 +168,8 @@ TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_256) {
     IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-256-gcm"));
     const CryConfig config = creator.create(none, none, none, false).config;
-    cpputils::AES256_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+    // Verify key has the correct size for AES-256-GCM
+    EXPECT_EQ(cpputils::AES256_GCM::KEYSIZE, config.EncryptionKey().binaryLength());
 }
 
 TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_128) {
@@ -175,7 +177,8 @@ TEST_F(CryConfigCreatorTest, ChoosesValidEncryptionKey_128) {
     IGNORE_ASK_FOR_MISSINGBLOCKISINTEGRITYVIOLATION();
     EXPECT_ASK_FOR_CIPHER().WillOnce(ChooseCipher("aes-128-gcm"));
     const CryConfig config = creator.create(none, none, none, false).config;
-    cpputils::AES128_GCM::EncryptionKey::FromString(config.EncryptionKey()); // This crashes if invalid
+    // Verify key has the correct size for AES-128-GCM
+    EXPECT_EQ(cpputils::AES128_GCM::KEYSIZE, config.EncryptionKey().binaryLength());
 }
 
 TEST_F(CryConfigCreatorTest, DoesNotAskForAnythingIfEverythingIsSpecified) {

@@ -13,7 +13,13 @@ namespace cpputils {
 void* UnswappableAllocator::allocate(size_t size) {
 	// VirtualAlloc allocates memory in full pages. This is needed, because VirtualUnlock unlocks full pages
 	// and might otherwise unlock unrelated memory of other allocations.
-    
+
+	// VirtualAlloc fails with ERROR_INVALID_PARAMETER for size=0.
+	// Match DefaultAllocator behavior and allocate 1 byte instead.
+	if (size == 0) {
+		size = 1;
+	}
+
 	// allocate pages
 	void* data = ::VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	if (nullptr == data) {
@@ -30,6 +36,12 @@ void* UnswappableAllocator::allocate(size_t size) {
 }
 
 void UnswappableAllocator::free(void* data, size_t size) {
+	// Match the size adjustment in allocate() so that VirtualUnlock
+	// receives the same size that was passed to VirtualLock.
+	if (size == 0) {
+		size = 1;
+	}
+
 	// overwrite the memory with zeroes before we free it.
 	// SecureWipeBuffer is guaranteed not to be optimized away by the compiler,
 	// unlike std::memset which can be removed as a dead store.

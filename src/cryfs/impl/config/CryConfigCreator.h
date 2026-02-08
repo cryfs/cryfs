@@ -23,7 +23,7 @@ namespace cryfs {
         ConfigCreateResult create(const boost::optional<std::string> &cipherFromCommandLine, const boost::optional<uint32_t> &blocksizeBytesFromCommandLine, const boost::optional<bool> &missingBlockIsIntegrityViolationFromCommandLine, bool allowReplacedFilesystem);
     private:
         std::string _generateCipher(const boost::optional<std::string> &cipherFromCommandLine);
-        std::string _generateEncKey(const std::string &cipher);
+        cpputils::EncryptionKey _generateEncKey(const std::string &cipher);
         std::string _generateRootBlobId();
         uint32_t _generateBlocksizeBytes(const boost::optional<uint32_t> &blocksizeBytesFromCommandLine);
         CryConfig::FilesystemID _generateFilesystemID();
