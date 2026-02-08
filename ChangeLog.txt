@@ -14,6 +14,12 @@ Version 1.0.4 (unreleased)
     but there were a few exceptions (e.g. config file handling) where keys were converted to plain
     std::string, bypassing the memory protections. Keys are now only converted to/from hex strings
     at serialization boundaries (config file I/O).
+* Fixed: Undefined behavior in OnDiskBlockStore2 when loading a block file smaller than the format
+  version header. The header validation functions (_isAcceptedCryfsHeader, _isOtherCryfsHeader)
+  called std::memcmp without first checking that the data buffer was large enough, causing a
+  heap buffer over-read. In practice, this would occur if a block file on disk was truncated or
+  corrupted, and the memcmp would simply fail to match — but it is still undefined behavior that
+  should be avoided. Added bounds checks before the memcmp calls.
 
 
 Version 1.0.3
