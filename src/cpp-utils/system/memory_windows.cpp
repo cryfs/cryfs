@@ -36,6 +36,12 @@ void* UnswappableAllocator::allocate(size_t size) {
 }
 
 void UnswappableAllocator::free(void* data, size_t size) {
+	// Match the size adjustment in allocate() so that VirtualUnlock
+	// receives the same size that was passed to VirtualLock.
+	if (size == 0) {
+		size = 1;
+	}
+
 	// overwrite the memory with zeroes before we free it.
 	// SecureWipeBuffer is guaranteed not to be optimized away by the compiler,
 	// unlike std::memset which can be removed as a dead store.
