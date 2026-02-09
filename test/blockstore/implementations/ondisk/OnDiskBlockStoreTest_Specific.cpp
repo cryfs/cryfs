@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <fstream>
+#include <string_view>
 
 using ::testing::Test;
 
@@ -88,15 +89,15 @@ TEST_F(OnDiskBlockStoreTest, LoadingBlockWithEmptyFile_ThrowsError) {
 
 TEST_F(OnDiskBlockStoreTest, LoadingBlockWithUndersizedFile_ThrowsError) {
   const BlockId blockId = BlockId::FromString("AB0123456789ABCDEF0123456789AB01");
-  const char shortData[] = "cryfs";
-  writeRawBlockFile(blockId, shortData, sizeof(shortData) - 1);
+  constexpr std::string_view shortData = "cryfs";
+  writeRawBlockFile(blockId, shortData.data(), shortData.size());
   EXPECT_THROW(blockStore.load(blockId), std::runtime_error);
 }
 
 TEST_F(OnDiskBlockStoreTest, LoadingBlockWithSizeBetweenPrefixAndFullHeader_ThrowsError) {
   // Data larger than FORMAT_VERSION_HEADER_PREFIX but smaller than full header
   const BlockId blockId = BlockId::FromString("AB0123456789ABCDEF0123456789AB01");
-  const char partialHeader[] = "cryfs;block;";
-  writeRawBlockFile(blockId, partialHeader, sizeof(partialHeader) - 1);
+  constexpr std::string_view partialHeader = "cryfs;block;";
+  writeRawBlockFile(blockId, partialHeader.data(), partialHeader.size());
   EXPECT_THROW(blockStore.load(blockId), std::runtime_error);
 }
