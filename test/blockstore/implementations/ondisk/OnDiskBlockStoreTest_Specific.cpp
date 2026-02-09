@@ -36,7 +36,7 @@ public:
   }
 
   void writeRawBlockFile(const BlockId &blockId, const void *data, size_t size) {
-    std::string idStr = blockId.ToString();
+    std::string const idStr = blockId.ToString();
     auto dir = baseDir.path() / idStr.substr(0, 3);
     boost::filesystem::create_directories(dir);
     auto filepath = dir / idStr.substr(3);
