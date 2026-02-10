@@ -37,10 +37,16 @@ Data OnDiskBlockStore2::_checkAndRemoveHeader(const Data &data) {
 }
 
 bool OnDiskBlockStore2::_isAcceptedCryfsHeader(const Data &data) {
+  if (data.size() < formatVersionHeaderSize()) {
+    return false;
+  }
   return 0 == std::memcmp(data.data(), FORMAT_VERSION_HEADER.c_str(), formatVersionHeaderSize());
 }
 
 bool OnDiskBlockStore2::_isOtherCryfsHeader(const Data &data) {
+  if (data.size() < FORMAT_VERSION_HEADER_PREFIX.size()) {
+    return false;
+  }
   return 0 == std::memcmp(data.data(), FORMAT_VERSION_HEADER_PREFIX.c_str(), FORMAT_VERSION_HEADER_PREFIX.size());
 }
 

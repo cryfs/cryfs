@@ -1,14 +1,18 @@
 #include <gtest/gtest.h>
 #include "blockstore/implementations/ondisk/OnDiskBlockStore2.h"
 #include <cpp-utils/tempfile/TempDir.h>
+#include <boost/filesystem.hpp>
 
 #include <cstddef>
+#include <fstream>
+#include <string_view>
 
 using ::testing::Test;
 
 using cpputils::TempDir;
 using cpputils::Data;
 using std::ifstream;
+using std::ofstream;
 using blockstore::BlockId;
 
 using namespace blockstore::ondisk;
@@ -30,6 +34,15 @@ public:
     ifstream stream((baseDir.path() / blockId.ToString().substr(0,3) / blockId.ToString().substr(3)).c_str());
     stream.seekg(0, stream.end);
     return stream.tellg();
+  }
+
+  void writeRawBlockFile(const BlockId &blockId, const void *data, size_t size) {
+    std::string const idStr = blockId.ToString();
+    auto dir = baseDir.path() / idStr.substr(0, 3);
+    boost::filesystem::create_directories(dir);
+    auto filepath = dir / idStr.substr(3);
+    ofstream file(filepath.string().c_str(), std::ios::binary | std::ios::trunc);
+    file.write(static_cast<const char*>(data), static_cast<std::streamsize>(size));
   }
 };
 
@@ -66,4 +79,25 @@ TEST_F(OnDiskBlockStoreTest, NumBlocksIsCorrectAfterAddingTwoBlocksWithSameKeyPr
   EXPECT_TRUE(blockStore.tryCreate(key1, cpputils::Data(0)));
   EXPECT_TRUE(blockStore.tryCreate(key2, cpputils::Data(0)));
   EXPECT_EQ(2u, blockStore.numBlocks());
+}
+
+TEST_F(OnDiskBlockStoreTest, LoadingBlockWithEmptyFile_ThrowsError) {
+  const BlockId blockId = BlockId::FromString("AB0123456789ABCDEF0123456789AB01");
+  writeRawBlockFile(blockId, "", 0);
+  EXPECT_THROW(blockStore.load(blockId), std::runtime_error);
+}
+
+TEST_F(OnDiskBlockStoreTest, LoadingBlockWithUndersizedFile_ThrowsError) {
+  const BlockId blockId = BlockId::FromString("AB0123456789ABCDEF0123456789AB01");
+  constexpr std::string_view shortData = "cryfs";
+  writeRawBlockFile(blockId, shortData.data(), shortData.size());
+  EXPECT_THROW(blockStore.load(blockId), std::runtime_error);
+}
+
+TEST_F(OnDiskBlockStoreTest, LoadingBlockWithSizeBetweenPrefixAndFullHeader_ThrowsError) {
+  // Data larger than FORMAT_VERSION_HEADER_PREFIX but smaller than full header
+  const BlockId blockId = BlockId::FromString("AB0123456789ABCDEF0123456789AB01");
+  constexpr std::string_view partialHeader = "cryfs;block;";
+  writeRawBlockFile(blockId, partialHeader.data(), partialHeader.size());
+  EXPECT_THROW(blockStore.load(blockId), std::runtime_error);
 }
