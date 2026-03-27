@@ -21,6 +21,10 @@ If you use homebrew-core, using the following instruction you should be able to 
 
     brew install cryfs/tap/cryfs
 
+If you have portage (mostly gentoo), you should be able to install CrysFS using the following command:
+
+    emerge --ask sys-fs/cryfs
+
 Additionally, the following would work for any Linux distro with the Nix package manager:
 
     nix-env -iA nixpkgs.cryfs
