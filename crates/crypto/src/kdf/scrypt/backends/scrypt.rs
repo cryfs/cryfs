@@ -9,6 +9,9 @@ use crate::kdf::scrypt::params::ScryptParams;
 use crate::kdf::scrypt::settings::ScryptSettings;
 use crate::symmetric::EncryptionKey;
 
+// TODO Some scrypt parameter settings that could have been created by cryfs 1.0 can't be loaded in cryfs 2.0.
+//      See https://github.com/RustCrypto/password-hashes/issues/866
+
 /// Scrypt implementation using the pure Rust `scrypt` crate.
 ///
 /// This is the default scrypt implementation and provides good portability
