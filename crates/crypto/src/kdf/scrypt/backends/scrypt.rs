@@ -24,8 +24,11 @@ impl PasswordBasedKDF for ScryptScrypt {
             kdf_parameters.log_n(),
             kdf_parameters.r(),
             kdf_parameters.p(),
-        )
-        .expect("Invalid scrypt parameters");
+        );
+        let params = match params {
+            Ok(params) => params,
+            Err(_) => panic!("Invalid scrypt parameters: {kdf_parameters:?}"),
+        };
         EncryptionKey::new(key_size, |key_data| {
             scrypt::scrypt(
                 password.as_bytes(),
