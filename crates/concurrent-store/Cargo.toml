@@ -20,8 +20,6 @@ tokio.workspace = true
 log.workspace = true
 
 [dev-dependencies]
-# TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
-lockable = {workspace = true, features = ["slow_assertions"]}
 
 [features]
 default = []

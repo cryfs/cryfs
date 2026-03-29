@@ -48,8 +48,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: ${{ matrix.command }}
-          # TODO `args: ${{ matrix.features }} ${{ matrix.profile }}` without the `-p` arguments, to run tests of all crates. But for some reason, that deadlocks at the moment.
-          args: ${{ matrix.features }} ${{ matrix.profile }} -p cryfs-blobstore -p cryfs-blockstore -p cryfs-cli-utils -p cryfs-concurrent-store -p cryfs-config -p cryfs-cli -p cryfs-filesystem -p cryfs-runner -p cryfs-version -p cryfs-crypto -p cryfs-fsblobstore -p tempproject -p cryfs-utils
+          args: ${{ matrix.features }} ${{ matrix.profile }}
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.

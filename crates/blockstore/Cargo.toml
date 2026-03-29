@@ -48,8 +48,6 @@ cryfs-utils = { path = "../utils", features = ["testutils"] }
 generic-array.workspace = true
 mockall.workspace = true
 tempdir.workspace = true
-# TODO Should we remove `slow_assertions` here to speed up cryfs in debug builds?
-lockable = { workspace = true, features = ["slow_assertions"] }
 pretty_assertions.workspace = true
 
 
