@@ -1,7 +1,7 @@
 use byte_unit::Byte;
 use futures::future;
 use futures::{future::BoxFuture, join};
-use rand::{Rng, SeedableRng, rngs::SmallRng};
+use rand::{RngExt, SeedableRng, rngs::SmallRng};
 
 use super::{DataInnerNode, DataLeafNode, DataNode, DataNodeStore, NodeLayout};
 use cryfs_blockstore::{BlockId, InMemoryBlockStore, LockingBlockStore};

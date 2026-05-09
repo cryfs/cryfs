@@ -3,7 +3,7 @@
 use aead::generic_array::typenum::Unsigned;
 use aead::{AeadCore, AeadInPlace, KeyInit, Nonce};
 use anyhow::{Context, Result, ensure};
-use rand::{RngCore, rng};
+use rand::{Rng, rng};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};

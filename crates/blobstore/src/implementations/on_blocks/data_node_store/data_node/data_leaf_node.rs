@@ -160,7 +160,7 @@ mod tests {
     use super::super::super::testutils::*;
     use super::*;
     use cryfs_blockstore::{BLOCKID_LEN, InMemoryBlockStore, LockingBlockStore};
-    use rand::{Rng, SeedableRng, rngs::SmallRng};
+    use rand::{RngExt, SeedableRng, rngs::SmallRng};
 
     #[allow(non_snake_case)]
     mod new {

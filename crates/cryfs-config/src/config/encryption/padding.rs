@@ -1,6 +1,6 @@
 use anyhow::Result;
 use binary_layout::Field;
-use rand::{RngCore, rng};
+use rand::{Rng, rng};
 use thiserror::Error;
 
 use cryfs_utils::data::Data;

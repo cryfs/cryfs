@@ -37,7 +37,7 @@ criterion.workspace = true
 
 [features]
 default = []
-testutils = ["rand/small_rng"]
+testutils = []
 
 [[bench]]
 harness = false

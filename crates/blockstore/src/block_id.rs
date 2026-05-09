@@ -1,6 +1,6 @@
 use anyhow::Result;
 use binrw::{BinRead, BinResult, BinWrite, Endian};
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use std::io::{Read, Seek, Write};
 
 pub const BLOCKID_LEN: usize = 16;

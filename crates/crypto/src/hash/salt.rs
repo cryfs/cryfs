@@ -1,5 +1,5 @@
 use derive_more::From;
-use rand::{Rng as _, rng};
+use rand::{RngExt as _, rng};
 use std::fmt::Debug;
 
 /// A cryptographic salt for hash operations.

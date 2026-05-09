@@ -29,7 +29,7 @@ derive_more.workspace = true
 cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
 cryfs-utils = { path = "../utils", features = ["testutils"] }
 iter-chunks.workspace = true
-rand = { workspace = true, features = ["small_rng"] }
+rand.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
 tokio = { workspace = true, features = ["macros"] }

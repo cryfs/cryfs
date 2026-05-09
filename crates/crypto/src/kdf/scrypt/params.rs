@@ -2,7 +2,7 @@
 
 use anyhow::{Result, ensure};
 use binrw::{BinRead, BinWrite, binrw, helpers::until_eof};
-use rand::{RngCore, rng};
+use rand::{Rng, rng};
 use std::fmt::Debug;
 use std::io::Cursor;
 

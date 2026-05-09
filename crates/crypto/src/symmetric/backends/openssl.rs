@@ -10,7 +10,7 @@ use generic_array::{
     typenum::{U16, Unsigned},
 };
 use openssl::symm::{Cipher as OpenSSLCipher, decrypt_aead, encrypt_aead};
-use rand::{RngCore, rng};
+use rand::{Rng, rng};
 use std::marker::PhantomData;
 
 use super::super::{Cipher, CipherDef, EncryptionKey, InvalidKeySizeError};

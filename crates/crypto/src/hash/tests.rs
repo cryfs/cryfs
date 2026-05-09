@@ -1,5 +1,5 @@
 use cryfs_utils::data::Data;
-use rand::{RngCore as _, SeedableRng as _, rngs::StdRng};
+use rand::{Rng as _, SeedableRng as _, rngs::StdRng};
 
 fn data(size: usize, seed: u64) -> Data {
     let mut rng = StdRng::seed_from_u64(seed);

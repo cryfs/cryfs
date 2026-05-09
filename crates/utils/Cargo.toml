@@ -43,7 +43,7 @@ libc.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
 tempdir.workspace = true
-rand = { workspace = true, features = ["small_rng"] }
+rand.workspace = true
 
 [features]
 testutils = ["dep:divrem"]

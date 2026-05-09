@@ -1,4 +1,4 @@
-use rand::{RngCore, rng};
+use rand::{Rng, rng};
 use thiserror::Error;
 // TODO Separate InfallibleUnwrap from lockable crate and remove lockable crate from our dependencies
 use lockable::InfallibleUnwrap;

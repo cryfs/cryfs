@@ -279,7 +279,7 @@ fn _prepend_header(mut data: Data) -> Data {
 mod tests {
     use super::*;
 
-    use rand::{RngCore, SeedableRng, rngs::StdRng};
+    use rand::{Rng, SeedableRng, rngs::StdRng};
     use std::marker::PhantomData;
 
     use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;

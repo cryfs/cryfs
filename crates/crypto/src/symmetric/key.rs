@@ -1,6 +1,6 @@
 use anyhow::{Result, ensure};
 use log::warn;
-use rand::{Rng as _, rng};
+use rand::{RngExt as _, rng};
 
 // TODO Separate InfallibleUnwrap from the lockable crate and don't depend on lockable from this crate
 use lockable::InfallibleUnwrap;
