@@ -2,6 +2,7 @@ name: CI
 
 permissions:
   contents: read
+  pull-requests: write
 
 on:
   - push
@@ -60,6 +61,24 @@ jobs:
           name: cargo-output-${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.command }}${{ matrix.features }}${{ matrix.profile }}
           path: cargo-output.log
           if-no-files-found: ignore
+      - name: Post cargo tail to PR on failure
+        if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-22.04' && matrix.features == '' && matrix.profile == ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -s cargo-output.log ]; then
+            {
+              echo "### CI failure: \`${{ matrix.os }}\` toolchain=\`${{ matrix.toolchain }}\` features=\`(default)\` profile=\`debug\`"
+              echo ""
+              echo "Last 250 lines of cargo output:"
+              echo ""
+              echo '```'
+              tail -n 250 cargo-output.log
+              echo '```'
+            } > /tmp/comment.md
+            gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md --repo ${{ github.repository }}
+          fi
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
