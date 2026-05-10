@@ -50,7 +50,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
           toolchain: ${{ matrix.toolchain }}
-      - run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
+      - name: cargo ${{ matrix.command }}
+        shell: bash
+        run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} 2>&1 | tee cargo-output.log
+      - name: Upload cargo output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-output-${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.command }}${{ matrix.features }}${{ matrix.profile }}
+          path: cargo-output.log
+          if-no-files-found: ignore
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
@@ -147,6 +156,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
+        shell: bash
         # Don't pass --all-features. The cryfs-e2e-perf-tests crate's
         # `benchmark` feature switches its perf_test_macro to a
         # criterion-benchmark form that doesn't compile under
@@ -154,7 +164,14 @@ jobs:
         # under `cargo bench`. With --all-features the coverage job
         # fails to compile e2e-perf-tests; without it, every crate
         # uses its default features and llvm-cov can finish.
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info 2>&1 | tee coverage-output.log
+      - name: Upload coverage output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-output
+          path: coverage-output.log
+          if-no-files-found: ignore
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
