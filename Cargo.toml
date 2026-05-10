@@ -89,7 +89,7 @@ scrypt = { version = "0.12.0", default-features = false, features = ["parallel"]
 serde = "^1.0.219"
 serde_json = "^1.0.140"
 serde_with = { version = "^3.12.0", features = ["hex"] }
-sha2 = "^0.10"
+sha2 = "^0.11"
 signal-hook = "^0.4"
 slab = "^0.4.11"
 sodiumoxide = "^0.2.7"
