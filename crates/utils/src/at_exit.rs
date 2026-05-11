@@ -86,223 +86,45 @@ impl Drop for AtExitHandler {
     }
 }
 
+// Tests that exercise actual signal delivery — i.e. anything that calls
+// `libc::raise(SIGTERM/SIGINT/SIGQUIT)` — do NOT live here. They are in
+// `crates/utils/tests/at_exit_signals.rs`, which compiles to its own
+// integration-test binary so that signals raised by those tests cannot be
+// observed by — or interfere with — any other test in the cryfs-utils
+// unit-test binary.
+//
+// The tests that moved out:
+//   - test_signal_handler (SIGTERM / SIGINT / SIGQUIT)
+//   - test_multiple_signals
+//   - test_handler_with_complex_callback
+//   - multiple_handlers
+//   - test_handler_drop_before_signal
+//   - test_thread_name
+//
+// Only signal-free tests belong in this module.
+
 #[cfg(test)]
 mod tests {
-    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
     use super::*;
-    use rstest::rstest;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
-    use std::time::Duration;
-
-    fn sleep_to_not_trigger_double_signal_handler() {
-        std::thread::sleep(Duration::from_secs_f32(
-            DOUBLE_SIGNAL_THRESHOLD.as_secs_f32() * 1.5,
-        ));
-    }
-
-    fn signal_test(test_fn: impl FnOnce() + Send + 'static) {
-        // Ensure only one signal test is running at a time
-        let _guard = LOCK.lock().unwrap();
-
-        test_fn();
-
-        // Wait a bit to ensure we don't trigger the double signal handler in the very next test
-        sleep_to_not_trigger_double_signal_handler();
-    }
 
     #[test]
     fn test_create_and_drop() {
-        signal_test(|| {
-            // Test that we can create and drop the handler without panicking
-            let called = Arc::new(AtomicBool::new(false));
-            let called_clone = called.clone();
+        // Test that we can create and drop the handler without panicking.
+        // No signals are raised, so this is safe to run in the unit-test binary.
+        let called = Arc::new(AtomicBool::new(false));
+        let called_clone = called.clone();
 
-            let handler = AtExitHandler::new("test", move || {
-                called_clone.store(true, Ordering::SeqCst);
-            });
-
-            drop(handler);
-            // Handler should be cleanly dropped
-
-            assert!(
-                !called.load(Ordering::SeqCst),
-                "Handler should not be called on drop"
-            );
+        let handler = AtExitHandler::new("test", move || {
+            called_clone.store(true, Ordering::SeqCst);
         });
-    }
 
-    #[rstest]
-    fn test_signal_handler(#[values(SIGTERM, SIGINT, SIGQUIT)] signal: i32) {
-        signal_test(move || {
-            let (tx, rx) = std::sync::mpsc::channel();
+        drop(handler);
 
-            let _handler = AtExitHandler::new("test", move || {
-                tx.send(()).unwrap();
-            });
-
-            // Send signal to ourselves
-            unsafe {
-                libc::raise(signal);
-            }
-
-            // Wait for the handler to be called
-            rx.recv_timeout(Duration::from_secs(10))
-                .expect("Handler was not called within timeout");
-        });
-    }
-
-    #[test]
-    fn test_multiple_signals() {
-        signal_test(|| {
-            let (tx, rx) = std::sync::mpsc::channel();
-
-            let _handler = AtExitHandler::new("test", move || {
-                tx.send(()).unwrap();
-            });
-
-            // Send first signal
-            unsafe {
-                libc::raise(SIGTERM);
-            }
-
-            sleep_to_not_trigger_double_signal_handler();
-
-            // Send second signal
-            unsafe {
-                libc::raise(SIGINT);
-            }
-
-            // Wait for first signal to be processed
-            rx.recv_timeout(Duration::from_secs(10))
-                .expect("First signal was not handled");
-
-            // Wait for second signal to be processed
-            rx.recv_timeout(Duration::from_secs(10))
-                .expect("Second signal was not handled");
-        });
-    }
-
-    #[test]
-    fn test_handler_with_complex_callback() {
-        signal_test(|| {
-            let (tx, rx) = std::sync::mpsc::channel();
-
-            let _handler = AtExitHandler::new("test", move || {
-                tx.send("Signal received".to_string()).unwrap();
-            });
-
-            unsafe {
-                libc::raise(SIGTERM);
-            }
-
-            let msg = rx
-                .recv_timeout(Duration::from_secs(10))
-                .expect("Handler was not called");
-            assert_eq!(msg, "Signal received");
-        });
-    }
-
-    #[test]
-    fn multiple_handlers() {
-        signal_test(|| {
-            use std::sync::Barrier;
-
-            let barrier = Arc::new(Barrier::new(4)); // 3 handlers + 1 main thread
-
-            let barrier1 = barrier.clone();
-            let _handler1 = AtExitHandler::new("test", move || {
-                barrier1.wait();
-            });
-
-            let barrier2 = barrier.clone();
-            let _handler2 = AtExitHandler::new("test", move || {
-                barrier2.wait();
-            });
-
-            let barrier3 = barrier.clone();
-            let _handler3 = AtExitHandler::new("test", move || {
-                barrier3.wait();
-            });
-
-            unsafe {
-                libc::raise(SIGINT);
-            }
-
-            // Wait for all handlers to be called with a timeout
-            let barrier_clone = barrier.clone();
-            let result = std::thread::spawn(move || barrier_clone.wait())
-                .join()
-                .expect("Barrier wait failed");
-
-            // If we get here, all handlers were called
-            assert!(result.is_leader() || !result.is_leader()); // Just to use the result
-        });
-    }
-
-    #[test]
-    fn test_handler_drop_before_signal() {
-        signal_test(|| {
-            let (dummy_tx, _dummy_rx) = std::sync::mpsc::channel();
-            let _handler = AtExitHandler::new("test", move || {
-                // Extra handler to ensure that the process doesn't crash
-                // even after the main handler is dropped
-                let _ = dummy_tx.send(());
-            });
-
-            let (tx, rx) = std::sync::mpsc::channel();
-            let handler = AtExitHandler::new("test", move || {
-                tx.send(()).unwrap();
-            });
-
-            unsafe {
-                libc::raise(SIGINT);
-            }
-
-            // Wait for handler to be called
-            rx.recv_timeout(Duration::from_secs(10))
-                .expect("Handler was not called before drop");
-
-            // Wait to avoid triggering double signal handler
-            sleep_to_not_trigger_double_signal_handler();
-
-            drop(handler);
-            unsafe {
-                libc::raise(SIGINT);
-            }
-
-            // Verify handler is NOT called after drop
-            assert!(
-                rx.recv_timeout(Duration::from_secs(1)).is_err(),
-                "Handler should not be called after drop"
-            );
-        });
-    }
-
-    #[test]
-    fn test_thread_name() {
-        signal_test(|| {
-            let (tx, rx) = std::sync::mpsc::channel();
-
-            let _handler = AtExitHandler::new("my-custom-handler", move || {
-                let name = thread::current().name().map(|s| s.to_string());
-                tx.send(name).unwrap();
-            });
-
-            unsafe {
-                libc::raise(SIGINT);
-            }
-
-            let thread_name = rx
-                .recv_timeout(Duration::from_secs(10))
-                .expect("Handler was not called");
-
-            assert_eq!(
-                thread_name.as_deref(),
-                Some("atexit:my-custom-handler"),
-                "Thread name should be 'atexit:my-custom-handler'"
-            );
-        });
+        assert!(
+            !called.load(Ordering::SeqCst),
+            "Handler should not be called on drop"
+        );
     }
 }
