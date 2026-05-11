@@ -7,6 +7,38 @@ use crate::ipc::RpcConnection;
 
 use super::{RpcClient, RpcServer};
 
+// TODO Refactor to fork+exec instead of plain fork.
+//
+// The current implementation uses the `daemonize` crate, which does `fork()` without
+// `exec()`. Two problems follow from this:
+//
+// 1. Inherited fds aren't closed. The `daemonize` crate only dup2s stdio; it leaves
+//    fds >= 3 alone. `interprocess` creates pipes without `O_CLOEXEC`. The daemonized
+//    child therefore holds copies of every fd open in the parent at fork time. In
+//    production this leaks shell-inherited fds into the daemon. In parallel `cargo
+//    test` runs it causes flaky failures (~5% rate) because sibling tests' pipes get
+//    inherited into each others' daemonized children, preventing EOF/EPIPE delivery to
+//    the rightful pipe owner — observed in `dropped_recver` and the
+//    `test_child_*_{before,after}_request` daemonize tests.
+//
+// 2. Fork-after-multithread hazard. POSIX restricts post-fork code in a multithreaded
+//    program to async-signal-safe operations only, because any mutex held by another
+//    thread at fork time stays locked forever in the child. The cargo test harness is
+//    multithreaded, so `background_main` (which calls `init_tokio()` and allocates
+//    heavily) can rarely deadlock the child. Production cryfs is fine here because it
+//    daemonizes single-threaded, before tokio.
+//
+// Switching to fork+exec fixes both:
+//   - `execve()` closes every `O_CLOEXEC` fd in the kernel. Rust stdlib sets CLOEXEC
+//     by default; we'd additionally set CLOEXEC on the `interprocess` pipes and clear
+//     it only on the two rpc fds we explicitly pass via argv to the re-exec'd child.
+//   - The new process is a fresh image: single-threaded, fresh allocator, no
+//     inherited mutex state.
+//
+// Sketch: `Command::new(env::current_exe()).arg("--background-child")
+// .arg(format!("{fd_in}:{fd_out}")).spawn()`. `cryfs-cli`'s `main` would detect the
+// flag and call `background_main` with the passed fds. See systemd `daemon(7)` and
+// rust-lang/rust#24034 for context.
 pub fn start_background_process<Request, Response>(
     // TODO Once the `!` type is stabilized, we can use `FnOnce` instead of `fn` here.
     background_main: fn(RpcServer<Request, Response>) -> !,
