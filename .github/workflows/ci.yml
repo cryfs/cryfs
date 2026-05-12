@@ -143,7 +143,11 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        # --lib --bins skips integration tests. The slow cli-utils integration
+        # tests spawn child cargo builds via tempproject; the child binaries
+        # aren't instrumented so they contribute no coverage data anyway, but
+        # they push the run past GitHub's hard 6h job limit.
+        run: cargo llvm-cov --all-features --workspace --lib --bins --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
