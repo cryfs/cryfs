@@ -11,6 +11,11 @@ pub use cryfs_rustfs::AtimeUpdateBehavior;
 pub use mounter::Mounter;
 pub use runner::{CreateOrLoad, FuseOption, MountArgs, make_device};
 
+// Exposed for integration tests in `tests/`. Will be restructured (and likely
+// removed from the public API) when the fork+exec refactor lands.
+#[doc(hidden)]
+pub use ipc::{RpcClient, RpcServer, start_background_process};
+
 cryfs_version::assert_cargo_version_equals_git_version!();
 
 pub fn init_tokio() -> tokio::runtime::Runtime {
