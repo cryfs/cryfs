@@ -738,6 +738,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "command-fds"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b60b5124979fccd9addd89d8b97a1d6eebb4950694520c75ddd722535ea443f"
+dependencies = [
+ "nix 0.31.2",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "common_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1290,6 +1300,7 @@ version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "atomic-time",
+ "command-fds",
  "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-cli-utils",

@@ -8,6 +8,7 @@ use std::{
     os::fd::{AsFd, AsRawFd},
     time::{Duration, Instant},
 };
+use tokio::runtime::Handle;
 
 /// Maximum message size (1 MiB). Protects against DoS from malicious/buggy senders.
 const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
@@ -15,23 +16,58 @@ const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
 /// Create a new pipe that can be used across forking for interprocess communication.
 ///
 /// Both ends are set CLOEXEC so they're closed by the kernel during `execve`.
-/// The fork+exec daemon spawn relies on this: only fds explicitly `dup2`'d in
-/// the `pre_exec` closure (which clears CLOEXEC as a side effect) survive into
-/// the child. The underlying `interprocess` crate doesn't set CLOEXEC, so we
-/// have to.
+/// The fork+exec daemon spawn relies on this: only fds explicitly remapped via
+/// `posix_spawn_file_actions` / `pre_exec` (which clear CLOEXEC as a side
+/// effect of `dup2`) survive into the child. The underlying `interprocess`
+/// crate doesn't set CLOEXEC, so we have to.
 ///
-/// Note: the CLOEXEC set is *not* atomic with pipe creation — there's a brief
-/// window between `interprocess::pipe()` returning and the `fcntl` call below
-/// where a concurrent `fork()` would inherit the still-non-CLOEXEC fds.
-/// Callers must avoid concurrent forks across that window. This is satisfied
-/// today because the only caller (the daemon spawn path) runs single-threaded
-/// before tokio starts.
+/// # The CLOEXEC race and why we panic if tokio is running
+///
+/// The CLOEXEC set is *not* atomic with pipe creation: there's a brief window
+/// between `interprocess::pipe()` returning and the `fcntl(F_SETFD)` call
+/// below where the fds exist but are still inheritable. If a concurrent thread
+/// `fork()`s (directly, or indirectly via `Command::spawn`) inside that
+/// window, the resulting child inherits the still-non-CLOEXEC pipe fds.
+/// Symptoms range from leaked fds in unrelated children to EOF never being
+/// delivered on the pipe (the rightful owner can't detect the other end being
+/// dropped because the unrelated child holds a duplicate).
+///
+/// On Linux/FreeBSD/OpenBSD/NetBSD≥6, `pipe2(O_CLOEXEC)` creates the pipe
+/// atomically with CLOEXEC set and the race doesn't exist. **macOS has no
+/// `pipe2`, no `SOCK_CLOEXEC` for `socketpair`, and no equivalent atomic
+/// primitive.** The standard workaround on macOS would be a process-wide fork
+/// lock that every fork site honors (CPython's `subprocess` does this with
+/// `_posixsubprocess._fork_lock`), but Rust's `std::process::Command` doesn't
+/// expose or honor any such lock, so we can't enforce it across our
+/// dependencies.
+///
+/// We therefore rely on a usage-level invariant rather than atomicity: pipe
+/// creation must be single-threaded. We enforce this by panicking if a tokio
+/// runtime is already initialized, since tokio's worker threads are the
+/// realistic source of "another thread that might fork" in this codebase. The
+/// daemon spawn path naturally satisfies this — pipes are created at startup,
+/// before tokio is constructed.
+///
+/// If we ever want to move pipe creation after tokio init, we have to either
+/// reach a process-wide fork-lock arrangement, or accept the race on macOS.
+/// Switching to `pipe2(O_CLOEXEC)` would close the race on Linux but leaves
+/// macOS unchanged.
 ///
 /// T: The type of the data that will be sent through the pipe.
 pub fn pipe<T>() -> Result<(Sender<T>, Receiver<T>)>
 where
     T: Serialize + DeserializeOwned,
 {
+    if Handle::try_current().is_ok() {
+        panic!(
+            "Cannot create an IPC pipe while a tokio runtime is running. \
+             Pipe creation must be single-threaded because the CLOEXEC flag \
+             is not set atomically with pipe creation (and macOS has no \
+             portable atomic alternative); a concurrent fork would inherit \
+             the not-yet-CLOEXEC fds. Create the pipe before initializing \
+             tokio."
+        );
+    }
     let (sender, recver) = interprocess::unnamed_pipe::pipe()?;
     set_cloexec(sender.as_raw_fd())?;
     set_cloexec(recver.as_raw_fd())?;
@@ -74,6 +110,19 @@ where
         }
     }
 
+    /// Construct a typed `Sender` from a raw owned file descriptor that the
+    /// caller has verified is the write end of a pipe inherited across `execve`.
+    /// Used by the fork+exec daemon child to rebuild its `RpcServer`.
+    pub fn from_owned_fd(fd: std::os::fd::OwnedFd) -> Self {
+        Self::new(interprocess::unnamed_pipe::Sender::from(fd))
+    }
+
+    /// Surrender the typed wrapper and recover the underlying owned file
+    /// descriptor. Used to `dup2` the fd onto a fixed slot in a child process.
+    pub fn into_owned_fd(self) -> std::os::fd::OwnedFd {
+        std::os::fd::OwnedFd::from(self.sender)
+    }
+
     pub fn send(&mut self, data: &T) -> Result<()> {
         let bytes = postcard::to_stdvec(data)?;
         if bytes.len() > MAX_MESSAGE_SIZE {
@@ -106,6 +155,19 @@ where
             recver,
             _p: PhantomData,
         }
+    }
+
+    /// Construct a typed `Receiver` from a raw owned file descriptor that the
+    /// caller has verified is the read end of a pipe inherited across `execve`.
+    /// Used by the fork+exec daemon child to rebuild its `RpcServer`.
+    pub fn from_owned_fd(fd: std::os::fd::OwnedFd) -> Self {
+        Self::new(interprocess::unnamed_pipe::Recver::from(fd))
+    }
+
+    /// Surrender the typed wrapper and recover the underlying owned file
+    /// descriptor. Used to `dup2` the fd onto a fixed slot in a child process.
+    pub fn into_owned_fd(self) -> std::os::fd::OwnedFd {
+        std::os::fd::OwnedFd::from(self.recver)
     }
 
     pub fn recv(&mut self) -> Result<T> {

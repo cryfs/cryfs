@@ -14,7 +14,10 @@ pub use runner::{CreateOrLoad, FuseOption, MountArgs, make_device};
 // Exposed for integration tests in `tests/`. Will be restructured (and likely
 // removed from the public API) when the fork+exec refactor lands.
 #[doc(hidden)]
-pub use ipc::{RpcClient, RpcServer, start_background_process};
+pub use ipc::{
+    RpcClient, RpcServer, rpc_server_from_inherited_fds, start_background_process,
+    start_background_process_with_exe,
+};
 
 cryfs_version::assert_cargo_version_equals_git_version!();
 
