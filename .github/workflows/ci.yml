@@ -60,7 +60,13 @@ jobs:
         crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-config", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "crypto", "e2e-perf-tests", "cryfs-fsblobstore", "rustfs", "tempproject", "utils"]
         targets: ["", "--tests", "--examples", "--benches"]
         features: ["", "--no-default-features", "--all-features"]
-        profile: ["", "--release"]
+        # TODO Re-add at least some release-profile coverage for this job.
+        # The full profile axis (debug vs release) was 16 × 4 × 3 × 2 = 384
+        # configurations, which exceeds GitHub Actions' 256-configuration
+        # matrix cap and caused the entire job to fail at matrix-resolution
+        # time. Either find a way to fit release back in (split into a
+        # second job, drop a less-valuable axis, exclude some
+        # crate/target/feature combinations) or accept debug-only here.
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
@@ -74,7 +80,7 @@ jobs:
           default: true
       - name: cargo check
         working-directory: ./crates/${{ matrix.crate }}
-        run: cargo check ${{ matrix.profile }} ${{ matrix.features }} ${{matrix.targets}}
+        run: cargo check ${{ matrix.features }} ${{matrix.targets}}
   # clippy_check:
   #   name: Linter (clippy)
   #   runs-on: ubuntu-latest
