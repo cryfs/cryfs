@@ -41,7 +41,7 @@ jobs:
       - name: Install Dependencies (MacOS)
         if: ${{ runner.os == 'macOS' }}
         run: brew install pkg-config macfuse
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
           toolchain: ${{ matrix.toolchain }}
       - run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
@@ -64,7 +64,9 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install Dependencies
         run: sudo apt-get install -y fuse3 libfuse3-dev
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: stable
       - name: cargo check
         working-directory: ./crates/${{ matrix.crate }}
         run: cargo check ${{ matrix.profile }} ${{ matrix.features }} ${{matrix.targets}}
@@ -91,8 +93,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
+          toolchain: stable
           components: rustfmt
       - uses: mbrobbel/rustfmt-check@0.5.0
         with:
@@ -113,7 +116,9 @@ jobs:
     - uses: actions/checkout@v6
     - name: Install Dependencies
       run: sudo apt-get install -y fuse3 libfuse3-dev
-    - uses: dtolnay/rust-toolchain@stable
+    - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      with:
+        toolchain: stable
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
@@ -123,7 +128,9 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         uses: jlumbroso/free-disk-space@v1.3.1
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: stable
       # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
