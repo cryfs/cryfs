@@ -65,6 +65,19 @@ impl Application for Cli {
     }
 
     fn default_log_config(&self) -> LoggingConfig {
+        if self.args.daemon {
+            // Daemon child: the parent's stderr is still inherited at this
+            // point but will be `dup2(/dev/null)`'d after successful mount,
+            // so route logging to syslog from the start. Note: user-supplied
+            // `--log` flags do NOT propagate across exec — the parent's
+            // `Command::new` only adds `--daemon` to argv. If you want a
+            // file logger in the daemon, configure it via the syslog backend
+            // rather than expecting `--log` to reach it.
+            return LoggingConfig::new(vec![LogDestinationConfig {
+                destination: LogDestination::Syslog,
+                level: Some(LevelFilter::Warn),
+            }]);
+        }
         let in_foreground = self
             .args
             .mount
@@ -81,16 +94,35 @@ impl Application for Cli {
                 level: Some(LevelFilter::Warn),
             }])
         } else {
-            // Mounting in background, let's log to syslog
+            // Parent CLI process about to fork+exec the daemon: keep logs on
+            // stderr so the user sees password prompts and mount errors. The
+            // daemon child re-enters this method with `args.daemon == true`
+            // and gets the syslog branch above.
             LoggingConfig::new(vec![LogDestinationConfig {
-                destination: LogDestination::Syslog,
+                destination: LogDestination::Stderr,
                 level: Some(LevelFilter::Warn),
             }])
         }
     }
 
+    fn should_show_version(&self) -> bool {
+        // Don't print the version banner / fetch update info in the daemon
+        // child: it would leak onto the user's tty through inherited stderr
+        // and (worse) make a network call before mount.
+        !self.args.daemon
+    }
+
     fn main(self) -> Result<(), CliError> {
         // TODO Once we support Windows, we need to check that we're running on a supported windows version. C++ CryFS only supported Windows 7 or later.
+
+        if self.args.daemon {
+            // This process was re-execed as the daemon child of a fork+exec
+            // spawn from a parent cryfs CLI. Dispatch into the daemon entry
+            // point; it diverges. Panic hook and logging are already set up
+            // by `cryfs_cli_utils::run::<Cli>`, so we don't repeat them.
+            // Empty match asserts at compile time that the call diverges (`-> !`).
+            match cryfs_runner::run_as_background_daemon() {}
+        }
 
         if self.args.show_ciphers {
             self.show_ciphers();
@@ -100,7 +132,12 @@ impl Application for Cli {
         let mounter = if self.mount_args().foreground {
             Mounter::run_in_foreground().map_cli_error(CliErrorKind::UnspecifiedError)?
         } else {
-            // We need to daemonize **before** initializing tokio because tokio doesn't support fork, see https://github.com/tokio-rs/tokio/issues/4301
+            // Spawn the daemon via fork+exec before initializing tokio.
+            // tokio's runtime threads can't survive a bare fork
+            // (https://github.com/tokio-rs/tokio/issues/4301), but the child
+            // here is a fresh process image courtesy of execve, so the
+            // constraint is structural rather than load-bearing — we still
+            // do it first to hand the shell back as early as possible.
             Mounter::run_in_background().map_cli_error(CliErrorKind::UnspecifiedError)?
         };
 

@@ -1,50 +1,27 @@
 //! Regression test for daemon detachment.
 //!
-//! Forks a sub-test-process that calls `start_background_process` (spawning a
-//! daemon that loops writing a tick counter to a sentinel file), then exits
-//! immediately. The main test process waits for the sub-process to reap, then
-//! verifies that the daemon is in its own session (setsid took effect) and
-//! is still alive and still updating the sentinel file. Cleans up via SIGTERM.
+//! Forks a sub-test-process that calls `start_background_process_with_exe`,
+//! spawning the `cryfs-runner-test-background` helper binary in
+//! `sentinel_loop` mode (ignores RPC, writes a tick counter to a file
+//! forever), then exits immediately. The main test waits for the sub-process
+//! to reap, verifies the daemon is in its own session (setsid took effect),
+//! and that it's still updating the sentinel. Cleans up via SIGTERM.
 //!
-//! Documents and locks in the setsid behavior we get from today's
-//! `daemonize` crate, so the fork+exec refactor (which calls `setsid()`
-//! explicitly in the daemon child) doesn't regress it.
+//! Locks in the setsid behavior of the fork+exec spawn: without `setsid()`
+//! in the daemon, it would die along with the parent's shell session.
 
+use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use cryfs_runner::{RpcServer, start_background_process};
+use cryfs_runner::start_background_process_with_exe;
 use nix::sys::signal::{Signal, kill};
 use nix::sys::wait::{WaitStatus, waitpid};
 use nix::unistd::{ForkResult, Pid, fork, getsid};
 
-const SENTINEL_ENV: &str = "CRYFS_TEST_DAEMON_SENTINEL";
-const PID_ENV: &str = "CRYFS_TEST_DAEMON_PID";
-
-fn env_path(key: &str) -> PathBuf {
-    std::env::var_os(key)
-        .unwrap_or_else(|| panic!("env var {key} not set"))
-        .into()
-}
-
-/// Loop forever, writing an incrementing tick counter to the sentinel file
-/// every 50 ms. Ignores the RPC server entirely — this test is about the
-/// daemon's *existence* surviving the parent's exit, not its RPC behavior.
-fn daemon_main(_rpc: RpcServer<(), ()>) -> ! {
-    let sentinel = env_path(SENTINEL_ENV);
-    let pid_file = env_path(PID_ENV);
-
-    std::fs::write(&pid_file, std::process::id().to_string()).expect("daemon: write pid");
-
-    let mut tick: u64 = 0;
-    loop {
-        tick += 1;
-        if let Err(err) = std::fs::write(&sentinel, tick.to_string()) {
-            eprintln!("daemon: failed to write sentinel: {err}");
-        }
-        thread::sleep(Duration::from_millis(50));
-    }
+fn helper_exe() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_cryfs-runner-test-background"))
 }
 
 /// RAII handle that kills the daemon on drop, so an assertion failure in the
@@ -87,11 +64,11 @@ fn daemon_survives_parent_exit() {
     // SAFETY: `set_var` is unsafe because it races with concurrent env
     // reads on other threads. This integration test is its own binary with
     // a single `#[test]`, so no sibling test thread is reading env at the
-    // same time. The values are inherited across `fork()` into both the
-    // sub-test-process and the daemon.
+    // same time. The values are inherited through fork + execve into the
+    // helper daemon.
     unsafe {
-        std::env::set_var(SENTINEL_ENV, &sentinel_path);
-        std::env::set_var(PID_ENV, &pid_path);
+        std::env::set_var("CRYFS_TEST_SENTINEL", &sentinel_path);
+        std::env::set_var("CRYFS_TEST_PID", &pid_path);
     }
 
     match unsafe { fork() }.expect("fork failed") {
@@ -100,8 +77,12 @@ fn daemon_survives_parent_exit() {
             // exit immediately. The daemon must keep running. `exit(0)`
             // skips destructors, matching what the real cryfs parent CLI
             // does after a successful mount.
-            let _client = start_background_process::<(), ()>(daemon_main)
-                .expect("start_background_process failed in child");
+            let env: [(&OsStr, &OsStr); 1] = [(
+                OsStr::new("CRYFS_TEST_BEHAVIOR"),
+                OsStr::new("sentinel_loop"),
+            )];
+            let _client = start_background_process_with_exe::<(), ()>(&helper_exe(), &env)
+                .expect("start_background_process_with_exe failed in child");
             std::process::exit(0);
         }
         ForkResult::Parent { child } => {
@@ -111,9 +92,8 @@ fn daemon_survives_parent_exit() {
                 "sub-test-process did not exit cleanly: {status:?}",
             );
 
-            // Wait for the daemon to publish its PID. The daemon is a
-            // grandchild of this test, not a direct child, so we discover it
-            // via the PID file rather than waitpid.
+            // Daemon is a grandchild of this test; discover its PID through
+            // the file it writes on startup.
             //
             // Poll on parseable content rather than just file existence:
             // `std::fs::write` (used by the daemon) creates the file before
@@ -138,7 +118,7 @@ fn daemon_survives_parent_exit() {
             let _guard = DaemonGuard(daemon_pid);
 
             // setsid moved the daemon into its own session. Without this,
-            // the daemon would die on SIGHUP when its parent's controlling
+            // the daemon would die on SIGHUP when the parent's controlling
             // terminal closes (e.g. when the user closes the shell).
             let daemon_sid = getsid(Some(daemon_pid)).expect("getsid(daemon)");
             let test_sid = getsid(None).expect("getsid(test)");
@@ -147,7 +127,7 @@ fn daemon_survives_parent_exit() {
                 "daemon and test share a session — setsid did not take effect",
             );
 
-            // Daemon should be updating the sentinel even though its parent
+            // Daemon must keep writing the sentinel even though its parent
             // (the sub-test-process) has exited. Wait for the file to appear,
             // then poll until its contents change. Daemon writes every 50 ms,
             // so observing a change normally takes <100 ms; 5 s is a generous

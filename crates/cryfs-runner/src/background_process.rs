@@ -17,7 +17,7 @@ pub struct BackgroundProcess {
 
 impl BackgroundProcess {
     pub fn daemonize() -> Result<Self> {
-        let rpc = start_background_process(background_main)?;
+        let rpc = start_background_process::<Request, Response>()?;
         let mut mount_process = Self { rpc };
         mount_process.status_check()?;
         Ok(mount_process)
@@ -117,6 +117,29 @@ async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> 
 }
 
 fn close_stdout_stderr() {
-    // TODO We should probably redirect them to the logfile if there is a logfile argument, otherwise /dev/null
-    // See https://docs.rs/daemonize/latest/src/daemonize/lib.rs.html#454
+    // Redirect stdin/stdout/stderr at /dev/null. We don't bare-close fds 0/1/2
+    // because a later allocation could re-grab those numbers and produce
+    // garbage in unrelated files. dup2-over-`/dev/null` keeps the fd numbers
+    // valid but neutralized.
+    let devnull = match std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/null")
+    {
+        Ok(f) => f,
+        Err(err) => {
+            log::warn!("failed to open /dev/null while detaching daemon stdio: {err}");
+            return;
+        }
+    };
+    let fd = std::os::fd::AsRawFd::as_raw_fd(&devnull);
+    for target in [libc::STDIN_FILENO, libc::STDOUT_FILENO, libc::STDERR_FILENO] {
+        if unsafe { libc::dup2(fd, target) } < 0 {
+            log::warn!(
+                "dup2(/dev/null, {target}) failed while detaching daemon stdio: {}",
+                std::io::Error::last_os_error(),
+            );
+        }
+    }
+    // `devnull` drop closes the temp fd; targets 0/1/2 keep their dup'd copies.
 }

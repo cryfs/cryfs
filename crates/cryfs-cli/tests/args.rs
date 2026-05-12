@@ -281,6 +281,59 @@ mod debug_build_warning {
     }
 }
 
+/// `--daemon` is the sentinel argv flag that the parent cryfs process passes
+/// when it re-execs itself as the background daemon child. It is hidden from
+/// `--help` and refuses to run unless invoked through the fork+exec spawn
+/// path (which sets up inherited pipes on fds 3 and 4).
+mod daemon_flag {
+    use super::*;
+
+    #[test]
+    fn hidden_from_help() {
+        // Implementation detail: clap's `hide = true` keeps the flag out of
+        // the rendered help. If a future refactor accidentally drops that
+        // attribute, the flag becomes discoverable and users could try to
+        // invoke it manually.
+        cryfs_cmd()
+            .arg("--help")
+            .assert()
+            .success()
+            .stdout(predicates::str::contains("--daemon").not());
+    }
+
+    #[test]
+    fn rejected_when_combined_with_other_args() {
+        // clap's `exclusive = true` rejects any combination of `--daemon`
+        // with another argument before any of our code runs. This replaces
+        // a hand-rolled "argv length must be exactly 2" check.
+        cryfs_cmd()
+            .args(["--daemon", "--foreground", "/tmp/v", "/tmp/m"])
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                "the argument '--daemon' cannot be used with",
+            ));
+    }
+
+    #[test]
+    fn rejected_when_invoked_from_shell() {
+        // Defensive `fstat(3)`/`fstat(4)` check in
+        // `cryfs_runner::run_as_background_daemon`. A curious user running
+        // `cryfs --daemon` from a shell has no pipes on fds 3/4, so the
+        // daemon refuses to start with a message pointing them at the right
+        // mental model. Without this guard, the daemon would silently
+        // attempt to deserialize from stdin (or whatever else happens to be
+        // open at fd 3) and produce confusing failures.
+        cryfs_cmd()
+            .arg("--daemon")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                "internal to cryfs; do not invoke it directly",
+            ));
+    }
+}
+
 // TODO Test that invalid arguments show the usage info (but with an error exit code)
 //    - missing vaultdir/mountdir
 //    - ...

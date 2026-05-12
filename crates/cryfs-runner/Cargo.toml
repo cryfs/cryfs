@@ -21,7 +21,6 @@ cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
-daemonize.workspace = true
 interprocess.workspace = true
 postcard = { workspace = true, features = ["use-std"] }
 tokio.workspace = true

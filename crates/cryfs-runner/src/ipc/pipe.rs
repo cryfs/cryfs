@@ -187,10 +187,26 @@ where
         Ok(postcard::from_bytes(&buf)?)
     }
 
-    /// Receive a length-prefixed raw byte payload without postcard decoding.
-    /// Used for the build-id handshake before typed RPC begins.
-    pub(crate) fn recv_raw(&mut self) -> Result<Vec<u8>> {
-        self.read_length_prefixed()
+    /// Receive a length-prefixed raw byte payload without postcard decoding,
+    /// bounded by `timeout`. Used by the parent CLI to bound how long it'll
+    /// wait for the daemon's build-id handshake — without a timeout,
+    /// exec'ing a binary that opens fd 4 but never writes (or hangs) would
+    /// hang the CLI forever.
+    pub(crate) fn recv_raw_timeout(&mut self, timeout: Duration) -> Result<Vec<u8>> {
+        self.recver.set_nonblocking(true)?;
+        let timeout_at = Instant::now() + timeout;
+
+        let mut len_bytes = [0u8; 4];
+        read_exact_with_timeout(&mut self.recver, &mut len_bytes, timeout_at)?;
+
+        let len = u32::from_le_bytes(len_bytes) as usize;
+        if len > MAX_MESSAGE_SIZE {
+            bail!("Message size {len} exceeds maximum {MAX_MESSAGE_SIZE}");
+        }
+        let mut buf = vec![0u8; len];
+        read_exact_with_timeout(&mut self.recver, &mut buf, timeout_at)?;
+
+        Ok(buf)
     }
 
     fn read_length_prefixed(&mut self) -> Result<Vec<u8>> {
@@ -620,7 +636,10 @@ mod tests {
         fn roundtrip_short_payload() {
             let (mut sender, mut recver) = pipe::<u32>().unwrap();
             sender.send_raw(b"hello").unwrap();
-            assert_eq!(recver.recv_raw().unwrap(), b"hello");
+            assert_eq!(
+                recver.recv_raw_timeout(Duration::from_secs(1)).unwrap(),
+                b"hello"
+            );
         }
 
         #[test]
@@ -629,7 +648,10 @@ mod tests {
             // [4-byte length=0] [0 bytes payload]. Receiver must complete.
             let (mut sender, mut recver) = pipe::<u32>().unwrap();
             sender.send_raw(b"").unwrap();
-            assert_eq!(recver.recv_raw().unwrap(), b"");
+            assert_eq!(
+                recver.recv_raw_timeout(Duration::from_secs(1)).unwrap(),
+                b""
+            );
         }
 
         #[test]
@@ -645,7 +667,7 @@ mod tests {
             let send_thread = thread::spawn(move || {
                 sender.send_raw(&payload).unwrap();
             });
-            let received = recver.recv_raw().unwrap();
+            let received = recver.recv_raw_timeout(Duration::from_secs(10)).unwrap();
             send_thread.join().unwrap();
             assert_eq!(received, expected);
         }
@@ -667,10 +689,12 @@ mod tests {
         }
 
         #[test]
-        fn dropped_sender_gives_eof_to_recv_raw() {
+        fn dropped_sender_gives_eof_to_recv_raw_timeout() {
             let (sender, mut recver) = pipe::<u32>().unwrap();
             drop(sender);
-            assert!(recver.recv_raw().is_err());
+            // EOF should be detected and surfaced as an error well before
+            // the timeout fires.
+            assert!(recver.recv_raw_timeout(Duration::from_secs(1)).is_err());
         }
 
         #[test]
@@ -691,7 +715,7 @@ mod tests {
 
         #[test]
         fn send_typed_then_recv_raw_observes_postcard_bytes() {
-            // Encoding asymmetry: `send` postcard-encodes; `recv_raw`
+            // Encoding asymmetry: `send` postcard-encodes; `recv_raw_timeout`
             // returns the raw bytes that were sent. The receiver of a
             // build-id handshake therefore sees exactly what the sender
             // wrote, not postcard-decoded. Pin this with a value that
@@ -708,7 +732,7 @@ mod tests {
                     b: "hi".into(),
                 })
                 .unwrap();
-            let raw = recver.recv_raw().unwrap();
+            let raw = recver.recv_raw_timeout(Duration::from_secs(1)).unwrap();
             // postcard varint-encodes integers and length-prefixes the
             // string. We don't depend on the exact bytes here, just that
             // we got something non-empty back.
