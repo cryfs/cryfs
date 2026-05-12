@@ -143,7 +143,14 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        # Don't pass --all-features. The cryfs-e2e-perf-tests crate's
+        # `benchmark` feature switches its perf_test_macro to a
+        # criterion-benchmark form that doesn't compile under
+        # `cargo build --tests` (which is what llvm-cov drives), only
+        # under `cargo bench`. With --all-features the coverage job
+        # fails to compile e2e-perf-tests; without it, every crate
+        # uses its default features and llvm-cov can finish.
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
