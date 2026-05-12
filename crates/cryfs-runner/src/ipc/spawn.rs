@@ -1,4 +1,5 @@
 use std::ffi::OsStr;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
@@ -86,8 +87,19 @@ where
     }
 
     let exe = daemon_exe_path()?;
-    let client =
-        start_background_process_inner::<Request, Response>(&exe, &[DAEMON_FLAG], &[])?;
+    // The execve path is `/proc/self/exe` on Linux (kernel magic-link, see
+    // `daemon_exe_path`), but that string would also become argv[0] by
+    // default, so `ps`/`top` would show "/proc/self/exe --daemon" instead of
+    // the actual binary name. Override argv[0] to the resolved path so
+    // operators see a recognizable command line. Falls back to the exec
+    // path if `current_exe()` fails — preserves correctness over cosmetics.
+    let argv0 = std::env::current_exe().unwrap_or_else(|_| exe.clone());
+    let client = start_background_process_inner::<Request, Response>(
+        &exe,
+        Some(argv0.as_path()),
+        &[DAEMON_FLAG],
+        &[],
+    )?;
     validate_handshake_and_build_client(client)
 }
 
@@ -109,13 +121,14 @@ where
              Spawn before initializing tokio."
         );
     }
-    start_background_process_inner(exe, &[], extra_env)
+    start_background_process_inner(exe, None, &[], extra_env)
 }
 
 /// Common fork+exec machinery shared by [`start_background_process`] and
 /// [`start_background_process_with_exe`].
 fn start_background_process_inner<Request, Response>(
     exe: &Path,
+    argv0: Option<&Path>,
     args: &[&str],
     extra_env: &[(&OsStr, &OsStr)],
 ) -> Result<RpcClient<Request, Response>>
@@ -127,6 +140,9 @@ where
     let (client, child_in_fd, child_out_fd) = rpc_pipes.into_client_and_child_fds();
 
     let mut cmd = Command::new(exe);
+    if let Some(argv0) = argv0 {
+        cmd.arg0(argv0);
+    }
     cmd.args(args);
     for (k, v) in extra_env {
         cmd.env(k, v);
