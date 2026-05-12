@@ -25,7 +25,7 @@ use futures::{Future, future::BoxFuture, stream::StreamExt};
 use rand::{SeedableRng, rngs::SmallRng};
 use std::fmt::{Debug, Formatter};
 use std::{collections::BTreeSet, path::PathBuf};
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use super::console::FixtureCreationConsole;
 use super::entry_helpers::{
@@ -1116,7 +1116,10 @@ struct FixtureTempDir {
 
 impl FixtureTempDir {
     pub fn new() -> Self {
-        let tempdir = TempDir::new("cryfs-check-fixture").expect("Couldn't create tempdir");
+        let tempdir = tempfile::Builder::new()
+            .prefix("cryfs-check-fixture")
+            .tempdir()
+            .expect("Couldn't create tempdir");
         let result = Self { tempdir };
         std::fs::create_dir(result.local_state_dir_path())
             .expect("Failed to create local state dir");

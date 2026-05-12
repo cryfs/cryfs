@@ -84,11 +84,11 @@ fn get_available_disk_space_impl(path: &Path) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn given_existing_path_when_querying_available_disk_space_then_succeeds() {
-        let tempdir = TempDir::new("").unwrap();
+        let tempdir = TempDir::new().unwrap();
         let path = tempdir.path();
         let size =
             get_available_disk_space(&path).expect("Expect get_available_disk_space to succeed");
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn given_nonexisting_path_when_querying_available_disk_space_then_fails() {
-        let tempdir = TempDir::new("").unwrap();
+        let tempdir = TempDir::new().unwrap();
         let path = tempdir.path().join("notexisting");
         let error = get_available_disk_space(&path)
             .unwrap_err()

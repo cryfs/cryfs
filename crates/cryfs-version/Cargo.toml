@@ -21,5 +21,4 @@ git2version = { workspace = true, features = ["build"] }
 [dev-dependencies]
 predicates.workspace = true
 serde_json.workspace = true
-tempdir.workspace = true
 tempproject = { path = "../tempproject" }

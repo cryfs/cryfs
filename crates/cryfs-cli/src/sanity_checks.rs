@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 
-use cryfs_utils::tempfile::TempFile;
+use cryfs_utils::tmpfile::TempFile;
 
 pub async fn check_dir_accessible(
     path: &Path,

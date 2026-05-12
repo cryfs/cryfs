@@ -552,18 +552,18 @@ mod tests {
 
     mod deserialize_from_file {
         use super::*;
-        use tempdir::TempDir;
+        use tempfile::TempDir;
 
         #[test]
         fn nonexisting_file() {
-            let tempdir = TempDir::new("").unwrap();
+            let tempdir = TempDir::new().unwrap();
             let file_path = tempdir.path().join("file");
             assert_eq!(None, MyStruct::deserialize_from_file(&file_path).unwrap());
         }
 
         #[test]
         fn existing_file() {
-            let tempdir = TempDir::new("").unwrap();
+            let tempdir = TempDir::new().unwrap();
             let file_path = tempdir.path().join("file");
             let object = MyStruct {
                 field1: 50_000,

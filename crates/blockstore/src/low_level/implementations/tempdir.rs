@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use crate::{
     BlockId, Overhead, RemoveResult, TryCreateResult,
@@ -28,7 +28,10 @@ pub struct TempDirBlockStore {
 
 impl TempDirBlockStore {
     pub fn new() -> AsyncDropGuard<Self> {
-        let tempdir = TempDir::new("cryfs-tempdir-blockstore").expect("Failed to create tempdir");
+        let tempdir = tempfile::Builder::new()
+            .prefix("cryfs-tempdir-blockstore")
+            .tempdir()
+            .expect("Failed to create tempdir");
         let path = tempdir.path().to_owned();
         AsyncDropGuard::new(Self {
             _tempdir: tempdir,

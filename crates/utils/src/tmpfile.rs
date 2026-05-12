@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 /// # Examples
 ///
 /// ```no_run
-/// use cryfs_utils::tempfile::TempFile;
+/// use cryfs_utils::tmpfile::TempFile;
 /// use std::path::PathBuf;
 ///
 /// let temp = TempFile::create(PathBuf::from("/tmp/my_temp_file")).unwrap();
@@ -74,11 +74,11 @@ impl Drop for TempFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_create_file_exists() {
-        let dir = TempDir::new("tempfile_test").unwrap();
+        let dir = TempDir::new().unwrap();
         let path = dir.path().join("test_file");
 
         let temp = TempFile::create(path.clone()).unwrap();
@@ -89,7 +89,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_async_file_exists() {
-        let dir = TempDir::new("tempfile_test_async").unwrap();
+        let dir = TempDir::new().unwrap();
         let path = dir.path().join("test_file_async");
 
         let temp = TempFile::create_async(path.clone()).await.unwrap();
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_path_returns_correct_path() {
-        let dir = TempDir::new("tempfile_test_path").unwrap();
+        let dir = TempDir::new().unwrap();
         let path = dir.path().join("test_file");
 
         let temp = TempFile::create(path.clone()).unwrap();
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_file_deleted_on_drop() {
-        let dir = TempDir::new("tempfile_test_drop").unwrap();
+        let dir = TempDir::new().unwrap();
         let path = dir.path().join("test_file");
 
         {

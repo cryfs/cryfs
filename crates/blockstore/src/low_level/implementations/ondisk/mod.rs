@@ -357,7 +357,7 @@ mod tests {
         low_level::LLFixture,
         utils::{blockid, data},
     };
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     struct TestFixture {
         basedir: TempDir,
@@ -366,7 +366,10 @@ mod tests {
     impl LLFixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {
-            let basedir = TempDir::new("OnDiskBlockStoreTest").unwrap();
+            let basedir = tempfile::Builder::new()
+                .prefix("OnDiskBlockStoreTest")
+                .tempdir()
+                .unwrap();
             Self { basedir }
         }
         async fn store(&mut self) -> AsyncDropGuard<OnDiskBlockStore> {

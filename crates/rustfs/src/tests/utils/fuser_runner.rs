@@ -1,5 +1,5 @@
 use std::sync::OnceLock;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
 
@@ -34,7 +34,10 @@ impl Runner {
         let implementation = SyncDrop::new(AsyncDropArc::new(AsyncDropGuard::new(mock_fs.fs)));
 
         let runtime = tokio::runtime::Handle::current();
-        let mountpoint = TempDir::new("rustfs-test-mock-mount").unwrap();
+        let mountpoint = tempfile::Builder::new()
+            .prefix("rustfs-test-mock-mount")
+            .tempdir()
+            .unwrap();
         let running_filesystem = spawn_mount(
             AsyncDropArc::clone(implementation.inner()),
             mountpoint.path(),

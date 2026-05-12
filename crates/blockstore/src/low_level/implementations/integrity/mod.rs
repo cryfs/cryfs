@@ -513,7 +513,7 @@ mod generic_tests {
     use crate::low_level::InMemoryBlockStore;
     use crate::tests::low_level::LLFixture;
     use std::num::NonZeroU32;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
 
@@ -530,7 +530,10 @@ mod generic_tests {
     {
         type ConcreteBlockStore = IntegrityBlockStore<InMemoryBlockStore>;
         fn new() -> Self {
-            let integrity_file_dir = TempDir::new("IntegrityBlockStore").unwrap();
+            let integrity_file_dir = tempfile::Builder::new()
+                .prefix("IntegrityBlockStore")
+                .tempdir()
+                .unwrap();
             Self { integrity_file_dir }
         }
         async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
@@ -629,7 +632,7 @@ mod specialized_tests {
     use cryfs_utils::async_drop::SyncDrop;
     use futures::future::BoxFuture;
     use std::sync::{Arc, Mutex};
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     struct Fixture {
         underlying: SyncDrop<SharedBlockStore<InMemoryBlockStore>>,
@@ -641,7 +644,10 @@ mod specialized_tests {
         fn new() -> Self {
             Self {
                 underlying: SyncDrop::new(SharedBlockStore::new(InMemoryBlockStore::new())),
-                integrity_file_dir: TempDir::new("test").unwrap(),
+                integrity_file_dir: tempfile::Builder::new()
+                    .prefix("test")
+                    .tempdir()
+                    .unwrap(),
                 integrity_violation_triggered: Arc::new(Mutex::new(None)),
             }
         }

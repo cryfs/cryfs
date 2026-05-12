@@ -2,7 +2,7 @@ use byte_unit::Byte;
 use derive_more::{Add, AddAssign, Sum};
 use std::fmt::Debug;
 use std::num::NonZeroU32;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use cryfs_blobstore::{BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
@@ -129,7 +129,10 @@ where
         TempDir,
         AsyncDropGuard<HLSharedBlockStore<HLTrackingBlockStore<LockingBlockStore<DynBlockStore>>>>,
     ) {
-        let local_state_tempdir = TempDir::new("cryfs-e2e-perf-tests").unwrap();
+        let local_state_tempdir = tempfile::Builder::new()
+            .prefix("cryfs-e2e-perf-tests")
+            .tempdir()
+            .unwrap();
 
         let locking_blockstore = setup_blockstore_stack_dyn(
             LLSharedBlockStore::clone(&ll_blockstore),

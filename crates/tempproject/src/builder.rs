@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 use super::project::TempProject;
 
@@ -63,7 +63,7 @@ impl TempProjectBuilder {
     /// ```
     pub fn new() -> Result<Self> {
         Ok(Self {
-            folder: TempDir::new("tempproject")?,
+            folder: tempfile::Builder::new().prefix("tempproject").tempdir()?,
             cargo: None,
             main: None,
         })

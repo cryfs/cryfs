@@ -125,7 +125,7 @@ pub mod testutils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::testutils::{clientid, version};
     use crate::tests::utils::blockid;
@@ -138,7 +138,10 @@ mod tests {
     impl Fixture {
         pub fn new() -> Self {
             Self {
-                state_file_dir: TempDir::new("OnDiskBlockStoreTest").unwrap(),
+                state_file_dir: tempfile::Builder::new()
+                    .prefix("OnDiskBlockStoreTest")
+                    .tempdir()
+                    .unwrap(),
             }
         }
 

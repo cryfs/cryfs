@@ -11,7 +11,7 @@ use std::{
     sync::{Arc, Mutex},
     time::{Duration, SystemTime},
 };
-use tempdir::TempDir;
+use tempfile::TempDir;
 use tokio::{
     fs::{self, File, OpenOptions},
     io::{AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _},
@@ -216,7 +216,10 @@ where
             >,
         >,
     ) -> AsyncDropGuard<Self> {
-        let mountdir = TempDir::new("cryfs-syscall-driver").unwrap();
+        let mountdir = tempfile::Builder::new()
+            .prefix("cryfs-syscall-driver")
+            .tempdir()
+            .unwrap();
         let fs = Mutex::new(MaybeMounted::NotMounted { device });
         AsyncDropGuard::new(Self { mountdir, fs })
     }

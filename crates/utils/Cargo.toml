@@ -42,7 +42,7 @@ divrem.workspace = true
 libc.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
-tempdir.workspace = true
+tempfile.workspace = true
 rand.workspace = true
 
 [features]

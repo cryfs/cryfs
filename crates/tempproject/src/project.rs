@@ -3,7 +3,7 @@ use is_executable::IsExecutable;
 use std::path::{Path, PathBuf};
 use std::string::FromUtf8Error;
 use std::sync::OnceLock;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use thiserror::Error;
 
 /// Error returned when a cargo build or process execution fails.

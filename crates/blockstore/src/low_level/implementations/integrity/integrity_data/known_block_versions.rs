@@ -411,7 +411,6 @@ mod tests {
     use cryfs_utils::testutils::asserts::assert_unordered_vec_eq;
 
     use common_macros::hash_map;
-    use tempdir::TempDir;
 
     fn clientid(id: u32) -> ClientId {
         ClientId {
@@ -1589,7 +1588,7 @@ mod tests {
 
         #[test]
         fn test_givenNoFile_whenLoading_thenReturnsDefault() {
-            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let nonexisting_path = tempdir.path().join("not-existing");
             let loaded = KnownBlockVersions::load_or_default(&nonexisting_path).unwrap();
             assert_eq!(
@@ -1603,7 +1602,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_givenEmptyObject_withNoPreviousViolation_whenSavingAndLoading_thenSucceeds() {
-            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let filepath = tempdir.path().join("file");
             let obj = KnownBlockVersions::default();
 
@@ -1620,7 +1619,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_givenEmptyObject_withPreviousViolation_whenSavingAndLoading_thenSucceeds() {
-            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let filepath = tempdir.path().join("file");
             let obj = KnownBlockVersions::default();
             obj.set_integrity_violation_in_previous_run();
@@ -1638,7 +1637,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_givenNonEmptyObject_whenSavingAndLoading_thenSucceeds() {
-            let tempdir = tempdir::TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let filepath = tempdir.path().join("file");
             let obj = KnownBlockVersions::default();
             obj.lock_block_info(blockid(1))
@@ -1703,7 +1702,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_backwards_compatibility_empty_file() {
-            let tempdir = TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let path = tempdir.path().join("file");
             write_file(&path, &base64_STANDARD.decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
             let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
@@ -1713,7 +1712,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_backwards_compatibility_empty_file_with_previous_violation() {
-            let tempdir = TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let path = tempdir.path().join("file");
             write_file(&path, &base64_STANDARD.decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQABAAAAAAAAAAAAAAAAAAAAAA==").unwrap());
             let obj = KnownBlockVersions::load(&path).unwrap().unwrap();
@@ -1723,7 +1722,7 @@ mod tests {
 
         #[tokio::test]
         async fn test_backwards_compatibility_nonempty_file() {
-            let tempdir = TempDir::new("test").unwrap();
+            let tempdir = tempfile::Builder::new().prefix("test").tempdir().unwrap();
             let path = tempdir.path().join("file");
             write_file(&path, &base64_STANDARD.decode("Y3J5ZnMuaW50ZWdyaXR5ZGF0YS5rbm93bmJsb2NrdmVyc2lvbnM7MQAAAwAAAAAAAACJZ0Ujkyo4nuFLxwkKx3KXIUkbtAIAAAAAAAAAeFY0EhSRu0kyo4nuFLxwkKx3KXIFAAAAAAAAAIlnRSMUkbtJMqOJ7hS8cJCsdylyCgAAAAAAAAACAAAAAAAAAJMqOJ7hS8cJCsdylyFJG7QAAAAAFJG7STKjie4UvHCQrHcpcnhWNBI=").unwrap());
             let obj = KnownBlockVersions::load(&path).unwrap().unwrap();

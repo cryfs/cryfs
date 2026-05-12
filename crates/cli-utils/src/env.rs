@@ -166,7 +166,6 @@ mod tests {
     mod local_state_dir {
         use super::*;
         use std::fs::canonicalize;
-        use tempdir::TempDir;
 
         #[test]
         fn when_not_set_then_returns_default() {
@@ -185,7 +184,10 @@ mod tests {
         #[test]
         fn when_set_to_nonexisting_absolute_dir_then_returns_error() {
             let _lock = lock_test();
-            let tmpdir = TempDir::new("some_path").unwrap();
+            let tmpdir = tempfile::Builder::new()
+                .prefix("some_path")
+                .tempdir()
+                .unwrap();
             let nonexisting_path = tmpdir.path().join("nonexisting");
             let _var = set_env(LOCALSTATEDIR_KEY.into(), &nonexisting_path);
             let env = Environment::read_env();
@@ -202,7 +204,10 @@ mod tests {
         #[test]
         fn when_set_to_existing_absolute_dir_then_returns_dir() {
             let _lock = lock_test();
-            let tmpdir = TempDir::new("some_path").unwrap();
+            let tmpdir = tempfile::Builder::new()
+                .prefix("some_path")
+                .tempdir()
+                .unwrap();
             let _var = set_env(LOCALSTATEDIR_KEY.into(), tmpdir.path());
             let local_state_dir = Environment::read_env().unwrap().local_state_dir;
             assert_eq!(
@@ -214,7 +219,10 @@ mod tests {
         #[test]
         fn when_set_to_nonexisting_relative_dir_without_dot_then_returns_dir() {
             let _lock = lock_test();
-            let tmpdir = TempDir::new("some_path").unwrap();
+            let tmpdir = tempfile::Builder::new()
+                .prefix("some_path")
+                .tempdir()
+                .unwrap();
             let nonexisting_path = tmpdir.path().join("nonexisting");
             let _var = set_env(LOCALSTATEDIR_KEY.into(), &nonexisting_path);
             let env = Environment::read_env();
@@ -231,7 +239,10 @@ mod tests {
         #[test]
         fn when_set_to_existing_relative_dir_without_dot_then_returns_dir() {
             let _lock = lock_test();
-            let tmpdir = TempDir::new("some_path").unwrap();
+            let tmpdir = tempfile::Builder::new()
+                .prefix("some_path")
+                .tempdir()
+                .unwrap();
             let relative_path =
                 pathdiff::diff_paths(tmpdir.path(), std::env::current_dir().unwrap()).unwrap();
             let _var = set_env(LOCALSTATEDIR_KEY.into(), relative_path);
@@ -245,7 +256,10 @@ mod tests {
         #[test]
         fn when_set_to_nonexisting_relative_dir_with_dot_then_returns_dir() {
             let _lock = lock_test();
-            let tmpdir = TempDir::new("some_path").unwrap();
+            let tmpdir = tempfile::Builder::new()
+                .prefix("some_path")
+                .tempdir()
+                .unwrap();
             let nonexisting_path =
                 format!("./{}", tmpdir.path().join("nonexisting").to_str().unwrap());
             let _var = set_env(LOCALSTATEDIR_KEY.into(), &nonexisting_path);
@@ -263,7 +277,10 @@ mod tests {
         #[test]
         fn when_set_to_existing_relative_dir_with_dot_then_returns_dir() {
             let _lock = lock_test();
-            let tmpdir = TempDir::new("some_path").unwrap();
+            let tmpdir = tempfile::Builder::new()
+                .prefix("some_path")
+                .tempdir()
+                .unwrap();
             let relative_path = format!(
                 "./{}",
                 pathdiff::diff_paths(tmpdir.path(), std::env::current_dir().unwrap())

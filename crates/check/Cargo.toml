@@ -36,7 +36,7 @@ tokio-stream.workspace = true
 itertools.workspace = true
 
 [dev-dependencies]
-tempdir.workspace = true
+tempfile.workspace = true
 cryfs-fsblobstore = { path = "../fsblobstore", features = ["testutils"] }
 cryfs-blockstore = { path = "../blockstore", features = ["testutils"] }
 cryfs-config = { path = "../cryfs-config", features = ["testutils"] }

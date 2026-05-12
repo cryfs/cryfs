@@ -18,7 +18,6 @@ use cryfs_runner::{RpcServer, start_background_process};
 use nix::sys::signal::{Signal, kill};
 use nix::sys::wait::{WaitStatus, waitpid};
 use nix::unistd::{ForkResult, Pid, fork, getsid};
-use tempdir::TempDir;
 
 const SENTINEL_ENV: &str = "CRYFS_TEST_DAEMON_SENTINEL";
 const PID_ENV: &str = "CRYFS_TEST_DAEMON_PID";
@@ -78,7 +77,10 @@ impl Drop for DaemonGuard {
 
 #[test]
 fn daemon_survives_parent_exit() {
-    let tmp = TempDir::new("cryfs-daemon-survive-test").unwrap();
+    let tmp = tempfile::Builder::new()
+        .prefix("cryfs-daemon-survive-test")
+        .tempdir()
+        .unwrap();
     let sentinel_path = tmp.path().join("sentinel");
     let pid_path = tmp.path().join("daemon.pid");
 

@@ -32,4 +32,4 @@ nix = { workspace = true, features = ["poll"] }
 
 [dev-dependencies]
 nix = { workspace = true, features = ["poll", "process", "signal"] }
-tempdir.workspace = true
+tempfile.workspace = true
