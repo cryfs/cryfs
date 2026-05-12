@@ -115,6 +115,15 @@ where
     pub fn send_response(&mut self, response: &Response) -> Result<()> {
         self.sender.send(response)
     }
+
+    /// Receive the build-id handshake from the parent. Must be the very first
+    /// read on this server, before any postcard-typed RPC. Bypasses postcard
+    /// so the daemon never deserializes structured data from a parent it
+    /// hasn't yet validated.
+    #[allow(dead_code)] // wired up in the fork+exec switch
+    pub(crate) fn recv_raw_handshake(&mut self) -> Result<Vec<u8>> {
+        self.receiver.recv_raw()
+    }
 }
 
 pub struct RpcClient<Request, Response>
@@ -137,6 +146,15 @@ where
 
     pub fn recv_response(&mut self, timeout: Duration) -> Result<Response> {
         self.receiver.recv_timeout(timeout)
+    }
+
+    /// Send the build-id handshake to the daemon. Must be the very first
+    /// write on this client, before any postcard-typed RPC. Bypasses postcard
+    /// so the receiver can validate schema compatibility before it tries to
+    /// deserialize anything typed.
+    #[allow(dead_code)] // wired up in the fork+exec switch
+    pub(crate) fn send_raw_handshake(&mut self, bytes: &[u8]) -> Result<()> {
+        self.sender.send_raw(bytes)
     }
 }
 

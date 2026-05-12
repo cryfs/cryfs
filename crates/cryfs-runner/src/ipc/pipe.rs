@@ -125,6 +125,18 @@ where
 
     pub fn send(&mut self, data: &T) -> Result<()> {
         let bytes = postcard::to_stdvec(data)?;
+        self.write_length_prefixed(&bytes)
+    }
+
+    /// Send a length-prefixed raw byte payload without postcard encoding.
+    /// Used for the build-id handshake before typed RPC begins: encoding the
+    /// handshake via postcard would defeat its purpose of validating that
+    /// parent and child agree on the postcard schema.
+    pub(crate) fn send_raw(&mut self, bytes: &[u8]) -> Result<()> {
+        self.write_length_prefixed(bytes)
+    }
+
+    fn write_length_prefixed(&mut self, bytes: &[u8]) -> Result<()> {
         if bytes.len() > MAX_MESSAGE_SIZE {
             bail!(
                 "Message size {} exceeds maximum {MAX_MESSAGE_SIZE}",
@@ -133,7 +145,7 @@ where
         }
         let len = bytes.len() as u32;
         self.sender.write_all(&len.to_le_bytes())?;
-        self.sender.write_all(&bytes)?;
+        self.sender.write_all(bytes)?;
         Ok(())
     }
 }
@@ -171,6 +183,17 @@ where
     }
 
     pub fn recv(&mut self) -> Result<T> {
+        let buf = self.read_length_prefixed()?;
+        Ok(postcard::from_bytes(&buf)?)
+    }
+
+    /// Receive a length-prefixed raw byte payload without postcard decoding.
+    /// Used for the build-id handshake before typed RPC begins.
+    pub(crate) fn recv_raw(&mut self) -> Result<Vec<u8>> {
+        self.read_length_prefixed()
+    }
+
+    fn read_length_prefixed(&mut self) -> Result<Vec<u8>> {
         self.recver.set_nonblocking(false)?;
         let mut len_bytes = [0u8; 4];
         self.recver.read_exact(&mut len_bytes)?;
@@ -180,7 +203,7 @@ where
         }
         let mut buf = vec![0u8; len];
         self.recver.read_exact(&mut buf)?;
-        Ok(postcard::from_bytes(&buf)?)
+        Ok(buf)
     }
 
     pub fn recv_timeout(&mut self, timeout: Duration) -> Result<T>
@@ -587,6 +610,109 @@ mod tests {
                 "Unexpected error: {:?}",
                 error,
             );
+        }
+    }
+
+    mod raw {
+        use super::*;
+
+        #[test]
+        fn roundtrip_short_payload() {
+            let (mut sender, mut recver) = pipe::<u32>().unwrap();
+            sender.send_raw(b"hello").unwrap();
+            assert_eq!(recver.recv_raw().unwrap(), b"hello");
+        }
+
+        #[test]
+        fn roundtrip_empty_payload() {
+            // Zero-length payload still goes over the wire as
+            // [4-byte length=0] [0 bytes payload]. Receiver must complete.
+            let (mut sender, mut recver) = pipe::<u32>().unwrap();
+            sender.send_raw(b"").unwrap();
+            assert_eq!(recver.recv_raw().unwrap(), b"");
+        }
+
+        #[test]
+        fn roundtrip_near_max_payload() {
+            // A payload just under MAX_MESSAGE_SIZE must round-trip cleanly.
+            // Send/recv concurrently so we don't deadlock against the pipe's
+            // OS-level buffer (~64 KiB on Linux).
+            let payload: Vec<u8> = (0..MAX_MESSAGE_SIZE - 4)
+                .map(|i| (i % 251) as u8)
+                .collect();
+            let expected = payload.clone();
+            let (mut sender, mut recver) = pipe::<u32>().unwrap();
+            let send_thread = thread::spawn(move || {
+                sender.send_raw(&payload).unwrap();
+            });
+            let received = recver.recv_raw().unwrap();
+            send_thread.join().unwrap();
+            assert_eq!(received, expected);
+        }
+
+        #[test]
+        fn payload_over_max_size_rejected_on_send() {
+            // We can't actually allocate the over-sized buffer cheaply, but
+            // we can verify that `send_raw` enforces the same limit as
+            // `send`: it bails before touching the underlying fd, so a
+            // dummy peer-less sender suffices.
+            let (sender, _recver) = interprocess::unnamed_pipe::pipe().unwrap();
+            let mut sender: Sender<u32> = Sender::new(sender);
+            let oversized = vec![0u8; MAX_MESSAGE_SIZE + 1];
+            let err = sender.send_raw(&oversized).unwrap_err();
+            assert!(
+                err.to_string().contains("exceeds maximum"),
+                "Unexpected error: {err:?}",
+            );
+        }
+
+        #[test]
+        fn dropped_sender_gives_eof_to_recv_raw() {
+            let (sender, mut recver) = pipe::<u32>().unwrap();
+            drop(sender);
+            assert!(recver.recv_raw().is_err());
+        }
+
+        #[test]
+        fn length_prefix_is_four_bytes_little_endian() {
+            // Pin the wire format: a `send_raw` of N bytes writes exactly
+            // 4+N bytes total, with the leading 4 bytes being the
+            // little-endian u32 length. The fork+exec daemon child relies on
+            // this format being stable across build_id mismatches (otherwise
+            // the handshake check itself can't be validated).
+            let (sender, mut raw_recver) = interprocess::unnamed_pipe::pipe().unwrap();
+            let mut typed_sender: Sender<u32> = Sender::new(sender);
+            typed_sender.send_raw(b"abc").unwrap();
+            drop(typed_sender);
+            let mut on_wire = Vec::new();
+            raw_recver.read_to_end(&mut on_wire).unwrap();
+            assert_eq!(on_wire, b"\x03\x00\x00\x00abc");
+        }
+
+        #[test]
+        fn send_typed_then_recv_raw_observes_postcard_bytes() {
+            // Encoding asymmetry: `send` postcard-encodes; `recv_raw`
+            // returns the raw bytes that were sent. The receiver of a
+            // build-id handshake therefore sees exactly what the sender
+            // wrote, not postcard-decoded. Pin this with a value that
+            // postcard would encode non-trivially.
+            #[derive(Debug, Serialize, Deserialize)]
+            struct Msg {
+                a: u32,
+                b: String,
+            }
+            let (mut sender, mut recver) = pipe::<Msg>().unwrap();
+            sender
+                .send(&Msg {
+                    a: 0x42,
+                    b: "hi".into(),
+                })
+                .unwrap();
+            let raw = recver.recv_raw().unwrap();
+            // postcard varint-encodes integers and length-prefixes the
+            // string. We don't depend on the exact bytes here, just that
+            // we got something non-empty back.
+            assert!(!raw.is_empty());
         }
     }
 }
