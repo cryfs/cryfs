@@ -173,8 +173,11 @@ mod arguments {
             test_mkdir(
                 &path,
                 async move |driver| driver.mkdir(&path, mode_arg).await,
-                move |_, _req, _parent_ino, _name, mode, _umask| {
-                    assert_eq!(expected_mode_return, mode);
+                move |_, _req, _parent_ino, _name, mode, umask| {
+                    // The kernel applies the calling process's umask to mode before passing
+                    // it to the FUSE handler, so we compare against the post-umask value.
+                    let expected_after_umask = expected_mode_return & !Mode::from(umask);
+                    assert_eq!(expected_after_umask, mode);
                     mkdir_return_ok(mode)
                 },
             )
