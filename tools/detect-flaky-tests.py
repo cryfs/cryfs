@@ -66,6 +66,7 @@ import fcntl
 import os
 import pty
 import re
+import select
 import shutil
 import signal
 import struct
@@ -97,6 +98,8 @@ LOG_SUBDIR = ".flaky-runs"
 LOG_PANEL_LINES = 60  # last N lines of cargo output kept in the log panel
 REFRESH_HZ = 8
 READER_JOIN_TIMEOUT_S = 2.0
+READER_POLL_S = 0.2  # how often the reader thread checks `shutting_down`
+READ_CHUNK_BYTES = 4096
 
 ANSI_ESC_RE = re.compile(rb"\x1b\[[0-9;?]*[a-zA-Z]")
 
@@ -296,22 +299,18 @@ def _normalize_for_log(raw_line: bytes) -> bytes:
 def _drain_reader(
     reader: threading.Thread,
     state: ReaderState,
-    pipe,
     log_path: Path,
 ) -> None:
-    """Wait for the reader thread to exit and release the pipe fd.
+    """Wait for the reader thread to exit.
 
     First join lets a healthy reader drain on its own (clean cargo exit →
-    readline returns b""). Then we always signal shutdown + close the pipe:
-    harmless if the reader already exited, and forces a stuck reader out of
-    `readline()` (e.g. a daemonized grandchild kept the pipe open). The
-    second join collects either case. A surviving reader after both joins
-    gets a warning.
+    read returns b""). Then we signal shutdown — the reader's `select` loop
+    notices on its next `READER_POLL_S` tick and exits. Second join collects
+    it. A reader still alive after both joins is genuinely stuck (very
+    unusual with the select-based design); we record a warning and move on.
     """
     reader.join(timeout=READER_JOIN_TIMEOUT_S)
     state.shutting_down.set()
-    with contextlib.suppress(OSError, ValueError):
-        pipe.close()
     reader.join(timeout=READER_JOIN_TIMEOUT_S)
     if reader.is_alive():
         _warnings.append(
@@ -323,40 +322,73 @@ def _drain_reader(
 
 
 def _stream_to_log(
-    pipe,
+    pipe_fd: int,
     log_path: Path,
-    on_line: Callable[[bytes], None],
+    on_line: "Callable[[bytes], None]",
     state: ReaderState,
 ) -> None:
-    """Reader thread body: copy each line from `pipe` to `log_path` and to the
-    `on_line` callback.
+    """Reader thread body: read raw bytes from `pipe_fd`, write to `log_path`,
+    dispatch lines to `on_line`.
 
-    Owns the log file lifecycle so the file is cleanly closed even if the
-    main thread abandons the reader. Captures unexpected exceptions to
-    `state.error` so the main thread can surface them after join.
+    Uses `select` with `READER_POLL_S` timeouts so the loop periodically
+    checks `state.shutting_down`. This is critical: a blocking `readline()`
+    (the obvious shape) can never be interrupted by another thread when a
+    daemonized grandchild of cargo holds the pipe's write end open — closing
+    the fd from outside doesn't reliably unblock an in-progress `read()`,
+    and `BufferedReader.close()` deadlocks on its own internal lock against
+    the in-progress read. Polling sidesteps both.
+
+    Owns the log file lifecycle. Captures unexpected exceptions to
+    `state.error` so the main thread surfaces them.
     """
+    buf = b""
     try:
         with open(log_path, "wb") as log_file:
-            for raw_line in iter(pipe.readline, b""):
-                log_file.write(ANSI_ESC_RE.sub(b"", _normalize_for_log(raw_line)))
-                on_line(raw_line)
-    except OSError as e:
-        # Linux PTY quirk: when the slave end closes (cargo exits), reading
-        # the master end returns EIO instead of EOF.
-        if e.errno == errno.EIO:
-            return
-        # Pipe was closed from the main thread during cleanup — expected.
-        if state.shutting_down.is_set():
-            return
-        state.error = e
-    except ValueError as e:
-        # readline() on a closed file raises ValueError; only expected
-        # during shutdown.
-        if state.shutting_down.is_set():
-            return
-        state.error = e
+            while not state.shutting_down.is_set():
+                try:
+                    ready, _, _ = select.select([pipe_fd], [], [], READER_POLL_S)
+                except (OSError, ValueError) as e:
+                    # fd was closed underneath us, or invalid.
+                    if state.shutting_down.is_set():
+                        return
+                    if isinstance(e, OSError) and e.errno == errno.EBADF:
+                        return
+                    state.error = e
+                    return
+                if not ready:
+                    continue
+                try:
+                    chunk = os.read(pipe_fd, READ_CHUNK_BYTES)
+                except OSError as e:
+                    # Linux PTY quirk: when the slave end closes (cargo
+                    # exits), reading the master end returns EIO instead of
+                    # the normal 0-byte EOF.
+                    if e.errno == errno.EIO:
+                        break
+                    if state.shutting_down.is_set():
+                        return
+                    state.error = e
+                    return
+                if not chunk:
+                    break  # EOF (regular pipe, all writers closed)
+                buf += chunk
+                # Emit every complete line; keep any trailing partial line
+                # in `buf` for the next iteration.
+                while b"\n" in buf:
+                    head, _, buf = buf.partition(b"\n")
+                    line = head + b"\n"
+                    log_file.write(ANSI_ESC_RE.sub(b"", _normalize_for_log(line)))
+                    on_line(line)
+            # Flush any trailing partial line (cargo exited without final \n,
+            # or we're shutting down with bytes buffered). Both sinks are
+            # thread-safe, so we emit unconditionally — the log file would
+            # otherwise have bytes plain mode never saw on stdout.
+            if buf:
+                log_file.write(ANSI_ESC_RE.sub(b"", _normalize_for_log(buf)))
+                on_line(buf)
     except Exception as e:
-        state.error = e
+        if not state.shutting_down.is_set():
+            state.error = e
 
 
 def run_cargo(
@@ -412,14 +444,28 @@ def run_cargo(
     if slave_fd is not None:
         # Parent doesn't need the slave end; cargo holds it via dup2.
         os.close(slave_fd)
-        pipe = os.fdopen(master_fd, "rb")  # type: ignore[arg-type]
+        pipe_fd = master_fd
     else:
-        pipe = proc.stdout  # type: ignore[assignment]
+        # `os.dup` gives the reader its own independent fd so it can never
+        # race with `proc.stdout` (a BufferedReader) prefetching into its
+        # internal buffer and stealing bytes. Both fds are closed in `finally`.
+        try:
+            pipe_fd = os.dup(proc.stdout.fileno())  # type: ignore[union-attr]
+        except OSError as e:
+            # fd exhaustion right after a successful Popen is extremely rare,
+            # but if it happens we must not leak the running cargo group.
+            with contextlib.suppress(ProcessLookupError, OSError):
+                os.killpg(proc.pid, signal.SIGKILL)
+            with contextlib.suppress(Exception):
+                proc.wait(timeout=5.0)
+            raise FlakyRunnerError(
+                f"Failed to duplicate cargo stdout fd: {e}"
+            ) from e
 
     reader_state = ReaderState()
     reader = threading.Thread(
         target=_stream_to_log,
-        args=(pipe, log_path, on_line, reader_state),
+        args=(pipe_fd, log_path, on_line, reader_state),
         daemon=True,
     )
     reader.start()
@@ -445,7 +491,15 @@ def run_cargo(
                 os.killpg(proc.pid, signal.SIGKILL)
         raise
     finally:
-        _drain_reader(reader, reader_state, pipe, log_path)
+        _drain_reader(reader, reader_state, log_path)
+        # Release the fd the reader was using. For PTY: we own master_fd.
+        # For PIPE: the dup'd fd we made for the reader; proc.stdout will
+        # close its own fd via Popen's cleanup.
+        with contextlib.suppress(OSError):
+            os.close(pipe_fd)
+        if slave_fd is None and proc.stdout is not None:
+            with contextlib.suppress(OSError, ValueError):
+                proc.stdout.close()
 
     if reader_state.error is not None:
         raise FlakyRunnerError(
