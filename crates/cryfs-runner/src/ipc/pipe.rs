@@ -5,7 +5,7 @@ use serde::{Serialize, de::DeserializeOwned};
 use std::{
     io::{Read, Write},
     marker::PhantomData,
-    os::fd::AsFd,
+    os::fd::{AsFd, AsRawFd},
     time::{Duration, Instant},
 };
 
@@ -14,13 +14,45 @@ const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
 
 /// Create a new pipe that can be used across forking for interprocess communication.
 ///
+/// Both ends are set CLOEXEC so they're closed by the kernel during `execve`.
+/// The fork+exec daemon spawn relies on this: only fds explicitly `dup2`'d in
+/// the `pre_exec` closure (which clears CLOEXEC as a side effect) survive into
+/// the child. The underlying `interprocess` crate doesn't set CLOEXEC, so we
+/// have to.
+///
+/// Note: the CLOEXEC set is *not* atomic with pipe creation — there's a brief
+/// window between `interprocess::pipe()` returning and the `fcntl` call below
+/// where a concurrent `fork()` would inherit the still-non-CLOEXEC fds.
+/// Callers must avoid concurrent forks across that window. This is satisfied
+/// today because the only caller (the daemon spawn path) runs single-threaded
+/// before tokio starts.
+///
 /// T: The type of the data that will be sent through the pipe.
 pub fn pipe<T>() -> Result<(Sender<T>, Receiver<T>)>
 where
     T: Serialize + DeserializeOwned,
 {
     let (sender, recver) = interprocess::unnamed_pipe::pipe()?;
+    set_cloexec(sender.as_raw_fd())?;
+    set_cloexec(recver.as_raw_fd())?;
     Ok((Sender::new(sender), Receiver::new(recver)))
+}
+
+fn set_cloexec(fd: std::os::fd::RawFd) -> Result<()> {
+    // SAFETY: `fd` is an open file descriptor returned by `pipe()` and still
+    // owned by the `interprocess` wrapper, so it's valid for the duration of
+    // both fcntl calls. F_GETFD has no side effects beyond returning flags.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFD) };
+    if flags < 0 {
+        bail!("fcntl(F_GETFD) failed: {}", std::io::Error::last_os_error());
+    }
+    // SAFETY: Same as above. F_SETFD only modifies the descriptor's flags
+    // (we OR in FD_CLOEXEC, preserving any others); it doesn't affect the
+    // underlying file or pipe state.
+    if unsafe { libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC) } < 0 {
+        bail!("fcntl(F_SETFD) failed: {}", std::io::Error::last_os_error());
+    }
+    Ok(())
 }
 
 pub struct Sender<T>
@@ -148,6 +180,7 @@ fn read_exact_with_timeout<R: Read + AsFd>(
 mod tests {
     use super::*;
     use serde::Deserialize;
+    use std::os::fd::AsRawFd;
     use std::thread;
 
     #[test]
@@ -155,6 +188,27 @@ mod tests {
         let (mut sender, recver) = pipe::<u32>().unwrap();
         drop(recver);
         assert!(sender.send(&42).is_err());
+    }
+
+    #[test]
+    fn pipe_ends_have_cloexec_set() {
+        // Both ends of pipes created by our `pipe()` wrapper must have
+        // FD_CLOEXEC set, so they're closed automatically by the kernel when
+        // the cryfs daemon child execs the new binary. The underlying
+        // `interprocess` crate does not set CLOEXEC, so we set it ourselves
+        // right after pipe creation.
+        let (sender, recver) = pipe::<u32>().unwrap();
+        for (label, raw_fd) in [
+            ("sender", sender.sender.as_raw_fd()),
+            ("recver", recver.recver.as_raw_fd()),
+        ] {
+            let flags = unsafe { libc::fcntl(raw_fd, libc::F_GETFD) };
+            assert!(flags >= 0, "fcntl(F_GETFD) failed for {label}");
+            assert!(
+                flags & libc::FD_CLOEXEC != 0,
+                "{label} end of pipe is missing FD_CLOEXEC (flags={flags:#x})",
+            );
+        }
     }
 
     mod recv {
