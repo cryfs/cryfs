@@ -41,14 +41,10 @@ jobs:
       - name: Install Dependencies (MacOS)
         if: ${{ runner.os == 'macOS' }}
         run: brew install pkg-config macfuse
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-          default: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: ${{ matrix.command }}
-          args: ${{ matrix.features }} ${{ matrix.profile }}
+      - run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
@@ -68,10 +64,7 @@ jobs:
       - uses: actions/checkout@v6
       - name: Install Dependencies
         run: sudo apt-get install -y fuse3 libfuse3-dev
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
+      - uses: dtolnay/rust-toolchain@stable
       - name: cargo check
         working-directory: ./crates/${{ matrix.crate }}
         run: cargo check ${{ matrix.profile }} ${{ matrix.features }} ${{matrix.targets}}
@@ -98,11 +91,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: rustfmt
-          default: true
       - uses: mbrobbel/rustfmt-check@0.5.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -122,10 +113,7 @@ jobs:
     - uses: actions/checkout@v6
     - name: Install Dependencies
       run: sudo apt-get install -y fuse3 libfuse3-dev
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        default: true
+    - uses: dtolnay/rust-toolchain@stable
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
@@ -135,10 +123,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         uses: jlumbroso/free-disk-space@v1.3.1
       - uses: actions/checkout@v6
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
+      - uses: dtolnay/rust-toolchain@stable
       # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
