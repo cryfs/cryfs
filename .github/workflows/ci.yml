@@ -36,6 +36,10 @@ jobs:
         features: ["", "--no-default-features"]
         toolchain: ["stable", "nightly", "1.95"]
     runs-on: ${{matrix.os}}
+    # Temporary diagnostic cap so macOS jobs fail (and upload their log
+    # artifact) well before the 6h job-level limit. Remove once the macOS
+    # hang is understood.
+    timeout-minutes: 75
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
@@ -53,7 +57,16 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
       - name: cargo ${{ matrix.command }}
         shell: bash
-        run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} 2>&1 | tee cargo-output.log
+        # --no-fail-fast: keep running other tests after one fails so the log
+        # captures the full failure surface.
+        # --nocapture: stream each test's stdout/stderr to the log so a hang
+        # leaves the last-running test name visible in cargo-output.log.
+        env:
+          RUST_BACKTRACE: "1"
+        run: |
+          set -o pipefail
+          cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} \
+              --no-fail-fast -- --nocapture 2>&1 | tee cargo-output.log
       - name: Upload cargo output on failure
         if: failure()
         uses: actions/upload-artifact@v4
