@@ -28,8 +28,8 @@ jobs:
           - macos-15
           - macos-15-intel
           - macos-26
-          - ubuntu-22.04
-          - ubuntu-24.04
+          # Linux jobs temporarily disabled on this diagnostic branch — we're
+          # only chasing the macOS hang. Restore before merging back.
         command: ["test"]
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
@@ -96,6 +96,9 @@ jobs:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
     name: check
+    # Disabled on this diagnostic branch (Linux-only job, we're chasing
+    # macOS). Restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -143,6 +146,8 @@ jobs:
   #         args: --all-features --all-targets -- -D warnings
   code_format:
     name: Code Formatter (rustfmt)
+    # Disabled on this diagnostic branch — restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -164,6 +169,8 @@ jobs:
   #   - run: git diff --exit-code
   dead_doc_links:
     name: Find dead doc links
+    # Disabled on this diagnostic branch — restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -175,6 +182,8 @@ jobs:
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
+    # Disabled on this diagnostic branch — restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
