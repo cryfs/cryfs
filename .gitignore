@@ -2,3 +2,4 @@ target
 .claude/scheduled_tasks.lock
 .flaky-runs/
 __pycache__/
+.mcp.json
