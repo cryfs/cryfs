@@ -36,6 +36,16 @@ impl BackgroundSession for fuser::BackgroundSession {
         // is what actively unmounts. It returns `Err` if the unmount failed OR the background thread
         // (which runs `destroy()`) panicked — fuser converts that thread panic into an `io::Error`. We
         // surface that to the caller rather than deciding here, so each call site picks its own policy.
+        //
+        // NOTE: when unprivileged, `umount_and_join()` unmounts via a lazy `umount2(MNT_DETACH)`, which
+        // does not abort the FUSE connection until the kernel destroys the superblock. If kernel-side
+        // references linger (e.g. dcache entries pinned by earlier lookups), the background thread can
+        // block in `read()` on `/dev/fuse` and this join can hang. The test harness force-aborts the
+        // connection on teardown to avoid exactly this; production relies on the kernel tearing the
+        // connection down on its own (production doesn't unmount mid-activity, so it isn't seen there).
+        // TODO If a production hang is ever observed here, escalate to "join with a timeout, abort the
+        // connection only if it doesn't complete" — never an unconditional abort, which would fail any
+        // in-flight request on every unmount.
         self.umount_and_join()
     }
     fn is_finished(&self) -> bool {

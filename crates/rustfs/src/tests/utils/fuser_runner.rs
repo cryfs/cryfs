@@ -66,15 +66,88 @@ impl Runner {
 
 impl Drop for Runner {
     fn drop(&mut self) {
-        // Production's `RunningFilesystem::Drop` only logs unmount/destroy failures; in tests we want
-        // them to fail loudly. Unmount explicitly here (which also ensures it happens before the mock
-        // `_implementation` drops, matching the required member order) and `safe_panic!` on error —
-        // that panics normally, but degrades to stderr if we're already unwinding (e.g. an assertion
-        // already failed), avoiding a double-panic abort that would mask the original failure.
+        // The fuser background thread blocks in `read()` on `/dev/fuse` until
+        // the FUSE connection is aborted. When unprivileged, fuser's own drop
+        // only does a lazy `umount2(MNT_DETACH)`, which defers that abort until
+        // the kernel evicts the dcache entries pinned by our `LOOKUP`/`MKDIR`
+        // calls — so the `join()` in `RunningFilesystem::drop` (the
+        // `_running_filesystem` field, dropped right after this body) can hang
+        // forever. Force the abort here, while we still hold the mountpoint, so
+        // the join completes. This is deliberately a test-only concern:
+        // production lets the kernel tear the connection down on its own and
+        // must not force-abort in-flight requests on every unmount.
+        #[cfg(target_os = "linux")]
+        force_abort_fuse_connection(self.mountpoint.path());
+
+        // Unmount explicitly and fail the test loudly on error. The unmount also
+        // happens when the `_running_filesystem` field is dropped right after this
+        // body, but `RunningFilesystem::Drop` only *logs* unmount/destroy failures
+        // (correct for production, where aborting a user's process on a benign
+        // unmount hiccup is worse than logging). In tests we want those failures —
+        // including a panic in the background thread's `destroy()`, which fuser
+        // surfaces as an `Err` from `unmount_join` — to fail the test. The
+        // force-abort above ensures this `unmount_join` doesn't itself hang.
+        // `safe_panic!` panics normally but degrades to stderr if we're already
+        // unwinding (e.g. an assertion already failed), avoiding a double-panic
+        // abort that would mask the original failure.
         if let Err(err) = self._running_filesystem.unmount_join() {
             safe_panic!("Test filesystem unmount failed: {err}");
         }
     }
+}
+
+/// Writes `"1"` to `/sys/fs/fuse/connections/<id>/abort`, which calls
+/// `fuse_abort_conn` directly and makes the background thread's blocked
+/// `read()` return regardless of dcache state. Best-effort: a missing control
+/// file means the kernel already tore the connection down on its own.
+#[cfg(target_os = "linux")]
+fn force_abort_fuse_connection(mountpoint: &std::path::Path) {
+    let Some(id) = fuse_connection_id_for_mountpoint(mountpoint) else {
+        return;
+    };
+    let path = format!("/sys/fs/fuse/connections/{id}/abort");
+    if let Err(err) = std::fs::write(&path, b"1") {
+        if err.kind() != std::io::ErrorKind::NotFound {
+            log::warn!("Failed to write FUSE abort file {path}: {err}");
+        }
+    }
+}
+
+/// Resolves a FUSE mountpoint to its connection id (= `minor(st_dev)`) via
+/// `/proc/self/mountinfo`. Reading mountinfo avoids `stat`-ing the mountpoint,
+/// which would issue a `GETATTR` the mock filesystem doesn't expect.
+#[cfg(target_os = "linux")]
+fn fuse_connection_id_for_mountpoint(mountpoint: &std::path::Path) -> Option<u32> {
+    // mountinfo stores kernel-canonicalized absolute paths. Canonicalize the
+    // *parent* and re-join the final component so a symlinked `$TMPDIR` still
+    // matches, without `stat`-ing the mountpoint itself.
+    let mountpoint = match (mountpoint.parent(), mountpoint.file_name()) {
+        (Some(parent), Some(name)) => std::fs::canonicalize(parent)
+            .map(|p| p.join(name))
+            .unwrap_or_else(|_| mountpoint.to_path_buf()),
+        _ => mountpoint.to_path_buf(),
+    };
+    let mountpoint_str = mountpoint.to_str()?;
+    let mountinfo = std::fs::read_to_string("/proc/self/mountinfo").ok()?;
+    for line in mountinfo.lines() {
+        // Format: mount_id parent_id major:minor root mountpoint mount_opts ...
+        let mut fields = line.split_whitespace();
+        let _mount_id = fields.next()?;
+        let _parent_id = fields.next()?;
+        let major_minor = fields.next()?;
+        let _root = fields.next()?;
+        let mp = fields.next()?;
+        if mp == mountpoint_str {
+            let (_major, minor) = major_minor.split_once(':')?;
+            return minor.parse().ok();
+        }
+    }
+    log::warn!(
+        "Could not resolve FUSE connection id for mountpoint {mountpoint_str} \
+         in /proc/self/mountinfo; teardown will fall back to fuser's lazy \
+         unmount, which may hang"
+    );
+    None
 }
 
 static LOG_INIT: OnceLock<()> = OnceLock::new();
