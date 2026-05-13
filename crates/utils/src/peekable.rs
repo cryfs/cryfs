@@ -44,22 +44,22 @@ mod tests {
     #[test]
     fn test_is_empty_on_empty_iterator() {
         let mut iter = std::iter::empty::<i32>().peekable();
-        assert!(iter.is_empty());
+        assert!(PeekableExt::is_empty(&mut iter));
     }
 
     #[test]
     fn test_is_empty_on_nonempty_iterator() {
         let mut iter = [1, 2, 3].into_iter().peekable();
-        assert!(!iter.is_empty());
+        assert!(!PeekableExt::is_empty(&mut iter));
     }
 
     #[test]
     fn test_is_empty_after_consuming_all_items() {
         let mut iter = [1].into_iter().peekable();
-        assert!(!iter.is_empty());
+        assert!(!PeekableExt::is_empty(&mut iter));
 
         iter.next();
-        assert!(iter.is_empty());
+        assert!(PeekableExt::is_empty(&mut iter));
     }
 
     #[test]
@@ -67,8 +67,8 @@ mod tests {
         let mut iter = [1, 2].into_iter().peekable();
 
         // Check twice - should still have elements
-        assert!(!iter.is_empty());
-        assert!(!iter.is_empty());
+        assert!(!PeekableExt::is_empty(&mut iter));
+        assert!(!PeekableExt::is_empty(&mut iter));
 
         // First element should still be available
         assert_eq!(Some(1), iter.next());
