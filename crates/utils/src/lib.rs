@@ -17,8 +17,8 @@ pub mod peekable;
 pub mod periodic_task;
 pub mod progress;
 pub mod stream;
-pub mod tmpfile;
 pub mod threadpool;
+pub mod tmpfile;
 
 #[cfg(any(test, feature = "testutils"))]
 pub mod testutils;

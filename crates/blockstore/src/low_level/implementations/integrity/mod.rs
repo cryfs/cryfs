@@ -644,10 +644,7 @@ mod specialized_tests {
         fn new() -> Self {
             Self {
                 underlying: SyncDrop::new(SharedBlockStore::new(InMemoryBlockStore::new())),
-                integrity_file_dir: tempfile::Builder::new()
-                    .prefix("test")
-                    .tempdir()
-                    .unwrap(),
+                integrity_file_dir: tempfile::Builder::new().prefix("test").tempdir().unwrap(),
                 integrity_violation_triggered: Arc::new(Mutex::new(None)),
             }
         }
