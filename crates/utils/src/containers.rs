@@ -95,7 +95,7 @@ mod tests {
         fn test_try_insert_new_key_succeeds() {
             let mut map: HashMap<i32, &str> = HashMap::new();
 
-            let result = map.try_insert(1, "one");
+            let result = HashMapExt::try_insert(&mut map, 1, "one");
 
             assert!(result.is_ok());
             assert_eq!(Some(&"one"), map.get(&1));
@@ -105,7 +105,7 @@ mod tests {
         fn test_try_insert_returns_mutable_reference() {
             let mut map: HashMap<i32, String> = HashMap::new();
 
-            let value_ref = map.try_insert(1, String::from("one")).unwrap();
+            let value_ref = HashMapExt::try_insert(&mut map, 1, String::from("one")).unwrap();
             value_ref.push_str(" modified");
 
             assert_eq!(Some(&String::from("one modified")), map.get(&1));
@@ -116,7 +116,7 @@ mod tests {
             let mut map: HashMap<i32, &str> = HashMap::new();
             map.insert(1, "one");
 
-            let result = map.try_insert(1, "uno");
+            let result = HashMapExt::try_insert(&mut map, 1, "uno");
 
             assert!(result.is_err());
             // Original value should be unchanged
@@ -128,7 +128,7 @@ mod tests {
             let mut map: HashMap<i32, &str> = HashMap::new();
             map.insert(1, "one");
 
-            let err = map.try_insert(1, "uno").unwrap_err();
+            let err = HashMapExt::try_insert(&mut map, 1, "uno").unwrap_err();
 
             assert_eq!(&1, err.entry.key());
             assert_eq!(&"one", err.entry.get());
@@ -140,7 +140,7 @@ mod tests {
             let mut map: HashMap<i32, &str> = HashMap::new();
             map.insert(1, "one");
 
-            let err = map.try_insert(1, "uno").unwrap_err();
+            let err = HashMapExt::try_insert(&mut map, 1, "uno").unwrap_err();
             let display = format!("{}", err);
 
             assert!(display.contains("1"));
