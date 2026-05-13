@@ -22,9 +22,11 @@ Build phase (excluded from per-run timing):
     cargo test --no-run [forwarded args]
 Test phase:
     Run 1 uses a generous 2-hour timeout.
-    Runs 2..N use 2 × run 1's elapsed time + 30 s as the timeout (min 60 s),
-    on the theory that a healthy test should never take substantially longer
-    than its first successful run.
+    Runs 2..N use 3 × the longest completed run's elapsed time + 30 s as the
+    timeout (min 60 s), on the theory that a healthy test should never take
+    substantially longer than its slowest previous successful run. The
+    longest-run baseline is refreshed after every run, so a run that legitimately
+    takes longer than its predecessors widens the timeout for the runs after it.
 
 Output: when stdout is a TTY (and `--plain` wasn't passed), a `rich` TUI
 shows scrolling cargo output on top and a status panel (run X/N, elapsed,
@@ -92,7 +94,7 @@ from rich.text import Text
 GRACE_AFTER_SIGTERM_S: float = 30.0
 FIRST_RUN_TIMEOUT_S: float = 2 * 60 * 60  # 2 hours
 MIN_SUBSEQUENT_TIMEOUT_S: float = 60.0
-SUBSEQUENT_TIMEOUT_MULTIPLIER: float = 2.0
+SUBSEQUENT_TIMEOUT_MULTIPLIER: float = 3.0
 SUBSEQUENT_TIMEOUT_JITTER_PAD_S: float = 30.0
 LOG_SUBDIR = ".flaky-runs"
 LOG_PANEL_LINES = 60  # last N lines of cargo output kept in the log panel
@@ -150,10 +152,10 @@ def stats_line(times: list[float]) -> str:
     )
 
 
-def subsequent_timeout(first_run_elapsed: float) -> float:
+def subsequent_timeout(longest_run_elapsed: float) -> float:
     return max(
         MIN_SUBSEQUENT_TIMEOUT_S,
-        SUBSEQUENT_TIMEOUT_MULTIPLIER * first_run_elapsed
+        SUBSEQUENT_TIMEOUT_MULTIPLIER * longest_run_elapsed
         + SUBSEQUENT_TIMEOUT_JITTER_PAD_S,
     )
 
@@ -761,7 +763,7 @@ def run_all(
         timeout = (
             FIRST_RUN_TIMEOUT_S
             if not elapsed_times
-            else subsequent_timeout(elapsed_times[0])
+            else subsequent_timeout(max(elapsed_times))
         )
         log_path = log_dir / f"run-{i:0{width}d}.log"
         display.announce_run(i, args.num_runs, timeout, log_path.relative_to(repo))
@@ -865,7 +867,7 @@ def main(argv: list[str]) -> int:
     print(f"  Run 1 timeout:        {fmt_duration(FIRST_RUN_TIMEOUT_S)}")
     print(
         f"  Subsequent timeouts:  "
-        f"{SUBSEQUENT_TIMEOUT_MULTIPLIER:g}× run 1's elapsed time "
+        f"{SUBSEQUENT_TIMEOUT_MULTIPLIER:g}× longest completed run's elapsed time "
         f"+ {fmt_duration(SUBSEQUENT_TIMEOUT_JITTER_PAD_S)} "
         f"(min {fmt_duration(MIN_SUBSEQUENT_TIMEOUT_S)})"
     )
