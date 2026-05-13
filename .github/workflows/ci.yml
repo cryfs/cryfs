@@ -68,7 +68,9 @@ jobs:
           cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} \
               --no-fail-fast -- --nocapture 2>&1 | tee cargo-output.log
       - name: Upload cargo output on failure
-        if: failure()
+        # Also upload on cancelled() so timeout-minutes-triggered cancellations
+        # still produce the artifact we need to diagnose the hang.
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: cargo-output-${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.command }}${{ matrix.features }}${{ matrix.profile }}
