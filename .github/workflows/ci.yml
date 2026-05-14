@@ -2,6 +2,7 @@ name: CI
 
 permissions:
   contents: read
+  pull-requests: write
 
 on:
   - push
@@ -27,14 +28,18 @@ jobs:
           - macos-15
           - macos-15-intel
           - macos-26
-          - ubuntu-22.04
-          - ubuntu-24.04
+          # Linux jobs temporarily disabled on this diagnostic branch — we're
+          # only chasing the macOS hang. Restore before merging back.
         command: ["test"]
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         features: ["", "--no-default-features"]
         toolchain: ["stable", "nightly", "1.95"]
     runs-on: ${{matrix.os}}
+    # Temporary diagnostic cap so macOS jobs fail (and upload their log
+    # artifact) well before the 6h job-level limit. Remove once the macOS
+    # hang is understood.
+    timeout-minutes: 75
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
@@ -50,11 +55,52 @@ jobs:
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
           toolchain: ${{ matrix.toolchain }}
-      - run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
+      - name: cargo ${{ matrix.command }}
+        shell: bash
+        # --no-fail-fast: keep running other tests after one fails so the log
+        # captures the full failure surface.
+        # --nocapture: stream each test's stdout/stderr to the log so a hang
+        # leaves the last-running test name visible in cargo-output.log.
+        env:
+          RUST_BACKTRACE: "1"
+        run: |
+          set -o pipefail
+          cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} \
+              --no-fail-fast -- --nocapture 2>&1 | tee cargo-output.log
+      - name: Upload cargo output on failure
+        # Also upload on cancelled() so timeout-minutes-triggered cancellations
+        # still produce the artifact we need to diagnose the hang.
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-output-${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.command }}${{ matrix.features }}${{ matrix.profile }}
+          path: cargo-output.log
+          if-no-files-found: ignore
+      - name: Post cargo tail to PR on failure
+        if: (failure() || cancelled()) && github.event_name == 'pull_request' && matrix.os == 'macos-14' && matrix.toolchain == 'stable' && matrix.features == '' && matrix.profile == ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -s cargo-output.log ]; then
+            {
+              echo "### CI failure: \`${{ matrix.os }}\` toolchain=\`${{ matrix.toolchain }}\` features=\`(default)\` profile=\`debug\`"
+              echo ""
+              echo "Last 250 lines of cargo output (job was cancelled at the 75-min timeout):"
+              echo ""
+              echo '```'
+              tail -n 250 cargo-output.log
+              echo '```'
+            } > /tmp/comment.md
+            gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md --repo ${{ github.repository }}
+          fi
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
     name: check
+    # Disabled on this diagnostic branch (Linux-only job, we're chasing
+    # macOS). Restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -102,6 +148,8 @@ jobs:
   #         args: --all-features --all-targets -- -D warnings
   code_format:
     name: Code Formatter (rustfmt)
+    # Disabled on this diagnostic branch — restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -123,6 +171,8 @@ jobs:
   #   - run: git diff --exit-code
   dead_doc_links:
     name: Find dead doc links
+    # Disabled on this diagnostic branch — restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -134,6 +184,8 @@ jobs:
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
+    # Disabled on this diagnostic branch — restore before merging back.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -147,6 +199,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
+        shell: bash
         # Don't pass --all-features. The cryfs-e2e-perf-tests crate's
         # `benchmark` feature switches its perf_test_macro to a
         # criterion-benchmark form that doesn't compile under
@@ -154,7 +207,14 @@ jobs:
         # under `cargo bench`. With --all-features the coverage job
         # fails to compile e2e-perf-tests; without it, every crate
         # uses its default features and llvm-cov can finish.
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info 2>&1 | tee coverage-output.log
+      - name: Upload coverage output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-output
+          path: coverage-output.log
+          if-no-files-found: ignore
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
