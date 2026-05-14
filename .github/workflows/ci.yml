@@ -50,7 +50,35 @@ jobs:
       - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
           toolchain: ${{ matrix.toolchain }}
-      - run: cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
+      - name: cargo ${{ matrix.command }}
+        shell: bash
+        # On GitHub-hosted macOS runners we have to skip the cryfs-rustfs
+        # tests under `tests::mkdir::`: they mount real FUSE sessions via
+        # fuser → macFUSE, and the runner image won't approve macFUSE's
+        # kernel extension (https://github.com/actions/runner-images/issues/4731),
+        # so the mount() syscall hangs forever and the job runs out the
+        # 6h clock. The tests still work on a local macOS where the
+        # operator has approved the kext, so we deliberately don't
+        # cfg-gate them out at compile time — only this CI invocation
+        # skips them. Keep the filter in sync with the test module paths
+        # under crates/rustfs/src/tests/.
+        #
+        # TODO Find a way to run these tests on GitHub-hosted macOS too:
+        #   1. Switch to fuse-t (https://www.fuse-t.org/) — userspace
+        #      FUSE-compatible filesystem that mounts via NFS-to-localhost,
+        #      no kext required. Would need fuser-on-macOS to speak fuse-t's
+        #      protocol instead of macFUSE's.
+        #   2. Find (or self-host) a macOS runner image where macFUSE's
+        #      kext is pre-approved, so the existing path keeps working.
+        #   3. Refactor these tests so they don't actually mount — they
+        #      already run against a MockAsyncFilesystemLL, so in principle
+        #      the FUSE session/mountpoint plumbing could be stubbed.
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir::
+          else
+            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
+          fi
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
