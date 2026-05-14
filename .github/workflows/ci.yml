@@ -77,7 +77,7 @@ jobs:
           path: cargo-output.log
           if-no-files-found: ignore
       - name: Post cargo tail to PR on failure
-        if: failure() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-22.04' && matrix.features == '' && matrix.profile == ''
+        if: (failure() || cancelled()) && github.event_name == 'pull_request' && matrix.os == 'macos-14' && matrix.toolchain == 'stable' && matrix.features == '' && matrix.profile == ''
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,7 +86,7 @@ jobs:
             {
               echo "### CI failure: \`${{ matrix.os }}\` toolchain=\`${{ matrix.toolchain }}\` features=\`(default)\` profile=\`debug\`"
               echo ""
-              echo "Last 250 lines of cargo output:"
+              echo "Last 250 lines of cargo output (job was cancelled at the 75-min timeout):"
               echo ""
               echo '```'
               tail -n 250 cargo-output.log
