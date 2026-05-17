@@ -114,21 +114,25 @@ fn daemon_survives_parent_exit() {
             // Wait for the daemon to publish its PID. The daemon is a
             // grandchild of this test, not a direct child, so we discover it
             // via the PID file rather than waitpid.
+            //
+            // Poll on parseable content rather than just file existence:
+            // `std::fs::write` (used by the daemon) creates the file before
+            // it writes, so a naive `pid_path.exists()` check can win the
+            // race and read an empty file. macOS exposes this race more
+            // often than Linux.
             let pid_deadline = Instant::now() + Duration::from_secs(5);
-            while !pid_path.exists() {
+            let daemon_pid = loop {
+                if let Ok(contents) = std::fs::read_to_string(&pid_path) {
+                    if let Ok(pid) = contents.trim().parse::<i32>() {
+                        break Pid::from_raw(pid);
+                    }
+                }
                 assert!(
                     Instant::now() < pid_deadline,
-                    "daemon did not write PID file within 5s",
+                    "daemon did not publish a parseable PID within 5s",
                 );
                 thread::sleep(Duration::from_millis(20));
-            }
-            let daemon_pid = Pid::from_raw(
-                std::fs::read_to_string(&pid_path)
-                    .expect("read pid file")
-                    .trim()
-                    .parse::<i32>()
-                    .expect("parse pid"),
-            );
+            };
             // Installed *before* any assertion below, so the daemon gets
             // killed even if a check panics.
             let _guard = DaemonGuard(daemon_pid);
