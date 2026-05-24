@@ -1,100 +1,9 @@
+use cryfs_utils::testutils::static_drop::StaticDrop;
 use indoc::indoc;
 use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;
 use rstest::rstest;
 use tempproject::{TempProject, TempProjectBuilder};
-
-use static_drop::StaticDrop;
-
-/// A wrapper that ensures `Drop` runs at process exit even when the value is
-/// stored in a `static` (`lazy_static!`, `LazyLock`, `OnceLock`, etc.).
-///
-/// Rust never calls `Drop` on `static` values at program exit, which means
-/// resource-cleanup side-effects (deleting a `TempDir`, killing a child,
-/// flushing a file) get silently skipped. `StaticDrop<T>` works around that:
-/// every instance registers itself in a process-global registry on
-/// construction, and a `#[static_init::destructor]` walks the registry at
-/// program exit and runs the destructors that the language would otherwise
-/// skip.
-///
-/// Specifically, this is what fixes the `tempprojectXXXX` directory leak in
-/// the `lazy_static! { static ref PROJECT_*: TestProject = ... }` declarations
-/// below — `TestProject` owns a `tempfile::TempDir`, and without this wrapper
-/// every test-suite run leaves six leftover folders in `$TMPDIR`.
-mod static_drop {
-    use std::mem::ManuallyDrop;
-    use std::ops::Deref;
-    use std::sync::Mutex;
-
-    /// A type-erased pointer + drop function. The address is to a heap
-    /// allocation owned by the corresponding `StaticDrop<T>`, so it stays valid
-    /// for the entire program lifetime once registered.
-    struct Entry {
-        ptr: *mut (),
-        drop_fn: unsafe fn(*mut ()),
-    }
-    // Safety: the registry is only touched via the `Mutex`. The pointers are
-    // only dereferenced inside the destructor, which runs after `main` has
-    // returned (so no other safe code is holding `&T` references concurrently)
-    // and is single-threaded with respect to the static.
-    unsafe impl Send for Entry {}
-
-    static REGISTRY: Mutex<Vec<Entry>> = Mutex::new(Vec::new());
-
-    pub struct StaticDrop<T> {
-        // `Box<T>` gives the inner `T` a stable heap address even if the
-        // `StaticDrop<T>` itself is moved between `new()` and reaching its
-        // final storage location, which keeps the registered pointer valid.
-        inner: ManuallyDrop<Box<T>>,
-    }
-
-    impl<T> StaticDrop<T> {
-        pub fn new(value: T) -> Self {
-            let inner = ManuallyDrop::new(Box::new(value));
-            let ptr: *mut T = &**inner as *const T as *mut T;
-            REGISTRY.lock().unwrap().push(Entry {
-                ptr: ptr.cast(),
-                drop_fn: |p| unsafe { std::ptr::drop_in_place(p.cast::<T>()) },
-            });
-            Self { inner }
-        }
-    }
-
-    impl<T> Deref for StaticDrop<T> {
-        type Target = T;
-        fn deref(&self) -> &T {
-            &self.inner
-        }
-    }
-
-    impl<T> Drop for StaticDrop<T> {
-        fn drop(&mut self) {
-            // Deregister so the process-exit destructor doesn't double-drop.
-            // (Only matters for non-`static` usage; statics never drop.)
-            let ptr: *mut T = &mut **self.inner as *mut T;
-            let mut reg = REGISTRY.lock().unwrap();
-            if let Some(pos) = reg.iter().position(|e| e.ptr == ptr.cast()) {
-                reg.swap_remove(pos);
-            }
-            drop(reg);
-            // Run the inner `Drop` and free the `Box` allocation.
-            unsafe { ManuallyDrop::drop(&mut self.inner) };
-        }
-    }
-
-    #[static_init::destructor]
-    extern "C" fn cleanup_leaked_statics() {
-        // After `main` returns, walk the registry and drop everything that
-        // was never deregistered (i.e. everything stored in a `static`).
-        // `catch_unwind` so one panicking `Drop` doesn't abort the rest.
-        let entries = std::mem::take(&mut *REGISTRY.lock().unwrap());
-        for entry in entries {
-            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
-                (entry.drop_fn)(entry.ptr)
-            }));
-        }
-    }
-}
 
 const VERSION_MESSAGE: &str = "my-cli-name 1.2.3";
 const MAIN_MESSAGE: &str = "my-testbin:main";
@@ -222,9 +131,9 @@ impl TestProject {
 // Each `TestProject` owns a `tempfile::TempDir` whose temp folder is only
 // removed in its `Drop` impl. Storing it directly in a `lazy_static!` would
 // leak the folder on every test run because Rust never runs `Drop` on `static`
-// values at program exit. The `StaticDrop<T>` wrapper above registers each
-// instance for cleanup via a `#[static_init::destructor]`, which does run at
-// process exit and gives us the missing `Drop` semantics.
+// values at program exit. The `StaticDrop<T>` wrapper registers each instance
+// for cleanup via a process-exit `dtor`, which does run at exit and gives us
+// the missing `Drop` semantics. See `cryfs_utils::testutils::static_drop`.
 lazy_static! {
     static ref PROJECT_NOARGS: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {

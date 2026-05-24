@@ -16,6 +16,7 @@ binrw.workspace = true
 cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 divrem = { workspace = true, optional = true }
+dtor = { workspace = true, optional = true }
 futures.workspace = true
 indicatif.workspace = true
 itertools.workspace = true
@@ -39,6 +40,7 @@ lockable.workspace = true
 common_macros.workspace = true
 criterion.workspace = true
 divrem.workspace = true
+dtor.workspace = true
 libc.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
@@ -46,7 +48,7 @@ tempfile.workspace = true
 rand.workspace = true
 
 [features]
-testutils = ["dep:divrem"]
+testutils = ["dep:divrem", "dep:dtor"]
 
 [[bench]]
 harness = false
