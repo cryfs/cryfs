@@ -39,6 +39,7 @@ lazy_static.workspace = true
 pathdiff.workspace = true
 predicates.workspace = true
 rstest.workspace = true
+static_init.workspace = true
 tempfile.workspace = true
 konst.workspace = true
 tempproject = { path = "../tempproject" }
