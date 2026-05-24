@@ -37,7 +37,7 @@
 //!   so it runs on both normal `main` return and [`std::process::exit`]
 //!   (including the `process::exit(101)` that `libtest` uses on test
 //!   failure). It does **not** run on [`std::process::abort`],
-//!   [`libc::_exit`], unhandled SIGTERM/SIGINT/SIGKILL, or an aborted
+//!   `libc::_exit`, unhandled SIGTERM/SIGINT/SIGKILL, or an aborted
 //!   panic — those bypass `atexit` entirely. For signal coverage see
 //!   `crate::at_exit`, but mixing it with `StaticDrop` introduces races
 //!   with the running program and is not done by default.
@@ -241,6 +241,19 @@ mod tests {
         drop(b);
         assert_eq!(counter_b.load(Ordering::SeqCst), 1);
     }
+
+    /// Compile-time check: `StaticDrop<T>: Sync` (required to store it in a
+    /// `static`) and `Send` when `T` is. A future field addition that
+    /// introduces e.g. a `Cell` would silently break this, so pin it here.
+    const _: () = {
+        const fn assert_send<T: Send>() {}
+        const fn assert_sync<T: Sync>() {}
+        assert_send::<StaticDrop<u32>>();
+        assert_sync::<StaticDrop<u32>>();
+        // String is `Send + Sync`; covers a non-`Copy` payload.
+        assert_send::<StaticDrop<String>>();
+        assert_sync::<StaticDrop<String>>();
+    };
 
     #[test]
     fn drop_does_not_run_twice() {
