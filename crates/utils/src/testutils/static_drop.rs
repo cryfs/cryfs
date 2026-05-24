@@ -33,8 +33,14 @@
 //! - **Sync `Drop` only.** The exit-time destructor cannot `.await`. Async
 //!   cleanup needs a different solution (the cryfs `AsyncDropGuard` pattern
 //!   doesn't fit into a `static` either).
-//! - **Normal exit only.** `dtor`s run after `main` returns. They do **not**
-//!   run on [`std::process::exit`], abort, or kill-by-signal.
+//! - **Soft exits only.** The destructor is registered via `libc::atexit`,
+//!   so it runs on both normal `main` return and [`std::process::exit`]
+//!   (including the `process::exit(101)` that `libtest` uses on test
+//!   failure). It does **not** run on [`std::process::abort`],
+//!   [`libc::_exit`], unhandled SIGTERM/SIGINT/SIGKILL, or an aborted
+//!   panic — those bypass `atexit` entirely. For signal coverage see
+//!   `crate::at_exit`, but mixing it with `StaticDrop` introduces races
+//!   with the running program and is not done by default.
 //! - **Threads may still be live.** No ordering guarantees vs. other threads
 //!   at exit; treat `Drop` here the same way you would a C++ exit-time
 //!   destructor — keep it self-contained.
@@ -116,11 +122,17 @@ impl<T> Drop for StaticDrop<T> {
     }
 }
 
-#[dtor::dtor(unsafe)]
+#[dtor::dtor(unsafe, method = at_binary_exit)]
 fn cleanup_leaked_statics() {
-    // After `main` returns, drop everything still in the registry —
-    // i.e. everything stored in a `static`. `catch_unwind` so a single
-    // panicking `Drop` doesn't abort the rest of the cleanup.
+    // Walk the registry and drop everything still in it — i.e. everything
+    // stored in a `static`. `catch_unwind` so a single panicking `Drop`
+    // doesn't abort the rest of the cleanup.
+    //
+    // `method = "at_binary_exit"` registers via `libc::atexit` rather than
+    // the platform's `.fini_array`-equivalent, which means this also runs
+    // on `std::process::exit(N)` (including when `libtest` exits with 101
+    // after a test failure). It still does NOT run on `abort`, `_exit`,
+    // or signal kill — see the module docs.
     let entries = std::mem::take(&mut *REGISTRY.lock().unwrap());
     for entry in entries {
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
