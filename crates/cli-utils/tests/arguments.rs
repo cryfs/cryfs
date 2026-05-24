@@ -1,3 +1,4 @@
+use cryfs_utils::testutils::static_drop::StaticDrop;
 use indoc::indoc;
 use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;
@@ -127,8 +128,14 @@ impl TestProject {
     }
 }
 
+// Each `TestProject` owns a `tempfile::TempDir` whose temp folder is only
+// removed in its `Drop` impl. Storing it directly in a `lazy_static!` would
+// leak the folder on every test run because Rust never runs `Drop` on `static`
+// values at program exit. The `StaticDrop<T>` wrapper registers each instance
+// for cleanup via a process-exit `dtor`, which does run at exit and gives us
+// the missing `Drop` semantics. See `cryfs_utils::testutils::static_drop`.
 lazy_static! {
-    static ref PROJECT_NOARGS: TestProject = TestProject {
+    static ref PROJECT_NOARGS: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {
             args: stringify!(
                 #[derive(Args, Debug)]
@@ -144,9 +151,9 @@ lazy_static! {
         .project(),
         expected_usage_header: "Usage: my-testbin",
         expected_usage_line_regex: "",
-    };
+    });
 
-    static ref PROJECT_FLAGS: TestProject = TestProject {
+    static ref PROJECT_FLAGS: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {
             args: stringify!(
                 #[derive(Args, Debug)]
@@ -166,9 +173,9 @@ lazy_static! {
         .project(),
         expected_usage_header: "Usage: my-testbin [OPTIONS]",
         expected_usage_line_regex: r"-f, --flag[[:space:]]+Flag Documentation",
-    };
+    });
 
-    static ref PROJECT_MANDATORY_POSITIONAL: TestProject = TestProject {
+    static ref PROJECT_MANDATORY_POSITIONAL: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {
             args: stringify!(
                 #[derive(Args, Debug)]
@@ -186,9 +193,9 @@ lazy_static! {
         .project(),
         expected_usage_header: "Usage: my-testbin [OPTIONS] <MANDATORY_POSITIONAL>",
         expected_usage_line_regex: r"Arguments:[[:space:]]+<MANDATORY_POSITIONAL>",
-    };
+    });
 
-    static ref PROJECT_OPTIONAL_POSITIONAL: TestProject = TestProject {
+    static ref PROJECT_OPTIONAL_POSITIONAL: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {
             args: stringify!(
                 #[derive(Args, Debug)]
@@ -206,9 +213,9 @@ lazy_static! {
         .project(),
         expected_usage_header: "Usage: my-testbin [OPTIONS] [OPTIONAL_POSITIONAL]",
         expected_usage_line_regex: r"Arguments:[[:space:]]+\[OPTIONAL_POSITIONAL\]",
-    };
+    });
 
-    static ref PROJECT_MANDATORY_ARGUMENT: TestProject = TestProject {
+    static ref PROJECT_MANDATORY_ARGUMENT: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {
             args: stringify!(
                 #[derive(Args, Debug)]
@@ -228,9 +235,9 @@ lazy_static! {
         .project(),
         expected_usage_header: "Usage: my-testbin [OPTIONS] --mandatory-argument <MANDATORY_ARGUMENT>",
         expected_usage_line_regex: r"-a, --mandatory-argument <MANDATORY_ARGUMENT>[[:space:]]+Mandatory Arg Documentation",
-    };
+    });
 
-    static ref PROJECT_OPTIONAL_ARGUMENT: TestProject = TestProject {
+    static ref PROJECT_OPTIONAL_ARGUMENT: StaticDrop<TestProject> = StaticDrop::new(TestProject {
         project: TestConfig {
             args: stringify!(
                 #[derive(Args, Debug)]
@@ -250,7 +257,7 @@ lazy_static! {
         .project(),
         expected_usage_header: "Usage: my-testbin [OPTIONS]",
         expected_usage_line_regex: r"-a, --optional-argument <OPTIONAL_ARGUMENT>[[:space:]]+Optional Arg Documentation",
-    };
+    });
 }
 
 mod common {

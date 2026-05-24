@@ -33,6 +33,7 @@ serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 assert_cmd.workspace = true
+cryfs-utils = { path = "../utils", features = ["testutils"] }
 envtestkit.workspace = true
 indoc.workspace = true
 lazy_static.workspace = true
