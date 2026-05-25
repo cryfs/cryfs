@@ -15,17 +15,15 @@
 //!
 //! ```
 //! # use cryfs_utils::testutils::static_drop::StaticDrop;
-//! use lazy_static::lazy_static;
+//! use std::sync::LazyLock;
 //! use tempfile::TempDir;
 //!
-//! lazy_static! {
-//!     // Without `StaticDrop`, the `TempDir`'s `Drop` would never run and
-//!     // the temporary folder would leak into `$TMPDIR` on every program
-//!     // exit. With it, the folder is removed at exit.
-//!     static ref TMP: StaticDrop<TempDir> = StaticDrop::new(
-//!         tempfile::tempdir().unwrap()
-//!     );
-//! }
+//! // Without `StaticDrop`, the `TempDir`'s `Drop` would never run and the
+//! // temporary folder would leak into `$TMPDIR` on every program exit. With
+//! // it, the folder is removed at exit. The same pattern works with
+//! // `lazy_static!`, `OnceLock`, or `once_cell::Lazy`.
+//! static TMP: LazyLock<StaticDrop<TempDir>> =
+//!     LazyLock::new(|| StaticDrop::new(tempfile::tempdir().unwrap()));
 //! ```
 //!
 //! # Caveats
