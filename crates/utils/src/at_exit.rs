@@ -32,6 +32,8 @@ static DOUBLE_SIGNAL_HANDLER: LazyLock<AtExitHandler> = LazyLock::new(|| {
 /// when the process receives a SIGTERM, SIGINT, or SIGQUIT signal.
 /// The function is run in a separate thread.
 ///
+/// TODO What happens in case of panics or std::process::exit()? Do we need to handle those too?
+///
 /// Dropping the [AtExitHandler] instance will unregister the signal handler.
 pub struct AtExitHandler {
     // Always Some except during drop
