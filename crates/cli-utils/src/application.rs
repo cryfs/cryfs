@@ -2,6 +2,7 @@ use std::process::ExitCode;
 
 use anyhow::Result;
 use clap::Args;
+use clap_logflag::LogArgs;
 
 use cryfs_version::VersionInfo;
 use log::LevelFilter;
@@ -13,7 +14,11 @@ use crate::args::{ArgParseError, ParseArgsResult, parse_args};
 use crate::env::Environment;
 use crate::error::CliError;
 
-const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Info;
+/// Default log level used by `init_logging` when neither the user's `--log`
+/// flag nor the application's [`Application::default_log_config`] specifies
+/// one. Re-exported from this crate so downstream daemon entry points that do
+/// their own deferred `init_logging` use the same level as the default path.
+pub const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 pub trait Application: Sized {
     type ConcreteArgs: Args;
@@ -34,7 +39,23 @@ pub trait Application: Sized {
         true
     }
 
-    fn main(self) -> Result<(), CliError>;
+    /// If true, [`run`] skips its own `init_logging!` call. The application
+    /// takes responsibility for initializing logging itself — typically
+    /// because it receives logging config out-of-band (e.g., a daemon child
+    /// reading config from its parent over an IPC channel after `main` is
+    /// entered). The raw [`LogArgs`] are still passed to `main` so the
+    /// application can decide what to do with them.
+    fn defer_logging_init(&self) -> bool {
+        false
+    }
+
+    /// Entry point. `log_args` is the parsed `--log` flag values (possibly
+    /// empty). For most apps this can be ignored — [`run`] has already
+    /// initialized logging from these args + [`default_log_config`]. Apps
+    /// that need to forward the config elsewhere (e.g. to a daemon child
+    /// via RPC) can resolve `log_args.or_default(...)` themselves with a
+    /// destination-appropriate default.
+    fn main(self, log_args: LogArgs) -> Result<(), CliError>;
 }
 
 pub fn run<App: Application>() -> ExitCode {
@@ -79,17 +100,19 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
         }
         Ok(ParseArgsResult::Normal { log, args }) => {
             let app = App::new(args, env.clone())?;
-            clap_logflag::init_logging!(
-                log.or_default(app.default_log_config()),
-                DEFAULT_LOG_LEVEL
-            );
+            if !app.defer_logging_init() {
+                clap_logflag::init_logging!(
+                    log.or_default(app.default_log_config()),
+                    DEFAULT_LOG_LEVEL
+                );
+            }
             if app.should_show_version() {
                 show_version(
                     #[cfg(feature = "check_for_updates")]
                     env,
                 );
             }
-            app.main()
+            app.main(log)
         }
         Err(ArgParseError::Clap(err)) => {
             show_version(

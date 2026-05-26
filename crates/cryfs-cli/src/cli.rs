@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{Context as _, Result};
-use clap_logflag::{LogDestination, LogDestinationConfig, LoggingConfig};
+use clap_logflag::{LogArgs, LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_config::config::CryConfigFile;
 use cryfs_config::localstate::{CheckFilesystemIdError, VaultdirMetadata};
 use cryfs_runner::{CreateOrLoad, Mounter};
@@ -66,17 +66,12 @@ impl Application for Cli {
 
     fn default_log_config(&self) -> LoggingConfig {
         if self.args.daemon {
-            // Daemon child: the parent's stderr is still inherited at this
-            // point but will be `dup2(/dev/null)`'d after successful mount,
-            // so route logging to syslog from the start. Note: user-supplied
-            // `--log` flags do NOT propagate across exec — the parent's
-            // `Command::new` only adds `--daemon` to argv. If you want a
-            // file logger in the daemon, configure it via the syslog backend
-            // rather than expecting `--log` to reach it.
-            return LoggingConfig::new(vec![LogDestinationConfig {
-                destination: LogDestination::Syslog,
-                level: Some(LevelFilter::Warn),
-            }]);
+            // Daemon child entry point. In practice this branch is unreached
+            // because [`defer_logging_init`] returns `true` for `args.daemon`
+            // — the daemon installs the parent-supplied [`LoggingConfig`]
+            // delivered over IPC instead. Keep this destination defined as
+            // a defensive fallback in case the bootstrap path ever changes.
+            return Self::daemon_default_log_config();
         }
         let in_foreground = self
             .args
@@ -96,8 +91,8 @@ impl Application for Cli {
         } else {
             // Parent CLI process about to fork+exec the daemon: keep logs on
             // stderr so the user sees password prompts and mount errors. The
-            // daemon child re-enters this method with `args.daemon == true`
-            // and gets the syslog branch above.
+            // daemon child receives its own logging config via the IPC
+            // bootstrap (see [`Self::daemon_default_log_config`]).
             LoggingConfig::new(vec![LogDestinationConfig {
                 destination: LogDestination::Stderr,
                 level: Some(LevelFilter::Warn),
@@ -112,14 +107,23 @@ impl Application for Cli {
         !self.args.daemon
     }
 
-    fn main(self) -> Result<(), CliError> {
+    fn defer_logging_init(&self) -> bool {
+        // The daemon child can't init logging via its own argv — the parent's
+        // `Command::new` only passes `--daemon`, so the daemon's `LogArgs` is
+        // always empty. Skip the built-in init; `run_as_background_daemon`
+        // installs the config it receives over the IPC bootstrap.
+        self.args.daemon
+    }
+
+    fn main(self, log_args: LogArgs) -> Result<(), CliError> {
         // TODO Once we support Windows, we need to check that we're running on a supported windows version. C++ CryFS only supported Windows 7 or later.
 
         if self.args.daemon {
             // This process was re-execed as the daemon child of a fork+exec
             // spawn from a parent cryfs CLI. Dispatch into the daemon entry
-            // point; it diverges. Panic hook and logging are already set up
-            // by `cryfs_cli_utils::run::<Cli>`, so we don't repeat them.
+            // point; it diverges. Panic hook is set up by
+            // `cryfs_cli_utils::run::<Cli>`; logging is deferred until after
+            // the IPC bootstrap delivers the parent-resolved config.
             // Empty match asserts at compile time that the call diverges (`-> !`).
             match cryfs_runner::run_as_background_daemon() {}
         }
@@ -138,7 +142,16 @@ impl Application for Cli {
             // here is a fresh process image courtesy of execve, so the
             // constraint is structural rather than load-bearing — we still
             // do it first to hand the shell back as early as possible.
-            Mounter::run_in_background().map_cli_error(CliErrorKind::UnspecifiedError)?
+            //
+            // Resolve the user's `--log` flags against the *daemon* default
+            // (syslog), not our own (stderr). The daemon will install this
+            // verbatim once the IPC bootstrap delivers it. Doing the resolve
+            // here, in the parent, keeps the "syslog if user didn't say
+            // otherwise" policy in one place — the daemon side just consumes.
+            let daemon_log_config =
+                log_args.or_default(Self::daemon_default_log_config());
+            Mounter::run_in_background(daemon_log_config)
+                .map_cli_error(CliErrorKind::UnspecifiedError)?
         };
 
         // Note: tokio-console requires running with `RUSTFLAGS="--cfg tokio_unstable" cargo build`, see https://github.com/tokio-rs/console
@@ -154,6 +167,24 @@ impl Application for Cli {
 }
 
 impl Cli {
+    /// Default destination the daemon writes logs to when the user supplied
+    /// no `--log` flags. Lives on the parent side because the parent resolves
+    /// the daemon's `LoggingConfig` before shipping it over IPC; the daemon
+    /// itself doesn't ever compute a default in the bootstrap path.
+    ///
+    /// Syslog is the right destination because the daemon's stderr is
+    /// `dup2(/dev/null)`'d after a successful mount — stderr-based logging
+    /// would go silent for the bulk of the daemon's lifetime. If the user
+    /// explicitly passes `--log stderr` we honor it (logs are visible until
+    /// the mount completes, then redirected); but we don't pick stderr as
+    /// the default.
+    fn daemon_default_log_config() -> LoggingConfig {
+        LoggingConfig::new(vec![LogDestinationConfig {
+            destination: LogDestination::Syslog,
+            level: Some(LevelFilter::Warn),
+        }])
+    }
+
     async fn async_main(self, mounter: Mounter) -> Result<(), CliError> {
         // TODO Making cryfs-cli init code async could speed it up, e.g. do update checks while creating vaultdirs or loading the config.
         self.sanity_checks().await?;

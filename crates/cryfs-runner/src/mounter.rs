@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap_logflag::LoggingConfig;
 use cryfs_cli_utils::CliError;
 
 use crate::{MountArgs, background_process::BackgroundProcess};
@@ -13,8 +14,12 @@ impl Mounter {
         Ok(Mounter::MountInForeground)
     }
 
-    pub fn run_in_background() -> Result<Mounter> {
-        let rpc = BackgroundProcess::daemonize()?;
+    /// Spawn the daemon and ship `daemon_log_config` to it as the first
+    /// IPC bootstrap message. `daemon_log_config` should already be
+    /// resolved against the daemon-mode default (typically syslog) — the
+    /// daemon installs this verbatim and does not re-resolve.
+    pub fn run_in_background(daemon_log_config: LoggingConfig) -> Result<Mounter> {
+        let rpc = BackgroundProcess::daemonize(daemon_log_config)?;
         Ok(Mounter::MountInBackgroud { rpc })
     }
 

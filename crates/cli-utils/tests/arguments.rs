@@ -142,7 +142,7 @@ lazy_static! {
                 struct MyArgs {}
             ),
             main: stringify!(
-                fn main(self) -> Result<(), CliError> {
+                fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
                     println!("my-testbin:main");
                     Ok(())
                 }
@@ -164,7 +164,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<(), CliError> {
+                fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
                     println!("my-testbin:main:{:?}", self.args.flag);
                     Ok(())
                 }
@@ -184,7 +184,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<(), CliError> {
+                fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
                     println!("my-testbin:main:{}", self.args.mandatory_positional);
                     Ok(())
                 }
@@ -204,7 +204,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<(), CliError> {
+                fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
                     println!("my-testbin:main:{:?}", self.args.optional_positional);
                     Ok(())
                 }
@@ -226,7 +226,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<(), CliError> {
+                fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
                     println!("my-testbin:main:{}", self.args.mandatory_argument);
                     Ok(())
                 }
@@ -248,7 +248,7 @@ lazy_static! {
                 }
             ),
             main: stringify!(
-                fn main(self) -> Result<(), CliError> {
+                fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
                     println!("my-testbin:main:{:?}", self.args.optional_argument);
                     Ok(())
                 }

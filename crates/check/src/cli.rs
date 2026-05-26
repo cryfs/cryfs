@@ -52,7 +52,7 @@ impl Application for RecoverCli {
         }])
     }
 
-    fn main(self) -> Result<(), CliError> {
+    fn main(self, _log_args: clap_logflag::LogArgs) -> Result<(), CliError> {
         // TODO Runtime settings
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name(Self::NAME)
