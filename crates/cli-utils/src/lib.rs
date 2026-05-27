@@ -15,7 +15,9 @@ mod env;
 pub use env::{ENV_VARS_DOCUMENTATION, EnvVarDoc, Environment};
 
 mod application;
-pub use application::{Application, DEFAULT_LOG_LEVEL, run};
+pub use application::{
+    Application, ConstructibleApplication, DEFAULT_LOG_LEVEL, run, run_with, setup_panic_handling,
+};
 
 mod config;
 pub use config::print_config;

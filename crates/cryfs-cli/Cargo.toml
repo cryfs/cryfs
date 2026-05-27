@@ -17,7 +17,11 @@ anyhow.workspace = true
 byte-unit.workspace = true
 color-print.workspace = true
 clap = { workspace = true, features = ["derive"] }
-clap-logflag.workspace = true
+# serde: we build the `LoggingConfig` that travels inside cryfs-runner's
+# `Request` over the parent->daemon RPC channel (the re-exec'd daemon has empty
+# argv and can't re-parse `--log`), so it must be Serialize/Deserialize here,
+# not via feature unification through some other crate.
+clap-logflag = { workspace = true, features = ["serde"] }
 # TODO Now that we have the cryfs-runner crate, can we remove other cryfs dependencies? Can we remove tokio? Maybe go through all of our crates and minimize inter-crate dependencies
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-cli-utils = { path = "../cli-utils" }
@@ -26,6 +30,7 @@ cryfs-config = { path = "../cryfs-config" }
 cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
+daemonizable.workspace = true
 dialoguer.workspace = true
 humantime.workspace = true
 itertools.workspace = true

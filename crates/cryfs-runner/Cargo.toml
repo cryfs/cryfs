@@ -12,8 +12,10 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 atomic-time.workspace = true
+# serde: the daemon's logging config now travels inside `Request` over the RPC
+# channel (the re-exec'd daemon has empty argv and can't re-parse `--log`), so
+# `LoggingConfig` must be Serialize/Deserialize here.
 clap-logflag = { workspace = true, features = ["serde"] }
-command-fds.workspace = true
 cryfs-cli-utils = { path = "../cli-utils" }
 cryfs-filesystem = { path = "../cryfs-filesystem" }
 cryfs-config = { path = "../cryfs-config" }
@@ -22,23 +24,12 @@ cryfs-blobstore = { path = "../blobstore" }
 cryfs-blockstore = { path = "../blockstore" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
-interprocess.workspace = true
-postcard = { workspace = true, features = ["use-std"] }
+daemonizable.workspace = true
 tokio.workspace = true
-libc.workspace = true
 log.workspace = true
 serde.workspace = true
 tokio-util.workspace = true
-nix = { workspace = true, features = ["poll"] }
 
 [dev-dependencies]
-nix = { workspace = true, features = ["poll", "process", "signal"] }
-tempfile.workspace = true
-
-# Helper binary used by daemon-lifecycle integration tests. Spawned via
-# fork+exec from start_background_process_with_exe so the test daemon runs in
-# a clean process image instead of inheriting libtest's multithread state.
-[[bin]]
-name = "cryfs-runner-test-background"
-path = "src/bin/cryfs_runner_test_background.rs"
-required-features = []
+byte-unit.workspace = true
+daemonizable = { workspace = true, features = ["testutils"] }

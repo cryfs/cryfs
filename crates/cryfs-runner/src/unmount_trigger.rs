@@ -10,6 +10,10 @@ use tokio_util::sync::CancellationToken;
 pub enum TriggerReason {
     UnmountIdle,
     IntegrityViolation(IntegrityViolationError),
+    /// The mount succeeded but notifying the caller failed (e.g. the parent
+    /// CLI was Ctrl+C'd while the daemon was still mounting), so there is no
+    /// one waiting on this mount. Unmount instead of serving it.
+    NotificationFailed,
 }
 
 #[derive(Clone)]

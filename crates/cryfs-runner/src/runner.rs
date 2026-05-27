@@ -51,10 +51,15 @@ pub enum FuseOption {
 }
 
 /// On error: will return the error
-/// On success: will call on_successfully_mounted and then block until the filesystem is unmounted, then return Ok.
+/// On success: will call `on_successfully_mounted` and then block until the filesystem is unmounted, then return Ok.
+///
+/// `on_successfully_mounted` runs once, right after the mount is established. If
+/// it returns `Err` (e.g. the daemon failed to notify a parent CLI that has
+/// since exited), the filesystem is unmounted again instead of served — we
+/// don't keep a mount alive that nobody is waiting on.
 pub async fn mount_filesystem(
     mount_args: MountArgs,
-    on_successfully_mounted: impl FnOnce() + Send + Sync,
+    on_successfully_mounted: impl FnOnce() -> Result<(), anyhow::Error> + Send + Sync,
 ) -> Result<(), CliError> {
     let missing_block_is_integrity_violation =
         if mount_args.config.missing_block_is_integrity_violation() {
@@ -65,6 +70,11 @@ pub async fn mount_filesystem(
     let unmount_trigger = UnmountTrigger::new();
     let unmount_trigger_clone = unmount_trigger.clone();
     let trigger_reason = Arc::clone(unmount_trigger.trigger_reason());
+
+    // Wrap the caller's notification so a failure unmounts the filesystem
+    // rather than leaving it mounted with no one waiting on it.
+    let on_successfully_mounted =
+        notify_or_unmount(on_successfully_mounted, unmount_trigger.clone());
     setup_blockstore_stack(
         OnDiskBlockStore::new(mount_args.vaultdir.to_owned()),
         &mount_args.config,
@@ -98,10 +108,36 @@ pub async fn mount_filesystem(
             Ok(())
         }
         Some(TriggerReason::UnmountIdle) => Ok(()),
+        // Intentional teardown because the caller vanished; there is no one to
+        // report an error to, so this is not a failure.
+        Some(TriggerReason::NotificationFailed) => Ok(()),
         Some(TriggerReason::IntegrityViolation(err)) => Err(CliError {
             error: Arc::new(err.into()),
             kind: CliErrorKind::IntegrityViolation,
         }),
+    }
+}
+
+/// Wrap a mount-success notification so that if it fails — e.g. the parent CLI
+/// that requested a background mount has since exited — the filesystem is
+/// unmounted via `unmount_trigger` instead of being served with no one waiting
+/// on it.
+///
+/// Triggering the (caller-owned) trigger here is safe even though the returned
+/// closure runs *before* the mount wires up its trigger listener: the token is
+/// level-triggered, so an already-cancelled state is observed as soon as the
+/// listener attaches.
+fn notify_or_unmount(
+    on_successfully_mounted: impl FnOnce() -> Result<(), anyhow::Error> + Send + Sync,
+    unmount_trigger: UnmountTrigger,
+) -> impl FnOnce() + Send + Sync {
+    move || {
+        if let Err(err) = on_successfully_mounted() {
+            log::warn!(
+                "Filesystem mounted but notifying the caller failed ({err:#}); unmounting again"
+            );
+            unmount_trigger.trigger_now(TriggerReason::NotificationFailed);
+        }
     }
 }
 
@@ -243,4 +279,42 @@ where
     Ok(device)
 }
 
-// TODO Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn notify_or_unmount_triggers_unmount_when_notification_fails() {
+        // If the success notification fails (e.g. the parent CLI vanished), the
+        // wrapper must fire the unmount trigger with NotificationFailed so the
+        // mount is torn down instead of served.
+        let trigger = UnmountTrigger::new();
+        let wrapped = notify_or_unmount(|| Err(anyhow::anyhow!("parent gone")), trigger.clone());
+        wrapped();
+
+        assert!(
+            trigger.waiter().is_cancelled(),
+            "a failed notification must trigger an unmount"
+        );
+        assert!(
+            matches!(
+                *trigger.trigger_reason().lock().unwrap(),
+                Some(TriggerReason::NotificationFailed)
+            ),
+            "the unmount reason must be NotificationFailed"
+        );
+    }
+
+    #[test]
+    fn notify_or_unmount_does_not_unmount_on_success() {
+        let trigger = UnmountTrigger::new();
+        let wrapped = notify_or_unmount(|| Ok(()), trigger.clone());
+        wrapped();
+
+        assert!(
+            !trigger.waiter().is_cancelled(),
+            "a successful notification must not trigger an unmount"
+        );
+        assert!(trigger.trigger_reason().lock().unwrap().is_none());
+    }
+}

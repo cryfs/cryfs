@@ -31,13 +31,6 @@ pub struct CryfsArgs {
     /// Show a list with the supported encryption ciphers.
     #[arg(long, group = "immediate-exit", conflicts_with("mount"))]
     pub show_ciphers: bool,
-
-    /// Internal entry point: the parent CLI process exec's the cryfs binary
-    /// with this flag to become the background daemon. Hidden from `--help`
-    /// and rejected when combined with any other argument so users can't
-    /// invoke it directly by accident.
-    #[arg(long, hide = true, exclusive = true)]
-    pub daemon: bool,
     // TODO C++ had this, needed for Windows?
     // bool _mountDirIsDriveLetter;
 }

@@ -38,6 +38,7 @@ console-subscriber = "^0.5"
 conv = "^0.3.3"
 crabtime = "^1.1.3"
 criterion = "^0.8"
+daemonizable = "^0.1.0"
 derivative = "^2.2.0"
 derive-where = "^1.5.0"
 derive_more = { version = "^2.0.1", features = ["full"] }
