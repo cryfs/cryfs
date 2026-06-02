@@ -201,6 +201,8 @@ Contributions are welcome! Please:
 
 Since this is alpha software, testing and bug reports are especially valuable.
 
+If you use AI tools when contributing, please read our [AI Use Policy](AI_POLICY.md) first.
+
 ## License
 
 CryFS is licensed under the LGPL v3. See the LICENSE file for details.
