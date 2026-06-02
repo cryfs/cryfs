@@ -98,10 +98,12 @@ fn pipes_do_not_leak_into_daemon() {
         std::env::set_var("CRYFS_TEST_PID", &pid_file);
     }
 
-    let env: [(&OsStr, &OsStr); 1] =
-        [(OsStr::new("CRYFS_TEST_BEHAVIOR"), OsStr::new("write_to_fd_then_idle"))];
-    let _client = start_background_process_with_exe::<(), ()>(&helper_exe(), &env)
-        .expect("spawn daemon");
+    let env: [(&OsStr, &OsStr); 1] = [(
+        OsStr::new("CRYFS_TEST_BEHAVIOR"),
+        OsStr::new("write_to_fd_then_idle"),
+    )];
+    let _client =
+        start_background_process_with_exe::<(), ()>(&helper_exe(), &env).expect("spawn daemon");
 
     // Drop our own copy of the sentinel sender so the only writer left
     // *would* be the daemon's inherited copy — if it had one. The recver
@@ -112,10 +114,7 @@ fn pipes_do_not_leak_into_daemon() {
     // main and (if the fd leaked) has had a chance to write.
     let pid_deadline = Instant::now() + Duration::from_secs(5);
     while !pid_file.exists() {
-        assert!(
-            Instant::now() < pid_deadline,
-            "daemon never wrote pid file",
-        );
+        assert!(Instant::now() < pid_deadline, "daemon never wrote pid file",);
         thread::sleep(Duration::from_millis(10));
     }
     let daemon_pid: i32 = std::fs::read_to_string(&pid_file)

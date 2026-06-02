@@ -6,7 +6,7 @@
 //! instead of forking an in-process fn pointer, so they no longer suffer the
 //! parallel-test fd-inheritance flake.
 
-use cryfs_runner::{rpc_server_from_inherited_fds, RpcServer};
+use cryfs_runner::{RpcServer, rpc_server_from_inherited_fds};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -20,8 +20,7 @@ struct Response {
 }
 
 fn main() {
-    let behavior =
-        std::env::var("CRYFS_TEST_BEHAVIOR").unwrap_or_else(|_| "echo".to_string());
+    let behavior = std::env::var("CRYFS_TEST_BEHAVIOR").unwrap_or_else(|_| "echo".to_string());
 
     let mut rpc: RpcServer<Request, Response> = rpc_server_from_inherited_fds()
         .expect("daemon: failed to rebuild RpcServer from inherited fds");
@@ -85,16 +84,11 @@ fn main() {
             // doesn't observe "pid file present" until we've at least
             // attempted the leak.
             let payload = b"LEAK\n";
-            let _ = unsafe {
-                libc::write(leak_fd, payload.as_ptr().cast(), payload.len())
-            };
+            let _ = unsafe { libc::write(leak_fd, payload.as_ptr().cast(), payload.len()) };
             std::fs::write(&pid_file, std::process::id().to_string())
                 .expect("daemon: write pid file");
             if unsafe { libc::setsid() } < 0 {
-                eprintln!(
-                    "daemon: setsid failed: {}",
-                    std::io::Error::last_os_error()
-                );
+                eprintln!("daemon: setsid failed: {}", std::io::Error::last_os_error());
                 std::process::exit(1);
             }
             loop {
@@ -109,8 +103,7 @@ fn main() {
             // sub-test parent exits.
             drop(rpc);
             let sentinel = std::path::PathBuf::from(
-                std::env::var_os("CRYFS_TEST_SENTINEL")
-                    .expect("CRYFS_TEST_SENTINEL not set"),
+                std::env::var_os("CRYFS_TEST_SENTINEL").expect("CRYFS_TEST_SENTINEL not set"),
             );
             let pid_file = std::path::PathBuf::from(
                 std::env::var_os("CRYFS_TEST_PID").expect("CRYFS_TEST_PID not set"),
@@ -121,10 +114,7 @@ fn main() {
             // exit even though we haven't gone through cryfs's
             // run_as_background_daemon (which would have called setsid).
             if unsafe { libc::setsid() } < 0 {
-                eprintln!(
-                    "daemon: setsid failed: {}",
-                    std::io::Error::last_os_error()
-                );
+                eprintln!("daemon: setsid failed: {}", std::io::Error::last_os_error());
                 std::process::exit(1);
             }
             let mut tick: u64 = 0;

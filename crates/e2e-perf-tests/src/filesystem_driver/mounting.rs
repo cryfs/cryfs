@@ -23,7 +23,7 @@ use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
 };
 use cryfs_filesystem::filesystem::CryDevice;
-use cryfs_rustfs::object_based_api::RustfsBackend as _;
+use cryfs_rustfs::object_based_api::{Config, RustfsBackend as _};
 use cryfs_rustfs::{
     FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, Statfs, Uid,
     backend::{BackgroundSession, RunningFilesystem},
@@ -76,7 +76,7 @@ impl MountingBackend for FuserBackend {
             |_uid, _gid| device,
             mountdir,
             runtime,
-            &[],
+            &Config::default(),
         )
         .await
         .map_err(|error| FsError::InternalError {
@@ -86,7 +86,9 @@ impl MountingBackend for FuserBackend {
 }
 pub struct FusemtBackend;
 impl MountingBackend for FusemtBackend {
-    type Session = fuser::BackgroundSession;
+    // fuse_mt mounts via fuser 0.16; name its session type through the backend's associated type
+    // (e2e doesn't depend on the 0.16-aliased `fuser_fusemt` directly).
+    type Session = <cryfs_rustfs::object_based_api::RustfsFusemtBackend as cryfs_rustfs::object_based_api::RustfsBackend>::BackgroundSession;
     async fn spawn_mount(
         device: AsyncDropGuard<
             CryDevice<
@@ -108,7 +110,7 @@ impl MountingBackend for FusemtBackend {
             |_uid, _gid| device,
             mountdir,
             runtime,
-            &[],
+            &Config::default(),
         )
         .await
         .map_err(|error| FsError::InternalError {
@@ -246,11 +248,10 @@ where
         else {
             panic!("Filesystem is not mounted");
         };
-        tokio::task::spawn_blocking(move || {
-            running_filesystem.unmount_join();
-        })
-        .await
-        .unwrap();
+        tokio::task::spawn_blocking(move || running_filesystem.unmount_join())
+            .await
+            .unwrap()
+            .expect("Failed to unmount filesystem");
     }
 
     async fn reset_cache_after_setup(&self) {

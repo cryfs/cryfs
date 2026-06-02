@@ -6,7 +6,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::FsError;
 
-pub use fuser::MountOption;
+pub use fuser::{Config, MountOption, SessionACL};
 
 use crate::{
     Gid, Uid,
@@ -24,7 +24,7 @@ pub trait RustfsBackend: Send + Sync {
         mountpoint: impl AsRef<Path>,
         runtime: tokio::runtime::Handle,
         unmount_trigger: Option<CancellationToken>,
-        mount_options: &[MountOption],
+        config: &Config,
         on_successfully_mounted: impl FnOnce(),
     ) -> std::io::Result<()>
     where
@@ -36,7 +36,7 @@ pub trait RustfsBackend: Send + Sync {
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
         mountpoint: impl AsRef<Path>,
         runtime: tokio::runtime::Handle,
-        mount_options: &[MountOption],
+        config: &Config,
     ) -> std::io::Result<RunningFilesystem<Self::BackgroundSession>>
     where
         Fs: Device + AsyncDrop<Error = FsError> + Send + Sync + Debug + 'static,
@@ -55,7 +55,7 @@ impl RustfsBackend for RustfsFuserBackend {
         mountpoint: impl AsRef<Path>,
         runtime: tokio::runtime::Handle,
         unmount_trigger: Option<CancellationToken>,
-        mount_options: &[MountOption],
+        config: &Config,
         on_successfully_mounted: impl FnOnce(),
     ) -> std::io::Result<()>
     where
@@ -70,7 +70,7 @@ impl RustfsBackend for RustfsFuserBackend {
             mountpoint,
             runtime,
             unmount_trigger,
-            mount_options,
+            config,
             on_successfully_mounted,
         )
         .await
@@ -80,7 +80,7 @@ impl RustfsBackend for RustfsFuserBackend {
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
         mountpoint: impl AsRef<Path>,
         runtime: tokio::runtime::Handle,
-        mount_options: &[MountOption],
+        config: &Config,
     ) -> std::io::Result<RunningFilesystem<Self::BackgroundSession>>
     where
         Fs: Device + AsyncDrop<Error = FsError> + Send + Sync + Debug + 'static,
@@ -93,7 +93,7 @@ impl RustfsBackend for RustfsFuserBackend {
             ObjectBasedFsAdapterLL::new(fs),
             mountpoint,
             runtime,
-            mount_options,
+            config,
         )
         .await
     }
@@ -103,14 +103,15 @@ impl RustfsBackend for RustfsFuserBackend {
 pub struct RustfsFusemtBackend;
 #[cfg(feature = "fuse_mt")]
 impl RustfsBackend for RustfsFusemtBackend {
-    type BackgroundSession = fuser::BackgroundSession;
+    // fuse_mt mounts via fuser 0.16 (`fuser_fusemt`), so its session is fuser-0.16's BackgroundSession.
+    type BackgroundSession = fuser_fusemt::BackgroundSession;
 
     async fn mount<Fs>(
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
         mountpoint: impl AsRef<Path>,
         runtime: tokio::runtime::Handle,
         unmount_trigger: Option<CancellationToken>,
-        mount_options: &[MountOption],
+        config: &Config,
         on_successfully_mounted: impl FnOnce(),
     ) -> std::io::Result<()>
     where
@@ -125,7 +126,7 @@ impl RustfsBackend for RustfsFusemtBackend {
             mountpoint,
             runtime,
             unmount_trigger,
-            mount_options,
+            config,
             on_successfully_mounted,
         )
         .await
@@ -135,7 +136,7 @@ impl RustfsBackend for RustfsFusemtBackend {
         fs: impl FnOnce(Uid, Gid) -> AsyncDropGuard<Fs> + Send + Sync + 'static,
         mountpoint: impl AsRef<Path>,
         runtime: tokio::runtime::Handle,
-        mount_options: &[MountOption],
+        config: &Config,
     ) -> std::io::Result<RunningFilesystem<Self::BackgroundSession>>
     where
         Fs: Device + AsyncDrop<Error = FsError> + Send + Sync + Debug + 'static,
@@ -148,7 +149,7 @@ impl RustfsBackend for RustfsFusemtBackend {
             ObjectBasedFsAdapter::new(fs),
             mountpoint,
             runtime,
-            mount_options,
+            config,
         )
         .await
     }

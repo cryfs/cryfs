@@ -386,7 +386,7 @@ mock! {
             fh_out: FileHandle,
             offset_out: NumBytes,
             len: NumBytes,
-            flags: u32,
+            flags: u64,
         ) -> FsResult<ReplyWrite>;
 
         #[cfg(target_os = "macos")]
@@ -869,7 +869,7 @@ impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
         fh_out: FileHandle,
         offset_out: NumBytes,
         len: NumBytes,
-        flags: u32,
+        flags: u64,
     ) -> FsResult<ReplyWrite> {
         self.deref()
             .copy_file_range(

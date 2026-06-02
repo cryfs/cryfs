@@ -674,7 +674,7 @@ pub trait AsyncFilesystemLL {
         offset_out: NumBytes,
         len: NumBytes,
         // TODO Wrapper type for flags
-        flags: u32,
+        flags: u64,
     ) -> FsResult<ReplyWrite>;
 
     /// macOS only: Rename the volume. Set fuse_init_out.flags during init to

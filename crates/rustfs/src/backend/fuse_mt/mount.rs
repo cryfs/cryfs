@@ -1,5 +1,4 @@
 use fuse_mt::FuseMT;
-use fuser::MountOption;
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::path::Path;
@@ -15,13 +14,13 @@ pub async fn mount<Fs>(
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
     unmount_trigger: Option<CancellationToken>,
-    mount_options: &[MountOption],
+    config: &fuser::Config,
     on_successfully_mounted: impl FnOnce(),
 ) -> std::io::Result<()>
 where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    let fs = spawn_mount(fs, mountpoint, runtime, mount_options).await?;
+    let fs = spawn_mount(fs, mountpoint, runtime, config).await?;
     on_successfully_mounted();
 
     if let Some(unmount_trigger) = unmount_trigger {
@@ -36,7 +35,7 @@ pub async fn spawn_mount<Fs>(
     fs: AsyncDropGuard<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
-    mount_options: &[MountOption],
+    config: &fuser::Config,
 ) -> std::io::Result<RunningFilesystem>
 where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
@@ -51,7 +50,10 @@ where
     let fs = FuseMT::new(backend, num_threads());
 
     // TODO Fuse args (e.g. filesystem name)
-    let session = fuser::spawn_mount2(fs, mountpoint, mount_options);
+    // `FuseMT` implements fuser 0.16's `Filesystem`, so we mount via the 0.16-pinned `fuser_fusemt`,
+    // translating the shared (fuser 0.17) `Config` into fuser-0.16 mount options.
+    let mount_options = config_to_fuser16_options(config);
+    let session = fuser_fusemt::spawn_mount2(fs, mountpoint, &mount_options);
     let session = match session {
         Ok(session) => {
             std::mem::drop(backend_internal_arc);
@@ -75,4 +77,49 @@ fn num_threads() -> usize {
             NonZeroUsize::new(2).unwrap()
         })
         .get()
+}
+
+/// The `fuse_mt` crate is still on fuser 0.16, whose `spawn_mount2` takes `&[MountOption]` (not the
+/// structured `Config` introduced in 0.17) and whose `MountOption` still carries the `AllowOther` /
+/// `AllowRoot` variants that 0.17 moved into `Config::acl`. Translate the shared (fuser 0.17) `Config`
+/// the `RustfsBackend` trait passes us into the fuser-0.16 mount options `fuser_fusemt` expects.
+fn config_to_fuser16_options(config: &fuser::Config) -> Vec<fuser_fusemt::MountOption> {
+    let mut options: Vec<fuser_fusemt::MountOption> = config
+        .mount_options
+        .iter()
+        .map(convert_mount_option)
+        .collect();
+    match config.acl {
+        fuser::SessionACL::All => options.push(fuser_fusemt::MountOption::AllowOther),
+        fuser::SessionACL::RootAndOwner => options.push(fuser_fusemt::MountOption::AllowRoot),
+        fuser::SessionACL::Owner => {}
+    }
+    options
+}
+
+fn convert_mount_option(option: &fuser::MountOption) -> fuser_fusemt::MountOption {
+    // fuser 0.17's `MountOption` variants are a subset of 0.16's (0.16 also has AllowOther/AllowRoot,
+    // handled separately via `Config::acl`), so this is an exhaustive 1:1 mapping.
+    use fuser::MountOption as New;
+    use fuser_fusemt::MountOption as Old;
+    match option {
+        New::FSName(name) => Old::FSName(name.clone()),
+        New::Subtype(subtype) => Old::Subtype(subtype.clone()),
+        New::CUSTOM(custom) => Old::CUSTOM(custom.clone()),
+        New::AutoUnmount => Old::AutoUnmount,
+        New::DefaultPermissions => Old::DefaultPermissions,
+        New::Dev => Old::Dev,
+        New::NoDev => Old::NoDev,
+        New::Suid => Old::Suid,
+        New::NoSuid => Old::NoSuid,
+        New::RO => Old::RO,
+        New::RW => Old::RW,
+        New::Exec => Old::Exec,
+        New::NoExec => Old::NoExec,
+        New::Atime => Old::Atime,
+        New::NoAtime => Old::NoAtime,
+        New::DirSync => Old::DirSync,
+        New::Sync => Old::Sync,
+        New::Async => Old::Async,
+    }
 }

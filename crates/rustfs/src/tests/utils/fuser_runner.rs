@@ -2,11 +2,12 @@ use std::sync::OnceLock;
 use tempfile::TempDir;
 
 use cryfs_utils::async_drop::{AsyncDropArc, AsyncDropGuard, SyncDrop};
+use cryfs_utils::safe_panic;
 
 use super::filesystem_driver::FilesystemDriver;
 use super::mock_low_level_api::MockAsyncFilesystemLL;
 use crate::{
-    backend::fuser::{RunningFilesystem, spawn_mount},
+    backend::fuser::{Config, RunningFilesystem, spawn_mount},
     tests::utils::mock_low_level_api::MockFilesystem,
 };
 
@@ -42,7 +43,7 @@ impl Runner {
             AsyncDropArc::clone(implementation.inner()),
             mountpoint.path(),
             runtime,
-            &[],
+            &Config::default(),
         )
         .await
         .expect("Failed to spawn filesystem");
@@ -60,6 +61,19 @@ impl Runner {
 
     pub fn driver(&self) -> FilesystemDriver {
         FilesystemDriver::new(self.mountpoint.path().to_owned().try_into().unwrap())
+    }
+}
+
+impl Drop for Runner {
+    fn drop(&mut self) {
+        // Production's `RunningFilesystem::Drop` only logs unmount/destroy failures; in tests we want
+        // them to fail loudly. Unmount explicitly here (which also ensures it happens before the mock
+        // `_implementation` drops, matching the required member order) and `safe_panic!` on error —
+        // that panics normally, but degrades to stderr if we're already unwinding (e.g. an assertion
+        // already failed), avoiding a double-panic abort that would mask the original failure.
+        if let Err(err) = self._running_filesystem.unmount_join() {
+            safe_panic!("Test filesystem unmount failed: {err}");
+        }
     }
 }
 

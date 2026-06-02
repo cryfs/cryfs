@@ -32,7 +32,7 @@ fn main() {
             mountdir,
             runtime.handle().clone(),
             None,
-            &[],
+            &cryfs_rustfs::backend::fuser::Config::default(),
             || {},
         ))
         .unwrap();

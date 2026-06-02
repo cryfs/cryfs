@@ -10,7 +10,7 @@ use crate::common::{
 use crate::low_level_api::ReplyEntry;
 
 pub const ROOT_INO: InodeNumber =
-    InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID).unwrap());
+    InodeNumber::from_const(NonZeroU64::new(fuser::INodeNo::ROOT.0).unwrap());
 
 struct TestInodeNumberPool {
     highest_assigned_ino: InodeNumber,

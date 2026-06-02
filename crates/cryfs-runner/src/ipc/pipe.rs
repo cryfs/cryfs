@@ -659,9 +659,7 @@ mod tests {
             // A payload just under MAX_MESSAGE_SIZE must round-trip cleanly.
             // Send/recv concurrently so we don't deadlock against the pipe's
             // OS-level buffer (~64 KiB on Linux).
-            let payload: Vec<u8> = (0..MAX_MESSAGE_SIZE - 4)
-                .map(|i| (i % 251) as u8)
-                .collect();
+            let payload: Vec<u8> = (0..MAX_MESSAGE_SIZE - 4).map(|i| (i % 251) as u8).collect();
             let expected = payload.clone();
             let (mut sender, mut recver) = pipe::<u32>().unwrap();
             let send_thread = thread::spawn(move || {

@@ -5,6 +5,7 @@ mod backend_adapter;
 mod mount;
 pub use mount::{mount, spawn_mount};
 
-pub use fuser::MountOption;
+pub use fuser::{Config, MountOption, SessionACL};
 
-pub type RunningFilesystem = super::RunningFilesystem<fuser::BackgroundSession>;
+// fuse_mt mounts via fuser 0.16 (`fuser_fusemt`), so its session is fuser-0.16's BackgroundSession.
+pub type RunningFilesystem = super::RunningFilesystem<fuser_fusemt::BackgroundSession>;

@@ -1,11 +1,12 @@
+use fuser::FileHandle as FuserFileHandle;
 #[cfg(target_os = "macos")]
 use fuser::ReplyXTimes;
 use fuser::{
-    Filesystem, KernelConfig, ReplyAttr, ReplyBmap, ReplyCreate, ReplyData, ReplyEmpty, ReplyEntry,
-    ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyStatfs, ReplyWrite, ReplyXattr, Request,
-    TimeOrNow,
+    AccessFlags, BsdFileFlags, CopyFileRangeFlags, Filesystem, INodeNo, IoctlFlags, KernelConfig,
+    LockOwner, OpenFlags, RenameFlags, ReplyAttr, ReplyBmap, ReplyCreate, ReplyData, ReplyEmpty,
+    ReplyEntry, ReplyIoctl, ReplyLock, ReplyLseek, ReplyOpen, ReplyStatfs, ReplyWrite, ReplyXattr,
+    Request, TimeOrNow, WriteFlags,
 };
-use libc::c_int;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::future::Future;
@@ -39,6 +40,7 @@ use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
 // TODO Check read/write and other operations, from here to the actual cryfs implementation, and minimize copies of data while it is being passed around.
 
+// TODO fuser 0.17 has an experimental async API. Should we use that?
 pub struct BackendAdapter<Fs>
 where
     // TODO Send + Sync + 'static needed?
@@ -117,26 +119,39 @@ where
         Ok(fs)
     }
 
-    fn run_blocking<R: Debug>(
+    fn run_blocking<R: Debug + Send>(
         runtime: &tokio::runtime::Handle,
         log_msg: &str,
-        func: impl AsyncFnOnce() -> FsResult<R>,
+        func: impl AsyncFnOnce() -> FsResult<R> + Send,
     ) -> Result<R, libc::c_int> {
-        // TODO Is it ok to call block_on concurrently for multiple fs operations?
-        runtime.block_on(async move {
-            log::info!("{log_msg}...");
-            let result = func().await;
-            match result {
-                Ok(ok) => {
-                    log::info!("{log_msg}...success: {ok:?}");
-                    Ok(ok)
+        let run = move || {
+            runtime.block_on(async move {
+                log::info!("{log_msg}...");
+                let result = func().await;
+                match result {
+                    Ok(ok) => {
+                        log::info!("{log_msg}...success: {ok:?}");
+                        Ok(ok)
+                    }
+                    Err(err) => {
+                        log::info!("{log_msg}...failed: {err:?}");
+                        Err(err.system_error_code())
+                    }
                 }
-                Err(err) => {
-                    log::info!("{log_msg}...failed: {err:?}");
-                    Err(err.system_error_code())
-                }
-            }
-        })
+            })
+        };
+
+        // fuser 0.17 calls `init` (during the mount handshake, inside `Session::new`) and `destroy`
+        // (via the session's `Drop`) synchronously on the thread that called `spawn_mount2` — typically
+        // a tokio runtime worker. `Handle::block_on` panics when called from a thread that is already
+        // driving the runtime, so if we detect we're inside a runtime, run the future on a short-lived
+        // dedicated thread instead. This keeps the adapter a correct `Filesystem` regardless of which
+        // thread fuser invokes us on, without imposing anything on the mount call site.
+        if tokio::runtime::Handle::try_current().is_ok() {
+            std::thread::scope(|scope| scope.spawn(run).join().unwrap())
+        } else {
+            run()
+        }
     }
 
     // TODO Can we unify `run_async_reply_{entry,attr,...}` ?
@@ -180,7 +195,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -203,12 +218,12 @@ where
                     fuser_reply.entry(
                         &reply.ttl,
                         &convert_node_attrs(reply.attr, reply.ino.handle),
-                        reply.ino.generation,
+                        fuser::Generation(reply.ino.generation),
                     );
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -232,7 +247,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -253,11 +268,11 @@ where
                 Ok(reply) => {
                     log::info!("{log_msg}...success: {reply:?}");
                     let flags = convert_open_out_flags(reply.flags);
-                    fuser_reply.opened(NonZeroU64::from(reply.fh).get(), flags);
+                    fuser_reply.opened(convert_file_handle(reply.fh), flags);
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -283,7 +298,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -317,7 +332,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -340,14 +355,14 @@ where
                     fuser_reply.created(
                         &reply.ttl,
                         &convert_node_attrs(reply.attr, reply.ino.handle),
-                        reply.ino.generation,
-                        NonZeroU64::from(reply.fh).get(),
+                        fuser::Generation(reply.ino.generation),
+                        convert_file_handle(reply.fh),
                         convert_open_out_flags(reply.flags),
                     );
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -371,7 +386,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -395,7 +410,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -419,7 +434,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -446,7 +461,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -471,7 +486,7 @@ where
                 }
                 Err(err) => {
                     log::info!("{log_msg}...failed: {err:?}");
-                    fuser_reply.error(err.system_error_code())
+                    fuser_reply.error(to_errno(&err))
                 }
             }
         });
@@ -503,12 +518,14 @@ impl<Fs> Filesystem for BackendAdapter<Fs>
 where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    fn init(&mut self, req: &Request<'_>, config: &mut KernelConfig) -> Result<(), c_int> {
+    fn init(&mut self, req: &Request, config: &mut KernelConfig) -> std::io::Result<()> {
         // TODO Allow a way to set KernelConfig? Or should we make choices in rustfs? The fuse-mt crate chose to hide it.
 
+        let req = RequestInfo::from(req);
         Self::run_blocking(&self.runtime, &format!("init({config:?})"), async || {
-            self.fs_write().await?.init(&RequestInfo::from(req)).await
+            self.fs_write().await?.init(&req).await
         })
+        .map_err(std::io::Error::from_raw_os_error)
     }
 
     fn destroy(&mut self) {
@@ -523,13 +540,7 @@ where
         // TODO Is there a way to do the above without a call to expect()?
     }
 
-    fn lookup(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
-        name: &OsStr,
-        reply: fuser::ReplyEntry,
-    ) {
+    fn lookup(&self, req: &Request, parent_ino: INodeNo, name: &OsStr, reply: fuser::ReplyEntry) {
         // TODO Is this possible without name.to_owned()?
         let req = RequestInfo::from(req);
         let name = name.to_owned();
@@ -547,7 +558,7 @@ where
         );
     }
 
-    fn forget(&mut self, req: &Request, ino: u64, nlookup: u64) {
+    fn forget(&self, req: &Request, ino: INodeNo, nlookup: u64) {
         let req = RequestInfo::from(req);
         self.run_async_no_reply(
             format!("forget(ino={ino}, nlookup={nlookup})"),
@@ -559,11 +570,11 @@ where
     }
 
     // TODO Do we want this? It seems to be gated by an "abi-7-16" feature but what is that?
-    // fn batch_forget(&mut self, req: &Request<'_>, nodes: &[fuse_forget_one]) {
+    // fn batch_forget(&mut self, req: &Request, nodes: &[fuse_forget_one]) {
     //     todo!()
     // }
 
-    fn getattr(&mut self, req: &Request<'_>, ino: u64, fh: Option<u64>, reply: ReplyAttr) {
+    fn getattr(&self, req: &Request, ino: INodeNo, fh: Option<FuserFileHandle>, reply: ReplyAttr) {
         let req = RequestInfo::from(req);
         self.run_async_reply_attr(
             format!("getattr(ino={ino}, fh={fh:?})"),
@@ -577,9 +588,9 @@ where
     }
 
     fn setattr(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
         mode: Option<u32>,
         uid: Option<u32>,
         gid: Option<u32>,
@@ -587,11 +598,11 @@ where
         atime: Option<TimeOrNow>,
         mtime: Option<TimeOrNow>,
         ctime: Option<SystemTime>,
-        fh: Option<u64>,
+        fh: Option<FuserFileHandle>,
         crtime: Option<SystemTime>,
         chgtime: Option<SystemTime>,
         bkuptime: Option<SystemTime>,
-        flags: Option<u32>,
+        flags: Option<BsdFileFlags>,
         reply: ReplyAttr,
     ) {
         let req = RequestInfo::from(req);
@@ -601,6 +612,7 @@ where
         let size = size.map(NumBytes::from);
         let atime = atime.map(parse_time);
         let mtime = mtime.map(parse_time);
+        let flags = flags.map(parse_file_flags);
         self.run_async_reply_attr(
             format!("setattr(ino={ino}, fh={fh:?}, mode={mode:?}, uid={uid:?}, gid={gid:?}, size={size:?}, atime={atime:?}, mtime={mtime:?}, ctime={ctime:?}, crtime={crtime:?}, chgtime={chgtime:?}, bkuptime={bkuptime:?}, flags={flags:?}"),
             reply,
@@ -611,7 +623,7 @@ where
             });
     }
 
-    fn readlink(&mut self, req: &Request<'_>, ino: u64, reply: ReplyData) {
+    fn readlink(&self, req: &Request, ino: INodeNo, reply: ReplyData) {
         let req = RequestInfo::from(req);
         self.run_async_reply_data(
             format!("readlink(ino={ino})"),
@@ -626,9 +638,9 @@ where
     }
 
     fn mknod(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
+        &self,
+        req: &Request,
+        parent_ino: INodeNo,
         name: &OsStr,
         mode: u32,
         umask: u32,
@@ -655,9 +667,9 @@ where
     }
 
     fn mkdir(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
+        &self,
+        req: &Request,
+        parent_ino: INodeNo,
         name: &OsStr,
         mode: u32,
         umask: u32,
@@ -683,7 +695,7 @@ where
         );
     }
 
-    fn unlink(&mut self, req: &Request<'_>, parent_ino: u64, name: &OsStr, reply: ReplyEmpty) {
+    fn unlink(&self, req: &Request, parent_ino: INodeNo, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         self.run_async_reply_empty(
@@ -700,7 +712,7 @@ where
         );
     }
 
-    fn rmdir(&mut self, req: &Request<'_>, parent_ino: u64, name: &OsStr, reply: ReplyEmpty) {
+    fn rmdir(&self, req: &Request, parent_ino: INodeNo, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         self.run_async_reply_empty(
@@ -718,9 +730,9 @@ where
     }
 
     fn symlink(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
+        &self,
+        req: &Request,
+        parent_ino: INodeNo,
         name: &OsStr,
         link: &Path,
         reply: ReplyEntry,
@@ -747,18 +759,19 @@ where
     }
 
     fn rename(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
+        &self,
+        req: &Request,
+        parent_ino: INodeNo,
         name: &OsStr,
-        newparent: u64,
+        newparent: INodeNo,
         newname: &OsStr,
-        flags: u32,
+        flags: RenameFlags,
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         let newname = newname.to_owned();
+        let flags = flags.bits();
         self.run_async_reply_empty(
             format!("rename(parent={parent_ino}, name={name:?}, newparent={newparent}, newname={newname:?}, flags={flags})"),
             reply,
@@ -781,10 +794,10 @@ where
     }
 
     fn link(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        newparent: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        newparent: INodeNo,
         newname: &OsStr,
         reply: ReplyEntry,
     ) {
@@ -805,7 +818,7 @@ where
         );
     }
 
-    fn open(&mut self, req: &Request<'_>, ino: u64, flags: i32, reply: ReplyOpen) {
+    fn open(&self, req: &Request, ino: INodeNo, flags: OpenFlags, reply: ReplyOpen) {
         let req = RequestInfo::from(req);
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_open(
@@ -819,19 +832,21 @@ where
     }
 
     fn read(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        offset: i64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        offset: u64,
         size: u32,
-        flags: i32,
-        lock_owner: Option<u64>,
+        flags: OpenFlags,
+        lock_owner: Option<LockOwner>,
         reply: ReplyData,
     ) {
         let req = RequestInfo::from(req);
-        let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
+        let offset = NumBytes::from(offset);
         let size = NumBytes::from(u64::from(size));
+        let flags = flags.0;
+        let lock_owner = lock_owner.map(|lock_owner| lock_owner.0);
         self.run_async_reply_data(
             format!("read(ino={ino}, fh={fh}, offset={offset}, size={size}, flags={flags}, lock_owner={lock_owner:?})"),
             reply,
@@ -866,20 +881,23 @@ where
     }
 
     fn write(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        offset: i64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        offset: u64,
         data: &[u8],
-        write_flags: u32,
-        flags: i32,
-        lock_owner: Option<u64>,
+        write_flags: WriteFlags,
+        flags: OpenFlags,
+        lock_owner: Option<LockOwner>,
         reply: ReplyWrite,
     ) {
         let req = RequestInfo::from(req);
-        let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
+        let offset = NumBytes::from(offset);
         let data = data.to_owned();
+        let write_flags = write_flags.bits();
+        let flags = flags.0;
+        let lock_owner = lock_owner.map(|lock_owner| lock_owner.0);
         self.run_async_reply_write(
             format!("write(ino={ino}, fh={fh}, offset={offset}, data=[{size} bytes], write_flags={write_flags}, flags={flags}, lock_owner={lock_owner:?})", size=data.len()),
             reply,
@@ -901,8 +919,16 @@ where
         );
     }
 
-    fn flush(&mut self, req: &Request<'_>, ino: u64, fh: u64, lock_owner: u64, reply: ReplyEmpty) {
+    fn flush(
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        lock_owner: LockOwner,
+        reply: ReplyEmpty,
+    ) {
         let req = RequestInfo::from(req);
+        let lock_owner = lock_owner.0;
         self.run_async_reply_empty(
             format!("flush(ino={ino}, fh={fh}, lock_owner={lock_owner})"),
             reply,
@@ -915,18 +941,19 @@ where
     }
 
     fn release(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        flags: i32,
-        lock_owner: Option<u64>,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        flags: OpenFlags,
+        lock_owner: Option<LockOwner>,
         flush: bool,
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
+        let lock_owner = lock_owner.map(|lock_owner| lock_owner.0);
         self.run_async_reply_empty(
-            format!("release(ino={ino}, fh={fh}, flags={flags}, lock_owner={lock_owner:?}, flush={flush})"),
+            format!("release(ino={ino}, fh={fh}, flags={flags:?}, lock_owner={lock_owner:?}, flush={flush})"),
             reply,
             async move |fs| {
                 let ino = parse_inode(ino)?;
@@ -936,7 +963,14 @@ where
         );
     }
 
-    fn fsync(&mut self, req: &Request<'_>, ino: u64, fh: u64, datasync: bool, reply: ReplyEmpty) {
+    fn fsync(
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        datasync: bool,
+        reply: ReplyEmpty,
+    ) {
         let req = RequestInfo::from(req);
 
         self.run_async_reply_empty(
@@ -950,7 +984,7 @@ where
         );
     }
 
-    fn opendir(&mut self, req: &Request<'_>, ino: u64, flags: i32, reply: ReplyOpen) {
+    fn opendir(&self, req: &Request, ino: INodeNo, flags: OpenFlags, reply: ReplyOpen) {
         let req = RequestInfo::from(req);
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_open(
@@ -964,15 +998,14 @@ where
     }
 
     fn readdir(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        offset: i64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        offset: u64,
         mut reply: fuser::ReplyDirectory,
     ) {
         let req = RequestInfo::from(req);
-        let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdir(ino={ino}, fh={fh}, offset={offset})"),
             async move |fs| {
@@ -985,7 +1018,7 @@ where
                         Ok(())
                     }
                     Err(err) => {
-                        reply.error(err.system_error_code());
+                        reply.error(to_errno(&err));
                         Err(err)
                     }
                 }
@@ -994,15 +1027,14 @@ where
     }
 
     fn readdirplus(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        offset: i64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        offset: u64,
         mut reply: fuser::ReplyDirectoryPlus,
     ) {
         let req = RequestInfo::from(req);
-        let offset = u64::try_from(offset).unwrap(); // TODO No unwrap?
         self.run_async_no_reply(
             format!("readdirplus(ino={ino}, fh={fh}, offset={offset})"),
             async move |fs| {
@@ -1015,7 +1047,7 @@ where
                         Ok(())
                     }
                     Err(err) => {
-                        reply.error(err.system_error_code());
+                        reply.error(to_errno(&err));
                         Err(err)
                     }
                 }
@@ -1023,7 +1055,14 @@ where
         );
     }
 
-    fn releasedir(&mut self, req: &Request<'_>, ino: u64, fh: u64, flags: i32, reply: ReplyEmpty) {
+    fn releasedir(
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        flags: OpenFlags,
+        reply: ReplyEmpty,
+    ) {
         let req = RequestInfo::from(req);
         let flags = parse_open_in_flags(flags);
         self.run_async_reply_empty(
@@ -1038,10 +1077,10 @@ where
     }
 
     fn fsyncdir(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
         datasync: bool,
         reply: ReplyEmpty,
     ) {
@@ -1057,7 +1096,7 @@ where
         );
     }
 
-    fn statfs(&mut self, req: &Request<'_>, ino: u64, reply: ReplyStatfs) {
+    fn statfs(&self, req: &Request, ino: INodeNo, reply: ReplyStatfs) {
         let req = RequestInfo::from(req);
         self.run_async_reply_statfs(format!("statfs(ino={ino})"), reply, async move |fs| {
             let ino = parse_inode(ino)?;
@@ -1066,9 +1105,9 @@ where
     }
 
     fn setxattr(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
         name: &OsStr,
         value: &[u8],
         flags: i32,
@@ -1095,20 +1134,13 @@ where
         );
     }
 
-    fn getxattr(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        name: &OsStr,
-        size: u32,
-        reply: ReplyXattr,
-    ) {
+    fn getxattr(&self, req: &Request, ino: INodeNo, name: &OsStr, size: u32, reply: ReplyXattr) {
         let req = RequestInfo::from(req);
         let name = match parse_xattr_name(name) {
             Ok(name) => name.to_owned(),
             Err(err) => {
                 log::info!("getxattr(ino={ino}, name={name:?})...failed: {err:?}");
-                reply.error(err.system_error_code());
+                reply.error(to_errno(&err));
                 return;
             }
         };
@@ -1125,7 +1157,7 @@ where
                             Ok(())
                         }
                         Err(err) => {
-                            reply.error(err.system_error_code());
+                            reply.error(to_errno(&err));
                             Err(err)
                         }
                     }
@@ -1137,7 +1169,7 @@ where
                             Ok(())
                         }
                         Err(err) => {
-                            reply.error(err.system_error_code());
+                            reply.error(to_errno(&err));
                             Err(err)
                         }
                     }
@@ -1146,7 +1178,7 @@ where
         );
     }
 
-    fn listxattr(&mut self, req: &Request<'_>, ino: u64, size: u32, reply: ReplyXattr) {
+    fn listxattr(&self, req: &Request, ino: INodeNo, size: u32, reply: ReplyXattr) {
         let req = RequestInfo::from(req);
         let size = NumBytes::from(u64::from(size));
         self.run_async_no_reply(
@@ -1161,7 +1193,7 @@ where
                             Ok(())
                         }
                         Err(err) => {
-                            reply.error(err.system_error_code());
+                            reply.error(to_errno(&err));
                             Err(err)
                         }
                     }
@@ -1175,7 +1207,7 @@ where
                             Ok(())
                         }
                         Err(err) => {
-                            reply.error(err.system_error_code());
+                            reply.error(to_errno(&err));
                             Err(err)
                         }
                     }
@@ -1184,7 +1216,7 @@ where
         );
     }
 
-    fn removexattr(&mut self, _req: &Request<'_>, ino: u64, name: &OsStr, reply: ReplyEmpty) {
+    fn removexattr(&self, _req: &Request, ino: INodeNo, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(_req);
         let name = name.to_owned();
         self.run_async_reply_empty(
@@ -1203,8 +1235,9 @@ where
         );
     }
 
-    fn access(&mut self, req: &Request<'_>, ino: u64, mask: i32, reply: ReplyEmpty) {
+    fn access(&self, req: &Request, ino: INodeNo, mask: AccessFlags, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
+        let mask = mask.bits();
         self.run_async_reply_empty(
             format!("access(ino={ino}, mask={mask})"),
             reply,
@@ -1216,9 +1249,9 @@ where
     }
 
     fn create(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
+        &self,
+        req: &Request,
+        parent_ino: INodeNo,
         name: &OsStr,
         mode: u32,
         umask: u32,
@@ -1230,7 +1263,7 @@ where
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         let mode = Mode::from(mode).add_file_flag();
-        let flags = parse_open_in_flags(flags);
+        let flags = parse_open_in_flags(OpenFlags(flags));
         self.run_async_reply_create(
             format!("create(parent={parent_ino}, name={name:?}, mode={mode}, umask={umask}, flags={flags})"),
             reply,
@@ -1247,11 +1280,11 @@ where
     }
 
     fn getlk(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        lock_owner: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        lock_owner: LockOwner,
         start: u64,
         end: u64,
         typ: i32,
@@ -1259,6 +1292,7 @@ where
         reply: ReplyLock,
     ) {
         let req = RequestInfo::from(req);
+        let lock_owner = lock_owner.0;
         self.run_async_reply_lock(
             format!("getlk(ino={ino}, fh={fh}, lock_owner={lock_owner}, start={start}, end={end}, typ={typ}, pid={pid})"),
             reply,
@@ -1272,11 +1306,11 @@ where
     }
 
     fn setlk(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        lock_owner: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        lock_owner: LockOwner,
         start: u64,
         end: u64,
         typ: i32,
@@ -1285,6 +1319,7 @@ where
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
+        let lock_owner = lock_owner.0;
         self.run_async_reply_empty(
             format!("setlk(ino={ino}, fh={fh}, lock_owner={lock_owner}, start={start}, end={end}, typ={typ}, pid={pid}, sleep={sleep:?})"),
             reply,
@@ -1297,7 +1332,7 @@ where
         );
     }
 
-    fn bmap(&mut self, req: &Request<'_>, ino: u64, blocksize: u32, idx: u64, reply: ReplyBmap) {
+    fn bmap(&self, req: &Request, ino: INodeNo, blocksize: u32, idx: u64, reply: ReplyBmap) {
         let req = RequestInfo::from(req);
         let blocksize = NumBytes::from(u64::from(blocksize));
         self.run_async_reply_bmap(
@@ -1311,11 +1346,11 @@ where
     }
 
     fn ioctl(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        flags: u32,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        flags: IoctlFlags,
         cmd: u32,
         in_data: &[u8],
         out_size: u32,
@@ -1323,6 +1358,7 @@ where
     ) {
         let req = RequestInfo::from(req);
         let in_data = in_data.to_owned();
+        let flags = flags.bits();
         self.run_async_reply_ioctl(
             format!("ioctl(ino={ino}, fh={fh}, flags={flags}, cmd={cmd}, in_data=[{} bytes], out_size={out_size})", in_data.len()),
             reply,
@@ -1336,18 +1372,18 @@ where
     }
 
     fn fallocate(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
-        offset: i64,
-        length: i64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
+        offset: u64,
+        length: u64,
         mode: i32,
         reply: ReplyEmpty,
     ) {
         let req = RequestInfo::from(req);
-        let offset = NumBytes::from(u64::try_from(offset).unwrap()); // TODO No unwrap?
-        let length = NumBytes::from(u64::try_from(length).unwrap()); // TODO No unwrap?
+        let offset = NumBytes::from(offset);
+        let length = NumBytes::from(length);
 
         // TODO Why does fuser use i32 instead of u32? for mode?
         let mode = Mode::from(u32::try_from(mode).unwrap());
@@ -1363,10 +1399,10 @@ where
     }
 
     fn lseek(
-        &mut self,
-        req: &Request<'_>,
-        ino: u64,
-        fh: u64,
+        &self,
+        req: &Request,
+        ino: INodeNo,
+        fh: FuserFileHandle,
         offset: i64,
         whence: i32,
         reply: ReplyLseek,
@@ -1385,22 +1421,23 @@ where
     }
 
     fn copy_file_range(
-        &mut self,
-        req: &Request<'_>,
-        ino_in: u64,
-        fh_in: u64,
-        offset_in: i64,
-        ino_out: u64,
-        fh_out: u64,
-        offset_out: i64,
+        &self,
+        req: &Request,
+        ino_in: INodeNo,
+        fh_in: FuserFileHandle,
+        offset_in: u64,
+        ino_out: INodeNo,
+        fh_out: FuserFileHandle,
+        offset_out: u64,
         len: u64,
-        flags: u32,
+        flags: CopyFileRangeFlags,
         reply: ReplyWrite,
     ) {
         let req = RequestInfo::from(req);
-        let offset_in = NumBytes::from(u64::try_from(offset_in).unwrap()); // TODO No unwrap?
-        let offset_out = NumBytes::from(u64::try_from(offset_out).unwrap()); // TODO No unwrap?
+        let offset_in = NumBytes::from(offset_in);
+        let offset_out = NumBytes::from(offset_out);
         let len = NumBytes::from(len);
+        let flags = flags.bits();
         self.run_async_reply_write(
             format!("copy_file_range(ino_in={ino_in}, fh_in={fh_in}, offset_in={offset_in}, ino_out={ino_out}, fh_out={fh_out}, offset_out={offset_out}, len={len}, flags={flags})"),
             reply,
@@ -1426,7 +1463,7 @@ where
     }
 
     #[cfg(target_os = "macos")]
-    fn setvolname(&mut self, req: &Request<'_>, name: &OsStr, reply: ReplyEmpty) {
+    fn setvolname(&self, req: &Request, name: &OsStr, reply: ReplyEmpty) {
         let req = RequestInfo::from(req);
         let name = name.to_owned();
         self.run_async_reply_empty(
@@ -1446,11 +1483,11 @@ where
     /// macOS only (undocumented)
     #[cfg(target_os = "macos")]
     fn exchange(
-        &mut self,
-        req: &Request<'_>,
-        parent_ino: u64,
+        &self,
+        req: &Request,
+        parent_ino: INodeNo,
         name: &OsStr,
-        newparent_ino: u64,
+        newparent_ino: INodeNo,
         newname: &OsStr,
         options: u64,
         reply: ReplyEmpty,
@@ -1485,7 +1522,7 @@ where
     /// macOS only: Query extended times (bkuptime and crtime). Set fuse_init_out.flags
     /// during init to FUSE_XTIMES to enable
     #[cfg(target_os = "macos")]
-    fn getxtimes(&mut self, req: &Request<'_>, ino: u64, reply: ReplyXTimes) {
+    fn getxtimes(&self, req: &Request, ino: INodeNo, reply: ReplyXTimes) {
         let req = RequestInfo::from(req);
         self.run_async_reply_xtimes(format!("getxtimes(ino={ino})"), reply, async move |fs| {
             let ino = parse_inode(ino)?;
@@ -1521,7 +1558,7 @@ fn _reply_directory_add(
     kind: fuser::FileType,
     name: impl AsRef<OsStr>,
 ) -> ReplyDirectoryAddResult {
-    let result = fuser::ReplyDirectory::add(reply, NonZeroU64::from(ino).get(), offset, kind, name);
+    let result = fuser::ReplyDirectory::add(reply, convert_inode(ino), offset as u64, kind, name);
     match result {
         true => ReplyDirectoryAddResult::Full,
         false => ReplyDirectoryAddResult::NotFull,
@@ -1541,12 +1578,12 @@ impl ReplyDirectoryPlus for fuser::ReplyDirectoryPlus {
         let attr = convert_node_attrs(*attr, ino);
         let result = fuser::ReplyDirectoryPlus::add(
             self,
-            NonZeroU64::from(ino).get(),
-            offset,
+            convert_inode(ino),
+            offset as u64,
             name.as_str(),
             ttl,
             &attr,
-            generation,
+            fuser::Generation(generation),
         );
         match result {
             true => ReplyDirectoryAddResult::Full,
@@ -1555,10 +1592,10 @@ impl ReplyDirectoryPlus for fuser::ReplyDirectoryPlus {
     }
 }
 
-impl<'a> From<&fuser::Request<'a>> for crate::common::RequestInfo {
-    fn from(value: &fuser::Request<'a>) -> Self {
+impl From<&fuser::Request> for crate::common::RequestInfo {
+    fn from(value: &fuser::Request) -> Self {
         Self {
-            unique: value.unique(),
+            unique: u64::from(value.unique()),
             uid: Uid::from(value.uid()),
             gid: Gid::from(value.gid()),
             pid: value.pid(),
@@ -1566,21 +1603,25 @@ impl<'a> From<&fuser::Request<'a>> for crate::common::RequestInfo {
     }
 }
 
-fn parse_inode(ino: u64) -> FsResult<InodeNumber> {
-    InodeNumber::try_from(ino).ok_or_else(|| {
+fn to_errno(err: &FsError) -> fuser::Errno {
+    fuser::Errno::from_i32(err.system_error_code())
+}
+
+fn parse_inode(ino: INodeNo) -> FsResult<InodeNumber> {
+    InodeNumber::try_from(ino.0).ok_or_else(|| {
         log::error!("Kernel gave us zero as an inode number");
         FsError::InvalidOperation
     })
 }
 
-fn parse_file_handle(fh: u64) -> FsResult<FileHandle> {
-    FileHandle::try_from(fh).ok_or_else(|| {
+fn parse_file_handle(fh: FuserFileHandle) -> FsResult<FileHandle> {
+    FileHandle::try_from(fh.0).ok_or_else(|| {
         log::error!("Kernel gave us zero as a file handle");
         FsError::InvalidOperation
     })
 }
 
-fn parse_opt_file_handle(fh: Option<u64>) -> FsResult<Option<FileHandle>> {
+fn parse_opt_file_handle(fh: Option<FuserFileHandle>) -> FsResult<Option<FileHandle>> {
     fh.map(parse_file_handle).transpose()
 }
 
@@ -1591,29 +1632,41 @@ fn parse_time(time: TimeOrNow) -> SystemTime {
     }
 }
 
-fn parse_open_in_flags(flags: i32) -> OpenInFlags {
+fn parse_file_flags(flags: BsdFileFlags) -> u32 {
+    flags.bits()
+}
+
+fn parse_open_in_flags(flags: OpenFlags) -> OpenInFlags {
     // TODO Is this the right way to parse openflags? Are there other flags than just Read+Write?
     //      https://docs.rs/fuser/latest/fuser/trait.Filesystem.html#method.open seems to suggest so.
     // TODO This is duplicate between fuser and fuse_mt
-    match flags & libc::O_ACCMODE {
+    match flags.0 & libc::O_ACCMODE {
         libc::O_RDONLY => OpenInFlags::Read,
         libc::O_WRONLY => OpenInFlags::Write,
         libc::O_RDWR => OpenInFlags::ReadWrite,
-        _ => panic!("invalid flags: {flags}"),
+        _ => panic!("invalid flags: {flags:?}"),
     }
 }
 
-fn convert_open_out_flags(flags: OpenOutFlags) -> u32 {
+fn convert_inode(ino: InodeNumber) -> INodeNo {
+    INodeNo(NonZeroU64::from(ino).get())
+}
+
+fn convert_open_out_flags(flags: OpenOutFlags) -> fuser::FopenFlags {
     // TODO This is duplicate between fuser and fuse_mt
     // TODO Not implemented yet
     let OpenOutFlags {} = flags;
-    0
+    fuser::FopenFlags::from_bits_retain(0)
+}
+
+fn convert_file_handle(fh: FileHandle) -> FuserFileHandle {
+    FuserFileHandle(NonZeroU64::from(fh).get())
 }
 
 fn convert_node_attrs(attrs: NodeAttrs, ino: InodeNumber) -> fuser::FileAttr {
     let size: u64 = attrs.num_bytes.into();
     fuser::FileAttr {
-        ino: NonZeroU64::from(ino).get(),
+        ino: INodeNo(NonZeroU64::from(ino).get()),
         size,
         blocks: attrs.num_blocks.unwrap_or(size.div_ceil(512)),
         atime: attrs.atime,
@@ -1670,7 +1723,7 @@ struct DataCallback {
 impl DataCallback {
     fn error(self, err: FsError) {
         log::info!("{}...failed: {err:?}", self.log_msg);
-        self.reply.error(err.system_error_code());
+        self.reply.error(to_errno(&err));
     }
 }
 

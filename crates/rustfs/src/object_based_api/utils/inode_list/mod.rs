@@ -29,9 +29,9 @@ use crate::{FsError, object_based_api::Device};
 use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
 pub const FUSE_ROOT_ID: InodeNumber =
-    InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID).unwrap());
+    InodeNumber::from_const(NonZeroU64::new(fuser::INodeNo::ROOT.0).unwrap());
 pub const DUMMY_INO: InodeNumber =
-    InodeNumber::from_const(NonZeroU64::new(fuser::FUSE_ROOT_ID + 1).unwrap());
+    InodeNumber::from_const(NonZeroU64::new(fuser::INodeNo::ROOT.0 + 1).unwrap());
 
 mod handle_forest;
 pub use handle_forest::MakeOrphanError;

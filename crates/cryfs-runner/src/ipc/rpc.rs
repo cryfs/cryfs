@@ -148,10 +148,7 @@ where
     /// handshake is daemon→parent. Timeout is the parent's safety net for a
     /// child binary that hangs without writing — bare `recv_raw` would block
     /// forever in that case.
-    pub(crate) fn recv_raw_handshake_with_timeout(
-        &mut self,
-        timeout: Duration,
-    ) -> Result<Vec<u8>> {
+    pub(crate) fn recv_raw_handshake_with_timeout(&mut self, timeout: Duration) -> Result<Vec<u8>> {
         self.receiver.recv_raw_timeout(timeout)
     }
 }

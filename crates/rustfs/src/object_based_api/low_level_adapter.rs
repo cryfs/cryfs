@@ -1087,7 +1087,7 @@ where
         _fh_out: FileHandle,
         _offset_out: NumBytes,
         _len: NumBytes,
-        _flags: u32,
+        _flags: u64,
     ) -> FsResult<ReplyWrite> {
         self.trigger_on_operation().await?;
 

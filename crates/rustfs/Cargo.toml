@@ -16,12 +16,14 @@ cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
 derive_more.workspace = true
 fuse_mt = { workspace = true, optional = true }
-# TODO Which ABI feature to set for Fuse?
-#      7.31 is the newest supported by fuser as of time of writing and was introduced in
-#      Linux Kernel 5.2, see https://github.com/torvalds/linux/blob/v5.2/include/uapi/linux/fuse.h .
-#      But probably make this configurable in the future.
+# The `fuse_mt` crate is still on fuser 0.16, so the fuse_mt backend mounts via a second fuser pinned to
+# 0.16 and aliased as `fuser_fusemt` (the main `fuser` dependency below is 0.17). Use "0.16" (NOT "=0.16.0")
+# so it resolves to the SAME fuser-0.16 version `fuse_mt` does and cargo unifies them into one crate
+# instance — otherwise `FuseMT` (which implements fuser-0.16's `Filesystem`) wouldn't satisfy
+# `fuser_fusemt::spawn_mount2`. Only pulled in when the `fuse_mt` feature is enabled.
+fuser_fusemt = { package = "fuser", version = "0.16", optional = true }
 # TODO Make fuser dependency optional and only include it if the "fuser" feature is enabled (here and below in the macos setup).
-fuser = { workspace = true, features = ["abi-7-31"] }
+fuser.workspace = true
 futures.workspace = true
 libc.workspace = true
 log.workspace = true
@@ -47,12 +49,16 @@ cryfs-utils = { path = "../utils", features = ["testutils"] }
 users.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
-# Building fuser without linking libfuse currently only works on Linux, not on macos. Macos requires the `libfuse` feature to link against the library
-fuser = { workspace = true, features = ["libfuse"] }
+# Unlike fuser 0.17, fuser 0.16 (`fuser_fusemt`, used by the fuse_mt backend) `unimplemented!()`s in its
+# build.rs when built without the `libfuse` feature on a non-Linux target — so on macOS it MUST link
+# libfuse (macFUSE). (The main fuser 0.17 dep needs no such feature; its build.rs forces libfuse2 on
+# macOS unconditionally.) On Linux, `fuser_fusemt` stays featureless (pure-rust) via the base dep above.
+# Only relevant when the `fuse_mt` feature is enabled.
+fuser_fusemt = { package = "fuser", version = "0.16", optional = true, features = ["libfuse"] }
 
 [features]
 default = ["fuser"]
-fuse_mt = ["dep:fuse_mt"]
+fuse_mt = ["dep:fuse_mt", "dep:fuser_fusemt"]
 fuser = []
 testutils = ["cryfs-utils/testutils", "cryfs-concurrent-store/testutils"]
 

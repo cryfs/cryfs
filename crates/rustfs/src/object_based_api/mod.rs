@@ -23,4 +23,4 @@ mod backends;
 pub use backends::RustfsFusemtBackend;
 #[cfg(feature = "fuser")]
 pub use backends::RustfsFuserBackend;
-pub use backends::{MountOption, RustfsBackend};
+pub use backends::{Config, MountOption, RustfsBackend, SessionACL};

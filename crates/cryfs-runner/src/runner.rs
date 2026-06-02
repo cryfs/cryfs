@@ -11,7 +11,7 @@ use cryfs_cli_utils::{
 use cryfs_config::{config::CryConfig, localstate::LocalStateDir};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::AtimeUpdateBehavior;
-use cryfs_rustfs::object_based_api::{MountOption, RustfsBackend};
+use cryfs_rustfs::object_based_api::{Config, MountOption, RustfsBackend, SessionACL};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -152,26 +152,41 @@ impl<'v, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
             | AtimeUpdateBehavior::NodiratimeStrictatime => MountOption::Atime,
             AtimeUpdateBehavior::Noatime => MountOption::NoAtime,
         };
-        let mount_options = [
+        // TODO How to set Config.n_threads and Config.clone_fd ? Would multiple threads be faster?
+        let mut config = Config::default();
+        config.mount_options = vec![
             MountOption::FSName(format!("cryfs@{}", self.vaultdir.display())),
             MountOption::Subtype("cryfs".to_string()),
             // let the kernel handle permission checking based on permission flags instead of calling the `access()` function of the fuse filesystem
             MountOption::DefaultPermissions,
             fuse_atime_option,
             // TODO What other MountOptions should we set (or let the user set on the command line)?
-        ]
-        .into_iter()
-        .chain(self.fuse_options.iter().map(|o| match o {
-            FuseOption::AllowOther => MountOption::AllowOther,
-            FuseOption::AllowRoot => MountOption::AllowRoot,
-        }))
-        .collect::<Box<[_]>>();
+        ];
+        // `SessionACL` is single-valued in fuser 0.17, unlike the old independent `AllowOther`/`AllowRoot`
+        // mount options (where both could be set at once). Collapse order-independently to the most
+        // permissive requested: `allow_other` (any user, which already subsumes root) wins over
+        // `allow_root`; otherwise owner-only (FUSE's default).
+        let allow_other = self
+            .fuse_options
+            .iter()
+            .any(|o| matches!(o, FuseOption::AllowOther));
+        let allow_root = self
+            .fuse_options
+            .iter()
+            .any(|o| matches!(o, FuseOption::AllowRoot));
+        config.acl = if allow_other {
+            SessionACL::All
+        } else if allow_root {
+            SessionACL::RootAndOwner
+        } else {
+            SessionACL::Owner
+        };
         Backend::mount(
             fs,
             self.mountdir,
             tokio::runtime::Handle::current(),
             Some(self.unmount_trigger.waiter()),
-            &mount_options,
+            &config,
             self.on_successfully_mounted,
         )
         .await

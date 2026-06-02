@@ -193,8 +193,8 @@ where
     let received = client
         .recv_raw_handshake_with_timeout(HANDSHAKE_TIMEOUT)
         .context("failed to receive build-id handshake from daemon")?;
-    let received_str = std::str::from_utf8(&received)
-        .context("daemon sent a build-id that isn't valid UTF-8")?;
+    let received_str =
+        std::str::from_utf8(&received).context("daemon sent a build-id that isn't valid UTF-8")?;
     let expected = crate::build_id();
     if received_str != expected {
         bail!(
@@ -209,9 +209,7 @@ where
 /// this process's build id to the parent so the parent can confirm it
 /// exec'd the binary it intended to. Must be called before any
 /// postcard-typed RPC on `server`.
-pub fn send_handshake<Request, Response>(
-    server: &mut RpcServer<Request, Response>,
-) -> Result<()>
+pub fn send_handshake<Request, Response>(server: &mut RpcServer<Request, Response>) -> Result<()>
 where
     Request: Serialize + DeserializeOwned,
     Response: Serialize + DeserializeOwned,

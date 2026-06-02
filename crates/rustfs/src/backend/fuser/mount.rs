@@ -1,4 +1,3 @@
-use fuser::MountOption;
 use std::fmt::Debug;
 use std::path::Path;
 use tokio_util::sync::CancellationToken;
@@ -13,13 +12,13 @@ pub async fn mount<Fs>(
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
     unmount_trigger: Option<CancellationToken>,
-    mount_options: &[MountOption],
+    config: &fuser::Config,
     on_successfully_mounted: impl FnOnce(),
 ) -> std::io::Result<()>
 where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
-    let fs = spawn_mount(fs, mountpoint, runtime, mount_options).await?;
+    let fs = spawn_mount(fs, mountpoint, runtime, config).await?;
     on_successfully_mounted();
 
     if let Some(unmount_trigger) = unmount_trigger {
@@ -34,7 +33,7 @@ pub async fn spawn_mount<Fs>(
     fs: AsyncDropGuard<Fs>,
     mountpoint: impl AsRef<Path>,
     runtime: tokio::runtime::Handle,
-    mount_options: &[MountOption],
+    config: &fuser::Config,
 ) -> std::io::Result<RunningFilesystem>
 where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
@@ -46,7 +45,7 @@ where
     // it will not call destroy().
     let backend_internal_arc = backend.internal_arc();
 
-    let session = fuser::spawn_mount2(backend, mountpoint, mount_options);
+    let session = fuser::spawn_mount2(backend, mountpoint, config);
     let session = match session {
         Ok(session) => {
             std::mem::drop(backend_internal_arc);

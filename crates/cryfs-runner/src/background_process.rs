@@ -276,8 +276,7 @@ mod tests {
             log_config: sample_log_config(),
         };
         let bytes = postcard::to_stdvec(&original).expect("postcard encode");
-        let restored: BootstrapConfig =
-            postcard::from_bytes(&bytes).expect("postcard decode");
+        let restored: BootstrapConfig = postcard::from_bytes(&bytes).expect("postcard decode");
         assert_eq!(original.log_config, restored.log_config);
     }
 

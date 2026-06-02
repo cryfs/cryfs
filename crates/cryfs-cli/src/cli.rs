@@ -148,8 +148,7 @@ impl Application for Cli {
             // verbatim once the IPC bootstrap delivers it. Doing the resolve
             // here, in the parent, keeps the "syslog if user didn't say
             // otherwise" policy in one place — the daemon side just consumes.
-            let daemon_log_config =
-                log_args.or_default(Self::daemon_default_log_config());
+            let daemon_log_config = log_args.or_default(Self::daemon_default_log_config());
             Mounter::run_in_background(daemon_log_config)
                 .map_cli_error(CliErrorKind::UnspecifiedError)?
         };
