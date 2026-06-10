@@ -53,15 +53,18 @@ jobs:
       - name: cargo ${{ matrix.command }}
         shell: bash
         # On GitHub-hosted macOS runners we have to skip the cryfs-rustfs
-        # tests under `tests::mkdir::`: they mount real FUSE sessions via
-        # fuser → macFUSE, and the runner image won't approve macFUSE's
-        # kernel extension (https://github.com/actions/runner-images/issues/4731),
-        # so the mount() syscall hangs forever and the job runs out the
-        # 6h clock. The tests still work on a local macOS where the
-        # operator has approved the kext, so we deliberately don't
-        # cfg-gate them out at compile time — only this CI invocation
-        # skips them. Keep the filter in sync with the test module paths
-        # under crates/rustfs/src/tests/.
+        # tests that mount real FUSE sessions via fuser → macFUSE: the
+        # runner image won't approve macFUSE's kernel extension
+        # (https://github.com/actions/runner-images/issues/4731), so the
+        # mount() syscall hangs forever and the job runs out the 6h clock.
+        # That's all tests under crates/rustfs/src/tests/ — currently the
+        # `tests::mkdir::` module and the fuser_runner self-tests in
+        # `tests::utils::fuser_runner::`. The tests still work on a local
+        # macOS where the operator has approved the kext, so we
+        # deliberately don't cfg-gate them out at compile time — only this
+        # CI invocation skips them. The --skip filters match by substring;
+        # keep them in sync with the test module paths under
+        # crates/rustfs/src/tests/.
         #
         # TODO Find a way to run these tests on GitHub-hosted macOS too:
         #   1. Switch to fuse-t (https://www.fuse-t.org/) — userspace
@@ -75,7 +78,7 @@ jobs:
         #      the FUSE session/mountpoint plumbing could be stubbed.
         run: |
           if [[ "${{ runner.os }}" == "macOS" ]]; then
-            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir::
+            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir:: --skip tests::utils::fuser_runner::
           else
             cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
           fi
