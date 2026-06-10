@@ -36,7 +36,11 @@ jobs:
         toolchain: ["stable"]
     runs-on: ${{matrix.os}}
     # Diagnostic cap: fail fast instead of riding out GitHub's 6h limit.
-    timeout-minutes: 75
+    # 120 min: a healthy macos-14 debug run reaches the (now-skipped) rustfs
+    # test binary at ~56 min, plus remaining binaries + doctests + slower
+    # --release legs ⇒ successful runs land around 60-90 min. A hang still
+    # gets caught 3x faster than the 6h default.
+    timeout-minutes: 120
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
