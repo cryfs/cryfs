@@ -58,14 +58,14 @@ fn daemon_exe_path() -> Result<PathBuf> {
 
 /// Spawn the cryfs daemon as a separate process via fork+exec.
 ///
-/// The current binary is re-execed with the [`DAEMON_FLAG`] sentinel argument
+/// The current binary is re-execed with the `DAEMON_FLAG` sentinel argument
 /// so its `main` can dispatch to [`crate::run_as_background_daemon`]. The
-/// child receives the two pipe ends as fds [`CHILD_REQUEST_RECV_FD`] (3) and
-/// [`CHILD_RESPONSE_SEND_FD`] (4). Every other parent fd is CLOEXEC (see
-/// [`super::pipe::pipe`]) so the kernel closes them during `execve`.
+/// child receives the two pipe ends as fds `CHILD_REQUEST_RECV_FD` (3) and
+/// `CHILD_RESPONSE_SEND_FD` (4). Every other parent fd is CLOEXEC (see
+/// `super::pipe::pipe`) so the kernel closes them during `execve`.
 ///
 /// Waits for a raw build-id handshake (not postcard-encoded) *from* the
-/// daemon child before returning, bounded by [`HANDSHAKE_TIMEOUT`]. Rejects
+/// daemon child before returning, bounded by `HANDSHAKE_TIMEOUT`. Rejects
 /// the spawn if the bytes don't match this process's own compile-time build
 /// id. This catches three classes of mistake at once:
 ///   - macOS-style binary replacement during the spawn window (the daemon
