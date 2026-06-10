@@ -22,18 +22,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # DIAGNOSTIC BRANCH: matrix temporarily reduced to a single macOS
-        # job while validating the macFUSE skip-filter fix. macOS runners
-        # are scarce; once this single job is green, the full macOS matrix
-        # gets re-enabled (Linux stays off on this branch). Restore the
-        # full matrix before merging anything from here.
+        # DIAGNOSTIC BRANCH: full macOS matrix, Linux legs disabled.
+        # Single-job validation passed (macos-14/stable/debug, 52m50s).
+        # Restore the ubuntu entries before merging anything from here.
         os:
           - macos-14
+          - macos-15
+          - macos-15-intel
+          - macos-26
         command: ["test"]
-        profile: [""]
+        profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
-        features: [""]
-        toolchain: ["stable"]
+        features: ["", "--no-default-features"]
+        toolchain: ["stable", "nightly", "1.95"]
     runs-on: ${{matrix.os}}
     # Diagnostic cap: fail fast instead of riding out GitHub's 6h limit.
     # 120 min: a healthy macos-14 debug run reaches the (now-skipped) rustfs
