@@ -22,19 +22,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # DIAGNOSTIC BRANCH: matrix temporarily reduced to a single macOS
+        # job while validating the macFUSE skip-filter fix. macOS runners
+        # are scarce; once this single job is green, the full macOS matrix
+        # gets re-enabled (Linux stays off on this branch). Restore the
+        # full matrix before merging anything from here.
         os:
           - macos-14
-          - macos-15
-          - macos-15-intel
-          - macos-26
-          - ubuntu-22.04
-          - ubuntu-24.04
         command: ["test"]
-        profile: ["", "--release"]
+        profile: [""]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
-        features: ["", "--no-default-features"]
-        toolchain: ["stable", "nightly", "1.95"]
+        features: [""]
+        toolchain: ["stable"]
     runs-on: ${{matrix.os}}
+    # Diagnostic cap: fail fast instead of riding out GitHub's 6h limit.
+    timeout-minutes: 75
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
@@ -86,6 +88,8 @@ jobs:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
     name: check
+    # Disabled on this diagnostic branch (Linux-only job). Restore before merging.
+    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -133,6 +137,8 @@ jobs:
   #         args: --all-features --all-targets -- -D warnings
   code_format:
     name: Code Formatter (rustfmt)
+    # Disabled on this diagnostic branch (Linux-only job). Restore before merging.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -154,6 +160,8 @@ jobs:
   #   - run: git diff --exit-code
   dead_doc_links:
     name: Find dead doc links
+    # Disabled on this diagnostic branch (Linux-only job). Restore before merging.
+    if: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
@@ -165,6 +173,8 @@ jobs:
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
+    # Disabled on this diagnostic branch (Linux-only job). Restore before merging.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
