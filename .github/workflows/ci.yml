@@ -22,31 +22,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # DIAGNOSTIC BRANCH: macOS matrix (Linux still off). macos-15-intel
-        # dropped — its runner is too slow to finish the test suite in any
-        # reasonable cap (the cli-utils integration tests in
-        # tests/arguments.rs each spawn child cargo builds via tempproject;
-        # at the observed ~10 min/test on Intel, the 212-test binary alone
-        # would need >30h). GitHub is also deprecating Intel macOS, so
-        # this matrix entry was on borrowed time anyway. Restore ubuntu
-        # entries (and decide whether to re-add intel if a faster runner
-        # image lands) before merging anything from here.
+        # INTEL EXPERIMENT BRANCH: can macos-15-intel finish within 6h now
+        # that the macFUSE skip-filter is in place? Estimate from the
+        # 120-min-capped run: ~1h45m to reach cli-utils tests/arguments.rs
+        # + ~10 min per tempproject child build (~11 distinct projects)
+        # + remaining binaries ≈ 4-5h. Borderline; this run measures it.
         os:
-          - macos-14
-          - macos-15
-          - macos-26
+          - macos-15-intel
         command: ["test"]
         profile: ["", "--release"]
         # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         features: ["", "--no-default-features"]
-        toolchain: ["stable", "nightly", "1.95"]
+        toolchain: ["stable"]
     runs-on: ${{matrix.os}}
-    # Diagnostic cap: fail fast instead of riding out GitHub's 6h limit.
-    # 120 min: a healthy macos-14 debug run reaches the (now-skipped) rustfs
-    # test binary at ~56 min, plus remaining binaries + doctests + slower
-    # --release legs ⇒ successful runs land around 60-90 min. A hang still
-    # gets caught 3x faster than the 6h default.
-    timeout-minutes: 120
+    # Intel gets the full 6h GitHub cap; everything else proved green in
+    # 47m-1h46m under a 120-min cap on the main diagnostic branch.
+    timeout-minutes: 360
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
