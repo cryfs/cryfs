@@ -78,7 +78,16 @@ jobs:
         #      the FUSE session/mountpoint plumbing could be stubbed.
         run: |
           if [[ "${{ runner.os }}" == "macOS" ]]; then
-            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir:: --skip tests::utils::fuser_runner::
+            # Also skip http_client::test_get_valid_{http,https}: they hit
+            # http://example.com / https://example.com over the real network,
+            # so they fail whenever the runner's DNS resolver hiccups
+            # (observed on macos-15-intel: getaddrinfo returned EAI_NONAME
+            # for example.com mid-job even though DNS had worked at job
+            # start — macOS runners have a history of flaky resolver
+            # behavior, e.g. actions/runner-images#12562, #8649). They're
+            # reqwest smoke tests, not cryfs unit tests, and still run on
+            # Linux CI and locally.
+            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_
           else
             cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
           fi
