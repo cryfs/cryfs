@@ -56,7 +56,7 @@ pub fn build_id() -> String {
 ///    *here* (rather than parent-side validation in the daemon) means a
 ///    parent that accidentally exec'd a non-cryfs binary surfaces the
 ///    mistake — a non-cryfs child won't send the expected bytes.
-/// 4. Hand the [`ipc::RpcServer`] to [`background_process::background_main`],
+/// 4. Hand the [`ipc::RpcServer`] to `background_process::background_main`,
 ///    which initializes tokio inside this clean process image and serves the
 ///    mount RPC until the parent drops its client.
 pub fn run_as_background_daemon() -> ! {

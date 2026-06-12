@@ -51,7 +51,7 @@ pub trait Application: Sized {
 
     /// Entry point. `log_args` is the parsed `--log` flag values (possibly
     /// empty). For most apps this can be ignored — [`run`] has already
-    /// initialized logging from these args + [`default_log_config`]. Apps
+    /// initialized logging from these args + [`Self::default_log_config`]. Apps
     /// that need to forward the config elsewhere (e.g. to a daemon child
     /// via RPC) can resolve `log_args.or_default(...)` themselves with a
     /// destination-appropriate default.
