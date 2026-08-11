@@ -154,7 +154,7 @@ mod tests {
         localstate::LocalStateDir,
     };
     use cryfs_rustfs::AtimeUpdateBehavior;
-    use daemonizable::RpcConnection;
+    use daemonizable::in_process_rpc_pair;
     use std::num::NonZeroU32;
     use std::path::PathBuf;
 
@@ -190,10 +190,8 @@ mod tests {
 
     #[test]
     fn parent_mount_filesystem_returns_ok_on_success_response() {
-        let (mut server, mut client) = RpcConnection::<Request, Response>::new_channel()
-            .expect("create rpc channel")
-            .into_server_and_client()
-            .expect("split rpc channel into server and client");
+        let (mut server, mut client) =
+            in_process_rpc_pair::<Request, Response>().expect("create in-process rpc pair");
 
         let daemon = std::thread::spawn(move || {
             let Request::MountRequest { mount_args, .. } = server
@@ -215,10 +213,8 @@ mod tests {
 
     #[test]
     fn parent_mount_filesystem_reconstructs_cli_error_from_mount_error() {
-        let (mut server, mut client) = RpcConnection::<Request, Response>::new_channel()
-            .expect("create rpc channel")
-            .into_server_and_client()
-            .expect("split rpc channel into server and client");
+        let (mut server, mut client) =
+            in_process_rpc_pair::<Request, Response>().expect("create in-process rpc pair");
 
         let daemon = std::thread::spawn(move || {
             let Request::MountRequest { .. } = server

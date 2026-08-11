@@ -1436,9 +1436,9 @@ checksum = "ef8ae57c4978a2acd8b869ce6b9ca1dfe817bff704c220209fdef2c0b75a01b9"
 
 [[package]]
 name = "daemonizable"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea30989df66903d6c3e6636a23ddc57feaaeffd4ae10ca5a12404f703954189"
+checksum = "01a95df43bd931fe379e2812424a2bc9ce466c37047a97c034deb56881285ebc"
 dependencies = [
  "command-fds",
  "daemonizable-macros",
@@ -1451,9 +1451,9 @@ dependencies = [
 
 [[package]]
 name = "daemonizable-macros"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3fe78771b0e2f3781987c6b37e09eb3a7beb95173285e7a2aedafe64eb920ce"
+checksum = "71ea06fa6ad558f3d935f921594d610488c97cf57aa68bd011c969ab068437fc"
 dependencies = [
  "proc-macro2",
  "quote",
