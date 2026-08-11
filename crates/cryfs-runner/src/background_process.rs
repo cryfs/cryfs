@@ -47,7 +47,7 @@ pub enum Response {
 /// Daemon-side entry point. The daemonizable framework hands us an
 /// `rpc_server` whose build-id handshake is already validated. Initialize
 /// tokio inside this clean process image and drive the typed request loop
-/// until the parent drops its end of the pipe. Logging is not yet installed:
+/// until the parent drops its end of the channel. Logging is not yet installed:
 /// the daemon installs it from the first request's `log_config` before it
 /// mounts (see [`Request::MountRequest`]).
 pub fn background_main(rpc_server: RpcServer<Request, Response>) -> ! {
@@ -112,7 +112,7 @@ async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> 
 
     // TODO Should we make this into a panic and introduce a clean shutdown
     // where Client Drop drops the Server? Error getting request, parent
-    // process probably exited or closed the pipe.
+    // process probably exited or closed the channel.
     std::process::exit(0);
 }
 
@@ -131,7 +131,7 @@ pub fn parent_mount_filesystem(
     // Block until the daemon reports the mount result. No timeout: a mount can
     // legitimately take a long time (large vault, slow/networked storage), and
     // a fixed deadline would spuriously fail a healthy-but-slow daemon. If the
-    // daemon dies instead, its pipe closes and this returns an error at once.
+    // daemon dies instead, its channel closes and this returns an error at once.
     let response = rpc
         .recv_response_blocking()
         .map_cli_error(|_| CliErrorKind::UnspecifiedError)?;
@@ -148,6 +148,7 @@ pub fn parent_mount_filesystem(
 mod tests {
     use super::*;
     use byte_unit::Byte;
+    use clap_logflag::{LogDestination, LogDestinationConfig};
     use cryfs_blockstore::{AllowIntegrityViolations, ClientId};
     use cryfs_config::{
         config::{CryConfig, FilesystemId},
@@ -155,6 +156,7 @@ mod tests {
     };
     use cryfs_rustfs::AtimeUpdateBehavior;
     use daemonizable::in_process_rpc_pair;
+    use log::LevelFilter;
     use std::num::NonZeroU32;
     use std::path::PathBuf;
 
@@ -188,25 +190,58 @@ mod tests {
         }
     }
 
+    /// A logging config with every destination shape the daemon can be asked
+    /// to install. `LoggingConfig::disabled()` is the empty-vec case and would
+    /// prove nothing about the wire.
+    fn test_log_config() -> LoggingConfig {
+        LoggingConfig::new(vec![
+            LogDestinationConfig {
+                destination: LogDestination::File(PathBuf::from("/var/log/cryfs.log")),
+                level: Some(LevelFilter::Debug),
+            },
+            LogDestinationConfig {
+                destination: LogDestination::Syslog,
+                level: None,
+            },
+            LogDestinationConfig {
+                destination: LogDestination::Stderr,
+                level: Some(LevelFilter::Warn),
+            },
+        ])
+    }
+
     #[test]
     fn parent_mount_filesystem_returns_ok_on_success_response() {
         let (mut server, mut client) =
             in_process_rpc_pair::<Request, Response>().expect("create in-process rpc pair");
 
         let daemon = std::thread::spawn(move || {
-            let Request::MountRequest { mount_args, .. } = server
+            let Request::MountRequest {
+                mount_args,
+                log_config,
+            } = server
                 .next_request()
                 .expect("daemon: receive mount request");
             // The typed request must round-trip the args, not just a marker.
-            assert_eq!(PathBuf::from("/some/vaultdir"), mount_args.vaultdir);
-            assert_eq!(PathBuf::from("/some/mountdir"), mount_args.mountdir);
+            // postcard is not self-describing, so a field whose serde shape it
+            // cannot carry fails HERE at runtime rather than at compile time —
+            // which is the whole reason this goes through a real channel.
+            // Compared through Debug because MountArgs has no PartialEq: the
+            // derived Debug prints every field, so a field that fails to
+            // survive the wire still shows up here.
+            assert_eq!(
+                format!("{:?}", test_mount_args()),
+                format!("{mount_args:?}")
+            );
+            // The daemon installs this before mounting; if it does not survive
+            // the wire the user silently gets no logging.
+            assert_eq!(test_log_config(), log_config);
             server
                 .send_response(&Response::MountResponse(Ok(())))
                 .expect("daemon: send response");
         });
 
-        let result =
-            parent_mount_filesystem(&mut client, test_mount_args(), LoggingConfig::disabled());
+        let result = parent_mount_filesystem(&mut client, test_mount_args(), test_log_config());
         daemon.join().expect("daemon thread panicked");
         result.expect("expected Ok from parent_mount_filesystem");
     }

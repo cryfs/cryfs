@@ -29,14 +29,6 @@ pub trait Application: Sized {
     /// The logging configuration to use if the user didn't supply any `--log` flags.
     fn default_log_config(&self) -> clap_logflag::LoggingConfig;
 
-    /// Whether to print the version banner (and optionally check for updates)
-    /// before invoking [`Application::main`]. Defaults to `true`; daemon-style
-    /// entry points override this to skip the banner so it doesn't leak onto
-    /// the user's TTY through the parent's inherited stderr.
-    fn should_show_version(&self) -> bool {
-        true
-    }
-
     /// Entry point. `log_args` is the parsed `--log` flag values (possibly
     /// empty). For most apps this can be ignored — [`run`] has already
     /// initialized logging from these args + [`Self::default_log_config`]. Apps
@@ -113,12 +105,10 @@ pub fn _run<App: Application>(
                 log.or_default(app.default_log_config()),
                 DEFAULT_LOG_LEVEL
             );
-            if app.should_show_version() {
-                show_version(
-                    #[cfg(feature = "check_for_updates")]
-                    env,
-                );
-            }
+            show_version(
+                #[cfg(feature = "check_for_updates")]
+                env,
+            );
             app.main(log)
         }
         Err(ArgParseError::Clap(err)) => {
