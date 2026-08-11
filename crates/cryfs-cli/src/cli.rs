@@ -50,9 +50,9 @@ pub struct Cli {
 }
 
 /// The [`Daemonizable`] application cryfs registers with `daemonizable::run`:
-/// ties the mount RPC protocol types, the logging bootstrap payload, and the
-/// build id together in one type. Lives in the lib rather than the `cryfs`
-/// bin so [`Cli`] can name `Daemonizer<CryfsApp>` in its field type.
+/// ties the mount RPC protocol types and the build id together in one type.
+/// Lives in the lib rather than the `cryfs` bin so [`Cli`] can name
+/// `Daemonizer<CryfsApp>` in its field type.
 pub struct CryfsApp;
 
 impl Daemonizable for CryfsApp {
@@ -60,10 +60,10 @@ impl Daemonizable for CryfsApp {
     type Response = cryfs_runner::Response;
 
     fn build_id() -> String {
-        // Same "{name} {version}" shape the legacy framework used: name AND
-        // version, because two different binaries built from the same
+        // Name AND version, because two different binaries built from the same
         // workspace commit share the identical version string and the
-        // handshake must still tell them apart.
+        // handshake must still tell them apart. (The legacy in-workspace
+        // framework hashed only the version, which could not.)
         format!("{} {}", Cli::NAME, CRYFS_VERSION)
     }
 
@@ -111,9 +111,11 @@ impl Application for Cli {
             // (empty argv), so we ship the result in the mount request and it
             // installs it before mounting. Spawn before `run_parent` starts
             // tokio: spawning while single-threaded sidesteps the narrow macOS
-            // pipe-fd-inheritance race (a non-issue on Linux, where pipe2 sets
-            // CLOEXEC atomically).
-            let daemon_log_config = log_args.or_default(self.default_daemon_log_config());
+            // channel-fd-inheritance race (a non-issue on Linux, where the
+            // socketpair is created with SOCK_CLOEXEC atomically).
+            let daemon_log_config = Self::absolutize_log_destinations(
+                log_args.or_default(self.default_daemon_log_config()),
+            );
             let mut rpc = self
                 .daemonizer
                 .spawn_daemon()
@@ -144,6 +146,37 @@ impl Cli {
             local_state_dir,
             daemonizer,
         })
+    }
+
+    /// Resolve any `file:` log destination to an absolute path.
+    ///
+    /// The daemon chdir's to `/`, so a cwd-relative `--log file:cryfs.log`
+    /// would land at `/cryfs.log` there — almost always a permission error,
+    /// i.e. the user asks for logging and silently gets none. This is the same
+    /// hazard `build_mount_args` canonicalizes vaultdir/mountdir for; the log
+    /// path needs it too because the config is resolved here and shipped to
+    /// the daemon in the mount request.
+    ///
+    /// `std::path::absolute`, not `canonicalize`: the log file usually does not
+    /// exist yet, and canonicalize would fail on it.
+    fn absolutize_log_destinations(config: LoggingConfig) -> LoggingConfig {
+        LoggingConfig::new(
+            config
+                .destinations()
+                .iter()
+                .map(|dest| LogDestinationConfig {
+                    destination: match &dest.destination {
+                        LogDestination::File(path) => LogDestination::File(
+                            // On failure keep the path as the user typed it:
+                            // a wrong-directory log beats refusing to mount.
+                            std::path::absolute(path).unwrap_or_else(|_| path.clone()),
+                        ),
+                        other => other.clone(),
+                    },
+                    level: dest.level,
+                })
+                .collect(),
+        )
     }
 
     fn default_daemon_log_config(&self) -> LoggingConfig {
@@ -492,3 +525,51 @@ impl Cli {
 }
 
 // TODO Tests
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn absolutize_log_destinations_makes_file_paths_absolute() {
+        // The daemon chdir's to "/", so a cwd-relative `--log file:<path>`
+        // would resolve against the wrong directory there (the same hazard
+        // vaultdir/mountdir are canonicalized for). Resolve it parent-side.
+        let config =
+            Cli::absolutize_log_destinations(LoggingConfig::new(vec![LogDestinationConfig {
+                destination: LogDestination::File(PathBuf::from("cryfs.log")),
+                level: Some(LevelFilter::Warn),
+            }]));
+
+        let LogDestination::File(path) = &config.destinations()[0].destination else {
+            panic!("expected a file destination");
+        };
+        assert!(
+            path.is_absolute(),
+            "relative log path must be resolved parent-side, got {path:?}"
+        );
+        assert_eq!(
+            std::env::current_dir().unwrap().join("cryfs.log"),
+            *path,
+            "must resolve against the parent's cwd"
+        );
+    }
+
+    #[test]
+    fn absolutize_log_destinations_leaves_other_destinations_alone() {
+        let config = Cli::absolutize_log_destinations(LoggingConfig::new(vec![
+            LogDestinationConfig {
+                destination: LogDestination::Syslog,
+                level: None,
+            },
+            LogDestinationConfig {
+                destination: LogDestination::Stderr,
+                level: Some(LevelFilter::Info),
+            },
+        ]));
+
+        assert_eq!(LogDestination::Syslog, config.destinations()[0].destination);
+        assert_eq!(LogDestination::Stderr, config.destinations()[1].destination);
+        assert_eq!(Some(LevelFilter::Info), config.destinations()[1].level);
+    }
+}
