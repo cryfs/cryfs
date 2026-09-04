@@ -27,6 +27,9 @@ log.workspace = true
 lru.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync"] }
+
 [features]
 default = []
 testutils = ["cryfs-blobstore/testutils"]
