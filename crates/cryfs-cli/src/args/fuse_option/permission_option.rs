@@ -11,11 +11,11 @@ pub enum FusePermissionOption {
     AllowRoot,
 }
 
-impl From<&FusePermissionOption> for cryfs_runner::FuseOption {
+impl From<&FusePermissionOption> for crate::runner::FuseOption {
     fn from(value: &FusePermissionOption) -> Self {
         match value {
-            FusePermissionOption::AllowOther => cryfs_runner::FuseOption::AllowOther,
-            FusePermissionOption::AllowRoot => cryfs_runner::FuseOption::AllowRoot,
+            FusePermissionOption::AllowOther => crate::runner::FuseOption::AllowOther,
+            FusePermissionOption::AllowRoot => crate::runner::FuseOption::AllowRoot,
         }
     }
 }

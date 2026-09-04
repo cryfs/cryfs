@@ -7,7 +7,7 @@ use std::{
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
-pub enum TriggerReason {
+pub(super) enum TriggerReason {
     UnmountIdle,
     IntegrityViolation(IntegrityViolationError),
     /// The mount succeeded but notifying the caller failed (e.g. the parent
@@ -17,20 +17,20 @@ pub enum TriggerReason {
 }
 
 #[derive(Clone)]
-pub struct UnmountTrigger {
+pub(super) struct UnmountTrigger {
     trigger: CancellationToken,
     trigger_reason: Arc<Mutex<Option<TriggerReason>>>,
 }
 
 impl UnmountTrigger {
-    pub fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             trigger: CancellationToken::new(),
             trigger_reason: Arc::new(Mutex::new(None)),
         }
     }
 
-    pub fn trigger_after_idle_timeout(
+    pub(super) fn trigger_after_idle_timeout(
         &self,
         last_filesystem_access_time: Arc<AtomicInstant>,
         unmount_after_idle_for: Duration,
@@ -51,7 +51,7 @@ impl UnmountTrigger {
         });
     }
 
-    pub fn trigger_now(&self, reason: TriggerReason) {
+    pub(super) fn trigger_now(&self, reason: TriggerReason) {
         // Concurrency: trigger_reason needs to be set before we actually cancel the trigger
         // because the cancellation triggers shutdown the file system, which will trigger
         // code to read the trigger_reason. So this order prevents a race condition.
@@ -59,11 +59,11 @@ impl UnmountTrigger {
         self.trigger.cancel();
     }
 
-    pub fn waiter(&self) -> CancellationToken {
+    pub(super) fn waiter(&self) -> CancellationToken {
         self.trigger.clone()
     }
 
-    pub fn trigger_reason(&self) -> &Arc<Mutex<Option<TriggerReason>>> {
+    pub(super) fn trigger_reason(&self) -> &Arc<Mutex<Option<TriggerReason>>> {
         &self.trigger_reason
     }
 }

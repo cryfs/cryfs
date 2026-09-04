@@ -4,7 +4,9 @@ use std::fmt::Debug;
 use std::num::NonZeroU32;
 use tempfile::TempDir;
 
-use cryfs_blobstore::{BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore};
+use cryfs_blobstore::{
+    BlobId, BlobStore, BlobStoreActionCounts, BlobStoreOnBlocks, TrackingBlobStore,
+};
 use cryfs_blockstore::{
     BLOCKID_LEN, BlockStore as _, BlockStoreReader as _, ClientId, DynBlockStore, HLActionCounts,
     HLSharedBlockStore, HLTrackingBlockStore, IntegrityConfig, LLActionCounts, LLBlockStore,
@@ -18,7 +20,6 @@ use cryfs_config::{
     localstate::LocalStateDir,
 };
 use cryfs_filesystem::filesystem::CryDevice;
-use cryfs_runner::{CreateOrLoad, make_device};
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
 
@@ -199,16 +200,17 @@ where
             >,
         >,
     > {
+        // The same steps the `cryfs` binary runs when it creates a new filesystem
+        // (see cryfs-cli's runner module): parse the root blob id, create the root
+        // dir blob, sanity check the result. Keep the sanity check: the operation
+        // count tests (e.g. `operations::init`) include its loads in their expected
+        // counts and start from the cache state it leaves behind.
+        let root_blob_id = BlobId::from_hex(&config.root_blob).unwrap();
         let blobstore = AsyncDropArc::clone(blobstore);
-
-        let device = make_device(
-            blobstore,
-            config,
-            CreateOrLoad::CreateNewFilesystem,
-            atime_behavior,
-        )
-        .await
-        .unwrap();
+        let device = CryDevice::create_new_filesystem(blobstore, root_blob_id, atime_behavior)
+            .await
+            .unwrap();
+        device.sanity_check().await.unwrap();
 
         device
     }

@@ -17,7 +17,7 @@ use cryfs_cli_utils::{CliError, CliErrorKind, CliResultExtFn, DEFAULT_LOG_LEVEL}
 use daemonizable::{RpcClient, RpcServer};
 use serde::{Deserialize, Serialize};
 
-use crate::MountArgs;
+use super::MountArgs;
 
 /// Mount-side error shipped over RPC. The daemon converts its internal
 /// `CliError` into this Serialize-friendly shape; the parent reconstitutes
@@ -50,8 +50,8 @@ pub enum Response {
 /// until the parent drops its end of the channel. Logging is not yet installed:
 /// the daemon installs it from the first request's `log_config` before it
 /// mounts (see [`Request::MountRequest`]).
-pub fn background_main(rpc_server: RpcServer<Request, Response>) -> ! {
-    let runtime = crate::init_tokio();
+pub(crate) fn background_main(rpc_server: RpcServer<Request, Response>) -> ! {
+    let runtime = super::init_tokio();
     runtime.block_on(background_async_main(rpc_server))
 }
 
@@ -83,7 +83,7 @@ async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> 
                     Ok(())
                 };
                 let mount_result =
-                    super::runner::mount_filesystem(mount_args, on_successfully_mounted).await;
+                    super::mount::mount_filesystem(mount_args, on_successfully_mounted).await;
                 match mount_result {
                     Ok(()) => {
                         // Normal path: the filesystem was mounted, served, and
@@ -118,7 +118,7 @@ async fn background_async_main(mut rpc_server: RpcServer<Request, Response>) -> 
 
 /// Parent-side helper: send the mount request to the daemon, wait for the
 /// response, translate the result back into a `CliError`.
-pub fn parent_mount_filesystem(
+pub(crate) fn parent_mount_filesystem(
     rpc: &mut RpcClient<Request, Response>,
     mount_args: MountArgs,
     log_config: LoggingConfig,
@@ -160,7 +160,7 @@ mod tests {
     use std::num::NonZeroU32;
     use std::path::PathBuf;
 
-    use crate::CreateOrLoad;
+    use crate::runner::CreateOrLoad;
 
     fn test_mount_args() -> MountArgs {
         MountArgs {
