@@ -79,8 +79,8 @@ Cross-cutting: crypto, utils, cryfs-version, concurrent-store, cryfs-config
 | Crate | Purpose | Key Types |
 |-------|---------|-----------|
 | cryfs-cli | Main CLI binary (cryfs) | argument parsing, console interaction |
-| cryfs-runner | Mount orchestration | FilesystemRunner, MountArgs |
-| cli-utils | Shared CLI utilities | blockstore stack setup, password prompts |
+| cryfs-runner | Mount orchestration | MountArgs, background_main, mount_filesystem |
+| cli-utils | Shared CLI utilities | blockstore stack setup, password prompts, Application/ConstructibleApplication, run/run_with |
 
 ### Cross-cutting
 

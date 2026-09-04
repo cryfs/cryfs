@@ -26,6 +26,7 @@ cryfs-config = { path = "../cryfs-config" }
 cryfs-runner = { path = "../cryfs-runner" }
 cryfs-utils = { path = "../utils" }
 cryfs-version = { path = "../cryfs-version" }
+daemonizable.workspace = true
 dialoguer.workspace = true
 humantime.workspace = true
 itertools.workspace = true

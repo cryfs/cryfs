@@ -7,7 +7,7 @@ use cryfs_blockstore::{
     OnDiskBlockStore, OptimizedBlockStoreWriter, ReadOnlyBlockStore,
 };
 use cryfs_cli_utils::{
-    Application, CliError, CliErrorKind, CliResultExt, Environment,
+    Application, CliError, CliErrorKind, CliResultExt, ConstructibleApplication, Environment,
     password_provider::InteractivePasswordProvider, print_config, setup_blockstore_stack,
 };
 use cryfs_config::{
@@ -36,15 +36,6 @@ impl Application for RecoverCli {
     const NAME: &'static str = "cryfs-check";
     const VERSION: VersionInfo<'static, 'static, &'static str> = CRYFS_VERSION;
 
-    fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self, CliError> {
-        // TODO Make sure we have tests for the local_state_dir location
-        let local_state_dir = LocalStateDir::new(env.local_state_dir);
-        Ok(Self {
-            args,
-            local_state_dir,
-        })
-    }
-
     fn default_log_config(&self) -> LoggingConfig {
         LoggingConfig::new(vec![LogDestinationConfig {
             destination: LogDestination::Stderr,
@@ -60,6 +51,17 @@ impl Application for RecoverCli {
             .build()
             .unwrap();
         runtime.block_on(self.async_main())
+    }
+}
+
+impl ConstructibleApplication for RecoverCli {
+    fn new(args: CryfsRecoverArgs, env: Environment) -> Result<Self, CliError> {
+        // TODO Make sure we have tests for the local_state_dir location
+        let local_state_dir = LocalStateDir::new(env.local_state_dir);
+        Ok(Self {
+            args,
+            local_state_dir,
+        })
     }
 }
 

@@ -4,7 +4,7 @@
 mod args;
 
 mod cli;
-pub use cli::Cli;
+pub use cli::{Cli, CryfsApp};
 
 mod console;
 mod sanity_checks;

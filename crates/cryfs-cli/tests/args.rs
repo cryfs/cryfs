@@ -281,55 +281,73 @@ mod debug_build_warning {
     }
 }
 
-/// `--daemon` is the sentinel argv flag that the parent cryfs process passes
-/// when it re-execs itself as the background daemon child. It is hidden from
-/// `--help` and refuses to run unless invoked through the fork+exec spawn
-/// path (which sets up inherited pipes on fds 3 and 4).
-mod daemon_flag {
+/// cryfs has no daemon-related surface a user can reach: the daemon child is
+/// signaled by an in-band token on the channel fd, so neither argv nor the
+/// environment routes to it. These tests pin down that the historical entry
+/// points — the `--daemon` flag and the `DAEMONIZABLE_DAEMON_CHILD` marker —
+/// are inert.
+///
+/// The fd-3 dispatch guard itself (foreign FIFO, wrong magic, partial token —
+/// all of which must fall through to foreground) is daemonizable's, and is
+/// covered by its `channel_dispatch_security` e2e tests. Don't duplicate it
+/// here; these tests only cover what cryfs's own CLI surface exposes.
+mod daemon_dispatch {
     use super::*;
 
     #[test]
-    fn hidden_from_help() {
-        // Implementation detail: clap's `hide = true` keeps the flag out of
-        // the rendered help. If a future refactor accidentally drops that
-        // attribute, the flag becomes discoverable and users could try to
-        // invoke it manually.
-        cryfs_cmd()
-            .arg("--help")
-            .assert()
-            .success()
-            .stdout(predicates::str::contains("--daemon").not());
-    }
-
-    #[test]
-    fn rejected_when_combined_with_other_args() {
-        // clap's `exclusive = true` rejects any combination of `--daemon`
-        // with another argument before any of our code runs. This replaces
-        // a hand-rolled "argv length must be exactly 2" check.
-        cryfs_cmd()
-            .args(["--daemon", "--foreground", "/tmp/v", "/tmp/m"])
-            .assert()
-            .failure()
-            .stderr(predicates::str::contains(
-                "the argument '--daemon' cannot be used with",
-            ));
-    }
-
-    #[test]
-    fn rejected_when_invoked_from_shell() {
-        // Defensive `fstat(3)`/`fstat(4)` check in
-        // `cryfs_runner::run_as_background_daemon`. A curious user running
-        // `cryfs --daemon` from a shell has no pipes on fds 3/4, so the
-        // daemon refuses to start with a message pointing them at the right
-        // mental model. Without this guard, the daemon would silently
-        // attempt to deserialize from stdin (or whatever else happens to be
-        // open at fd 3) and produce confusing failures.
+    fn daemon_flag_is_rejected_as_unknown_argument() {
+        // `--daemon` used to be the (hidden) sentinel flag of the legacy
+        // daemonizable framework. It is no longer defined, so clap rejects
+        // it like any other unknown argument.
         cryfs_cmd()
             .arg("--daemon")
             .assert()
             .failure()
             .stderr(predicates::str::contains(
-                "internal to cryfs; do not invoke it directly",
+                "unexpected argument '--daemon' found",
+            ));
+    }
+
+    #[test]
+    fn daemon_flag_combined_with_other_args_is_rejected_as_unknown_argument() {
+        cryfs_cmd()
+            .args(["--daemon", "--foreground", "/tmp/v", "/tmp/m"])
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains(
+                "unexpected argument '--daemon' found",
+            ));
+    }
+
+    #[test]
+    fn env_marker_from_shell_is_inert() {
+        // `DAEMONIZABLE_DAEMON_CHILD` was the daemon-child marker back when
+        // dispatch read the environment. Dispatch now peeks an in-band token
+        // off the channel fd and the daemon's argv and environment stay
+        // untouched, so a user (or stray script) exporting the old marker must
+        // get a perfectly ordinary foreground run — not a daemon arm, and not
+        // a diagnostic about one.
+        //
+        // Proving "ordinary" takes both directions: a successful invocation
+        // that must still work, and a failing one whose failure must come from
+        // clap rather than from any daemon path.
+        cryfs_cmd()
+            .env("DAEMONIZABLE_DAEMON_CHILD", "1")
+            .arg("--version")
+            .assert()
+            .success()
+            .stderr(predicates::str::contains(format!(
+                "cryfs {}",
+                cryfs_config::CRYFS_VERSION,
+            )));
+
+        cryfs_cmd()
+            .env("DAEMONIZABLE_DAEMON_CHILD", "1")
+            .assert()
+            .failure()
+            .code(2)
+            .stderr(predicates::str::contains(
+                "the following required arguments were not provided",
             ));
     }
 }

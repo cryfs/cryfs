@@ -26,28 +26,8 @@ pub trait Application: Sized {
     const NAME: &'static str;
     const VERSION: VersionInfo<'static, 'static, &'static str>;
 
-    fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self, CliError>;
-
     /// The logging configuration to use if the user didn't supply any `--log` flags.
     fn default_log_config(&self) -> clap_logflag::LoggingConfig;
-
-    /// Whether to print the version banner (and optionally check for updates)
-    /// before invoking [`Application::main`]. Defaults to `true`; daemon-style
-    /// entry points override this to skip the banner so it doesn't leak onto
-    /// the user's TTY through the parent's inherited stderr.
-    fn should_show_version(&self) -> bool {
-        true
-    }
-
-    /// If true, [`run`] skips its own `init_logging!` call. The application
-    /// takes responsibility for initializing logging itself — typically
-    /// because it receives logging config out-of-band (e.g., a daemon child
-    /// reading config from its parent over an IPC channel after `main` is
-    /// entered). The raw [`LogArgs`] are still passed to `main` so the
-    /// application can decide what to do with them.
-    fn defer_logging_init(&self) -> bool {
-        false
-    }
 
     /// Entry point. `log_args` is the parsed `--log` flag values (possibly
     /// empty). For most apps this can be ignored — [`run`] has already
@@ -58,9 +38,28 @@ pub trait Application: Sized {
     fn main(self, log_args: LogArgs) -> Result<(), CliError>;
 }
 
-pub fn run<App: Application>() -> ExitCode {
+/// The subset of [`Application`]s that can be constructed from parsed args
+/// and environment alone. [`run`] requires it; an application whose
+/// constructor needs additional inputs (e.g. a capability token that only
+/// its outer framework can mint) implements just [`Application`] and is
+/// started via [`run_with`] with the construction injected.
+pub trait ConstructibleApplication: Application {
+    fn new(args: Self::ConcreteArgs, env: Environment) -> Result<Self, CliError>;
+}
+
+pub fn run<App: ConstructibleApplication>() -> ExitCode {
+    run_with(App::new)
+}
+
+/// Like [`run`], but with the application's construction injected instead of
+/// taken from [`ConstructibleApplication::new`]. The constructor runs at the
+/// same point of the startup pipeline `new` would: after arg parsing and
+/// environment loading, before logging init and the version banner.
+pub fn run_with<App: Application>(
+    construct: impl FnOnce(App::ConcreteArgs, Environment) -> Result<App, CliError>,
+) -> ExitCode {
     // TODO Print an error message, probably should be specific to the error. Maybe main should return a Result<(), Self::Error>?
-    match _run::<App>() {
+    match _run(construct) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             // TODO Coloring the output would be nice
@@ -71,8 +70,10 @@ pub fn run<App: Application>() -> ExitCode {
     }
 }
 
-pub fn _run<App: Application>() -> Result<(), CliError> {
-    show_backtrace_on_panic::<App>();
+pub fn _run<App: Application>(
+    construct: impl FnOnce(App::ConcreteArgs, Environment) -> Result<App, CliError>,
+) -> Result<(), CliError> {
+    setup_panic_handling(App::NAME, &App::VERSION.to_string());
 
     let env = Environment::read_env()?;
 
@@ -99,19 +100,15 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
             Ok(())
         }
         Ok(ParseArgsResult::Normal { log, args }) => {
-            let app = App::new(args, env.clone())?;
-            if !app.defer_logging_init() {
-                clap_logflag::init_logging!(
-                    log.or_default(app.default_log_config()),
-                    DEFAULT_LOG_LEVEL
-                );
-            }
-            if app.should_show_version() {
-                show_version(
-                    #[cfg(feature = "check_for_updates")]
-                    env,
-                );
-            }
+            let app = construct(args, env.clone())?;
+            clap_logflag::init_logging!(
+                log.or_default(app.default_log_config()),
+                DEFAULT_LOG_LEVEL
+            );
+            show_version(
+                #[cfg(feature = "check_for_updates")]
+                env,
+            );
             app.main(log)
         }
         Err(ArgParseError::Clap(err)) => {
@@ -132,7 +129,13 @@ pub fn _run<App: Application>() -> Result<(), CliError> {
     }
 }
 
-fn show_backtrace_on_panic<App: Application>() {
+/// Install the panic hooks [`run`]/[`run_with`] give every application: a
+/// forced backtrace in debug builds, a human-readable message + report file
+/// (human-panic) in release builds; a user-set `RUST_BACKTRACE` wins over
+/// both. Public so process entry points that bypass the [`run`] pipeline —
+/// e.g. a re-exec'd daemon child dispatching straight into its daemon loop —
+/// can install the same hooks first thing.
+pub fn setup_panic_handling(name: &str, version: &str) {
     match ::std::env::var("RUST_BACKTRACE") {
         Ok(_) => {
             // The `RUST_BACKTRACE` environment variable is set, change nothing and just use the default behavior of that variable.
@@ -149,7 +152,7 @@ fn show_backtrace_on_panic<App: Application>() {
             } else {
                 // In release builds, show a human readable error message and generate a dump file for the user to upload with the issue report
                 human_panic::setup_panic!(
-                    human_panic::Metadata::new(App::NAME, App::VERSION.to_string())
+                    human_panic::Metadata::new(name.to_string(), version.to_string())
                         .authors(env!("CARGO_PKG_AUTHORS").replace(":", ", "))
                         .homepage(env!("CARGO_PKG_HOMEPAGE"))
                         .support("Open a ticket at https://github.com/cryfs/cryfs/issues and include the report file.")

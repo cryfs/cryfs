@@ -52,7 +52,7 @@ Usage:
 Examples:
     tools/detect-flaky-tests.py 50
     tools/detect-flaky-tests.py 50 -p cryfs-runner
-    tools/detect-flaky-tests.py 50 -p cryfs-runner --test daemon_child_lifecycle
+    tools/detect-flaky-tests.py 50 -p cryfs-cli --test args
     tools/detect-flaky-tests.py 50 -p cryfs-runner -- --test-threads=1 --nocapture
 """
 
