@@ -99,12 +99,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-config", "cryfs-cli", "cryfs-filesystem", "cryfs-runner", "cryfs-version", "crypto", "e2e-perf-tests", "fsblobstore", "rustfs", "tempproject", "utils"]
+        crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-config", "cryfs-cli", "cryfs-filesystem", "cryfs-version", "crypto", "e2e-perf-tests", "fsblobstore", "rustfs", "tempproject", "utils"]
         targets: ["", "--tests", "--examples", "--benches"]
         features: ["", "--no-default-features", "--all-features"]
         # TODO Re-add at least some release-profile coverage for this job.
         # The full profile axis (debug vs release) was 16 × 4 × 3 × 2 = 384
-        # configurations, which exceeds GitHub Actions' 256-configuration
+        # configurations (15 × 4 × 3 × 2 = 360 with the current crate list),
+        # which exceeds GitHub Actions' 256-configuration
         # matrix cap and caused the entire job to fail at matrix-resolution
         # time. Either find a way to fit release back in (split into a
         # second job, drop a less-valuable axis, exclude some

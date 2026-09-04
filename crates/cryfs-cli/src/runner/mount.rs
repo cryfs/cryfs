@@ -19,10 +19,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::unmount_trigger::{TriggerReason, UnmountTrigger};
+use super::unmount_trigger::{TriggerReason, UnmountTrigger};
 
 // Run with the fuser backend. This can be switched to fuse-mt if desired.
-pub type Backend = cryfs_rustfs::object_based_api::RustfsFuserBackend;
+type Backend = cryfs_rustfs::object_based_api::RustfsFuserBackend;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CreateOrLoad {
@@ -57,7 +57,7 @@ pub enum FuseOption {
 /// it returns `Err` (e.g. the daemon failed to notify a parent CLI that has
 /// since exited), the filesystem is unmounted again instead of served — we
 /// don't keep a mount alive that nobody is waiting on.
-pub async fn mount_filesystem(
+pub(crate) async fn mount_filesystem(
     mount_args: MountArgs,
     on_successfully_mounted: impl FnOnce() -> Result<(), anyhow::Error> + Send + Sync,
 ) -> Result<(), CliError> {
@@ -231,7 +231,7 @@ impl<'v, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
     }
 }
 
-pub async fn make_device<B>(
+async fn make_device<B>(
     mut blobstore: AsyncDropGuard<B>,
     config: &CryConfig,
     create_or_load: CreateOrLoad,

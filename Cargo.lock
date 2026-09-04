@@ -1090,16 +1090,19 @@ version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "assert_cmd",
+ "atomic-time",
  "byte-unit",
  "clap",
  "clap-logflag",
  "color-print",
  "console-subscriber",
+ "cryfs-blobstore",
  "cryfs-blockstore",
  "cryfs-cli-utils",
  "cryfs-config",
  "cryfs-crypto",
- "cryfs-runner",
+ "cryfs-filesystem",
+ "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
  "daemonizable",
@@ -1112,7 +1115,9 @@ dependencies = [
  "once_cell",
  "predicates",
  "rstest",
+ "serde",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -1233,7 +1238,6 @@ dependencies = [
  "cryfs-cli-utils",
  "cryfs-config",
  "cryfs-filesystem",
- "cryfs-runner",
  "cryfs-rustfs",
  "cryfs-utils",
  "cryfs-version",
@@ -1288,29 +1292,6 @@ dependencies = [
  "futures",
  "lockable",
  "log",
-]
-
-[[package]]
-name = "cryfs-runner"
-version = "2.0.0-alpha3"
-dependencies = [
- "anyhow",
- "atomic-time",
- "byte-unit",
- "clap-logflag",
- "cryfs-blobstore",
- "cryfs-blockstore",
- "cryfs-cli-utils",
- "cryfs-config",
- "cryfs-filesystem",
- "cryfs-rustfs",
- "cryfs-utils",
- "cryfs-version",
- "daemonizable",
- "log",
- "serde",
- "tokio",
- "tokio-util",
 ]
 
 [[package]]

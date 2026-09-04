@@ -5,12 +5,12 @@ use anyhow::{Context as _, Result};
 use clap_logflag::{LogArgs, LogDestination, LogDestinationConfig, LoggingConfig};
 use cryfs_config::config::CryConfigFile;
 use cryfs_config::localstate::{CheckFilesystemIdError, VaultdirMetadata};
-use cryfs_runner::CreateOrLoad;
 use daemonizable::{Daemonizable, Daemonizer, RpcClient, RpcServer};
 use log::LevelFilter;
 
 use super::console::InteractiveConsole;
 use crate::args::{AtimeOption, CryfsArgs, FuseOption, MountArgs};
+use crate::runner::{self, CreateOrLoad};
 use cryfs_blockstore::AllowIntegrityViolations;
 use cryfs_cli_utils::password_provider::{
     InteractivePasswordProvider, NoninteractivePasswordProvider,
@@ -56,8 +56,8 @@ pub struct Cli {
 pub struct CryfsApp;
 
 impl Daemonizable for CryfsApp {
-    type Request = cryfs_runner::Request;
-    type Response = cryfs_runner::Response;
+    type Request = runner::Request;
+    type Response = runner::Response;
 
     fn build_id() -> String {
         // Name AND version, because two different binaries built from the same
@@ -85,7 +85,7 @@ impl Daemonizable for CryfsApp {
         // fully-prepared `MountArgs` — plus the logging config it installs
         // before mounting — over RPC; just drive the request loop.
         // `background_main` initializes tokio inside this fresh process image.
-        cryfs_runner::background_main(rpc)
+        runner::background_main(rpc)
     }
 }
 
@@ -215,13 +215,13 @@ impl Cli {
         #[cfg(feature = "tokio_console")]
         console_subscriber::init();
 
-        let runtime = cryfs_runner::init_tokio();
+        let runtime = runner::init_tokio();
         runtime.block_on(self.run_foreground_async())
     }
 
     fn run_parent(
         self,
-        rpc: &mut RpcClient<cryfs_runner::Request, cryfs_runner::Response>,
+        rpc: &mut RpcClient<runner::Request, runner::Response>,
         log_config: LoggingConfig,
     ) -> Result<(), CliError> {
         // `should_daemonize` only returned `true` because we had mount args,
@@ -229,7 +229,7 @@ impl Cli {
         #[cfg(feature = "tokio_console")]
         console_subscriber::init();
 
-        let runtime = cryfs_runner::init_tokio();
+        let runtime = runner::init_tokio();
         runtime.block_on(self.run_parent_async(rpc, log_config))
     }
     async fn run_foreground_async(self) -> Result<(), CliError> {
@@ -241,7 +241,7 @@ impl Cli {
             Self::print_mount_success(&mountdir, /* foreground */ true);
             Ok(())
         };
-        cryfs_runner::mount_filesystem(mount_args, on_successfully_mounted).await?;
+        runner::mount_filesystem(mount_args, on_successfully_mounted).await?;
         // In foreground mode, we only return after unmount
         // TODO Output formatting, e.g. colorization (and search the codebase for other println statements that might be missing it)
         println!("  CryFS has been unmounted.");
@@ -250,13 +250,13 @@ impl Cli {
 
     async fn run_parent_async(
         self,
-        rpc: &mut RpcClient<cryfs_runner::Request, cryfs_runner::Response>,
+        rpc: &mut RpcClient<runner::Request, runner::Response>,
         log_config: LoggingConfig,
     ) -> Result<(), CliError> {
         self.sanity_checks().await?;
         let mountdir = self.mount_args().mountdir.clone();
         let mount_args = self.build_mount_args(ConsoleProgressBarManager)?;
-        cryfs_runner::parent_mount_filesystem(rpc, mount_args, log_config)?;
+        runner::parent_mount_filesystem(rpc, mount_args, log_config)?;
         Self::print_mount_success(&mountdir, /* foreground */ false);
         Ok(())
     }
@@ -264,7 +264,7 @@ impl Cli {
     fn build_mount_args(
         &self,
         progress_bars: impl ProgressBarManager,
-    ) -> Result<cryfs_runner::MountArgs, CliError> {
+    ) -> Result<runner::MountArgs, CliError> {
         let mount_args = self.mount_args();
         let config =
             self.load_or_create_config(mount_args.allow_replaced_filesystem, progress_bars)?;
@@ -276,7 +276,7 @@ impl Cli {
         let atime_behavior = AtimeOption::to_atime_behavior(&atime_options)
             .map_cli_error(CliErrorKind::InvalidArguments)?;
 
-        Ok(cryfs_runner::MountArgs {
+        Ok(runner::MountArgs {
             // Resolve to absolute paths before handing them to the (possibly
             // daemonized) runner: the daemon chdir's to `/`, so a cwd-relative
             // vault/mount path would otherwise resolve against the wrong

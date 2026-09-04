@@ -26,11 +26,11 @@ The architecture is layered. Dependencies flow downward (higher layers depend on
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  APPLICATION LAYER                                          │
-│  cryfs-cli ──────────► cryfs-runner                        │
-│  (CLI binary)          (mount orchestration)               │
-│       │                     │                              │
-│       └──► cli-utils ◄──────┘                              │
-│            (shared CLI code, blockstore setup)             │
+│  cryfs-cli                                                  │
+│  (CLI binary + mount orchestration, foreground & daemon)    │
+│       │                                                     │
+│       └──► cli-utils                                        │
+│            (shared CLI code, blockstore setup)              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -78,8 +78,7 @@ Cross-cutting: crypto, utils, cryfs-version, concurrent-store, cryfs-config
 
 | Crate | Purpose | Key Types |
 |-------|---------|-----------|
-| cryfs-cli | Main CLI binary (cryfs) | argument parsing, console interaction |
-| cryfs-runner | Mount orchestration | MountArgs, background_main, mount_filesystem |
+| cryfs-cli | Main CLI binary (cryfs) and mount orchestration | argument parsing, console interaction, MountArgs, mount_filesystem, background_main (daemon side) |
 | cli-utils | Shared CLI utilities | blockstore stack setup, password prompts, Application/ConstructibleApplication, run/run_with |
 
 ### Cross-cutting
@@ -205,6 +204,7 @@ cargo doc                      # Generate docs
 
 - Entry point: `crates/cryfs-cli/src/bin/cryfs.rs`
 - CLI args: `crates/cryfs-cli/src/args/`
+- Mount orchestration (foreground and daemon mode): `crates/cryfs-cli/src/runner/`
 - Core filesystem: `crates/cryfs-filesystem/src/`
 - Block encryption: `crates/blockstore/src/low_level/implementations/encrypted/`
 - Integrity: `crates/blockstore/src/low_level/implementations/integrity/`
@@ -217,6 +217,6 @@ cargo doc                      # Generate docs
 ## Common Development Tasks
 
 - **Adding a new cipher**: Implement in `crates/crypto/src/symmetric/`, register in config ciphers
-- **Adding CLI option**: Modify `crates/cryfs-cli/src/args/`, update runner
+- **Adding CLI option**: Modify `crates/cryfs-cli/src/args/`, thread it through `MountArgs` in `crates/cryfs-cli/src/runner/`
 - **Adding filesystem operation**: Implement in `crates/cryfs-filesystem/`, wire through rustfs Device trait
 - **Adding tests**: Follow existing patterns, use macro fixtures for multiple implementations

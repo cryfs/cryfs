@@ -51,9 +51,9 @@ Usage:
 
 Examples:
     tools/detect-flaky-tests.py 50
-    tools/detect-flaky-tests.py 50 -p cryfs-runner
+    tools/detect-flaky-tests.py 50 -p cryfs-cli --lib
     tools/detect-flaky-tests.py 50 -p cryfs-cli --test args
-    tools/detect-flaky-tests.py 50 -p cryfs-runner -- --test-threads=1 --nocapture
+    tools/detect-flaky-tests.py 50 -p cryfs-cli --lib -- --test-threads=1 --nocapture
 """
 
 from __future__ import annotations
