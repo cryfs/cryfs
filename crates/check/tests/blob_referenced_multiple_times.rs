@@ -1,6 +1,11 @@
 //! Tests where a blob is referenced multiple times, either from the same or from a different directory
 //! Note: Tests for the blob being referenced from an inner node is in [super::node_referenced_multiple_times::root_node_referenced]
 
+// Raise the trait-solver recursion limit above rustc's default of 128: proving
+// `generic_array::ArrayLength` for our typenum-parameterized ciphers overflows
+// it. See crates/crypto/src/lib.rs for the full explanation.
+#![recursion_limit = "512"]
+
 use futures::future::BoxFuture;
 use rstest::rstest;
 use std::collections::BTreeSet;
