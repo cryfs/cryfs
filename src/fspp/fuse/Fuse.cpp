@@ -16,6 +16,7 @@
 #include <cpp-utils/thread/debugging.h>
 #include <csignal>
 #include "InvalidFilesystem.h"
+#include "AtimeOptions.h"
 #include <codecvt>
 #include <boost/algorithm/string/replace.hpp>
 
@@ -290,58 +291,6 @@ void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string
   }
 }
 
-namespace {
-  void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, vector<string>* result) {
-    const auto is_fuse_supported_atime_flag = [] (const std::string& flag) {
-        constexpr std::array<const char*, 2> flags = {"noatime", "atime"};
-        return flags.end() != std::find(flags.begin(), flags.end(), flag);
-    };
-    const auto is_fuse_unsupported_atime_flag = [] (const std::string& flag) {
-        constexpr std::array<const char*, 3> flags = {"strictatime", "relatime", "nodiratime"};
-        return flags.end() != std::find(flags.begin(), flags.end(), flag);
-    };
-    *csv_options = ranges::make_subrange(csv_options->begin(), csv_options->end()) | ranges::views::split(',') | ranges::views::filter(
-      [&](auto &&elem_) {
-          // TODO string_view would be better
-          const std::string elem(&*elem_.begin(), ranges::distance(elem_));
-          if (is_fuse_unsupported_atime_flag(elem)) {
-              result->push_back(elem);
-              return false;
-          }
-          if (is_fuse_supported_atime_flag(elem)) {
-              result->push_back(elem);
-          }
-          return true;
-      }) | ranges::views::join(',') | ranges::to<string>();
-  }
-
-  // Return a list of all atime options (e.g. atime, noatime, relatime, strictatime, nodiratime) that occur in the
-  // fuseOptions input. They must be preceded by a '-o', i.e. {..., '-o', 'noatime', ...} and multiple ones can be
-  // csv-concatenated, i.e. {..., '-o', 'atime,nodiratime', ...}.
-  // Also, this function removes all of these atime options that are unknown to libfuse (i.e. all except atime and noatime)
-  // from the input fuseOptions so we can pass it on to libfuse without crashing.
-  vector<string> extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(vector<string>* fuseOptions) {
-    vector<string> result;
-    bool lastOptionWasDashO = false;
-    for (size_t i = 0; i < fuseOptions->size(); ++i) {
-      string &option = (*fuseOptions)[i];
-      if (lastOptionWasDashO) {
-        extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&option, &result);
-        if (option.empty()) {
-          // All options were removed, remove the empty argument
-          fuseOptions->erase(fuseOptions->begin() + i);
-          --i;
-          // And also remove the now value-less '-o' before it
-          fuseOptions->erase(fuseOptions->begin() + i);
-          --i;
-        }
-      }
-      lastOptionWasDashO = (option == "-o");
-    }
-
-    return result;
-  }
-}
 
 void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 #if defined(__GLIBC__) || defined(__APPLE__) || defined(_MSC_VER)
@@ -381,7 +330,7 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 
   ASSERT(_argv.size() == 0, "Filesystem already started");
 
-  const vector<string> atimeOptions = extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&fuseOptions);
+  const vector<string> atimeOptions = extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse(&fuseOptions);
   _createContext(atimeOptions);
 
   _argv = _build_argv(mountdir, fuseOptions);
