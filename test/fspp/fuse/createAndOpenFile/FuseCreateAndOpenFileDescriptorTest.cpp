@@ -4,6 +4,7 @@ using ::testing::Eq;
 using ::testing::WithParamInterface;
 using ::testing::Values;
 using ::testing::Invoke;
+using ::testing::Return;
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
 
@@ -32,14 +33,12 @@ private:
 INSTANTIATE_TEST_SUITE_P(FuseCreateAndOpenFileDescriptorTest, FuseCreateAndOpenFileDescriptorTest, Values(0, 2, 5, 1000, 1024*1024*1024));
 
 TEST_P(FuseCreateAndOpenFileDescriptorTest, TestReturnedFileDescriptor) {
-  bool created = false;
-  ReturnIsFileOnLstatWithSizeIfFlagIsSet(FILENAME, fspp::num_bytes_t(100), &created);
+  ReturnDoesntExistOnLstat(FILENAME);
   EXPECT_CALL(*fsimpl, createAndOpenFile(Eq(FILENAME), testing::_, testing::_, testing::_))
-    .Times(1).WillOnce(Invoke([&] () {
-      ASSERT(!created, "called createAndOpenFile multiple times");
-      created = true;
-      return GetParam();
-    }));
+    .Times(1).WillOnce(Return(GetParam()));
+  //libfuse asks for the new file's attributes through the handle create() returned. The file has to
+  //look non-empty, otherwise the kernel answers our read from the (empty) file itself.
+  ReturnIsFileOnFstatWithSize(GetParam(), fspp::num_bytes_t(100));
   EXPECT_CALL(*fsimpl, read(Eq(GetParam()), testing::_, testing::_, testing::_)).Times(1).WillOnce(Invoke([] () {
     return fspp::num_bytes_t(1);
   }));

@@ -481,14 +481,20 @@ void Fuse::unmount(const bf::path& mountdir, bool force) {
 }
 
 int Fuse::getattr(const bf::path &path, fspp::fuse::STAT *stbuf, fuse_file_info* file_info) {
-  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("getattr");
 #ifdef FSPP_LOG
   LOG(DEBUG, "getattr({}, _, _)", path);
 #endif
   try {
-    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->lstat(path, stbuf);
+    if (file_info != nullptr) {
+      // The request came from a file that is already open, e.g. from fstat(2) or from the lookup
+      // libfuse does right after create(). Answering from the handle saves resolving the path,
+      // which is one directory blob load and lookup per component in CryFS.
+      _fs->fstat(file_info->fh, stbuf);
+    } else {
+      ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
+      _fs->lstat(path, stbuf);
+    }
 #ifdef FSPP_LOG
     LOG(DEBUG, "getattr({}, _, _): success", path);
 #endif
@@ -788,14 +794,18 @@ int Fuse::chown(const bf::path &path, ::uid_t uid, ::gid_t gid, fuse_file_info* 
 }
 
 int Fuse::truncate(const bf::path &path, int64_t size, fuse_file_info* file_info) {
-  UNUSED(file_info);
   const ThreadNameForDebugging _threadName("truncate");
 #ifdef FSPP_LOG
   LOG(DEBUG, "truncate({}, {})", path, size);
 #endif
   try {
-    ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->truncate(path, fspp::num_bytes_t(size));
+    if (file_info != nullptr) {
+      // ftruncate(2), i.e. the file is already open and we don't have to resolve the path again.
+      _fs->ftruncate(file_info->fh, fspp::num_bytes_t(size));
+    } else {
+      ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
+      _fs->truncate(path, fspp::num_bytes_t(size));
+    }
 #ifdef FSPP_LOG
     LOG(DEBUG, "truncate({}, {}): success", path, size);
 #endif

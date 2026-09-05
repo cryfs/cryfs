@@ -24,7 +24,9 @@ FuseTest::FuseTest(): fsimpl(make_shared<MockFilesystem>()), _context(boost::non
   ON_CALL(*fsimpl, openFile(_,_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, closeFile(_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, lstat(_,_)).WillByDefault(Throw(FuseErrnoException(ENOENT)));
+  ON_CALL(*fsimpl, fstat(_,_)).WillByDefault(Throw(FuseErrnoException(ENOENT)));
   ON_CALL(*fsimpl, truncate(_,_)).WillByDefault(defaultAction);
+  ON_CALL(*fsimpl, ftruncate(_,_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, read(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, write(_,_,_,_)).WillByDefault(defaultAction);
   ON_CALL(*fsimpl, fsync(_)).WillByDefault(defaultAction);
@@ -146,4 +148,12 @@ void FuseTest::ReturnIsDirOnLstat(const bf::path &path) {
 
 void FuseTest::ReturnDoesntExistOnLstat(const bf::path &path) {
   EXPECT_CALL(*fsimpl, lstat(Eq(path), ::testing::_)).WillRepeatedly(ReturnDoesntExist);
+}
+
+void FuseTest::ReturnIsFileOnFstat(int descriptor) {
+  EXPECT_CALL(*fsimpl, fstat(descriptor, testing::_)).WillRepeatedly(ReturnIsFileFstat);
+}
+
+void FuseTest::ReturnIsFileOnFstatWithSize(int descriptor, fspp::num_bytes_t size) {
+  EXPECT_CALL(*fsimpl, fstat(descriptor, testing::_)).WillRepeatedly(ReturnIsFileFstatWithSize(size));
 }

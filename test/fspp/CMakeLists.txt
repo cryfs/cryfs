@@ -7,6 +7,14 @@ set(SOURCES
     testutils/InMemoryFile.cpp
     impl/FuseOpenFileListTest.cpp
     impl/IdListTest.cpp
+    fuse/fstat/testutils/FuseFstatTest.cpp
+    fuse/fstat/FuseFstatErrorTest.cpp
+    fuse/fstat/FuseFstatParameterTest.cpp
+    fuse/fstat/FuseFstatOnOpenFileTest.cpp
+    fuse/ftruncate/testutils/FuseFTruncateTest.cpp
+    fuse/ftruncate/FuseFTruncateErrorTest.cpp
+    fuse/ftruncate/FuseFTruncateFileDescriptorTest.cpp
+    fuse/ftruncate/FuseFTruncateSizeTest.cpp
     fuse/lstat/FuseLstatReturnUidTest.cpp
     fuse/lstat/testutils/FuseLstatTest.cpp
     fuse/lstat/FuseLstatReturnCtimeTest.cpp
