@@ -305,10 +305,14 @@ namespace cryfs_cli {
             std::cout << "\nMounting filesystem. To unmount, call:\n$ cryfs-unmount " << options.mountDir() << "\n"
                       << std::endl;
 
-            if (options.foreground()) {
-                fuse->runInForeground(options.mountDir(), options.fuseOptions());
-            } else {
-                fuse->runInBackground(options.mountDir(), options.fuseOptions());
+            const int fuseExitCode = options.foreground()
+                ? fuse->runInForeground(options.mountDir(), options.fuseOptions())
+                : fuse->runInBackground(options.mountDir(), options.fuseOptions());
+            if (0 != fuseExitCode) {
+                // libfuse refused to mount (e.g. an unknown '-o' option, or a missing fusermount3).
+                // It already printed the reason; without this we would exit successfully after
+                // telling the user the filesystem was being mounted.
+                throw CryfsException("Failed to mount filesystem. See error messages above.", ErrorCode::MountFailed);
             }
 
             if (stoppedBecauseOfIntegrityViolation) {

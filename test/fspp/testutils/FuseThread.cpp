@@ -20,8 +20,18 @@ void FuseThread::start(const bf::path &mountDir, const vector<string> &fuseOptio
   _child = thread([this, mountDir, fuseOptions] () {
     _fuse->runInForeground(mountDir, fuseOptions);
   });
-  //Wait until it is running (busy waiting is simple and doesn't hurt much here)
-  while(!_fuse->running()) {}
+  //Wait until it is running (busy waiting is simple and doesn't hurt much here).
+  //Fuse::running() only becomes true from init(), which libfuse calls after a successful mount,
+  //so if the mount is refused the thread exits and this would otherwise spin forever.
+  const auto deadline = boost::chrono::steady_clock::now() + seconds(30);
+  while(!_fuse->running()) {
+    if (_child.try_join_for(boost::chrono::milliseconds(10))) {
+      ASSERT(false, "The FUSE thread exited before the filesystem was mounted. libfuse probably refused the mount.");
+    }
+    if (boost::chrono::steady_clock::now() > deadline) {
+      ASSERT(false, "Timeout waiting for the filesystem to be mounted.");
+    }
+  }
 #ifdef __APPLE__
   // On Mac OS X, _fuse->running() returns true too early, because macFUSE calls init() when it's not ready yet. Give it a bit time.
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
