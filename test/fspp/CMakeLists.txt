@@ -27,6 +27,7 @@ set(SOURCES
     fuse/flush/FuseFlushErrorTest.cpp
     fuse/flush/FuseFlushFileDescriptorTest.cpp
     fuse/AtimeOptionsTest.cpp
+    fuse/MountOptionsTest.cpp
     fuse/rename/testutils/FuseRenameTest.cpp
     fuse/rename/FuseRenameErrorTest.cpp
     fuse/rename/FuseRenameFilenameTest.cpp
