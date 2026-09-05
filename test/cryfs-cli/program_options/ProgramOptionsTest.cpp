@@ -157,3 +157,16 @@ TEST_F(ProgramOptionsTest, SomeFuseOptions) {
     //Fuse should have the mount dir as first parameter
     EXPECT_VECTOR_EQ({"-f", "--longoption"}, testobj.fuseOptions());
 }
+
+TEST_F(ProgramOptionsTest, AllowNonEmptyMountdirDefaultsToFalse) {
+    const ProgramOptions testobj("/rootDir", "/home/user/mydir", none, false, false, false, false, false, none, none, none, none, false, none, {"-o", "allow_other"});
+    EXPECT_FALSE(testobj.allowNonEmptyMountdir());
+    EXPECT_VECTOR_EQ({"-o", "allow_other"}, testobj.fuseOptions());
+}
+
+TEST_F(ProgramOptionsTest, NonemptyFuseOptionIsConsumed) {
+    const ProgramOptions testobj("/rootDir", "/home/user/mydir", none, false, false, false, false, false, none, none, none, none, false, none, {"-o", "nonempty", "-o", "allow_other"});
+    EXPECT_TRUE(testobj.allowNonEmptyMountdir());
+    //libfuse must never see the option, it doesn't know it on all versions we support
+    EXPECT_VECTOR_EQ({"-o", "allow_other"}, testobj.fuseOptions());
+}

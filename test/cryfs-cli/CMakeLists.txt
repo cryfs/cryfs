@@ -6,6 +6,7 @@ set(SOURCES
     CliTest_Setup.cpp
     CliTest_WrongEnvironment.cpp
     CliTest_MountFailure.cpp
+    CliTest_NonEmptyMountdir.cpp
     program_options/UtilsTest.cpp
     program_options/ProgramOptionsTest.cpp
     program_options/ParserTest.cpp

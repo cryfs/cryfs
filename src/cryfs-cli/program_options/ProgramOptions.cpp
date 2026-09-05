@@ -1,4 +1,5 @@
 #include "ProgramOptions.h"
+#include "utils.h"
 #include <cstring>
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/system/path.h>
@@ -27,7 +28,11 @@ ProgramOptions::ProgramOptions(bf::path baseDir, bf::path mountDir, optional<bf:
       _allowIntegrityViolations(allowIntegrityViolations),
       _missingBlockIsIntegrityViolation(std::move(missingBlockIsIntegrityViolation)),
       _fuseOptions(std::move(fuseOptions)),
-      _mountDirIsDriveLetter(cpputils::path_is_just_drive_letter(_mountDir)) {
+      _mountDirIsDriveLetter(cpputils::path_is_just_drive_letter(_mountDir)),
+      // Note: this consumes the 'nonempty' option, i.e. removes it from _fuseOptions, so that we
+      // never hand it to libfuse. _fuseOptions is declared before this member, so it is already
+      // initialized here.
+      _allowNonEmptyMountdir(extractNonemptyOption(&_fuseOptions)) {
 	if (!_mountDirIsDriveLetter) {
 		_mountDir = bf::absolute(std::move(_mountDir));
 	}
@@ -95,4 +100,8 @@ const optional<bool> &ProgramOptions::missingBlockIsIntegrityViolation() const {
 
 const vector<string> &ProgramOptions::fuseOptions() const {
     return _fuseOptions;
+}
+
+bool ProgramOptions::allowNonEmptyMountdir() const {
+    return _allowNonEmptyMountdir;
 }

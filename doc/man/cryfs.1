@@ -230,6 +230,12 @@ root) can access the files.
 This option is similar to allow_other but file access is
 limited to the filesystem owner and root.  This option and
 allow_other are mutually exclusive.
+.TP
+\fB\-o\fR \fInonempty\fR
+Allow mounting over a directory that already contains files.
+Those files are hidden for as long as the filesystem is mounted.
+Without this option CryFS refuses to mount over a non-empty
+directory.
 .
 .
 .
