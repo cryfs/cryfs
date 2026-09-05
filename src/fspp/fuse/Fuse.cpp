@@ -14,6 +14,8 @@
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/thread/debugging.h>
+#include <cpp-utils/system/stat.h>
+#include <cpp-utils/system/time.h>
 #include <csignal>
 #include "InvalidFilesystem.h"
 #include <codecvt>
@@ -38,6 +40,19 @@ using std::shared_ptr;
 using std::string;
 using namespace fspp::fuse;
 using cpputils::set_thread_name;
+
+// libfuse 3 always encodes "set this timestamp to the current time" as UTIME_NOW and
+// "leave this timestamp alone" as UTIME_OMIT in tv_nsec, with tv_sec set to 0. libfuse 2 only
+// did that for filesystems setting flag_utime_omit_ok, which we never set, so before the move
+// to libfuse 3 these sentinels never reached us. Everything below fspp expects concrete
+// timestamps, so we resolve them in Fuse::utimens before handing them down.
+// The constants live in <sys/stat.h> on Linux and macOS; the Dokan headers don't define them.
+#ifndef UTIME_NOW
+#define UTIME_NOW ((1L << 30) - 1L)
+#endif
+#ifndef UTIME_OMIT
+#define UTIME_OMIT ((1L << 30) - 2L)
+#endif
 
 namespace {
   bool is_valid_fspp_path(const bf::path& path) {
@@ -848,7 +863,28 @@ int Fuse::utimens(const bf::path &path, const std::array<timespec, 2> times, fus
 #endif
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->utimens(path, times[0], times[1]);
+    std::array<timespec, 2> resolved = times;
+    if (times[0].tv_nsec == UTIME_OMIT || times[1].tv_nsec == UTIME_OMIT) {
+      // UTIME_OMIT means "keep the timestamp the node already has", so we have to read it first.
+      fspp::fuse::STAT currentStat{};
+      _fs->lstat(path, &currentStat);
+      if (times[0].tv_nsec == UTIME_OMIT) {
+        resolved[0] = currentStat.st_atim;
+      }
+      if (times[1].tv_nsec == UTIME_OMIT) {
+        resolved[1] = currentStat.st_mtim;
+      }
+    }
+    if (times[0].tv_nsec == UTIME_NOW || times[1].tv_nsec == UTIME_NOW) {
+      const timespec now = cpputils::time::now();
+      if (times[0].tv_nsec == UTIME_NOW) {
+        resolved[0] = now;
+      }
+      if (times[1].tv_nsec == UTIME_NOW) {
+        resolved[1] = now;
+      }
+    }
+    _fs->utimens(path, resolved[0], resolved[1]);
 #ifdef FSPP_LOG
     LOG(DEBUG, "utimens({}, _): success", path);
 #endif
