@@ -27,6 +27,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     message(FATAL_ERROR "Unsupported architecture: ${TARGET_ARCH}")
   endif()
 
+  # Dokany's FUSE wrapper implements FUSE 2.7. There is no libFUSE 3 version of it, so the Windows
+  # build takes the FUSE 2 code path, see src/fspp/fuse/params.h.
   target_include_directories(${PROJECT_NAME} PUBLIC "${DOKAN_PATH}/include")
   target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}/lib/dokan2.lib")
   #target_link_libraries(${PROJECT_NAME} PUBLIC "${DOKAN_LIB_PATH}/lib/dokannp2.lib")
