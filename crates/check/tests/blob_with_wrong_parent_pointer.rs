@@ -1,5 +1,10 @@
 //! Tests where blobs have wrong parent pointers set
 
+// Raise the trait-solver recursion limit above rustc's default of 128: proving
+// `generic_array::ArrayLength` for our typenum-parameterized ciphers overflows
+// it. See crates/crypto/src/lib.rs for the full explanation.
+#![recursion_limit = "512"]
+
 use futures::future::BoxFuture;
 use rstest::rstest;
 use std::collections::BTreeSet;
