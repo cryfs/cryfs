@@ -36,13 +36,24 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     DESTINATION "${CMAKE_INSTALL_BINDIR}"
   )
 
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") # macOS
+else() # Linux and macOS
   find_package(PkgConfig REQUIRED)
-  pkg_check_modules(Fuse REQUIRED IMPORTED_TARGET fuse)
-  target_link_libraries(${PROJECT_NAME} PUBLIC PkgConfig::Fuse)
-else() # Linux
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(Fuse3 REQUIRED IMPORTED_TARGET fuse3)
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # macFUSE installs into /usr/local, which isn't on pkg-config's default search path when
+    # pkg-config itself comes from Homebrew on Apple Silicon.
+    set(ENV{PKG_CONFIG_PATH} "/usr/local/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  endif()
+  # The minimum is enforced here rather than with a preprocessor check on FUSE_VERSION, because
+  # libfuse 3.9.0 itself ships a stale FUSE_MINOR_VERSION of 2 in its headers (fixed in 3.9.1), so
+  # a header check would reject the very version being asked for. pkg-config reads the real one.
+  pkg_check_modules(Fuse3 IMPORTED_TARGET "fuse3>=3.9")
+  if(NOT Fuse3_FOUND)
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      message(FATAL_ERROR "Didn't find libfuse 3.9 or newer. On macOS it comes with macFUSE 4.10.0 and newer - install it from https://osxfuse.github.io/ or with 'brew install --cask macfuse'. If macFUSE is already installed, point pkg-config at it with PKG_CONFIG_PATH=/usr/local/lib/pkgconfig.")
+    else()
+      message(FATAL_ERROR "Didn't find libfuse 3.9 or newer. Install it, e.g. 'apt install libfuse3-dev' or 'dnf install fuse3-devel'.")
+    endif()
+  endif()
   target_link_libraries(${PROJECT_NAME} PUBLIC PkgConfig::Fuse3)
 endif()
 

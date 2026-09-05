@@ -263,8 +263,8 @@ Dependencies are managed via Conan. See `conanfile.py` for current versions.
 
 | Platform | Dependency | Purpose |
 |----------|-----------|---------|
-| Linux/macOS | libFUSE >= 2.9 | Filesystem in Userspace |
-| macOS | macFUSE | FUSE for macOS |
+| Linux/macOS | libFUSE 3 | Filesystem in Userspace |
+| macOS | macFUSE >= 4.10.0 | ships libFUSE 3 for macOS |
 | Windows | Dokan | Windows filesystem driver (see README for version) |
 
 ### Build Commands
@@ -424,7 +424,12 @@ Configuration in `.clang-tidy`:
 
 ### macOS
 
-- Requires macFUSE from https://osxfuse.github.io/
+- Requires macFUSE >= 4.10.0 from https://osxfuse.github.io/, which is the first release that
+  ships libFUSE 3. Older macFUSE only has the libFUSE 2.9 API.
+- `params.h` defines `FUSE_DARWIN_ENABLE_EXTENSIONS 0`, because macFUSE otherwise replaces some
+  `fuse_operations` members with macOS specific variants that don't match our signatures.
+- macFUSE installs into /usr/local, so pkg-config may need
+  `PKG_CONFIG_PATH=/usr/local/lib/pkgconfig` on Apple Silicon.
 - Apple Clang support varies by macOS version
 
 ## Stability Notes
