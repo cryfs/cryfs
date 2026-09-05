@@ -230,6 +230,24 @@ root) can access the files.
 This option is similar to allow_other but file access is
 limited to the filesystem owner and root.  This option and
 allow_other are mutually exclusive.
+.TP
+Options that no longer exist:
+.TP
+libFUSE 3 removed a number of mount options that libFUSE 2 accepted, either
+because only the filesystem itself can set them now or because they became
+unconditional.  CryFS ignores them and prints a warning instead of failing to
+mount:
+.BR hard_remove ,
+.BR use_ino ,
+.BR readdir_ino ,
+.BR direct_io ,
+.BR nopath ,
+.BR intr ,
+.BR intr_signal ,
+.BR big_writes ,
+.BR large_read
+and
+.BR max_write .
 .
 .
 .
