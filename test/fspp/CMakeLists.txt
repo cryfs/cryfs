@@ -2,6 +2,7 @@ project (fspp-test)
 
 set(SOURCES
     testutils/FuseTest.cpp
+    fuse/FuseMountFailureTest.cpp
     testutils/FuseThread.cpp
     testutils/InMemoryFile.cpp
     impl/FuseOpenFileListTest.cpp

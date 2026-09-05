@@ -26,8 +26,14 @@ public:
   explicit Fuse(std::function<std::shared_ptr<Filesystem> (Fuse *fuse)> init, std::function<void()> onMounted, std::string fstype, boost::optional<std::string> fsname);
   ~Fuse();
 
-  void runInBackground(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
-  void runInForeground(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
+  // Both return the exit code of fuse_main(), i.e. 0 if the filesystem ran and was unmounted
+  // cleanly and non-zero if libfuse refused to mount it (see 'man fuse_main' / lib/helper.c:
+  // 1 = bad command line, 2 = no mountpoint, 3 = fuse_new failed e.g. an unknown '-o' option,
+  // 4 = mount failed e.g. fusermount3 missing, 5 = daemonize failed, 6 = signal handlers, 7 = loop).
+  // Note that in background mode libfuse forks and the parent exits inside fuse_main, so only
+  // failures that happen before daemonizing (1-4) are reported back to the caller.
+  int runInBackground(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
+  int runInForeground(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
   bool running() const;
   void stop();
 
@@ -67,7 +73,7 @@ private:
   static void _logUnknownException();
   static char *_create_c_string(const std::string &str);
   static void _removeAndWarnIfExists(std::vector<std::string> *fuseOptions, const std::string &option);
-  void _run(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
+  int _run(const boost::filesystem::path &mountdir, std::vector<std::string> fuseOptions);
   static bool _has_option(const std::vector<char *> &vec, const std::string &key);
   static bool _has_entry_with_prefix(const std::string &prefix, const std::vector<char *> &vec);
   std::vector<char *> _build_argv(const boost::filesystem::path &mountdir, const std::vector<std::string> &fuseOptions);

@@ -56,7 +56,11 @@ enum class ErrorCode : int {
   IntegrityViolationOnPreviousRun = 24,
 
   // An integrity violation was detected and the file system unmounted to make sure the user notices.
-  IntegrityViolation = 25
+  IntegrityViolation = 25,
+
+  // libfuse refused to mount the file system, e.g. because a mount option isn't supported or
+  // because the fusermount3 helper is missing.
+  MountFailed = 26
 };
 
 inline int exitCode(ErrorCode code) {
