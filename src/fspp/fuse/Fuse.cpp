@@ -6,6 +6,7 @@
 #include "Fuse.h"
 #include <memory>
 #include <cassert>
+#include <cstdlib>
 
 #include "../fs_interface/FuseErrnoException.h"
 #include "Filesystem.h"
@@ -266,19 +267,19 @@ void Fuse::_logUnknownException() {
   LOG(ERR, "Unknown exception thrown");
 }
 
-void Fuse::runInForeground(const bf::path &mountdir, vector<string> fuseOptions) {
+int Fuse::runInForeground(const bf::path &mountdir, vector<string> fuseOptions) {
   vector<string> realFuseOptions = std::move(fuseOptions);
   if (std::find(realFuseOptions.begin(), realFuseOptions.end(), "-f") == realFuseOptions.end()) {
     realFuseOptions.push_back("-f");
   }
-  _run(mountdir, std::move(realFuseOptions));
+  return _run(mountdir, std::move(realFuseOptions));
 }
 
-void Fuse::runInBackground(const bf::path &mountdir, vector<string> fuseOptions) {
+int Fuse::runInBackground(const bf::path &mountdir, vector<string> fuseOptions) {
   vector<string> realFuseOptions = std::move(fuseOptions);
   _removeAndWarnIfExists(&realFuseOptions, "-f");
   _removeAndWarnIfExists(&realFuseOptions, "-d");
-  _run(mountdir, std::move(realFuseOptions));
+  return _run(mountdir, std::move(realFuseOptions));
 }
 
 void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string &option) {
@@ -343,7 +344,7 @@ namespace {
   }
 }
 
-void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
+int Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 #if defined(__GLIBC__) || defined(__APPLE__) || defined(_MSC_VER)
   // Avoid encoding errors for non-utf8 characters, see https://github.com/cryfs/cryfs/issues/247
   // this is ifdef'd out for non-glibc linux, because musl doesn't handle this correctly.
@@ -361,11 +362,11 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
   auto dokan_driver_version = DokanDriverVersion();
   if (dokan_driver_version == 0) {
     std::cerr << "Error: Did not find DokanY driver. Please install the newest version of DokanY from https://github.com/dokan-dev/dokany/releases" << std::endl;
-    return;
+    return EXIT_FAILURE;
   }
   if (dokan_driver_version != 400) {
     std::cerr << "Error: Unknown version of DokanY driver: " << dokan_driver_version << std::endl;
-    return;
+    return EXIT_FAILURE;
   }
 #endif
 
@@ -373,7 +374,7 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
   if (!mountdir.has_root_name() || mountdir.has_root_directory() || mountdir.has_relative_path()) {
      // TODO Can we fix this and make mounting to non-drives work?
      std::cerr << "Unsupported mount directory " << mountdir << ". CryFS on Windows currently only supports mounting to drives, e.g. 'G:'" << std::endl;
-     return;
+     return EXIT_FAILURE;
   }
 #endif
 
@@ -386,7 +387,9 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 
   _argv = _build_argv(mountdir, fuseOptions);
 
-  fuse_main(_argv.size(), _argv.data(), operations(), this);
+  // Report the result: libfuse returns non-zero when it refused to mount, and silently
+  // continuing here would make a failed mount look like a successful one to our caller.
+  return fuse_main(_argv.size(), _argv.data(), operations(), this);
 }
 
 void Fuse::_createContext(const vector<string> &fuseOptions) {
