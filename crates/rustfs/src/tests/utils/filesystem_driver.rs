@@ -1,5 +1,5 @@
 use cryfs_utils::path::AbsolutePathBuf;
-use nix::{Result, unistd};
+use nix::{Result, fcntl, unistd};
 use std::path::PathBuf;
 
 use crate::Mode;
@@ -33,5 +33,32 @@ impl FilesystemDriver {
         tokio::task::spawn_blocking(move || unistd::mkdir(&path, mode))
             .await
             .unwrap()
+    }
+
+    pub async fn rename(&self, oldpath: &str, newpath: &str) -> Result<()> {
+        let oldpath = self._path(oldpath);
+        let newpath = self._path(newpath);
+        tokio::task::spawn_blocking(move || {
+            fcntl::renameat(fcntl::AT_FDCWD, &oldpath, fcntl::AT_FDCWD, &newpath)
+        })
+        .await
+        .unwrap()
+    }
+
+    /// `rename` with `renameat2()` flags. `renameat2` only exists on Linux.
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    pub async fn renameat2(
+        &self,
+        oldpath: &str,
+        newpath: &str,
+        flags: fcntl::RenameFlags,
+    ) -> Result<()> {
+        let oldpath = self._path(oldpath);
+        let newpath = self._path(newpath);
+        tokio::task::spawn_blocking(move || {
+            fcntl::renameat2(fcntl::AT_FDCWD, &oldpath, fcntl::AT_FDCWD, &newpath, flags)
+        })
+        .await
+        .unwrap()
     }
 }
