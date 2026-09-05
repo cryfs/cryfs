@@ -4,6 +4,7 @@ set(SOURCES
   ../impl/FilesystemImpl.cpp
   ../impl/Profiler.cpp
   ../fuse/Fuse.cpp
+  ../fuse/AtimeOptions.cpp
   ../fuse/Capabilities.cpp
 )
 
