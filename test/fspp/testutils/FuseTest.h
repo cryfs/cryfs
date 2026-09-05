@@ -24,7 +24,9 @@ public:
   MOCK_METHOD(int, openFile, (const boost::filesystem::path&, int), (override));
   MOCK_METHOD(void, closeFile, (int), (override));
   MOCK_METHOD(void, lstat, (const boost::filesystem::path&, fspp::fuse::STAT*), (override));
+  MOCK_METHOD(void, fstat, (int, fspp::fuse::STAT*), (override));
   MOCK_METHOD(void, truncate, (const boost::filesystem::path&, fspp::num_bytes_t), (override));
+  MOCK_METHOD(void, ftruncate, (int, fspp::num_bytes_t), (override));
   MOCK_METHOD(fspp::num_bytes_t, read, (int, void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
   MOCK_METHOD(void, write, (int, const void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
   MOCK_METHOD(void, flush, (int), (override));
@@ -92,6 +94,8 @@ public:
   void ReturnIsDirOnLstat(const boost::filesystem::path &path);
   void ReturnDoesntExistOnLstat(const boost::filesystem::path &path);
   void OnOpenReturnFileDescriptor(const char *filename, int descriptor);
+  void ReturnIsFileOnFstat(int descriptor);
+  void ReturnIsFileOnFstatWithSize(int descriptor, fspp::num_bytes_t size);
 };
 
 #endif
