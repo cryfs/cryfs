@@ -418,7 +418,11 @@ Configuration in `.clang-tidy`:
 
 ### Windows (Experimental)
 
-- Uses Dokan instead of FUSE
+- Uses Dokany instead of libFUSE, through Dokany's FUSE wrapper (`dokanfuse2`)
+- That wrapper implements **FUSE 2.7**, and there is no libFUSE 3 version of it, so the Windows
+  build compiles the FUSE 2 code path. Everything that differs between the two APIs is behind
+  `#if FUSE_MAJOR_VERSION >= 3` in `src/fspp/fuse/Fuse.h` and `Fuse.cpp`, and `params.h` picks the
+  API. The `fspp` interface itself is FUSE 3 shaped on both; only the wrappers differ.
 - Requires Visual Studio 2019/2022
 - Some tests are disabled on Windows (see CI config)
 
