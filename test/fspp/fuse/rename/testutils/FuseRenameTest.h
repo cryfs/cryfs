@@ -11,6 +11,10 @@ public:
 
   void Rename(const char *from, const char *to);
   int RenameReturnError(const char *from, const char *to);
+
+  // rename(2) cannot carry flags, so exercising the renameat2() flags needs a separate entry
+  // point. Returns the errno, or 0 on success.
+  int Renameat2ReturnError(const char *from, const char *to, unsigned int flags);
 };
 
 #endif

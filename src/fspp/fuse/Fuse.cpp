@@ -6,6 +6,7 @@
 #include "Fuse.h"
 #include <memory>
 #include <cassert>
+#include <cstdlib>
 
 #include "../fs_interface/FuseErrnoException.h"
 #include "Filesystem.h"
@@ -14,8 +15,11 @@
 #include <cpp-utils/logging/logging.h>
 #include <cpp-utils/process/subprocess.h>
 #include <cpp-utils/thread/debugging.h>
+#include <cpp-utils/system/stat.h>
+#include <cpp-utils/system/time.h>
 #include <csignal>
 #include "InvalidFilesystem.h"
+#include "AtimeOptions.h"
 #include <codecvt>
 #include <boost/algorithm/string/replace.hpp>
 
@@ -38,6 +42,19 @@ using std::shared_ptr;
 using std::string;
 using namespace fspp::fuse;
 using cpputils::set_thread_name;
+
+// libfuse 3 always encodes "set this timestamp to the current time" as UTIME_NOW and
+// "leave this timestamp alone" as UTIME_OMIT in tv_nsec, with tv_sec set to 0. libfuse 2 only
+// did that for filesystems setting flag_utime_omit_ok, which we never set, so before the move
+// to libfuse 3 these sentinels never reached us. Everything below fspp expects concrete
+// timestamps, so we resolve them in Fuse::utimens before handing them down.
+// The constants live in <sys/stat.h> on Linux and macOS; the Dokan headers don't define them.
+#ifndef UTIME_NOW
+#define UTIME_NOW ((1L << 30) - 1L)
+#endif
+#ifndef UTIME_OMIT
+#define UTIME_OMIT ((1L << 30) - 2L)
+#endif
 
 namespace {
   bool is_valid_fspp_path(const bf::path& path) {
@@ -266,19 +283,19 @@ void Fuse::_logUnknownException() {
   LOG(ERR, "Unknown exception thrown");
 }
 
-void Fuse::runInForeground(const bf::path &mountdir, vector<string> fuseOptions) {
+int Fuse::runInForeground(const bf::path &mountdir, vector<string> fuseOptions) {
   vector<string> realFuseOptions = std::move(fuseOptions);
   if (std::find(realFuseOptions.begin(), realFuseOptions.end(), "-f") == realFuseOptions.end()) {
     realFuseOptions.push_back("-f");
   }
-  _run(mountdir, std::move(realFuseOptions));
+  return _run(mountdir, std::move(realFuseOptions));
 }
 
-void Fuse::runInBackground(const bf::path &mountdir, vector<string> fuseOptions) {
+int Fuse::runInBackground(const bf::path &mountdir, vector<string> fuseOptions) {
   vector<string> realFuseOptions = std::move(fuseOptions);
   _removeAndWarnIfExists(&realFuseOptions, "-f");
   _removeAndWarnIfExists(&realFuseOptions, "-d");
-  _run(mountdir, std::move(realFuseOptions));
+  return _run(mountdir, std::move(realFuseOptions));
 }
 
 void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string &option) {
@@ -290,60 +307,8 @@ void Fuse::_removeAndWarnIfExists(vector<string> *fuseOptions, const std::string
   }
 }
 
-namespace {
-  void extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(string* csv_options, vector<string>* result) {
-    const auto is_fuse_supported_atime_flag = [] (const std::string& flag) {
-        constexpr std::array<const char*, 2> flags = {"noatime", "atime"};
-        return flags.end() != std::find(flags.begin(), flags.end(), flag);
-    };
-    const auto is_fuse_unsupported_atime_flag = [] (const std::string& flag) {
-        constexpr std::array<const char*, 3> flags = {"strictatime", "relatime", "nodiratime"};
-        return flags.end() != std::find(flags.begin(), flags.end(), flag);
-    };
-    *csv_options = ranges::make_subrange(csv_options->begin(), csv_options->end()) | ranges::views::split(',') | ranges::views::filter(
-      [&](auto &&elem_) {
-          // TODO string_view would be better
-          const std::string elem(&*elem_.begin(), ranges::distance(elem_));
-          if (is_fuse_unsupported_atime_flag(elem)) {
-              result->push_back(elem);
-              return false;
-          }
-          if (is_fuse_supported_atime_flag(elem)) {
-              result->push_back(elem);
-          }
-          return true;
-      }) | ranges::views::join(',') | ranges::to<string>();
-  }
 
-  // Return a list of all atime options (e.g. atime, noatime, relatime, strictatime, nodiratime) that occur in the
-  // fuseOptions input. They must be preceded by a '-o', i.e. {..., '-o', 'noatime', ...} and multiple ones can be
-  // csv-concatenated, i.e. {..., '-o', 'atime,nodiratime', ...}.
-  // Also, this function removes all of these atime options that are unknown to libfuse (i.e. all except atime and noatime)
-  // from the input fuseOptions so we can pass it on to libfuse without crashing.
-  vector<string> extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(vector<string>* fuseOptions) {
-    vector<string> result;
-    bool lastOptionWasDashO = false;
-    for (size_t i = 0; i < fuseOptions->size(); ++i) {
-      string &option = (*fuseOptions)[i];
-      if (lastOptionWasDashO) {
-        extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&option, &result);
-        if (option.empty()) {
-          // All options were removed, remove the empty argument
-          fuseOptions->erase(fuseOptions->begin() + i);
-          --i;
-          // And also remove the now value-less '-o' before it
-          fuseOptions->erase(fuseOptions->begin() + i);
-          --i;
-        }
-      }
-      lastOptionWasDashO = (option == "-o");
-    }
-
-    return result;
-  }
-}
-
-void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
+int Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 #if defined(__GLIBC__) || defined(__APPLE__) || defined(_MSC_VER)
   // Avoid encoding errors for non-utf8 characters, see https://github.com/cryfs/cryfs/issues/247
   // this is ifdef'd out for non-glibc linux, because musl doesn't handle this correctly.
@@ -361,11 +326,11 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
   auto dokan_driver_version = DokanDriverVersion();
   if (dokan_driver_version == 0) {
     std::cerr << "Error: Did not find DokanY driver. Please install the newest version of DokanY from https://github.com/dokan-dev/dokany/releases" << std::endl;
-    return;
+    return EXIT_FAILURE;
   }
   if (dokan_driver_version != 400) {
     std::cerr << "Error: Unknown version of DokanY driver: " << dokan_driver_version << std::endl;
-    return;
+    return EXIT_FAILURE;
   }
 #endif
 
@@ -373,7 +338,7 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
   if (!mountdir.has_root_name() || mountdir.has_root_directory() || mountdir.has_relative_path()) {
      // TODO Can we fix this and make mounting to non-drives work?
      std::cerr << "Unsupported mount directory " << mountdir << ". CryFS on Windows currently only supports mounting to drives, e.g. 'G:'" << std::endl;
-     return;
+     return EXIT_FAILURE;
   }
 #endif
 
@@ -381,12 +346,14 @@ void Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 
   ASSERT(_argv.size() == 0, "Filesystem already started");
 
-  const vector<string> atimeOptions = extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse_(&fuseOptions);
+  const vector<string> atimeOptions = extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse(&fuseOptions);
   _createContext(atimeOptions);
 
   _argv = _build_argv(mountdir, fuseOptions);
 
-  fuse_main(_argv.size(), _argv.data(), operations(), this);
+  // Report the result: libfuse returns non-zero when it refused to mount, and silently
+  // continuing here would make a failed mount look like a successful one to our caller.
+  return fuse_main(_argv.size(), _argv.data(), operations(), this);
 }
 
 void Fuse::_createContext(const vector<string> &fuseOptions) {
@@ -708,9 +675,19 @@ int Fuse::symlink(const bf::path &to, const bf::path &from) {
 }
 
 int Fuse::rename(const bf::path &from, const bf::path &to, unsigned int flags) {
-  // TODO Handle flags correctly (see man renameat2)
-  UNUSED(flags);
   const ThreadNameForDebugging _threadName("rename");
+  // libfuse 3 forwards the renameat2() flags to us and expects the filesystem to honour them.
+  // We cannot: RENAME_EXCHANGE needs an atomic swap of two entries, and RENAME_NOREPLACE needs
+  // the "does the target exist" check to happen inside the rename. Silently ignoring them is
+  // not an option - a plain rename in response to RENAME_EXCHANGE reports success while
+  // destroying one of the two files, because our rename overwrites (and deletes) the target.
+  // Rejecting them restores exactly what happened before the move to libfuse 3: libfuse 2 had
+  // no FUSE_RENAME2 handler at all, so the kernel answered every flagged rename with EINVAL and
+  // callers fell back to a plain rename. This is also what libfuse's own passthrough example does.
+  // TODO Implement RENAME_NOREPLACE and RENAME_EXCHANGE instead of rejecting them.
+  if (flags != 0) {
+    return -EINVAL;
+  }
 #ifdef FSPP_LOG
   LOG(DEBUG, "rename({}, {})", from, to);
 #endif
@@ -848,7 +825,28 @@ int Fuse::utimens(const bf::path &path, const std::array<timespec, 2> times, fus
 #endif
   try {
     ASSERT(is_valid_fspp_path(path), "has to be an absolute path");
-    _fs->utimens(path, times[0], times[1]);
+    std::array<timespec, 2> resolved = times;
+    if (times[0].tv_nsec == UTIME_OMIT || times[1].tv_nsec == UTIME_OMIT) {
+      // UTIME_OMIT means "keep the timestamp the node already has", so we have to read it first.
+      fspp::fuse::STAT currentStat{};
+      _fs->lstat(path, &currentStat);
+      if (times[0].tv_nsec == UTIME_OMIT) {
+        resolved[0] = currentStat.st_atim;
+      }
+      if (times[1].tv_nsec == UTIME_OMIT) {
+        resolved[1] = currentStat.st_mtim;
+      }
+    }
+    if (times[0].tv_nsec == UTIME_NOW || times[1].tv_nsec == UTIME_NOW) {
+      const timespec now = cpputils::time::now();
+      if (times[0].tv_nsec == UTIME_NOW) {
+        resolved[0] = now;
+      }
+      if (times[1].tv_nsec == UTIME_NOW) {
+        resolved[1] = now;
+      }
+    }
+    _fs->utimens(path, resolved[0], resolved[1]);
 #ifdef FSPP_LOG
     LOG(DEBUG, "utimens({}, _): success", path);
 #endif

@@ -2,6 +2,7 @@ project (fspp-test)
 
 set(SOURCES
     testutils/FuseTest.cpp
+    fuse/FuseMountFailureTest.cpp
     testutils/FuseThread.cpp
     testutils/InMemoryFile.cpp
     impl/FuseOpenFileListTest.cpp
@@ -25,13 +26,16 @@ set(SOURCES
     fuse/flush/testutils/FuseFlushTest.cpp
     fuse/flush/FuseFlushErrorTest.cpp
     fuse/flush/FuseFlushFileDescriptorTest.cpp
+    fuse/AtimeOptionsTest.cpp
     fuse/rename/testutils/FuseRenameTest.cpp
     fuse/rename/FuseRenameErrorTest.cpp
     fuse/rename/FuseRenameFilenameTest.cpp
+    fuse/rename/FuseRenameFlagsTest.cpp
     fuse/utimens/testutils/FuseUtimensTest.cpp
     fuse/utimens/FuseUtimensErrorTest.cpp
     fuse/utimens/FuseUtimensFilenameTest.cpp
     fuse/utimens/FuseUtimensTimeParameterTest.cpp
+    fuse/utimens/FuseUtimensSentinelTest.cpp
     fuse/unlink/testutils/FuseUnlinkTest.cpp
     fuse/unlink/FuseUnlinkErrorTest.cpp
     fuse/unlink/FuseUnlinkFilenameTest.cpp
