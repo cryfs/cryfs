@@ -28,6 +28,7 @@ set(SOURCES
     fuse/rename/testutils/FuseRenameTest.cpp
     fuse/rename/FuseRenameErrorTest.cpp
     fuse/rename/FuseRenameFilenameTest.cpp
+    fuse/rename/FuseRenameFlagsTest.cpp
     fuse/utimens/testutils/FuseUtimensTest.cpp
     fuse/utimens/FuseUtimensErrorTest.cpp
     fuse/utimens/FuseUtimensFilenameTest.cpp

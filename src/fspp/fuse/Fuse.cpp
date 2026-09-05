@@ -723,9 +723,19 @@ int Fuse::symlink(const bf::path &to, const bf::path &from) {
 }
 
 int Fuse::rename(const bf::path &from, const bf::path &to, unsigned int flags) {
-  // TODO Handle flags correctly (see man renameat2)
-  UNUSED(flags);
   const ThreadNameForDebugging _threadName("rename");
+  // libfuse 3 forwards the renameat2() flags to us and expects the filesystem to honour them.
+  // We cannot: RENAME_EXCHANGE needs an atomic swap of two entries, and RENAME_NOREPLACE needs
+  // the "does the target exist" check to happen inside the rename. Silently ignoring them is
+  // not an option - a plain rename in response to RENAME_EXCHANGE reports success while
+  // destroying one of the two files, because our rename overwrites (and deletes) the target.
+  // Rejecting them restores exactly what happened before the move to libfuse 3: libfuse 2 had
+  // no FUSE_RENAME2 handler at all, so the kernel answered every flagged rename with EINVAL and
+  // callers fell back to a plain rename. This is also what libfuse's own passthrough example does.
+  // TODO Implement RENAME_NOREPLACE and RENAME_EXCHANGE instead of rejecting them.
+  if (flags != 0) {
+    return -EINVAL;
+  }
 #ifdef FSPP_LOG
   LOG(DEBUG, "rename({}, {})", from, to);
 #endif
