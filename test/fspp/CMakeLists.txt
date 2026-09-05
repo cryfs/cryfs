@@ -32,6 +32,7 @@ set(SOURCES
     fuse/utimens/FuseUtimensErrorTest.cpp
     fuse/utimens/FuseUtimensFilenameTest.cpp
     fuse/utimens/FuseUtimensTimeParameterTest.cpp
+    fuse/utimens/FuseUtimensSentinelTest.cpp
     fuse/unlink/testutils/FuseUnlinkTest.cpp
     fuse/unlink/FuseUnlinkErrorTest.cpp
     fuse/unlink/FuseUnlinkFilenameTest.cpp
