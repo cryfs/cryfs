@@ -41,6 +41,10 @@ namespace cryfs_cli {
             const boost::optional<bool> &missingBlockIsIntegrityViolation() const;
             const std::vector<std::string> &fuseOptions() const;
 			bool mountDirIsDriveLetter() const;
+            // True iff the user passed '-o nonempty', i.e. asked us to mount over a directory that
+            // already has files in it. The option itself is removed from fuseOptions(), see
+            // extractNonemptyOption() in utils.h for why.
+            bool allowNonEmptyMountdir() const;
 
         private:
             boost::filesystem::path _baseDir; // this is always absolute
@@ -59,6 +63,7 @@ namespace cryfs_cli {
             boost::optional<bool> _missingBlockIsIntegrityViolation;
             std::vector<std::string> _fuseOptions;
 			bool _mountDirIsDriveLetter;
+            bool _allowNonEmptyMountdir;
 
             DISALLOW_COPY_AND_ASSIGN(ProgramOptions);
         };

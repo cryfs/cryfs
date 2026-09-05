@@ -46,6 +46,7 @@ namespace cryfs_cli {
         void _initLogfile(const program_options::ProgramOptions &options);
         void _sanityChecks(const program_options::ProgramOptions &options);
         void _checkMountdirDoesntContainBasedir(const program_options::ProgramOptions &options);
+        static void _checkMountdirIsEmpty(const program_options::ProgramOptions &options);
         bool _pathContains(const boost::filesystem::path &parent, const boost::filesystem::path &child);
         void _checkDirAccessible(const boost::filesystem::path &dir, const std::string &name, bool createMissingDir, cryfs::ErrorCode errorCode);
         std::shared_ptr<cpputils::TempFile> _checkDirWriteable(const boost::filesystem::path &dir, const std::string &name, cryfs::ErrorCode errorCode);
