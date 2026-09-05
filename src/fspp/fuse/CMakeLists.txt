@@ -4,6 +4,7 @@ set(SOURCES
   ../impl/FilesystemImpl.cpp
   ../impl/Profiler.cpp
   ../fuse/Fuse.cpp
+  ../fuse/Capabilities.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
