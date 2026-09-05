@@ -12,6 +12,12 @@ public:
   void Utimens(const char *filename, timespec lastAccessTime, timespec lastModificationTime);
   int UtimensReturnError(const char *filename, timespec lastAccessTime, timespec lastModificationTime);
 
+  // set_filetime() goes through utimes(2), which can only express two concrete times.
+  // To exercise UTIME_NOW/UTIME_OMIT we have to call utimensat(2) ourselves.
+  // Passing nullptr for times is what `touch` does: it means "both timestamps to now".
+  void Utimensat(const char *filename, const struct timespec *times);
+  int UtimensatReturnError(const char *filename, const struct timespec *times);
+
   static struct timespec makeTimespec(time_t tv_sec, long tv_nsec);
 };
 
