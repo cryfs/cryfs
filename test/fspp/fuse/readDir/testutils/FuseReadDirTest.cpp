@@ -18,6 +18,24 @@ vector<string> FuseReadDirTest::ReadDir(const char *dirname) {
   return result;
 }
 
+vector<std::pair<string, unsigned char>> FuseReadDirTest::ReadDirEntryTypes(const char *dirname) {
+  auto fs = TestFS();
+
+  DIR *dir = openDir(fs.get(), dirname);
+
+  vector<std::pair<string, unsigned char>> result;
+  errno = 0;
+  struct dirent *entry = ::readdir(dir);
+  while (entry != nullptr) {
+    result.emplace_back(entry->d_name, entry->d_type);
+    errno = 0;
+    entry = ::readdir(dir);
+  }
+  EXPECT_EQ(0, errno) << "Reading directory entries failed";
+  closeDir(dir);
+  return result;
+}
+
 int FuseReadDirTest::ReadDirReturnError(const char *dirname) {
   auto fs = TestFS();
 

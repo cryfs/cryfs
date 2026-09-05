@@ -3,6 +3,7 @@ project (fspp-test)
 set(SOURCES
     testutils/FuseTest.cpp
     fuse/FuseMountFailureTest.cpp
+    fuse/CapabilitiesTest.cpp
     testutils/FuseThread.cpp
     testutils/InMemoryFile.cpp
     impl/FuseOpenFileListTest.cpp
@@ -86,6 +87,7 @@ set(SOURCES
     fuse/readDir/FuseReadDirDirnameTest.cpp
     fuse/readDir/FuseReadDirErrorTest.cpp
     fuse/readDir/FuseReadDirReturnTest.cpp
+    fuse/readDir/FuseReadDirEntryTypeTest.cpp
     fuse/createAndOpenFile/FuseCreateAndOpenFilenameTest.cpp
     fuse/createAndOpenFile/testutils/FuseCreateAndOpenTest.cpp
     fuse/createAndOpenFile/FuseCreateAndOpenFlagsTest.cpp
