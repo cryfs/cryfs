@@ -366,6 +366,7 @@ namespace cryfs_cli {
 
 		if (!options.mountDirIsDriveLetter()) {
 			_checkDirAccessible(options.mountDir(), "mount directory", options.createMissingMountpoint(), ErrorCode::InaccessibleMountDir);
+			_checkMountdirIsEmpty(options);
 			_checkMountdirDoesntContainBasedir(options);
 		} else {
 			if (bf::exists(options.mountDir())) {
@@ -423,6 +424,20 @@ namespace cryfs_cli {
             }
         } catch (const boost::filesystem::filesystem_error &e) {
             throw CryfsException("Could not read from "+name+".", errorCode);
+        }
+    }
+
+    void Cli::_checkMountdirIsEmpty(const ProgramOptions &options) {
+        // libfuse 2 refused to mount over a directory that already had files in it, unless the user
+        // passed '-o nonempty'. libfuse 3.0 removed that check together with the option and left the
+        // decision to the file system, so without this we would silently hide the user's files for
+        // as long as the file system is mounted.
+        if (options.allowNonEmptyMountdir()) {
+            return;
+        }
+        const bf::directory_iterator end;
+        if (end != bf::directory_iterator(options.mountDir())) {
+            throw CryfsException("mount directory is not empty. If you are sure this is safe, pass '-o nonempty'.", ErrorCode::InaccessibleMountDir);
         }
     }
 
