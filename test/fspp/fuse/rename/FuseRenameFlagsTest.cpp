@@ -4,7 +4,6 @@
 
 using ::testing::Eq;
 using ::testing::Return;
-using ::testing::_;
 
 // libfuse 3 hands the renameat2() flags to the filesystem and expects it to honour them.
 // CryFS cannot: RENAME_EXCHANGE needs an atomic swap and RENAME_NOREPLACE needs the
@@ -37,7 +36,7 @@ TEST_F(FuseRenameFlagsTest, RenameExchange_IsRejectedAndDoesNotReachTheFilesyste
   // Without this, the rename would go through as a plain rename: it would report success
   // while overwriting (and deleting) one of the two files.
   ReturnTwoExistingFiles();
-  EXPECT_CALL(*fsimpl, rename(_, _)).Times(0);
+  EXPECT_CALL(*fsimpl, rename(::testing::_, ::testing::_)).Times(0);
 
   const int error = Renameat2ReturnError(FILENAME1, FILENAME2, RENAME_EXCHANGE);
   EXPECT_EQ(EINVAL, error);
@@ -46,7 +45,7 @@ TEST_F(FuseRenameFlagsTest, RenameExchange_IsRejectedAndDoesNotReachTheFilesyste
 TEST_F(FuseRenameFlagsTest, RenameNoreplace_IsRejectedAndDoesNotReachTheFilesystem) {
   ReturnIsFileOnLstat(FILENAME1);
   ReturnDoesntExistOnLstat(FILENAME2);
-  EXPECT_CALL(*fsimpl, rename(_, _)).Times(0);
+  EXPECT_CALL(*fsimpl, rename(::testing::_, ::testing::_)).Times(0);
 
   const int error = Renameat2ReturnError(FILENAME1, FILENAME2, RENAME_NOREPLACE);
   EXPECT_EQ(EINVAL, error);
@@ -55,7 +54,7 @@ TEST_F(FuseRenameFlagsTest, RenameNoreplace_IsRejectedAndDoesNotReachTheFilesyst
 TEST_F(FuseRenameFlagsTest, RenameWhiteout_IsRejected) {
   ReturnIsFileOnLstat(FILENAME1);
   ReturnDoesntExistOnLstat(FILENAME2);
-  EXPECT_CALL(*fsimpl, rename(_, _)).Times(0);
+  EXPECT_CALL(*fsimpl, rename(::testing::_, ::testing::_)).Times(0);
 
   const int error = Renameat2ReturnError(FILENAME1, FILENAME2, RENAME_WHITEOUT);
   EXPECT_EQ(EINVAL, error);
