@@ -32,6 +32,10 @@ namespace fspp {
                 throw std::logic_error("Filesystem not initialized yet");
             }
 
+            void fstat(int , fspp::fuse::STAT *) override {
+                throw std::logic_error("Filesystem not initialized yet");
+            }
+
             void chmod(const boost::filesystem::path &, ::mode_t ) override {
                 throw std::logic_error("Filesystem not initialized yet");
             }
@@ -41,6 +45,10 @@ namespace fspp {
             }
 
             void truncate(const boost::filesystem::path &, fspp::num_bytes_t ) override {
+                throw std::logic_error("Filesystem not initialized yet");
+            }
+
+            void ftruncate(int , fspp::num_bytes_t ) override {
                 throw std::logic_error("Filesystem not initialized yet");
             }
 
