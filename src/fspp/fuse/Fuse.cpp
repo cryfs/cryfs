@@ -20,6 +20,7 @@
 #include <csignal>
 #include "InvalidFilesystem.h"
 #include "AtimeOptions.h"
+#include "Capabilities.h"
 #include <codecvt>
 #include <boost/algorithm/string/replace.hpp>
 
@@ -1247,8 +1248,12 @@ void Fuse::init(fuse_conn_info *conn, fuse_config *config) {
   const ThreadNameForDebugging _threadName("init");
 
 #if FUSE_MAJOR_VERSION >= 3
-  // Disable capabilities that we don't support
-  conn->want &= ~(FUSE_CAP_POSIX_LOCKS | FUSE_CAP_ATOMIC_O_TRUNC | FUSE_CAP_EXPORT_SUPPORT);
+  // Opt out of the capabilities libfuse would otherwise negotiate for us, see Capabilities.cpp.
+  // libfuse 3.17 deprecates conn->want in favour of the 64 bit conn->want_ext, but it keeps
+  // converting one into the other around every init() call (convert_to_conn_want_ext() in libfuse's
+  // lib/fuse_i.h), so writing conn->want stays correct on every libfuse 3 release. Switching to
+  // fuse_unset_feature_flag() belongs together with raising FUSE_USE_VERSION.
+  conn->want = removeUnsupportedCapabilities(conn->want);
 #else
   // Dokany's FUSE 2.7 wrapper has neither fuse_conn_info::want nor any FUSE_CAP_* constant, so
   // there is nothing to negotiate here.
