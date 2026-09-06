@@ -1,0 +1,13 @@
+libfuse 2 only ever called fgetattr() after the create() method, which is what
+FuseFstatErrorTest and FuseFstatParameterTest exercise: they issue a create to get
+fstat called, so they can't check the values it returns.
+
+libfuse 3 merged fgetattr() into getattr() and passes the open file's fuse_file_info,
+so requests that come from an open file reach the file system through the handle too.
+FuseFstatOnOpenFileTest covers that, including the values fstat returns.
+
+It uses lseek(fd, 0, SEEK_END) rather than fstat(2). The kernel's getattr inode
+operation has no struct file to take a handle from, so a plain fstat(2) is answered by
+path; lseek(SEEK_END) goes through fuse_file_llseek(), which does have the file and
+sets FATTR_FH. The mount uses attr_timeout=0, because the kernel would otherwise
+answer out of its attribute cache without asking us at all.
