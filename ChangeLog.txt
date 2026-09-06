@@ -20,6 +20,31 @@ Version 1.0.4 (unreleased)
   heap buffer over-read. In practice, this would occur if a block file on disk was truncated or
   corrupted, and the memcmp would simply fail to match — but it is still undefined behavior that
   should be avoided. Added bounds checks before the memcmp calls.
+* CryFS now builds against libFUSE 3 instead of libFUSE 2 on Linux and macOS. libFUSE 2 has been
+  unmaintained for years and distributions are dropping it. What this means when you upgrade:
+  - On Linux you need libFUSE 3 and the fusermount3 helper it uses to mount and unmount. Both ship
+    in the fuse3 package on Debian, Ubuntu and Fedora. Note that installing the libFUSE 2 package,
+    which is called fuse on Debian and Ubuntu, removes fuse3 and leaves CryFS unable to mount.
+  - On macOS you need macFUSE 4.10.0 or newer. That is the first macFUSE release that ships
+    libFUSE 3; older ones only have the libFUSE 2 API.
+  - On Windows nothing changes. Dokany's FUSE wrapper is still FUSE 2.7 and there is no libFUSE 3
+    version of it, so the Windows build keeps using the FUSE 2 API.
+  - Some mount options that libFUSE 2 accepted do not exist in libFUSE 3 any more: hard_remove,
+    use_ino, readdir_ino, direct_io, nopath, intr, intr_signal, big_writes, large_read and
+    max_write. Passing one of them used to configure the file system; now only the file system
+    itself can decide those, so CryFS ignores them and prints a warning instead of failing to
+    mount. nonempty is gone as well, but it still works: libFUSE used to refuse a non-empty mount
+    directory itself, and CryFS now does that check and honours -o nonempty to override it.
+* Fixed: A mount that libFUSE refused, for example because of an unknown -o option or a missing
+  fusermount3, made cryfs print "Mounting filesystem" and then exit with status 0, as though it had
+  mounted and later unmounted cleanly. Scripts and service managers had no way to tell a failed
+  mount from a successful one. It now exits with error code 26 and an error message.
+* Fixed: Undefined behavior while parsing mount options. After removing an option that libFUSE
+  doesn't know, the parser kept using a reference into the vector it had just erased from. It
+  happened to do the right thing in practice, but it was undefined behavior.
+
+Dependency Updates
+* Fuse 3.9 on Linux and macOS (was: Fuse 2.9), still Fuse 2.7 via DokanY on Windows
 
 
 Version 1.0.3
@@ -74,7 +99,7 @@ Build changes
   Now the flag will fully remove the libcurl dependency from the build.
 
 Dependency Updates
-* Fuse 3.9
+* Fuse 2.9
 * DokanY 2.2.0.1000
 * Crypto++ 8.9
 * range-v3 0.12.0
