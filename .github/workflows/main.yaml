@@ -1,5 +1,18 @@
 name: CI
-on: ['push', 'pull_request']
+on:
+  # Only the long-lived branches build on push. A branch that exists to carry a pull
+  # request is already built by the pull_request trigger below, and an unfiltered push
+  # trigger meant every such commit was built twice: once as the branch head, once as
+  # the merge with the base. Tags stay listed so release tags still get a build.
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - 'feature/**'
+    tags:
+      - '**'
+  pull_request:
 
 jobs:
   linux_macos:
