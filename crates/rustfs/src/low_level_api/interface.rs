@@ -263,6 +263,12 @@ pub trait AsyncFilesystemLL {
     ) -> FsResult<ReplyEntry>;
 
     /// Rename a file.
+    ///
+    /// `flags` carries the `renameat2()` flags (`RENAME_NOREPLACE`, `RENAME_EXCHANGE`,
+    /// `RENAME_WHITEOUT`); it is zero for a plain `rename()`. An implementation that doesn't honor
+    /// them must reject a non-zero `flags` with FsError::InvalidOperation rather than ignore it -
+    /// performing a plain rename in response to a `RENAME_EXCHANGE` reports success while
+    /// destroying one of the two files.
     async fn rename(
         &self,
         req: &RequestInfo,

@@ -4,3 +4,4 @@
 mod utils;
 
 mod mkdir;
+mod rename;

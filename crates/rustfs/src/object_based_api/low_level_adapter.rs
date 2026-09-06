@@ -509,11 +509,12 @@ where
         oldname: &PathComponent,
         newparent_ino: InodeNumber,
         newname: &PathComponent,
-        _flags: u32,
+        flags: u32,
     ) -> FsResult<()> {
+        reject_unsupported_rename_flags(flags)?;
+
         self.trigger_on_operation().await?;
 
-        // TODO Honor flags
         // TODO Check that oldparent+oldname/newparent+newname aren't ancestors of each other, or at least write a test that fuse already blocks that
         if oldparent_ino == newparent_ino {
             let shared_parent = self.get_inode(oldparent_ino).await?;
@@ -1158,5 +1159,64 @@ where
         self.inodes.async_drop().await.unwrap();
         self.fs.write().await.async_drop().await.unwrap();
         Ok(())
+    }
+}
+
+/// The object based API cannot honor the `renameat2()` flags, so refuse them instead of silently
+/// ignoring them.
+///
+/// [Dir::rename_child] and [Dir::move_child_to] overwrite an existing target, which is the exact
+/// opposite of `RENAME_NOREPLACE`, and there is no operation that could atomically swap two entries
+/// for `RENAME_EXCHANGE`. Ignoring the flags is not a harmless simplification but destructive:
+/// answering a `RENAME_EXCHANGE` with a plain rename reports success while destroying one of the
+/// two files.
+///
+/// `EINVAL` is what the kernel itself answers once a file system says it doesn't handle
+/// `FUSE_RENAME2` (fs/fuse/dir.c: `fc->no_rename2 = 1; err = -EINVAL;`), and callers such as
+/// coreutils' `mv` react to it by falling back to a plain rename.
+///
+/// The kernel already rejects flags outside `RENAME_NOREPLACE | RENAME_EXCHANGE | RENAME_WHITEOUT`
+/// before they reach us, so in practice this only ever sees those three, but we reject on
+/// "anything set" rather than on a list so that a future flag doesn't silently slip through.
+///
+/// TODO Implement `RENAME_NOREPLACE` and `RENAME_EXCHANGE` instead of rejecting them.
+///      `RENAME_NOREPLACE` needs the "does the target exist" check to happen inside
+///      [Dir::rename_child]/[Dir::move_child_to], `RENAME_EXCHANGE` needs a new atomic
+///      "swap two entries" operation on [Dir].
+fn reject_unsupported_rename_flags(flags: u32) -> FsResult<()> {
+    if flags != 0 {
+        return Err(FsError::InvalidOperation);
+    }
+    Ok(())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unflagged_rename_is_allowed() {
+        assert!(reject_unsupported_rename_flags(0).is_ok());
+    }
+
+    #[test]
+    fn renameat2_flags_are_rejected_with_einval() {
+        for flags in [
+            libc::RENAME_NOREPLACE,
+            libc::RENAME_EXCHANGE,
+            libc::RENAME_WHITEOUT,
+            libc::RENAME_NOREPLACE | libc::RENAME_WHITEOUT,
+            // Not something the kernel forwards today, but we must not start honoring a flag
+            // just because we don't know it.
+            1 << 31,
+        ] {
+            let error = reject_unsupported_rename_flags(flags)
+                .expect_err(&format!("flags={flags:#x} should have been rejected"));
+            assert!(
+                matches!(error, FsError::InvalidOperation),
+                "flags={flags:#x} was rejected with {error:?}",
+            );
+            assert_eq!(libc::EINVAL, error.system_error_code(), "flags={flags:#x}");
+        }
     }
 }
