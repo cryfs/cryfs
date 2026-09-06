@@ -5,6 +5,7 @@ set(SOURCES
   ../impl/Profiler.cpp
   ../fuse/Fuse.cpp
   ../fuse/AtimeOptions.cpp
+  ../fuse/Capabilities.cpp
   ../fuse/MountOptions.cpp
 )
 

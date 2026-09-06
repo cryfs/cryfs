@@ -56,10 +56,15 @@ else()
     set(CPACK_PACKAGE_EXECUTABLES "cryfs" "CryFS")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "fuse")
+    # cryfs, cryfs-unmount and Fuse::stop() all run the fusermount3 helper, and libfuse 3 needs it
+    # for unprivileged mounts. It ships in 'fuse3' on Debian and Ubuntu; the FUSE 2 'fuse' package
+    # doesn't contain it and the two conflict, so depending on 'fuse' would leave CryFS unable to
+    # mount or unmount. Fedora and openSUSE ship the same binary in a package of the same name.
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "fuse3")
 
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://www.cryfs.org")
     set(CPACK_RPM_PACKAGE_LICENSE "LGPLv3")
+    set(CPACK_RPM_PACKAGE_REQUIRES "fuse3")
     set(CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
     set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/usr/bin;/usr/share/man;/usr/share/man/man1")
 
