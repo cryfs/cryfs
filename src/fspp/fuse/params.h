@@ -9,13 +9,14 @@
 // guarded with FUSE_MAJOR_VERSION in Fuse.h and Fuse.cpp.
 #define FUSE_USE_VERSION 27
 #else
-// 309, not 39. libfuse changed FUSE_MAKE_VERSION from (major*10 + minor) to (major*100 + minor) in
-// 3.10.0, so on every header released since then 39 is not 3.9, it is a number that means nothing
-// and happens to land on the right side of each of libfuse's remaining version guards. 309 is
-// FUSE_MAKE_VERSION(3, 9) on a modern header and behaves exactly like 39 on an older one. Spelling
-// it as FUSE_MAKE_VERSION(3, 9) would be nicer still, but this header is shared with the Windows
-// build and Dokany's FUSE 2.7 headers don't define that macro.
-#define FUSE_USE_VERSION 309
+// 39 means API 3.9. libfuse changed FUSE_MAKE_VERSION from (major*10 + minor) to
+// (major*100 + minor) in 3.10.0, but it did not renumber the versions that already existed: the
+// two-digit values 29..39 keep their meaning and the three-digit space starts at 310. libfuse 3.17
+// still spells its own guards for the old versions as literal 30, 32 and 35, and its own examples
+// still use 31, 34 and 35, switching to FUSE_MAKE_VERSION only from 3.12 on. So 39 is the correct
+// spelling for 3.9; FUSE_MAKE_VERSION(3, 9) would be 309, a value in the gap between the two
+// numbering spaces that libfuse gives no meaning to.
+#define FUSE_USE_VERSION 39
 
 #if defined(__APPLE__)
 // macFUSE ships libfuse 3 (since macFUSE 4.10.0), but by default it replaces six fuse_operations
