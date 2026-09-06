@@ -14,6 +14,14 @@ on:
       - '**'
   pull_request:
 
+# Cancel in-progress runs on the same ref when a new commit is pushed, so a fix-up
+# push doesn't have to wait behind the superseded run. Without this, runs for commits
+# that no longer exist kept occupying the queue and reporting failures long after the
+# branch had moved on. Same setting the Rust workflow on main already uses.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux_macos:
     name: CI
