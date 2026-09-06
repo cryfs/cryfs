@@ -463,7 +463,7 @@ jobs:
         uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          cache_key: v7-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v8-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
       # Setup conan is after restoring the cache so the cache doesn't overwrite the conan profile
       - name: Setup conan
         uses: ./.github/workflows/actions/conan/setup
@@ -531,7 +531,7 @@ jobs:
           action: save
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          cache_key: v7-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v8-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
       - name: Test
         if: ${{ matrix.run_tests }}
         uses: ./.github/workflows/actions/run_tests
