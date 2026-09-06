@@ -1,6 +1,11 @@
 #include "Capabilities.h"
 #include "params.h"
 
+// Dokany's FUSE 2.7 wrapper, which the Windows build uses, has neither fuse_conn_info::want nor any
+// FUSE_CAP_* constant, so there is nothing to negotiate there and Fuse::init() doesn't call into
+// this file at all.
+#if FUSE_MAJOR_VERSION >= 3
+
 namespace fspp {
 namespace fuse {
 
@@ -52,3 +57,5 @@ uint32_t removeUnsupportedCapabilities(uint32_t want) {
 
 }
 }
+
+#endif

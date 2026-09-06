@@ -11,7 +11,9 @@ namespace fuse {
 
 #if defined(_MSC_VER)
 
-#include <fuse.h>
+// via params.h, so FUSE_USE_VERSION is set before <fuse.h> is pulled in, whichever header gets
+// included first
+#include "params.h"
     typedef struct FUSE_STAT STAT;
 
 #else

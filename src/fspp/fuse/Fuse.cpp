@@ -99,6 +99,7 @@ namespace {
     return false;
   }
 
+#if FUSE_MAJOR_VERSION >= 3
   int fusepp_getattr(const char* path, fspp::fuse::STAT* stbuf, fuse_file_info* file_info) {
     if (is_null_path(path)) {
       return -EIO;
@@ -106,6 +107,17 @@ namespace {
     const int rs = FUSE_OBJ->getattr(bf::path(path), stbuf, file_info);
     return rs;
   }
+#else
+  // FUSE 2 splits this into getattr() and fgetattr(); FUSE 3 merged them into one operation that
+  // gets the fuse_file_info when there is one.
+  int fusepp_getattr(const char* path, fspp::fuse::STAT* stbuf) {
+    return FUSE_OBJ->getattr(bf::path(path), stbuf, nullptr);
+  }
+
+  int fusepp_fgetattr(const char* path, fspp::fuse::STAT* stbuf, fuse_file_info* file_info) {
+    return FUSE_OBJ->getattr(bf::path(path), stbuf, file_info);
+  }
+#endif
 
   int fusepp_readlink(const char *path, char *buf, size_t size) {
     return FUSE_OBJ->readlink(bf::path(path), buf, size);
@@ -131,14 +143,22 @@ namespace {
     return FUSE_OBJ->symlink(bf::path(to), bf::path(from));
   }
 
+#if FUSE_MAJOR_VERSION >= 3
   int fusepp_rename(const char *from, const char *to, unsigned int flags) {
     return FUSE_OBJ->rename(bf::path(from), bf::path(to), flags);
   }
+#else
+  // FUSE 2 never implemented FUSE_RENAME2, so a flagged rename never reaches the file system.
+  int fusepp_rename(const char *from, const char *to) {
+    return FUSE_OBJ->rename(bf::path(from), bf::path(to), 0);
+  }
+#endif
 
   int fusepp_link(const char *from, const char *to) {
     return FUSE_OBJ->link(bf::path(from), bf::path(to));
   }
 
+#if FUSE_MAJOR_VERSION >= 3
   int fusepp_chmod(const char *path, ::mode_t mode, fuse_file_info* file_info) {
     if (is_null_path(path)) {
       return -EIO;
@@ -152,14 +172,35 @@ namespace {
     }
     return FUSE_OBJ->chown(bf::path(path), uid, gid, file_info);
   }
+#else
+  int fusepp_chmod(const char *path, ::mode_t mode) {
+    return FUSE_OBJ->chmod(bf::path(path), mode, nullptr);
+  }
 
+  int fusepp_chown(const char *path, ::uid_t uid, ::gid_t gid) {
+    return FUSE_OBJ->chown(bf::path(path), uid, gid, nullptr);
+  }
+#endif
+
+#if FUSE_MAJOR_VERSION >= 3
   int fusepp_truncate(const char *path, int64_t size, fuse_file_info* file_info) {
     if (is_null_path(path)) {
       return -EIO;
     }
     return FUSE_OBJ->truncate(bf::path(path), size, file_info);
   }
+#else
+  // FUSE 2 splits this into truncate() and ftruncate(), the same way it splits getattr.
+  int fusepp_truncate(const char *path, FUSE_OFF_T size) {
+    return FUSE_OBJ->truncate(bf::path(path), size, nullptr);
+  }
 
+  int fusepp_ftruncate(const char *path, FUSE_OFF_T size, fuse_file_info* file_info) {
+    return FUSE_OBJ->truncate(bf::path(path), size, file_info);
+  }
+#endif
+
+#if FUSE_MAJOR_VERSION >= 3
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
   int fusepp_utimens(const char *path, const timespec times[2], fuse_file_info* file_info) {
     if (is_null_path(path)) {
@@ -167,6 +208,12 @@ namespace {
     }
     return FUSE_OBJ->utimens(bf::path(path), {times[0], times[1]}, file_info);
   }
+#else
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
+  int fusepp_utimens(const char *path, const timespec times[2]) {
+    return FUSE_OBJ->utimens(bf::path(path), {times[0], times[1]}, nullptr);
+  }
+#endif
 
   int fusepp_open(const char *path, fuse_file_info *fileinfo) {
     if (is_null_path(path)) {
@@ -182,6 +229,7 @@ namespace {
     return FUSE_OBJ->release(bf::path(path), fileinfo);
   }
 
+#if FUSE_MAJOR_VERSION >= 3
   int fusepp_read(const char *path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
     if (is_null_path(path)) {
       return -EIO;
@@ -195,6 +243,15 @@ namespace {
     }
     return FUSE_OBJ->write(bf::path(path), buf, size, offset, fileinfo);
   }
+#else
+  int fusepp_read(const char *path, char *buf, size_t size, FUSE_OFF_T offset, fuse_file_info *fileinfo) {
+    return FUSE_OBJ->read(bf::path(path), buf, size, offset, fileinfo);
+  }
+
+  int fusepp_write(const char *path, const char *buf, size_t size, FUSE_OFF_T offset, fuse_file_info *fileinfo) {
+    return FUSE_OBJ->write(bf::path(path), buf, size, offset, fileinfo);
+  }
+#endif
 
   int fusepp_statfs(const char *path, struct statvfs *fsstat) {
     return FUSE_OBJ->statfs(bf::path(path), fsstat);
@@ -226,12 +283,19 @@ namespace {
     return FUSE_OBJ->opendir(bf::path(path), fileinfo);
   }
 
+#if FUSE_MAJOR_VERSION >= 3
   int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo, fuse_readdir_flags flags) {
     if (is_null_path(path)) {
       return -EIO;
     }
     return FUSE_OBJ->readdir(bf::path(path), buf, filler, offset, fileinfo, flags);
   }
+#else
+  // FUSE 2 has no readdirplus, so there are no flags to pass on.
+  int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, FUSE_OFF_T offset, fuse_file_info *fileinfo) {
+    return FUSE_OBJ->readdir(bf::path(path), buf, filler, offset, fileinfo, FUSE_READDIR_DEFAULTS);
+  }
+#endif
 
   int fusepp_releasedir(const char *path, fuse_file_info *fileinfo) {
     if (is_null_path(path)) {
@@ -247,11 +311,20 @@ namespace {
     return FUSE_OBJ->fsyncdir(bf::path(path), datasync, fileinfo);
   }
 
+#if FUSE_MAJOR_VERSION >= 3
   void* fusepp_init(fuse_conn_info *conn, fuse_config* config) {
     auto f = FUSE_OBJ;
     f->init(conn, config);
     return f;
   }
+#else
+  // FUSE 2 has no fuse_config; everything it holds was a mount option there.
+  void* fusepp_init(fuse_conn_info *conn) {
+    auto f = FUSE_OBJ;
+    f->init(conn, nullptr);
+    return f;
+  }
+#endif
 
   void fusepp_destroy(void *userdata) {
     auto f = FUSE_OBJ;
@@ -295,6 +368,11 @@ namespace {
       singleton->chown = &fusepp_chown;
       singleton->truncate = &fusepp_truncate;
       singleton->utimens = &fusepp_utimens;
+#if FUSE_MAJOR_VERSION < 3
+      // FUSE 3 merged these into getattr and truncate, which get the fuse_file_info instead.
+      singleton->fgetattr = &fusepp_fgetattr;
+      singleton->ftruncate = &fusepp_ftruncate;
+#endif
       singleton->open = &fusepp_open;
       singleton->read = &fusepp_read;
       singleton->write = &fusepp_write;
@@ -1187,7 +1265,11 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
       } else {
         ASSERT(false, "Unknown entry type");
       }
+#if FUSE_MAJOR_VERSION >= 3
       if (filler(buf, entry.name.c_str(), &stbuf, 0, static_cast<fuse_fill_dir_flags>(0)) != 0) {
+#else
+      if (filler(buf, entry.name.c_str(), &stbuf, 0) != 0) {
+#endif
 #ifdef FSPP_LOG
         LOG(DEBUG, "readdir({}, _, _, {}, _): failure with ENOMEM", path, offset);
 #endif
@@ -1239,12 +1321,18 @@ void Fuse::init(fuse_conn_info *conn, fuse_config *config) {
   
   const ThreadNameForDebugging _threadName("init");
 
+#if FUSE_MAJOR_VERSION >= 3
   // Opt out of the capabilities libfuse would otherwise negotiate for us, see Capabilities.cpp.
   // libfuse 3.17 deprecates conn->want in favour of the 64 bit conn->want_ext, but it keeps
   // converting one into the other around every init() call (convert_to_conn_want_ext() in libfuse's
   // lib/fuse_i.h), so writing conn->want stays correct on every libfuse 3 release. Switching to
   // fuse_unset_feature_flag() belongs together with raising FUSE_USE_VERSION.
   conn->want = removeUnsupportedCapabilities(conn->want);
+#else
+  // Dokany's FUSE 2.7 wrapper has neither fuse_conn_info::want nor any FUSE_CAP_* constant, so
+  // there is nothing to negotiate here.
+  UNUSED(conn);
+#endif
 
   _fs = _init(this);
 
