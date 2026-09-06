@@ -6,6 +6,7 @@ set(SOURCES
   ../fuse/Fuse.cpp
   ../fuse/AtimeOptions.cpp
   ../fuse/Capabilities.cpp
+  ../fuse/MountOptions.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

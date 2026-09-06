@@ -21,6 +21,7 @@
 #include "InvalidFilesystem.h"
 #include "AtimeOptions.h"
 #include "Capabilities.h"
+#include "MountOptions.h"
 #include <codecvt>
 #include <boost/algorithm/string/replace.hpp>
 
@@ -84,8 +85,25 @@ namespace {
 //#define FSPP_LOG 1
 
 namespace {
+  // libfuse hands a null path to the operations that also get a fuse_file_info whenever the node
+  // they refer to has left its tree and the file system told libfuse it can work from the file
+  // handle alone (get_path_nullok() in libfuse's lib/fuse.c). CryFS never asks for that, so this
+  // shouldn't happen - but constructing a boost::filesystem::path from a null pointer is undefined
+  // behaviour, so refuse the request instead of walking into it. If nullpath_ok is ever enabled,
+  // these operations have to answer from file_info instead of returning an error here.
+  bool is_null_path(const char* path) {
+    if (path == nullptr) {
+      LOG(ERR, "libfuse passed a null path to an operation that needs one. This shouldn't happen because we don't enable nullpath_ok.");
+      return true;
+    }
+    return false;
+  }
+
 #if FUSE_MAJOR_VERSION >= 3
   int fusepp_getattr(const char* path, fspp::fuse::STAT* stbuf, fuse_file_info* file_info) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     const int rs = FUSE_OBJ->getattr(bf::path(path), stbuf, file_info);
     return rs;
   }
@@ -142,10 +160,16 @@ namespace {
 
 #if FUSE_MAJOR_VERSION >= 3
   int fusepp_chmod(const char *path, ::mode_t mode, fuse_file_info* file_info) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->chmod(bf::path(path), mode, file_info);
   }
 
   int fusepp_chown(const char *path, ::uid_t uid, ::gid_t gid, fuse_file_info* file_info) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->chown(bf::path(path), uid, gid, file_info);
   }
 #else
@@ -160,6 +184,9 @@ namespace {
 
 #if FUSE_MAJOR_VERSION >= 3
   int fusepp_truncate(const char *path, int64_t size, fuse_file_info* file_info) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->truncate(bf::path(path), size, file_info);
   }
 #else
@@ -176,6 +203,9 @@ namespace {
 #if FUSE_MAJOR_VERSION >= 3
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
   int fusepp_utimens(const char *path, const timespec times[2], fuse_file_info* file_info) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->utimens(bf::path(path), {times[0], times[1]}, file_info);
   }
 #else
@@ -186,19 +216,31 @@ namespace {
 #endif
 
   int fusepp_open(const char *path, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->open(bf::path(path), fileinfo);
   }
 
   int fusepp_release(const char *path, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->release(bf::path(path), fileinfo);
   }
 
 #if FUSE_MAJOR_VERSION >= 3
   int fusepp_read(const char *path, char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->read(bf::path(path), buf, size, offset, fileinfo);
   }
 
   int fusepp_write(const char *path, const char *buf, size_t size, int64_t offset, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->write(bf::path(path), buf, size, offset, fileinfo);
   }
 #else
@@ -216,10 +258,16 @@ namespace {
   }
 
   int fusepp_flush(const char *path, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->flush(bf::path(path), fileinfo);
   }
 
   int fusepp_fsync(const char *path, int datasync, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->fsync(bf::path(path), datasync, fileinfo);
   }
 
@@ -229,11 +277,17 @@ namespace {
   //int fusepp_removexattr(const char*, const char*)
 
   int fusepp_opendir(const char *path, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->opendir(bf::path(path), fileinfo);
   }
 
 #if FUSE_MAJOR_VERSION >= 3
   int fusepp_readdir(const char *path, void *buf, fuse_fill_dir_t filler, int64_t offset, fuse_file_info *fileinfo, fuse_readdir_flags flags) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->readdir(bf::path(path), buf, filler, offset, fileinfo, flags);
   }
 #else
@@ -244,10 +298,16 @@ namespace {
 #endif
 
   int fusepp_releasedir(const char *path, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->releasedir(bf::path(path), fileinfo);
   }
 
   int fusepp_fsyncdir(const char *path, int datasync, fuse_file_info *fileinfo) {
+    if (is_null_path(path)) {
+      return -EIO;
+    }
     return FUSE_OBJ->fsyncdir(bf::path(path), datasync, fileinfo);
   }
 
@@ -427,6 +487,10 @@ int Fuse::_run(const bf::path &mountdir, vector<string> fuseOptions) {
 
   const vector<string> atimeOptions = extractAllAtimeOptionsAndRemoveOnesUnknownToLibfuse(&fuseOptions);
   _createContext(atimeOptions);
+
+  // Drop the libfuse 2 options libfuse 3 doesn't know, so a user who is used to them gets a warning
+  // instead of a refused mount.
+  removeOptionsRemovedInFuse3(&fuseOptions);
 
   _argv = _build_argv(mountdir, fuseOptions);
 
