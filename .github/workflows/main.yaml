@@ -573,9 +573,6 @@ jobs:
       matrix:
         name: [""]
         os:
-          # windows-2019 was removed here because GitHub retired that runner image. Jobs asking
-          # for it are never picked up: they sit queued until they expire, so every run had three
-          # checks that could never finish and the pull request never showed all checks passed.
           - windows-2022
         build_type:
           - Debug
@@ -619,9 +616,6 @@ jobs:
           arch: "x86_64"
           compiler: "msvc"
           # 194 is the MSVC toolset of Visual Studio 2022, which is what windows-2022 ships.
-          # This used to be a conditional whose other branch selected 192 (Visual Studio 2019) for
-          # windows-2019. With that image gone the condition is always true, and leaving it would
-          # silently hand 192 to any runner image added here later.
           compiler_version: "194"
           build_type: ${{ matrix.build_type }}
       - name: Install dependencies
