@@ -32,7 +32,6 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-14
           - macos-15
           - macos-15-intel
           - macos-26
@@ -48,7 +47,7 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
         uses: jlumbroso/free-disk-space@v1.3.1
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Dependencies (Linux)
         if: ${{ runner.os == 'Linux' }}
         # TODO We may be able to remove libfuse3-dev here because rust fuser doesn't use libfuse anymore (on Linux at least)
@@ -56,7 +55,7 @@ jobs:
       - name: Install Dependencies (MacOS)
         if: ${{ runner.os == 'macOS' }}
         run: brew install pkg-config macfuse
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: ${{ matrix.toolchain }}
       - name: cargo ${{ matrix.command }}
@@ -123,10 +122,10 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
         uses: jlumbroso/free-disk-space@v1.3.1
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install Dependencies
         run: sudo apt-get install -y fuse3 libfuse3-dev
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
       - name: cargo check
@@ -135,38 +134,37 @@ jobs:
   # clippy_check:
   #   name: Linter (clippy)
   #   runs-on: ubuntu-latest
-  #   permissions:
-  #     checks: write
   #   steps:
-  #     - uses: actions/checkout@v6
+  #     - uses: actions/checkout@v7
   #     - name: Install Dependencies
   #       run: sudo apt-get install -y fuse3 libfuse3-dev
-  #     - uses: actions-rs/toolchain@v1
+  #     - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
   #       with:
   #         toolchain: stable
   #         components: clippy
-  #         default: true
-  #     - uses: actions-rs/clippy-check@v1
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-  #         args: --all-features --all-targets -- -D warnings
+  #     # This used to be actions-rs/clippy-check, which posted the warnings as a
+  #     # check run. The actions-rs org was archived in October 2023 and its
+  #     # actions still run on node12, so plain `cargo clippy` it is: the
+  #     # warnings show up in the job log, and no `checks: write` permission is
+  #     # needed to write them there.
+  #     - run: cargo clippy --all-features --all-targets -- -D warnings
   code_format:
     name: Code Formatter (rustfmt)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
           components: rustfmt
-      - uses: mbrobbel/rustfmt-check@0.5.0
+      - uses: mbrobbel/rustfmt-check@0.23.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
   # sync_readme:
   #   name: Sync README.md (cargo sync-readme)
   #   runs-on: ubuntu-latest
   #   steps:
-  #   - uses: actions/checkout@v6
+  #   - uses: actions/checkout@v7
   #   - run: cargo install cargo-rdme
   #   - run: ./gen_readme.sh
   #   # Fail job if gen_readme.sh introduced changes. If this fails, then we need to run gen_readme.sh locally and add it to the commit.
@@ -175,10 +173,10 @@ jobs:
     name: Find dead doc links
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Install Dependencies
       run: sudo apt-get install -y fuse3 libfuse3-dev
-    - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+    - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
       with:
         toolchain: stable
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
@@ -189,8 +187,8 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
         uses: jlumbroso/free-disk-space@v1.3.1
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
       # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
@@ -206,9 +204,13 @@ jobs:
         # uses its default features and llvm-cov can finish.
         run: cargo llvm-cov --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}  # not required for public repos, but leaving it here because it seems we run into rate limit issues on Codecov's API without it.
+          # Required since codecov-action v4: tokenless uploading only remains
+          # supported for pull requests from forks of a public repo, not for the
+          # pushes and same-repo pull requests this job runs on. It also avoids
+          # the rate limits we used to hit on Codecov's API without it.
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
           verbose: true
