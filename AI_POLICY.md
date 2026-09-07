@@ -22,11 +22,9 @@ This policy explains how AI tools are — and are not — used in this project.
 ## History and disclosure
 
 - CryFS up to version 1.0.3 was written entirely without AI.
-- CryFS 2.0.0-alpha3 is hand-written as well and is feature complete. This means
-  all important functional pieces of CryFS 2.0 have been written without AI.
-  In commits after 2.0.0-alpha3 towards the 2.0 release, AI has helped polish
-  the code, write and fix tests. AI has **not** made any security-relevant
-  changes in 2.0.
+- CryFS 1.1.0 adds some AI written bugfixes on top of 1.0.3. Everything was reviewed by a human as laid out above. 
+- CryFS 2.0.0-alpha3 is hand-written as well and is feature complete. This means all important functional pieces of CryFS 2.0 have been written without AI.
+  In commits after 2.0.0-alpha3 towards the 2.0 release, AI has helped polish the code, write and fix tests. AI has **not** made any security-relevant changes in 2.0.
 - Going forward (versions past 2.0), AI may be used more heavily, including for
   feature development — always under the principles above.
 
