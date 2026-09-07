@@ -616,9 +616,9 @@ jobs:
         with:
           arch: "x86_64"
           compiler: "msvc"
-          # 194 is the MSVC toolset of Visual Studio 2022, which is what both
-          # windows-2022 and windows-2025 ship.
-          compiler_version: "194"
+          # windows-2022 ships Visual Studio 2022, which conan calls msvc 194 (toolset v143).
+          # windows-2025 ships Visual Studio 2026, which conan calls msvc 195 (toolset v145).
+          compiler_version: ${{ matrix.os == 'windows-2025' && '195' || '194' }}
           build_type: ${{ matrix.build_type }}
       - name: Install dependencies
         uses: ./.github/workflows/actions/conan/install_dependencies
