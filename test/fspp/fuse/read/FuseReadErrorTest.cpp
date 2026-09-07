@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <cstddef>
 
 #include "testutils/FuseReadTest.h"
@@ -6,6 +7,7 @@
 
 using ::testing::WithParamInterface;
 using ::testing::Values;
+using ::testing::AnyOf;
 using ::testing::Eq;
 using ::testing::Ne;
 using ::testing::Invoke;
@@ -33,7 +35,12 @@ TEST_P(FuseReadErrorTest, ReturnErrorOnFirstReadCall) {
 
   char *buf = new char[READCOUNT.value()];
   auto retval = ReadFileReturnError(FILENAME, buf, READCOUNT, fspp::num_bytes_t(0));
-  EXPECT_EQ(GetParam(), retval.error);
+  // This is a buffered read, so the kernel fills the page cache and then copies out of it. It is
+  // not obliged to carry our errno through that; when it cannot, the read() syscall reports EIO.
+  // Linux used to hand back the errno the filesystem returned and, as of the 7.0 kernel on the
+  // ubuntu-26.04 CI image, reports EIO for every errno instead. Accept both, because which one a
+  // caller sees is the kernel's choice, not ours.
+  EXPECT_THAT(retval.error, AnyOf(Eq(GetParam()), Eq(EIO)));
   delete[] buf;
 }
 
