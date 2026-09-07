@@ -479,6 +479,7 @@ jobs:
         with:
           os: ${{ matrix.os }}
           extra_apt_packages: ${{ matrix.compiler.apt_package }}
+          llvm_version: ${{ matrix.compiler.compiler == 'clang' && matrix.compiler.version || '' }}
       - name: Install local dependencies
         if: ${{ matrix.install_dependencies_manually }}
         uses: ./.github/workflows/actions/install_local_dependencies

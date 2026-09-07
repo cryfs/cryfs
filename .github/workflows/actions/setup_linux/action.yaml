@@ -7,6 +7,9 @@ inputs:
   extra_apt_packages:
     description: "Job-specific apt packages to install (e.g. the compiler)"
     required: true
+  llvm_version:
+    description: "The LLVM version this job builds with, or empty if it doesn't build with clang"
+    required: true
 runs:
   using: "composite"
   steps:
@@ -16,40 +19,25 @@ runs:
         set -v
         set -e
         echo 'Acquire::Retries "20";' | sudo tee -a /etc/apt/apt.conf.d/80-retries
-        if [[ "${{inputs.os}}" == "ubuntu-24.04" ]]; then
-          echo Adding apt repositories for newer clang versions on Ubuntu 22.04
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-          sudo touch /etc/apt/sources.list.d/clang.list
-          sudo chmod o+w /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-19 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" >> /etc/apt/sources.list.d/clang.list
-        elif [[ "${{inputs.os}}" == "ubuntu-22.04" ]]; then
-          echo Adding apt repositories for newer clang versions on Ubuntu 22.04
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-          sudo touch /etc/apt/sources.list.d/clang.list
-          sudo chmod o+w /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-20 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-20 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" >> /etc/apt/sources.list.d/clang.list
-          echo "deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" >> /etc/apt/sources.list.d/clang.list
-          sudo chmod o-w /etc/apt/sources.list.d/clang.list
+
+        # Ubuntu only carries clang up to a certain version, so anything newer than that comes from
+        # apt.llvm.org. At most one of its repositories may be enabled at a time: from LLVM 20 on it
+        # ships the runtime as unversioned libc++1, libc++abi1 and libunwind packages, so with two
+        # of them enabled apt resolves those to the newer LLVM, and libc++-<version>-dev of the
+        # older one, which depends on its own exact version, becomes uninstallable.
+        case "${{inputs.os}}" in
+          # NEWEST_CLANG_IN_ARCHIVE is the newest clang that release ships itself.
+          ubuntu-22.04) LLVM_CODENAME=jammy;    NEWEST_CLANG_IN_ARCHIVE=14 ;;
+          ubuntu-24.04) LLVM_CODENAME=noble;    NEWEST_CLANG_IN_ARCHIVE=19 ;;
+          ubuntu-26.04) LLVM_CODENAME=resolute; NEWEST_CLANG_IN_ARCHIVE=22 ;;
+          *)            LLVM_CODENAME="";       NEWEST_CLANG_IN_ARCHIVE=0  ;;
+        esac
+        if [[ -n "${{inputs.llvm_version}}" && -n "$LLVM_CODENAME" && "${{inputs.llvm_version}}" -gt "$NEWEST_CLANG_IN_ARCHIVE" ]]; then
+          echo "Adding the apt.llvm.org repository for clang ${{inputs.llvm_version}}"
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/apt-llvm-org.gpg
+          echo "deb [signed-by=/usr/share/keyrings/apt-llvm-org.gpg] http://apt.llvm.org/$LLVM_CODENAME/ llvm-toolchain-$LLVM_CODENAME-${{inputs.llvm_version}} main" | sudo tee /etc/apt/sources.list.d/clang.list
         fi
+
         sudo apt-get update
         sudo apt-get install ninja-build libfuse3-dev fuse3 ccache ${{inputs.extra_apt_packages}}
     - name: Speed up random generator
@@ -58,4 +46,3 @@ runs:
         # Use /dev/urandom when /dev/random is accessed to use less entropy
         sudo cp -a /dev/urandom /dev/random
       shell: bash
-
