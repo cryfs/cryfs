@@ -90,7 +90,7 @@ jobs:
             cxx: clang++-13
             macos_cc: llvm@13/bin/clang
             macos_cxx: llvm@13/bin/clang++
-            apt_package: clang-13 libc++-13-dev libc++abi-13-dev libomp-13-dev
+            apt_package: clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev
             homebrew_package: llvm@13
           - compiler: clang
             version: 14
@@ -99,7 +99,7 @@ jobs:
             cxx: clang++-14
             macos_cc: llvm@14/bin/clang
             macos_cxx: llvm@14/bin/clang++
-            apt_package: clang-14 libc++-14-dev libc++abi-14-dev libomp-14-dev
+            apt_package: clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev
             homebrew_package: llvm@14
           - compiler: clang
             version: 15
@@ -108,7 +108,7 @@ jobs:
             cxx: clang++-15
             macos_cc: llvm@15/bin/clang
             macos_cxx: llvm@15/bin/clang++
-            apt_package: clang-15 libc++-15-dev libc++abi-15-dev libomp-15-dev
+            apt_package: clang-15 libc++-15-dev libc++abi-15-dev libunwind-15-dev libomp-15-dev
             homebrew_package: llvm@15
           - compiler: clang
             version: 16
@@ -117,7 +117,7 @@ jobs:
             cxx: clang++-16
             macos_cc: llvm@16/bin/clang
             macos_cxx: llvm@16/bin/clang++
-            apt_package: clang-16 libc++-16-dev libc++abi-16-dev libomp-16-dev
+            apt_package: clang-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev libomp-16-dev
             homebrew_package: llvm@16
           - compiler: clang
             version: 17
@@ -126,7 +126,7 @@ jobs:
             cxx: clang++-17
             macos_cc: llvm@17/bin/clang
             macos_cxx: llvm@17/bin/clang++
-            apt_package: clang-17 libc++-17-dev libc++abi-17-dev libomp-17-dev
+            apt_package: clang-17 libc++-17-dev libc++abi-17-dev libunwind-17-dev libomp-17-dev
             homebrew_package: llvm@17
           - compiler: clang
             version: 18
@@ -135,7 +135,7 @@ jobs:
             cxx: clang++-18
             macos_cc: llvm@18/bin/clang
             macos_cxx: llvm@18/bin/clang++
-            apt_package: clang-18 libc++-18-dev libc++abi-18-dev libomp-18-dev
+            apt_package: clang-18 libc++-18-dev libc++abi-18-dev libunwind-18-dev libomp-18-dev
             homebrew_package: llvm@18
           - compiler: clang
             version: 19
@@ -144,7 +144,7 @@ jobs:
             cxx: clang++-19
             macos_cc: llvm@19/bin/clang
             macos_cxx: llvm@19/bin/clang++
-            apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+            apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             homebrew_package: llvm@19
           # Apple Clang
 #           - compiler: apple-clang
@@ -162,11 +162,11 @@ jobs:
         exclude:
           # MacOS 14 doesn't have Clang 13 anymore. Clang 18, 19 seems broken (maybe https://github.com/llvm/llvm-project/issues/92121), and GCC versions are often incompatible, so we don't support them officially.
           - os: macos-14
-            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp-13-dev", homebrew_package: llvm@13}
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-14
-            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libomp-18-dev", homebrew_package: llvm@18}
+            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libunwind-18-dev libomp-18-dev", homebrew_package: llvm@18}
           - os: macos-14
-            compiler: {compiler: clang, version: 19, libcxx: libc++, cc: clang-19, cxx: clang++-19, macos_cc: llvm@19/bin/clang, macos_cxx: llvm@19/bin/clang++, apt_package: "clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev", homebrew_package: llvm@19}
+            compiler: {compiler: clang, version: 19, libcxx: libc++, cc: clang-19, cxx: clang++-19, macos_cc: llvm@19/bin/clang, macos_cxx: llvm@19/bin/clang++, apt_package: "clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev", homebrew_package: llvm@19}
           - os: macos-14
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-14
@@ -181,7 +181,7 @@ jobs:
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
           # MacOS 15 doesn't have Clang 13 anymore. And GCC versions are often incompatible, so we don't support them officially.
           - os: macos-15
-            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp-13-dev", homebrew_package: llvm@13}
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-15
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-15
@@ -195,9 +195,9 @@ jobs:
           - os: macos-15
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
           - os: macos-15-intel
-            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp-13-dev", homebrew_package: llvm@13}
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-15-intel
-            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libomp-18-dev", homebrew_package: llvm@18}
+            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libunwind-18-dev libomp-18-dev", homebrew_package: llvm@18}
           - os: macos-15-intel
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-15-intel
@@ -212,17 +212,17 @@ jobs:
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
           # MacOS 15-intel fails to build with Clang 14
           - os: macos-15-intel
-            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libomp-14-dev", homebrew_package: llvm@14}
+            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev", homebrew_package: llvm@14}
           # MacOS 15-intel fails to install Clang 16
           - os: macos-15-intel
-            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libomp-16-dev", homebrew_package: llvm@16}
+            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev libomp-16-dev", homebrew_package: llvm@16}
           # MacOS 26 doesn't have Clang 13, 14, 15 anymore. And GCC versions are often incompatible, so we don't support them officially.
           - os: macos-26
-            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp-13-dev", homebrew_package: llvm@13}
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-26
-            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libomp-14-dev", homebrew_package: llvm@14}
+            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev", homebrew_package: llvm@14}
           - os: macos-26
-            compiler: {compiler: clang, version: 15, libcxx: libc++, cc: clang-15, cxx: clang++-15, macos_cc: llvm@15/bin/clang, macos_cxx: llvm@15/bin/clang++, apt_package: "clang-15 libc++-15-dev libc++abi-15-dev libomp-15-dev", homebrew_package: llvm@15}
+            compiler: {compiler: clang, version: 15, libcxx: libc++, cc: clang-15, cxx: clang++-15, macos_cc: llvm@15/bin/clang, macos_cxx: llvm@15/bin/clang++, apt_package: "clang-15 libc++-15-dev libc++abi-15-dev libunwind-15-dev libomp-15-dev", homebrew_package: llvm@15}
           - os: macos-26
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: macos-26
@@ -238,9 +238,9 @@ jobs:
           # Clang 14, 16 on macos-14 builds fine but tests fail with "line 9: 55242 Trace/BPT trap: 5       ./cpp-utils/cpp-utils-test"
           # TODO Can we fix this? Not sure what's causing it
           - os: macos-14
-            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libomp-14-dev", homebrew_package: llvm@14}
+            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev", homebrew_package: llvm@14}
           - os: macos-14
-            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libomp-16-dev", homebrew_package: llvm@16}
+            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev libomp-16-dev", homebrew_package: llvm@16}
           # Ubuntu 22.04 doesn't have gcc 13, 14 yet
           - os: ubuntu-22.04
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
@@ -248,7 +248,7 @@ jobs:
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
           # Ubuntu 24.04 doesn't have clang 13 anymore
           - os: ubuntu-24.04
-            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libomp-13-dev", homebrew_package: llvm@13}
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
         include:
           - name: Local dependencies
             os: ubuntu-24.04
@@ -260,7 +260,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -296,7 +296,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: Debug
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
@@ -314,7 +314,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
@@ -333,7 +333,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: RelWithDebInfo
             extra_conan_flags: "-o '&:update_checks=False'"
             extra_cxxflags: '[]'
@@ -352,7 +352,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -374,7 +374,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
@@ -393,7 +393,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -412,7 +412,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -432,7 +432,7 @@ jobs:
               cxx: clang++-19
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 clang-tidy-19 libc++-19-dev libc++abi-19-dev libomp-19-dev
+              apt_package: clang-19 clang-tidy-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             build_type: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
