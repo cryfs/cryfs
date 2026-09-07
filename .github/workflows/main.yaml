@@ -36,6 +36,7 @@ jobs:
           - macos-26
           - ubuntu-22.04
           - ubuntu-24.04
+          - ubuntu-26.04
         build_type:
           - Debug
           - Release
@@ -249,6 +250,19 @@ jobs:
           # Ubuntu 24.04 doesn't have clang 13 anymore
           - os: ubuntu-24.04
             compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
+          # Ubuntu 26.04 has neither clang 13 to 16 nor gcc 9 and 10 anymore
+          - os: ubuntu-26.04
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
+          - os: ubuntu-26.04
+            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev", homebrew_package: llvm@14}
+          - os: ubuntu-26.04
+            compiler: {compiler: clang, version: 15, libcxx: libc++, cc: clang-15, cxx: clang++-15, macos_cc: llvm@15/bin/clang, macos_cxx: llvm@15/bin/clang++, apt_package: "clang-15 libc++-15-dev libc++abi-15-dev libunwind-15-dev libomp-15-dev", homebrew_package: llvm@15}
+          - os: ubuntu-26.04
+            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev libomp-16-dev", homebrew_package: llvm@16}
+          - os: ubuntu-26.04
+            compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
+          - os: ubuntu-26.04
+            compiler: {compiler: gcc, version: 10, libcxx: libstdc++11, cc: gcc-10, cxx: g++-10, homebrew_package: gcc@10, apt_package: g++-10}
         include:
           - name: Local dependencies
             os: ubuntu-24.04
