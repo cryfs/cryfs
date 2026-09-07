@@ -42,6 +42,10 @@ Version 1.1.0 (unreleased)
 * Fixed: Undefined behavior while parsing mount options. After removing an option that libFUSE
   doesn't know, the parser kept using a reference into the vector it had just erased from. It
   happened to do the right thing in practice, but it was undefined behavior.
+* The Windows installer is now built with Visual Studio 2026 instead of Visual Studio 2022. You
+  need the Microsoft Visual C++ Redistributable from Visual Studio 2026 or newer to run it, an
+  older one is not enough. Only one Redistributable is installed at a time and a newer one
+  replaces an older one, so installing the latest is all that is needed.
 
 Dependency Updates
 * Fuse 3.9 on Linux and macOS (was: Fuse 2.9), still Fuse 2.7 via DokanY on Windows
