@@ -1,6 +1,12 @@
 This directory contains external projects, taken from the following locations:
 cryptopp:
  - vendor_cryptopp: https://github.com/weidai11/cryptopp/tree/CRYPTOPP_8_9_0
+   - Stop using stdext::make_checked_array_iterator and stdext::make_unchecked_array_iterator
+     on MSVC 19.38 and newer. They are non-Standard Microsoft extensions that were removed in
+     the Visual Studio 2026 standard library, so the build broke there. This is upstream's own
+     fix, already on their master branch but not in the 8.9.0 release: it adds the same
+     CRYPTOPP_MSC_VERSION < 1938 upper bound to both guards. Drop this patch when updating to
+     a release that contains it.
  - vendor_cryptopp_cmake: https://github.com/abdes/cryptopp-cmake/tree/CRYPTOPP_8_9_0
    - Added workaround to find OpenMP on MacOS: https://github.com/abdes/cryptopp-cmake/pull/126
    - Fix building on PowerPC: https://github.com/cryfs/cryfs/pull/506
