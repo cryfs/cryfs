@@ -4,6 +4,7 @@ Version 1.1.0 (unreleased)
 * Fixed data races in the integrity checks (see https://github.com/cryfs/cryfs/pull/664 )
 * Fixed a buffer over-read when loading a truncated or corrupted block file (see https://github.com/cryfs/cryfs/pull/530 )
 * Fixed a rare heap buffer overrun when generating random data (see https://github.com/cryfs/cryfs/pull/663 )
+* Fixed renaming a directory onto a non-empty directory in the same parent directory silently deleting the target instead of failing with ENOTEMPTY, which also leaked the storage of everything inside it (see https://github.com/cryfs/cryfs/pull/591 )
 * CryFS now uses libFUSE 3 instead of libFUSE 2 on Linux and macOS (see https://github.com/cryfs/cryfs/pull/590 )
   - Linux: requires libFUSE 3 (the fuse3 package on Debian, Ubuntu and Fedora). Installing the libFUSE 2 package (fuse on Debian and Ubuntu) removes fuse3 and leaves CryFS unable to mount.
   - macOS: requires macFUSE 4.10.0 or newer.
