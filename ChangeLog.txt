@@ -10,6 +10,7 @@ Version 1.1.0 (unreleased)
   - Mount options that libFUSE 3 removed are now ignored with a warning. The nonempty option still works.
 * Fixed CryFS exiting with status 0 when libFUSE refused to mount. It now exits with error code 26 (see https://github.com/cryfs/cryfs/pull/570 )
 * Fixed undefined behavior while parsing mount options (see https://github.com/cryfs/cryfs/pull/576 )
+* Fixed reading from, writing to and truncating an open file after it was moved to a different directory (see https://github.com/cryfs/cryfs/pull/593 )
 * Fixed a data race and a possible hang when deleting files (see https://github.com/cryfs/cryfs/pull/665 )
 * Fixed a race condition in the caches when unmounting (see https://github.com/cryfs/cryfs/pull/670 )
 * An idle mounted file system no longer creates and destroys dozens of threads per second (see https://github.com/cryfs/cryfs/pull/670 )
