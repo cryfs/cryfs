@@ -1,4 +1,4 @@
-Version 1.0.4 (unreleased)
+Version 1.1.0 (unreleased)
 ---------------
 * Improved protection and zeroing of encryption key material in CryFS process memory while the
   file system is mounted. Note that this is not a vulnerability in CryFS's threat model, since keys
