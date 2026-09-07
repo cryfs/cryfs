@@ -178,7 +178,8 @@ Building on Windows (experimental)
 
         $ conan build . --build=missing -o "&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.2.0"
 
-The Windows build is tested with Visual Studio 2022 on Windows Server 2022 and Windows Server 2025.
+The Windows build is tested with Visual Studio 2022 on Windows Server 2022, and with
+Visual Studio 2026 on Windows Server 2025.
 
 Using local dependencies
 -------------------------------

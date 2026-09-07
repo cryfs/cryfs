@@ -423,10 +423,11 @@ Configuration in `.clang-tidy`:
   build compiles the FUSE 2 code path. Everything that differs between the two APIs is behind
   `#if FUSE_MAJOR_VERSION >= 3` in `src/fspp/fuse/Fuse.h` and `Fuse.cpp`, and `params.h` picks the
   API. The `fspp` interface itself is FUSE 3 shaped on both; only the wrappers differ.
-- Requires Visual Studio 2022 (MSVC toolset v143, which conan calls `msvc` version `194`)
-- CI builds Windows on the `windows-2022` and `windows-2025` runner images; both ship
-  Visual Studio 2022, so they use the same toolset. Release packages are built on
-  `windows-2022`.
+- Builds with Visual Studio 2022 (toolset v143, which conan calls `msvc` version `194`) and
+  Visual Studio 2026 (toolset v145, conan `195`)
+- CI builds Windows on two runner images: `windows-2022`, which ships Visual Studio 2022, and
+  `windows-2025`, which ships Visual Studio 2026. The workflow selects the conan compiler
+  version per image. Release packages are built on `windows-2022`.
 - Some tests are disabled on Windows (see CI config)
 
 ### macOS
