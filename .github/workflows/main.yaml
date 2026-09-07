@@ -462,7 +462,7 @@ jobs:
       CONAN_HOME: "${{ github.workspace }}/conan-cache/"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Fetch all history because we need that to determine our version number
           fetch-depth: 0
@@ -548,7 +548,7 @@ jobs:
           fi
       - name: Upload fixes as artifact
         if: ${{ always() && matrix.run_clang_tidy }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: clang-tidy-fixes
           path: /tmp/clang-tidy-fixes
@@ -600,7 +600,7 @@ jobs:
       CONAN_HOME: "D:/.conan/"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Fetch all history because we need that to determine our version number
           fetch-depth: 0

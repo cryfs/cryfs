@@ -92,21 +92,21 @@ runs:
         /usr/bin/cryfs --version
     - name: Upload .deb as artifact
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cryfs-${{inputs.build_type}}.deb
         path: build/${{inputs.build_type}}/cryfs-*.deb
         if-no-files-found: error
     - name: Upload .rpm as artifact
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cryfs-${{inputs.build_type}}.rpm
         path: build/${{inputs.build_type}}/cryfs-*.rpm
         if-no-files-found: error
     - name: Upload .tar.gz as artifact
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cryfs-${{inputs.build_type}}.tar.gz
         path: build/${{inputs.build_type}}/cryfs-*.tar.gz
@@ -123,7 +123,7 @@ runs:
         cpack -C . --verbose -G WIX
     - name: Upload installers as artifact
       if: runner.os == 'Windows'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cryfs-${{inputs.build_type}}.msi
         path: build/${{inputs.build_type}}/cryfs-*.msi
