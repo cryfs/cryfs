@@ -658,6 +658,7 @@ jobs:
           # ./cryfs-cli/cryfs-cli-test.exe
       - name: CPack
         uses: ./.github/workflows/actions/cpack
-        if: ${{ matrix.os == 'windows-2022' }}
+        # Release installers are built with Visual Studio 2026, which windows-2025 ships.
+        if: ${{ matrix.os == 'windows-2025' }}
         with:
           build_type: ${{matrix.build_type}}

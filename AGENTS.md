@@ -427,7 +427,8 @@ Configuration in `.clang-tidy`:
   Visual Studio 2026 (toolset v145, conan `195`)
 - CI builds Windows on two runner images: `windows-2022`, which ships Visual Studio 2022, and
   `windows-2025`, which ships Visual Studio 2026. The workflow selects the conan compiler
-  version per image. Release packages are built on `windows-2022`.
+  version per image. Release packages are built on `windows-2025`, so they are compiled with
+  Visual Studio 2026.
 - Some tests are disabled on Windows (see CI config)
 
 ### macOS
