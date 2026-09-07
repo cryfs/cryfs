@@ -21,6 +21,12 @@ Version 1.1.0 (unreleased)
   deletions and loads run on whichever thread requested them. markBlockAsDeleted inserts into a map
   and can rehash the whole table while another thread is updating it, which can corrupt it; the
   integrity violation flag could be written by two FUSE worker threads at once.
+* Fixed: Renaming a directory over an existing non-empty directory within the same parent directory
+  silently deleted the target directory instead of failing with ENOTEMPTY (see
+  https://github.com/cryfs/cryfs/issues/566 ). The check that refuses to overwrite a non-empty
+  directory was only applied when source and target were in different parent directories. Besides
+  losing the target directory, this also leaked the storage of the blobs it contained, because those
+  were never deleted.
 * Fixed: Undefined behavior in OnDiskBlockStore2 when loading a block file smaller than the format
   version header. The header validation functions (_isAcceptedCryfsHeader, _isOtherCryfsHeader)
   called std::memcmp without first checking that the data buffer was large enough, causing a
