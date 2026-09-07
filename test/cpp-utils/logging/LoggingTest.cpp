@@ -9,31 +9,44 @@
 using namespace cpputils::logging;
 using std::string;
 
-// Disable the next tests for MSVC debug builds since writing to stderr doesn't seem to work well there
-#if !defined(_MSC_VER) || NDEBUG
+void logAndExit(const string &message) {
+    LOG(INFO, message);
+    cpputils::logging::flush();
+    exit(1);
+}
 
+void setLoggerAndLogAndExit(const string &message) {
+    setLogger(spdlog::stderr_logger_mt("MyTestLog2"));
+    LOG(INFO, message);
+    cpputils::logging::flush();
+    exit(1);
+}
+
+// The next two tests log in a child process instead of capturing stderr in
+// this one. On Windows, spdlog's stderr sink looks up the Win32 handle behind
+// the stderr file descriptor once, when the sink is created, and then writes
+// to that handle with WriteFile(). Redirecting the stderr file descriptor
+// afterwards - which is all gtest's stderr capture does - therefore doesn't
+// reach the sink. A child process starts with its stderr already pointing at
+// the pipe the death test reads, so the handle the sink caches is the one we
+// are looking at.
 TEST_F(LoggingTest, DefaultLoggerIsStderr) {
-    const string output = captureStderr([]{
-        LOG(INFO, "My log message");
-        cpputils::logging::flush();
-    });
-	// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
-    //EXPECT_THAT(output, MatchesRegex(".*\\[Log\\].*\\[info\\].*My log message.*"));
-	EXPECT_TRUE(std::regex_search(output, std::regex(".*\\[Log\\].*\\[info\\].*My log message.*")));
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
+    EXPECT_EXIT(
+        logAndExit("My log message"),
+        ::testing::ExitedWithCode(1),
+        ::testing::HasSubstr("[Log] [info] My log message")
+    );
 }
 
 TEST_F(LoggingTest, SetLogger_NewLoggerIsUsed) {
-    setLogger(spdlog::stderr_logger_mt("MyTestLog2"));
-    const string output = captureStderr([]{
-        LOG(INFO, "My log message");
-        cpputils::logging::flush();
-    });
-	// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
-	//EXPECT_THAT(output, MatchesRegex(".*\\[MyTestLog2\\].*\\[info\\].*My log message.*"));
-	EXPECT_TRUE(std::regex_search(output, std::regex(".*\\[MyTestLog2\\].*\\[info\\].*My log message.*")));
+    testing::FLAGS_gtest_death_test_style = "threadsafe";
+    EXPECT_EXIT(
+        setLoggerAndLogAndExit("My log message"),
+        ::testing::ExitedWithCode(1),
+        ::testing::HasSubstr("[MyTestLog2] [info] My log message")
+    );
 }
-
-#endif
 
 TEST_F(LoggingTest, SetNonStderrLogger_LogsToNewLogger) {
     setLogger(mockLogger.get());
@@ -88,12 +101,6 @@ TEST_F(LoggingTest, ErrorLog) {
 	// For some reason, the following doesn't seem to work in MSVC. Possibly because of the multiline string?
 	//EXPECT_THAT(mockLogger.capturedLog(), MatchesRegex(".*\\[MockLogger\\].*\\[error\\].*My log message.*"));
 	EXPECT_TRUE(std::regex_search(mockLogger.capturedLog(), std::regex(".*\\[MockLogger\\].*\\[error\\].*My log message.*")));
-}
-
-void logAndExit(const string &message) {
-    LOG(INFO, message);
-    cpputils::logging::flush();
-    exit(1);
 }
 
 // fork() only forks the main thread. This test ensures that logging doesn't depend on threads that suddenly aren't
