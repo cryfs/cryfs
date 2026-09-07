@@ -112,28 +112,11 @@ void CryNode::rename(const bf::path &to) {
   auto onOverwritten = [this] (const blockstore::BlockId &blockId) {
       device()->RemoveBlob(blockId);
   };
+  _checkAllowedOverwrite(*targetParent, to.filename().string());
   if (targetParent->blockId() == (*_parent)->blockId()) {
     _updateParentModificationTimestamp();
     targetParent->RenameChild(oldEntry.blockId(), to.filename().string(), onOverwritten);
   } else {
-    auto preexistingTargetEntry = targetParent->GetChild(to.filename().string());
-    if (preexistingTargetEntry != boost::none && preexistingTargetEntry->type() == fspp::Dir::EntryType::DIR) {
-      if (getType() != fspp::Dir::EntryType::DIR) {
-        // A directory cannot be overwritten with a non-directory
-        throw FuseErrnoException(EISDIR);
-      }
-      auto preexistingTarget = device()->LoadBlob(preexistingTargetEntry->blockId());
-      auto preexistingTargetDir = dynamic_pointer_move<DirBlobRef>(preexistingTarget);
-      if (preexistingTargetDir == none) {
-        LOG(ERR, "Preexisting target is not a directory. But its parent dir entry says it's a directory");
-        throw FuseErrnoException(EIO);
-      }
-      if ((*preexistingTargetDir)->NumChildren() > 0) {
-        // Cannot overwrite a non-empty dir with a rename operation.
-        throw FuseErrnoException(ENOTEMPTY);
-      }
-    }
-
     _updateParentModificationTimestamp();
     _updateTargetDirModificationTimestamp(*targetParent, std::move(targetGrandparent));
     targetParent->AddOrOverwriteChild(to.filename().string(), oldEntry.blockId(), oldEntry.type(), oldEntry.mode(), oldEntry.uid(), oldEntry.gid(),
@@ -142,6 +125,37 @@ void CryNode::rename(const bf::path &to) {
     // targetParent is now the new parent for this node. Adapt to it, so we can call further operations on this node object.
     LoadBlob()->setParentPointer(targetParent->blockId());
     _parent = std::move(targetParent);
+  }
+}
+
+void CryNode::_checkAllowedOverwrite(const DirBlobRef &targetParent, const std::string &targetName) const {
+  auto preexistingTargetEntry = targetParent.GetChild(targetName);
+  if (preexistingTargetEntry == none) {
+    // Target doesn't exist yet, so there is nothing that could be overwritten.
+    return;
+  }
+  if (preexistingTargetEntry->blockId() == _blockId) {
+    // Source and target are the same node. Renaming a node to itself is a no-op and always allowed.
+    return;
+  }
+  if (preexistingTargetEntry->type() != fspp::Dir::EntryType::DIR) {
+    // Overwriting a non-directory. Whether that is allowed only depends on the entry types,
+    // which is checked by DirEntryList when the directory entry is actually replaced.
+    return;
+  }
+  if (getType() != fspp::Dir::EntryType::DIR) {
+    // A directory cannot be overwritten with a non-directory
+    throw FuseErrnoException(EISDIR);
+  }
+  auto preexistingTarget = _device->LoadBlob(preexistingTargetEntry->blockId());
+  auto preexistingTargetDir = dynamic_pointer_move<DirBlobRef>(preexistingTarget);
+  if (preexistingTargetDir == none) {
+    LOG(ERR, "Preexisting target is not a directory. But its parent dir entry says it's a directory");
+    throw FuseErrnoException(EIO);
+  }
+  if ((*preexistingTargetDir)->NumChildren() > 0) {
+    // Cannot overwrite a non-empty dir with a rename operation.
+    throw FuseErrnoException(ENOTEMPTY);
   }
 }
 
