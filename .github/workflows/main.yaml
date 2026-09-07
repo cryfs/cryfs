@@ -573,7 +573,6 @@ jobs:
       matrix:
         name: [""]
         os:
-          - windows-2019
           - windows-2022
         build_type:
           - Debug
@@ -616,7 +615,8 @@ jobs:
         with:
           arch: "x86_64"
           compiler: "msvc"
-          compiler_version: ${{ matrix.os == 'windows-2022' && '194' || '192' }}
+          # 194 is the MSVC toolset of Visual Studio 2022, which is what windows-2022 ships.
+          compiler_version: "194"
           build_type: ${{ matrix.build_type }}
       - name: Install dependencies
         uses: ./.github/workflows/actions/conan/install_dependencies
