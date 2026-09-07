@@ -574,6 +574,7 @@ jobs:
         name: [""]
         os:
           - windows-2022
+          - windows-2025
         build_type:
           - Debug
           - Release
@@ -615,7 +616,8 @@ jobs:
         with:
           arch: "x86_64"
           compiler: "msvc"
-          # 194 is the MSVC toolset of Visual Studio 2022, which is what windows-2022 ships.
+          # 194 is the MSVC toolset of Visual Studio 2022, which is what both
+          # windows-2022 and windows-2025 ship.
           compiler_version: "194"
           build_type: ${{ matrix.build_type }}
       - name: Install dependencies
