@@ -54,7 +54,7 @@ CryFS has experimental Windows support since the 0.10 release series. To install
    It's recommended to install the matching version DokanY a given CryFS version was built with. Other versions may work but we have seen issues.
    * CryFS 1.0: DokanY 2.2.0.1000
    * CryFS 0.11: DokanY 1.2.2.1001
-2. Install the latest [Microsoft Visual C++ Redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+2. Install the [Microsoft Visual C++ Redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) from Visual Studio 2026 or newer
 4. Install [CryFS](https://www.cryfs.org/#download)
 
 GUI
