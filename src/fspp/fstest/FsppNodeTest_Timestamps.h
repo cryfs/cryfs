@@ -369,9 +369,56 @@ public:
             EXPECT_EQ(mtime, this->stat(*node).mtime);
         });
     }
+
+    // The three setAtime* helpers used to patch only tv_nsec and leave tv_sec alone, so they
+    // established the ordering they promise only while atime and mtime happened to share a
+    // second. These pin them a second apart first, which is the case that used to come out
+    // backwards and made the atime tests fail intermittently in CI.
+    void Test_SetAtimeNewerThanMtime_AcrossSecondBoundary() {
+        auto node = this->CreateNode("/mynode");
+        const timespec mtime = this->xSecondsAgo(100);
+        timespec atime = mtime;
+        atime.tv_sec -= 1;   // atime starts a whole second older than mtime
+        node->utimens(atime, mtime);
+
+        this->setAtimeNewerThanMtime("/mynode");
+
+        const auto st = this->stat(*node);
+        EXPECT_LT(st.mtime, st.atime);
+    }
+
+    void Test_SetAtimeOlderThanMtime_AcrossSecondBoundary() {
+        auto node = this->CreateNode("/mynode");
+        const timespec mtime = this->xSecondsAgo(100);
+        timespec atime = mtime;
+        atime.tv_sec += 1;   // atime starts a whole second newer than mtime
+        node->utimens(atime, mtime);
+
+        this->setAtimeOlderThanMtime("/mynode");
+
+        const auto st = this->stat(*node);
+        EXPECT_LT(st.atime, st.mtime);
+    }
+
+    void Test_SetAtimeNewerThanMtimeButBeforeYesterday_IsNewerThanMtime() {
+        auto node = this->CreateNode("/mynode");
+
+        this->setAtimeNewerThanMtimeButBeforeYesterday("/mynode");
+
+        const auto st = this->stat(*node);
+        EXPECT_LT(st.mtime, st.atime);   // the "newer than mtime" half of the name
+        const timespec yesterday {
+                /*.tv_sec = */ cpputils::time::now().tv_sec - 60*60*24,
+                /*.tv_nsec = */ 0
+        };
+        EXPECT_LT(st.atime, yesterday);  // and the "before yesterday" half
+    }
 };
 
 REGISTER_NODE_TEST_SUITE(FsppNodeTest_Timestamps,
+    SetAtimeNewerThanMtime_AcrossSecondBoundary,
+    SetAtimeOlderThanMtime_AcrossSecondBoundary,
+    SetAtimeNewerThanMtimeButBeforeYesterday_IsNewerThanMtime,
     Create,
     Stat,
     Chmod,

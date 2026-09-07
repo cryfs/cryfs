@@ -102,10 +102,34 @@ public:
     EXPECT_NE(nullptr, dynamic_cast<const fspp::Symlink*>(node.get()));
   }
 
+  // The next two derive one timestamp from the other, so they have to move whole timespecs.
+  // Touching only tv_nsec would leave tv_sec alone, which silently produces the opposite
+  // ordering whenever the two timestamps are not already in the same second, and can also
+  // produce an out-of-range tv_nsec at the ends of a second.
+  static timespec plusOneNanosecond(timespec time) {
+    if (time.tv_nsec == 999999999) {
+      time.tv_nsec = 0;
+      ++time.tv_sec;
+    } else {
+      ++time.tv_nsec;
+    }
+    return time;
+  }
+
+  static timespec minusOneNanosecond(timespec time) {
+    if (time.tv_nsec == 0) {
+      time.tv_nsec = 999999999;
+      --time.tv_sec;
+    } else {
+      --time.tv_nsec;
+    }
+    return time;
+  }
+
   void setAtimeOlderThanMtime(const boost::filesystem::path& path) {
     auto node = device->Load(path).value();
     auto st = node->stat();
-    st.atime.tv_nsec = st.mtime.tv_nsec - 1;
+    st.atime = minusOneNanosecond(st.mtime);
     node->utimens(
             st.atime,
             st.mtime
@@ -115,7 +139,7 @@ public:
   void setAtimeNewerThanMtime(const boost::filesystem::path& path) {
     auto node = device->Load(path).value();
     auto st = node->stat();
-    st.atime.tv_nsec = st.mtime.tv_nsec + 1;
+    st.atime = plusOneNanosecond(st.mtime);
     node->utimens(
             st.atime,
             st.mtime
@@ -131,7 +155,9 @@ public:
               /*.tv_nsec = */ now.tv_nsec
       };
       st.atime = before_yesterday;
-      st.mtime.tv_nsec = st.atime.tv_nsec - 1;
+      // mtime has to move with atime. Patching only its tv_nsec left it at the node's current
+      // mtime, roughly now, which made atime older than mtime instead of newer.
+      st.mtime = minusOneNanosecond(st.atime);
       node->utimens(
               st.atime,
               st.mtime
