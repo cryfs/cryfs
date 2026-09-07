@@ -9,10 +9,33 @@
 // guarded with FUSE_MAJOR_VERSION in Fuse.h and Fuse.cpp.
 #define FUSE_USE_VERSION 27
 #else
+// 39 means API 3.9. libfuse changed FUSE_MAKE_VERSION from (major*10 + minor) to
+// (major*100 + minor) in 3.10.0, but it did not renumber the versions that already existed: the
+// two-digit values 29..39 keep their meaning and the three-digit space starts at 310. libfuse 3.17
+// still spells its own guards for the old versions as literal 30, 32 and 35, and its own examples
+// still use 31, 34 and 35, switching to FUSE_MAKE_VERSION only from 3.12 on. So 39 is the correct
+// spelling for 3.9; FUSE_MAKE_VERSION(3, 9) would be 309, a value in the gap between the two
+// numbering spaces that libfuse gives no meaning to.
 #define FUSE_USE_VERSION 39
+
+#if defined(__APPLE__)
+// macFUSE ships libfuse 3 (since macFUSE 4.10.0), but by default it replaces six fuse_operations
+// members with macOS specific variants: getattr and readdir take a 'struct fuse_darwin_attr'
+// instead of a 'struct stat', utimens takes a timespec[3] instead of a timespec[2], statfs takes a
+// 'struct statfs' instead of a 'struct statvfs', and get/setxattr take an extra position argument.
+// We implement the vanilla FUSE 3 signatures, so turn the extensions off. libfuse itself builds
+// with the same define. This has to happen before <fuse.h> is included.
+#define FUSE_DARWIN_ENABLE_EXTENSIONS 0
+#endif
 #endif
 
 #include <fuse.h>
+
+#if !defined(_MSC_VER) && FUSE_MAJOR_VERSION < 3
+// Without this, using a libFUSE 2 header produces a wall of signature mismatches instead of saying
+// what is actually wrong. Windows is exempt because Dokany's FUSE wrapper is still at FUSE 2.7.
+#error "CryFS needs libFUSE 3. On macOS, install macFUSE 4.10.0 or newer - that is the first release that ships libFUSE 3."
+#endif
 
 #if FUSE_MAJOR_VERSION < 3
 // Two types our own interface uses that only exist in FUSE 3. Declaring them here lets fspp keep
