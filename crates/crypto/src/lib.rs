@@ -59,6 +59,20 @@
 //! assert_eq!(decrypted.as_ref(), b"Hello, CryFS!");
 //! ```
 
+// Our ciphers are parameterized by `typenum` type-level integers, and proving
+// `generic_array::ArrayLength` for one of them (e.g. `U16`) unrolls typenum's
+// `Shl` recursion deeper than rustc's default recursion limit of 128, so the
+// obligation overflows. rustc used to accept that silently; as of
+// 1.100.0-nightly it reports `recursion_depth_exceeding_limit`
+// (rust-lang/rust#159228) and will make it a hard error in a future release.
+// Where the overflowing obligation is an auto trait (e.g. the `Send` bound on a
+// boxed future), the failure is worse than a warning: the coercion to
+// `dyn Future + Send` then looks unimplemented to the monomorphization
+// collector, which ICEs. Raise the limit so these obligations resolve.
+//
+// This has to be repeated in every crate that instantiates a concrete cipher
+// type, because `recursion_limit` is a per-crate attribute.
+#![recursion_limit = "512"]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 

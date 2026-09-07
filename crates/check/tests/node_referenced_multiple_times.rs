@@ -1,5 +1,10 @@
 //! Tests where a node is referenced multiple times, either from the same or from a different blob
 
+// Raise the trait-solver recursion limit above rustc's default of 128: proving
+// `generic_array::ArrayLength` for our typenum-parameterized ciphers overflows
+// it. See crates/crypto/src/lib.rs for the full explanation.
+#![recursion_limit = "512"]
+
 use pretty_assertions::{assert_eq, assert_ne};
 use rand::{SeedableRng, rngs::SmallRng};
 use rstest::rstest;

@@ -28,6 +28,10 @@
 //! - #[cfg(feature = "benchmark")]      // Code only necessary for benchmarks
 //! - #[cfg(not(feature = "benchmark"))] // Code only necessary for perf tests
 
+// Raise the trait-solver recursion limit above rustc's default of 128: proving
+// `generic_array::ArrayLength` for our typenum-parameterized ciphers overflows
+// it. See crates/crypto/src/lib.rs for the full explanation.
+#![recursion_limit = "512"]
 // TODO #![deny(missing_docs)]
 #![cfg(any(test, feature = "benchmark"))]
 

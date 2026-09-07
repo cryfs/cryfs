@@ -1,5 +1,10 @@
 //! Tests where individual nodes are unreadable
 
+// Raise the trait-solver recursion limit above rustc's default of 128: proving
+// `generic_array::ArrayLength` for our typenum-parameterized ciphers overflows
+// it. See crates/crypto/src/lib.rs for the full explanation.
+#![recursion_limit = "512"]
+
 use rstest::rstest;
 
 use cryfs_check::{BlobReference, BlobReferenceWithId, BlobUnreadableError, NodeUnreadableError};
