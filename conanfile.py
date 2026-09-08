@@ -42,6 +42,7 @@ class CryFSConan(ConanFile):
         "boost/*:asio_no_deprecated": True,
         "boost/*:filesystem_no_deprecated": True,
         "boost/*:without_atomic": False,  # needed by boost thread
+        "boost/*:without_charconv": True,
         "boost/*:without_chrono": False,  # needed by CryFS
         "boost/*:without_cobalt": True,
         "boost/*:without_container": False,  # needed by boost thread
@@ -61,6 +62,9 @@ class CryFSConan(ConanFile):
         "boost/*:without_math": True,
         "boost/*:without_mpi": True,
         "boost/*:without_nowide": True,
+        # We use Boost.Process v1, which is header-only. The compiled boost_process
+        # library is v2 only, and v2 needs Boost.Context, which we switch off above.
+        "boost/*:without_process": True,
         "boost/*:without_program_options": False,  # needed by CryFS
         "boost/*:without_python": True,
         "boost/*:without_random": True,
@@ -70,7 +74,6 @@ class CryFSConan(ConanFile):
         # see https://www.boost.org/doc/libs/1_65_0/doc/html/stacktrace/getting_started.html#stacktrace.getting_started.enabling_and_disabling_stacktrac
         # This is why we need to **not** link against the static version of stacktrace.
         "boost/*:without_stacktrace": True,
-        "boost/*:without_system": False,  # needed by CryFS
         "boost/*:without_test": True,
         "boost/*:without_thread": False,  # needed by CryFS
         "boost/*:without_timer": True,
@@ -131,7 +134,7 @@ class CryFSConan(ConanFile):
     def requirements(self):
         self.requires("range-v3/cci.20240905")
         self.requires("spdlog/1.17.0")
-        self.requires("boost/1.84.0")
+        self.requires("boost/1.91.0")
         if self.options.update_checks:
             self.requires("libcurl/8.9.1")
         if self.options.build_tests:
