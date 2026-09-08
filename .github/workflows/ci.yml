@@ -142,11 +142,6 @@ jobs:
   #       with:
   #         toolchain: stable
   #         components: clippy
-  #     # This used to be actions-rs/clippy-check, which posted the warnings as a
-  #     # check run. The actions-rs org was archived in October 2023 and its
-  #     # actions still run on node12, so plain `cargo clippy` it is: the
-  #     # warnings show up in the job log, and no `checks: write` permission is
-  #     # needed to write them there.
   #     - run: cargo clippy --all-features --all-targets -- -D warnings
   code_format:
     name: Code Formatter (rustfmt)
@@ -206,10 +201,10 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          # Required since codecov-action v4: tokenless uploading only remains
-          # supported for pull requests from forks of a public repo, not for the
-          # pushes and same-repo pull requests this job runs on. It also avoids
-          # the rate limits we used to hit on Codecov's API without it.
+          # Tokenless uploading only works for pull requests from forks of a
+          # public repo, not for the pushes and same-repo pull requests this job
+          # runs on, so the token is required here. It also keeps us clear of
+          # rate limits on Codecov's API.
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: true
