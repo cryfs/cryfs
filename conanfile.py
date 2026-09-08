@@ -135,7 +135,7 @@ class CryFSConan(ConanFile):
         if self.options.update_checks:
             self.requires("libcurl/8.9.1")
         if self.options.build_tests:
-            self.requires("gtest/1.15.0")
+            self.requires("gtest/1.17.0")
 
     def layout(self):
         cmake_layout(self)
