@@ -49,6 +49,7 @@ Version 1.1.0 (unreleased)
 
 Dependency Updates
 * Fuse 3.9 on Linux and macOS (was: Fuse 2.9), still Fuse 2.7 via DokanY on Windows
+* spdlog 1.17.0 (was: 1.14.1)
 
 
 Version 1.0.3
