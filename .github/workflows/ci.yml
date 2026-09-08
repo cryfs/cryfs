@@ -234,16 +234,6 @@ jobs:
       fail-fast: false
       matrix:
         crate: ["blobstore", "blockstore", "check", "cli-utils", "concurrent-store", "cryfs-config", "cryfs-cli", "cryfs-filesystem", "cryfs-version", "crypto", "e2e-perf-tests", "fsblobstore", "rustfs", "tempproject", "utils"]
-        targets: ["", "--tests", "--examples", "--benches"]
-        features: ["", "--no-default-features", "--all-features"]
-        # TODO Re-add at least some release-profile coverage for this job.
-        # The full profile axis (debug vs release) was 16 × 4 × 3 × 2 = 384
-        # configurations (15 × 4 × 3 × 2 = 360 with the current crate list),
-        # which exceeds GitHub Actions' 256-configuration
-        # matrix cap and caused the entire job to fail at matrix-resolution
-        # time. Either find a way to fit release back in (split into a
-        # second job, drop a less-valuable axis, exclude some
-        # crate/target/feature combinations) or accept debug-only here.
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
@@ -256,7 +246,30 @@ jobs:
           toolchain: stable
       - name: cargo check
         working-directory: ./crates/${{ matrix.crate }}
-        run: cargo check ${{ matrix.features }} ${{matrix.targets}}
+        shell: bash
+        # One job per crate, with the feature and target combinations as a
+        # loop inside it: they share a target directory, so only the first
+        # combination pays to build the crate's dependencies.
+        #
+        # Every combination runs even when an earlier one fails, and the step
+        # exits non-zero if any did, so one job reports all the broken
+        # combinations rather than stopping at the first.
+        #
+        # TODO Cover the release profile too. It is another dimension of this
+        # loop, costing runner time but no additional jobs.
+        run: |
+          status=0
+          for features in "" --no-default-features --all-features; do
+            for targets in "" --tests --examples --benches; do
+              echo "::group::cargo check $features $targets"
+              if ! cargo check $features $targets; then
+                echo "::error::${{ matrix.crate }}: cargo check $features $targets failed"
+                status=1
+              fi
+              echo "::endgroup::"
+            done
+          done
+          exit $status
   # clippy_check:
   #   name: Linter (clippy)
   #   runs-on: ubuntu-latest
