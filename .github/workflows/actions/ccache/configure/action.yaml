@@ -13,7 +13,8 @@ runs:
         set -e
         set -v
         ccache --set-config=compiler_check=content
-        ccache --set-config=max_size=500M
+        # Room for every build type of a configuration, which share one cache.
+        ccache --set-config=max_size=1500M
         ccache --set-config=cache_dir="${{ inputs.ccache_dir }}"
         ccache --set-config=compression=true
         ccache --set-config=sloppiness=include_file_mtime,include_file_ctime
