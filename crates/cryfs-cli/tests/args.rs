@@ -2,41 +2,18 @@ use assert_cmd::Command;
 use lazy_static::lazy_static;
 use predicates::boolean::PredicateBooleanExt;
 use predicates::str::ContainsPredicate;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 // TODO Use indoc! for multiline strings
 
 lazy_static! {
-    // Don't use escargot for getting the path of the executable built with same settings as the
-    // test was built, because that one is already built by cargo and we don't need to re-build it.
+    // The executable built with the same profile as this test binary. Cargo has already built it
+    // by the time the tests run, so no test here builds anything itself.
     static ref CRYFS_CMD_PATH_CURRENT: &'static Path = assert_cmd::cargo::cargo_bin!("cryfs");
-    static ref CRYFS_CMD_PATH_DEBUG: PathBuf = escargot::CargoBuild::new()
-        .current_target()
-        .bin("cryfs")
-        .run()
-        .unwrap()
-        .path()
-        .to_owned();
-    static ref CRYFS_CMD_PATH_RELEASE: PathBuf = escargot::CargoBuild::new()
-        .current_target()
-        .release()
-        .bin("cryfs")
-        .run()
-        .unwrap()
-        .path()
-        .to_owned();
 }
 
 fn cryfs_cmd() -> Command {
     Command::new(&*CRYFS_CMD_PATH_CURRENT)
-}
-
-fn cryfs_cmd_debug() -> Command {
-    Command::new(&*CRYFS_CMD_PATH_DEBUG)
-}
-
-fn cryfs_cmd_release() -> Command {
-    Command::new(&*CRYFS_CMD_PATH_RELEASE)
 }
 
 mod no_args {
@@ -260,9 +237,15 @@ mod debug_build_warning {
         predicates::str::contains("WARNING! This is a debug build.")
     }
 
+    // Each of these runs the executable built with the same profile as the test binary, so a
+    // `cargo test` run covers the debug case and a `cargo test --release` run the release case.
+    // Building the other profile's executable from inside the test would compile the whole
+    // dependency tree a second time on every test run.
+
+    #[cfg(debug_assertions)]
     #[test]
     fn debug_build() {
-        cryfs_cmd_debug()
+        cryfs_cmd()
             // TODO Test this by actually mounting a test file system (probably with test scrypt parameters for performance), not with "--version"
             .arg("--version")
             .assert()
@@ -270,9 +253,10 @@ mod debug_build_warning {
             .stderr(debug_build_warning());
     }
 
+    #[cfg(not(debug_assertions))]
     #[test]
     fn release_build() {
-        cryfs_cmd_release()
+        cryfs_cmd()
             // TODO Test this by actually mounting a test file system (probably with test scrypt parameters for performance), not with "--version"
             .arg("--version")
             .assert()
