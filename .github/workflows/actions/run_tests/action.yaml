@@ -23,6 +23,12 @@ runs:
       run: |
         set -v
         set -e
+        # Job control is on so that the background test binaries below keep the
+        # default SIGINT and SIGQUIT handling. Without it, bash starts
+        # asynchronous commands with both signals ignored, which the death
+        # tests in cpp-utils-test that raise SIGINT on themselves and expect
+        # to die then fail.
+        set -m
         echo Running on ${{runner.os}}
         cd build/${{inputs.build_type}}/test
 
