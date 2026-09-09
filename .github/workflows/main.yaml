@@ -190,6 +190,13 @@ jobs:
             macos_cxx: llvm@19/bin/clang++
             apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             homebrew_package: llvm@19
+          - compiler: gcc
+            version: 16
+            libcxx: libstdc++11
+            cc: gcc-16
+            cxx: g++-16
+            apt_package: g++-16
+            homebrew_package: gcc@16
           # Apple Clang
 #           - compiler: apple-clang
 #             version: xxx
@@ -224,6 +231,8 @@ jobs:
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: macos-15
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
+          - os: macos-15
+            compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
           - os: macos-15-intel
             compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
           - os: macos-15-intel
@@ -240,6 +249,8 @@ jobs:
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: macos-15-intel
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
+          - os: macos-15-intel
+            compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
           # MacOS 15-intel fails to build with Clang 14
           - os: macos-15-intel
             compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev", homebrew_package: llvm@14}
@@ -265,12 +276,18 @@ jobs:
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: macos-26
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
-          # Ubuntu 22.04 doesn't have gcc 13, 14 yet
+          - os: macos-26
+            compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
+          # Ubuntu 22.04 doesn't have gcc 13, 14 or 16
           - os: ubuntu-22.04
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
           - os: ubuntu-22.04
             compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
-          # Ubuntu 24.04 doesn't have clang 13 anymore
+          - os: ubuntu-22.04
+            compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
+          # Ubuntu 24.04 doesn't have gcc 16, and doesn't have clang 13 anymore
+          - os: ubuntu-24.04
+            compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
           - os: ubuntu-24.04
             compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
           # Ubuntu 26.04 has neither clang 13 to 16 nor gcc 9 and 10 anymore
