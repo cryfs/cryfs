@@ -115,23 +115,20 @@ jobs:
         # version and the Cargo.lock hash; a lockfile change still restores the
         # nearest older cache and rebuilds just the crates that differ.
         #
-        # Only main and the release branches save. Every branch can restore
-        # main's caches, and a pull request can restore its base branch's,
-        # while caches saved by any other branch are visible to that branch
-        # alone, so per-branch caches would only evict the shared ones. There
-        # is one cache per runner image, toolchain and profile, 30 in total.
-        # One is about 0.3 GB for the release profile and 0.5 GB for debug
-        # (tests are built with line tables only), about 12 GB per saving
-        # branch plus the daily nightly churn. The repository's cache storage
-        # limit is set to 20 GB in its Actions settings (the default is
-        # 10 GB), which holds main's set; an active release branch adds a set
-        # of its own, so raise the limit before one exists. Eviction is
-        # least-recently-used across all entries, so if the limit drops below
-        # what the caches need, which jobs hit becomes a lottery.
+        # Only main saves. Every branch can restore main's caches, while
+        # caches saved by a branch are visible to that branch alone, so
+        # per-branch caches would only evict the shared ones. There is one
+        # cache per runner image, toolchain and profile, 30 in total. One is
+        # about 0.3 GB for the release profile and 0.5 GB for debug (tests are
+        # built with line tables only), about 12 GB together plus the daily
+        # nightly churn. The repository's cache storage limit is set to 20 GB
+        # in its Actions settings (the default is 10 GB); eviction is
+        # least-recently-used across all entries, so if the limit ever drops
+        # back below what the caches need, which jobs hit becomes a lottery.
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: ${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.profile == '--release' && 'release' || 'debug' }}
-          save-if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
           # The dependencies compiled fine even when a test fails.
           cache-on-failure: true
       - name: cargo ${{ matrix.command }}
@@ -355,7 +352,7 @@ jobs:
       # job, keyed by job, rustc version and lockfile.
       uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       with:
-        save-if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
+        save-if: ${{ github.ref == 'refs/heads/main' }}
         cache-on-failure: true
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
@@ -378,7 +375,7 @@ jobs:
         # directory that rust-cache handles like the top-level one.
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
       # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
       - name: Install cargo-llvm-cov
