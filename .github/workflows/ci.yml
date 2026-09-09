@@ -118,6 +118,21 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
+      - name: Cache compiled dependencies
+        # Same as in the test job: the dependency artifacts from the last
+        # main build, keyed by job, crate, rustc version and lockfile. One
+        # cache per crate rather than one shared by all fifteen jobs, because
+        # a shared key would be saved by whichever job finishes first, which
+        # is the crate with the fewest dependencies, and every other job
+        # would then miss most of its own. cargo check keeps only metadata,
+        # so these caches are small next to the test jobs' ones, but the
+        # build scripts still run in full, and that includes compiling the
+        # vendored OpenSSL, libsodium, aws-lc and libgit2.
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ${{ matrix.crate }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
       - name: cargo check
         working-directory: ./crates/${{ matrix.crate }}
         shell: bash
