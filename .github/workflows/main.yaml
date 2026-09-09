@@ -23,8 +23,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  should_run:
+    # A push to a branch that has an open pull request is already built by that
+    # pull request's run (the merge with the base), so the push run would build
+    # the same commit a second time. This job checks for such a pull request,
+    # and every other job skips when it finds one. It decides only for push
+    # events on branches; tag pushes and pull_request events always run.
+    name: Skip pushes already built by a pull request
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Look for an open pull request from this branch
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [[ "$EVENT" != "push" || "$REF_TYPE" != "branch" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Only pull requests whose head lives in this repository count: a
+          # fork could carry a branch of the same name, and its pull request
+          # builds the fork's commit, not ours.
+          prs=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
+            --json number,headRepositoryOwner \
+            --jq "[.[] | select(.headRepositoryOwner.login == \"$OWNER\")] | length")
+          if [[ "$prs" == "0" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Branch $BRANCH has an open pull request; its run builds this commit."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
   linux_macos:
     name: CI
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -557,6 +598,8 @@ jobs:
 
   windows:
     name: CI
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     strategy:
       fail-fast: false
       matrix:
