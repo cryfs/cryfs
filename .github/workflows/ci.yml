@@ -101,13 +101,13 @@ jobs:
         # tested, half the jobs. The loop runs every feature set even after
         # one fails, so a job reports all broken feature sets, not just the
         # first.
-        # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         run: |
           skip=()
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             skip=(-- --skip tests::mkdir:: --skip tests::rename:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_)
           fi
           failed=()
+          # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
           for features in "" "--no-default-features"; do
             label="cargo ${{ matrix.command }} ${features:-(default features)} ${{ matrix.profile }}"
             echo "::group::$label"
