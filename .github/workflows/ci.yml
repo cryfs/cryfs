@@ -207,6 +207,35 @@ jobs:
             printf 'Failed: %s\n' "${failed[@]}"
             exit 1
           fi
+  cache_usage:
+    # The Actions cache evicts least-recently-used entries silently once the
+    # repository's cache storage limit is reached; the only symptom is test
+    # jobs that stop restoring their dependencies. This job reads the usage
+    # after the test jobs have saved their caches and warns before that
+    # happens. The limit itself is not readable through the API, so it is
+    # repeated here: keep LIMIT_GB in sync with the repository's Actions
+    # settings.
+    name: Actions cache usage
+    needs: [should_run, test]
+    if: ${{ !cancelled() && needs.should_run.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Warn when the cache is close to its storage limit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LIMIT_GB: 20
+          WARN_PERCENT: 90
+        run: |
+          used=$(gh api "repos/$REPO/actions/cache/usage" --jq .active_caches_size_in_bytes)
+          limit=$(( LIMIT_GB * 1024 * 1024 * 1024 ))
+          percent=$(( used * 100 / limit ))
+          echo "Actions cache: $(( used / 1024 / 1024 )) MB used, ${percent}% of the ${LIMIT_GB} GB limit"
+          if (( percent >= WARN_PERCENT )); then
+            echo "::warning::The Actions cache is at ${percent}% of its ${LIMIT_GB} GB storage limit. Once it is full, least-recently-used entries are evicted and test jobs stop restoring their dependencies. Raise the limit in the repository's Actions settings or cache less."
+          fi
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
