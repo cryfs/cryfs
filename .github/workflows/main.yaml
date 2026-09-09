@@ -190,6 +190,15 @@ jobs:
             macos_cxx: llvm@19/bin/clang++
             apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             homebrew_package: llvm@19
+          - compiler: clang
+            version: 21
+            libcxx: libc++
+            cc: clang-21
+            cxx: clang++-21
+            macos_cc: llvm@21/bin/clang
+            macos_cxx: llvm@21/bin/clang++
+            apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+            homebrew_package: llvm@21
           # Apple Clang
 #           - compiler: apple-clang
 #             version: xxx
