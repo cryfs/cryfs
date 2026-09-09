@@ -84,6 +84,18 @@ jobs:
         features: ["", "--no-default-features"]
         toolchain: ["stable", "nightly", "1.95"]
     runs-on: ${{matrix.os}}
+    env:
+      # `brew install` otherwise starts with a `brew update` of the whole tap.
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      # Nothing on a CI runner reuses incremental artifacts, they only cost
+      # time and disk: the incremental directory of a debug test build of the
+      # workspace is 11 GB.
+      CARGO_INCREMENTAL: 0
+      # Full debuginfo is only useful under a debugger; backtraces from a
+      # failing test keep file and line with line tables alone. Measured on a
+      # 4-core machine: a debug `cargo build --tests` of the workspace drops
+      # from 7m40s to 5m02s and the target directory from 20 GB to 4 GB.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
     steps:
       - name: Free Disk Space (Ubuntu)
         if: ${{ runner.os == 'Linux' }}
