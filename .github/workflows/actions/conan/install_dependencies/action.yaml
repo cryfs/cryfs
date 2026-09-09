@@ -1,5 +1,9 @@
 name: 'Install dependencies'
 description: 'Install dependencies'
+inputs:
+  build_type:
+    description: "Which cmake build type to install the dependencies for (e.g. Release, Debug, RelWithDebInfo). Overrides the one in the conan profile."
+    required: true
 runs:
   using: "composite"
   steps:
@@ -10,4 +14,4 @@ runs:
         set -e
         conan profile show
 
-        conan install . --build=missing
+        conan install . --build=missing -s build_type=${{ inputs.build_type }}

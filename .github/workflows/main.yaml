@@ -36,10 +36,12 @@ jobs:
           - ubuntu-22.04
           - ubuntu-24.04
           - ubuntu-26.04
-        build_type:
-          - Debug
-          - Release
-          - RelWithDebInfo
+        # Every build type of a configuration is built and tested in the same
+        # job, one after another, so the job pays for the runner, the checkout
+        # and the compiler installation once instead of once per build type.
+        # Space-separated; the build, test and package steps below run once
+        # per build type named here.
+        build_types: ["Debug Release RelWithDebInfo"]
         compiler:
           - compiler: gcc
             version: 9
@@ -249,7 +251,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: Debug
+            build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
             extra_env_vars_for_test: ""
@@ -267,7 +269,7 @@ jobs:
               cxx: g++-14
               apt_package: g++-14
             # build_type cannot be debug because gcc checks for some errors in optimization passes
-            build_type: RelWithDebInfo
+            build_types: RelWithDebInfo
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '[]'
             install_dependencies_manually: false
@@ -285,7 +287,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: Debug
+            build_types: Debug
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
             install_dependencies_manually: false
@@ -303,7 +305,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: RelWithDebInfo
+            build_types: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
             extra_env_vars_for_test: ""
@@ -322,7 +324,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: RelWithDebInfo
+            build_types: RelWithDebInfo
             extra_conan_flags: "-o '&:update_checks=False'"
             extra_cxxflags: '[]'
             extra_env_vars_for_test: ""
@@ -341,7 +343,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: RelWithDebInfo
+            build_types: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '[]'
             extra_env_vars_for_test: ""
@@ -363,7 +365,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: Debug
+            build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
             extra_env_vars_for_test: ASAN_OPTIONS="detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
@@ -382,7 +384,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: Debug
+            build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
             extra_env_vars_for_test: UBSAN_OPTIONS="print_stacktrace=1"
@@ -401,7 +403,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: Debug
+            build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
             install_dependencies_manually: false
@@ -421,7 +423,7 @@ jobs:
               macos_cc: llvm@19/bin/clang
               macos_cxx: llvm@19/bin/clang++
               apt_package: clang-19 clang-tidy-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_type: Debug
+            build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
             install_dependencies_manually: false
@@ -463,17 +465,28 @@ jobs:
         shell: bash
         run: |
           echo __${{matrix.extra_conan_flags}}__${{matrix.extra_cxxflags}}__ | (echo -n "hash_flags=" && sha256sum | awk '{print $1}') >> $GITHUB_OUTPUT
+      - name: Build types
+        id: build_types
+        shell: bash
+        env:
+          BUILD_TYPES: ${{ matrix.build_types }}
+        # `slug` joins the build types with dashes for the cache keys, `first`
+        # is the one the conan profile is written with; every conan command
+        # below names its build type explicitly anyway.
+        run: |
+          echo "slug=${BUILD_TYPES// /-}" >> "$GITHUB_OUTPUT"
+          echo "first=${BUILD_TYPES%% *}" >> "$GITHUB_OUTPUT"
       - name: Setup ccache
         uses: ./.github/workflows/actions/ccache/setup
         with:
           ccache_dir: ${{github.workspace}}/.ccache
-          cache_key: v3-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.install_dependencies_manually}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v4-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{steps.build_types.outputs.slug}}__${{matrix.run_build}}__${{matrix.install_dependencies_manually}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
       # TODO Ideally, the Setup conan cache step would be part of the build action, but Github doesn't support nested actions yet, see https://github.com/actions/runner/issues/862
       - name: Restore conan cache
         uses: ./.github/workflows/actions/conan/cache
         with:
           action: load
-          cache_key: v10-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v11-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{steps.build_types.outputs.slug}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
       # Setup conan is after restoring the cache so the cache doesn't overwrite the conan profile
       - name: Setup conan
         uses: ./.github/workflows/actions/conan/setup
@@ -484,26 +497,53 @@ jobs:
           compiler_libcxx: ${{ matrix.compiler.libcxx }}
           compiler_executable_c: ${{ runner.os == 'macOS' && format('{0}{1}', (matrix.os == 'macos-15-intel' && '/usr/local/opt/' || '/opt/homebrew/opt/'), matrix.compiler.macos_cc) || matrix.compiler.cc }}
           compiler_executable_cxx: ${{ runner.os == 'macOS' && format('{0}{1}', (matrix.os == 'macos-15-intel' && '/usr/local/opt/' || '/opt/homebrew/opt/'), matrix.compiler.macos_cxx) || matrix.compiler.cxx }}
-          build_type: ${{ matrix.build_type }}
+          build_type: ${{ steps.build_types.outputs.first }}
           extra_cxxflags: ${{ matrix.extra_cxxflags }}
-      - name: Install dependencies
-        if: ${{ !matrix.install_dependencies_manually }}
+      - name: Install dependencies (Debug)
+        if: ${{ !matrix.install_dependencies_manually && contains(matrix.build_types, 'Debug') }}
         uses: ./.github/workflows/actions/conan/install_dependencies
-      - name: Build
-        if: ${{ matrix.run_build && !matrix.install_dependencies_manually }}
+        with:
+          build_type: Debug
+      - name: Build (Debug)
+        if: ${{ matrix.run_build && !matrix.install_dependencies_manually && contains(matrix.build_types, 'Debug') }}
         uses: ./.github/workflows/actions/conan/build
         with:
+          build_type: Debug
+          extra_conan_flags: ${{ matrix.extra_conan_flags}}
+      - name: Install dependencies (Release)
+        if: ${{ !matrix.install_dependencies_manually && contains(matrix.build_types, 'Release') }}
+        uses: ./.github/workflows/actions/conan/install_dependencies
+        with:
+          build_type: Release
+      - name: Build (Release)
+        if: ${{ matrix.run_build && !matrix.install_dependencies_manually && contains(matrix.build_types, 'Release') }}
+        uses: ./.github/workflows/actions/conan/build
+        with:
+          build_type: Release
+          extra_conan_flags: ${{ matrix.extra_conan_flags}}
+      - name: Install dependencies (RelWithDebInfo)
+        if: ${{ !matrix.install_dependencies_manually && contains(matrix.build_types, 'RelWithDebInfo') }}
+        uses: ./.github/workflows/actions/conan/install_dependencies
+        with:
+          build_type: RelWithDebInfo
+      - name: Build (RelWithDebInfo)
+        if: ${{ matrix.run_build && !matrix.install_dependencies_manually && contains(matrix.build_types, 'RelWithDebInfo') }}
+        uses: ./.github/workflows/actions/conan/build
+        with:
+          build_type: RelWithDebInfo
           extra_conan_flags: ${{ matrix.extra_conan_flags}}
       - name: Build (with local dependencies)
+        # Only the "Local dependencies" configuration takes this path, and it
+        # names a single build type.
         if: ${{ matrix.run_build && matrix.install_dependencies_manually }}
         shell: bash
         run: |
           set -v
           set -e
           mkdir build
-          mkdir build/${{matrix.build_type}}
-          cd build/${{matrix.build_type}}
-          cmake -G Ninja ../.. -DCMAKE_BUILD_TYPE=${{matrix.build_type}} -DBUILD_TESTING=True -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}} -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}
+          mkdir build/${{matrix.build_types}}
+          cd build/${{matrix.build_types}}
+          cmake -G Ninja ../.. -DCMAKE_BUILD_TYPE=${{matrix.build_types}} -DBUILD_TESTING=True -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}} -DCMAKE_C_COMPILER=${{matrix.compiler.cc}}
           ninja
       - name: Run clang-tidy
         id: clang_tidy
@@ -532,7 +572,7 @@ jobs:
         with:
           action: 'save'
           ccache_dir: ${{github.workspace}}/.ccache
-          cache_key: v3-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.run_build}}__${{matrix.install_dependencies_manually}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
+          cache_key: v4-${{ runner.os }}-${{ matrix.os }}-ccache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{steps.build_types.outputs.slug}}__${{matrix.run_build}}__${{matrix.install_dependencies_manually}}__${{matrix.run_clang_tidy}}__${{steps.hash_flags.outputs.hash_flags}}__
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
       - name: Save conan cache
@@ -541,19 +581,43 @@ jobs:
           action: save
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
-          cache_key: v10-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{matrix.build_type}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
-      - name: Test
-        if: ${{ matrix.run_tests }}
+          cache_key: v11-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{steps.build_types.outputs.slug}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
+      - name: Test (Debug)
+        if: ${{ matrix.run_tests && contains(matrix.build_types, 'Debug') }}
         uses: ./.github/workflows/actions/run_tests
         with:
-          build_type: ${{matrix.build_type}}
+          build_type: Debug
           gtest_args: ${{matrix.gtest_args}}
           extra_env_vars: ${{matrix.extra_env_vars_for_test}}
-      - name: CPack
-        if: ${{ matrix.run_cpack }}
+      - name: Test (Release)
+        if: ${{ matrix.run_tests && contains(matrix.build_types, 'Release') }}
+        uses: ./.github/workflows/actions/run_tests
+        with:
+          build_type: Release
+          gtest_args: ${{matrix.gtest_args}}
+          extra_env_vars: ${{matrix.extra_env_vars_for_test}}
+      - name: Test (RelWithDebInfo)
+        if: ${{ matrix.run_tests && contains(matrix.build_types, 'RelWithDebInfo') }}
+        uses: ./.github/workflows/actions/run_tests
+        with:
+          build_type: RelWithDebInfo
+          gtest_args: ${{matrix.gtest_args}}
+          extra_env_vars: ${{matrix.extra_env_vars_for_test}}
+      - name: CPack (Debug)
+        if: ${{ matrix.run_cpack && contains(matrix.build_types, 'Debug') }}
         uses: ./.github/workflows/actions/cpack
         with:
-          build_type: ${{matrix.build_type}}
+          build_type: Debug
+      - name: CPack (Release)
+        if: ${{ matrix.run_cpack && contains(matrix.build_types, 'Release') }}
+        uses: ./.github/workflows/actions/cpack
+        with:
+          build_type: Release
+      - name: CPack (RelWithDebInfo)
+        if: ${{ matrix.run_cpack && contains(matrix.build_types, 'RelWithDebInfo') }}
+        uses: ./.github/workflows/actions/cpack
+        with:
+          build_type: RelWithDebInfo
 
   windows:
     name: CI
@@ -611,9 +675,12 @@ jobs:
           build_type: ${{ matrix.build_type }}
       - name: Install dependencies
         uses: ./.github/workflows/actions/conan/install_dependencies
+        with:
+          build_type: ${{ matrix.build_type }}
       - name: Build
         uses: ./.github/workflows/actions/conan/build
         with:
+          build_type: ${{ matrix.build_type }}
           extra_conan_flags: "-o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.2.0'"
       - name: Save ccache
         uses: ./.github/workflows/actions/ccache/cache

@@ -1,6 +1,9 @@
 name: 'Build'
 description: 'Compile CryFS'
 inputs:
+  build_type:
+    description: "Which cmake build type to build (e.g. Release, Debug, RelWithDebInfo). Overrides the one in the conan profile; the build goes to build/<build_type>."
+    required: true
   extra_conan_flags:
     description: "Extra flags to add to the cmake command"
     required: true
@@ -14,4 +17,4 @@ runs:
         set -e
         conan profile show
 
-        conan build . --build=missing -o "&:build_tests=True" -o "&:use_ccache=True" ${{ inputs.extra_conan_flags }}
+        conan build . --build=missing -s build_type=${{ inputs.build_type }} -o "&:build_tests=True" -o "&:use_ccache=True" ${{ inputs.extra_conan_flags }}
