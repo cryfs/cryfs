@@ -65,19 +65,16 @@ jobs:
         # version and the Cargo.lock hash; a lockfile change still restores the
         # nearest older cache and rebuilds just the crates that differ.
         #
-        # Only the macOS jobs cache, and only main saves. GitHub runs at most
-        # 5 macOS jobs at a time for the whole account, so macOS runner
-        # minutes are the scarce resource; Linux has a pool of 20. The
-        # repository has 10 GB of cache storage in total. One cache is about
-        # 0.3 GB for the release profile and 0.5 GB for debug when tests are
-        # built with line tables only (0.8 GB with full debuginfo), so the 18
-        # macOS caches fit and the 12 Linux ones would not: they would only
-        # evict the macOS caches. Every branch can restore main's caches, while
+        # Only main saves. Every branch can restore main's caches, while
         # caches saved by a branch are visible to that branch alone, so
-        # per-branch caches would evict the shared ones the same way. If the
-        # cache storage limit is raised in the repository settings, drop the
-        # `if` to cache the Linux jobs too.
-        if: ${{ runner.os == 'macOS' }}
+        # per-branch caches would only evict the shared ones. There is one
+        # cache per runner image, toolchain and profile, 30 in total. One is
+        # about 0.3 GB for the release profile and 0.5 GB for debug (tests are
+        # built with line tables only), about 12 GB together plus the daily
+        # nightly churn. The repository's cache storage limit is set to 20 GB
+        # in its Actions settings (the default is 10 GB); eviction is
+        # least-recently-used across all entries, so if the limit ever drops
+        # back below what the caches need, which jobs hit becomes a lottery.
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: ${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.profile == '--release' && 'release' || 'debug' }}
