@@ -25,9 +25,9 @@ pub use entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 pub use guard::BlockCacheEntryGuard;
 
 // How often to run the task to prune old blocks
-const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
+pub(super) const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
 // The cutoff age of blocks. Each time the task runs, blocks older than this will be pruned.
-const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
+pub(super) const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
 
 pub struct BlockCache<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // Always Some except during destruction

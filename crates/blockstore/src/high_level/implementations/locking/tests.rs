@@ -6,9 +6,10 @@ use byte_unit::Byte;
 use mockall::predicate::{always, function};
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
+use super::cache::{PRUNE_BLOCKS_INTERVAL, PRUNE_BLOCKS_OLDER_THAN};
 use super::*;
 use crate::{
     BlockId, InMemoryBlockStore, Overhead, high_level::interface::BlockStore as _,
@@ -228,6 +229,74 @@ async fn test_overhead() {
     let mut store = LockingBlockStore::new(underlying_store);
 
     assert_eq!(expected_overhead, store.overhead());
+
+    store.async_drop().await.unwrap();
+}
+
+/// A mock base store for a store that creates one block: the block doesn't exist yet, and
+/// it is written back exactly once. `stored` records when that write-back happens.
+fn make_mock_block_store_expecting_one_write_back()
+-> (AsyncDropGuard<MockBlockStore>, Arc<AtomicBool>) {
+    let stored = Arc::new(AtomicBool::new(false));
+    let mut underlying_store = make_mock_block_store();
+    underlying_store
+        .expect_exists()
+        .returning(|_| Box::pin(async { Ok(false) }));
+    let _stored = Arc::clone(&stored);
+    underlying_store
+        .expect_store()
+        .once()
+        .returning(move |_, _| {
+            _stored.store(true, Ordering::SeqCst);
+            Box::pin(async { Ok(()) })
+        });
+    (underlying_store, stored)
+}
+
+#[tokio::test]
+async fn test_whenStoppingPeriodicCachePruningTwice_thenSecondCallIsANoop() {
+    let underlying_store = make_mock_block_store();
+    let mut store = LockingBlockStore::new(underlying_store);
+
+    store.stop_periodic_cache_pruning().await.unwrap();
+    store.stop_periodic_cache_pruning().await.unwrap();
+
+    store.async_drop().await.unwrap();
+}
+
+#[tokio::test]
+async fn test_whenPeriodicCachePruningIsStopped_thenDirtyBlockIsNotWrittenBackByTheClock() {
+    let (underlying_store, stored) = make_mock_block_store_expecting_one_write_back();
+    let mut store = LockingBlockStore::new(underlying_store);
+    store.stop_periodic_cache_pruning().await.unwrap();
+
+    store.create(&data(1024, 0)).await.unwrap();
+    // Long enough for the periodic task, were it still running, to find the block
+    // untouched for longer than the threshold and write it back.
+    tokio::time::sleep(2 * (PRUNE_BLOCKS_INTERVAL + PRUNE_BLOCKS_OLDER_THAN)).await;
+    assert!(
+        !stored.load(Ordering::SeqCst),
+        "block was written back although periodic pruning is stopped"
+    );
+
+    // Destructing the store still writes the dirty block back.
+    store.async_drop().await.unwrap();
+    assert!(stored.load(Ordering::SeqCst));
+}
+
+#[tokio::test]
+async fn test_whenPeriodicCachePruningIsStopped_thenExplicitPruningStillWritesBackDirtyBlocks() {
+    let (underlying_store, stored) = make_mock_block_store_expecting_one_write_back();
+    let mut store = LockingBlockStore::new(underlying_store);
+    store.stop_periodic_cache_pruning().await.unwrap();
+
+    store.create(&data(1024, 0)).await.unwrap();
+    assert!(!stored.load(Ordering::SeqCst));
+    store.clear_unloaded_blocks_from_cache().await.unwrap();
+    assert!(
+        stored.load(Ordering::SeqCst),
+        "explicit pruning must still write the dirty block back"
+    );
 
     store.async_drop().await.unwrap();
 }
