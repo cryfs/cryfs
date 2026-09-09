@@ -103,7 +103,16 @@ jobs:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
     name: check
-    runs-on: ubuntu-latest
+    # The same image as the test job whose dependency cache this job restores
+    # (see the cache step), rather than ubuntu-latest, so the two cannot drift
+    # apart when ubuntu-latest moves on.
+    runs-on: ubuntu-24.04
+    env:
+      # Identical to the test job's settings. rust-cache hashes every CARGO_*
+      # variable into the cache key, so the key only matches the test job's
+      # cache if these match too. Neither changes what cargo check does.
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
     strategy:
       fail-fast: false
       matrix:
@@ -118,21 +127,25 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
-      - name: Cache compiled dependencies
-        # Same as in the test job: the dependency artifacts from the last
-        # main build, keyed by job, crate, rustc version and lockfile. One
-        # cache per crate rather than one shared by all fifteen jobs, because
-        # a shared key would be saved by whichever job finishes first, which
-        # is the crate with the fewest dependencies, and every other job
-        # would then miss most of its own. cargo check keeps only metadata,
-        # so these caches are small next to the test jobs' ones, but the
-        # build scripts still run in full, and that includes compiling the
-        # vendored OpenSSL, libsodium, aws-lc and libgit2.
+      - name: Restore the test job's compiled dependencies
+        # Restores the cache the ubuntu-24.04 / stable / debug test job saves
+        # on main, and never saves one of its own. cargo check cannot reuse
+        # the Rust artifacts in it (check units and build units are distinct
+        # to cargo), but it does reuse the build script outputs, and those are
+        # most of a check job's dependency time: compiling the vendored
+        # OpenSSL, libsodium, aws-lc and libgit2. The metadata check of the
+        # Rust dependencies that remains takes a minute or two. Sharing the
+        # cache rather than keeping fifteen per-crate ones keeps the storage
+        # footprint of this job at zero.
+        #
+        # The key matches the test job's only if this job runs the same
+        # rustc, on the same runner OS, with the same CARGO_* environment;
+        # see the job's env above. If it stops matching, these jobs miss and
+        # compile everything, as they did before.
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          key: ${{ matrix.crate }}
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-          cache-on-failure: true
+          shared-key: ubuntu-24.04-stable-debug
+          save-if: false
       - name: cargo check
         working-directory: ./crates/${{ matrix.crate }}
         shell: bash
