@@ -80,9 +80,8 @@ jobs:
           - ubuntu-24.04
         command: ["test"]
         profile: ["", "--release"]
-        # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
-        features: ["", "--no-default-features"]
         toolchain: ["stable", "nightly", "1.95"]
+        # The feature sets are not a matrix axis; see the cargo step below.
     runs-on: ${{matrix.os}}
     env:
       # `brew install` otherwise starts with a `brew update` of the whole tap.
@@ -147,20 +146,43 @@ jobs:
         #   3. Refactor these tests so they don't actually mount — they
         #      already run against a MockAsyncFilesystemLL, so in principle
         #      the FUSE session/mountpoint plumbing could be stubbed.
+        #
+        # Also on macOS, skip http_client::test_get_valid_{http,https}: they hit
+        # http://example.com / https://example.com over the real network,
+        # so they fail whenever the runner's DNS resolver hiccups
+        # (observed on macos-15-intel: getaddrinfo returned EAI_NONAME
+        # for example.com mid-job even though DNS had worked at job
+        # start — macOS runners have a history of flaky resolver
+        # behavior, e.g. actions/runner-images#12562, #8649). They're
+        # reqwest smoke tests, not cryfs unit tests, and still run on
+        # Linux CI and locally.
+        #
+        # The feature sets are a loop here rather than a matrix axis: both
+        # `cargo test` invocations share one target directory, so the second
+        # only rebuilds the crates whose features differ instead of compiling
+        # every dependency again on a fresh runner. Same configurations
+        # tested, half the jobs. The loop runs every feature set even after
+        # one fails, so a job reports all broken feature sets, not just the
+        # first.
+        # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
         run: |
+          skip=()
           if [[ "${{ runner.os }}" == "macOS" ]]; then
-            # Also skip http_client::test_get_valid_{http,https}: they hit
-            # http://example.com / https://example.com over the real network,
-            # so they fail whenever the runner's DNS resolver hiccups
-            # (observed on macos-15-intel: getaddrinfo returned EAI_NONAME
-            # for example.com mid-job even though DNS had worked at job
-            # start — macOS runners have a history of flaky resolver
-            # behavior, e.g. actions/runner-images#12562, #8649). They're
-            # reqwest smoke tests, not cryfs unit tests, and still run on
-            # Linux CI and locally.
-            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir:: --skip tests::rename:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_
-          else
-            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
+            skip=(-- --skip tests::mkdir:: --skip tests::rename:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_)
+          fi
+          failed=()
+          for features in "" "--no-default-features"; do
+            label="cargo ${{ matrix.command }} ${features:-(default features)} ${{ matrix.profile }}"
+            echo "::group::$label"
+            if ! cargo ${{ matrix.command }} $features ${{ matrix.profile }} "${skip[@]}"; then
+              failed+=("$label")
+              echo "::error::$label failed"
+            fi
+            echo "::endgroup::"
+          done
+          if (( ${#failed[@]} > 0 )); then
+            printf 'Failed: %s\n' "${failed[@]}"
+            exit 1
           fi
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
