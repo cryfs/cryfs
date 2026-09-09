@@ -314,6 +314,14 @@ jobs:
     - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
       with:
         toolchain: stable
+    - name: Cache compiled dependencies
+      # Same as in the test job: the dependency artifacts and the generated
+      # documentation of the dependencies from the last main build of this
+      # job, keyed by job, rustc version and lockfile.
+      uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+        cache-on-failure: true
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
@@ -328,6 +336,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
+      - name: Cache compiled dependencies
+        # Same as in the test job: the dependency artifacts from the last
+        # main build of this job, keyed by job, rustc version and lockfile.
+        # cargo-llvm-cov builds into target/llvm-cov-target, a nested target
+        # directory that rust-cache handles like the top-level one.
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
       # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
