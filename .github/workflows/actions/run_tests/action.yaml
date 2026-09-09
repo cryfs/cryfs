@@ -15,6 +15,11 @@ runs:
   steps:
     - name: Run tests
       shell: bash
+      # The test binaries are independent of each other, so they run at the
+      # same time, each into its own log. The logs are printed once all of
+      # them have finished, in the order the binaries used to run in, each in
+      # its own group, so the job log reads as before. A failure in any
+      # binary fails the step after every log has been printed.
       run: |
         set -v
         set -e
@@ -23,20 +28,44 @@ runs:
 
         export ${{ inputs.extra_env_vars }}
 
-        ./gitversion/gitversion-test ${{inputs.gtest_args}}
-        ./cpp-utils/cpp-utils-test ${{inputs.gtest_args}}
-        ./parallelaccessstore/parallelaccessstore-test ${{inputs.gtest_args}}
-        ./blockstore/blockstore-test ${{inputs.gtest_args}}
-        ./blobstore/blobstore-test ${{inputs.gtest_args}}
-        ./cryfs/cryfs-test ${{inputs.gtest_args}}
-
+        tests=(
+          gitversion/gitversion-test
+          cpp-utils/cpp-utils-test
+          parallelaccessstore/parallelaccessstore-test
+          blockstore/blockstore-test
+          blobstore/blobstore-test
+          cryfs/cryfs-test
+        )
         # TODO Also run on macOS once fixed
         if [[ "${{runner.os}}" == "macOS" ]]; then
           echo Skipping some tests because they are not fixed for macOS yet
         else
           # TODO Also run with TSAN once fixed
           if [[ "${{matrix.name}}" != "TSAN" ]]; then
-            ./fspp/fspp-test ${{inputs.gtest_args}}
+            tests+=(fspp/fspp-test)
           fi
-          ./cryfs-cli/cryfs-cli-test ${{inputs.gtest_args}}
+          tests+=(cryfs-cli/cryfs-cli-test)
+        fi
+
+        logdir=$(mktemp -d)
+        pids=()
+        for t in "${tests[@]}"; do
+          "./$t" ${{inputs.gtest_args}} > "$logdir/$(basename "$t").log" 2>&1 &
+          pids+=($!)
+        done
+        failed=()
+        for i in "${!tests[@]}"; do
+          if wait "${pids[$i]}"; then
+            status=passed
+          else
+            status=FAILED
+            failed+=("${tests[$i]}")
+          fi
+          echo "::group::${tests[$i]} ($status)"
+          cat "$logdir/$(basename "${tests[$i]}").log"
+          echo "::endgroup::"
+        done
+        if (( ${#failed[@]} > 0 )); then
+          echo "Failed test binaries: ${failed[*]}"
+          exit 1
         fi
