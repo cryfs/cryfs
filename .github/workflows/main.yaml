@@ -9,6 +9,7 @@ on:
       - main
       - master
       - develop
+      - 'release/**'
       - 'feature/**'
     tags:
       - '**'
