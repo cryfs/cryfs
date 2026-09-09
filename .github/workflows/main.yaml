@@ -249,6 +249,15 @@ jobs:
             macos_cxx: llvm@21/bin/clang++
             apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             homebrew_package: llvm@21
+          - compiler: clang
+            version: 22
+            libcxx: libc++
+            cc: clang-22
+            cxx: clang++-22
+            macos_cc: llvm@22/bin/clang
+            macos_cxx: llvm@22/bin/clang++
+            apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
+            homebrew_package: llvm@22
           - compiler: gcc
             version: 15
             libcxx: libstdc++11
