@@ -19,8 +19,16 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Saving needs the write-capable key, which the workflow passes in from
+    # the repository secrets. GitHub gives those to push runs and to pull
+    # request runs whose head branch is in this repository, and withholds
+    # them from pull requests coming from forks, so the condition below
+    # matches exactly the runs that can save. Pull request runs used to be
+    # excluded altogether; since a push to a branch with an open pull request
+    # no longer gets a run of its own, they are now the only runs that can
+    # refresh the caches while a dependency change is under review.
     - name: Zip cache files
-      if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
+      if: ${{ inputs.action == 'save' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
       shell: bash
       run: |
         set -e
@@ -30,8 +38,8 @@ runs:
         echo "Zipped cache:"
         ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
     - name: Store cache
-      # note: this access key has write access to the cache. This can't run on PRs.
-      if: ${{ inputs.action == 'save' && github.event_name == 'push' }}
+      # note: this access key has write access to the cache. See above for which runs have it.
+      if: ${{ inputs.action == 'save' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
       # Cache things sometimes indeterministically fail (roughly 1% of times this is run), let's not fail the job for it
       continue-on-error: true
       uses: leroy-merlin-br/action-s3-cache@7fad0a81b31884660211f24b62e29b4777a6ac4c # v1.0.6
@@ -44,11 +52,11 @@ runs:
         s3-class: ONEZONE_IA
         key: v2-${{ inputs.cache_key }}
         artifacts: "/tmp/s3_cache/${{inputs.cache_key}}"
-    - name: Not saving cache on PRs
-      if: ${{ inputs.action == 'save' && github.event_name != 'push' }}
+    - name: Not saving cache on pull requests from forks
+      if: ${{ inputs.action == 'save' && !(github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
       shell: bash
       run: |
-        echo "Not saving cache because this is a PR"
+        echo "Not saving cache because this is a pull request from a fork"
 
 
     - name: Retrieve cache
