@@ -113,6 +113,16 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
       - name: cargo ${{ matrix.command }}
         shell: bash
+        env:
+          # Cargo.toml asks for fat LTO, and release binaries built anywhere
+          # else still get it. For the release test builds here, thin LTO
+          # keeps the optimisation level and the checks that differ between
+          # profiles (overflow, debug_assertions) while roughly halving the
+          # workspace's release build: rebuilding the workspace's test binaries
+          # after a change takes 8m18s with thin LTO and 17m19s with fat on a
+          # 4-core machine, and every release job pays that for each feature
+          # set.
+          CARGO_PROFILE_RELEASE_LTO: thin
         # On GitHub-hosted macOS runners we have to skip the cryfs-rustfs
         # tests that mount real FUSE sessions via fuser → macFUSE: the
         # runner image won't approve macFUSE's kernel extension
