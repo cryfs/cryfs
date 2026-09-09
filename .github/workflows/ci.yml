@@ -26,8 +26,49 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  should_run:
+    # A push to a branch that has an open pull request is already built by that
+    # pull request's run (the merge with the base), so the push run would build
+    # the same commit a second time. This job checks for such a pull request,
+    # and every other job skips when it finds one. It decides only for push
+    # events on branches; tag pushes and pull_request events always run.
+    name: Skip pushes already built by a pull request
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Look for an open pull request from this branch
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [[ "$EVENT" != "push" || "$REF_TYPE" != "branch" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Only pull requests whose head lives in this repository count: a
+          # fork could carry a branch of the same name, and its pull request
+          # builds the fork's commit, not ours.
+          prs=$(gh pr list --repo "$REPO" --head "$BRANCH" --state open \
+            --json number,headRepositoryOwner \
+            --jq "[.[] | select(.headRepositoryOwner.login == \"$OWNER\")] | length")
+          if [[ "$prs" == "0" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Branch $BRANCH has an open pull request; its run builds this commit."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
   test:
     name: test
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -39,14 +80,22 @@ jobs:
           - ubuntu-24.04
         command: ["test"]
         profile: ["", "--release"]
-        # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
-        features: ["", "--no-default-features"]
         toolchain: ["stable", "nightly", "1.95"]
+        # The feature sets are not a matrix axis; see the cargo step below.
     runs-on: ${{matrix.os}}
+    env:
+      # `brew install` otherwise starts with a `brew update` of the whole tap.
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      # Nothing on a CI runner reuses incremental artifacts, they only cost
+      # time and disk: the incremental directory of a debug test build of the
+      # workspace is 11 GB.
+      CARGO_INCREMENTAL: 0
+      # Full debuginfo is only useful under a debugger; backtraces from a
+      # failing test keep file and line with line tables alone. Measured on a
+      # 4-core machine: a debug `cargo build --tests` of the workspace drops
+      # from 7m40s to 5m02s and the target directory from 20 GB to 4 GB.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
     steps:
-      - name: Free Disk Space (Ubuntu)
-        if: ${{ runner.os == 'Linux' }}
-        uses: jlumbroso/free-disk-space@v1.3.1
       - uses: actions/checkout@v7
       - name: Install Dependencies (Linux)
         if: ${{ runner.os == 'Linux' }}
@@ -58,8 +107,41 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: ${{ matrix.toolchain }}
+      - name: Cache compiled dependencies
+        # Restores the compiled dependencies (not the workspace crates) from
+        # the last main build with the same runner image, toolchain and profile,
+        # so a job only compiles what changed. The key also covers the rustc
+        # version and the Cargo.lock hash; a lockfile change still restores the
+        # nearest older cache and rebuilds just the crates that differ.
+        #
+        # Only main saves. Every branch can restore main's caches, while
+        # caches saved by a branch are visible to that branch alone, so
+        # per-branch caches would only evict the shared ones. There is one
+        # cache per runner image, toolchain and profile, 30 in total. One is
+        # about 0.3 GB for the release profile and 0.5 GB for debug (tests are
+        # built with line tables only), about 12 GB together plus the daily
+        # nightly churn. The repository's cache storage limit is set to 20 GB
+        # in its Actions settings (the default is 10 GB); eviction is
+        # least-recently-used across all entries, so if the limit ever drops
+        # back below what the caches need, which jobs hit becomes a lottery.
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ${{ matrix.os }}-${{ matrix.toolchain }}-${{ matrix.profile == '--release' && 'release' || 'debug' }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # The dependencies compiled fine even when a test fails.
+          cache-on-failure: true
       - name: cargo ${{ matrix.command }}
         shell: bash
+        env:
+          # Cargo.toml asks for fat LTO, and release binaries built anywhere
+          # else still get it. For the release test builds here, thin LTO
+          # keeps the optimisation level and the checks that differ between
+          # profiles (overflow, debug_assertions) while roughly halving the
+          # workspace's release build: rebuilding the workspace's test binaries
+          # after a change takes 8m18s with thin LTO and 17m19s with fat on a
+          # 4-core machine, and every release job pays that for each feature
+          # set.
+          CARGO_PROFILE_RELEASE_LTO: thin
         # On GitHub-hosted macOS runners we have to skip the cryfs-rustfs
         # tests that mount real FUSE sessions via fuser → macFUSE: the
         # runner image won't approve macFUSE's kernel extension
@@ -84,25 +166,79 @@ jobs:
         #   3. Refactor these tests so they don't actually mount — they
         #      already run against a MockAsyncFilesystemLL, so in principle
         #      the FUSE session/mountpoint plumbing could be stubbed.
+        #
+        # Also on macOS, skip http_client::test_get_valid_{http,https}: they hit
+        # http://example.com / https://example.com over the real network,
+        # so they fail whenever the runner's DNS resolver hiccups
+        # (observed on macos-15-intel: getaddrinfo returned EAI_NONAME
+        # for example.com mid-job even though DNS had worked at job
+        # start — macOS runners have a history of flaky resolver
+        # behavior, e.g. actions/runner-images#12562, #8649). They're
+        # reqwest smoke tests, not cryfs unit tests, and still run on
+        # Linux CI and locally.
+        #
+        # The feature sets are a loop here rather than a matrix axis: both
+        # `cargo test` invocations share one target directory, so the second
+        # only rebuilds the crates whose features differ instead of compiling
+        # every dependency again on a fresh runner. Same configurations
+        # tested, half the jobs. The loop runs every feature set even after
+        # one fails, so a job reports all broken feature sets, not just the
+        # first.
         run: |
+          skip=()
           if [[ "${{ runner.os }}" == "macOS" ]]; then
-            # Also skip http_client::test_get_valid_{http,https}: they hit
-            # http://example.com / https://example.com over the real network,
-            # so they fail whenever the runner's DNS resolver hiccups
-            # (observed on macos-15-intel: getaddrinfo returned EAI_NONAME
-            # for example.com mid-job even though DNS had worked at job
-            # start — macOS runners have a history of flaky resolver
-            # behavior, e.g. actions/runner-images#12562, #8649). They're
-            # reqwest smoke tests, not cryfs unit tests, and still run on
-            # Linux CI and locally.
-            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }} -- --skip tests::mkdir:: --skip tests::rename:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_
-          else
-            cargo ${{ matrix.command }} ${{ matrix.features }} ${{ matrix.profile }}
+            skip=(-- --skip tests::mkdir:: --skip tests::rename:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_)
+          fi
+          failed=()
+          # TODO Add --all-features (but that takes too long). Maybe instead add --all-features for some crates, but use separate jobs for the different slow-test-features of blockstore.
+          for features in "" "--no-default-features"; do
+            label="cargo ${{ matrix.command }} ${features:-(default features)} ${{ matrix.profile }}"
+            echo "::group::$label"
+            if ! cargo ${{ matrix.command }} $features ${{ matrix.profile }} "${skip[@]}"; then
+              failed+=("$label")
+              echo "::error::$label failed"
+            fi
+            echo "::endgroup::"
+          done
+          if (( ${#failed[@]} > 0 )); then
+            printf 'Failed: %s\n' "${failed[@]}"
+            exit 1
+          fi
+  cache_usage:
+    # The Actions cache evicts least-recently-used entries silently once the
+    # repository's cache storage limit is reached; the only symptom is test
+    # jobs that stop restoring their dependencies. This job reads the usage
+    # after the test jobs have saved their caches and warns before that
+    # happens. The limit itself is not readable through the API, so it is
+    # repeated here: keep LIMIT_GB in sync with the repository's Actions
+    # settings.
+    name: Actions cache usage
+    needs: [should_run, test]
+    if: ${{ !cancelled() && needs.should_run.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Warn when the cache is close to its storage limit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LIMIT_GB: 20
+          WARN_PERCENT: 90
+        run: |
+          used=$(gh api "repos/$REPO/actions/cache/usage" --jq .active_caches_size_in_bytes)
+          limit=$(( LIMIT_GB * 1024 * 1024 * 1024 ))
+          percent=$(( used * 100 / limit ))
+          echo "Actions cache: $(( used / 1024 / 1024 )) MB used, ${percent}% of the ${LIMIT_GB} GB limit"
+          if (( percent >= WARN_PERCENT )); then
+            echo "::warning::The Actions cache is at ${percent}% of its ${LIMIT_GB} GB storage limit. Once it is full, least-recently-used entries are evicted and test jobs stop restoring their dependencies. Raise the limit in the repository's Actions settings or cache less."
           fi
   crates_individually_testable:
     # This job tests that each crate can be built and tested individually.
     # We don't actually run any tests because those are being run as part of other CI jobs already.
     name: check
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     # The same image as the test job whose dependency cache this job restores
     # (see the cache step), rather than ubuntu-latest, so the two cannot drift
     # apart when ubuntu-latest moves on.
@@ -186,6 +322,8 @@ jobs:
   #     - run: cargo clippy --all-features --all-targets -- -D warnings
   code_format:
     name: Code Formatter (rustfmt)
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -207,6 +345,8 @@ jobs:
   #   - run: git diff --exit-code
   dead_doc_links:
     name: Find dead doc links
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
@@ -215,9 +355,19 @@ jobs:
     - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
       with:
         toolchain: stable
+    - name: Cache compiled dependencies
+      # Same as in the test job: the dependency artifacts and the generated
+      # documentation of the dependencies from the last main build of this
+      # job, keyed by job, rustc version and lockfile.
+      uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      with:
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+        cache-on-failure: true
     - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
   coverage:
     name: Code Coverage
+    needs: should_run
+    if: needs.should_run.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -227,6 +377,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
         with:
           toolchain: stable
+      - name: Cache compiled dependencies
+        # Same as in the test job: the dependency artifacts from the last
+        # main build of this job, keyed by job, rustc version and lockfile.
+        # cargo-llvm-cov builds into target/llvm-cov-target, a nested target
+        # directory that rust-cache handles like the top-level one.
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: true
       # Setup inspired by instructions at https://github.com/taiki-e/cargo-llvm-cov/blob/9b93f70f4c5a06d6ee221d3537067bc8d3f5b7c6/README.md
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
