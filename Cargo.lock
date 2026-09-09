@@ -1107,7 +1107,6 @@ dependencies = [
  "cryfs-version",
  "daemonizable",
  "dialoguer",
- "escargot",
  "humantime",
  "itertools 0.14.0",
  "lazy_static",
@@ -1737,17 +1736,6 @@ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "escargot"
-version = "0.5.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11c3aea32bc97b500c9ca6a72b768a26e558264303d101d3409cf6d57a9ed0cf"
-dependencies = [
- "log",
- "serde",
- "serde_json",
 ]
 
 [[package]]
