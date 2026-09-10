@@ -9,9 +9,16 @@ runs:
   steps:
     - name: Install dependencies via conan
       shell: bash
+      # build_tests is set here because it decides whether gtest is part of the
+      # dependency graph, and the build step always sets it. Without it here,
+      # gtest is missing from the local conan cache after this step and the
+      # build step goes to the conan remote to look for it, which fails when
+      # the runner cannot reach the remote. The other options the build step
+      # passes do not change the graph, except update_checks, which only ever
+      # removes libcurl from it: installing that superset is harmless.
       run: |
         set -v
         set -e
         conan profile show
 
-        conan install . --build=missing -s build_type=${{ inputs.build_type }}
+        conan install . --build=missing -s build_type=${{ inputs.build_type }} -o "&:build_tests=True"
