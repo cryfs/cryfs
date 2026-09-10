@@ -118,6 +118,7 @@ private:
     template<class T2, class D2> friend class unique_ref;
     template<class DST, class SRC> friend boost::optional<unique_ref<DST>> dynamic_pointer_move(unique_ref<SRC> &source) noexcept;
     template<class T2, class D2> friend bool operator==(const unique_ref<T2, D2>& lhs, const unique_ref<T2, D2>& rhs) noexcept;
+    template<class T2, class D2> friend bool operator<(const unique_ref<T2, D2>& lhs, const unique_ref<T2, D2>& rhs) noexcept;
     friend struct std::hash<unique_ref<T, D>>;
     friend struct std::less<unique_ref<T, D>>;
 
@@ -159,6 +160,15 @@ inline bool operator!=(const unique_ref<T, D> &lhs, const unique_ref<T, D> &rhs)
     return !operator==(lhs, rhs);
 }
 
+// Ordering, so unique_ref can be used as a key in std::map / std::set. This has to be a real
+// operator< rather than only a std::less specialization: libc++ 22 recognizes a map whose
+// comparator is std::less<Key> and compares the keys directly with <, so a type that only
+// specializes std::less fails to compile there.
+template<class T, class D>
+inline bool operator<(const unique_ref<T, D> &lhs, const unique_ref<T, D> &rhs) noexcept {
+    return lhs._target < rhs._target;
+}
+
 }
 
 // NOLINTBEGIN(cert-dcl58-cpp) -- intentional change of namespace std
@@ -192,7 +202,7 @@ namespace std {
     // Allow using it in std::map / std::set
     template <class T, class D> struct less<cpputils::unique_ref<T, D>> {
         bool operator()(const cpputils::unique_ref<T, D> &lhs, const cpputils::unique_ref<T, D> &rhs) const noexcept {
-            return lhs._target < rhs._target;
+            return lhs < rhs;
         }
     };
 }

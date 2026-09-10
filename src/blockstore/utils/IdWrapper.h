@@ -2,6 +2,7 @@
 #ifndef MESSMER_BLOCKSTORE_UTILS_IDWRAPPER_H_
 #define MESSMER_BLOCKSTORE_UTILS_IDWRAPPER_H_
 
+#include <cstring>
 #include <string>
 #include <cpp-utils/data/FixedSizeData.h>
 #include <cpp-utils/random/Random.h>
@@ -38,6 +39,7 @@ private:
   friend struct std::less<IdWrapper>;
   template<class Tag2> friend bool operator==(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
   template<class Tag2> friend bool operator!=(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
+  template<class Tag2> friend bool operator<(const IdWrapper<Tag2>& lhs, const IdWrapper<Tag2>& rhs);
 };
 
 template<class Tag>
@@ -94,6 +96,15 @@ inline bool operator!=(const IdWrapper<Tag>& lhs, const IdWrapper<Tag>& rhs) {
   return !operator==(lhs, rhs);
 }
 
+// Ordering, so IdWrapper can be used as a key in std::map / std::set. This has to be a real
+// operator< rather than only a std::less specialization: libc++ 22 recognizes a map whose
+// comparator is std::less<Key> and compares the keys directly with <, so a type that only
+// specializes std::less fails to compile there.
+template<class Tag>
+inline bool operator<(const IdWrapper<Tag>& lhs, const IdWrapper<Tag>& rhs) {
+  return 0 > std::memcmp(lhs.id_.data(), rhs.id_.data(), IdWrapper<Tag>::BINARY_LENGTH);
+}
+
 }
 
 #define DEFINE_IDWRAPPER(IdWrapper)                                                                                    \
@@ -108,7 +119,7 @@ inline bool operator!=(const IdWrapper<Tag>& lhs, const IdWrapper<Tag>& rhs) {
     /*Allow using IdWrapper in std::map / std::set */                                                                  \
     template <> struct less<IdWrapper> {                                                                               \
       bool operator()(const IdWrapper &lhs, const IdWrapper &rhs) const {                                              \
-        return 0 > std::memcmp(lhs.id_.data(), rhs.id_.data(), IdWrapper::BINARY_LENGTH);                              \
+        return lhs < rhs;                                                                                              \
       }                                                                                                                \
     };                                                                                                                 \
   }                                                                                                                    \
