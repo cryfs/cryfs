@@ -112,7 +112,6 @@ async fn test_whenCallingCreate_thenReturnsCorrectBlockId() {
 #[tokio::test]
 async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCreatedAndDoesntRemove()
 {
-    // TODO This is potentially flaky. Let's make sure cache doesn't get pruned, maybe set flush time to infinity?
     let mut underlying_store = make_mock_block_store();
     underlying_store
         .expect_exists()
@@ -120,6 +119,10 @@ async fn test_whenRemovingABlockThatWasJustCreatedButNotFlushed_thenWasNeverCrea
     underlying_store.expect_store().never();
     underlying_store.expect_remove().never();
     let mut store = LockingBlockStore::new(underlying_store);
+    // The block below stays in the cache for the whole test. The periodic pruning would
+    // write it back to the base store and evict it, which is exactly what this test
+    // asserts doesn't happen, so it must not run on the clock's schedule.
+    store.stop_periodic_cache_pruning().await.unwrap();
 
     let block_id = store.create(&data(1024, 0)).await.unwrap();
     let block = store.load(block_id).await.unwrap().unwrap();
@@ -134,7 +137,6 @@ async fn test_whenRemovingABlockThatWasJustCreatedButThenFlushed_thenActuallyRem
     // but forgot to set the cache entry to "this block exists in the base store", so a later remove
     // didn't actually remove it from the base store.
 
-    // TODO This is potentially flaky. Let's make sure cache doesn't get pruned, maybe set flush time to infinity?
     let mut underlying_store = make_mock_block_store();
     underlying_store
         .expect_exists()
@@ -148,6 +150,10 @@ async fn test_whenRemovingABlockThatWasJustCreatedButThenFlushed_thenActuallyRem
         .once()
         .return_once(|_| Box::pin(async { Ok(crate::utils::RemoveResult::SuccessfullyRemoved) }));
     let mut store = LockingBlockStore::new(underlying_store);
+    // The periodic pruning would evict the block between creating and loading it, so the
+    // load would go to the base store and the write-back would be a second store call.
+    // This test counts both, so pruning must not run on the clock's schedule.
+    store.stop_periodic_cache_pruning().await.unwrap();
 
     let block_id = store.create(&data(1024, 0)).await.unwrap();
     let mut block = store.load(block_id).await.unwrap().unwrap();
