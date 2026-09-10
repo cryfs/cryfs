@@ -198,6 +198,11 @@ jobs:
         extra_cxxflags: ['[]']
         extra_env_vars_for_test: [""]
         install_dependencies_manually: [false]
+        # Whether to build the test binaries, as conan's True or False. The
+        # packaging job builds what it ships, which is without them. Every
+        # other job wants them, either to run them or to compile them under
+        # the check it exists for.
+        build_tests: ["True"]
         run_build: [true]
         run_tests: [true]
         run_cpack: [false]
@@ -298,6 +303,7 @@ jobs:
             extra_cxxflags: '[]'
             extra_env_vars_for_test: ""
             install_dependencies_manually: true
+            build_tests: "True"
             run_build: true
             run_tests: true
             run_cpack: false
@@ -315,6 +321,7 @@ jobs:
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '[]'
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: false
             run_cpack: false
@@ -333,6 +340,7 @@ jobs:
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: false
             run_cpack: false
@@ -352,6 +360,7 @@ jobs:
             extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
             extra_env_vars_for_test: ""
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: true
             run_cpack: false
@@ -371,6 +380,7 @@ jobs:
             extra_cxxflags: '[]'
             extra_env_vars_for_test: ""
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: true
             run_cpack: false
@@ -390,6 +400,7 @@ jobs:
             extra_cxxflags: '[]'
             extra_env_vars_for_test: ""
             install_dependencies_manually: false
+            build_tests: "False"
             run_build: true
             run_tests: false
             run_cpack: true
@@ -412,6 +423,7 @@ jobs:
             extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
             extra_env_vars_for_test: ASAN_OPTIONS="detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: true
             run_cpack: false
@@ -431,6 +443,7 @@ jobs:
             extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
             extra_env_vars_for_test: UBSAN_OPTIONS="print_stacktrace=1"
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: true
             run_cpack: false
@@ -449,6 +462,7 @@ jobs:
             extra_conan_flags: ""
             extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: true
             run_tests: true
             run_cpack: false
@@ -469,6 +483,7 @@ jobs:
             extra_conan_flags: ""
             extra_cxxflags: '[]'
             install_dependencies_manually: false
+            build_tests: "True"
             run_build: false
             run_tests: false
             run_cpack: false
@@ -546,33 +561,39 @@ jobs:
         uses: ./.github/workflows/actions/conan/install_dependencies
         with:
           build_type: Debug
+          build_tests: ${{ matrix.build_tests }}
       - name: Build (Debug)
         if: ${{ matrix.run_build && !matrix.install_dependencies_manually && contains(matrix.build_types, 'Debug') }}
         uses: ./.github/workflows/actions/conan/build
         with:
           build_type: Debug
+          build_tests: ${{ matrix.build_tests }}
           extra_conan_flags: ${{ matrix.extra_conan_flags}}
       - name: Install dependencies (Release)
         if: ${{ !matrix.install_dependencies_manually && contains(matrix.build_types, 'Release') }}
         uses: ./.github/workflows/actions/conan/install_dependencies
         with:
           build_type: Release
+          build_tests: ${{ matrix.build_tests }}
       - name: Build (Release)
         if: ${{ matrix.run_build && !matrix.install_dependencies_manually && contains(matrix.build_types, 'Release') }}
         uses: ./.github/workflows/actions/conan/build
         with:
           build_type: Release
+          build_tests: ${{ matrix.build_tests }}
           extra_conan_flags: ${{ matrix.extra_conan_flags}}
       - name: Install dependencies (RelWithDebInfo)
         if: ${{ !matrix.install_dependencies_manually && contains(matrix.build_types, 'RelWithDebInfo') }}
         uses: ./.github/workflows/actions/conan/install_dependencies
         with:
           build_type: RelWithDebInfo
+          build_tests: ${{ matrix.build_tests }}
       - name: Build (RelWithDebInfo)
         if: ${{ matrix.run_build && !matrix.install_dependencies_manually && contains(matrix.build_types, 'RelWithDebInfo') }}
         uses: ./.github/workflows/actions/conan/build
         with:
           build_type: RelWithDebInfo
+          build_tests: ${{ matrix.build_tests }}
           extra_conan_flags: ${{ matrix.extra_conan_flags}}
       - name: Build (with local dependencies)
         # Only the "Local dependencies" configuration takes this path, and it
@@ -721,10 +742,12 @@ jobs:
         uses: ./.github/workflows/actions/conan/install_dependencies
         with:
           build_type: ${{ matrix.build_type }}
+          build_tests: "True"
       - name: Build
         uses: ./.github/workflows/actions/conan/build
         with:
           build_type: ${{ matrix.build_type }}
+          build_tests: "True"
           extra_conan_flags: "-o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.2.0'"
       - name: Save ccache
         uses: ./.github/workflows/actions/ccache/cache
