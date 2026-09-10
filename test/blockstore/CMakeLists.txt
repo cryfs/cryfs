@@ -1,6 +1,7 @@
 project (blockstore-test)
 
 set(SOURCES
+    utils/BlockIdTest.cpp
     utils/BlockStoreUtilsTest.cpp
     interface/BlockStoreTest.cpp
     interface/BlockStore2Test.cpp
