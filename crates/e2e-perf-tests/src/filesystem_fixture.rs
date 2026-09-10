@@ -152,10 +152,37 @@ where
         )
         .await
         .unwrap();
+        let locking_blockstore = Self::configure_cache_pruning(locking_blockstore).await;
 
         let tracking_block_store = HLTrackingBlockStore::new(locking_blockstore);
         let shared_block_store = HLSharedBlockStore::new(tracking_block_store);
         (local_state_tempdir, shared_block_store)
+    }
+
+    /// The counter tests assert exact operation counts, and the block cache's periodic
+    /// pruning runs on wall-clock time. Left running, it fires in the middle of the
+    /// operation under test on a slow machine, evicts blocks the operation then has to
+    /// load again, and the count depends on the machine's speed. So the counter tests
+    /// turn the timer off and prune only explicitly, in `reset_cache_after_setup` and
+    /// `reset_cache_after_test`. The write-backs pruning causes stay in the counts, at
+    /// points the test controls rather than at whatever moment the clock picks.
+    /// Benchmarks keep the production behavior.
+    #[cfg(not(feature = "benchmark"))]
+    async fn configure_cache_pruning(
+        mut locking_blockstore: AsyncDropGuard<LockingBlockStore<DynBlockStore>>,
+    ) -> AsyncDropGuard<LockingBlockStore<DynBlockStore>> {
+        locking_blockstore
+            .stop_periodic_cache_pruning()
+            .await
+            .unwrap();
+        locking_blockstore
+    }
+
+    #[cfg(feature = "benchmark")]
+    async fn configure_cache_pruning(
+        locking_blockstore: AsyncDropGuard<LockingBlockStore<DynBlockStore>>,
+    ) -> AsyncDropGuard<LockingBlockStore<DynBlockStore>> {
+        locking_blockstore
     }
 
     async fn make_blobstore(

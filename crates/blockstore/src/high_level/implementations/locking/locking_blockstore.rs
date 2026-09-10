@@ -96,6 +96,13 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
     pub fn inner_block_store(&self) -> &AsyncDropGuard<B> {
         self.base_store.as_ref().expect("Already destructed")
     }
+
+    /// See `BlockCache::stop_periodic_pruning`. Only meant for tests that assert exact
+    /// operation counts.
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn stop_periodic_cache_pruning(&mut self) -> Result<()> {
+        self.cache.stop_periodic_pruning().await
+    }
 }
 
 #[async_trait]

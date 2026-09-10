@@ -25,14 +25,16 @@ pub use entry::{BlockBaseStoreState, BlockCacheEntry, CacheEntryState};
 pub use guard::BlockCacheEntryGuard;
 
 // How often to run the task to prune old blocks
-const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
+pub(super) const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
 // The cutoff age of blocks. Each time the task runs, blocks older than this will be pruned.
-const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
+pub(super) const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
 
 pub struct BlockCache<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
     // Always Some except during destruction
     cache: Option<Arc<BlockCacheImpl<B>>>,
-    // Always Some except during destruction
+    // The background task evicting blocks nobody has touched for a while. `None` after
+    // destruction, and also after [Self::stop_periodic_pruning] (tests only) turned the
+    // wall-clock driven eviction off.
     prune_task: Option<AsyncDropGuard<PeriodicTask>>,
 }
 
@@ -134,6 +136,26 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
         Self::_prune_blocks(cache, to_prune).await
     }
 
+    /// Stop the background task that periodically evicts blocks which haven't been
+    /// accessed for `PRUNE_BLOCKS_OLDER_THAN`.
+    ///
+    /// That task runs on wall-clock time, so whether it fires in the middle of an
+    /// operation depends on how fast the machine is. Tests that assert exact operation
+    /// counts can't live with that: a prune landing mid-operation evicts blocks the
+    /// operation then has to load again, and the count changes with the runner's speed.
+    /// After this call blocks are only evicted when a test asks for it, through
+    /// [Self::prune_unloaded_blocks] or [Self::prune_all_blocks], so the write-backs
+    /// pruning causes still happen and are still counted, at a point the test controls.
+    ///
+    /// Only meant for tests; production keeps the periodic task.
+    #[cfg(any(test, feature = "testutils"))]
+    pub async fn stop_periodic_pruning(&mut self) -> Result<()> {
+        if let Some(mut prune_task) = self.prune_task.take() {
+            prune_task.async_drop().await?;
+        }
+        Ok(())
+    }
+
     /// TODO Docs
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
@@ -233,11 +255,16 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDro
     type Error = anyhow::Error;
 
     async fn async_drop_impl(&mut self) -> Result<()> {
-        let mut prune_task = self
-            .prune_task
-            .take()
-            .expect("Object was already destructed");
-        let stop_prune_task = async move { prune_task.async_drop().await };
+        // `None` means `stop_periodic_pruning` (tests only) already stopped the task.
+        // Destructing twice is caught by the `self.cache.take()` below.
+        let prune_task = self.prune_task.take();
+        let stop_prune_task = async move {
+            if let Some(mut prune_task) = prune_task {
+                prune_task.async_drop().await
+            } else {
+                Ok(())
+            }
+        };
         let drop_entries = async move {
             // The self.cache arc is shared between the prune task and self.
             // Since self is passed in by value, prune task is the only one
