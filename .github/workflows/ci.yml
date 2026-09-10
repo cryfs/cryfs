@@ -344,14 +344,19 @@ jobs:
       with:
         toolchain: stable
     - name: Cache compiled dependencies
-      # Same as in the test job: the dependency artifacts and the generated
-      # documentation of the dependencies from the last main build of this
-      # job, keyed by job, rustc version and lockfile.
+      # Same as in the test job: the compiled dependency artifacts from the
+      # last main build of this job, keyed by job, rustc version and lockfile.
       uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       with:
         save-if: ${{ github.ref == 'refs/heads/main' }}
         cache-on-failure: true
-    - run: RUSTDOCFLAGS="-Dwarnings" cargo doc
+    # --no-deps builds the documentation of this workspace only. Links into the
+    # dependencies still resolve, because rustdoc reads their metadata either
+    # way, so this job finds the same dead links as before; what it stops doing
+    # is generating the dependencies' own pages, which was nearly all of its
+    # runtime. A documentation warning inside a dependency can also no longer
+    # fail this job through -Dwarnings.
+    - run: RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps
   coverage:
     name: Code Coverage
     needs: should_run
