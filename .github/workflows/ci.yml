@@ -17,11 +17,26 @@ on:
       - '**'
   pull_request:
 
-# Cancel in-progress runs on the same ref when a new commit is pushed,
-# so a fix-up push doesn't have to wait behind the superseded run.
+# One run per ref at a time. On a branch carrying a pull request, a new commit
+# cancels the run of the one it replaces, so a fix-up push doesn't wait behind a
+# superseded run.
+#
+# On main it does not. A run there is the only thing that refreshes the caches
+# every other run restores, because GitHub scopes a cache to the branch that
+# wrote it and only the default branch's caches can be read from everywhere, so
+# the test jobs save from main alone. Cancelling main meant that while merges
+# arrived more often than a run takes, no run ever reached its cache-saving
+# steps and the caches went stale.
+#
+# The group still keeps main to one run at a time, and holds one pending run
+# behind it: further merges replace whatever is pending rather than piling up,
+# so the run that starts next is the newest commit at that moment, not a queue
+# of stale ones. The cost is that main's results lag by up to the length of a
+# run, and commits that were only ever the pending one are not built on their
+# own.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
