@@ -15,13 +15,25 @@ on:
       - '**'
   pull_request:
 
-# Cancel in-progress runs on the same ref when a new commit is pushed, so a fix-up
-# push doesn't have to wait behind the superseded run. Without this, runs for commits
-# that no longer exist kept occupying the queue and reporting failures long after the
-# branch had moved on. Same setting the Rust workflow on main already uses.
+# One run per ref at a time. On a branch carrying a pull request, a new commit
+# cancels the run of the one it replaces, so a fix-up push doesn't have to wait behind
+# the superseded run. Without that, runs for commits that no longer exist kept
+# occupying the queue and reporting failures long after the branch had moved on.
+#
+# The release branches are exempt, because that is where this project's code lives and
+# a run there is worth finishing: it is the one that refreshes the ccache and conan
+# caches from the real branch state, and its packaging job is the only build of what
+# actually ships. While merges arrive more often than a run takes, cancelling means no
+# run ever reaches those steps.
+#
+# The group still keeps a release branch to one run at a time, and holds one pending
+# run behind it: further merges replace whatever is pending rather than queueing up, so
+# the run that starts next covers the newest commit at that moment. The cost is that
+# results lag by up to the length of a run, and a commit that was only ever the pending
+# one gets no run of its own. Same setting the Rust workflow uses for main.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
 
 jobs:
   should_run:
