@@ -54,7 +54,42 @@ jobs:
       pull-requests: read
     outputs:
       run: ${{ steps.check.outputs.run }}
+      test_matrix: ${{ steps.matrix.outputs.test_matrix }}
     steps:
+      - name: Decide which test combinations this event runs
+        id: matrix
+        # A pull request runs every Linux combination and two macOS ones; a
+        # push to main or a tag runs all of them. The macOS jobs are what the
+        # five concurrent macOS runners the account gets have to be spent on,
+        # and they are long: a debug job is around 80 minutes and a release
+        # job on the Intel runner around 300, against 50 to 110 for Linux. At
+        # eighteen per run they were most of the queue.
+        #
+        # What the two kept ones are for: the Linux jobs already cover x86_64
+        # in both profiles on all three toolchains, so what macOS adds is the
+        # Darwin platform and, on macos-15, the only aarch64-apple-darwin
+        # build anything here does. Both profiles stay because the release
+        # profile is a different build, and because the cryfs-cli test for the
+        # release-build warning only runs there. The toolchain is stable only:
+        # a nightly regression or a use of something newer than the minimum
+        # supported version is almost never specific to a platform, and the
+        # Linux jobs still check all three on every pull request.
+        #
+        # Nothing is lost from main, which keeps every combination.
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          full='{"os":["macos-15","macos-15-intel","macos-26","ubuntu-22.04","ubuntu-24.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"]}'
+          pr='{"os":["macos-15","ubuntu-22.04","ubuntu-24.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"],"exclude":[{"os":"macos-15","toolchain":"nightly"},{"os":"macos-15","toolchain":"1.95"}]}'
+          if [[ "$EVENT" == "pull_request" ]]; then
+            matrix="$pr"
+          else
+            matrix="$full"
+          fi
+          # A malformed matrix fails every job with an unhelpful message, so
+          # check it here where the error is readable.
+          echo "$matrix" | python3 -m json.tool > /dev/null
+          echo "test_matrix=$matrix" >> "$GITHUB_OUTPUT"
       - name: Look for an open pull request from this branch
         id: check
         env:
@@ -87,17 +122,10 @@ jobs:
     if: needs.should_run.outputs.run == 'true'
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - macos-15
-          - macos-15-intel
-          - macos-26
-          - ubuntu-22.04
-          - ubuntu-24.04
-        command: ["test"]
-        profile: ["", "--release"]
-        toolchain: ["stable", "nightly", "1.95"]
-        # The feature sets are not a matrix axis; see the cargo step below.
+      # Built by the should_run job above, because which combinations run
+      # depends on the event and a matrix cannot ask that itself. The feature
+      # sets are not a matrix axis either; see the cargo step below.
+      matrix: ${{ fromJSON(needs.should_run.outputs.test_matrix) }}
     runs-on: ${{matrix.os}}
     env:
       # `brew install` otherwise starts with a `brew update` of the whole tap.
