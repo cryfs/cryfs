@@ -4,21 +4,26 @@ inputs:
   build_type:
     description: "Which cmake build type to install the dependencies for (e.g. Release, Debug, RelWithDebInfo). Overrides the one in the conan profile."
     required: true
+  build_tests:
+    description: "Whether the dependencies of the tests are needed too, as conan's True or False. Must be what the build step is given."
+    required: true
 runs:
   using: "composite"
   steps:
     - name: Install dependencies via conan
       shell: bash
-      # build_tests is set here because it decides whether gtest is part of the
-      # dependency graph, and the build step always sets it. Without it here,
-      # gtest is missing from the local conan cache after this step and the
-      # build step goes to the conan remote to look for it, which fails when
-      # the runner cannot reach the remote. The other options the build step
-      # passes do not change the graph, except update_checks, which only ever
-      # removes libcurl from it: installing that superset is harmless.
+      # build_tests has to match what the build step is given, because it
+      # decides whether gtest is part of the dependency graph. While this step
+      # left it at its default and the build step set it, gtest was missing
+      # from the local conan cache afterwards and the build step went to the
+      # conan remote to look for it, which fails on a runner that cannot reach
+      # the remote. Of the other options the build step passes, use_ccache and
+      # those in extra_conan_flags only reach cmake, except update_checks,
+      # which only ever removes libcurl from the graph: installing that
+      # superset is harmless.
       run: |
         set -v
         set -e
         conan profile show
 
-        conan install . --build=missing -s build_type=${{ inputs.build_type }} -o "&:build_tests=True"
+        conan install . --build=missing -s build_type=${{ inputs.build_type }} -o "&:build_tests=${{ inputs.build_tests }}"
