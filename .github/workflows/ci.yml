@@ -75,11 +75,18 @@ jobs:
         # supported version is almost never specific to a platform, and the
         # Linux jobs still check all three on every pull request.
         #
-        # Nothing is lost from main, which keeps every combination.
+        # Main keeps every combination but one: beta does not run on the
+        # macOS images. Beta is here to catch an upstream Rust regression a
+        # cycle before it reaches stable, and such a regression is almost
+        # never platform-specific -- the same reasoning that keeps the pull
+        # request macOS jobs to stable. On four macOS images it cost eight
+        # jobs for a signal the six Linux beta jobs already give. Adding a
+        # macOS image means adding it to that exclude list too, or beta
+        # starts running on it.
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          full='{"os":["macos-15","macos-15-intel","macos-26","macos-26-intel","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","beta","nightly","1.95"]}'
+          full='{"os":["macos-15","macos-15-intel","macos-26","macos-26-intel","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","beta","nightly","1.95"],"exclude":[{"os":"macos-15","toolchain":"beta"},{"os":"macos-15-intel","toolchain":"beta"},{"os":"macos-26","toolchain":"beta"},{"os":"macos-26-intel","toolchain":"beta"}]}'
           pr='{"os":["macos-15","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"],"exclude":[{"os":"macos-15","toolchain":"nightly"},{"os":"macos-15","toolchain":"1.95"}]}'
           if [[ "$EVENT" == "pull_request" ]]; then
             matrix="$pr"
