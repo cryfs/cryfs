@@ -79,8 +79,8 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          full='{"os":["macos-15","macos-15-intel","macos-26","ubuntu-22.04","ubuntu-24.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"]}'
-          pr='{"os":["macos-15","ubuntu-22.04","ubuntu-24.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"],"exclude":[{"os":"macos-15","toolchain":"nightly"},{"os":"macos-15","toolchain":"1.95"}]}'
+          full='{"os":["macos-15","macos-15-intel","macos-26","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"]}'
+          pr='{"os":["macos-15","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"command":["test"],"profile":["","--release"],"toolchain":["stable","nightly","1.95"],"exclude":[{"os":"macos-15","toolchain":"nightly"},{"os":"macos-15","toolchain":"1.95"}]}'
           if [[ "$EVENT" == "pull_request" ]]; then
             matrix="$pr"
           else
@@ -219,6 +219,27 @@ jobs:
         # one fails, so a job reports all broken feature sets, not just the
         # first.
         run: |
+          # crates/cli-utils/tests/arguments.rs builds a throwaway cargo project
+          # per test case (via the tempproject crate), and each of those compiles
+          # the full dependency tree, including OpenSSL vendored from source.
+          # That is tens of gigabytes across the suite, and tempfile puts those
+          # projects under $TMPDIR.
+          #
+          # On ubuntu-26.04 /tmp is a tmpfs sized at half of RAM -- about 7.8 GiB
+          # on a standard runner -- because systemd mounts it that way by default
+          # since Ubuntu 25.04. The temp projects fill it and the builds die with
+          # "No space left on device" while the runner's real disk still has tens
+          # of GiB free. ubuntu-22.04 and ubuntu-24.04 keep /tmp on the root
+          # filesystem, which is why they never hit this.
+          #
+          # $RUNNER_TEMP is on that root filesystem, so pointing TMPDIR at it puts
+          # the temp projects back on real disk. Linux only, deliberately: the
+          # macOS runners already put TMPDIR on disk, and redirecting them at
+          # $RUNNER_TEMP made the vendored OpenSSL install fail there with
+          # "cp: ... fcopyfile failed: Input/output error".
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            export TMPDIR="$RUNNER_TEMP"
+          fi
           skip=()
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             skip=(-- --skip tests::mkdir:: --skip tests::rename:: --skip tests::utils::fuser_runner:: --skip version::http_client::tests::reqwest_http_client::test_get_valid_)
