@@ -50,8 +50,8 @@ public:
     template<class Operation>
     void EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(const boost::filesystem::path &oldPath, const boost::filesystem::path &newPath, Operation&& operation, std::initializer_list<TimestampUpdateExpectation> behaviorChecks) {
         EXPECT_OPERATION_UPDATES_TIMESTAMPS_AS(
-            [this, oldPath](){return this->stat(*this->Load(oldPath));},
-            [this, newPath](){return this->stat(*this->Load(newPath));},
+            [this, &oldPath](){return this->stat(*this->Load(oldPath));},
+            [this, &newPath](){return this->stat(*this->Load(newPath));},
             std::forward<Operation>(operation),
             behaviorChecks
         );
