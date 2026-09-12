@@ -486,8 +486,9 @@ jobs:
           pass=0; fail=0; skip=0
           for t in $tests; do
             start=$(date +%s)
-            gtimeout 240 ./cryfs-cli/cryfs-cli-test --gtest_filter="$t" > /tmp/one.log 2>&1
-            rc=$?
+            rc=0
+            rm -f /tmp/trace.log
+            CRYFS_TEST_TRACE_FILE=/tmp/trace.log gtimeout 120 ./cryfs-cli/cryfs-cli-test --gtest_filter="$t" > /tmp/one.log 2>&1 || rc=$?
             end=$(date +%s)
             if [ $rc -eq 0 ]; then
               if grep -q "SKIPPED" /tmp/one.log; then skip=$((skip+1)); echo "SKIP ($((end-start))s) $t: $(grep -A1 'SKIPPED' /tmp/one.log | head -2 | tr '\n' ' ')"; else pass=$((pass+1)); echo "PASS ($((end-start))s) $t"; fi
@@ -496,6 +497,8 @@ jobs:
               echo "FAIL rc=$rc ($((end-start))s) $t"
               echo "::group::log of $t"
               cat /tmp/one.log
+              echo "--- harness trace:"
+              cat /tmp/trace.log || true
               echo "::endgroup::"
             fi
           done
@@ -647,6 +650,22 @@ jobs:
           ls /x/ && echo "EXPLORE: X: still there after cryfs-unmount" || echo "EXPLORE: X: is gone now"
           wait $pid || true
           echo "--- cryfs log:"; cat "$RUNNER_TEMP/probe.log"
+          echo "=== EXPLORE probe 2: unmount right after the mount"
+          BASE2="$(cygpath -w "$RUNNER_TEMP")\\probe-base2"
+          mkdir -p "$BASE2"
+          ( echo pass | timeout 120 "$CRYFS" "$BASE2" "Y:" -f --cipher aes-256-gcm ; echo "cryfs exit code: $?" ) > "$RUNNER_TEMP/probe2.log" 2>&1 &
+          pid=$!
+          for i in $(seq 1 200); do
+            if "$UNMOUNT" "Y:" > "$RUNNER_TEMP/unmount.log" 2>&1; then
+              echo "EXPLORE: unmount attempt $i succeeded at $(date +%T)"
+              break
+            else
+              echo "EXPLORE: unmount attempt $i failed at $(date +%T): $(tr '\n' ' ' < "$RUNNER_TEMP/unmount.log" | cut -c1-200)"
+            fi
+            sleep 0.1
+          done
+          wait $pid || true
+          echo "--- cryfs log 2:"; cat "$RUNNER_TEMP/probe2.log"
       - name: EXPLORE cryfs-cli-test on Windows, one process per test
         shell: bash
         continue-on-error: true
@@ -660,8 +679,9 @@ jobs:
           pass=0; fail=0; skip=0
           for t in $tests; do
             start=$(date +%s)
-            timeout 240 ./cryfs-cli/cryfs-cli-test.exe --gtest_filter="$t" > "$RUNNER_TEMP/one.log" 2>&1
-            rc=$?
+            rc=0
+            rm -f "$RUNNER_TEMP/trace.log"
+            CRYFS_TEST_TRACE_FILE="$RUNNER_TEMP/trace.log" timeout 120 ./cryfs-cli/cryfs-cli-test.exe --gtest_filter="$t" > "$RUNNER_TEMP/one.log" 2>&1 || rc=$?
             end=$(date +%s)
             if [ $rc -eq 0 ]; then
               if grep -q "SKIPPED" "$RUNNER_TEMP/one.log"; then skip=$((skip+1)); echo "SKIP ($((end-start))s) $t: $(grep -A1 'SKIPPED' "$RUNNER_TEMP/one.log" | head -2 | tr '\n' ' ')"; else pass=$((pass+1)); echo "PASS ($((end-start))s) $t"; fi
@@ -670,6 +690,8 @@ jobs:
               echo "FAIL rc=$rc ($((end-start))s) $t"
               echo "::group::log of $t"
               cat "$RUNNER_TEMP/one.log"
+              echo "--- harness trace:"
+              cat "$RUNNER_TEMP/trace.log" || true
               echo "::endgroup::"
             fi
           done

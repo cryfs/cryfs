@@ -24,6 +24,17 @@
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 #include <regex>
 #include <string>
+#include <fstream>
+#include <cstdlib>
+
+// EXPLORATION ONLY: trace the harness steps to a file, because gtest captures stdout/stderr here.
+inline void harness_trace(const std::string& msg) {
+    const char* file = std::getenv("CRYFS_TEST_TRACE_FILE");
+    if (file != nullptr) {
+        std::ofstream f(file, std::ios::app);
+        f << msg << std::endl;
+    }
+}
 
 #if defined(_MSC_VER)
 namespace {
@@ -183,7 +194,10 @@ public:
                     barrier->release();
                 }
             } releaseBarrier{&exited, &isMountedOrFailedBarrier};
-            return run(args, [&] { isMountedOrFailedBarrier.release(); });
+            harness_trace("run(): starting Cli::main");
+            const int code = run(args, [&] { harness_trace("onMounted callback from Fuse::init"); isMountedOrFailedBarrier.release(); });
+            harness_trace("run(): Cli::main returned " + std::to_string(code));
+            return code;
         });
 
         std::future<bool> on_mounted_success = std::async(std::launch::async, [&] {
@@ -195,10 +209,19 @@ public:
               return true;
             }
             // now we know the filesystem stayed online, so we can call the onMounted callback
+            harness_trace("on_mounted thread: calling the test's onMounted");
             onMounted();
+            harness_trace("on_mounted thread: onMounted returned");
             // and unmount it afterwards
             if (mountDirForUnmounting.is_initialized()) {
-              _unmount(*mountDirForUnmounting);
+              harness_trace("on_mounted thread: unmounting " + mountDirForUnmounting->string());
+              try {
+                _unmount(*mountDirForUnmounting);
+              } catch (const std::exception& e) {
+                harness_trace(std::string("on_mounted thread: unmount threw: ") + e.what());
+                throw;
+              }
+              harness_trace("on_mounted thread: unmount returned");
             }
             return true;
         });
