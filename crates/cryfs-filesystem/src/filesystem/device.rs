@@ -14,7 +14,7 @@ use std::{fmt::Debug, time::Instant};
 use cryfs_blobstore::{BlobId, BlobStore};
 use cryfs_rustfs::{FsError, FsResult, Statfs, object_based_api::Device};
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, async_drop_all},
     path::{AbsolutePath, PathComponent},
 };
 
@@ -228,33 +228,15 @@ where
                 Err(err1)
             }
             (Err(err1), Ok(blob2)) => {
-                // TODO async_drop blob2 and shared_blob concurrently
-                match blob2 {
-                    MaybeOwned::Owned(blob2) => {
-                        blob2.async_drop().await.map_err(FsError::internal_error)?;
-                    }
-                    MaybeOwned::Borrowed(_) => {
-                        // blob2 is borrowed. No need to drop it
-                    }
-                }
-                shared_blob
-                    .async_drop()
+                // A borrowed blob2 is shared_blob itself and doesn't need to be dropped
+                async_drop_all((into_owned(blob2), shared_blob))
                     .await
                     .map_err(FsError::internal_error)?;
                 Err(err1)
             }
             (Ok(blob1), Err(err2)) => {
-                // TODO async_drop blob1 and shared_blob concurrently
-                match blob1 {
-                    MaybeOwned::Owned(blob1) => {
-                        blob1.async_drop().await.map_err(FsError::internal_error)?;
-                    }
-                    MaybeOwned::Borrowed(_) => {
-                        // blob1 is borrowed. No need to drop it
-                    }
-                }
-                shared_blob
-                    .async_drop()
+                // A borrowed blob1 is shared_blob itself and doesn't need to be dropped
+                async_drop_all((into_owned(blob1), shared_blob))
                     .await
                     .map_err(FsError::internal_error)?;
                 Err(err2)
@@ -420,55 +402,52 @@ where
                     //      blobs at once is risky for deadlocks if not done in a consistent order.
                     // TODO Improve concurrency in this function
 
-                    // TODO Concurrently drop source_parent_blob and dest_parent_blob
                     with_async_drop_2!(
                         source_parent_blob,
+                        dest_parent_blob,
                         {
+                            let entry = source_parent_blob
+                                .with_lock(async |source_parent: &mut FsBlob<B>| {
+                                    source_parent
+                                        .as_dir_mut()
+                                        .map_err(|_| FsError::NodeIsNotADirectory)?
+                                        .entry_by_name(source_name)
+                                        .ok_or(FsError::NodeDoesNotExist)
+                                        .cloned() // TODO No cloned?
+                                })
+                                .await?;
+                            let self_blob_id = entry.blob_id();
+
+                            // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
+                            //      But it likely has some dependency with source_parent_blob.
+                            let self_blob = self
+                                .blobstore
+                                .load(self_blob_id)
+                                .await
+                                .map_err(|err| {
+                                    log::error!("Error loading blob: {:?}", err);
+                                    FsError::UnknownError
+                                })?
+                                .ok_or(FsError::NodeDoesNotExist)?;
+
+                            // TODO Drop self_blob concurrently with source_parent_blob and dest_parent_blob
                             with_async_drop_2!(
-                                dest_parent_blob,
+                                self_blob,
                                 {
-                                    let entry = source_parent_blob
-                                        .with_lock(async |source_parent: &mut FsBlob<B>| {
+                                    source_parent_blob
+                                        .with_lock(async |source_parent| {
                                             source_parent
                                                 .as_dir_mut()
                                                 .map_err(|_| FsError::NodeIsNotADirectory)?
-                                                .entry_by_name(source_name)
-                                                .ok_or(FsError::NodeDoesNotExist)
-                                                .cloned() // TODO No cloned?
+                                                .remove_entry_by_name(source_name)
+                                                .map_err(|err| match err {
+                                                    RemoveError::NodeDoesNotExist => {
+                                                        FsError::NodeDoesNotExist
+                                                    }
+                                                })
                                         })
                                         .await?;
-                                    let self_blob_id = entry.blob_id();
-
-                                    // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
-                                    //      But it likely has some dependency with source_parent_blob.
-                                    let self_blob = self
-                                        .blobstore
-                                        .load(self_blob_id)
-                                        .await
-                                        .map_err(|err| {
-                                            log::error!("Error loading blob: {:?}", err);
-                                            FsError::UnknownError
-                                        })?
-                                        .ok_or(FsError::NodeDoesNotExist)?;
-
-                                    // TODO Concurrently drop source_parent_blob, dest_parent_blob and self_blob
-                                    with_async_drop_2!(
-                                        self_blob,
-                                        {
-                                            source_parent_blob
-                                                .with_lock(async |source_parent| {
-                                                    source_parent
-                                                        .as_dir_mut()
-                                                        .map_err(|_| FsError::NodeIsNotADirectory)?
-                                                        .remove_entry_by_name(source_name)
-                                                        .map_err(|err| match err {
-                                                            RemoveError::NodeDoesNotExist => {
-                                                                FsError::NodeDoesNotExist
-                                                            }
-                                                        })
-                                                })
-                                                .await?;
-                                            dest_parent_blob
+                                    dest_parent_blob
                                                 .with_lock(async |source_parent| {
                                                     source_parent
                                                         .as_dir_mut()
@@ -500,22 +479,17 @@ where
                                                         })
                                                 }).await?;
 
-                                            self_blob
-                                                .with_lock(async |self_blob| {
-                                                    self_blob
-                                                        .set_parent(&dest_parent_blob.blob_id())
-                                                        .await
-                                                })
-                                                .await
-                                                .map_err(|err| {
-                                                    // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
-                                                    log::error!("Error setting parent: {err:?}");
-                                                    FsError::UnknownError
-                                                })?;
-                                            Ok::<(), FsError>(())
-                                        },
-                                        FsError::internal_error
-                                    )
+                                    self_blob
+                                        .with_lock(async |self_blob| {
+                                            self_blob.set_parent(&dest_parent_blob.blob_id()).await
+                                        })
+                                        .await
+                                        .map_err(|err| {
+                                            // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
+                                            log::error!("Error setting parent: {err:?}");
+                                            FsError::UnknownError
+                                        })?;
+                                    Ok::<(), FsError>(())
                                 },
                                 FsError::internal_error
                             )
@@ -651,6 +625,14 @@ where
             .async_drop()
             .await
             .map_err(FsError::internal_error)
+    }
+}
+
+/// Returns the blob if it is owned, or [None] if it is only borrowed and therefore owned by someone else.
+fn into_owned<T>(blob: MaybeOwned<'_, T>) -> Option<T> {
+    match blob {
+        MaybeOwned::Owned(blob) => Some(blob),
+        MaybeOwned::Borrowed(_) => None,
     }
 }
 

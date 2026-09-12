@@ -306,61 +306,58 @@ where
                 flatten_async_drop::<anyhow::Error, _, _, _, _>(source_parent, dest_parent)
                     .await
                     .map_err(FsError::internal_error)?;
-            // TODO Drop source_parent, dest_parent, newparent and self_blob concurrently
+            // TODO Drop newparent and self_blob concurrently with source_parent and dest_parent
             with_async_drop_2!(
                 source_parent,
+                dest_parent,
                 {
+                    let entry = source_parent
+                        .with_lock(async |source_parent_dir| {
+                            let source_parent_dir = Self::blob_as_dir_mut(&mut *source_parent_dir)?;
+                            let entry = source_parent_dir
+                                .entry_by_name(oldname)
+                                .ok_or(FsError::NodeDoesNotExist)?;
+                            Ok::<_, FsError>(entry.clone()) // TODO No clone
+                        })
+                        .await?;
+
+                    let self_blob_id = entry.blob_id();
+                    #[cfg(feature = "ancestor_checks_on_move")]
+                    {
+                        // TODO This can happen concurrently with the load_blob above
+                        self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
+                            .await?;
+                    }
+
+                    // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
+                    //      But it likely has some dependency with source_parent_blob.
+                    let self_blob = self
+                        .blobstore
+                        .load(self_blob_id)
+                        .await
+                        .map_err(|err| {
+                            log::error!("Error loading blob: {:?}", err);
+                            FsError::UnknownError
+                        })?
+                        .ok_or(
+                            // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
+                            FsError::NodeDoesNotExist,
+                        )?;
                     with_async_drop_2!(
-                        dest_parent,
+                        self_blob,
                         {
                             let entry = source_parent
                                 .with_lock(async |source_parent_dir| {
-                                    let source_parent_dir =
-                                        Self::blob_as_dir_mut(&mut *source_parent_dir)?;
-                                    let entry = source_parent_dir
-                                        .entry_by_name(oldname)
-                                        .ok_or(FsError::NodeDoesNotExist)?;
-                                    Ok::<_, FsError>(entry.clone()) // TODO No clone
+                                    Self::blob_as_dir_mut(source_parent_dir)?
+                                        .remove_entry_by_name(oldname)
+                                        .map_err(|err| match err {
+                                            RemoveError::NodeDoesNotExist => {
+                                                FsError::NodeDoesNotExist
+                                            }
+                                        })
                                 })
                                 .await?;
-
-                            let self_blob_id = entry.blob_id();
-                            #[cfg(feature = "ancestor_checks_on_move")]
-                            {
-                                // TODO This can happen concurrently with the load_blob above
-                                self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
-                                    .await?;
-                            }
-
-                            // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
-                            //      But it likely has some dependency with source_parent_blob.
-                            let self_blob = self
-                                .blobstore
-                                .load(self_blob_id)
-                                .await
-                                .map_err(|err| {
-                                    log::error!("Error loading blob: {:?}", err);
-                                    FsError::UnknownError
-                                })?
-                                .ok_or(
-                                    // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
-                                    FsError::NodeDoesNotExist,
-                                )?;
-                            with_async_drop_2!(
-                                self_blob,
-                                {
-                                    let entry = source_parent
-                                        .with_lock(async |source_parent_dir| {
-                                            Self::blob_as_dir_mut(source_parent_dir)?
-                                                .remove_entry_by_name(oldname)
-                                                .map_err(|err| match err {
-                                                    RemoveError::NodeDoesNotExist => {
-                                                        FsError::NodeDoesNotExist
-                                                    }
-                                                })
-                                        })
-                                        .await?;
-                                    dest_parent
+                            dest_parent
                                         .with_lock(async |dest_parent_dir| {
                                             Self::blob_as_dir_mut(dest_parent_dir)?
                                                 .add_or_overwrite_entry(
@@ -403,34 +400,31 @@ where
                                                 })
                                         }).await?;
 
-                                    self_blob
-                                        .with_lock(async |self_blob| {
-                                            self_blob.set_parent(&dest_parent.blob_id()).await
-                                        })
-                                        .await
-                                        .map_err(|err| {
-                                            // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
-                                            log::error!("Error setting parent: {err:?}");
-                                            FsError::UnknownError
-                                        })?;
+                            self_blob
+                                .with_lock(async |self_blob| {
+                                    self_blob.set_parent(&dest_parent.blob_id()).await
+                                })
+                                .await
+                                .map_err(|err| {
+                                    // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
+                                    log::error!("Error setting parent: {err:?}");
+                                    FsError::UnknownError
+                                })?;
 
-                                    // TODO We can probably do this concurrently with the other modifications further up
-                                    // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
-                                    //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
-                                    let (source_update, dest_update) = join!(
-                                        self.node_info.update_modification_timestamp_in_parent(),
-                                        newparent
-                                            .node_info
-                                            .update_modification_timestamp_in_parent(),
-                                    );
+                            // TODO We can probably do this concurrently with the other modifications further up
+                            // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
+                            //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
+                            let (source_update, dest_update) = join!(
+                                self.node_info.update_modification_timestamp_in_parent(),
+                                newparent
+                                    .node_info
+                                    .update_modification_timestamp_in_parent(),
+                            );
 
-                                    source_update?;
-                                    dest_update?;
+                            source_update?;
+                            dest_update?;
 
-                                    Ok::<(), FsError>(())
-                                },
-                                FsError::internal_error
-                            )
+                            Ok::<(), FsError>(())
                         },
                         FsError::internal_error
                     )

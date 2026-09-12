@@ -97,7 +97,17 @@ with_async_drop_2_infallible!(value, {
     // ... work ...
     result
 })
+
+// Several independent guards - all forms accept a list; the guards are dropped
+// concurrently after the block (they must share the same error type)
+with_async_drop_2!(source, dest, {
+    // ... work with source and dest ...
+    Ok(result)
+})
 ```
+
+Prefer the multi-guard form over nesting one `with_async_drop_2!` inside another: it
+is flatter and drops the guards concurrently.
 
 ## Pattern 4: Manual Cleanup on All Exit Paths
 
@@ -275,20 +285,14 @@ impl AsyncDrop for ConnectionPool {
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
         let Self { conn_a, conn_b, conn_c } = self;
         // GOOD - concurrent drop for independent resources
-        let (a, b, c) = tokio::join!(
-            conn_a.async_drop(),
-            conn_b.async_drop(),
-            conn_c.async_drop()
-        );
-        a?;
-        b?;
-        c?;
-        Ok(())
+        async_drop_all((conn_a, conn_b, conn_c)).await
     }
 }
 ```
 
-Use `tokio::join!` to run async_drop calls concurrently when members don't depend on each other.
+`async_drop_all` takes a tuple of guards (or `Option<AsyncDropGuard<_>>`s) sharing one error
+type, drops them concurrently, waits for all of them even if some fail, and returns the first
+error (the others are logged). Use it whenever members don't depend on each other.
 
 ## Pattern 11: Shared Ownership with AsyncDropArc
 

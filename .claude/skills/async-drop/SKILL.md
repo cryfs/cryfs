@@ -82,6 +82,16 @@ with_async_drop_2!(resource, {
 })
 ```
 
+Several independent guards can be listed; they are dropped concurrently afterward:
+
+```rust
+with_async_drop_2!(source, dest, {
+    move_entry(&source, &dest).await
+})
+```
+
+To drop several independent guards without running a block, use `async_drop_all((a, b, c)).await?`.
+
 ## Additional References
 
 - [patterns.md](patterns.md) - Implementation patterns and examples
