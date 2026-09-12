@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 use std::time::SystemTime;
@@ -342,7 +341,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for DirBlob<B>
 where
     B: BlobStore + Debug,
@@ -350,9 +348,10 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(mut self) -> Result<()> {
         self.writeback().await?;
-        self.blob.async_drop().await?;
+        let Self { blob, entries: _ } = self;
+        blob.async_drop().await?;
         Ok(())
     }
 }

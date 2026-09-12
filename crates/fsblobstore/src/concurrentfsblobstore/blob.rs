@@ -44,7 +44,6 @@ where
     }
 }
 
-#[async_trait::async_trait]
 impl<B> AsyncDrop for ConcurrentFsBlob<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
@@ -52,7 +51,8 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blob.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { blob } = self;
+        blob.async_drop().await
     }
 }

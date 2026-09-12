@@ -1,6 +1,5 @@
 use std::{fmt::Debug, sync::Arc};
 
-use async_trait::async_trait;
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_concurrent_store::{LoadedEntryGuard, RequestImmediateDropResult};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
@@ -44,9 +43,7 @@ where
         f(&mut *guard).await
     }
 
-    pub async fn remove(
-        mut this: AsyncDropGuard<Self>,
-    ) -> Result<RemoveResult, Arc<anyhow::Error>> {
+    pub async fn remove(this: AsyncDropGuard<Self>) -> Result<RemoveResult, Arc<anyhow::Error>> {
         loop {
             match this.loaded_blob.request_immediate_drop(
                 |blob| async move {
@@ -61,7 +58,6 @@ where
                 RequestImmediateDropResult::ImmediateDropRequested { drop_result } => {
                     // Drop the blob so we don't hold a lock on it, which would prevent the removal. Removal waits until all readers relinquished their blob.
                     this.async_drop().await?;
-                    std::mem::drop(this);
                     // Wait until the blob is removed. If there are other readers, this will wait.
                     return drop_result.await;
                 }
@@ -75,7 +71,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for LoadedBlobGuard<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + 'static,
@@ -83,8 +78,9 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.loaded_blob.async_drop().await.infallible_unwrap();
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { loaded_blob } = self;
+        loaded_blob.async_drop().await.infallible_unwrap();
         Ok(())
     }
 }

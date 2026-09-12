@@ -1,5 +1,4 @@
 use anyhow::{Result, ensure};
-use async_trait::async_trait;
 use binary_layout::Field;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -197,7 +196,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for BaseBlob<B>
 where
     B: BlobStore + Debug,
@@ -205,8 +203,12 @@ where
 {
     type Error = <B::ConcreteBlob as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blob.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            blob,
+            header_cache: _,
+        } = self;
+        blob.async_drop().await
     }
 }
 

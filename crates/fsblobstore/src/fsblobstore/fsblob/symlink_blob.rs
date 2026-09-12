@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -96,7 +95,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for SymlinkBlob<B>
 where
     B: BlobStore + Debug,
@@ -104,8 +102,9 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blob.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { blob } = self;
+        blob.async_drop().await?;
         Ok(())
     }
 }
