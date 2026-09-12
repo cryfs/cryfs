@@ -233,29 +233,7 @@ async fn may_panic(mut resource: AsyncDropGuard<R>) -> Result<()> {
 
 Don't try to call `async_drop()` in panic handlers.
 
-## Gotcha 9: Double async_drop or Use After async_drop
-
-`async_drop()` consumes the guard. Calling it twice, or using the value afterwards,
-is a compile error (use of moved value), not a runtime check.
-
-```rust
-let resource = Resource::new();
-resource.async_drop().await?;  // Does cleanup
-resource.async_drop().await?;  // Compile error: use of moved value
-resource.do_work().await?;     // Compile error: use of moved value
-```
-
-There is no `is_dropped()`. If a struct genuinely needs a "maybe already dropped" slot
-(for example a `Drop` impl that drops a guard synchronously, or a shared handle that is
-destroyed in place), store an `Option<AsyncDropGuard<T>>` and use `.take()`:
-
-```rust
-if let Some(resource) = self.resource.take() {
-    resource.async_drop().await?;
-}
-```
-
-## Gotcha 10: Holding Guards Across Await Points Without Cleanup
+## Gotcha 9: Holding Guards Across Await Points Without Cleanup
 
 Long-lived guards in loops need careful handling.
 
@@ -279,22 +257,7 @@ async fn good_loop() -> Result<()> {
 }
 ```
 
-## Gotcha 11: Clone vs AsyncDropArc
-
-Regular `Clone` on `AsyncDropGuard` is not available. Use `AsyncDropArc` for shared ownership.
-
-```rust
-// WRONG - AsyncDropGuard doesn't implement Clone
-let guard = AsyncDropGuard::new(resource);
-let clone = guard.clone();  // Compile error!
-
-// RIGHT - use AsyncDropArc for sharing
-let shared = AsyncDropArc::new(AsyncDropGuard::new(resource));
-let clone = AsyncDropArc::clone(&shared);
-// Both must be async_dropped, last one does actual cleanup
-```
-
-## Gotcha 12: Dropping a Guard Member Through `&mut self`
+## Gotcha 10: Dropping a Guard Member Through `&mut self`
 
 `async_drop()` takes `self` by value, so it cannot be called on a field behind `&mut self`.
 Inside `AsyncDrop::async_drop_impl(self)` destructure `self` instead. Elsewhere, prefer
