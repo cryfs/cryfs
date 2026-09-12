@@ -232,7 +232,7 @@ impl<'v, 'm, 'c, OnSuccessfullyMounted: FnOnce()> BlockstoreCallback
 }
 
 async fn make_device<B>(
-    mut blobstore: AsyncDropGuard<B>,
+    blobstore: AsyncDropGuard<B>,
     config: &CryConfig,
     create_or_load: CreateOrLoad,
     atime_behavior: AtimeUpdateBehavior,
@@ -254,7 +254,7 @@ where
         }
     };
 
-    let mut device = match create_or_load {
+    let device = match create_or_load {
         CreateOrLoad::CreateNewFilesystem => {
             CryDevice::create_new_filesystem(blobstore, root_blob_id, atime_behavior)
                 .await
