@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use lockable::Never;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -56,7 +55,6 @@ where
     }
 }
 
-#[async_trait]
 impl<K, V, E> AsyncDrop for LoadedEntryGuard<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
@@ -65,10 +63,10 @@ where
 {
     type Error = Never;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let value = std::mem::replace(&mut self.value, AsyncDropGuard::new_invalid());
-        ConcurrentStoreInner::unload(&self.store, self.key.clone(), value).await;
-        self.store.async_drop().await.unwrap(); // TODO No unwrap
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { store, key, value } = self;
+        ConcurrentStoreInner::unload(&store, key, value).await;
+        store.async_drop().await.unwrap(); // TODO No unwrap
         Ok(())
     }
 }

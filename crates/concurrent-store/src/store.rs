@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::FutureExt as _;
 use futures::future::{BoxFuture, Shared};
 use lockable::{InfallibleUnwrap as _, Never};
@@ -149,7 +148,7 @@ where
     pub async fn try_insert_loaded(
         &self,
         mut key: K,
-        mut value: AsyncDropGuard<V>,
+        value: AsyncDropGuard<V>,
     ) -> Result<AsyncDropGuard<LoadedEntryGuard<K, V, E>>> {
         // TODO Deduplicate between this and try_insert_loading
         loop {
@@ -539,11 +538,10 @@ where
     pub(super) async fn unload(
         this: &AsyncDropGuard<AsyncDropArc<ConcurrentStoreInner<K, V, E>>>,
         key: K,
-        mut entry: AsyncDropGuard<AsyncDropArc<V>>,
+        entry: AsyncDropGuard<AsyncDropArc<V>>,
     ) {
         // First drop the entry to decrement the reference count
         entry.async_drop().await.unwrap(); // TODO No unwrap? But what to do if it fails? We need to guarantee that we still remove the entry since the guard is gone now.
-        std::mem::drop(entry);
 
         // Now check if we're the last reference. If yes, remove the entry from our map.
         Self::_drop_if_no_references(this, key).await;
@@ -619,7 +617,7 @@ where
         key: K,
         loaded: EntryStateLoaded<V>,
     ) -> Shared<BoxFuture<'static, ()>> {
-        let (immediate_drop_request, mut entry) = loaded.into_inner();
+        let (immediate_drop_request, entry) = loaded.into_inner();
         let this = AsyncDropArc::clone(this);
         async move {
             with_async_drop_2!(this, {
@@ -728,7 +726,6 @@ where
     }
 }
 
-#[async_trait]
 impl<K, V, E> AsyncDrop for ConcurrentStoreInner<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
@@ -737,11 +734,13 @@ where
 {
     type Error = Never;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         // Wait for any currently dropping entries to complete
-        let mut entries = std::mem::take(&mut *self.entries.get_mut().unwrap());
+        let Self { entries } = self;
         let dropping_futures = entries
-                .drain()
+                .into_inner()
+                .unwrap()
+                .into_iter()
                 .filter_map(|(_, entry_state)| match entry_state {
                     EntryState::Dropping(dropping) => Some(dropping.into_future()),
                     EntryState::Loading(loading) => {
@@ -772,7 +771,6 @@ where
     }
 }
 
-#[async_trait]
 impl<K, V, E> AsyncDrop for ConcurrentStore<K, V, E>
 where
     K: Hash + Eq + Clone + Debug + Send + Sync + 'static,
@@ -781,8 +779,9 @@ where
 {
     type Error = Never;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.inner.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { inner } = self;
+        inner.async_drop().await
     }
 }
 
