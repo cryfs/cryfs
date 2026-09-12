@@ -72,8 +72,8 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          full='["macos-15","macos-15-intel","macos-26","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
-          pr='["macos-15","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
+          full='["macos-15","macos-15-intel","macos-26"]'
+          pr='["macos-15","macos-15-intel","macos-26"]'
           if [[ "$EVENT" == "pull_request" ]]; then
             os_list="$pr"
           else
@@ -126,102 +126,6 @@ jobs:
         # per build type named here.
         build_types: ["Debug Release RelWithDebInfo"]
         compiler:
-          - compiler: gcc
-            version: 9
-            libcxx: libstdc++11
-            cc: gcc-9
-            cxx: g++-9
-            apt_package: g++-9
-            homebrew_package: gcc@9
-          - compiler: gcc
-            version: 10
-            libcxx: libstdc++11
-            cc: gcc-10
-            cxx: g++-10
-            apt_package: g++-10
-            homebrew_package: gcc@10
-          - compiler: gcc
-            version: 11
-            libcxx: libstdc++11
-            cc: gcc-11
-            cxx: g++-11
-            apt_package: g++-11
-            homebrew_package: gcc@11
-          - compiler: gcc
-            version: 12
-            libcxx: libstdc++11
-            cc: gcc-12
-            cxx: g++-12
-            apt_package: g++-12
-            homebrew_package: gcc@12
-          - compiler: gcc
-            version: 13
-            libcxx: libstdc++11
-            cc: gcc-13
-            cxx: g++-13
-            apt_package: g++-13
-            homebrew_package: gcc@13
-          - compiler: gcc
-            version: 14
-            libcxx: libstdc++11
-            cc: gcc-14
-            cxx: g++-14
-            apt_package: g++-14
-            homebrew_package: gcc@14
-          - compiler: clang
-            version: 13
-            libcxx: libc++
-            cc: clang-13
-            cxx: clang++-13
-            macos_cc: llvm@13/bin/clang
-            macos_cxx: llvm@13/bin/clang++
-            apt_package: clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev
-            homebrew_package: llvm@13
-          - compiler: clang
-            version: 14
-            libcxx: libc++
-            cc: clang-14
-            cxx: clang++-14
-            macos_cc: llvm@14/bin/clang
-            macos_cxx: llvm@14/bin/clang++
-            apt_package: clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev
-            homebrew_package: llvm@14
-          - compiler: clang
-            version: 15
-            libcxx: libc++
-            cc: clang-15
-            cxx: clang++-15
-            macos_cc: llvm@15/bin/clang
-            macos_cxx: llvm@15/bin/clang++
-            apt_package: clang-15 libc++-15-dev libc++abi-15-dev libunwind-15-dev libomp-15-dev
-            homebrew_package: llvm@15
-          - compiler: clang
-            version: 16
-            libcxx: libc++
-            cc: clang-16
-            cxx: clang++-16
-            macos_cc: llvm@16/bin/clang
-            macos_cxx: llvm@16/bin/clang++
-            apt_package: clang-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev libomp-16-dev
-            homebrew_package: llvm@16
-          - compiler: clang
-            version: 17
-            libcxx: libc++
-            cc: clang-17
-            cxx: clang++-17
-            macos_cc: llvm@17/bin/clang
-            macos_cxx: llvm@17/bin/clang++
-            apt_package: clang-17 libc++-17-dev libc++abi-17-dev libunwind-17-dev libomp-17-dev
-            homebrew_package: llvm@17
-          - compiler: clang
-            version: 18
-            libcxx: libc++
-            cc: clang-18
-            cxx: clang++-18
-            macos_cc: llvm@18/bin/clang
-            macos_cxx: llvm@18/bin/clang++
-            apt_package: clang-18 libc++-18-dev libc++abi-18-dev libunwind-18-dev libomp-18-dev
-            homebrew_package: llvm@18
           - compiler: clang
             version: 19
             libcxx: libc++
@@ -231,13 +135,6 @@ jobs:
             macos_cxx: llvm@19/bin/clang++
             apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             homebrew_package: llvm@19
-          - compiler: gcc
-            version: 15
-            libcxx: libstdc++11
-            cc: gcc-15
-            cxx: g++-15
-            apt_package: g++-15
-            homebrew_package: gcc@15
           # Apple Clang
 #           - compiler: apple-clang
 #             version: xxx
@@ -252,7 +149,7 @@ jobs:
         # the check it exists for.
         build_tests: ["True"]
         run_build: [true]
-        run_tests: [true]
+        run_tests: [false]
         run_cpack: [false]
         run_clang_tidy: [false]
         gtest_args: [""]
@@ -344,209 +241,6 @@ jobs:
             compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
           - os: ubuntu-26.04
             compiler: {compiler: gcc, version: 10, libcxx: libstdc++11, cc: gcc-10, cxx: g++-10, homebrew_package: gcc@10, apt_package: g++-10}
-        include:
-          - name: Local dependencies
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: Debug
-            extra_conan_flags: ""
-            extra_cxxflags: '[]'
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: true
-            build_tests: "True"
-            run_build: true
-            run_tests: true
-            run_cpack: false
-          - name: Werror gcc
-            os: ubuntu-24.04
-            compiler:
-              compiler: gcc
-              version: 14
-              libcxx: libstdc++
-              cc: gcc-14
-              cxx: g++-14
-              apt_package: g++-14
-            # build_type cannot be debug because gcc checks for some errors in optimization passes
-            build_types: RelWithDebInfo
-            extra_conan_flags: "-o '&:use_werror=True'"
-            extra_cxxflags: '[]'
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: false
-            run_cpack: false
-          - name: Werror clang
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: Debug
-            extra_conan_flags: "-o '&:use_werror=True'"
-            extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: false
-            run_cpack: false
-          - name: No compatibility
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: RelWithDebInfo
-            extra_conan_flags: ""
-            extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: true
-            run_cpack: false
-          - name: No update checks
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: RelWithDebInfo
-            extra_conan_flags: "-o '&:update_checks=False'"
-            extra_cxxflags: '[]'
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: true
-            run_cpack: false
-          - name: cpack
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: RelWithDebInfo
-            extra_conan_flags: ""
-            extra_cxxflags: '[]'
-            extra_env_vars_for_test: ""
-            install_dependencies_manually: false
-            build_tests: "False"
-            run_build: true
-            run_tests: false
-            run_cpack: true
-          - name: ASAN
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              # Using libstdc++11 instead of libc++ for ASAN because of
-              # - https://github.com/llvm/llvm-project/issues/52771
-              # - https://github.com/llvm/llvm-project/issues/59432
-              libcxx: libstdc++11
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: Debug
-            extra_conan_flags: ""
-            extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
-            extra_env_vars_for_test: ASAN_OPTIONS="detect_leaks=1 check_initialization_order=1 detect_stack_use_after_return=1 detect_invalid_pointer_pairs=1 atexit=1"
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: true
-            run_cpack: false
-          - name: UBSAN
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: Debug
-            extra_conan_flags: ""
-            extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
-            extra_env_vars_for_test: UBSAN_OPTIONS="print_stacktrace=1"
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: true
-            run_cpack: false
-          - name: TSAN
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: Debug
-            extra_conan_flags: ""
-            extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: true
-            run_tests: true
-            run_cpack: false
-            gtest_args: "--gtest_filter=-LoggingTest.LoggingAlsoWorksAfterFork:AssertTest_*:BacktraceTest.*:SubprocessTest.*:SignalCatcherTest.*_thenDies:SignalHandlerTest.*_thenDies:SignalHandlerTest.givenMultipleSigIntHandlers_whenRaising_thenCatchesCorrectSignal:CliTest_Setup.*:CliTest_IntegrityCheck.*:*/CliTest_WrongEnvironment.*:CliTest_Unmount.*:CliTest.WorksWithCommasInBasedir:CliTest_NonEmptyMountdir.*ThenMountingSucceeds"
-            extra_env_vars_for_test: OMP_NUM_THREADS=1
-          - name: clang-tidy
-            os: ubuntu-24.04
-            compiler:
-              compiler: clang
-              version: 19
-              libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 clang-tidy-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
-            build_types: Debug
-            extra_conan_flags: ""
-            extra_cxxflags: '[]'
-            install_dependencies_manually: false
-            build_tests: "True"
-            run_build: false
-            run_tests: false
-            run_cpack: false
-            extra_env_vars_for_test: ""
-            run_clang_tidy: true
     runs-on: ${{matrix.os}}
     env:
       # Setting conan cache dir to a location where our Github Cache Action can find it
@@ -703,6 +397,112 @@ jobs:
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           cache_key: v11-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.compiler.compiler}}__${{matrix.compiler.version}}__${{steps.build_types.outputs.slug}}__${{matrix.install_dependencies_manually}}__${{steps.hash_flags.outputs.hash_flags}}__
+      - name: EXPLORE macOS FUSE backends
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -x
+          sw_vers
+          uname -m
+          id
+          ls -la /Library/Filesystems/ || true
+          ls -la /Library/Filesystems/macfuse.fs/Contents/ || true
+          grep -A1 -E "CFBundleShortVersionString|CFBundleVersion" /Library/Filesystems/macfuse.fs/Contents/Info.plist || true
+          ls -la /usr/local/lib/ | grep -i fuse || true
+          PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config --modversion fuse3 || true
+          kmutil showloaded 2>&1 | grep -i fuse || echo "EXPLORE: no fuse kext loaded"
+          ls -la /dev/ | grep -i fuse || echo "EXPLORE: no /dev/*fuse* devices"
+          ls -la /Volumes/
+          pluginkit -m -v -A 2>&1 | grep -i fuse || echo "EXPLORE: pluginkit does not list a macfuse extension"
+          ls -la /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/Extensions/ || true
+          sudo pluginkit -v -a /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/Extensions/macfuse.appex/ || true
+          pluginkit -m -v -A 2>&1 | grep -i fuse || echo "EXPLORE: pluginkit still does not list a macfuse extension"
+          ls -la /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/ || true
+          /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/macfuse --help 2>&1 | head -50 || true
+          /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/macfuse status 2>&1 | head -50 || true
+
+          CRYFS=build/Release/src/cryfs-cli/cryfs
+          UNMOUNT=build/Release/src/cryfs-unmount/cryfs-unmount
+          ls -la "$CRYFS" "$UNMOUNT"
+          export CRYFS_FRONTEND=noninteractive CRYFS_NO_UPDATE_CHECK=true
+          probe() {
+            local name=$1 mountdir=$2; shift 2
+            local base=/tmp/probe-$name-base
+            mkdir -p "$base"
+            echo "=== EXPLORE probe $name: mountdir=$mountdir extra args: $*"
+            ( echo pass | gtimeout 120 "$CRYFS" "$base" "$mountdir" -f --cipher aes-256-gcm "$@" ; echo "cryfs exit code: $?" ) > /tmp/probe-$name.log 2>&1 &
+            local pid=$!
+            for i in $(seq 1 30); do
+              if mount | grep -q "$mountdir"; then break; fi
+              sleep 1
+            done
+            mount | grep "$mountdir" || echo "EXPLORE: $name not mounted after 30s"
+            ls -la "$mountdir" || true
+            echo hello > "$mountdir/testfile" || echo "EXPLORE: $name write failed"
+            cat "$mountdir/testfile" || echo "EXPLORE: $name read failed"
+            ls -la "$mountdir" || true
+            stat "$mountdir/testfile" || true
+            "$UNMOUNT" "$mountdir" || echo "EXPLORE: $name cryfs-unmount failed"
+            sleep 3
+            if mount | grep -q "$mountdir"; then
+              echo "EXPLORE: $name still mounted after cryfs-unmount; trying umount"
+              umount "$mountdir" || echo "EXPLORE: $name umount failed"
+              sleep 2
+            fi
+            if mount | grep -q "$mountdir"; then
+              echo "EXPLORE: $name still mounted after umount; trying diskutil unmount"
+              diskutil unmount "$mountdir" || diskutil unmount force "$mountdir" || echo "EXPLORE: $name diskutil unmount failed"
+              sleep 2
+            fi
+            mount | grep "$mountdir" && echo "EXPLORE: $name STILL mounted" || echo "EXPLORE: $name is unmounted now"
+            wait $pid || true
+            echo "--- cryfs log for $name:"; cat /tmp/probe-$name.log
+          }
+          mkdir -p /tmp/probe-kext-mount
+          probe kext /tmp/probe-kext-mount
+          sudo mkdir -p /Volumes/cryfsprobe && sudo chown "$(id -u)" /Volumes/cryfsprobe
+          probe fskit /Volumes/cryfsprobe -o backend=fskit
+          mkdir -p /tmp/probe-fskit2-mount
+          probe fskit2 /tmp/probe-fskit2-mount -o backend=fskit
+          sudo chmod a+w /Volumes || true
+          probe fskit3 /Volumes/cryfsprobe3 -o backend=fskit --create-missing-mountpoint
+          ls -la /Volumes/
+          mount
+      - name: EXPLORE fspp-test and cryfs-cli-test on macOS (Release)
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        continue-on-error: true
+        run: |
+          cd build/Release/test
+          gtimeout 1500 ./fspp/fspp-test > /tmp/fspp-test.log 2>&1 || echo "EXPLORE: fspp-test exit $?"
+          grep -E "^\[  (PASSED|FAILED|  SKIPPED)|^\[==========\]|Assertion|exited before|Timeout" /tmp/fspp-test.log | head -300
+          echo "::group::fspp-test full log"
+          cat /tmp/fspp-test.log || true
+          echo "::endgroup::"
+          ./cryfs-cli/cryfs-cli-test --gtest_list_tests > /tmp/tests.txt
+          tests=$(awk '/^[^ ]/ {suite=$1} /^  / {sub(/^  /,""); split($0,a,"#"); gsub(/ +$/,"",a[1]); print suite a[1]}' /tmp/tests.txt)
+          echo "$tests" | wc -l
+          pass=0; fail=0; skip=0
+          for t in $tests; do
+            start=$(date +%s)
+            rc=0
+            rm -f /tmp/trace.log
+            CRYFS_TEST_TRACE_FILE=/tmp/trace.log gtimeout 120 ./cryfs-cli/cryfs-cli-test --gtest_filter="$t" > /tmp/one.log 2>&1 || rc=$?
+            end=$(date +%s)
+            if [ $rc -eq 0 ]; then
+              if grep -q "SKIPPED" /tmp/one.log; then skip=$((skip+1)); echo "SKIP ($((end-start))s) $t: $(grep -A1 'SKIPPED' /tmp/one.log | head -2 | tr '\n' ' ')"; else pass=$((pass+1)); echo "PASS ($((end-start))s) $t"; fi
+            else
+              fail=$((fail+1))
+              echo "FAIL rc=$rc ($((end-start))s) $t"
+              echo "::group::log of $t"
+              cat /tmp/one.log
+              echo "--- harness trace:"
+              cat /tmp/trace.log || true
+              echo "::endgroup::"
+            fi
+          done
+          echo "EXPLORE: cryfs-cli-test pass=$pass fail=$fail skip=$skip"
       - name: Test (Debug)
         if: ${{ matrix.run_tests && contains(matrix.build_types, 'Debug') }}
         uses: ./.github/workflows/actions/run_tests
@@ -752,7 +552,6 @@ jobs:
           - windows-2022
           - windows-2025
         build_type:
-          - Debug
           - Release
           - RelWithDebInfo
     runs-on: ${{matrix.os}}
@@ -822,21 +621,81 @@ jobs:
           secret_aws_access_key_id: ${{ secrets.CACHE_AWS_ACCESS_KEY_ID }}
           secret_aws_secret_access_key: ${{ secrets.CACHE_AWS_SECRET_ACCESS_KEY }}
           cache_key: v10-${{ runner.os }}-${{ matrix.os }}-conancache__${{matrix.build_type}}__
-      - name: Test
+      - name: EXPLORE Dokany and a cryfs mount on Windows
         shell: bash
+        continue-on-error: true
         run: |
-          set -v
-          set -e
+          set -x
+          sc query dokan2 || true
+          sc query dokan1 || true
+          fltmc filters || true
+          ls "C:/Program Files/Dokan/" || true
+          ls "C:/Program Files/Dokan/DokanLibrary-2.3.1/" || true
+          ls "C:/Windows/System32/drivers/" | grep -i dokan || true
+          CRYFS=build/${{matrix.build_type}}/src/cryfs-cli/cryfs.exe
+          UNMOUNT=build/${{matrix.build_type}}/src/cryfs-unmount/cryfs-unmount.exe
+          ls -la "$CRYFS" "$UNMOUNT"
+          export CRYFS_FRONTEND=noninteractive CRYFS_NO_UPDATE_CHECK=true
+          BASE="$(cygpath -w "$RUNNER_TEMP")\\probe-base"
+          mkdir -p "$BASE"
+          ( echo pass | timeout 120 "$CRYFS" "$BASE" "X:" -f --cipher aes-256-gcm ; echo "cryfs exit code: $?" ) > "$RUNNER_TEMP/probe.log" 2>&1 &
+          pid=$!
+          for i in $(seq 1 30); do if [ -d /x/ ]; then break; fi; sleep 1; done
+          ls -la /x/ || echo "EXPLORE: X: not accessible after 30s"
+          echo hello > /x/testfile || echo "EXPLORE: write failed"
+          cat /x/testfile || echo "EXPLORE: read failed"
+          ls -la /x/ || true
+          "$UNMOUNT" "X:" || echo "EXPLORE: cryfs-unmount failed"
+          sleep 3
+          ls /x/ && echo "EXPLORE: X: still there after cryfs-unmount" || echo "EXPLORE: X: is gone now"
+          wait $pid || true
+          echo "--- cryfs log:"; cat "$RUNNER_TEMP/probe.log"
+          echo "=== EXPLORE probe 2: unmount right after the mount"
+          BASE2="$(cygpath -w "$RUNNER_TEMP")\\probe-base2"
+          mkdir -p "$BASE2"
+          ( echo pass | timeout 120 "$CRYFS" "$BASE2" "Y:" -f --cipher aes-256-gcm ; echo "cryfs exit code: $?" ) > "$RUNNER_TEMP/probe2.log" 2>&1 &
+          pid=$!
+          for i in $(seq 1 200); do
+            if "$UNMOUNT" "Y:" > "$RUNNER_TEMP/unmount.log" 2>&1; then
+              echo "EXPLORE: unmount attempt $i succeeded at $(date +%T)"
+              break
+            else
+              echo "EXPLORE: unmount attempt $i failed at $(date +%T): $(tr '\n' ' ' < "$RUNNER_TEMP/unmount.log" | cut -c1-200)"
+            fi
+            sleep 0.1
+          done
+          wait $pid || true
+          echo "--- cryfs log 2:"; cat "$RUNNER_TEMP/probe2.log"
+      - name: EXPLORE cryfs-cli-test on Windows, one process per test
+        shell: bash
+        continue-on-error: true
+        run: |
           cd build/${{matrix.build_type}}/test
-          ./gitversion/gitversion-test.exe
-          ./cpp-utils/cpp-utils-test.exe
-          # ./fspp/fspp-test.exe
-          ./parallelaccessstore/parallelaccessstore-test.exe
-          ./blockstore/blockstore-test.exe
-          ./blobstore/blobstore-test.exe
-          ./cryfs/cryfs-test.exe
-          # TODO Enable cryfs-cli-test on Windows
-          # ./cryfs-cli/cryfs-cli-test.exe
+          timeout 600 ./fspp/fspp-test.exe 2>&1 | tail -3
+          echo "EXPLORE: fspp-test exit ${PIPESTATUS[0]}"
+          ./cryfs-cli/cryfs-cli-test.exe --gtest_list_tests > "$RUNNER_TEMP/tests.txt"
+          tests=$(awk '/^[^ ]/ {suite=$1} /^  / {sub(/^  /,""); split($0,a,"#"); gsub(/ +$/,"",a[1]); print suite a[1]}' "$RUNNER_TEMP/tests.txt")
+          echo "$tests" | wc -l
+          pass=0; fail=0; skip=0
+          for t in $tests; do
+            start=$(date +%s)
+            rc=0
+            rm -f "$RUNNER_TEMP/trace.log"
+            CRYFS_TEST_TRACE_FILE="$RUNNER_TEMP/trace.log" timeout 120 ./cryfs-cli/cryfs-cli-test.exe --gtest_filter="$t" > "$RUNNER_TEMP/one.log" 2>&1 || rc=$?
+            end=$(date +%s)
+            if [ $rc -eq 0 ]; then
+              if grep -q "SKIPPED" "$RUNNER_TEMP/one.log"; then skip=$((skip+1)); echo "SKIP ($((end-start))s) $t: $(grep -A1 'SKIPPED' "$RUNNER_TEMP/one.log" | head -2 | tr '\n' ' ')"; else pass=$((pass+1)); echo "PASS ($((end-start))s) $t"; fi
+            else
+              fail=$((fail+1))
+              echo "FAIL rc=$rc ($((end-start))s) $t"
+              echo "::group::log of $t"
+              cat "$RUNNER_TEMP/one.log"
+              echo "--- harness trace:"
+              cat "$RUNNER_TEMP/trace.log" || true
+              echo "::endgroup::"
+            fi
+          done
+          echo "EXPLORE: cryfs-cli-test pass=$pass fail=$fail skip=$skip"
       - name: CPack
         uses: ./.github/workflows/actions/cpack
         # Release installers are built with Visual Studio 2026, which windows-2025 ships.

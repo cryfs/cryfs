@@ -24,18 +24,68 @@
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
 #include <regex>
 #include <string>
+#include <fstream>
+#include <cstdlib>
+
+// EXPLORATION ONLY: trace the harness steps to a file, because gtest captures stdout/stderr here.
+inline void harness_trace(const std::string& msg) {
+    const char* file = std::getenv("CRYFS_TEST_TRACE_FILE");
+    if (file != nullptr) {
+        std::ofstream f(file, std::ios::app);
+        f << msg << std::endl;
+    }
+}
+
+#if defined(_MSC_VER)
+namespace {
+// CryFS on Windows mounts to a drive letter, not into a directory (see Fuse::_run), so a test that
+// expects a mount to succeed needs a drive letter nothing else is using.
+inline boost::filesystem::path find_free_drive_letter() {
+    const DWORD used = GetLogicalDrives();
+    for (char letter = 'Z'; letter >= 'D'; --letter) {
+        if (0 == (used & (1u << (letter - 'A')))) {
+            return boost::filesystem::path(std::string(1, letter) + ":");
+        }
+    }
+    throw std::runtime_error("Didn't find a free drive letter to mount the test file system to");
+}
+}
+#endif
 
 class CliTest : public ::testing::Test, TestWithFakeHomeDirectory {
 public:
-    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()), logfile(), configfile(false), console(std::make_shared<MockConsole>()) {}
+    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()),
+#if defined(_MSC_VER)
+        mountpoint(find_free_drive_letter()),
+#else
+        mountpoint(_mountdir.path()),
+#endif
+        logfile(), configfile(false), console(std::make_shared<MockConsole>()) {}
 
     cpputils::TempDir _basedir;
     cpputils::TempDir _mountdir;
     boost::filesystem::path basedir;
+    // A directory to test the checks CryFS does on its mount directory with. On Linux and macOS
+    // the tests that expect the mount to succeed also mount into it. On Windows, CryFS can only
+    // mount to a drive letter (see Fuse::_run), so there they mount to `mountpoint` instead and
+    // the tests that need the mount directory to be a directory are skipped.
     boost::filesystem::path mountdir;
+    // Where a test that expects the mount to succeed mounts to: `mountdir` on Linux and macOS, a
+    // free drive letter on Windows.
+    boost::filesystem::path mountpoint;
     cpputils::TempFile logfile;
     cpputils::TempFile configfile;
     std::shared_ptr<MockConsole> console;
+
+    // A path inside the mounted file system. On Windows `mountpoint` is a bare drive letter, and
+    // "X:myfile" would be relative to that drive's current directory rather than to its root.
+    boost::filesystem::path in_mountpoint(const std::string& name) const {
+#if defined(_MSC_VER)
+        return boost::filesystem::path(mountpoint.string() + "\\") / name;
+#else
+        return mountpoint / name;
+#endif
+    }
 
     cpputils::unique_ref<cpputils::HttpClient> _httpClient() {
         cpputils::unique_ref<cpputils::FakeHttpClient> httpClient = cpputils::make_unique_ref<cpputils::FakeHttpClient>();
@@ -113,17 +163,41 @@ public:
     FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         testing::internal::CaptureStdout();
         testing::internal::CaptureStderr();
+        try {
+            return _run_filesystem_with_captured_output(args, std::move(mountDirForUnmounting), std::move(onMounted));
+        } catch (...) {
+            // The exception is reported by gtest once it propagates out of the test body, but
+            // gtest prints that report to stdout, which is still being captured here. Stop
+            // capturing first, and show what the file system printed, because that is where
+            // the reason usually is.
+            std::cerr << "Running the file system threw an exception.\nSTDOUT:\n" << testing::internal::GetCapturedStdout()
+                      << "STDERR:\n" << testing::internal::GetCapturedStderr() << std::endl;
+            throw;
+        }
+    }
 
+    FilesystemOutput _run_filesystem_with_captured_output(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         bool exited = false;
         cpputils::ConditionBarrier isMountedOrFailedBarrier;
 
         std::future<int> exit_code = std::async(std::launch::async, [&] {
-            const int exit_code = run(args, [&] { isMountedOrFailedBarrier.release(); });
-            // just in case it fails, we also want to release the barrier.
-            // if it succeeds, this will release it a second time, which doesn't hurt.
-            exited = true;
-            isMountedOrFailedBarrier.release();
-            return exit_code;
+            // Release the barrier however run() ends, also when it throws. If it fails before
+            // mounting, this releases the barrier the mount would have released. If it mounted,
+            // this releases it a second time, which doesn't hurt. Without the release on an
+            // exception, the thread below would wait for the whole timeout and then abort the
+            // test binary, and the exception would never be reported.
+            struct ReleaseBarrier final {
+                bool* exited;
+                cpputils::ConditionBarrier* barrier;
+                ~ReleaseBarrier() {
+                    *exited = true;
+                    barrier->release();
+                }
+            } releaseBarrier{&exited, &isMountedOrFailedBarrier};
+            harness_trace("run(): starting Cli::main");
+            const int code = run(args, [&] { harness_trace("onMounted callback from Fuse::init"); isMountedOrFailedBarrier.release(); });
+            harness_trace("run(): Cli::main returned " + std::to_string(code));
+            return code;
         });
 
         std::future<bool> on_mounted_success = std::async(std::launch::async, [&] {
@@ -135,10 +209,19 @@ public:
               return true;
             }
             // now we know the filesystem stayed online, so we can call the onMounted callback
+            harness_trace("on_mounted thread: calling the test's onMounted");
             onMounted();
+            harness_trace("on_mounted thread: onMounted returned");
             // and unmount it afterwards
             if (mountDirForUnmounting.is_initialized()) {
-              _unmount(*mountDirForUnmounting);
+              harness_trace("on_mounted thread: unmounting " + mountDirForUnmounting->string());
+              try {
+                _unmount(*mountDirForUnmounting);
+              } catch (const std::exception& e) {
+                harness_trace(std::string("on_mounted thread: unmount threw: ") + e.what());
+                throw;
+              }
+              harness_trace("on_mounted thread: unmount returned");
             }
             return true;
         });
