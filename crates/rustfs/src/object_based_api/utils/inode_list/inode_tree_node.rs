@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_concurrent_store::LoadedEntryGuard;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropResult, AsyncDropShared};
 use futures::future::BoxFuture;
@@ -97,15 +96,15 @@ pub enum RefcountInfo {
     RefcountZero,
 }
 
-#[async_trait]
 impl<Fs> AsyncDrop for InodeTreeNode<Fs>
 where
     Fs: Device + Debug + 'static,
     Fs::Node: 'static,
 {
     type Error = FsError;
-    async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.inode.async_drop().await?;
+    async fn async_drop_impl(self) -> FsResult<()> {
+        let Self { inode, .. } = self;
+        inode.async_drop().await?;
 
         Ok(())
     }

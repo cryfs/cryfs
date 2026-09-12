@@ -60,9 +60,13 @@ where
             session
         }
         Err(e) => {
-            let mut backend_internal_arc = backend_internal_arc.write().await;
-            backend_internal_arc.destroy().await;
-            backend_internal_arc.async_drop().await.unwrap();
+            // Keep the write lock (`fs_lock`) until we're done so that no operation runs concurrently with the drop.
+            let mut fs_lock = backend_internal_arc.write().await;
+            let fs = fs_lock
+                .take()
+                .expect("spawn_mount2 failed without calling destroy(), so the file system must still be alive");
+            fs.destroy().await;
+            fs.async_drop().await.unwrap();
             return Err(e);
         }
     };

@@ -38,7 +38,8 @@ where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     // TODO RwLock is only needed for async drop. Can we remove it?
-    fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
+    // `None` once [Self::destroy] dropped the file system. Other handles (see [Self::internal_arc]) can still observe that.
+    fs: Arc<tokio::sync::RwLock<Option<AsyncDropGuard<Fs>>>>,
 
     runtime: tokio::runtime::Handle,
 }
@@ -60,12 +61,12 @@ where
 {
     pub fn new(fs: AsyncDropGuard<Fs>, runtime: tokio::runtime::Handle) -> Self {
         Self {
-            fs: Arc::new(tokio::sync::RwLock::new(fs)),
+            fs: Arc::new(tokio::sync::RwLock::new(Some(fs))),
             runtime,
         }
     }
 
-    pub(super) fn internal_arc(&self) -> Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>> {
+    pub(super) fn internal_arc(&self) -> Arc<tokio::sync::RwLock<Option<AsyncDropGuard<Fs>>>> {
         Arc::clone(&self.fs)
     }
 
@@ -93,22 +94,24 @@ where
 
     async fn fs(&self) -> FsResult<RwLockReadGuard<'_, AsyncDropGuard<Fs>>> {
         let fs = self.fs.read().await;
-        if fs.is_dropped() {
-            // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
-            // a file held open and closed after the file system is already unmounted.
-            // We can't really handle it well or honor those operations,
-            // but at least we can avoid a panic.
-            log::error!(
-                "Received a file system operation after destroy() terminated the file system"
-            );
-            return Err(FsError::FilesystemDestroyed);
+        match RwLockReadGuard::try_map(fs, Option::as_ref) {
+            Ok(fs) => Ok(fs),
+            Err(_) => {
+                // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
+                // a file held open and closed after the file system is already unmounted.
+                // We can't really handle it well or honor those operations,
+                // but at least we can avoid a panic.
+                log::error!(
+                    "Received a file system operation after destroy() terminated the file system"
+                );
+                Err(FsError::FilesystemDestroyed)
+            }
         }
-        Ok(fs)
     }
 
-    async fn fs_mut(&self) -> FsResult<RwLockWriteGuard<'_, AsyncDropGuard<Fs>>> {
+    async fn fs_mut(&self) -> FsResult<RwLockWriteGuard<'_, Option<AsyncDropGuard<Fs>>>> {
         let fs = self.fs.write().await;
-        if fs.is_dropped() {
+        if fs.is_none() {
             // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
             // a file held open and closed after the file system is already unmounted.
             // We can't really handle it well or honor those operations,
@@ -136,7 +139,11 @@ where
 
     fn destroy(&self) {
         self.run_async(&format!("destroy"), async move || {
-            let mut fs = self.fs_mut().await?;
+            // Keep the write lock (`fs_lock`) until we're done so that no operation runs concurrently with the drop.
+            let mut fs_lock = self.fs_mut().await?;
+            let fs = fs_lock
+                .take()
+                .expect("fs_mut() checked that the file system wasn't destroyed yet");
             fs.destroy().await;
             fs.async_drop().await?;
             Ok(())
@@ -726,7 +733,7 @@ where
     Fs: AsyncFilesystem + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     fn drop(&mut self) {
-        if !self.fs.blocking_read().is_dropped() {
+        if self.fs.blocking_read().is_some() {
             safe_panic!("BackendAdapter dropped without calling destroy() first");
         }
     }

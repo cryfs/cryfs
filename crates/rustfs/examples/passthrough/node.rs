@@ -176,11 +176,10 @@ impl Node for PassthroughNode {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for PassthroughNode {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(self) -> Result<(), FsError> {
         // Nothing to do
         Ok(())
     }

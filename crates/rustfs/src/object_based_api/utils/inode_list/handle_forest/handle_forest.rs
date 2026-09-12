@@ -2,7 +2,6 @@ use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropHashMap};
 use cryfs_utils::containers::OccupiedError;
 use derive_more::{Display, Error};
@@ -126,7 +125,7 @@ where
         &mut self,
         parent_handle: Handle,
         edge: EdgeKey,
-        mut value_fn_input: AsyncDropGuard<I>,
+        value_fn_input: AsyncDropGuard<I>,
         value_fn: impl AsyncFnOnce(
             AsyncDropGuard<I>,
             &HandleWithGeneration<Handle>,
@@ -161,10 +160,7 @@ where
             Node::new(parent_handle, edge, value),
         ) {
             Ok(node) => Ok((new_handle, node)),
-            Err(OccupiedError {
-                entry: _,
-                mut value,
-            }) => {
+            Err(OccupiedError { entry: _, value }) => {
                 value.async_drop().await.unwrap();
                 panic!("Invariant A violated");
             }
@@ -381,7 +377,6 @@ where
     value: AsyncDropGuard<NodeValue>,
 }
 
-#[async_trait]
 impl<Handle, EdgeKey, NodeValue> AsyncDrop for HandleForest<Handle, EdgeKey, NodeValue>
 where
     Handle: HandleTrait + Send,
@@ -391,7 +386,8 @@ where
 {
     type Error = <NodeValue as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.nodes.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { nodes, .. } = self;
+        nodes.async_drop().await
     }
 }

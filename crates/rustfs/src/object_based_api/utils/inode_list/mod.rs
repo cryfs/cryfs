@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use core::panic;
 #[cfg(feature = "testutils")]
 use cryfs_concurrent_store::RequestImmediateDropResult;
@@ -384,7 +383,7 @@ where
         F: Future<Output = FsResult<AsyncDropGuard<Fs::Node>>> + Send,
     {
         let parent_node = {
-            let mut parent_node = Self::_lookup_node(&inner, parent_ino)?;
+            let parent_node = Self::_lookup_node(&inner, parent_ino)?;
             let parent_node_value = AsyncDropArc::clone(parent_node.value());
             parent_node.async_drop().await?;
             parent_node_value
@@ -478,7 +477,7 @@ where
                     inner.inodes.is_fully_absent(&new_child_ino.handle),
                     "We just checked that loading failed, so invariant C1 must be violated here"
                 );
-                let (mut removed_node, remove_result, delayed_handle_release) = inner
+                let (removed_node, remove_result, delayed_handle_release) = inner
                     .inode_forest
                     .try_remove(new_child_ino.handle)
                     .expect("This should never happen because we just added the child above");
@@ -592,7 +591,7 @@ where
                 // Now inodes lock is released and we can drop all removed inodes
                 std::mem::drop(inner);
                 let drop_result =
-                    for_each_unordered(removed_inodes.into_iter(), |mut inode| async move {
+                    for_each_unordered(removed_inodes.into_iter(), |inode| async move {
                         inode.async_drop().await?;
                         // We dropped the guard and concurrent_store::LoadedEntryGuard ensures that the entry is removed from self.inodes now.
                         // Even if it's async_drop fails, it still removes the entry.
@@ -833,7 +832,7 @@ where
 
         for_each_unordered(
             inner.inode_forest.drain(),
-            |(_ino, mut inode_info)| async move { inode_info.async_drop().await },
+            |(_ino, inode_info)| async move { inode_info.async_drop().await },
         )
         .await?;
         // Dropping references also drops the corresponding entries in self.inodes
@@ -878,25 +877,28 @@ where
     }
 }
 
-#[async_trait]
 impl<Fs> AsyncDrop for InodeList<Fs>
 where
     Fs: Device + Debug + 'static,
 {
     type Error = FsError;
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         // The kernel doesn't guarantee that it'll forget all inodes on shutdown, so we can't assert that all inodes are forgotten here.
         // Instead, we just drop all remaining inodes.
-        let inner = self.inner.get_mut();
+        let Self { inner } = self;
+        let InodeListInner {
+            inodes,
+            inode_forest,
+        } = inner.into_inner();
 
         // We don't assert that all inodes were forgotten because the fuse kernl doesn't guarantee that on shutdown.
         // TODO But maybe we still want to assert it when an InodeInfo is dropped in a non-shutdown scenario. Maybe we should add the assertion here and add a [InodeInfo::drop_on_shutdown(self)] that deals with the shutdown case?
-        // assert_eq!(1, inner.inode_forest.num_nodes());
-        // assert!(inner.inode_forest.get(&FUSE_ROOT_ID).is_some());
+        // assert_eq!(1, inode_forest.num_nodes());
+        // assert!(inode_forest.get(&FUSE_ROOT_ID).is_some());
 
-        let result = inner.inode_forest.async_drop().await;
+        let result = inode_forest.async_drop().await;
         // And after all of its references are dropped, we can drop the inode list itself
-        inner.inodes.async_drop().await.infallible_unwrap();
+        inodes.async_drop().await.infallible_unwrap();
 
         result
     }

@@ -353,7 +353,7 @@ where
             }
         }
 
-        let mut inode = match self.get_inode(ino).await {
+        let inode = match self.get_inode(ino).await {
             Ok(inode) => inode,
             Err(err) => return callback.call(Err(err)),
         };
@@ -531,7 +531,7 @@ where
         } else {
             let (oldparent, newparent) =
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
-            let (mut oldparent, mut newparent) =
+            let (oldparent, newparent) =
                 flatten_async_drop::<FsError, _, _, _, _>(oldparent, newparent).await?;
             let result = async {
                 let oldparent_dir = oldparent.as_dir().await?;
@@ -1142,7 +1142,6 @@ where
     }
 }
 
-#[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapterLL<Fs>
 where
     Fs: Device + AsyncDrop + Send + Sync + Debug + 'static,
@@ -1151,13 +1150,22 @@ where
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         // TODO Can we add a check here that inodes are empty? To ensure we've handled them correctly?
         //      Or is it actually allowed fuse behavior to keep files open and/or inodes active on shutdown?
-        self.open_files.async_drop().await.unwrap();
-        self.open_dirs.async_drop().await.unwrap();
-        self.inodes.async_drop().await.unwrap();
-        self.fs.write().await.async_drop().await.unwrap();
+        let Self {
+            fs,
+            inodes,
+            open_files,
+            open_dirs,
+        } = self;
+        open_files.async_drop().await.unwrap();
+        open_dirs.async_drop().await.unwrap();
+        inodes.async_drop().await.unwrap();
+        let fs = Arc::into_inner(fs)
+            .expect("ObjectBasedFsAdapterLL::fs is never shared, so this must be the last reference to it")
+            .into_inner();
+        fs.async_drop().await.unwrap();
         Ok(())
     }
 }
