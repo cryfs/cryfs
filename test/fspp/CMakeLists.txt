@@ -1,13 +1,32 @@
 project (fspp-test)
 
+# The tests that don't need a mounted file system. They only exercise fspp's own code, so they
+# build and run everywhere CryFS does, including Windows.
 set(SOURCES
+    impl/FuseOpenFileListTest.cpp
+    impl/IdListTest.cpp
+    fuse/AtimeOptionsTest.cpp
+    fuse/MountOptionsTest.cpp
+    fuse/FilesystemTest.cpp
+    fs_interface/NodeTest.cpp
+    fs_interface/FileTest.cpp
+    fs_interface/DirTest.cpp
+    fs_interface/DeviceTest.cpp
+    fs_interface/OpenFileTest.cpp
+)
+
+# The rest mounts a mock file system through libfuse and talks to it through the POSIX file API
+# (open, lstat, opendir, statvfs and so on). On Windows CryFS runs on Dokany instead of libfuse and
+# that API doesn't exist, so these stay off the Windows build. CapabilitiesTest is in this group
+# because Dokany's FUSE 2.7 wrapper has no FUSE_CAP_* constants and no capability negotiation, so
+# there is nothing for it to test there, see src/fspp/fuse/Capabilities.cpp.
+if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  list(APPEND SOURCES
     testutils/FuseTest.cpp
     fuse/FuseMountFailureTest.cpp
     fuse/CapabilitiesTest.cpp
     testutils/FuseThread.cpp
     testutils/InMemoryFile.cpp
-    impl/FuseOpenFileListTest.cpp
-    impl/IdListTest.cpp
     fuse/fstat/testutils/FuseFstatTest.cpp
     fuse/fstat/FuseFstatErrorTest.cpp
     fuse/fstat/FuseFstatParameterTest.cpp
@@ -35,8 +54,6 @@ set(SOURCES
     fuse/flush/testutils/FuseFlushTest.cpp
     fuse/flush/FuseFlushErrorTest.cpp
     fuse/flush/FuseFlushFileDescriptorTest.cpp
-    fuse/AtimeOptionsTest.cpp
-    fuse/MountOptionsTest.cpp
     fuse/rename/testutils/FuseRenameTest.cpp
     fuse/rename/FuseRenameErrorTest.cpp
     fuse/rename/FuseRenameFilenameTest.cpp
@@ -102,13 +119,10 @@ set(SOURCES
     fuse/createAndOpenFile/FuseCreateAndOpenFlagsTest.cpp
     fuse/createAndOpenFile/FuseCreateAndOpenFileDescriptorTest.cpp
     fuse/createAndOpenFile/FuseCreateAndOpenErrorTest.cpp
-    fuse/FilesystemTest.cpp
-    fs_interface/NodeTest.cpp
-    fs_interface/FileTest.cpp
-    fs_interface/DirTest.cpp
-    fs_interface/DeviceTest.cpp
-    fs_interface/OpenFileTest.cpp
-        testutils/OpenFileHandle.cpp testutils/OpenFileHandle.h)
+    testutils/OpenFileHandle.cpp
+    testutils/OpenFileHandle.h
+  )
+endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} my-gtest-main fspp-interface fspp-fuse)
