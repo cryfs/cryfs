@@ -789,7 +789,7 @@ jobs:
         with:
           build_type: ${{ matrix.build_type }}
           build_tests: "True"
-          extra_conan_flags: "-o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.2.0'"
+          extra_conan_flags: "-o '&:windows_dokany_path=C:/Program Files/Dokan/DokanLibrary-2.3.1'"
       - name: Save ccache
         uses: ./.github/workflows/actions/ccache/cache
         with:
