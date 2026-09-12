@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -28,7 +27,6 @@ impl<B: Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>> ReadOnlyBlockSto
     }
 }
 
-#[async_trait]
 impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>> BlockStoreReader
     for ReadOnlyBlockStore<B>
 {
@@ -57,7 +55,6 @@ impl<B: BlockStoreReader + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error
     }
 }
 
-#[async_trait]
 impl<B: BlockStoreDeleter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>>
     BlockStoreDeleter for ReadOnlyBlockStore<B>
 {
@@ -66,7 +63,6 @@ impl<B: BlockStoreDeleter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Erro
     }
 }
 
-#[async_trait]
 impl<B: OptimizedBlockStoreWriter + Debug + Sync + Send + AsyncDrop<Error = anyhow::Error>>
     OptimizedBlockStoreWriter for ReadOnlyBlockStore<B>
 {

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use super::dir::Dir;
@@ -11,7 +10,6 @@ use cryfs_utils::{
 };
 
 // TODO We only call this `Device` because that's the historical name from the c++ Cryfs version. We should probably rename this to `Filesystem`.
-#[async_trait]
 pub trait Device {
     // TODO Do we need those Send bounds on Node and Dir?
     type Node: super::Node<Device = Self> + AsyncDrop<Error = FsError> + Debug + Send + Sync;
@@ -34,40 +32,65 @@ pub trait Device {
     /// This does not have to be implemented, but if it is,
     /// it can be used for example to check when the file system was last accessed,
     /// or automatically unmount it when it is idle for too long.
-    async fn on_operation(&self) -> FsResult<()>
+    fn on_operation(&self) -> impl Future<Output = FsResult<()>> + Send
     where
-        Self: 'static,
+        Self: Sync + 'static,
     {
         // By default just do nothing
-        Ok(())
+        async { Ok(()) }
     }
 
-    async fn rootdir(&self) -> FsResult<AsyncDropGuard<Self::Dir<'_>>>;
+    fn rootdir(&self) -> impl Future<Output = FsResult<AsyncDropGuard<Self::Dir<'_>>>> + Send;
 
     // TODO We can probably remove `rename`. It's only called from the fuse-mt backend and fuser uses CryDir::{rename_child,move_child_to} instead. We can probably make fuse-mt use those too.
-    fn rename(&self, from: &AbsolutePath, to: &AbsolutePath) -> impl Future<Output = FsResult<()>>;
-    async fn statfs(&self) -> FsResult<Statfs>;
+    fn rename(
+        &self,
+        from: &AbsolutePath,
+        to: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<()>> + Send;
+    fn statfs(&self) -> impl Future<Output = FsResult<Statfs>> + Send;
 
     // If the node at `path` doesn't exist, it's ok to either immediately fail with [FsError::NodeDoesNotExist]
     // or to return a [Node] object that throws [FsError::NodeDoesNotExist] when any of its members that
     // require existence are called.
-    async fn lookup(&self, path: &AbsolutePath) -> FsResult<AsyncDropGuard<Self::Node>>
+    fn lookup(
+        &self,
+        path: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<AsyncDropGuard<Self::Node>>> + Send
     where
         // TODO Why is Self: 'static needed?
-        Self: 'static,
+        Self: Sync + 'static,
     {
-        // TODO Can we do this without first converting `rootdir` to `Node` by calling `.as_node()`, and then immediately calling `.as_dir()` in the loop below?
-        let rootdir = Dir::into_node(self.rootdir().await?);
+        async move {
+            // TODO Can we do this without first converting `rootdir` to `Node` by calling `.as_node()`, and then immediately calling `.as_dir()` in the loop below?
+            let rootdir = Dir::into_node(self.rootdir().await?);
 
-        match path.split_last() {
-            None => {
-                // We're being asked to load the root dir
-                Ok(rootdir)
-            }
-            // TODO Simplify code
-            Some((parent_path, node_name)) => {
-                let mut currentnode = rootdir;
-                for component in parent_path {
+            match path.split_last() {
+                None => {
+                    // We're being asked to load the root dir
+                    Ok(rootdir)
+                }
+                // TODO Simplify code
+                Some((parent_path, node_name)) => {
+                    let mut currentnode = rootdir;
+                    for component in parent_path {
+                        let dir = currentnode.as_dir();
+                        let child = {
+                            let dir = dir.await;
+                            match dir {
+                                Ok(dir) => {
+                                    // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
+                                    with_async_drop_2!(dir, {
+                                        let child = dir.lookup_child(component);
+                                        child.await
+                                    })
+                                }
+                                Err(err) => Err(err),
+                            }
+                        };
+                        currentnode.async_drop().await?;
+                        currentnode = child?;
+                    }
                     let dir = currentnode.as_dir();
                     let child = {
                         let dir = dir.await;
@@ -75,7 +98,7 @@ pub trait Device {
                             Ok(dir) => {
                                 // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
                                 with_async_drop_2!(dir, {
-                                    let child = dir.lookup_child(component);
+                                    let child = dir.lookup_child(node_name);
                                     child.await
                                 })
                             }
@@ -83,24 +106,8 @@ pub trait Device {
                         }
                     };
                     currentnode.async_drop().await?;
-                    currentnode = child?;
+                    child
                 }
-                let dir = currentnode.as_dir();
-                let child = {
-                    let dir = dir.await;
-                    match dir {
-                        Ok(dir) => {
-                            // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
-                            with_async_drop_2!(dir, {
-                                let child = dir.lookup_child(node_name);
-                                child.await
-                            })
-                        }
-                        Err(err) => Err(err),
-                    }
-                };
-                currentnode.async_drop().await?;
-                child
             }
         }
     }

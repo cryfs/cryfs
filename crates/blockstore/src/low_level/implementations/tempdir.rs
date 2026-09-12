@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -39,7 +38,6 @@ impl TempDirBlockStore {
     }
 }
 
-#[async_trait]
 impl BlockStoreReader for TempDirBlockStore {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         self.underlying_store.exists(id).await
@@ -66,14 +64,12 @@ impl BlockStoreReader for TempDirBlockStore {
     }
 }
 
-#[async_trait]
 impl BlockStoreDeleter for TempDirBlockStore {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         self.underlying_store.remove(id).await
     }
 }
 
-#[async_trait]
 impl OptimizedBlockStoreWriter for TempDirBlockStore {
     type BlockData = <OnDiskBlockStore as OptimizedBlockStoreWriter>::BlockData;
 
@@ -117,7 +113,6 @@ mod tests {
     use crate::tests::low_level::LLFixture;
 
     struct TestFixture {}
-    #[async_trait]
     impl LLFixture for TestFixture {
         type ConcreteBlockStore = TempDirBlockStore;
         fn new() -> Self {

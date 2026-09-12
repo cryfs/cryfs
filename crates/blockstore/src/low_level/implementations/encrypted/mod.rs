@@ -1,5 +1,4 @@
 use anyhow::{Context, Result, bail};
-use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_utils::lazy_reclaim::LazyReclaim;
 use cryfs_utils::threadpool::ThreadPool;
@@ -65,7 +64,6 @@ impl<
     }
 }
 
-#[async_trait]
 impl<
     C: 'static + CipherDef + Send + Sync,
     _B: BlockStoreReader + Send + Sync + Debug,
@@ -129,7 +127,6 @@ impl<
     }
 }
 
-#[async_trait]
 impl<
     C: 'static + CipherDef + Send + Sync,
     _B: BlockStoreDeleter + Send + Sync + Debug,
@@ -147,7 +144,6 @@ impl<
 
 create_block_data_wrapper!(BlockData);
 
-#[async_trait]
 impl<
     C: 'static + CipherDef + Send + Sync,
     _B: OptimizedBlockStoreWriter + Send + Sync + Debug,
@@ -312,7 +308,6 @@ mod tests {
     struct TestFixture<C: 'static + CipherDef + Send + Sync> {
         _c: PhantomData<C>,
     }
-    #[async_trait]
     impl<C: 'static + CipherDef + Send + Sync> LLFixture for TestFixture<C> {
         type ConcreteBlockStore = EncryptedBlockStore<C, InMemoryBlockStore, InMemoryBlockStore>;
         fn new() -> Self {

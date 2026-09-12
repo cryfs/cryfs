@@ -120,6 +120,7 @@ See `crates/cli-utils/src/blockstore_setup.rs` for the setup code.
 - `#![forbid(unsafe_code)]` in most crates
 - All I/O is async via tokio runtime
 - Trait-based abstraction (BlockStoreReader/Writer/Deleter, Blob, Device)
+- Async traits use native Rust async support, not the `async-trait` crate: declare methods as `fn f(&self) -> impl Future<Output = T> + Send;` and implement them with `async fn`. Traits that must be dyn-compatible get a separate `Dyn*` trait with boxed futures (see `DynLLBlockStore`)
 - Binary serialization with `binrw` and `binary-layout`
 
 ## Code Quality Principles
@@ -146,7 +147,7 @@ Types needing async cleanup use `AsyncDropGuard<T>`. See the async-drop skill fo
 - Every `AsyncDropGuard<T>` must have `async_drop()` called before drop (panics otherwise)
 - `async_drop()` consumes the guard: use-after-drop and double-drop are compile errors
 - Factory methods return `AsyncDropGuard<Self>`, never plain `Self`
-- Types with guard members must implement `AsyncDrop` to delegate: `async fn async_drop_impl(self)`, destructure `self` listing every field (no `..`), drop the guard members. No `#[async_trait]` on `AsyncDrop` impls
+- Types with guard members must implement `AsyncDrop` to delegate: `async fn async_drop_impl(self)`, destructure `self` listing every field (no `..`), drop the guard members. Plain `async fn`, no attribute macros
 - Use `with_async_drop_2!` macro when possible; otherwise call `async_drop()` on all exit paths
 - Panics are exceptions - ok to skip `async_drop()` on panic paths
 

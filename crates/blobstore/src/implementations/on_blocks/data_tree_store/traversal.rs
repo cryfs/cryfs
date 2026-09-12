@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow, bail, ensure};
-use async_trait::async_trait;
 use conv::{ConvUtil, DefaultApprox, RoundToNearest};
 use divrem::DivCeil;
 use futures::{
@@ -100,16 +99,18 @@ impl<'a, B: BlockStore + AsyncDrop + Debug + Send> LeafHandle<'a, B> {
     }
 }
 
-#[async_trait]
 pub trait TraversalCallbacks<B: BlockStore + AsyncDrop + Debug + Send> {
-    async fn on_existing_leaf(
+    fn on_existing_leaf(
         &self,
         leaf_index: u64,
         is_right_border_leaf: bool,
         leaf: LeafHandle<'_, B>,
-    ) -> Result<()>;
+    ) -> impl Future<Output = Result<()>> + Send;
     fn on_create_leaf(&self, index: u64) -> Data;
-    async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()>;
+    fn on_backtrack_from_subtree(
+        &self,
+        node: &mut DataInnerNode<B>,
+    ) -> impl Future<Output = Result<()>> + Send;
 }
 
 pub async fn traverse_and_return_new_root<
@@ -382,7 +383,6 @@ async fn _traverse_existing_subtree_of_inner_node<
                 )
             })?;
         struct PanicCallbacks;
-        #[async_trait]
         impl<B: BlockStore<Block: Send> + AsyncDrop + Debug + Send + Sync> TraversalCallbacks<B>
             for PanicCallbacks
         {
@@ -502,7 +502,6 @@ async fn _traverse_existing_subtree_of_inner_node<
             layout: NodeLayout,
             callbacks: &'a C,
         }
-        #[async_trait]
         impl<
             'a,
             B: BlockStore<Block: Send> + AsyncDrop + Debug + Send + Sync,
@@ -573,15 +572,17 @@ async fn _increase_tree_depth<B: BlockStore + AsyncDrop + Debug + Send>(
     )))
 }
 
-#[async_trait]
-trait CreateNewSubtreeCallbacks<B: BlockStore + AsyncDrop + Debug + Send + Sync> {
+trait CreateNewSubtreeCallbacks<B: BlockStore<Block: Send> + AsyncDrop + Debug + Send + Sync> {
     fn on_create_leaf(&self, index: u64) -> Data;
-    async fn on_backtrack_from_subtree(&self, node: &mut DataInnerNode<B>) -> Result<()>;
+    fn on_backtrack_from_subtree(
+        &self,
+        node: &mut DataInnerNode<B>,
+    ) -> impl Future<Output = Result<()>> + Send;
 }
 
 // TODO leaf_offset u32 or u64?
 async fn _create_new_subtree<
-    B: BlockStore + AsyncDrop + Debug + Send + Sync,
+    B: BlockStore<Block: Send> + AsyncDrop + Debug + Send + Sync,
     C: CreateNewSubtreeCallbacks<B> + Sync,
 >(
     node_store: &DataNodeStore<B>,
@@ -641,8 +642,9 @@ async fn _create_new_subtree<
                 )
             })?;
             struct Callbacks;
-            #[async_trait]
-            impl<B: BlockStore + AsyncDrop + Debug + Send + Sync> CreateNewSubtreeCallbacks<B> for Callbacks {
+            impl<B: BlockStore<Block: Send> + AsyncDrop + Debug + Send + Sync>
+                CreateNewSubtreeCallbacks<B> for Callbacks
+            {
                 fn on_create_leaf(&self, _index: u64) -> Data {
                     panic!("We're only creating gap leaves here, not traversing any");
                 }

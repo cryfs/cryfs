@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::StreamExt;
 use pretty_assertions::assert_eq;
@@ -13,7 +12,6 @@ use crate::{
 use crate::{InMemoryBlockStore, LockingBlockStore, tests::high_level::HLFixture};
 
 struct TestFixture<const FLUSH_CACHE_ON_YIELD: bool> {}
-#[async_trait]
 impl<const FLUSH_CACHE_ON_YIELD: bool> HLFixture for TestFixture<FLUSH_CACHE_ON_YIELD> {
     type ConcreteBlockStore = TrackingBlockStore<LockingBlockStore<InMemoryBlockStore>>;
     fn new() -> Self {

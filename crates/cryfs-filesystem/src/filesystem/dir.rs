@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_rustfs::{NumBytes, OpenInFlags};
 use futures::join;
 use std::fmt::Debug;
@@ -191,7 +190,6 @@ where
     }
 }
 
-#[async_trait]
 impl<'a, B> Dir for CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -659,7 +657,7 @@ where
         target: &str,
         uid: cryfs_rustfs::Uid,
         gid: cryfs_rustfs::Gid,
-    ) -> FsResult<(NodeAttrs, AsyncDropGuard<CrySymlink<B>>)> {
+    ) -> FsResult<(NodeAttrs, AsyncDropGuard<CrySymlink<'_, B>>)> {
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(async || {
                 // TODO What should NumBytes be? Also, no unwrap?

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_rustfs::{
     Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenInFlags, Uid,
     object_based_api::{File, OpenFile},
@@ -132,7 +131,6 @@ impl InMemoryFileRef {
     }
 }
 
-#[async_trait]
 impl File for InMemoryFileRef {
     type Device = InMemoryDevice;
 
@@ -165,7 +163,6 @@ pub struct InMemoryOpenFileRef {
     inode: Arc<Mutex<FileInode>>,
 }
 
-#[async_trait]
 impl OpenFile for InMemoryOpenFileRef {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         // TODO Deduplicate with implementation in InMemoryNode

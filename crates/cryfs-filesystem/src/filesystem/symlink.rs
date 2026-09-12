@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use cryfs_fsblobstore::{
@@ -55,7 +54,6 @@ where
     }
 }
 
-#[async_trait]
 impl<'a, B> Symlink for CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,

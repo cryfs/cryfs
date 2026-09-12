@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 #[cfg(feature = "testutils")]
 use cryfs_utils::with_async_drop_2;
 #[cfg(feature = "testutils")]
@@ -82,7 +81,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> Node for CryNode<B>
 where
     // TODO Do we really need B: 'static ?
