@@ -112,7 +112,8 @@ jobs:
   linux_macos:
     name: CI
     needs: should_run
-    if: needs.should_run.outputs.run == 'true'
+    # EXPLORATION: Windows only
+    if: false
     strategy:
       fail-fast: false
       matrix:
