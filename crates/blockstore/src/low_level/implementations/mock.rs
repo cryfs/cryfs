@@ -1,6 +1,6 @@
 use anyhow::Result;
 use byte_unit::Byte;
-use futures::{future::BoxFuture, stream::BoxStream};
+use futures::stream::BoxStream;
 use mockall::mock;
 use std::fmt::{self, Debug};
 
@@ -15,24 +15,24 @@ mock! {
     pub BlockStore {
     }
     impl BlockStoreReader for BlockStore {
-        fn exists<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<bool>> where 'a: 'r, 'b: 'r;
-        fn load<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<Option<Data>>> where 'a: 'r, 'b: 'r;
-        fn num_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<u64>> where 'a: 'r;
+        fn exists(&self, id: &BlockId) -> impl Future<Output = Result<bool>> + Send;
+        fn load(&self, id: &BlockId) -> impl Future<Output = Result<Option<Data>>> + Send;
+        fn num_blocks(&self) -> impl Future<Output = Result<u64>> + Send;
         fn estimate_num_free_bytes(&self) -> Result<Byte>;
         fn overhead(&self) -> Overhead;
 
-        fn all_blocks<'a, 'r>(&'a self) -> BoxFuture<'r, Result<BoxStream<'static, Result<BlockId>>>> where 'a: 'r;
+        fn all_blocks(&self) -> impl Future<Output = Result<BoxStream<'static, Result<BlockId>>>> + Send;
     }
     impl BlockStoreDeleter for BlockStore {
-        fn remove<'a, 'b, 'r>(&'a self, id: &'b BlockId) -> BoxFuture<'r, Result<RemoveResult>> where 'a: 'r, 'b: 'r;
+        fn remove(&self, id: &BlockId) -> impl Future<Output = Result<RemoveResult>> + Send;
     }
     impl BlockStoreWriter for BlockStore {
-        fn try_create<'a, 'b, 'c, 'r>(&'a self, id: &'b BlockId, data: &'c [u8]) -> BoxFuture<'r, Result<TryCreateResult>> where 'a: 'r, 'b: 'r, 'c: 'r;
-        fn store<'a, 'b, 'c, 'r>(&'a self, id: &'b BlockId, data: &'c[u8]) -> BoxFuture<'r, Result<()>> where 'a: 'r, 'b: 'r, 'c: 'r;
+        fn try_create(&self, id: &BlockId, data: &[u8]) -> impl Future<Output = Result<TryCreateResult>> + Send;
+        fn store(&self, id: &BlockId, data: &[u8]) -> impl Future<Output = Result<()>> + Send;
     }
     impl AsyncDrop for BlockStore {
         type Error = anyhow::Error;
-        fn async_drop_impl(self) -> impl std::future::Future<Output = Result<()>> + Send;
+        fn async_drop_impl(self) -> impl Future<Output = Result<()>> + Send;
     }
     impl LLBlockStore for BlockStore {}
 }
@@ -47,7 +47,6 @@ mod tests {
     use super::*;
     use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
     use crate::low_level::InMemoryBlockStore;
-    use async_trait::async_trait;
     use cryfs_utils::async_drop::AsyncDropGuard;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -210,7 +209,6 @@ mod tests {
     }
 
     struct TestFixture {}
-    #[async_trait]
     impl crate::tests::low_level::LLFixture for TestFixture {
         type ConcreteBlockStore = MockBlockStore;
         fn new() -> Self {

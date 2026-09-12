@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
@@ -33,7 +32,6 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
     }
 }
 
-#[async_trait]
 impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
     BlockStoreReader for BlockStoreToLLBlockStoreAdapter<B>
 {
@@ -66,7 +64,6 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
     }
 }
 
-#[async_trait]
 impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
     BlockStoreDeleter for BlockStoreToLLBlockStoreAdapter<B>
 {
@@ -75,7 +72,6 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
     }
 }
 
-#[async_trait]
 impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static>
     BlockStoreWriter for BlockStoreToLLBlockStoreAdapter<B>
 {
@@ -117,7 +113,6 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
 pub struct FixtureAdapterForLLTests<F: HLFixture + Sync, const FLUSH_CACHE_ON_YIELD: bool> {
     f: F,
 }
-#[async_trait]
 impl<
     F: HLFixture<ConcreteBlockStore: AsyncDrop<Error = anyhow::Error>> + Send + Sync,
     const FLUSH_CACHE_ON_YIELD: bool,

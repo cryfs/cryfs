@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::{
     fmt::Debug,
     sync::{Arc, Mutex},
@@ -33,7 +32,6 @@ impl<B: Block> TrackingBlock<B> {
     }
 }
 
-#[async_trait]
 impl<B: Block + Send + Sync> Block for TrackingBlock<B> {
     fn block_id(&self) -> &BlockId {
         self.underlying_block.block_id()

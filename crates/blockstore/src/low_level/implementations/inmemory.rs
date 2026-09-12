@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::{BoxStream, StreamExt};
 use std::collections::hash_map::HashMap;
@@ -32,7 +31,6 @@ impl InMemoryBlockStore {
     }
 }
 
-#[async_trait]
 impl BlockStoreReader for InMemoryBlockStore {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         let blocks = self
@@ -88,7 +86,6 @@ impl BlockStoreReader for InMemoryBlockStore {
     }
 }
 
-#[async_trait]
 impl BlockStoreDeleter for InMemoryBlockStore {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         let mut blocks = self
@@ -105,7 +102,6 @@ impl BlockStoreDeleter for InMemoryBlockStore {
 
 create_block_data_wrapper!(BlockData);
 
-#[async_trait]
 impl OptimizedBlockStoreWriter for InMemoryBlockStore {
     type BlockData = BlockData;
 
@@ -162,7 +158,6 @@ mod tests {
     use crate::tests::low_level::LLFixture;
 
     struct TestFixture {}
-    #[async_trait]
     impl LLFixture for TestFixture {
         type ConcreteBlockStore = InMemoryBlockStore;
         fn new() -> Self {

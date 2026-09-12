@@ -1,5 +1,4 @@
 use anyhow::{Context, Error, Result, anyhow, bail};
-use async_trait::async_trait;
 use base64::engine::{Engine as _, general_purpose::STANDARD as base64_STANDARD};
 use byte_unit::Byte;
 use futures::stream::{BoxStream, Stream, StreamExt, TryStreamExt};
@@ -45,7 +44,6 @@ impl OnDiskBlockStore {
     }
 }
 
-#[async_trait]
 impl BlockStoreReader for OnDiskBlockStore {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         let path = self._block_path(id);
@@ -100,7 +98,6 @@ impl BlockStoreReader for OnDiskBlockStore {
     }
 }
 
-#[async_trait]
 impl BlockStoreDeleter for OnDiskBlockStore {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         let path = self._block_path(id);
@@ -117,7 +114,6 @@ impl BlockStoreDeleter for OnDiskBlockStore {
 
 create_block_data_wrapper!(BlockData);
 
-#[async_trait]
 impl OptimizedBlockStoreWriter for OnDiskBlockStore {
     type BlockData = BlockData;
 
@@ -361,7 +357,6 @@ mod tests {
     struct TestFixture {
         basedir: TempDir,
     }
-    #[async_trait]
     impl LLFixture for TestFixture {
         type ConcreteBlockStore = OnDiskBlockStore;
         fn new() -> Self {

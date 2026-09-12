@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -37,7 +36,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> BlockStore for SharedBlockStore<B>
 where
     B: BlockStore + AsyncDrop + Debug + Send + Sync,
@@ -135,7 +133,6 @@ mod tests {
     use crate::{InMemoryBlockStore, LockingBlockStore, tests::high_level::HLFixture};
 
     struct TestFixture<const FLUSH_CACHE_ON_YIELD: bool> {}
-    #[async_trait]
     impl<const FLUSH_CACHE_ON_YIELD: bool> HLFixture for TestFixture<FLUSH_CACHE_ON_YIELD> {
         type ConcreteBlockStore = SharedBlockStore<LockingBlockStore<InMemoryBlockStore>>;
         fn new() -> Self {

@@ -13,13 +13,11 @@ pub use data_tree_store::{DataTree, DataTreeStore, LoadNodeError};
 mod tests {
     use super::*;
     use crate::tests::fixture::Fixture;
-    use async_trait::async_trait;
     use byte_unit::Byte;
     use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
     use cryfs_utils::async_drop::AsyncDropGuard;
 
     struct TestFixture<const BLOCK_SIZE_BYTES: u64>;
-    #[async_trait]
     impl<const BLOCK_SIZE_BYTES: u64> Fixture for TestFixture<BLOCK_SIZE_BYTES> {
         type ConcreteBlobStore = BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>;
         fn new() -> Self {

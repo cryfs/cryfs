@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use derive_more::Debug;
 use std::time::{Duration, SystemTime};
 
@@ -140,24 +139,23 @@ pub trait ReplyDirectoryPlus {
     ) -> ReplyDirectoryAddResult;
 }
 
-#[async_trait]
 pub trait AsyncFilesystemLL {
     /// Initialize filesystem.
     /// Called before any other filesystem method.
     /// The kernel module connection can be configured using the KernelConfig object
-    async fn init(&self, req: &RequestInfo) -> FsResult<()>;
+    fn init(&self, req: &RequestInfo) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Clean up filesystem.
     /// Called on filesystem exit.
-    async fn destroy(&self);
+    fn destroy(&self) -> impl Future<Output = ()> + Send;
 
     /// Look up a directory entry by name and get its attributes.
-    async fn lookup(
+    fn lookup(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
         name: &PathComponent,
-    ) -> FsResult<ReplyEntry>;
+    ) -> impl Future<Output = FsResult<ReplyEntry>> + Send;
 
     /// Forget about an inode.
     /// The nlookup parameter indicates the number of lookups previously performed on
@@ -166,7 +164,12 @@ pub trait AsyncFilesystemLL {
     /// each forget. The filesystem may ignore forget calls, if the inodes don't need to
     /// have a limited lifetime. On unmount it is not guaranteed, that all referenced
     /// inodes will receive a forget message.
-    async fn forget(&self, req: &RequestInfo, ino: InodeNumber, nlookup: u64) -> FsResult<()>;
+    fn forget(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        nlookup: u64,
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     // TODO Do we want this? It seems to be gated by an "abi-7-16" feature but what is that?
     // /// Like forget, but take multiple forget requests at once for performance. The default
@@ -179,15 +182,15 @@ pub trait AsyncFilesystemLL {
     // }
 
     /// Get file attributes.
-    async fn getattr(
+    fn getattr(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: Option<FileHandle>,
-    ) -> FsResult<ReplyAttr>;
+    ) -> impl Future<Output = FsResult<ReplyAttr>> + Send;
 
     /// Set file attributes.
-    async fn setattr(
+    fn setattr(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -204,17 +207,22 @@ pub trait AsyncFilesystemLL {
         bkuptime: Option<SystemTime>,
         // TODO Custom type for flags
         flags: Option<u32>,
-    ) -> FsResult<ReplyAttr>;
+    ) -> impl Future<Output = FsResult<ReplyAttr>> + Send;
 
     /// Read symbolic link.
-    async fn readlink<R, C>(&self, req: &RequestInfo, ino: InodeNumber, callback: C) -> R
+    fn readlink<R, C>(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+        callback: C,
+    ) -> impl Future<Output = R> + Send
     where
         R: 'static,
         C: Send + 'static + for<'a> Callback<FsResult<&'a str>, R>;
 
     /// Create file node.
     /// Create a regular file, character device, block device, fifo or socket node.
-    async fn mknod(
+    fn mknod(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
@@ -224,10 +232,10 @@ pub trait AsyncFilesystemLL {
         umask: u32,
         // TODO What is rdev?
         rdev: u32,
-    ) -> FsResult<ReplyEntry>;
+    ) -> impl Future<Output = FsResult<ReplyEntry>> + Send;
 
     /// Create a directory.
-    async fn mkdir(
+    fn mkdir(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
@@ -235,32 +243,32 @@ pub trait AsyncFilesystemLL {
         mode: Mode,
         // TODO Which type for umask?
         umask: u32,
-    ) -> FsResult<ReplyEntry>;
+    ) -> impl Future<Output = FsResult<ReplyEntry>> + Send;
 
     /// Remove a file.
-    async fn unlink(
+    fn unlink(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
         name: &PathComponent,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Remove a directory.
-    async fn rmdir(
+    fn rmdir(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
         name: &PathComponent,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Create a symbolic link.
-    async fn symlink(
+    fn symlink(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
         name: &PathComponent,
         link: &str,
-    ) -> FsResult<ReplyEntry>;
+    ) -> impl Future<Output = FsResult<ReplyEntry>> + Send;
 
     /// Rename a file.
     ///
@@ -269,7 +277,7 @@ pub trait AsyncFilesystemLL {
     /// them must reject a non-zero `flags` with FsError::InvalidOperation rather than ignore it -
     /// performing a plain rename in response to a `RENAME_EXCHANGE` reports success while
     /// destroying one of the two files.
-    async fn rename(
+    fn rename(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
@@ -278,16 +286,16 @@ pub trait AsyncFilesystemLL {
         newname: &PathComponent,
         // TODO Which type for flags?
         flags: u32,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Create a hard link.
-    async fn link(
+    fn link(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         newparent: InodeNumber,
         newname: &PathComponent,
-    ) -> FsResult<ReplyEntry>;
+    ) -> impl Future<Output = FsResult<ReplyEntry>> + Send;
 
     /// Open a file.
     /// Open flags (with the exception of O_CREAT, O_EXCL, O_NOCTTY and O_TRUNC) are
@@ -297,12 +305,12 @@ pub trait AsyncFilesystemLL {
     /// anything in fh. There are also some flags (direct_io, keep_cache) which the
     /// filesystem may set, to change the way the file is opened. See fuse_file_info
     /// structure in <fuse_common.h> for more details.
-    async fn open(
+    fn open(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         flags: OpenInFlags,
-    ) -> FsResult<ReplyOpen>;
+    ) -> impl Future<Output = FsResult<ReplyOpen>> + Send;
 
     /// Read data.
     /// Read should send exactly the number of bytes requested except on EOF or error,
@@ -314,7 +322,7 @@ pub trait AsyncFilesystemLL {
     ///
     /// flags: these are the file flags, such as O_SYNC. Only supported with ABI >= 7.9
     /// lock_owner: only supported with ABI >= 7.9
-    async fn read<R, C>(
+    fn read<R, C>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -328,7 +336,7 @@ pub trait AsyncFilesystemLL {
         lock_owner: Option<u64>,
         // TODO Here and in other places, add documentation saying that `CallbackResult` is just a way to ensure that the implementation actually calls callback.
         callback: C,
-    ) -> R
+    ) -> impl Future<Output = R> + Send
     where
         R: 'static,
         C: Send + 'static + for<'a> Callback<FsResult<&'a [u8]>, R>;
@@ -345,7 +353,7 @@ pub trait AsyncFilesystemLL {
     /// is disabled
     /// flags: these are the file flags, such as O_SYNC. Only supported with ABI >= 7.9
     /// lock_owner: only supported with ABI >= 7.9
-    async fn write(
+    fn write(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -359,7 +367,7 @@ pub trait AsyncFilesystemLL {
         flags: i32,
         // TODO What is lock_owner?
         lock_owner: Option<u64>,
-    ) -> FsResult<ReplyWrite>;
+    ) -> impl Future<Output = FsResult<ReplyWrite>> + Send;
 
     /// Flush method.
     /// This is called on each close() of the opened file. Since file descriptors can
@@ -371,14 +379,14 @@ pub trait AsyncFilesystemLL {
     /// is not forced to flush pending writes. One reason to flush data, is if the
     /// filesystem wants to return write errors. If the filesystem supports file locking
     /// operations (setlk, getlk) it should remove all locks belonging to 'lock_owner'.
-    async fn flush(
+    fn flush(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         // TODO What is lock_owner?
         lock_owner: u64,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Release an open file.
     /// Release is called when there are no more references to an open file: all file
@@ -388,7 +396,7 @@ pub trait AsyncFilesystemLL {
     /// the release. fh will contain the value set by the open method, or will be undefined
     /// if the open method didn't set any value. flags will contain the same flags as for
     /// open.
-    async fn release(
+    fn release(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -398,18 +406,18 @@ pub trait AsyncFilesystemLL {
         // TODO What is lock_owner?
         lock_owner: Option<u64>,
         flush: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Synchronize file contents.
     /// If the datasync parameter is non-zero, then only the user data should be flushed,
     /// not the meta data.
-    async fn fsync(
+    fn fsync(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Open a directory.
     /// Filesystem may store an arbitrary file handle (pointer, index, etc) in fh, and
@@ -418,19 +426,19 @@ pub trait AsyncFilesystemLL {
     /// anything in fh, though that makes it impossible to implement standard conforming
     /// directory stream operations in case the contents of the directory can change
     /// between opendir and releasedir.
-    async fn opendir(
+    fn opendir(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         flags: OpenInFlags,
-    ) -> FsResult<ReplyOpen>;
+    ) -> impl Future<Output = FsResult<ReplyOpen>> + Send;
 
     /// Read directory.
     /// Send a buffer filled using buffer.fill(), with size not exceeding the
     /// requested size. Send an empty buffer on end of stream. fh will contain the
     /// value set by the opendir method, or will be undefined if the opendir method
     /// didn't set any value.
-    async fn readdir<R: ReplyDirectory + Send + 'static>(
+    fn readdir<R: ReplyDirectory + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -439,14 +447,14 @@ pub trait AsyncFilesystemLL {
         offset: u64,
         // TODO Can we do this via a callback that takes an iterator
         reply: &mut R,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Read directory.
     /// Send a buffer filled using buffer.fill(), with size not exceeding the
     /// requested size. Send an empty buffer on end of stream. fh will contain the
     /// value set by the opendir method, or will be undefined if the opendir method
     /// didn't set any value.
-    async fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
+    fn readdirplus<R: ReplyDirectoryPlus + Send + 'static>(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -455,37 +463,41 @@ pub trait AsyncFilesystemLL {
         offset: u64,
         // TODO Can we do this via a callback that takes an iterator
         reply: &mut R,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Release an open directory.
     /// For every opendir call there will be exactly one releasedir call. fh will
     /// contain the value set by the opendir method, or will be undefined if the
     /// opendir method didn't set any value.
-    async fn releasedir(
+    fn releasedir(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         flags: OpenInFlags,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Synchronize directory contents.
     /// If the datasync parameter is set, then only the directory contents should
     /// be flushed, not the meta data. fh will contain the value set by the opendir
     /// method, or will be undefined if the opendir method didn't set any value.
-    async fn fsyncdir(
+    fn fsyncdir(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         fh: FileHandle,
         datasync: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Get file system statistics.
-    async fn statfs(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<Statfs>;
+    fn statfs(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+    ) -> impl Future<Output = FsResult<Statfs>> + Send;
 
     /// Set an extended attribute.
-    async fn setxattr(
+    fn setxattr(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -495,66 +507,70 @@ pub trait AsyncFilesystemLL {
         // TODO Wrapper type for flags
         flags: i32,
         position: NumBytes,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Get the size of a file extended attribute.
-    async fn getxattr_numbytes(
+    fn getxattr_numbytes(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
-    ) -> FsResult<NumBytes>;
+    ) -> impl Future<Output = FsResult<NumBytes>> + Send;
 
     /// Get the data stored in a file extended attribute.
     /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
     ///
     /// TODO Should we change the API to a callback based one, similar to how `read` works? Could reduce amount of copies needed
-    async fn getxattr_data(
+    fn getxattr_data(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
         max_bytes_to_read: NumBytes,
-    ) -> FsResult<Vec<u8>>;
+    ) -> impl Future<Output = FsResult<Vec<u8>>> + Send;
 
     /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
     ///
     /// See [Self::listxattr_data] for a definition of what it returns.
-    async fn listxattr_numbytes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<NumBytes>;
+    fn listxattr_numbytes(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+    ) -> impl Future<Output = FsResult<NumBytes>> + Send;
 
     /// List extended attributes for a file. Return all the null-terminated attribute names.
     /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
     ///
     /// // TODO Come up with a better way to handle this return, and its combination with listxattr_numbytes.
-    async fn listxattr_data(
+    fn listxattr_data(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         max_bytes_to_read: NumBytes,
-    ) -> FsResult<Vec<u8>>;
+    ) -> impl Future<Output = FsResult<Vec<u8>>> + Send;
 
     /// Remove an extended attribute.
-    async fn removexattr(
+    fn removexattr(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         // TODO Different wrapper type for name that isn't PathComponent? Are the rules the same for xattr names and path components?
         name: &PathComponent,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Check file access permissions.
     /// This will be called for the access() system call. If the 'default_permissions'
     /// mount option is given, this method is not called. This method is not called
     /// under Linux kernel versions 2.4.x
-    async fn access(
+    fn access(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         // TODO Wrapper task for mask
         mask: i32,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Create and open a file.
     /// If the file does not exist, first create it with the specified mode, and then
@@ -566,7 +582,7 @@ pub trait AsyncFilesystemLL {
     /// structure in <fuse_common.h> for more details. If this method is not
     /// implemented or under Linux kernel versions earlier than 2.6.15, the mknod()
     /// and open() methods will be called instead.
-    async fn create(
+    fn create(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
@@ -575,10 +591,10 @@ pub trait AsyncFilesystemLL {
         // TODO Wrapper type for umask
         umask: u32,
         flags: OpenInFlags,
-    ) -> FsResult<ReplyCreate>;
+    ) -> impl Future<Output = FsResult<ReplyCreate>> + Send;
 
     /// Test for a POSIX file lock.
-    async fn getlk(
+    fn getlk(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -590,7 +606,7 @@ pub trait AsyncFilesystemLL {
         end: u64,
         typ: i32,
         pid: u32,
-    ) -> FsResult<ReplyLock>;
+    ) -> impl Future<Output = FsResult<ReplyLock>> + Send;
 
     /// Acquire, modify or release a POSIX file lock.
     /// For POSIX threads (NPTL) there's a 1-1 relation between pid and owner, but
@@ -599,7 +615,7 @@ pub trait AsyncFilesystemLL {
     /// used to fill in this field in getlk(). Note: if the locking methods are not
     /// implemented, the kernel will still allow file locking to work locally.
     /// Hence these are only interesting for network filesystems and similar.
-    async fn setlk(
+    fn setlk(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -612,22 +628,22 @@ pub trait AsyncFilesystemLL {
         typ: i32,
         pid: u32,
         sleep: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Map block index within file to block index within device.
     /// Note: This makes sense only for block device backed filesystems mounted
     /// with the 'blkdev' option
-    async fn bmap(
+    fn bmap(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
         blocksize: NumBytes,
         // TODO What is idx?
         idx: u64,
-    ) -> FsResult<ReplyBmap>;
+    ) -> impl Future<Output = FsResult<ReplyBmap>> + Send;
 
     /// control device
-    async fn ioctl(
+    fn ioctl(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -637,10 +653,10 @@ pub trait AsyncFilesystemLL {
         cmd: u32,
         in_data: &[u8],
         out_size: u32,
-    ) -> FsResult<ReplyIoctl>;
+    ) -> impl Future<Output = FsResult<ReplyIoctl>> + Send;
 
     /// Preallocate or deallocate space to a file
-    async fn fallocate(
+    fn fallocate(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -649,10 +665,10 @@ pub trait AsyncFilesystemLL {
         offset: NumBytes,
         length: NumBytes,
         mode: Mode,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// Reposition read/write file offset
-    async fn lseek(
+    fn lseek(
         &self,
         req: &RequestInfo,
         ino: InodeNumber,
@@ -661,13 +677,13 @@ pub trait AsyncFilesystemLL {
         offset: NumBytes,
         // TODO What is whence?
         whence: i32,
-    ) -> FsResult<ReplyLseek>;
+    ) -> impl Future<Output = FsResult<ReplyLseek>> + Send;
 
     // TODO Some below (and maybe some above) aren't actually needed and fuse allows returning ENOSYS as a "not-implemented" marker, see https://www.youtube.com/watch?v=id0Kkq4VHDo
     //     See also which ones are actually implemented in https://github.com/wfraser/fuse-mt/blob/master/src/fusemt.rs
 
     /// Copy the specified range from the source inode to the destination inode
-    async fn copy_file_range(
+    fn copy_file_range(
         &self,
         req: &RequestInfo,
         ino_in: InodeNumber,
@@ -681,16 +697,20 @@ pub trait AsyncFilesystemLL {
         len: NumBytes,
         // TODO Wrapper type for flags
         flags: u64,
-    ) -> FsResult<ReplyWrite>;
+    ) -> impl Future<Output = FsResult<ReplyWrite>> + Send;
 
     /// macOS only: Rename the volume. Set fuse_init_out.flags during init to
     /// FUSE_VOL_RENAME to enable
     #[cfg(target_os = "macos")]
-    async fn setvolname(&self, req: &RequestInfo, name: &str) -> FsResult<()>;
+    fn setvolname(
+        &self,
+        req: &RequestInfo,
+        name: &str,
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// macOS only (undocumented)
     #[cfg(target_os = "macos")]
-    async fn exchange(
+    fn exchange(
         &self,
         req: &RequestInfo,
         parent: InodeNumber,
@@ -699,10 +719,14 @@ pub trait AsyncFilesystemLL {
         newname: &PathComponent,
         // TODO Wrapper type for options
         options: u64,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
     /// macOS only: Query extended times (bkuptime and crtime). Set fuse_init_out.flags
     /// during init to FUSE_XTIMES to enable
     #[cfg(target_os = "macos")]
-    async fn getxtimes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyXTimes>;
+    fn getxtimes(
+        &self,
+        req: &RequestInfo,
+        ino: InodeNumber,
+    ) -> impl Future<Output = FsResult<ReplyXTimes>> + Send;
 }

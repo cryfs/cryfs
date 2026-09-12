@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc},
     event::Event,
@@ -50,7 +49,6 @@ pub fn make_mock_filesystem() -> MockFilesystem {
 mock! {
     pub AsyncFilesystemLL {}
 
-    #[async_trait]
     impl AsyncFilesystemLL for AsyncFilesystemLL {
         async fn init(&self, req: &RequestInfo) -> FsResult<()>;
 
@@ -424,7 +422,6 @@ impl Debug for MockAsyncFilesystemLL {
 /// We need to implement AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> because we need our code
 /// to keep access to the mock (e.g. keep an Arc) while the mock is also being passed to the backend adapter
 /// to run the file system.
-#[async_trait]
 impl AsyncFilesystemLL for AsyncDropArc<MockAsyncFilesystemLL> {
     async fn init(&self, req: &RequestInfo) -> FsResult<()> {
         self.deref().init(req).await

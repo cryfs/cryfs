@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use super::{device::CryDevice, node_info::NodeInfo, open_file::CryOpenFile};
@@ -32,7 +31,6 @@ where
     }
 }
 
-#[async_trait]
 impl<'a, B> File for CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,

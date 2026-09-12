@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use crate::BlobStore;
@@ -9,7 +8,6 @@ use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 ///
 /// The fixture is kept alive for as long as the test runs, so it can hold RAII resources
 /// required by the block store.
-#[async_trait]
 pub trait Fixture {
     type ConcreteBlobStore: BlobStore
         + Debug
@@ -22,7 +20,7 @@ pub trait Fixture {
     fn new() -> Self;
 
     /// Create a new block store for testing
-    async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlobStore>;
+    fn store(&mut self) -> impl Future<Output = AsyncDropGuard<Self::ConcreteBlobStore>> + Send;
 
     /// Run some action defined by the fixture. This is often called
     /// by test cases between making changes and asserting that the changes
@@ -30,5 +28,5 @@ pub trait Fixture {
     /// if they want to test that flushing doesn't break anything.
     /// Most fixtures will likely implement this as a no-op.
     /// TODO Go through our low level block store implementations and see if they have a use for yield_fixture
-    async fn yield_fixture(&self, store: &Self::ConcreteBlobStore);
+    fn yield_fixture(&self, store: &Self::ConcreteBlobStore) -> impl Future<Output = ()> + Send;
 }

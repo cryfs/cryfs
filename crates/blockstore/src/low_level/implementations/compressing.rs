@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
@@ -38,7 +37,6 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> Debug for CompressingBl
     }
 }
 
-#[async_trait]
 impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> BlockStoreReader
     for CompressingBlockStore<B>
 {
@@ -76,7 +74,6 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     }
 }
 
-#[async_trait]
 impl<B: BlockStoreDeleter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
     BlockStoreDeleter for CompressingBlockStore<B>
 {
@@ -85,7 +82,6 @@ impl<B: BlockStoreDeleter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Erro
     }
 }
 
-#[async_trait]
 impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
     OptimizedBlockStoreWriter for CompressingBlockStore<B>
 {
@@ -166,7 +162,6 @@ mod generic_tests {
     use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
 
     struct TestFixture {}
-    #[async_trait]
     impl LLFixture for TestFixture {
         type ConcreteBlockStore = CompressingBlockStore<InMemoryBlockStore>;
         fn new() -> Self {

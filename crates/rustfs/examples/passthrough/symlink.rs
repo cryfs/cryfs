@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_rustfs::{FsError, FsResult, object_based_api::Symlink};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -20,7 +19,6 @@ impl PassthroughSymlink {
     }
 }
 
-#[async_trait]
 impl Symlink for PassthroughSymlink {
     type Device = PassthroughDevice;
 

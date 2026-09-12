@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
 use cryfs_utils::async_drop::AsyncDropGuard;
@@ -7,7 +6,6 @@ use super::TrackingBlobStore;
 use crate::{BlobId, BlobStoreOnBlocks, tests::fixture::Fixture};
 
 struct TestFixture;
-#[async_trait]
 impl Fixture for TestFixture {
     type ConcreteBlobStore =
         TrackingBlobStore<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>;

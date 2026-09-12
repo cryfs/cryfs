@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::time::SystemTime;
 
 use cryfs_rustfs::{
@@ -31,7 +30,6 @@ impl InMemoryNodeRef {
     }
 }
 
-#[async_trait]
 impl Node for InMemoryNodeRef {
     type Device = InMemoryDevice;
 
