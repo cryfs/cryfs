@@ -21,9 +21,54 @@ runs:
       # those in extra_conan_flags only reach cmake, except update_checks,
       # which only ever removes libcurl from the graph: installing that
       # superset is harmless.
+      #
+      # A download that fails part way through leaves conan's partial
+      # conan_export.tgz behind, and conan's own retry then refuses to write over
+      # it:
+      #
+      #     <pkg>: ERROR: Error downloading from remote 'conancenter'
+      #     ERROR: Package '<pkg>' not resolved: Error, the file to download
+      #     already exists: '.../p/<pkg>/d/conan_export.tgz'
+      #
+      # so the retry conan does on its own can never succeed and the job gets one
+      # download attempt rather than several. A blip that conan is built to absorb
+      # fails the build instead. Only a cell whose cache is missing a package
+      # downloads anything at all, so this shows up on whichever few cells are
+      # cold for a package rather than across the matrix, which makes it look
+      # specific to them.
+      #
+      # Removing the download folders between attempts is what makes the retry a
+      # real one. The last attempt adds -vtrace so that if it still fails the log
+      # carries the underlying error rather than only conan's generic "Error
+      # downloading from remote".
       run: |
         set -v
         set -e
         conan profile show
 
-        conan install . --build=missing -s build_type=${{ inputs.build_type }} -o "&:build_tests=${{ inputs.build_tests }}"
+        set +e
+        attempt=1
+        max_attempts=3
+        while true; do
+          if [ "$attempt" -eq "$max_attempts" ]; then
+            verbosity=-vtrace
+          else
+            verbosity=
+          fi
+          conan install . --build=missing -s build_type=${{ inputs.build_type }} -o "&:build_tests=${{ inputs.build_tests }}" $verbosity
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            break
+          fi
+          if [ "$attempt" -ge "$max_attempts" ]; then
+            echo "conan install failed after $max_attempts attempts"
+            exit "$status"
+          fi
+          echo "conan install failed (attempt $attempt of $max_attempts), discarding partially downloaded packages and retrying"
+          if [ -n "$CONAN_HOME" ]; then
+            rm -rf "$CONAN_HOME"/p/*/d
+          fi
+          sleep "$(( attempt * 5 ))"
+          attempt="$(( attempt + 1 ))"
+        done
+        set -e

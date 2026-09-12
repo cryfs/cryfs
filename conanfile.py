@@ -130,7 +130,7 @@ class CryFSConan(ConanFile):
      
     def requirements(self):
         self.requires("range-v3/cci.20240905")
-        self.requires("spdlog/1.14.1")
+        self.requires("spdlog/1.17.0")
         self.requires("boost/1.84.0")
         if self.options.update_checks:
             self.requires("libcurl/8.9.1")
