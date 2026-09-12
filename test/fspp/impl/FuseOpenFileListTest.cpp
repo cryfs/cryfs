@@ -9,7 +9,10 @@ using cpputils::make_unique_ref;
 
 using namespace fspp;
 
-class MockOpenFile: public OpenFile {
+// fspp::OpenFile is spelled out below, because on Windows the headers pull in <windows.h>, which
+// declares a global function named OpenFile, and with the using directive above the bare name is
+// ambiguous there.
+class MockOpenFile: public fspp::OpenFile {
 public:
   MockOpenFile(int fileid_, int flags_): fileid(fileid_), flags(flags_), destructed(false) {}
   int fileid, flags;
@@ -17,7 +20,7 @@ public:
 
   ~MockOpenFile() override {destructed = true;}
 
-  MOCK_METHOD(OpenFile::stat_info, stat, (), (const, override));
+  MOCK_METHOD(fspp::OpenFile::stat_info, stat, (), (const, override));
   MOCK_METHOD(void, truncate, (fspp::num_bytes_t), (const, override));
   MOCK_METHOD(fspp::num_bytes_t, read, (void*, fspp::num_bytes_t, fspp::num_bytes_t), (const, override));
   MOCK_METHOD(void, write, (const void*, fspp::num_bytes_t, fspp::num_bytes_t), (override));
@@ -45,7 +48,7 @@ struct FuseOpenFileListTest: public ::testing::Test {
     return open(FILEID1, FILEID2);
   }
   void check(int id, int fileid, int flags) {
-	  list.load(id, [=](OpenFile* _openFile) {
+	  list.load(id, [=](fspp::OpenFile* _openFile) {
 		  MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(_openFile);
 		  EXPECT_EQ(fileid, openFile->fileid);
 		  EXPECT_EQ(flags, openFile->flags);
@@ -54,17 +57,17 @@ struct FuseOpenFileListTest: public ::testing::Test {
 };
 
 TEST_F(FuseOpenFileListTest, EmptyList1) {
-	ASSERT_THROW(list.load(0, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
+	ASSERT_THROW(list.load(0, [](fspp::OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, EmptyList2) {
-	ASSERT_THROW(list.load(3, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
+	ASSERT_THROW(list.load(3, [](fspp::OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, InvalidId) {
   const int valid_id = open();
   const int invalid_id = valid_id + 1;
-  ASSERT_THROW(list.load(invalid_id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
+  ASSERT_THROW(list.load(invalid_id, [](fspp::OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, Open1AndGet) {
@@ -104,18 +107,18 @@ TEST_F(FuseOpenFileListTest, Open3AndGet) {
 TEST_F(FuseOpenFileListTest, GetClosedItemOnEmptyList) {
   const int id = open();
 
-  ASSERT_NO_THROW(list.load(id, [](OpenFile*) {}));
+  ASSERT_NO_THROW(list.load(id, [](fspp::OpenFile*) {}));
   list.close(id);
-  ASSERT_THROW(list.load(id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
+  ASSERT_THROW(list.load(id, [](fspp::OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, GetClosedItemOnNonEmptyList) {
   const int id = open();
   open();
 
-  ASSERT_NO_THROW(list.load(id, [](OpenFile*) {}));
+  ASSERT_NO_THROW(list.load(id, [](fspp::OpenFile*) {}));
   list.close(id);
-  ASSERT_THROW(list.load(id, [](OpenFile*) {}), fspp::fuse::FuseErrnoException);
+  ASSERT_THROW(list.load(id, [](fspp::OpenFile*) {}), fspp::fuse::FuseErrnoException);
 }
 
 TEST_F(FuseOpenFileListTest, CloseOnEmptyList1) {
