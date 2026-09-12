@@ -70,8 +70,8 @@ impl FilesystemFixture {
     }
 
     async fn create_root_dir_blob(&self) {
-        let mut fsblobstore = self.make_fsblobstore().await;
-        let mut blob = fsblobstore
+        let fsblobstore = self.make_fsblobstore().await;
+        let blob = fsblobstore
             .create_root_dir_blob(&self.root_blob_id)
             .await
             .expect("Failed to create rootdir blob");
@@ -144,7 +144,7 @@ impl FilesystemFixture {
             &'b DataNodeStore<LockingBlockStore<DynBlockStore>>,
         ) -> BoxFuture<'b, R>,
     ) -> R {
-        let mut nodestore = self.make_nodestore().await;
+        let nodestore = self.make_nodestore().await;
         let result = update_fn(&nodestore).await;
         nodestore.async_drop().await.unwrap();
         result
@@ -156,7 +156,7 @@ impl FilesystemFixture {
             &'b BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>,
         ) -> BoxFuture<'b, R>,
     ) -> R {
-        let mut blobstore = self.make_blobstore().await;
+        let blobstore = self.make_blobstore().await;
         let result = update_fn(&blobstore).await;
         blobstore.async_drop().await.unwrap();
         result
@@ -168,7 +168,7 @@ impl FilesystemFixture {
             &'b FsBlobStore<BlobStoreOnBlocks<LockingBlockStore<DynBlockStore>>>,
         ) -> BoxFuture<'b, R>,
     ) -> R {
-        let mut fsblobstore = self.make_fsblobstore().await;
+        let fsblobstore = self.make_fsblobstore().await;
         let result = update_fn(&fsblobstore).await;
         fsblobstore.async_drop().await.unwrap();
         result
@@ -230,7 +230,7 @@ impl FilesystemFixture {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
                 with_async_drop_2!(parent, {
-                    let mut file =
+                    let file =
                         super::entry_helpers::create_empty_file(blobstore, &mut parent, &name)
                             .await;
                     let result = (&*file).into();
@@ -289,7 +289,7 @@ impl FilesystemFixture {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent_blob = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
                 with_async_drop_2!(parent_blob, {
-                    let mut symlink = super::entry_helpers::create_symlink(
+                    let symlink = super::entry_helpers::create_symlink(
                         blobstore,
                         &mut parent_blob,
                         &name,
@@ -405,7 +405,7 @@ impl FilesystemFixture {
     pub async fn is_dir_blob(&self, blob_id: BlobId) -> bool {
         self.update_fsblobstore(move |fsblobstore| {
             Box::pin(async move {
-                let mut blob = fsblobstore.load(&blob_id).await.unwrap().unwrap();
+                let blob = fsblobstore.load(&blob_id).await.unwrap().unwrap();
                 let result = matches!(&*blob, FsBlob::Directory(_));
                 blob.async_drop().await.unwrap();
                 result

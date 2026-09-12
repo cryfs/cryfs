@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::{
     future::FutureExt,
     stream::{self, BoxStream, StreamExt},
@@ -72,7 +71,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for CreatedDirBlob<B>
 where
     B: BlobStore + Debug + 'static,
@@ -80,8 +78,9 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.blob.async_drop().await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { blob, path: _ } = self;
+        blob.async_drop().await
     }
 }
 
@@ -151,7 +150,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for CreatedFileBlob<B>
 where
     B: BlobStore + Debug + 'static,
@@ -159,8 +157,9 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.blob.async_drop().await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { blob, path: _ } = self;
+        blob.async_drop().await
     }
 }
 
@@ -196,7 +195,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for CreatedSymlinkBlob<B>
 where
     B: BlobStore + Debug + 'static,
@@ -204,8 +202,9 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.blob.async_drop().await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { blob, path: _ } = self;
+        blob.async_drop().await
     }
 }
 
@@ -526,26 +525,23 @@ where
     let mut dir2_dir7 = create_empty_dir(fsblobstore, &mut dir2, "somedir7").await;
 
     // Let's create a directory, symlink and file with lots of entries (so it'll use multiple nodes)
-    let mut large_dir_1 =
+    let large_dir_1 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir2_dir6, "some_large_dir_1", 2)
             .await;
-    let mut large_dir_2 =
+    let large_dir_2 =
         create_large_dir_with_large_entries(fsblobstore, &mut dir1_dir4, "some_large_dir_2", 2)
             .await;
-    let mut dir2_dir7_large_symlink_1 =
+    let dir2_dir7_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2_dir7, "some_large_symlink_1").await;
-    let mut dir2_large_symlink_1 =
+    let dir2_large_symlink_1 =
         create_large_symlink(fsblobstore, &mut dir2, "some_large_symlink_2").await;
-    let mut dir2_dir7_large_file_1 =
+    let dir2_dir7_large_file_1 =
         create_large_file(fsblobstore, &mut dir2_dir7, "some_large_file_1").await;
-    let mut dir2_large_file_1 =
-        create_large_file(fsblobstore, &mut dir2, "some_large_file_2").await;
+    let dir2_large_file_1 = create_large_file(fsblobstore, &mut dir2, "some_large_file_2").await;
 
-    let mut empty_file =
-        create_empty_file(fsblobstore, &mut dir1_dir3_dir5, "some_empty_file").await;
-    let mut empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
-    let mut empty_symlink =
-        create_symlink(fsblobstore, &mut dir1_dir3, "some_empty_symlink", "").await;
+    let empty_file = create_empty_file(fsblobstore, &mut dir1_dir3_dir5, "some_empty_file").await;
+    let empty_dir = create_empty_dir(fsblobstore, &mut dir2_dir7, "some_empty_dir").await;
+    let empty_symlink = create_symlink(fsblobstore, &mut dir1_dir3, "some_empty_symlink", "").await;
 
     let result = SomeBlobs {
         root: (&*root).into(),

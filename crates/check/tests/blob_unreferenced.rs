@@ -47,7 +47,7 @@ fn make_single_node_file_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut blob = fsblobstore
+                    let blob = fsblobstore
                         .create_file_blob(&parent_id(), FlushBehavior::DontFlush)
                         .await
                         .unwrap();
@@ -104,7 +104,7 @@ fn make_single_node_dir_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut dir_blob = fsblobstore
+                    let dir_blob = fsblobstore
                         .create_dir_blob(&parent_id(), FlushBehavior::DontFlush)
                         .await
                         .unwrap();
@@ -214,7 +214,7 @@ fn make_single_node_symlink_blob(
         fs_fixture
             .update_fsblobstore(|fsblobstore| {
                 Box::pin(async move {
-                    let mut blob = fsblobstore
+                    let blob = fsblobstore
                         .create_symlink_blob(&parent_id(), "target", FlushBehavior::DontFlush)
                         .await
                         .unwrap();

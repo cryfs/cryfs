@@ -47,7 +47,7 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
 
     async fn callback<B: LLBlockStore + AsyncDrop + Send + Sync + 'static>(
         self,
-        mut blockstore: AsyncDropGuard<LockingBlockStore<B>>,
+        blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
         // TODO Function too large. Split into subfunctions
 
@@ -78,7 +78,7 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
         let checks = AllChecks::new(root_blob_id);
 
         let blocksize = self.config.config.config().blocksize;
-        let mut blobstore = FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize).await?);
+        let blobstore = FsBlobStore::new(BlobStoreOnBlocks::new(blockstore, blocksize).await?);
 
         let pb = self
             .progress_bar_manager
@@ -112,7 +112,7 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
             "Checking all nodes",
             u64::try_from(all_nodes.len()).unwrap(),
         );
-        let mut nodestore = DataTreeStore::into_inner_node_store(
+        let nodestore = DataTreeStore::into_inner_node_store(
             BlobStoreOnBlocks::into_inner_tree_store(FsBlobStore::into_inner_blobstore(blobstore)),
         );
         let processed_nodes = Arc::new(ProcessedItems::new());
@@ -295,7 +295,7 @@ where
                 // TODO Can we deduplicate this with the AlreadySeen::NotSeenYet branch below?
                 //      Also, do we want to add the same assertions here that we have below?
                 match loaded {
-                    Ok(Some(mut blob)) => {
+                    Ok(Some(blob)) => {
                         let result = checks.process_reachable_blob_again(
                             BlobToProcess::Readable(&blob),
                             &blob_referenced_as.referenced_as,
@@ -335,7 +335,7 @@ where
             }
             AlreadySeen::NotSeenYet => {
                 match loaded {
-                    Ok(Some(mut blob)) => {
+                    Ok(Some(blob)) => {
                         if !all_nodes.contains(blob_referenced_as.blob_id.to_root_block_id()) {
                             Err(CheckError::FilesystemModified {
                                 msg: format!(
