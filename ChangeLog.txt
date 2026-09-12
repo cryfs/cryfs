@@ -50,6 +50,11 @@ Version 1.1.0 (unreleased)
 Dependency Updates
 * Fuse 3.9 on Linux and macOS (was: Fuse 2.9), still Fuse 2.7 via DokanY on Windows
 * spdlog 1.17.0 (was: 1.14.1)
+* gtest 1.17.0 (was: 1.15.0), test-only dependency
+* boost 1.91.0 (was: 1.84.0)
+* DokanY 2.3.1.1000 on Windows (was: 2.2.0.1000). If you already have DokanY 2.2.0.1000
+  installed, uninstall it and reboot before installing 2.3.1.1000. Since DokanY 2.3.0 the
+  installer refuses to install over an existing DokanY 2.x instead of upgrading in place.
 
 
 Version 1.0.3
