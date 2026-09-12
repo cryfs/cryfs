@@ -14,31 +14,34 @@ use super::{AsyncDrop, AsyncDropGuard};
 /// - Both Ok: returns both values as a tuple
 /// - First Ok, Second Err: drops the first value, returns the second error
 /// - First Err, Second Ok: drops the second value, returns the first error
-/// - Both Err: returns the first error (second error is currently lost)
-pub async fn flatten_async_drop<E, T, E1, U, E2>(
-    first: Result<AsyncDropGuard<T>, E1>,
-    second: Result<AsyncDropGuard<U>, E2>,
+/// - Both Err: returns the first error and logs the second one
+///
+/// The error type is the one of the two inputs. If dropping a value fails while an error
+/// is already being returned, the drop error is logged and the original error is returned.
+pub async fn flatten_async_drop<E, T, U>(
+    first: Result<AsyncDropGuard<T>, E>,
+    second: Result<AsyncDropGuard<U>, E>,
 ) -> Result<(AsyncDropGuard<T>, AsyncDropGuard<U>), E>
 where
+    E: Debug,
     T: AsyncDrop + Debug,
     U: AsyncDrop + Debug,
-    E: From<E1> + From<E2> + From<<T as AsyncDrop>::Error> + From<<U as AsyncDrop>::Error>,
 {
     match (first, second) {
         (Ok(first), Ok(second)) => Ok((first, second)),
-        (Ok(first), Err(second)) => {
-            // TODO Report both errors if async_drop fails
-            first.async_drop().await?;
-            Err(second.into())
+        (Ok(first), Err(second_error)) => {
+            first.async_drop_on_error_path().await;
+            Err(second_error)
         }
-        (Err(first), Ok(second)) => {
-            // TODO Report both errors if async_drop fails
-            second.async_drop().await?;
-            Err(first.into())
+        (Err(first_error), Ok(second)) => {
+            second.async_drop_on_error_path().await;
+            Err(first_error)
         }
-        (Err(first), Err(_second)) => {
-            // TODO Report both errors
-            Err(first.into())
+        (Err(first_error), Err(second_error)) => {
+            log::error!(
+                "Two operations failed. Reporting only the first error. Second error: {second_error:?}"
+            );
+            Err(first_error)
         }
     }
 }
@@ -53,11 +56,27 @@ mod tests {
     struct TestValue {
         id: &'static str,
         drop_counter: Arc<AtomicUsize>,
+        fail_drop: bool,
     }
 
     impl TestValue {
-        fn new(id: &'static str, drop_counter: Arc<AtomicUsize>) -> AsyncDropGuard<Self> {
-            AsyncDropGuard::new(Self { id, drop_counter })
+        fn new(id: &'static str, drop_counter: &Arc<AtomicUsize>) -> AsyncDropGuard<Self> {
+            AsyncDropGuard::new(Self {
+                id,
+                drop_counter: Arc::clone(drop_counter),
+                fail_drop: false,
+            })
+        }
+
+        fn with_failing_drop(
+            id: &'static str,
+            drop_counter: &Arc<AtomicUsize>,
+        ) -> AsyncDropGuard<Self> {
+            AsyncDropGuard::new(Self {
+                id,
+                drop_counter: Arc::clone(drop_counter),
+                fail_drop: true,
+            })
         }
     }
 
@@ -66,33 +85,31 @@ mod tests {
 
         async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            if self.fail_drop {
+                Err("drop error")
+            } else {
+                Ok(())
+            }
         }
     }
 
-    #[derive(Debug)]
+    /// An error type that is unrelated to the guards' `&'static str` drop error,
+    /// so the tests show that the error type is taken from the inputs alone.
+    #[derive(Debug, PartialEq, Eq)]
     struct TestError(&'static str);
-
-    impl From<&'static str> for TestError {
-        fn from(s: &'static str) -> Self {
-            TestError(s)
-        }
-    }
 
     #[tokio::test]
     async fn test_both_ok() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let first = TestValue::new("first", Arc::clone(&counter));
-        let second = TestValue::new("second", Arc::clone(&counter));
+        let first = TestValue::new("first", &counter);
+        let second = TestValue::new("second", &counter);
 
-        let first_result: Result<_, &'static str> = Ok(first);
-        let second_result: Result<_, &'static str> = Ok(second);
-        let result: Result<_, TestError> = flatten_async_drop(first_result, second_result).await;
-        assert!(result.is_ok());
-
-        let (first, second) = result.unwrap();
+        let (first, second) = flatten_async_drop(Ok::<_, TestError>(first), Ok(second))
+            .await
+            .unwrap();
         assert_eq!("first", first.id);
         assert_eq!("second", second.id);
+        assert_eq!(0, counter.load(Ordering::SeqCst));
 
         // Clean up
         first.async_drop().await.unwrap();
@@ -103,15 +120,12 @@ mod tests {
     #[tokio::test]
     async fn test_first_ok_second_err() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let first = TestValue::new("first", Arc::clone(&counter));
+        let first = TestValue::new("first", &counter);
+        let second: Result<AsyncDropGuard<TestValue>, _> = Err(TestError("second error"));
 
-        let first_result: Result<_, &'static str> = Ok(first);
-        let second_result: Result<AsyncDropGuard<TestValue>, _> = Err("second error");
-        let result: Result<(AsyncDropGuard<TestValue>, AsyncDropGuard<TestValue>), TestError> =
-            flatten_async_drop(first_result, second_result).await;
+        let result = flatten_async_drop(Ok(first), second).await;
 
-        assert!(result.is_err());
-        assert_eq!("second error", result.unwrap_err().0);
+        assert_eq!(TestError("second error"), result.unwrap_err());
         // First value should have been dropped
         assert_eq!(1, counter.load(Ordering::SeqCst));
     }
@@ -119,26 +133,49 @@ mod tests {
     #[tokio::test]
     async fn test_first_err_second_ok() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let second = TestValue::new("second", Arc::clone(&counter));
+        let first: Result<AsyncDropGuard<TestValue>, _> = Err(TestError("first error"));
+        let second = TestValue::new("second", &counter);
 
-        let first_result: Result<AsyncDropGuard<TestValue>, _> = Err("first error");
-        let second_result: Result<_, &'static str> = Ok(second);
-        let result: Result<(AsyncDropGuard<TestValue>, AsyncDropGuard<TestValue>), TestError> =
-            flatten_async_drop(first_result, second_result).await;
+        let result = flatten_async_drop(first, Ok(second)).await;
 
-        assert!(result.is_err());
-        assert_eq!("first error", result.unwrap_err().0);
+        assert_eq!(TestError("first error"), result.unwrap_err());
         // Second value should have been dropped
         assert_eq!(1, counter.load(Ordering::SeqCst));
     }
 
     #[tokio::test]
     async fn test_both_err() {
-        let result: Result<(AsyncDropGuard<TestValue>, AsyncDropGuard<TestValue>), TestError> =
-            flatten_async_drop(Err("first error"), Err("second error")).await;
+        let first: Result<AsyncDropGuard<TestValue>, _> = Err(TestError("first error"));
+        let second: Result<AsyncDropGuard<TestValue>, _> = Err(TestError("second error"));
 
-        assert!(result.is_err());
+        let result = flatten_async_drop(first, second).await;
+
         // Returns the first error
-        assert_eq!("first error", result.unwrap_err().0);
+        assert_eq!(TestError("first error"), result.unwrap_err());
+    }
+
+    #[tokio::test]
+    async fn test_first_ok_second_err_and_dropping_first_fails() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let first = TestValue::with_failing_drop("first", &counter);
+        let second: Result<AsyncDropGuard<TestValue>, _> = Err(TestError("second error"));
+
+        let result = flatten_async_drop(Ok(first), second).await;
+
+        // The original error is returned, the drop error is only logged
+        assert_eq!(TestError("second error"), result.unwrap_err());
+        assert_eq!(1, counter.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_first_err_second_ok_and_dropping_second_fails() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let first: Result<AsyncDropGuard<TestValue>, _> = Err(TestError("first error"));
+        let second = TestValue::with_failing_drop("second", &counter);
+
+        let result = flatten_async_drop(first, Ok(second)).await;
+
+        assert_eq!(TestError("first error"), result.unwrap_err());
+        assert_eq!(1, counter.load(Ordering::SeqCst));
     }
 }

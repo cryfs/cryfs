@@ -531,8 +531,7 @@ where
         } else {
             let (oldparent, newparent) =
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
-            let (oldparent, newparent) =
-                flatten_async_drop::<FsError, _, _, _, _>(oldparent, newparent).await?;
+            let (oldparent, newparent) = flatten_async_drop(oldparent, newparent).await?;
             let result = async {
                 let oldparent_dir = oldparent.as_dir().await?;
                 with_async_drop_2!(oldparent_dir, {

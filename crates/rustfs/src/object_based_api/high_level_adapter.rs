@@ -768,7 +768,6 @@ where
             .expect("ObjectBasedFsAdapter::fs is never shared, so this must be the last reference to it")
             .into_inner()
             .unwrap();
-        fs.async_drop().await.map_err(|err| err)?;
-        Ok(())
+        fs.async_drop().await
     }
 }
