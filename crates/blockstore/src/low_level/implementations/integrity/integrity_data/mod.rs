@@ -24,18 +24,15 @@ pub struct IntegrityData {
     state_file_path: PathBuf,
     my_client_id: ClientId,
 
-    // Always Some except for during destruction
-    known_block_versions: Option<KnownBlockVersions>,
+    known_block_versions: KnownBlockVersions,
 }
 
 // TODO We should probably lock the file while it's open so that another CryFS process doesn't open it too
 
 impl IntegrityData {
     pub fn new(state_file_path: PathBuf, my_client_id: ClientId) -> Result<AsyncDropGuard<Self>> {
-        let known_block_versions = Some(
-            KnownBlockVersions::load_or_default(&state_file_path)
-                .context("Tried to deserialize the state file")?,
-        );
+        let known_block_versions = KnownBlockVersions::load_or_default(&state_file_path)
+            .context("Tried to deserialize the state file")?;
         Ok(AsyncDropGuard::new(Self {
             state_file_path,
             my_client_id,
@@ -81,15 +78,11 @@ impl IntegrityData {
     }
 
     fn _known_block_versions(&self) -> &KnownBlockVersions {
-        self.known_block_versions
-            .as_ref()
-            .expect("Object is currently being destructed")
+        &self.known_block_versions
     }
 
     fn _known_block_versions_mut(&mut self) -> &mut KnownBlockVersions {
-        self.known_block_versions
-            .as_mut()
-            .expect("Object is currently being destructed")
+        &mut self.known_block_versions
     }
 }
 
@@ -101,10 +94,7 @@ impl AsyncDrop for IntegrityData {
             known_block_versions,
             ..
         } = self;
-        known_block_versions
-            .expect("Was already destructed")
-            .save(&state_file_path)
-            .await
+        known_block_versions.save(&state_file_path).await
     }
 }
 

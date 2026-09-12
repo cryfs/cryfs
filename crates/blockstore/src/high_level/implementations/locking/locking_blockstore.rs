@@ -18,8 +18,7 @@ use super::cache::{BlockBaseStoreState, BlockCache, BlockCacheEntryGuard, CacheE
 
 // TODO Should we require B: OptimizedBlockStoreWriter and use its methods?
 pub struct LockingBlockStore<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
-    // Always Some unless during destruction
-    base_store: Option<Arc<AsyncDropGuard<B>>>,
+    base_store: Arc<AsyncDropGuard<B>>,
 
     // cache doubles as a cache for blocks that are being returned and might be
     // re-requested, and as a set of mutexes making sure we don't concurrently
@@ -30,7 +29,7 @@ pub struct LockingBlockStore<B: crate::low_level::LLBlockStore + Send + Sync + D
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingBlockStore<B> {
     pub fn new(base_store: AsyncDropGuard<B>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            base_store: Some(Arc::new(base_store)),
+            base_store: Arc::new(base_store),
             cache: BlockCache::new(),
         })
     }
@@ -56,7 +55,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
             };
 
         let removed_from_base_store = if should_remove_from_base_store {
-            let base_store = self.base_store.as_ref().expect("Already destructed");
+            let base_store = &self.base_store;
             match base_store.remove(block_id).await? {
                 RemoveResult::SuccessfullyRemoved => true,
                 RemoveResult::NotRemovedBecauseItDoesntExist => false,
@@ -75,7 +74,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
     pub async fn into_inner_block_store(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B>> {
         let Self { base_store, cache } = this.unsafe_into_inner_dont_drop();
         if let Err(e) = cache.async_drop().await {
-            let base_store = base_store.expect("Already destructed");
             // After th cache was dropped, there should be only our own reference left and Arc::try_unwrap should succeed.
             // However, since dropping the cache failed, we don't know what the exact state is.
             // Let's clean up as a best effort.
@@ -87,14 +85,13 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
             return Err(e);
         }
 
-        let base_store = base_store.expect("Already destructed");
         let base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         Ok(base_store)
     }
 
     #[cfg(any(test, feature = "testutils"))]
     pub fn inner_block_store(&self) -> &AsyncDropGuard<B> {
-        self.base_store.as_ref().expect("Already destructed")
+        &self.base_store
     }
 
     /// See `BlockCache::stop_periodic_pruning`. Only meant for tests that assert exact
@@ -115,7 +112,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
         // TODO Cache non-existence?
         let mut cache_entry = self.cache.async_lock(block_id).await?;
         if cache_entry.value().is_none() {
-            let base_store = self.base_store.as_ref().expect("Already destructed");
+            let base_store = &self.base_store;
             let loaded = base_store.load(&block_id).await?;
             if let Some(loaded) = loaded {
                 self.cache.set_entry(
@@ -140,7 +137,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
             // Block already exists in the cache
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
         }
-        let base_store = self.base_store.as_ref().expect("Already destructed");
+        let base_store = &self.base_store;
         if base_store.exists(block_id).await? {
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
         }
@@ -157,7 +154,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
     async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
         let mut cache_entry = self.cache.async_lock(*block_id).await?;
 
-        let base_store = self.base_store.as_ref().expect("Already destructed");
+        let base_store = &self.base_store;
 
         let exists_in_base_store = async || {
             if base_store.exists(block_id).await? {
@@ -201,23 +198,23 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
     }
 
     async fn num_blocks(&self) -> Result<u64> {
-        let base_store = self.base_store.as_ref().expect("Already destructed");
+        let base_store = &self.base_store;
         Ok(base_store.num_blocks().await? + self.cache.num_blocks_in_cache_but_not_in_base_store())
     }
 
     fn estimate_num_free_bytes(&self) -> Result<Byte> {
-        let base_store = self.base_store.as_ref().expect("Already destructed");
+        let base_store = &self.base_store;
         base_store.estimate_num_free_bytes()
     }
 
     fn overhead(&self) -> Overhead {
-        let base_store = self.base_store.as_ref().expect("Already destructed");
+        let base_store = &self.base_store;
         base_store.overhead()
     }
 
     // TODO Make sure we have tests that have some blocks in the cache and some in the base store
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
-        let base_store = self.base_store.as_ref().expect("Already destructed");
+        let base_store = &self.base_store;
 
         // TODO Is keys_with_entries_or_locked the right thing here? Do we want to count locked entries?
         let blocks_in_cache = self.cache.keys_with_entries_or_locked();
@@ -280,7 +277,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDro
         // Since we just dropped the cache, we know there are no cache entries left with access to the self.base_store Arc.
         // This also means there can't be any other tasks/threads currently locking cache entries and doing things with it,
         // we're truly the only one with access to self.base_store.
-        let base_store = base_store.expect("Already destructed");
         let base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         base_store.async_drop().await?;
 

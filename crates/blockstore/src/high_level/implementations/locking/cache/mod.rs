@@ -29,11 +29,9 @@ pub(super) const PRUNE_BLOCKS_INTERVAL: Duration = Duration::from_millis(500);
 pub(super) const PRUNE_BLOCKS_OLDER_THAN: Duration = Duration::from_millis(500);
 
 pub struct BlockCache<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> {
-    // Always Some except during destruction
-    cache: Option<Arc<BlockCacheImpl<B>>>,
+    cache: Arc<BlockCacheImpl<B>>,
     // The background task evicting blocks nobody has touched for a while. `None` after
-    // destruction, and also after [Self::stop_periodic_pruning] (tests only) turned the
-    // wall-clock driven eviction off.
+    // [Self::stop_periodic_pruning] (tests only) turned the wall-clock driven eviction off.
     prune_task: Option<AsyncDropGuard<PeriodicTask>>,
 }
 
@@ -42,7 +40,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
         let cache = BlockCacheImpl::new();
         let cache_clone = Arc::clone(&cache);
         AsyncDropGuard::new(Self {
-            cache: Some(cache),
+            cache,
             prune_task: Some(PeriodicTask::spawn(
                 "BlockCache::prune",
                 PRUNE_BLOCKS_INTERVAL,
@@ -55,10 +53,8 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     }
 
     pub async fn async_lock(&self, block_id: BlockId) -> Result<BlockCacheEntryGuard<B>> {
-        let cache = Arc::clone(self.cache.as_ref().expect("Object is already destructed"));
+        let cache = Arc::clone(&self.cache);
         self.cache
-            .as_ref()
-            .expect("Object is already destructed")
             .async_lock(block_id, async move |evicted| {
                 Self::_prune_blocks(Arc::clone(&cache), evicted.into_iter()).await
             })
@@ -66,16 +62,11 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     }
 
     pub fn keys_with_entries_or_locked(&self) -> Vec<BlockId> {
-        self.cache
-            .as_ref()
-            .expect("Object is already destructed")
-            .keys_with_entries_or_locked()
+        self.cache.keys_with_entries_or_locked()
     }
 
     pub fn delete_entry_from_cache_even_if_dirty(&self, entry: &mut BlockCacheEntryGuard<B>) {
         self.cache
-            .as_ref()
-            .expect("Object is already destructed")
             .delete_entry_from_cache_even_if_dirty(&mut entry.guard);
     }
 
@@ -88,8 +79,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
         base_store_state: BlockBaseStoreState,
     ) {
         self.cache
-            .as_ref()
-            .expect("Object is already destructed")
             .set_entry(base_store, entry, new_value, dirty, base_store_state);
     }
 
@@ -102,8 +91,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
         base_store_state: impl AsyncFnOnce() -> Result<BlockBaseStoreState>,
     ) -> Result<()> {
         self.cache
-            .as_ref()
-            .expect("Object is already destructed")
             .set_or_overwrite_entry_even_if_dirty(
                 base_store,
                 entry,
@@ -115,10 +102,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     }
 
     pub fn num_blocks_in_cache_but_not_in_base_store(&self) -> u64 {
-        self.cache
-            .as_ref()
-            .expect("Object is already destructed")
-            .num_blocks_in_cache_but_not_in_base_store()
+        self.cache.num_blocks_in_cache_but_not_in_base_store()
     }
 
     async fn _prune_old_blocks(cache: Arc<BlockCacheImpl<B>>) -> Result<()> {
@@ -159,7 +143,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_unloaded_blocks(&self) -> Result<()> {
-        let cache = self.cache.as_ref().expect("Object is already destructed");
+        let cache = &self.cache;
         Self::_prune_blocks_not_accessed_for_at_least(Arc::clone(cache), Duration::ZERO).await
     }
 
@@ -167,7 +151,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_all_blocks(&self) -> Result<()> {
-        let cache = self.cache.as_ref().expect("Object is already destructed");
+        let cache = &self.cache;
         let to_prune = cache.lock_all_entries().await;
         Self::_prune_blocks_stream(Arc::clone(cache), to_prune).await
     }
@@ -239,11 +223,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
         block: &mut BlockCacheEntry<B>,
         block_id: &BlockId,
     ) -> Result<()> {
-        self.cache
-            .as_ref()
-            .expect("Object is already destructed")
-            .flush_entry(block, block_id)
-            .await
+        self.cache.flush_entry(block, block_id).await
     }
 }
 
@@ -267,7 +247,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDro
             // Since self is passed in by value, prune task is the only one
             // that also has an instance. We're dropping prune_task concurrently
             // with this task. So let's wait until it has dropped it
-            let cache = cache.expect("Object is already destructed");
             while Arc::strong_count(&cache) > 1 {
                 // TODO Is there a better alternative that doesn't involve busy waiting?
                 tokio::task::yield_now().await;

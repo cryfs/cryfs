@@ -13,7 +13,6 @@ use cryfs_utils::{
 
 #[derive(Debug)]
 pub struct BlobOnBlocks<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> {
-    // Always Some unless during destruction
     tree: AsyncDropGuard<DataTree<B>>,
 }
 
