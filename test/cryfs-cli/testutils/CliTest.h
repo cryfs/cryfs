@@ -25,6 +25,8 @@
 #include <regex>
 #include <string>
 #include <fstream>
+#include <thread>
+#include <chrono>
 #include <cstdlib>
 
 // EXPLORATION ONLY: trace the harness steps to a file, because gtest captures stdout/stderr here.
@@ -118,8 +120,12 @@ public:
         EXPECT_RUN_ERROR(args, "Usage:[^\\x00]*"+message, errorCode);
     }
 
-    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const std::string& message, cryfs::ErrorCode errorCode, std::function<void ()> onMounted = [] {}) {
-        const FilesystemOutput filesystem_output = run_filesystem(args, boost::none, std::move(onMounted));
+    enum class UnmountAfterwards { Yes, No };
+
+    // `mountDir` is where the file system gets mounted if the run gets that far. It is only needed
+    // when `onMounted` accesses the mounted file system, see run_filesystem().
+    void EXPECT_RUN_ERROR(const std::vector<std::string>& args, const std::string& message, cryfs::ErrorCode errorCode, std::function<void ()> onMounted = [] {}, const boost::optional<boost::filesystem::path> &mountDir = boost::none) {
+        const FilesystemOutput filesystem_output = run_filesystem(args, mountDir, UnmountAfterwards::No, std::move(onMounted));
 
         EXPECT_EQ(exitCode(errorCode), filesystem_output.exit_code);
         if (!std::regex_search(filesystem_output.stderr_, std::regex(message))) {
@@ -128,13 +134,15 @@ public:
         }
     }
 
-    void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::optional<boost::filesystem::path> &mountDir, std::function<void ()> onMounted = [] {}) {
+    // `mountDir` is where the file system gets mounted. It gets unmounted after `onMounted` ran,
+    // unless the test unmounts it itself and says so with UnmountAfterwards::No.
+    void EXPECT_RUN_SUCCESS(const std::vector<std::string>& args, const boost::filesystem::path &mountDir, std::function<void ()> onMounted = [] {}, UnmountAfterwards unmountAfterwards = UnmountAfterwards::Yes) {
         //TODO Make this work when run in background
         ASSERT(std::find(args.begin(), args.end(), string("-f")) != args.end(), "Currently only works if run in foreground");
 
         bool successfully_mounted = false;
 
-        const FilesystemOutput filesystem_output = run_filesystem(args, mountDir, [&] {
+        const FilesystemOutput filesystem_output = run_filesystem(args, mountDir, unmountAfterwards, [&] {
             successfully_mounted = true;
             onMounted();
         });
@@ -160,11 +168,35 @@ public:
         fspp::fuse::Fuse::unmount(mountDir, true);
     }
 
-    FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
+    // Waits until the mounted file system shows up at `mountDir`. The onMounted callback that
+    // releases the barrier below is called from Fuse::init(). libfuse calls that once the mount is
+    // live, so on Linux and macOS this returns right away. Dokany calls it while it is still
+    // setting the mount up: for a moment after it the drive letter isn't there yet, and both
+    // accessing the file system and DokanRemoveMountPoint() fail until it is.
+    static void _waitUntilMounted(const boost::filesystem::path &mountDir) {
+#if defined(_MSC_VER)
+        // `mountDir` is a bare drive letter, and "Z:" alone is relative to that drive's current directory
+        const boost::filesystem::path root = mountDir.string() + "\\";
+#else
+        const boost::filesystem::path &root = mountDir;
+#endif
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (!boost::filesystem::exists(root)) {
+            if (std::chrono::steady_clock::now() > deadline) {
+                throw std::runtime_error("Timeout waiting for the file system to show up at " + mountDir.string());
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+
+    // `mountDir` is where the file system gets mounted, if it does. When it is given, the file
+    // system is unmounted after `onMounted` ran, unless `unmountAfterwards` says the test does that
+    // itself.
+    FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDir, UnmountAfterwards unmountAfterwards, std::function<void()> onMounted) {
         testing::internal::CaptureStdout();
         testing::internal::CaptureStderr();
         try {
-            return _run_filesystem_with_captured_output(args, std::move(mountDirForUnmounting), std::move(onMounted));
+            return _run_filesystem_with_captured_output(args, std::move(mountDir), unmountAfterwards, std::move(onMounted));
         } catch (...) {
             // The exception is reported by gtest once it propagates out of the test body, but
             // gtest prints that report to stdout, which is still being captured here. Stop
@@ -176,7 +208,7 @@ public:
         }
     }
 
-    FilesystemOutput _run_filesystem_with_captured_output(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
+    FilesystemOutput _run_filesystem_with_captured_output(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDir, UnmountAfterwards unmountAfterwards, std::function<void()> onMounted) {
         bool exited = false;
         cpputils::ConditionBarrier isMountedOrFailedBarrier;
 
@@ -209,14 +241,32 @@ public:
               return true;
             }
             // now we know the filesystem stayed online, so we can call the onMounted callback
-            harness_trace("on_mounted thread: calling the test's onMounted");
-            onMounted();
-            harness_trace("on_mounted thread: onMounted returned");
+            const bool unmount = mountDir.is_initialized() && unmountAfterwards == UnmountAfterwards::Yes;
+            try {
+              if (mountDir.is_initialized()) {
+                harness_trace("on_mounted thread: waiting for " + mountDir->string());
+                _waitUntilMounted(*mountDir);
+              }
+              harness_trace("on_mounted thread: calling the test's onMounted");
+              onMounted();
+              harness_trace("on_mounted thread: onMounted returned");
+            } catch (...) {
+              // Unmount anyway if we can, otherwise Cli::main() never returns and instead of
+              // reporting this exception, the test would wait for the timeout below.
+              if (unmount) {
+                try {
+                  _unmount(*mountDir);
+                } catch (...) {
+                  // the original exception is the one worth reporting
+                }
+              }
+              throw;
+            }
             // and unmount it afterwards
-            if (mountDirForUnmounting.is_initialized()) {
-              harness_trace("on_mounted thread: unmounting " + mountDirForUnmounting->string());
+            if (unmount) {
+              harness_trace("on_mounted thread: unmounting " + mountDir->string());
               try {
-                _unmount(*mountDirForUnmounting);
+                _unmount(*mountDir);
               } catch (const std::exception& e) {
                 harness_trace(std::string("on_mounted thread: unmount threw: ") + e.what());
                 throw;

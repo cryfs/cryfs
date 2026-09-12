@@ -111,7 +111,13 @@ TEST_F(ProgramOptionsParserTest, MountDir_Relative) {
 
 TEST_F(ProgramOptionsParserTest, Foreground_False) {
     const ProgramOptions options = parse({"./myExecutable", basedir, "mountdir"});
+#if defined(_MSC_VER)
+    // CryFS can't run in the background on Windows yet, so the parser always reports foreground
+    // there, see Parser.cpp.
+    EXPECT_TRUE(options.foreground());
+#else
     EXPECT_FALSE(options.foreground());
+#endif
 }
 
 TEST_F(ProgramOptionsParserTest, Foreground_True) {

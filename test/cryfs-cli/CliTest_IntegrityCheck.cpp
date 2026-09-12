@@ -133,7 +133,7 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
   // error code is success because it unmounts normally
   EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
     EXPECT_FALSE(readingFileIsSuccessful(in_mountpoint("myfile")));
-  });
+  }, mountpoint);
 
   // Test it doesn't mount anymore now because it's marked with an integrity violation
   EXPECT_RUN_ERROR(args, "There was an integrity violation detected. Preventing any further access to the file system.", ErrorCode::IntegrityViolationOnPreviousRun);
@@ -167,7 +167,7 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
 
     // expect reading now fails
     EXPECT_FALSE(readingFileIsSuccessful(in_mountpoint("myfile")));
-  });
+  }, mountpoint);
 
   // Test it doesn't mount anymore now because it's marked with an integrity violation
   EXPECT_RUN_ERROR(args, "There was an integrity violation detected. Preventing any further access to the file system.", ErrorCode::IntegrityViolationOnPreviousRun);
