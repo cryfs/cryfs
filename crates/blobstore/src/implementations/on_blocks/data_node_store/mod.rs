@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow, bail};
-use async_trait::async_trait;
 use binary_layout::Field;
 use byte_unit::Byte;
 #[cfg(test)]
@@ -36,7 +35,7 @@ pub struct DataNodeStore<B: BlockStore + AsyncDrop + Debug + Send> {
 
 impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
     pub async fn new(
-        mut block_store: AsyncDropGuard<B>,
+        block_store: AsyncDropGuard<B>,
         physical_block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
         let block_size = match Self::_block_size(&block_store, physical_block_size) {
@@ -236,12 +235,12 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
     }
 }
 
-#[async_trait]
 impl<B: BlockStore + AsyncDrop + Debug + Send> AsyncDrop for DataNodeStore<B> {
     type Error = <B as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.block_store.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { block_store, .. } = self;
+        block_store.async_drop().await
     }
 }
 
@@ -284,7 +283,7 @@ mod tests {
 
         #[tokio::test]
         async fn valid_block_size() {
-            let mut store = DataNodeStore::new(
+            let store = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 Byte::from_u64(40),
             )
@@ -320,7 +319,7 @@ mod tests {
 
         #[tokio::test]
         async fn test() {
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 Byte::from_u64(100),
             )
@@ -349,7 +348,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(0)));
-            let mut nodestore =
+            let nodestore =
                 DataNodeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -1278,8 +1277,8 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_created_leaf_node() {
-            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
-            let mut nodestore = DataNodeStore::new(
+            let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
@@ -1317,8 +1316,8 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_loaded_leaf_node() {
-            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
-            let mut nodestore = DataNodeStore::new(
+            let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
@@ -1375,8 +1374,8 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_created_inner_node() {
-            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
-            let mut nodestore = DataNodeStore::new(
+            let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
@@ -1419,8 +1418,8 @@ mod tests {
 
         #[tokio::test]
         async fn flushing_loaded_inner_node() {
-            let mut blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
-            let mut nodestore = DataNodeStore::new(
+            let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
                 PHYSICAL_BLOCK_SIZE,
             )
@@ -1510,7 +1509,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(0)));
-            let mut nodestore =
+            let nodestore =
                 DataNodeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -1530,7 +1529,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(99)));
-            let mut nodestore =
+            let nodestore =
                 DataNodeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -1550,7 +1549,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(100)));
-            let mut nodestore =
+            let nodestore =
                 DataNodeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -1570,7 +1569,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
             )
@@ -1595,7 +1594,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
             )
@@ -1620,7 +1619,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Err(anyhow!("some error")));
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
             )
@@ -1651,7 +1650,7 @@ mod tests {
                 .expect_overhead()
                 .times(1)
                 .returning(|| Overhead::new(Byte::from_u64(100)));
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024 * 10),
             )
@@ -1698,7 +1697,7 @@ mod tests {
                     Ok(stream)
                 })
             });
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
             )
@@ -1733,7 +1732,7 @@ mod tests {
                 })
             });
 
-            let mut nodestore = DataNodeStore::new(
+            let nodestore = DataNodeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64_with_unit(32, byte_unit::Unit::KiB).unwrap(),
             )

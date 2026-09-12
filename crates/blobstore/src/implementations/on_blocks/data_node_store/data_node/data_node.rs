@@ -1202,13 +1202,13 @@ mod tests {
         async fn overwrite_with_wrong_source_layout() {
             const BLOCKSIZE_1: Byte = Byte::from_u64(100);
             const BLOCKSIZE_2: Byte = Byte::from_u64(200);
-            let mut nodestore1 = DataNodeStore::new(
+            let nodestore1 = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 BLOCKSIZE_1,
             )
             .await
             .unwrap();
-            let mut nodestore2 = DataNodeStore::new(
+            let nodestore2 = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 BLOCKSIZE_2,
             )
@@ -1230,13 +1230,13 @@ mod tests {
         async fn overwrite_with_wrong_target_layout() {
             const BLOCKSIZE_1: Byte = Byte::from_u64(100);
             const BLOCKSIZE_2: Byte = Byte::from_u64(200);
-            let mut nodestore1 = DataNodeStore::new(
+            let nodestore1 = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 BLOCKSIZE_1,
             )
             .await
             .unwrap();
-            let mut nodestore2 = DataNodeStore::new(
+            let nodestore2 = DataNodeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 BLOCKSIZE_2,
             )

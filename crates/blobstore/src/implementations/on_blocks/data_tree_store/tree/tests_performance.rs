@@ -36,9 +36,9 @@ mod testutils {
             &'a LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
         ) -> BoxFuture<'a, ()>,
     ) {
-        let mut blockstore =
+        let blockstore =
             LLSharedBlockStore::new(LLTrackingBlockStore::new(InMemoryBlockStore::new()));
-        let mut treestore = DataTreeStore::new(
+        let treestore = DataTreeStore::new(
             LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
             LAYOUT.block_size,
         )
@@ -55,10 +55,9 @@ mod testutils {
         >,
         blockstore: &LLSharedBlockStore<LLTrackingBlockStore<InMemoryBlockStore>>,
     ) -> BlockId {
-        let mut tree = treestore.create_tree().await.unwrap();
+        let tree = treestore.create_tree().await.unwrap();
         let id = *tree.root_node_id();
         tree.async_drop().await.unwrap();
-        std::mem::drop(tree);
         treestore.clear_cache_slow().await.unwrap();
         blockstore.get_and_reset_counts();
         id
@@ -76,7 +75,6 @@ mod testutils {
             .unwrap();
         let id = *tree.root_node_id();
         tree.async_drop().await.unwrap();
-        std::mem::drop(tree);
         treestore.clear_cache_slow().await.unwrap();
         blockstore.get_and_reset_counts();
         id
@@ -400,7 +398,7 @@ mod create_tree {
     async fn only_creates_one_leaf() {
         with_treestore_and_tracking_blockstore(|treestore, blockstore| {
             Box::pin(async move {
-                let mut tree = treestore.create_tree().await.unwrap();
+                let tree = treestore.create_tree().await.unwrap();
                 tree.async_drop().await.unwrap();
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
@@ -777,7 +775,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
@@ -818,7 +815,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
@@ -867,7 +863,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
@@ -914,7 +909,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
@@ -972,7 +966,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
@@ -1028,7 +1021,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 assert_eq!(
                     LLActionCounts {
@@ -1075,7 +1067,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 let expected_stored =
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
@@ -1122,7 +1113,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 let expected_stored =
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
@@ -1176,7 +1166,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 let expected_stored =
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
@@ -1228,7 +1217,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 let expected_stored =
                     num_nodes_written_when_growing_tree(NUM_LEAVES, WRITTEN_LEAF_INDEX as u64 + 1)
@@ -1285,7 +1273,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 let expected_stored = num_nodes_written_when_growing_tree(
                     NUM_LEAVES,
@@ -1340,7 +1327,6 @@ mod write_bytes {
 
                 // After flushing, the new content should have been written
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 treestore.clear_cache_slow().await.unwrap();
                 let expected_stored = num_nodes_written_when_growing_tree(
                     NUM_LEAVES,

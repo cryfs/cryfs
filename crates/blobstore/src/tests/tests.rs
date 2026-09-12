@@ -45,7 +45,7 @@ pub mod load {
     pub async fn test_givenEmptyBlobstore_whenLoadingNonexistingBlob_thenReturnsNone(
         mut f: impl Fixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
 
         let loaded = store
             .load(&BlobId::from_hex("1491BB4932A389EE14BC7090AC772972").unwrap())
@@ -59,7 +59,7 @@ pub mod load {
     pub async fn test_givenNonEmptyBlobstore_whenLoadingNonexistingBlob_thenReturnsNone(
         mut f: impl Fixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
 
         store
             .try_create(&BlobId::from_hex("AB0DC45269804AC6B1CF95391895DDF1").unwrap())

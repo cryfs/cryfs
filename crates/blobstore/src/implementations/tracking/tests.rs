@@ -48,7 +48,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn counters_start_at_zero() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         assert_eq!(
             BlobStoreActionCounts {
@@ -80,7 +80,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_create_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         store.create().await.unwrap().async_drop().await.unwrap();
         store.create().await.unwrap().async_drop().await.unwrap();
@@ -100,7 +100,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_try_create_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id = BlobId::from_hex("1bdad9f4879fd1417870e42b8a4e547b").unwrap();
 
@@ -128,12 +128,11 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_load_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
-        let mut blob = store.create().await.unwrap();
+        let blob = store.create().await.unwrap();
         let id = blob.id();
         blob.async_drop().await.unwrap();
-        drop(blob);
 
         store
             .load(&id)
@@ -172,12 +171,11 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_remove_by_id_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
-        let mut blob = store.create().await.unwrap();
+        let blob = store.create().await.unwrap();
         let id = blob.id();
         blob.async_drop().await.unwrap();
-        drop(blob);
 
         assert_eq!(
             RemoveResult::SuccessfullyRemoved,
@@ -213,7 +211,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_num_nodes_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         store.num_nodes().await.unwrap();
         store.num_nodes().await.unwrap();
@@ -233,7 +231,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_estimate_space_for_num_blocks_left_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         store.estimate_space_for_num_blocks_left().unwrap();
         store.estimate_space_for_num_blocks_left().unwrap();
@@ -253,7 +251,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn store_logical_block_size_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         store.logical_block_size_bytes();
         store.logical_block_size_bytes();
@@ -273,7 +271,7 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_num_bytes_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let mut blob = store.create().await.unwrap();
         blob.num_bytes().await.unwrap();
@@ -290,14 +288,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_resize_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let mut blob = store.create().await.unwrap();
         blob.resize(100).await.unwrap();
@@ -314,14 +311,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_read_all_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let mut blob = store.create().await.unwrap();
         blob.read_all().await.unwrap();
@@ -338,14 +334,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_read_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let mut blob = store.create().await.unwrap();
         blob.write(&[1, 2, 3], 0).await.unwrap();
@@ -366,14 +361,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_try_read_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let mut blob = store.create().await.unwrap();
         blob.write(&[1, 2, 3], 0).await.unwrap();
@@ -394,14 +388,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_write_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Create a blob and write data
         let mut blob = store.create().await.unwrap();
@@ -419,14 +412,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_flush_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Create a blob and flush
         let mut blob = store.create().await.unwrap();
@@ -444,14 +436,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_num_nodes_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let mut blob = store.create().await.unwrap();
         blob.num_nodes().await.unwrap();
@@ -468,14 +459,13 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_remove_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let blob = store.create().await.unwrap();
         TrackingBlob::remove(blob).await.unwrap();
@@ -496,9 +486,9 @@ mod counter_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn blob_all_blocks_increases_counter() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
-        let mut blob = store.create().await.unwrap();
+        let blob = store.create().await.unwrap();
         let stream = blob.all_blocks().unwrap();
         // Use the stream to make sure it's properly executed
         let _ = stream.collect::<Vec<_>>().await;
@@ -517,20 +507,18 @@ mod counter_tests {
         );
 
         blob.async_drop().await.unwrap();
-        drop(blob);
         store.async_drop().await.unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn get_and_reset_counts_resets_counters() {
         let mut fixture = super::TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Perform operations to increase counters
-        let mut blob = store.create().await.unwrap();
+        let blob = store.create().await.unwrap();
         let _ = blob.all_blocks().unwrap();
         blob.async_drop().await.unwrap();
-        drop(blob);
 
         // Check counts were increased
         let counts = store.counts();

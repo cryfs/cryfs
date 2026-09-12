@@ -108,13 +108,13 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> fmt::D
     }
 }
 
-#[async_trait]
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> AsyncDrop
     for BlobStoreOnBlocks<B>
 {
     type Error = <B as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.tree_store.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { tree_store } = self;
+        tree_store.async_drop().await
     }
 }

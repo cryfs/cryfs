@@ -48,7 +48,7 @@ where
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         let loaded = self.underlying_store.load(&BlobId { root: *id }).await?;
         match loaded {
-            Some(mut blob) => {
+            Some(blob) => {
                 blob.async_drop().await.unwrap();
                 Ok(true)
             }
@@ -157,14 +157,14 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for BlockStoreAdapter<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
 {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_store.async_drop().await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { underlying_store } = self;
+        underlying_store.async_drop().await
     }
 }
 
