@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use lockable::{Lockable, LockableHashMap};
 use std::path::PathBuf;
 
@@ -94,14 +93,17 @@ impl IntegrityData {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for IntegrityData {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.known_block_versions
-            .take()
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            state_file_path,
+            known_block_versions,
+            ..
+        } = self;
+        known_block_versions
             .expect("Was already destructed")
-            .save(&self.state_file_path)
+            .save(&state_file_path)
             .await
     }
 }

@@ -73,13 +73,13 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
     }
 
     pub async fn into_inner_block_store(this: AsyncDropGuard<Self>) -> Result<AsyncDropGuard<B>> {
-        let mut this = this.unsafe_into_inner_dont_drop();
-        if let Err(e) = this.cache.async_drop().await {
-            let base_store = this.base_store.take().expect("Already destructed");
+        let Self { base_store, cache } = this.unsafe_into_inner_dont_drop();
+        if let Err(e) = cache.async_drop().await {
+            let base_store = base_store.expect("Already destructed");
             // After th cache was dropped, there should be only our own reference left and Arc::try_unwrap should succeed.
             // However, since dropping the cache failed, we don't know what the exact state is.
             // Let's clean up as a best effort.
-            if let Ok(mut base_store) = Arc::try_unwrap(base_store) {
+            if let Ok(base_store) = Arc::try_unwrap(base_store) {
                 if let Err(drop_err) = base_store.async_drop().await {
                     log::error!("Error dropping base_store: {:?}", drop_err);
                 }
@@ -87,7 +87,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
             return Err(e);
         }
 
-        let base_store = this.base_store.take().expect("Already destructed");
+        let base_store = base_store.expect("Already destructed");
         let base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         Ok(base_store)
     }
@@ -267,21 +267,21 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
     }
 }
 
-#[async_trait]
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop
     for LockingBlockStore<B>
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { base_store, cache } = self;
         // TODO Exception safety. Should we drop base_store even if dropping the cache fails?
-        self.cache.async_drop().await?;
+        cache.async_drop().await?;
 
         // Since we just dropped the cache, we know there are no cache entries left with access to the self.base_store Arc.
         // This also means there can't be any other tasks/threads currently locking cache entries and doing things with it,
         // we're truly the only one with access to self.base_store.
-        let base_store = self.base_store.take().expect("Already destructed");
-        let mut base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
+        let base_store = base_store.expect("Already destructed");
+        let base_store = Arc::into_inner(base_store).expect("We should be the only ones with access to self.base_store, but seems there is still something else accessing it");
         base_store.async_drop().await?;
 
         Ok(())

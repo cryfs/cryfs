@@ -95,11 +95,16 @@ impl OptimizedBlockStoreWriter for TempDirBlockStore {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for TempDirBlockStore {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_store.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        // `_tempdir` stays alive until the end of this function, so the underlying store
+        // is dropped before the tempdir gets deleted.
+        let Self {
+            underlying_store,
+            _tempdir,
+        } = self;
+        underlying_store.async_drop().await?;
         Ok(())
     }
 }

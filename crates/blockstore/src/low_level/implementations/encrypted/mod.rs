@@ -205,7 +205,6 @@ impl<
     }
 }
 
-#[async_trait]
 impl<
     C: 'static + CipherDef + Send + Sync,
     _B: Sync + Send + Debug,
@@ -213,8 +212,12 @@ impl<
 > AsyncDrop for EncryptedBlockStore<C, _B, B>
 {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_block_store.async_drop().await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            underlying_block_store,
+            ..
+        } = self;
+        underlying_block_store.async_drop().await
     }
 }
 
@@ -351,7 +354,7 @@ mod tests {
             C: 'static + CipherDef + Send + Sync,
         >() {
             let mut fixture = TestFixture::<C>::new();
-            let mut store = fixture.store().await;
+            let store = fixture.store().await;
             let expected_overhead = Byte::from_u64(
                 FORMAT_VERSION_HEADER.len() as u64
                     + C::CIPHERTEXT_OVERHEAD_PREFIX as u64
@@ -410,7 +413,7 @@ mod tests {
         block_id: &BlockId,
         data: &Data,
     ) {
-        let mut store = EncryptedBlockStore::<
+        let store = EncryptedBlockStore::<
             Aes256Gcm,
             InMemoryBlockStore,
             AsyncDropArc<InMemoryBlockStore>,
@@ -425,7 +428,7 @@ mod tests {
         key: EncryptionKey,
         block_id: &BlockId,
     ) -> Result<Option<Data>> {
-        let mut store = EncryptedBlockStore::<
+        let store = EncryptedBlockStore::<
             Aes256Gcm,
             InMemoryBlockStore,
             AsyncDropArc<InMemoryBlockStore>,
@@ -447,7 +450,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_loading_with_same_key_works() {
-        let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
+        let inner = AsyncDropArc::new(InMemoryBlockStore::new());
 
         _store(
             &inner,
@@ -472,7 +475,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_loading_with_different_key_doesnt_work() {
-        let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
+        let inner = AsyncDropArc::new(InMemoryBlockStore::new());
 
         _store(
             &inner,
@@ -494,7 +497,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_loading_manipulated_block_doesnt_work() {
-        let mut inner = AsyncDropArc::new(InMemoryBlockStore::new());
+        let inner = AsyncDropArc::new(InMemoryBlockStore::new());
 
         _store(
             &inner,

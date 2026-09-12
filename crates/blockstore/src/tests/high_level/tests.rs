@@ -111,7 +111,7 @@ pub mod create {
     use super::*;
 
     pub async fn test_twoCreatedBlocksHaveDifferentIds(mut f: impl HLFixture) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let first = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -131,7 +131,7 @@ pub mod remove {
     use super::*;
 
     pub async fn test_canRemoveAModifiedBlock(mut f: impl HLFixture) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
         let mut block = store.load(blockid).await.unwrap().unwrap();
@@ -157,7 +157,7 @@ pub mod resize {
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -175,7 +175,7 @@ pub mod resize {
     pub async fn test_givenZeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(0, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -192,7 +192,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenSucceeds(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -210,7 +210,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeLarger_thenBlockIsStillUsable(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(100, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -227,7 +227,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenSucceeds(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -245,7 +245,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeSmaller_thenBlockIsStillUsable(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -262,7 +262,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenSucceeds(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -280,7 +280,7 @@ pub mod resize {
     pub async fn test_givenNonzeroSizeBlock_whenResizingToBeZero_thenBlockIsStillUsable(
         mut f: impl HLFixture,
     ) {
-        let mut store = f.store().await;
+        let store = f.store().await;
         let blockid = store.create(&data(1024, 0)).await.unwrap();
         f.yield_fixture(&store).await;
 
@@ -328,7 +328,7 @@ pub mod data {
 
     pub async fn test_writeAndReadImmediately(mut f: impl HLFixture) {
         for data_range in DATA_RANGES {
-            let mut store = f.store().await;
+            let store = f.store().await;
 
             let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
             f.yield_fixture(&store).await;
@@ -365,7 +365,7 @@ pub mod data {
 
     pub async fn test_writeAndReadAfterLoading(mut f: impl HLFixture) {
         for data_range in DATA_RANGES {
-            let mut store = f.store().await;
+            let store = f.store().await;
 
             let blockid = store.create(&data(data_range.blocksize, 0)).await.unwrap();
             f.yield_fixture(&store).await;
@@ -457,7 +457,7 @@ pub mod usable_block_size_from_physical_block_size {
     use super::*;
 
     pub async fn test_physicalToUsableToPhysical(mut f: impl HLFixture) {
-        let mut store = f.store().await;
+        let store = f.store().await;
 
         let physical = Byte::from_u64(100);
         let usable = store
@@ -476,7 +476,7 @@ pub mod usable_block_size_from_physical_block_size {
     }
 
     pub async fn test_usableToPhysicalToUsable(mut f: impl HLFixture) {
-        let mut store = f.store().await;
+        let store = f.store().await;
 
         let usable = Byte::from_u64(100);
         let physical = store

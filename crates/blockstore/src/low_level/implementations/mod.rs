@@ -20,7 +20,7 @@ mod readonly;
 pub use readonly::ReadOnlyBlockStore;
 
 mod box_dyn;
-pub use box_dyn::DynBlockStore;
+pub use box_dyn::{DynBlockStore, DynLLBlockStore};
 
 #[cfg(any(test, feature = "testutils"))]
 mod mock;

@@ -17,7 +17,7 @@ pub use high_level::{Block, BlockStore, LockingBlockStore};
 mod low_level;
 pub use low_level::{
     AllowIntegrityViolations, BlockStoreDeleter, BlockStoreReader, BlockStoreWriter, ClientId,
-    CompressingBlockStore, DynBlockStore, EncryptedBlockStore, InMemoryBlockStore,
+    CompressingBlockStore, DynBlockStore, DynLLBlockStore, EncryptedBlockStore, InMemoryBlockStore,
     IntegrityBlockStore, IntegrityBlockStoreInitError, IntegrityConfig, IntegrityViolationError,
     LLBlockStore, MissingBlockIsIntegrityViolation, OnDiskBlockStore, OptimizedBlockStoreWriter,
     ReadOnlyBlockStore,

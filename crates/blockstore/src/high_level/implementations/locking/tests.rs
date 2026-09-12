@@ -70,7 +70,7 @@ async fn test_whenCallingCreate_thenPassesThroughDataToBaseStore() {
         .expect_store()
         .with(always(), function(|v| v == data(1024, 0).as_ref()))
         .returning(|_, _| Box::pin(async { Ok(()) }));
-    let mut store = LockingBlockStore::new(underlying_store);
+    let store = LockingBlockStore::new(underlying_store);
 
     store.create(&data(1024, 0)).await.unwrap();
 
@@ -101,7 +101,7 @@ async fn test_whenCallingCreate_thenReturnsCorrectBlockId() {
             assert_eq!(*id, id_watcher.expect("id_watcher not set yet"));
             Box::pin(async { Ok(()) })
         });
-    let mut store = LockingBlockStore::new(underlying_store);
+    let store = LockingBlockStore::new(underlying_store);
 
     let block_id = store.create(&data(1024, 0)).await.unwrap();
     assert_eq!(*id_watcher.lock().unwrap(), Some(block_id));
@@ -200,7 +200,7 @@ async fn test_whenCallingCreate_butIdAlreadyExists_thenTriesAgain() {
             );
             Box::pin(async { Ok(()) })
         });
-    let mut store = LockingBlockStore::new(underlying_store);
+    let store = LockingBlockStore::new(underlying_store);
 
     let block_id = store.create(&data(1024, 0)).await.unwrap();
     assert_eq!(attempted_ids.lock().unwrap().last(), Some(&block_id));
@@ -216,7 +216,7 @@ async fn test_whenCallingCreate_butExistsReturnsError_thenReturnsError() {
         .once()
         .returning(move |_| Box::pin(async { Err(anyhow!("Some error")) }));
     underlying_store.expect_store().never();
-    let mut store = LockingBlockStore::new(underlying_store);
+    let store = LockingBlockStore::new(underlying_store);
 
     let err = store.create(&data(1024, 0)).await.unwrap_err();
     assert_eq!("Some error", err.to_string());
@@ -232,7 +232,7 @@ async fn test_overhead() {
     underlying_store
         .expect_overhead()
         .returning(move || expected_overhead);
-    let mut store = LockingBlockStore::new(underlying_store);
+    let store = LockingBlockStore::new(underlying_store);
 
     assert_eq!(expected_overhead, store.overhead());
 

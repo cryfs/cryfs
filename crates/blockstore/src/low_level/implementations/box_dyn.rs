@@ -1,7 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use byte_unit::Byte;
+use futures::future::BoxFuture;
 use futures::stream::BoxStream;
+use std::any::Any;
+use std::fmt::Debug;
 
 use crate::{
     BlockId, Overhead, RemoveResult, TryCreateResult,
@@ -10,8 +13,28 @@ use crate::{
 use cryfs_utils::async_drop::AsyncDrop;
 use cryfs_utils::data::Data;
 
+/// Dyn-compatible version of [LLBlockStore], for use behind `dyn` (see [DynBlockStore]).
+///
+/// [LLBlockStore] has [AsyncDrop] as a supertrait, and [AsyncDrop::async_drop_impl]
+/// returns `impl Future`, which makes [AsyncDrop] and with it [LLBlockStore] not
+/// dyn-compatible. This trait has the same supertraits as [LLBlockStore] except for
+/// [AsyncDrop], which it replaces by [DynLLBlockStore::async_drop_boxed], a method taking
+/// `self: Box<Self>` and returning a boxed future. It is implemented for every [LLBlockStore].
+pub trait DynLLBlockStore:
+    BlockStoreReader + BlockStoreWriter + BlockStoreDeleter + Debug + Any
+{
+    /// Same as [AsyncDrop::async_drop_impl], but callable on a `Box<dyn DynLLBlockStore>`.
+    fn async_drop_boxed(self: Box<Self>) -> BoxFuture<'static, Result<()>>;
+}
+
+impl<B: LLBlockStore> DynLLBlockStore for B {
+    fn async_drop_boxed(self: Box<Self>) -> BoxFuture<'static, Result<()>> {
+        Box::pin((*self).async_drop_impl())
+    }
+}
+
 #[derive(Debug)]
-pub struct DynBlockStore(pub Box<dyn LLBlockStore + Sync + Send>);
+pub struct DynBlockStore(pub Box<dyn DynLLBlockStore + Sync + Send>);
 
 #[async_trait]
 impl BlockStoreReader for DynBlockStore {
@@ -65,12 +88,11 @@ impl BlockStoreDeleter for DynBlockStore {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for DynBlockStore {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let r = (*self.0).async_drop_impl();
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let r = self.0.async_drop_boxed();
         let r = r.await?;
         Ok(r)
     }

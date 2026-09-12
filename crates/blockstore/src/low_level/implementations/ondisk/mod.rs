@@ -154,10 +154,9 @@ impl Debug for OnDiskBlockStore {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for OnDiskBlockStore {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(self) -> Result<()> {
         Ok(())
     }
 }
@@ -382,7 +381,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_path() {
-        let mut block_store = OnDiskBlockStore::new(PathBuf::from("/base/path"));
+        let block_store = OnDiskBlockStore::new(PathBuf::from("/base/path"));
         assert_eq!(
             Path::new("/base/path/2AC/9C78D80937AD50852C50BD3F1F982"),
             block_store._block_path(
@@ -401,7 +400,7 @@ mod tests {
     #[tokio::test]
     async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
         let expected_overhead = Byte::from_u64(FORMAT_VERSION_HEADER.len() as u64);
 
         assert_eq!(
@@ -446,7 +445,7 @@ mod tests {
     #[tokio::test]
     async fn test_ondisk_block_size() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert_eq!(
@@ -478,7 +477,7 @@ mod tests {
     #[tokio::test]
     async fn test_whenStoringBlock_thenBlockFileExists() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         assert!(!_block_file_exists(fixture.basedir.path(), &blockid(0)));
         store.store(&blockid(0), &[]).await.unwrap();
@@ -494,7 +493,7 @@ mod tests {
     #[tokio::test]
     async fn test_whenRemovingBlock_thenBlockFileDoesntExist() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         store.store(&blockid(0), &[]).await.unwrap();
         assert!(_block_file_exists(fixture.basedir.path(), &blockid(0)));

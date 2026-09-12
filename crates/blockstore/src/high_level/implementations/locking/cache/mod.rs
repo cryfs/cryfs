@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::join;
 #[cfg(any(test, feature = "testutils"))]
 use futures::{Stream, StreamExt};
@@ -150,7 +149,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     /// Only meant for tests; production keeps the periodic task.
     #[cfg(any(test, feature = "testutils"))]
     pub async fn stop_periodic_pruning(&mut self) -> Result<()> {
-        if let Some(mut prune_task) = self.prune_task.take() {
+        if let Some(prune_task) = self.prune_task.take() {
             prune_task.async_drop().await?;
         }
         Ok(())
@@ -248,18 +247,16 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     }
 }
 
-#[async_trait]
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDrop
     for BlockCache<B>
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { cache, prune_task } = self;
         // `None` means `stop_periodic_pruning` (tests only) already stopped the task.
-        // Destructing twice is caught by the `self.cache.take()` below.
-        let prune_task = self.prune_task.take();
         let stop_prune_task = async move {
-            if let Some(mut prune_task) = prune_task {
+            if let Some(prune_task) = prune_task {
                 prune_task.async_drop().await
             } else {
                 Ok(())
@@ -270,7 +267,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> AsyncDro
             // Since self is passed in by value, prune task is the only one
             // that also has an instance. We're dropping prune_task concurrently
             // with this task. So let's wait until it has dropped it
-            let cache = self.cache.take().expect("Object is already destructed");
+            let cache = cache.expect("Object is already destructed");
             while Arc::strong_count(&cache) > 1 {
                 // TODO Is there a better alternative that doesn't involve busy waiting?
                 tokio::task::yield_now().await;
