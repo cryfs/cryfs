@@ -84,6 +84,8 @@ pub fn async_drop_all<T: AsyncDropTuple>(
     guards.async_drop_all()
 }
 
+// TODO Instead of only returning the first error and logging the others, we might want to
+//      return all of them, e.g. with a list error type.
 fn record_error<E: Debug>(first_error: &mut Option<E>, result: Result<(), E>) {
     if let Err(error) = result {
         if first_error.is_none() {
