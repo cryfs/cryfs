@@ -143,7 +143,7 @@ public:
                     *exited = true;
                     barrier->release();
                 }
-            } releaseBarrier{&exited, &isMountedOrFailedBarrier};
+            } const releaseBarrier{&exited, &isMountedOrFailedBarrier};
             return run(args, [&] { isMountedOrFailedBarrier.release(); });
         });
 
