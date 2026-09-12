@@ -62,8 +62,8 @@ runs:
 
         echo Download boost
         cd ~
-        wget -O boost.tar.bz2 https://archives.boost.io/release/1.84.0/source/boost_1_84_0.tar.bz2
-        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "5dfeb35198bb096e46cf9e131ef0334cb95bc0bf09f343f291b860b112598b3c36111bd8c232439c401a2b2fb832fa0c399a8d5b96afc60bd359dff070154497" ]; then
+        wget -O boost.tar.bz2 https://archives.boost.io/release/1.91.0/source/boost_1_91_0.tar.bz2
+        if [ $(sha512sum boost.tar.bz2 | awk '{print $1;}') == "25b3c1434d4c561ff568581356d1f240ef12218be62281f34fe7482487c5328ee6902ef158b7cf8daafe84943cf6f46485a8710a6da74475f11da023ec7b5559" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
@@ -73,10 +73,10 @@ runs:
         echo Extracting boost
         tar -xf boost.tar.bz2
         rm boost.tar.bz2
-        cd boost_1_84_0
+        cd boost_1_91_0
 
         echo Install boost
-        ./bootstrap.sh --with-libraries=filesystem,system,thread,chrono,program_options
+        ./bootstrap.sh --with-libraries=filesystem,thread,chrono,program_options
         sudo ./b2 link=shared cxxflags=-fPIC --prefix=/usr -d0 -j$NUMCORES install
 
         echo Install googletest
