@@ -157,12 +157,20 @@ public:
         cpputils::ConditionBarrier isMountedOrFailedBarrier;
 
         std::future<int> exit_code = std::async(std::launch::async, [&] {
-            const int exit_code = run(args, [&] { isMountedOrFailedBarrier.release(); });
-            // just in case it fails, we also want to release the barrier.
-            // if it succeeds, this will release it a second time, which doesn't hurt.
-            exited = true;
-            isMountedOrFailedBarrier.release();
-            return exit_code;
+            // Release the barrier however run() ends, also when it throws. If it fails before
+            // mounting, this releases the barrier the mount would have released. If it mounted,
+            // this releases it a second time, which doesn't hurt. Without the release on an
+            // exception, the thread below would wait for the whole timeout and then abort the
+            // test binary, and the exception would never be reported.
+            struct ReleaseBarrier final {
+                bool* exited;
+                cpputils::ConditionBarrier* barrier;
+                ~ReleaseBarrier() {
+                    *exited = true;
+                    barrier->release();
+                }
+            } releaseBarrier{&exited, &isMountedOrFailedBarrier};
+            return run(args, [&] { isMountedOrFailedBarrier.release(); });
         });
 
         std::future<bool> on_mounted_success = std::async(std::launch::async, [&] {
