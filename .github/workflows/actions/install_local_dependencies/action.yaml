@@ -41,8 +41,8 @@ runs:
 
         echo Download spdlog
         cd ~
-        wget https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz -O spdlog.tar.gz
-        if [ $(sha512sum spdlog.tar.gz | awk '{print $1;}') == "d8f36a3d65a43d8c64900e46137827aadb05559948b2f5a389bea16ed1bfac07d113ee11cf47970913298d6c37400355fe6895cda8fa6dcf6abd9da0d8f199e9" ]; then
+        wget https://github.com/gabime/spdlog/archive/refs/tags/v1.17.0.tar.gz -O spdlog.tar.gz
+        if [ $(sha512sum spdlog.tar.gz | awk '{print $1;}') == "8df117055d19ff21c9c9951881c7bdf27cc0866ea3a4aa0614b2c3939cedceab94ac9abaa63dc4312b51562b27d708cb2f014c68c603fd1c1051d3ed5c1c3087" ]; then
           echo Correct sha512sum
         else
           echo Wrong sha512sum
@@ -51,7 +51,7 @@ runs:
         fi
         tar -xvf spdlog.tar.gz
         rm spdlog.tar.gz
-        cd spdlog-1.14.1
+        cd spdlog-1.17.0
 
         echo Install spdlog
         mkdir build

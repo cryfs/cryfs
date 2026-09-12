@@ -15,13 +15,25 @@ on:
       - '**'
   pull_request:
 
-# Cancel in-progress runs on the same ref when a new commit is pushed, so a fix-up
-# push doesn't have to wait behind the superseded run. Without this, runs for commits
-# that no longer exist kept occupying the queue and reporting failures long after the
-# branch had moved on. Same setting the Rust workflow on main already uses.
+# One run per ref at a time. On a branch carrying a pull request, a new commit
+# cancels the run of the one it replaces, so a fix-up push doesn't have to wait behind
+# the superseded run. Without that, runs for commits that no longer exist kept
+# occupying the queue and reporting failures long after the branch had moved on.
+#
+# The release branches are exempt, because that is where this project's code lives and
+# a run there is worth finishing: it is the one that refreshes the ccache and conan
+# caches from the real branch state, and its packaging job is the only build of what
+# actually ships. While merges arrive more often than a run takes, cancelling means no
+# run ever reaches those steps.
+#
+# The group still keeps a release branch to one run at a time, and holds one pending
+# run behind it: further merges replace whatever is pending rather than queueing up, so
+# the run that starts next covers the newest commit at that moment. The cost is that
+# results lag by up to the length of a run, and a commit that was only ever the pending
+# one gets no run of its own. Same setting the Rust workflow uses for main.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
 
 jobs:
   should_run:
@@ -36,7 +48,41 @@ jobs:
       pull-requests: read
     outputs:
       run: ${{ steps.check.outputs.run }}
+      os_list: ${{ steps.matrix.outputs.os_list }}
     steps:
+      - name: Decide which runners this event builds on
+        id: matrix
+        # A pull request builds every Linux runner and one macOS runner; a push
+        # to a release branch or a tag builds all of them. The account gets five
+        # concurrent macOS runners, and with thirteen macOS jobs per run they
+        # were the bulk of the queue by job count.
+        #
+        # macos-15 is the one kept, because what macOS adds over Linux is the
+        # Darwin platform rather than a compiler version, and the Linux runners
+        # already build clang 13 to 19 and gcc 9 to 14 on every pull request.
+        # Of the three dropped, macos-15-intel and macos-26-intel are x86_64,
+        # the architecture the Linux runners cover thoroughly, and macos-26 is
+        # a second Darwin SDK behind the same architecture as macos-15. None is
+        # a combination only macOS can show, and a release branch keeps them.
+        #
+        # This is the os axis alone. The build types, the compiler list and the
+        # exclusions that say which compiler exists on which runner are the same
+        # for both events, so a dropped runner takes its exclusions with it and
+        # they simply match nothing.
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          full='["macos-15","macos-15-intel","macos-26","macos-26-intel","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
+          pr='["macos-15","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
+          if [[ "$EVENT" == "pull_request" ]]; then
+            os_list="$pr"
+          else
+            os_list="$full"
+          fi
+          # A malformed list fails every job with an unhelpful message, so check
+          # it here where the error is readable.
+          echo "$os_list" | python3 -m json.tool > /dev/null
+          echo "os_list=$os_list" >> "$GITHUB_OUTPUT"
       - name: Look for an open pull request from this branch
         id: check
         env:
@@ -71,14 +117,8 @@ jobs:
       fail-fast: false
       matrix:
         name: [""]
-        os:
-          - macos-15
-          - macos-15-intel
-          - macos-26
-          - macos-26-intel
-          - ubuntu-22.04
-          - ubuntu-24.04
-          - ubuntu-26.04
+        # Which runners this is depends on the event; see should_run above.
+        os: ${{ fromJSON(needs.should_run.outputs.os_list) }}
         # Every build type of a configuration is built and tested in the same
         # job, one after another, so the job pays for the runner, the checkout
         # and the compiler installation once instead of once per build type.
