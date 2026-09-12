@@ -651,6 +651,9 @@ jobs:
         run: |
           set -x
           cd build/${{matrix.build_type}}/test
+          ls fspp/ || true
+          timeout 600 ./fspp/fspp-test.exe 2>&1 | tail -30
+          echo "EXPLORE: fspp-test exit ${PIPESTATUS[0]}"
           timeout 1500 ./cryfs-cli/cryfs-cli-test.exe 2>&1 | tee "$RUNNER_TEMP/cryfs-cli-test.log" | grep -E "^\[  (PASSED|FAILED|  SKIPPED)|^\[==========\]|Assertion|Error [0-9]+:|Failed to mount|Dokan|Unsupported mount" | head -300
           echo "EXPLORE: cryfs-cli-test exit ${PIPESTATUS[0]}"
           echo "::group::cryfs-cli-test full log"

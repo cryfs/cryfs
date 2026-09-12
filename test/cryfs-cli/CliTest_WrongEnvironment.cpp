@@ -40,19 +40,19 @@ public:
     }
 
     void Test_Run_Success() {
-        EXPECT_RUN_SUCCESS(args(), mountdir);
+        EXPECT_RUN_SUCCESS(args(mountpoint), mountpoint);
     }
 
     void Test_Run_Error(const char *expectedError, cryfs::ErrorCode errorCode) {
         EXPECT_RUN_ERROR(
-            args(),
+            args(mountdir),
             expectedError,
             errorCode
         );
     }
 
-    vector<string> args() {
-        vector<string> result = {basedir.string(), mountdir.string()};
+    vector<string> args(const bf::path &mountdir_) {
+        vector<string> result = {basedir.string(), mountdir_.string()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
             result.push_back(configfile.path().string());
@@ -198,6 +198,9 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which can't be created";
+#endif
     _mountdir.remove();
     ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     Test_Run_Success();
@@ -212,6 +215,9 @@ TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which has no permissions to set";
+#endif
     //Counter-Test. Test it doesn't fail if permissions are there.
     SetAllPermissions(mountdir);
     Test_Run_Success();

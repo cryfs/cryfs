@@ -25,17 +25,56 @@
 #include <regex>
 #include <string>
 
+#if defined(_MSC_VER)
+namespace {
+// CryFS on Windows mounts to a drive letter, not into a directory (see Fuse::_run), so a test that
+// expects a mount to succeed needs a drive letter nothing else is using.
+inline boost::filesystem::path find_free_drive_letter() {
+    const DWORD used = GetLogicalDrives();
+    for (char letter = 'Z'; letter >= 'D'; --letter) {
+        if (0 == (used & (1u << (letter - 'A')))) {
+            return boost::filesystem::path(std::string(1, letter) + ":");
+        }
+    }
+    throw std::runtime_error("Didn't find a free drive letter to mount the test file system to");
+}
+}
+#endif
+
 class CliTest : public ::testing::Test, TestWithFakeHomeDirectory {
 public:
-    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()), logfile(), configfile(false), console(std::make_shared<MockConsole>()) {}
+    CliTest(): _basedir(), _mountdir(), basedir(_basedir.path()), mountdir(_mountdir.path()),
+#if defined(_MSC_VER)
+        mountpoint(find_free_drive_letter()),
+#else
+        mountpoint(_mountdir.path()),
+#endif
+        logfile(), configfile(false), console(std::make_shared<MockConsole>()) {}
 
     cpputils::TempDir _basedir;
     cpputils::TempDir _mountdir;
     boost::filesystem::path basedir;
+    // A directory to test the checks CryFS does on its mount directory with. On Linux and macOS
+    // the tests that expect the mount to succeed also mount into it. On Windows, CryFS can only
+    // mount to a drive letter (see Fuse::_run), so there they mount to `mountpoint` instead and
+    // the tests that need the mount directory to be a directory are skipped.
     boost::filesystem::path mountdir;
+    // Where a test that expects the mount to succeed mounts to: `mountdir` on Linux and macOS, a
+    // free drive letter on Windows.
+    boost::filesystem::path mountpoint;
     cpputils::TempFile logfile;
     cpputils::TempFile configfile;
     std::shared_ptr<MockConsole> console;
+
+    // A path inside the mounted file system. On Windows `mountpoint` is a bare drive letter, and
+    // "X:myfile" would be relative to that drive's current directory rather than to its root.
+    boost::filesystem::path in_mountpoint(const std::string& name) const {
+#if defined(_MSC_VER)
+        return boost::filesystem::path(mountpoint.string() + "\\") / name;
+#else
+        return mountpoint / name;
+#endif
+    }
 
     cpputils::unique_ref<cpputils::HttpClient> _httpClient() {
         cpputils::unique_ref<cpputils::FakeHttpClient> httpClient = cpputils::make_unique_ref<cpputils::FakeHttpClient>();
