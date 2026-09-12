@@ -49,7 +49,7 @@ impl IntegrityData {
         &self,
         block_id: BlockId,
     ) -> <LockableHashMap<BlockId, BlockInfo> as Lockable<BlockId, BlockInfo>>::OwnedGuard {
-        self._known_block_versions().lock_block_info(block_id).await
+        self.known_block_versions.lock_block_info(block_id).await
     }
 
     /// Checks if any previous runs recognized any integrity violations and marked it in the local state.
@@ -59,14 +59,14 @@ impl IntegrityData {
     /// so there's a way to reset and allow them to access the file system again, but they definitely
     /// won't miss that something weird happened.
     pub fn integrity_violation_in_previous_run(&self) -> bool {
-        self._known_block_versions()
+        self.known_block_versions
             .integrity_violation_in_previous_run()
     }
 
     /// This is intended to be called when an integrity violation was recognized and it marks the local
     /// state so that future attempts to open the file system will fail. See [IntegrityData::integrity_violation_in_previous_run].
     pub fn set_integrity_violation_in_previous_run(&self) {
-        self._known_block_versions()
+        self.known_block_versions
             .set_integrity_violation_in_previous_run();
     }
 
@@ -74,15 +74,7 @@ impl IntegrityData {
     /// seen them before and we haven't deleted it. Note that, this can return
     /// blocks that have been correctly deleted by other authorized clients.
     pub fn existing_blocks(&self) -> Vec<BlockId> {
-        self._known_block_versions().existing_blocks()
-    }
-
-    fn _known_block_versions(&self) -> &KnownBlockVersions {
-        &self.known_block_versions
-    }
-
-    fn _known_block_versions_mut(&mut self) -> &mut KnownBlockVersions {
-        &mut self.known_block_versions
+        self.known_block_versions.existing_blocks()
     }
 }
 
@@ -91,8 +83,8 @@ impl AsyncDrop for IntegrityData {
     async fn async_drop_impl(self) -> Result<()> {
         let Self {
             state_file_path,
+            my_client_id: _,
             known_block_versions,
-            ..
         } = self;
         known_block_versions.save(&state_file_path).await
     }

@@ -40,14 +40,16 @@ pub trait AsyncDrop {
 
 Implement it as a plain `async fn async_drop_impl(self)` without `#[async_trait]`.
 `self` is taken by value, so destructure it to move `AsyncDropGuard` members out
-and drop them:
+and drop them. List every field (`name: _` for the ones that don't need dropping)
+instead of using `..`: that way adding a field later is a compile error here, which
+forces whoever adds an `AsyncDropGuard` field to decide how to drop it.
 
 ```rust
 impl AsyncDrop for MyType {
     type Error = anyhow::Error;
 
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
-        let Self { connection, cache, .. } = self;
+        let Self { connection, cache, config: _ } = self;
         cache.async_drop().await?;
         connection.async_drop().await?;
         Ok(())

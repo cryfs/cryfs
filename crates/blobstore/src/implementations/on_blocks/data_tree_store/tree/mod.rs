@@ -732,7 +732,7 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
         let Self {
             node_store,
             root_node,
-            ..
+            num_bytes_cache: _,
         } = this.unsafe_into_inner_dont_drop();
         node_store.async_drop().await.unwrap(); // TODO No unwrap
         root_node.expect("DataTree.RootNode is none")
@@ -765,7 +765,11 @@ where
 {
     type Error = <B as AsyncDrop>::Error;
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
-        let Self { node_store, .. } = self;
+        let Self {
+            node_store,
+            root_node: _,
+            num_bytes_cache: _,
+        } = self;
         node_store.async_drop().await
     }
 }

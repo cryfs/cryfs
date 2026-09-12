@@ -143,17 +143,15 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockCac
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_unloaded_blocks(&self) -> Result<()> {
-        let cache = &self.cache;
-        Self::_prune_blocks_not_accessed_for_at_least(Arc::clone(cache), Duration::ZERO).await
+        Self::_prune_blocks_not_accessed_for_at_least(Arc::clone(&self.cache), Duration::ZERO).await
     }
 
     /// TODO Docs
     /// TODO Test
     #[cfg(any(test, feature = "testutils"))]
     pub async fn prune_all_blocks(&self) -> Result<()> {
-        let cache = &self.cache;
-        let to_prune = cache.lock_all_entries().await;
-        Self::_prune_blocks_stream(Arc::clone(cache), to_prune).await
+        let to_prune = self.cache.lock_all_entries().await;
+        Self::_prune_blocks_stream(Arc::clone(&self.cache), to_prune).await
     }
 
     #[cfg(any(test, feature = "testutils"))]

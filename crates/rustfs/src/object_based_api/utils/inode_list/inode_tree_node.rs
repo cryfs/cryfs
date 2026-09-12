@@ -103,7 +103,10 @@ where
 {
     type Error = FsError;
     async fn async_drop_impl(self) -> FsResult<()> {
-        let Self { inode, .. } = self;
+        let Self {
+            inode,
+            kernel_refcount: _,
+        } = self;
         inode.async_drop().await?;
 
         Ok(())

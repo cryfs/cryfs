@@ -387,7 +387,7 @@ where
     type Error = <NodeValue as AsyncDrop>::Error;
 
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
-        let Self { nodes, .. } = self;
+        let Self { nodes, handles: _ } = self;
         nodes.async_drop().await
     }
 }

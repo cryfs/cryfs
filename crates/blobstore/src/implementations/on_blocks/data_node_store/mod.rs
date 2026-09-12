@@ -239,7 +239,11 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> AsyncDrop for DataNodeStore<B> {
     type Error = <B as AsyncDrop>::Error;
 
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
-        let Self { block_store, .. } = self;
+        let Self {
+            block_store,
+            layout: _,
+            physical_block_size: _,
+        } = self;
         block_store.async_drop().await
     }
 }

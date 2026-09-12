@@ -55,8 +55,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
             };
 
         let removed_from_base_store = if should_remove_from_base_store {
-            let base_store = &self.base_store;
-            match base_store.remove(block_id).await? {
+            match self.base_store.remove(block_id).await? {
                 RemoveResult::SuccessfullyRemoved => true,
                 RemoveResult::NotRemovedBecauseItDoesntExist => false,
             }
@@ -112,11 +111,10 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
         // TODO Cache non-existence?
         let mut cache_entry = self.cache.async_lock(block_id).await?;
         if cache_entry.value().is_none() {
-            let base_store = &self.base_store;
-            let loaded = base_store.load(&block_id).await?;
+            let loaded = self.base_store.load(&block_id).await?;
             if let Some(loaded) = loaded {
                 self.cache.set_entry(
-                    base_store,
+                    &self.base_store,
                     &mut cache_entry,
                     loaded,
                     CacheEntryState::Clean,
@@ -137,12 +135,11 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
             // Block already exists in the cache
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
         }
-        let base_store = &self.base_store;
-        if base_store.exists(block_id).await? {
+        if self.base_store.exists(block_id).await? {
             return Ok(TryCreateResult::NotCreatedBecauseBlockIdAlreadyExists);
         }
         self.cache.set_entry(
-            base_store,
+            &self.base_store,
             &mut cache_entry,
             data.clone(),
             CacheEntryState::Dirty,
@@ -154,10 +151,8 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
     async fn overwrite(&self, block_id: &BlockId, data: &Data) -> Result<()> {
         let mut cache_entry = self.cache.async_lock(*block_id).await?;
 
-        let base_store = &self.base_store;
-
         let exists_in_base_store = async || {
-            if base_store.exists(block_id).await? {
+            if self.base_store.exists(block_id).await? {
                 Ok(BlockBaseStoreState::ExistsInBaseStore)
             } else {
                 Ok(BlockBaseStoreState::DoesntExistInBaseStore)
@@ -167,7 +162,7 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
         // Add the new value to the cache.
         self.cache
             .set_or_overwrite_entry_even_if_dirty(
-                base_store,
+                &self.base_store,
                 &mut cache_entry,
                 data.clone(),
                 CacheEntryState::Dirty,
@@ -198,27 +193,23 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockSto
     }
 
     async fn num_blocks(&self) -> Result<u64> {
-        let base_store = &self.base_store;
-        Ok(base_store.num_blocks().await? + self.cache.num_blocks_in_cache_but_not_in_base_store())
+        Ok(self.base_store.num_blocks().await?
+            + self.cache.num_blocks_in_cache_but_not_in_base_store())
     }
 
     fn estimate_num_free_bytes(&self) -> Result<Byte> {
-        let base_store = &self.base_store;
-        base_store.estimate_num_free_bytes()
+        self.base_store.estimate_num_free_bytes()
     }
 
     fn overhead(&self) -> Overhead {
-        let base_store = &self.base_store;
-        base_store.overhead()
+        self.base_store.overhead()
     }
 
     // TODO Make sure we have tests that have some blocks in the cache and some in the base store
     async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>> {
-        let base_store = &self.base_store;
-
         // TODO Is keys_with_entries_or_locked the right thing here? Do we want to count locked entries?
         let blocks_in_cache = self.cache.keys_with_entries_or_locked();
-        let blocks_in_base_store = base_store.all_blocks().await?;
+        let blocks_in_base_store = self.base_store.all_blocks().await?;
 
         let blocks_in_cache_set: HashSet<_> = blocks_in_cache.iter().copied().collect();
         let blocks_in_base_store_and_not_in_cache = blocks_in_base_store

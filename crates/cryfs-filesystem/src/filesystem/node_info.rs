@@ -460,8 +460,19 @@ where
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
         let Self { inner } = self;
         match inner {
-            NodeInfoImpl::IsRootDir { .. } => (),
-            NodeInfoImpl::IsNotRootDir { parent_blob, .. } => {
+            NodeInfoImpl::IsRootDir {
+                root_blob_id: _,
+                atime_update_behavior: _,
+            } => (),
+            NodeInfoImpl::IsNotRootDir {
+                parent_blob,
+                #[cfg(feature = "ancestor_checks_on_move")]
+                    ancestors: _,
+                name: _,
+                blob_id: _,
+                blob_type: _,
+                atime_update_behavior: _,
+            } => {
                 parent_blob
                     .async_drop()
                     .await

@@ -163,7 +163,7 @@ impl MyType {
 // RIGHT - internal unwrapping, still clean up members
 impl MyType {
     pub async fn good(this: AsyncDropGuard<Self>) -> Result<()> {
-        let Self { mut member, .. } = this.unsafe_into_inner_dont_drop();
+        let Self { mut member, config: _ } = this.unsafe_into_inner_dont_drop();
         let result = member.do_work().await?;
         member.async_drop().await?;  // Still our responsibility!
         Ok(result)

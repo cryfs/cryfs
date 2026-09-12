@@ -101,7 +101,7 @@ where
 {
     type Error = <B::ConcreteBlob as AsyncDrop>::Error;
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
-        let Self { blob, .. } = self;
+        let Self { blob, counts: _ } = self;
         blob.async_drop().await
     }
 }

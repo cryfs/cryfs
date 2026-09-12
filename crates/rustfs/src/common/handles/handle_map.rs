@@ -69,7 +69,10 @@ where
     type Error = FsError;
 
     async fn async_drop_impl(self) -> Result<(), FsError> {
-        let Self { objects, .. } = self;
+        let Self {
+            objects,
+            available_handles: _,
+        } = self;
         objects.async_drop().await
     }
 }

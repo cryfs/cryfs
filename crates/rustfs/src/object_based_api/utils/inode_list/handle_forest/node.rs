@@ -145,7 +145,11 @@ where
     type Error = <NodeValue as AsyncDrop>::Error;
 
     async fn async_drop_impl(self) -> Result<(), Self::Error> {
-        let Self { value, .. } = self;
+        let Self {
+            value,
+            parent: _,
+            children: _,
+        } = self;
         value.async_drop().await
     }
 }

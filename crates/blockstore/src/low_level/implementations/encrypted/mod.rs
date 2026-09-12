@@ -215,7 +215,9 @@ impl<
     async fn async_drop_impl(self) -> Result<()> {
         let Self {
             underlying_block_store,
-            ..
+            cipher: _,
+            threadpool: _,
+            _phantom: _,
         } = self;
         underlying_block_store.async_drop().await
     }

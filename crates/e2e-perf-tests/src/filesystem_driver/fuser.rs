@@ -205,7 +205,7 @@ pub struct InodeGuard {
 /// Holds an inode number and will tell the filesystem to forget it when dropped.
 #[derive(Debug)]
 pub struct InodeGuardInner {
-    // `Option` because [Drop::drop] only gets `&mut self` but has to move the guard out to drop it.
+    // Always Some except during destruction
     fs: Option<AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>>,
     ino: InodeNumber,
 }

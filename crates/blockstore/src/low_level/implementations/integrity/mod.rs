@@ -493,8 +493,8 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     async fn async_drop_impl(self) -> Result<()> {
         let Self {
             underlying_block_store,
+            config: _,
             integrity_data,
-            ..
         } = self;
         let (drop1, drop2) = join!(
             underlying_block_store.async_drop(),
