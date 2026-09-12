@@ -225,7 +225,7 @@ public:
                     *exited = true;
                     barrier->release();
                 }
-            } releaseBarrier{&exited, &isMountedOrFailedBarrier};
+            } const releaseBarrier{&exited, &isMountedOrFailedBarrier};
             harness_trace("run(): starting Cli::main");
             const int code = run(args, [&] { harness_trace("onMounted callback from Fuse::init"); isMountedOrFailedBarrier.release(); });
             harness_trace("run(): Cli::main returned " + std::to_string(code));
@@ -252,8 +252,10 @@ public:
               harness_trace("on_mounted thread: onMounted returned");
             } catch (...) {
               // Unmount anyway if we can, otherwise Cli::main() never returns and instead of
-              // reporting this exception, the test would wait for the timeout below.
-              if (unmount) {
+              // reporting this exception, the test would wait for the timeout below. This also
+              // applies to a test that unmounts itself, because the exception may well have come
+              // from that unmount failing.
+              if (mountDir.is_initialized()) {
                 try {
                   _unmount(*mountDir);
                 } catch (...) {

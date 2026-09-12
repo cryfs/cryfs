@@ -7,7 +7,11 @@ namespace bf = boost::filesystem;
 
 namespace {
 void unmount(const bf::path& mountdir) {
-    std::vector<const char*> _args = {"cryfs-unmount", mountdir.string().c_str()};
+    // On Windows, path::string() returns a copy, so it has to be kept alive while the arguments
+    // point into it. On Linux and macOS it returns a reference to the path's own string, which is
+    // why the temporary this used to point into went unnoticed there.
+    const std::string mountdir_string = mountdir.string();
+    std::vector<const char*> _args = {"cryfs-unmount", mountdir_string.c_str()};
     cryfs_unmount::Cli().main(2, _args.data());
 }
 
