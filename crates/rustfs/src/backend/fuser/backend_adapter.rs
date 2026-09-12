@@ -26,6 +26,9 @@ use crate::low_level_api::{
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 use cryfs_utils::path::{PathComponent, PathComponentBuf};
 
+/// Owned read guard on the file system, mapped past the `Option` slot that [BackendAdapter::destroy] empties.
+type FsReadGuard<Fs> = OwnedRwLockReadGuard<Option<AsyncDropGuard<Fs>>, AsyncDropGuard<Fs>>;
+
 // TODO Check if any of the APIs in the high or low level interface would benefit from replacing Vec<> with impl Iterator
 
 // TODO Fuse has a requirement that (inode, generation) tuples are unique throughout the lifetime of the filesystem, not just the lifetime of the mount.
@@ -47,7 +50,8 @@ where
     Fs: AsyncFilesystemLL + AsyncDrop<Error = FsError> + Debug + Send + Sync + 'static,
 {
     // TODO RwLock is only needed for async drop. Can we remove it? init() and destroy() are called on &mut self so they should be exclusive anyways.
-    fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
+    // `None` once [Self::destroy] dropped the file system. Other handles (see [Self::internal_arc]) can still observe that.
+    fs: Arc<tokio::sync::RwLock<Option<AsyncDropGuard<Fs>>>>,
 
     runtime: tokio::runtime::Handle,
 }
@@ -67,18 +71,18 @@ where
 {
     pub fn new(fs: AsyncDropGuard<Fs>, runtime: tokio::runtime::Handle) -> Self {
         Self {
-            fs: Arc::new(RwLock::new(fs)),
+            fs: Arc::new(RwLock::new(Some(fs))),
             runtime,
         }
     }
 
-    pub(super) fn internal_arc(&self) -> Arc<RwLock<AsyncDropGuard<Fs>>> {
+    pub(super) fn internal_arc(&self) -> Arc<RwLock<Option<AsyncDropGuard<Fs>>>> {
         Arc::clone(&self.fs)
     }
 
     async fn call_with_fs<F, R>(
-        fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        fs: Arc<tokio::sync::RwLock<Option<AsyncDropGuard<Fs>>>>,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) -> FsResult<R>
     where
         F: Future<Output = FsResult<R>> + Send,
@@ -88,25 +92,27 @@ where
     }
 
     async fn fs_read(
-        fs: Arc<tokio::sync::RwLock<AsyncDropGuard<Fs>>>,
-    ) -> FsResult<OwnedRwLockReadGuard<AsyncDropGuard<Fs>>> {
+        fs: Arc<tokio::sync::RwLock<Option<AsyncDropGuard<Fs>>>>,
+    ) -> FsResult<FsReadGuard<Fs>> {
         let fs = RwLock::read_owned(fs).await;
-        if fs.is_dropped() {
-            // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
-            // a file held open and closed after the file system is already unmounted.
-            // We can't really handle it well or honor those operations,
-            // but at least we can avoid a panic.
-            log::error!(
-                "Received a file system operation after destroy() terminated the file system"
-            );
-            return Err(FsError::FilesystemDestroyed);
+        match OwnedRwLockReadGuard::try_map(fs, Option::as_ref) {
+            Ok(fs) => Ok(fs),
+            Err(_) => {
+                // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
+                // a file held open and closed after the file system is already unmounted.
+                // We can't really handle it well or honor those operations,
+                // but at least we can avoid a panic.
+                log::error!(
+                    "Received a file system operation after destroy() terminated the file system"
+                );
+                Err(FsError::FilesystemDestroyed)
+            }
         }
-        Ok(fs)
     }
 
-    async fn fs_write(&self) -> FsResult<RwLockWriteGuard<'_, AsyncDropGuard<Fs>>> {
+    async fn fs_write(&self) -> FsResult<RwLockWriteGuard<'_, Option<AsyncDropGuard<Fs>>>> {
         let fs = self.fs.write().await;
-        if fs.is_dropped() {
+        if fs.is_none() {
             // Gracefully handle if [Self::destroy] was already called. This can happen in corner cases where
             // a file held open and closed after the file system is already unmounted.
             // We can't really handle it well or honor those operations,
@@ -159,7 +165,7 @@ where
     fn run_async_no_reply<F>(
         &self,
         log_msg: String,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<()>> + Send,
     {
@@ -181,7 +187,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyEmpty,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<()>> + Send,
     {
@@ -205,7 +211,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyEntry,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyEntry>> + Send,
     {
@@ -233,7 +239,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyAttr,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyAttr>> + Send,
     {
@@ -257,7 +263,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyOpen,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyOpen>> + Send,
     {
@@ -282,7 +288,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyWrite,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyWrite>> + Send,
     {
@@ -308,7 +314,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyStatfs,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<Statfs>> + Send,
     {
@@ -342,7 +348,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyCreate,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyCreate>> + Send,
     {
@@ -372,7 +378,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyLock,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyLock>> + Send,
     {
@@ -396,7 +402,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyBmap,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyBmap>> + Send,
     {
@@ -420,7 +426,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyIoctl,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyIoctl>> + Send,
     {
@@ -444,7 +450,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyLseek,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyLseek>> + Send,
     {
@@ -472,7 +478,7 @@ where
         &self,
         log_msg: String,
         fuser_reply: fuser::ReplyXTimes,
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>) -> F,
     ) where
         F: Future<Output = FsResult<low_level_api::ReplyXTimes>> + Send,
     {
@@ -497,7 +503,7 @@ where
         log_msg: String,
         reply: fuser::ReplyData,
         // TODO If we could do `for <Callback: FnOnce> impl ...`, we wouldn't need the DataCallback class
-        func: impl Send + 'static + FnOnce(OwnedRwLockReadGuard<AsyncDropGuard<Fs>>, DataCallback) -> F,
+        func: impl Send + 'static + FnOnce(FsReadGuard<Fs>, DataCallback) -> F,
     ) where
         F: Future<Output = ()> + Send,
     {
@@ -523,14 +529,22 @@ where
 
         let req = RequestInfo::from(req);
         Self::run_blocking(&self.runtime, &format!("init({config:?})"), async || {
-            self.fs_write().await?.init(&req).await
+            let fs = self.fs_write().await?;
+            fs.as_ref()
+                .expect("fs_write() checked that the file system wasn't destroyed yet")
+                .init(&req)
+                .await
         })
         .map_err(std::io::Error::from_raw_os_error)
     }
 
     fn destroy(&mut self) {
         Self::run_blocking(&self.runtime, "destroy", async || {
-            let mut fs = self.fs_write().await?;
+            // Keep the write lock (`fs_lock`) until we're done so that no operation runs concurrently with the drop.
+            let mut fs_lock = self.fs_write().await?;
+            let fs = fs_lock
+                .take()
+                .expect("fs_write() checked that the file system wasn't destroyed yet");
             fs.destroy().await;
             fs.async_drop().await.unwrap();
             Ok(())

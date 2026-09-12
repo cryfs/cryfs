@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 #[cfg(test)]
@@ -160,14 +159,14 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
     }
 }
 
-#[async_trait]
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> AsyncDrop
     for DataTreeStore<B>
 {
     type Error = <B as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.node_store.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { node_store } = self;
+        node_store.async_drop().await
     }
 }
 
@@ -208,7 +207,7 @@ mod tests {
 
         #[tokio::test]
         async fn valid_block_size() {
-            let mut store = DataTreeStore::new(
+            let store = DataTreeStore::new(
                 LockingBlockStore::new(InMemoryBlockStore::new()),
                 Byte::from_u64(40),
             )
@@ -259,12 +258,12 @@ mod tests {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = {
-                        let mut created = store.create_tree().await.unwrap();
+                        let created = store.create_tree().await.unwrap();
                         let root_id = *created.root_node_id();
                         created.async_drop().await.unwrap();
                         root_id
                     };
-                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -285,7 +284,7 @@ mod tests {
                         tree.async_drop().await.unwrap();
                         root_id
                     };
-                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -302,12 +301,12 @@ mod tests {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = {
-                        let mut created = store.create_tree().await.unwrap();
+                        let created = store.create_tree().await.unwrap();
                         let root_id = *created.root_node_id();
                         created.async_drop().await.unwrap();
                         root_id
                     };
-                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -345,11 +344,11 @@ mod tests {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
-                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
 
-                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -385,7 +384,7 @@ mod tests {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("d86afd0489d7c3046c446e8ec1a049fe").unwrap();
-                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
 
@@ -692,7 +691,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(0)));
-            let mut treestore =
+            let treestore =
                 DataTreeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -712,7 +711,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(99)));
-            let mut treestore =
+            let treestore =
                 DataTreeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -732,7 +731,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(100)));
-            let mut treestore =
+            let treestore =
                 DataTreeStore::new(LockingBlockStore::new(blockstore), Byte::from_u64(100))
                     .await
                     .unwrap();
@@ -752,7 +751,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
-            let mut treestore = DataTreeStore::new(
+            let treestore = DataTreeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024),
             )
@@ -777,7 +776,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Ok(Byte::from_u64(32 * 1024 * 10240 + 123)));
-            let mut treestore = DataTreeStore::new(
+            let treestore = DataTreeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024),
             )
@@ -802,7 +801,7 @@ mod tests {
             blockstore
                 .expect_estimate_num_free_bytes()
                 .returning(|| Err(anyhow!("some error")));
-            let mut treestore = DataTreeStore::new(
+            let treestore = DataTreeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024),
             )
@@ -831,7 +830,7 @@ mod tests {
                 .expect_overhead()
                 .times(1)
                 .returning(|| Overhead::new(Byte::from_u64(100)));
-            let mut treestore = DataTreeStore::new(
+            let treestore = DataTreeStore::new(
                 LockingBlockStore::new(blockstore),
                 Byte::from_u64(32 * 1024 * 10),
             )

@@ -89,13 +89,13 @@ impl<B: OptimizedBlockStoreWriter + Debug + Sync + Send + AsyncDrop<Error = anyh
     }
 }
 
-#[async_trait]
 impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     for ReadOnlyBlockStore<B>
 {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_store.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { underlying_store } = self;
+        underlying_store.async_drop().await?;
         Ok(())
     }
 }

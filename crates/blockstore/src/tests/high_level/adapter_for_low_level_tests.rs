@@ -96,13 +96,13 @@ impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 's
     }
 }
 
-#[async_trait]
 impl<B: BlockStore + AsyncDrop<Error = anyhow::Error> + Send + Sync + Debug + 'static> AsyncDrop
     for BlockStoreToLLBlockStoreAdapter<B>
 {
     type Error = <B as AsyncDrop>::Error;
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.0.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self(inner) = self;
+        inner.async_drop().await
     }
 }
 

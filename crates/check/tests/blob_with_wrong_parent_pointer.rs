@@ -77,7 +77,7 @@ fn make_large_dir<'a>(
                         .unwrap()
                         .unwrap();
                     let mut parent = CreatedDirBlob::new(parent, parent_info.referenced_as.path);
-                    let mut dir =
+                    let dir =
                         entry_helpers::create_large_dir(fsblobstore, &mut *parent, "dirname").await;
                     let result = (&*dir).into();
                     dir.async_drop().await.unwrap();

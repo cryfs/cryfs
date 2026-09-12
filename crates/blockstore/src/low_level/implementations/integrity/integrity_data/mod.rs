@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use lockable::{Lockable, LockableHashMap};
 use std::path::PathBuf;
 
@@ -25,18 +24,15 @@ pub struct IntegrityData {
     state_file_path: PathBuf,
     my_client_id: ClientId,
 
-    // Always Some except for during destruction
-    known_block_versions: Option<KnownBlockVersions>,
+    known_block_versions: KnownBlockVersions,
 }
 
 // TODO We should probably lock the file while it's open so that another CryFS process doesn't open it too
 
 impl IntegrityData {
     pub fn new(state_file_path: PathBuf, my_client_id: ClientId) -> Result<AsyncDropGuard<Self>> {
-        let known_block_versions = Some(
-            KnownBlockVersions::load_or_default(&state_file_path)
-                .context("Tried to deserialize the state file")?,
-        );
+        let known_block_versions = KnownBlockVersions::load_or_default(&state_file_path)
+            .context("Tried to deserialize the state file")?;
         Ok(AsyncDropGuard::new(Self {
             state_file_path,
             my_client_id,
@@ -53,7 +49,7 @@ impl IntegrityData {
         &self,
         block_id: BlockId,
     ) -> <LockableHashMap<BlockId, BlockInfo> as Lockable<BlockId, BlockInfo>>::OwnedGuard {
-        self._known_block_versions().lock_block_info(block_id).await
+        self.known_block_versions.lock_block_info(block_id).await
     }
 
     /// Checks if any previous runs recognized any integrity violations and marked it in the local state.
@@ -63,14 +59,14 @@ impl IntegrityData {
     /// so there's a way to reset and allow them to access the file system again, but they definitely
     /// won't miss that something weird happened.
     pub fn integrity_violation_in_previous_run(&self) -> bool {
-        self._known_block_versions()
+        self.known_block_versions
             .integrity_violation_in_previous_run()
     }
 
     /// This is intended to be called when an integrity violation was recognized and it marks the local
     /// state so that future attempts to open the file system will fail. See [IntegrityData::integrity_violation_in_previous_run].
     pub fn set_integrity_violation_in_previous_run(&self) {
-        self._known_block_versions()
+        self.known_block_versions
             .set_integrity_violation_in_previous_run();
     }
 
@@ -78,31 +74,19 @@ impl IntegrityData {
     /// seen them before and we haven't deleted it. Note that, this can return
     /// blocks that have been correctly deleted by other authorized clients.
     pub fn existing_blocks(&self) -> Vec<BlockId> {
-        self._known_block_versions().existing_blocks()
-    }
-
-    fn _known_block_versions(&self) -> &KnownBlockVersions {
-        self.known_block_versions
-            .as_ref()
-            .expect("Object is currently being destructed")
-    }
-
-    fn _known_block_versions_mut(&mut self) -> &mut KnownBlockVersions {
-        self.known_block_versions
-            .as_mut()
-            .expect("Object is currently being destructed")
+        self.known_block_versions.existing_blocks()
     }
 }
 
-#[async_trait]
 impl AsyncDrop for IntegrityData {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.known_block_versions
-            .take()
-            .expect("Was already destructed")
-            .save(&self.state_file_path)
-            .await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            state_file_path,
+            my_client_id: _,
+            known_block_versions,
+        } = self;
+        known_block_versions.save(&state_file_path).await
     }
 }
 

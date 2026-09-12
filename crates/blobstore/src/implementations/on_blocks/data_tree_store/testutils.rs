@@ -100,7 +100,7 @@ pub async fn create_one_leaf_tree_return_id<
 >(
     store: &DataTreeStore<B>,
 ) -> BlockId {
-    let mut tree = create_one_leaf_tree(store).await;
+    let tree = create_one_leaf_tree(store).await;
     let id = *tree.root_node_id();
     tree.async_drop().await.unwrap();
     id
@@ -125,7 +125,7 @@ pub async fn create_multi_leaf_tree_return_id<
     store: &DataTreeStore<B>,
     num_leaves: u64,
 ) -> BlockId {
-    let mut tree = create_multi_leaf_tree(store, num_leaves).await;
+    let tree = create_multi_leaf_tree(store, num_leaves).await;
     let id = *tree.root_node_id();
     tree.async_drop().await.unwrap();
     id
@@ -208,7 +208,7 @@ pub async fn with_treestore_with_blocksize(
     blocksize_bytes: Byte,
     f: impl FnOnce(&DataTreeStore<LockingBlockStore<InMemoryBlockStore>>) -> BoxFuture<'_, ()>,
 ) {
-    let mut treestore = DataTreeStore::new(
+    let treestore = DataTreeStore::new(
         LockingBlockStore::new(InMemoryBlockStore::new()),
         blocksize_bytes,
     )
@@ -235,13 +235,13 @@ pub async fn with_treestore_and_nodestore_with_blocksize(
     ) -> BoxFuture<'a, ()>,
 ) {
     let blockstore = LLSharedBlockStore::new(InMemoryBlockStore::new());
-    let mut nodestore = DataNodeStore::new(
+    let nodestore = DataNodeStore::new(
         LockingBlockStore::new(LLSharedBlockStore::clone(&blockstore)),
         blocksize,
     )
     .await
     .unwrap();
-    let mut treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), blocksize)
+    let treestore = DataTreeStore::new(LockingBlockStore::new(blockstore), blocksize)
         .await
         .unwrap();
     f(&treestore, &nodestore).await;

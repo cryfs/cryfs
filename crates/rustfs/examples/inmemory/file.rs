@@ -151,11 +151,10 @@ impl Debug for InMemoryFileRef {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for InMemoryFileRef {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(self) -> Result<(), FsError> {
         // Nothing to do
         Ok(())
     }
@@ -249,11 +248,10 @@ impl Debug for InMemoryOpenFileRef {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for InMemoryOpenFileRef {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(self) -> Result<(), FsError> {
         // Nothing to do
         Ok(())
     }

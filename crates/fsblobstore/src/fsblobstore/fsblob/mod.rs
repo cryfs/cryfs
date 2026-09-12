@@ -1,5 +1,4 @@
 use anyhow::{Result, bail};
-use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
@@ -50,7 +49,7 @@ where
     <B as BlobStore>::ConcreteBlob: Send + AsyncDrop<Error = anyhow::Error>,
 {
     pub async fn parse(blob: AsyncDropGuard<B::ConcreteBlob>) -> Result<AsyncDropGuard<FsBlob<B>>> {
-        let mut blob = BaseBlob::parse(blob).await?;
+        let blob = BaseBlob::parse(blob).await?;
         match blob.blob_type() {
             Ok(BlobType::Dir) => Ok(AsyncDropGuard::new(Self::Directory(
                 DirBlob::new(blob).await?,
@@ -180,7 +179,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for FsBlob<B>
 where
     B: BlobStore + Debug + 'static,
@@ -188,8 +186,8 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        match &mut self {
+    async fn async_drop_impl(self) -> Result<()> {
+        match self {
             Self::File(blob) => {
                 blob.async_drop().await?;
             }

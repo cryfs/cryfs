@@ -319,7 +319,7 @@ where
             with_async_drop_2!(parent_dir, {
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_child_dir() ?
                 // TODO No need to return the child dir object to just immediately async_drop it
-                let (new_dir_attrs, mut new_dir) = parent_dir
+                let (new_dir_attrs, new_dir) = parent_dir
                     .create_child_dir(&name, mode, req.uid, req.gid)
                     .await?;
                 new_dir.async_drop().await?;
@@ -388,7 +388,7 @@ where
             with_async_drop_2!(parent_dir, {
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_child_symlink() ?
                 // TODO No need to return the symlink object to just immediately async_drop it
-                let (new_symlink_attrs, mut symlink) = parent_dir
+                let (new_symlink_attrs, symlink) = parent_dir
                     .create_child_symlink(&name, target, req.uid, req.gid)
                     .await?;
                 symlink.async_drop().await?;
@@ -542,7 +542,7 @@ where
     ) -> FsResult<()> {
         self.trigger_on_operation().await?;
 
-        let mut removed = self.open_files.remove(fh);
+        let removed = self.open_files.remove(fh);
         removed.async_drop().await?;
         Ok(())
     }
@@ -735,7 +735,7 @@ where
         let parent_dir = fs.get().lookup(parent).await?;
         with_async_drop_2!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (file_attrs, mut node, open_file) = with_async_drop_2!(parent_dir, {
+            let (file_attrs, node, open_file) = with_async_drop_2!(parent_dir, {
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_and_open_file() ?
                 // TODO No need to return the node just to immediately async_drop it below
                 parent_dir
@@ -754,7 +754,6 @@ where
     }
 }
 
-#[async_trait]
 impl<Fs> AsyncDrop for ObjectBasedFsAdapter<Fs>
 where
     Fs: Device + Debug + AsyncDrop<Error = FsError> + Send + Sync + 'static,
@@ -762,12 +761,13 @@ where
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.open_files.async_drop().await?;
-        let mut fs = std::mem::replace(
-            &mut *self.fs.write().unwrap(),
-            AsyncDropGuard::new_invalid(),
-        );
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { fs, open_files } = self;
+        open_files.async_drop().await?;
+        let fs = Arc::into_inner(fs)
+            .expect("ObjectBasedFsAdapter::fs is never shared, so this must be the last reference to it")
+            .into_inner()
+            .unwrap();
         fs.async_drop().await.map_err(|err| err)?;
         Ok(())
     }

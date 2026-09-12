@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, SyncDrop};
 use derive_more::{From, Into};
 use std::fmt::Debug;
@@ -65,15 +64,12 @@ impl Debug for DirCache {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for DirCache {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> FsResult<()> {
-        let mut entries = std::mem::replace(
-            &mut *self.entries.lock().unwrap(),
-            AsyncDropGuard::new_invalid(),
-        );
+    async fn async_drop_impl(self) -> FsResult<()> {
+        let Self { entries } = self;
+        let entries = entries.into_inner().unwrap();
         entries.async_drop().await?;
         Ok(())
     }
@@ -118,11 +114,10 @@ impl DirCacheEntry {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for DirCacheEntry {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> FsResult<()> {
+    async fn async_drop_impl(self) -> FsResult<()> {
         // Nothing to do
         Ok(())
     }

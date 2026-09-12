@@ -67,14 +67,17 @@ where
     }
 }
 
-#[async_trait]
 impl<'a, B> AsyncDrop for CryFile<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
-        self.node_info.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), FsError> {
+        let Self {
+            blobstore: _,
+            node_info,
+        } = self;
+        node_info.async_drop().await
     }
 }

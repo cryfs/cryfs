@@ -85,14 +85,14 @@ pub enum IntegrityBlockStoreInitError {
 
 impl<B: Send + Sync + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> {
     pub async fn new(
-        mut underlying_block_store: AsyncDropGuard<B>,
+        underlying_block_store: AsyncDropGuard<B>,
         integrity_file_path: PathBuf,
         my_client_id: ClientId,
         config: IntegrityConfig,
     ) -> Result<AsyncDropGuard<Self>, IntegrityBlockStoreInitError> {
         let integrity_data = IntegrityData::new(integrity_file_path.clone(), my_client_id)
             .context("Tried to create IntegrityData");
-        let mut integrity_data = match integrity_data {
+        let integrity_data = match integrity_data {
             Ok(integrity_data) => integrity_data,
             Err(err) => {
                 if let Err(async_drop_err) = underlying_block_store.async_drop().await {
@@ -486,15 +486,19 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> IntegrityBlockStore<B> 
     }
 }
 
-#[async_trait]
 impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     for IntegrityBlockStore<B>
 {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            underlying_block_store,
+            config: _,
+            integrity_data,
+        } = self;
         let (drop1, drop2) = join!(
-            self.underlying_block_store.async_drop(),
-            self.integrity_data.async_drop(),
+            underlying_block_store.async_drop(),
+            integrity_data.async_drop(),
         );
         drop1?;
         drop2?;
@@ -590,7 +594,7 @@ mod generic_tests {
     #[tokio::test]
     async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::<false, false>::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
         let expected_overhead = Byte::from_u64(HEADER_SIZE_BYTES as u64);
 
         assert_eq!(

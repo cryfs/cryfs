@@ -37,7 +37,9 @@ pub fn make_mock_filesystem() -> MockFilesystem {
         Ok(())
     });
     mock.expect_destroy().once().returning(|| ());
-    mock.expect_async_drop_impl().once().returning(|| Ok(()));
+    mock.expect_async_drop_impl()
+        .once()
+        .returning(|| Box::pin(async { Ok(()) }));
 
     MockFilesystem {
         fs: mock,
@@ -407,10 +409,9 @@ mock! {
         async fn getxtimes(&self, req: &RequestInfo, ino: InodeNumber) -> FsResult<ReplyXTimes>;
     }
 
-    #[async_trait]
     impl AsyncDrop for AsyncFilesystemLL {
         type Error = FsError;
-        async fn async_drop_impl(&mut self) -> Result<(), FsError>;
+        fn async_drop_impl(self) -> impl std::future::Future<Output = Result<(), FsError>> + Send;
     }
 }
 

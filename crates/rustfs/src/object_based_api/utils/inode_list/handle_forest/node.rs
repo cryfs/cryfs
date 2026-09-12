@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::borrow::Borrow;
 use std::hash::Hash;
 use std::{collections::HashMap, fmt::Debug};
@@ -136,7 +135,6 @@ where
     }
 }
 
-#[async_trait]
 impl<Handle, EdgeKey, NodeValue> AsyncDrop for Node<Handle, EdgeKey, NodeValue>
 where
     Handle: HandleTrait + Send,
@@ -146,8 +144,13 @@ where
 {
     type Error = <NodeValue as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.value.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            value,
+            parent: _,
+            children: _,
+        } = self;
+        value.async_drop().await
     }
 }
 

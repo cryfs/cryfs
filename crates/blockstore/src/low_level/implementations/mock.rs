@@ -32,7 +32,7 @@ mock! {
     }
     impl AsyncDrop for BlockStore {
         type Error = anyhow::Error;
-        fn async_drop_impl<'a, 'r>(&'a mut self) -> BoxFuture<'r, Result<()>> where 'a: 'r;
+        fn async_drop_impl(self) -> impl std::future::Future<Output = Result<()>> + Send;
     }
     impl LLBlockStore for BlockStore {}
 }

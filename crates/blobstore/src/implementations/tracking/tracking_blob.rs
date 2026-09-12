@@ -95,13 +95,13 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for TrackingBlob<B>
 where
     B: BlobStore + AsyncDrop + Debug + 'static,
 {
     type Error = <B::ConcreteBlob as AsyncDrop>::Error;
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blob.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { blob, counts: _ } = self;
+        blob.async_drop().await
     }
 }

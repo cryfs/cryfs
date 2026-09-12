@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use futures::future::Future;
 use futures::task::{ArcWake, Context, Poll, Waker, waker_ref};
 use slab::Slab;
@@ -45,7 +44,6 @@ where
     notifier: Arc<Notifier>,
 }
 
-#[async_trait]
 impl<O, Fut> AsyncDrop for Inner<O, Fut>
 where
     O: Debug + AsyncDrop + Send + Sync,
@@ -53,19 +51,19 @@ where
 {
     type Error = <O as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let inner = std::mem::replace(
-            &mut self.future_or_output,
-            UnsafeCell::new(FutureOrOutput::Output(AsyncDropGuard::new_invalid())),
-        );
-        match inner.into_inner() {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            future_or_output,
+            notifier,
+        } = self;
+        drop(notifier);
+        match future_or_output.into_inner() {
             FutureOrOutput::Future(future) => {
                 // To ensure that any AsyncDropGuards that may temporarily exist in the future state,
                 // or maybe even are returned from the future, are dropped, we have to await the future here.
-                let mut output = future.await;
-                output.async_drop().await
+                future.await.async_drop().await
             }
-            FutureOrOutput::Output(mut output) => output.async_drop().await,
+            FutureOrOutput::Output(output) => output.async_drop().await,
         }
     }
 }
@@ -397,7 +395,6 @@ where
     }
 }
 
-#[async_trait]
 impl<O, Fut> AsyncDrop for AsyncDropShared<O, Fut>
 where
     O: Debug + AsyncDrop + Send + Sync,
@@ -405,16 +402,18 @@ where
 {
     type Error = <O as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        if self.waker_key != NULL_WAKER_KEY
-            && let Some(ref inner) = self.inner
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { inner, waker_key } = self;
+
+        if waker_key != NULL_WAKER_KEY
+            && let Some(ref inner) = inner
             && let Ok(mut wakers) = inner.notifier.wakers.lock()
             && let Some(wakers) = wakers.as_mut()
         {
-            wakers.remove(self.waker_key);
+            wakers.remove(waker_key);
         }
 
-        if let Some(inner) = &mut self.inner {
+        if let Some(inner) = inner {
             inner.async_drop().await?;
         }
         Ok(())
@@ -437,7 +436,6 @@ impl ArcWake for Notifier {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use std::sync::Arc as StdArc;
     use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
@@ -447,11 +445,10 @@ mod tests {
         drop_called: StdArc<AtomicBool>,
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = ();
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             assert!(
                 !self.drop_called.load(Ordering::SeqCst),
                 "Drop called twice",
@@ -472,7 +469,7 @@ mod tests {
         };
 
         let mut shared = AsyncDropShared::new(future);
-        let mut result = (&mut *shared).await;
+        let result = (&mut *shared).await;
 
         assert!(
             !drop_called.load(Ordering::SeqCst),
@@ -504,7 +501,7 @@ mod tests {
         };
 
         let mut shared = AsyncDropShared::new(future);
-        let mut result = (&mut *shared).await;
+        let result = (&mut *shared).await;
 
         assert!(
             !drop_called.load(Ordering::SeqCst),
@@ -544,7 +541,6 @@ mod tests {
         );
 
         // Clean up
-        let mut result = result;
         result.async_drop().await.unwrap();
         shared.async_drop().await.unwrap();
         assert!(
@@ -564,14 +560,13 @@ mod tests {
         };
 
         let mut shared1 = AsyncDropShared::new(future);
-        let mut shared2 = AsyncDropShared::clone(&shared1);
+        let shared2 = AsyncDropShared::clone(&shared1);
 
         // Poll the first one
         let result = (&mut *shared1).await;
         assert_eq!(result.value, 42);
 
         // Clean up
-        let mut result = result;
         result.async_drop().await.unwrap();
         shared1.async_drop().await.unwrap();
         shared2.async_drop().await.unwrap();
@@ -614,11 +609,11 @@ mod tests {
         assert_eq!(poll_count.load(Ordering::SeqCst), 1);
 
         // Clean up
-        let mut result = result1;
+        let result = result1;
         result.async_drop().await.unwrap();
-        let mut result = result2;
+        let result = result2;
         result.async_drop().await.unwrap();
-        let mut result = result3;
+        let result = result3;
         result.async_drop().await.unwrap();
         shared1.async_drop().await.unwrap();
         shared2.async_drop().await.unwrap();
@@ -639,7 +634,7 @@ mod tests {
         };
 
         let mut shared = AsyncDropShared::new(future);
-        let mut shared2 = AsyncDropShared::clone(&shared);
+        let shared2 = AsyncDropShared::clone(&shared);
 
         // Before polling, peek should return None
         assert!(shared.peek().is_none());
@@ -654,7 +649,6 @@ mod tests {
         assert_eq!(shared2.peek().unwrap().value, 99);
 
         // Clean up - drop result first since it holds the actual value
-        let mut result = result;
         result.async_drop().await.unwrap();
         shared.async_drop().await.unwrap();
         shared2.async_drop().await.unwrap();
@@ -672,11 +666,11 @@ mod tests {
         let mut shared1 = AsyncDropShared::new(future);
         assert_eq!(shared1.strong_count(), Some(1));
 
-        let mut shared2 = AsyncDropShared::clone(&shared1);
+        let shared2 = AsyncDropShared::clone(&shared1);
         assert_eq!(shared1.strong_count(), Some(2));
         assert_eq!(shared2.strong_count(), Some(2));
 
-        let mut shared3 = AsyncDropShared::clone(&shared1);
+        let shared3 = AsyncDropShared::clone(&shared1);
         assert_eq!(shared1.strong_count(), Some(3));
 
         shared2.async_drop().await.unwrap();
@@ -689,7 +683,6 @@ mod tests {
         assert_eq!(shared3.strong_count(), Some(2));
 
         // Clean up
-        let mut result = result;
         result.async_drop().await.unwrap();
         shared1.async_drop().await.unwrap();
         shared3.async_drop().await.unwrap();
@@ -704,9 +697,9 @@ mod tests {
             })
         };
 
-        let mut shared1a = AsyncDropShared::new(future1());
-        let mut shared1b = AsyncDropShared::clone(&shared1a);
-        let mut shared1c = AsyncDropShared::clone(&shared1a);
+        let shared1a = AsyncDropShared::new(future1());
+        let shared1b = AsyncDropShared::clone(&shared1a);
+        let shared1c = AsyncDropShared::clone(&shared1a);
 
         // Clones should point to the same future
         assert!(shared1a.ptr_eq(&*shared1b));
@@ -714,7 +707,7 @@ mod tests {
         assert!(shared1a.ptr_eq(&*shared1c));
 
         // Different futures should not be equal
-        let mut shared2 = AsyncDropShared::new(future1());
+        let shared2 = AsyncDropShared::new(future1());
         assert!(!shared1a.ptr_eq(&*shared2));
         shared2.async_drop().await.unwrap();
 
@@ -735,7 +728,7 @@ mod tests {
         };
 
         let mut shared1 = AsyncDropShared::new(future);
-        let mut shared2 = AsyncDropShared::clone(&shared1);
+        let shared2 = AsyncDropShared::clone(&shared1);
 
         // Poll to completion
         let result = (&mut *shared1).await;
@@ -755,7 +748,6 @@ mod tests {
         );
 
         // Finally drop the result
-        let mut result = result;
         result.async_drop().await.unwrap();
         assert!(
             drop_called.load(Ordering::SeqCst),
@@ -775,8 +767,8 @@ mod tests {
             })
         };
 
-        let mut shared = AsyncDropShared::new(future);
-        let mut clone = AsyncDropShared::clone(&shared);
+        let shared = AsyncDropShared::new(future);
+        let clone = AsyncDropShared::clone(&shared);
 
         // Drop without polling to completion
         shared.async_drop().await.unwrap();
@@ -805,9 +797,7 @@ mod tests {
         assert_eq!(result2.value, 42);
 
         // Clean up - drop results first
-        let mut result1 = result1;
         result1.async_drop().await.unwrap();
-        let mut result2 = result2;
         result2.async_drop().await.unwrap();
         shared1.async_drop().await.unwrap();
         shared2.async_drop().await.unwrap();
@@ -830,9 +820,7 @@ mod tests {
         assert_eq!(result2.value, 42);
 
         // Clean up - drop results first
-        let mut result1 = result1;
         result1.async_drop().await.unwrap();
-        let mut result2 = result2;
         result2.async_drop().await.unwrap();
         shared1.async_drop().await.unwrap();
     }
@@ -851,7 +839,7 @@ mod tests {
         assert!(debug_str.contains("Shared"));
 
         // Clean up
-        let mut result = (&mut *shared).await;
+        let result = (&mut *shared).await;
         result.async_drop().await.unwrap();
         shared.async_drop().await.unwrap();
     }
@@ -869,7 +857,7 @@ mod tests {
         };
 
         let mut shared1a = AsyncDropShared::new(future1);
-        let mut shared1b = AsyncDropShared::clone(&shared1a);
+        let shared1b = AsyncDropShared::clone(&shared1a);
 
         let mut hasher1a = DefaultHasher::new();
         shared1a.ptr_hash(&mut hasher1a);
@@ -884,7 +872,6 @@ mod tests {
 
         // Clean up
         let result1 = (&mut *shared1a).await;
-        let mut result1 = result1;
         result1.async_drop().await.unwrap();
         shared1a.async_drop().await.unwrap();
         shared1b.async_drop().await.unwrap();

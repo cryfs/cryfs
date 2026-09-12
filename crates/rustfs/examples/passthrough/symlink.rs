@@ -42,11 +42,10 @@ impl Symlink for PassthroughSymlink {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for PassthroughSymlink {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
+    async fn async_drop_impl(self) -> Result<(), FsError> {
         // Nothing to do
         Ok(())
     }

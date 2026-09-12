@@ -75,7 +75,7 @@ where
     }
 
     async fn create_dir_blob(&self, parent: &BlobId) -> Result<BlobId, FsError> {
-        let mut blob = self
+        let blob = self
             .blobstore
             .create_dir_blob(
                 parent,
@@ -96,7 +96,7 @@ where
     }
 
     async fn create_file_blob(&self, parent: &BlobId) -> Result<BlobId, FsError> {
-        let mut blob = self
+        let blob = self
             .blobstore
             .create_file_blob(
                 parent,
@@ -117,7 +117,7 @@ where
     }
 
     async fn create_symlink_blob(&self, target: &str, parent: &BlobId) -> Result<BlobId, FsError> {
-        let mut blob = self
+        let blob = self
             .blobstore
             .create_symlink_blob(
                 parent,
@@ -206,7 +206,7 @@ where
 
     async fn lookup_child(&self, name: &PathComponent) -> FsResult<AsyncDropGuard<CryNode<B>>> {
         // TODO We shouldn't have to reload the self blob here, that's weird
-        let mut self_blob = self.load_blob().await?;
+        let self_blob = self.load_blob().await?;
 
         let blob_details = self_blob
             .with_lock(async |self_blob| {
@@ -485,7 +485,7 @@ where
                 let self_blob_id = self.node_info.blob_id();
                 let (blob, new_dir_blob_id) =
                     join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
-                let mut blob = match blob {
+                let blob = match blob {
                     Ok(blob) => blob,
                     Err(err) => {
                         log::error!("Error loading blob: {err:?}");
@@ -589,7 +589,7 @@ where
                         })
                         .await?;
 
-                    let mut child_blob = self.blobstore.load(&child_id).await.map_err(|_| FsError::NodeDoesNotExist)?.ok_or_else(|| FsError::NodeDoesNotExist)?;
+                    let child_blob = self.blobstore.load(&child_id).await.map_err(|_| FsError::NodeDoesNotExist)?.ok_or_else(|| FsError::NodeDoesNotExist)?;
 
                     let entries_check = child_blob.with_lock(async |child_blob| {
                         let child_blob_dir = Self::blob_as_dir(&child_blob).map_err(|err| {
@@ -677,7 +677,7 @@ where
                     self.load_blob(),
                     self.create_symlink_blob(target, self_blob_id),
                 );
-                let mut blob = match blob {
+                let blob = match blob {
                     Ok(blob) => blob,
                     Err(err) => {
                         log::error!("Error loading blob: {err:?}");
@@ -824,7 +824,7 @@ where
                 let self_blob_id = self.node_info.blob_id();
                 let (blob, new_file_blob_id) =
                     join!(self.load_blob(), self.create_file_blob(&self_blob_id),);
-                let mut blob = match blob {
+                let blob = match blob {
                     Ok(blob) => blob,
                     Err(err) => {
                         log::error!("Error loading blob: {err:?}");
@@ -925,14 +925,17 @@ where
     }
 }
 
-#[async_trait]
 impl<'a, B> AsyncDrop for CryDir<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = FsError;
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
-        self.node_info.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), FsError> {
+        let Self {
+            blobstore: _,
+            node_info,
+        } = self;
+        node_info.async_drop().await
     }
 }

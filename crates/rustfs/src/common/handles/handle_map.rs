@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use super::{HandlePool, HandleWithGeneration};
@@ -62,7 +61,6 @@ where
     }
 }
 
-#[async_trait]
 impl<Handle, T> AsyncDrop for HandleMap<Handle, T>
 where
     Handle: HandleTrait + Send,
@@ -70,8 +68,12 @@ where
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), FsError> {
-        self.objects.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), FsError> {
+        let Self {
+            objects,
+            available_handles: _,
+        } = self;
+        objects.async_drop().await
     }
 }
 

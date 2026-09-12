@@ -331,14 +331,13 @@ mod testutils {
     pub async fn flush_caches<
         B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
     >(
-        mut tree: AsyncDropGuard<DataTree<B>>,
+        tree: AsyncDropGuard<DataTree<B>>,
         nodestore: &DataNodeStore<B>,
         treestore: &DataTreeStore<B>,
     ) -> BlockId {
         let root_id = *tree.root_node_id();
         // Flush tree
         tree.async_drop().await.unwrap();
-        std::mem::drop(tree);
 
         // Flush tree store cache
         treestore.clear_cache_slow().await.unwrap();
@@ -583,7 +582,7 @@ mod root_node_id {
             with_treestore(|store| {
                 Box::pin(async move {
                     let root_id = BlockId::from_hex("18834bc490faaab6bfdc6a53864cd0a8").unwrap();
-                    let mut tree = store.try_create_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.try_create_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -606,7 +605,7 @@ mod root_node_id {
                         .async_drop()
                         .await
                         .unwrap();
-                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -644,9 +643,8 @@ mod root_node_id {
                         .await
                         .unwrap();
                     tree.async_drop().await.unwrap();
-                    std::mem::drop(tree);
 
-                    let mut tree = store.load_tree(root_id).await.unwrap().unwrap();
+                    let tree = store.load_tree(root_id).await.unwrap().unwrap();
                     assert_eq!(root_id, *tree.root_node_id());
                     tree.async_drop().await.unwrap();
                 })
@@ -1095,7 +1093,6 @@ mod write_bytes {
 
                 // Check new tree size (as read after clearing size cache)
                 tree.async_drop().await.unwrap();
-                std::mem::drop(tree);
                 let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
                 assert_eq!(
                     expected_new_data.len() as u64,
@@ -1209,7 +1206,6 @@ mod resize_num_bytes {
 
                     // Check tree has correct size (looked up after clearing the size cache of the `tree` instance)
                     tree.async_drop().await.unwrap();
-                    std::mem::drop(tree);
                     let mut tree = treestore.load_tree(tree_id).await.unwrap().unwrap();
                     assert_eq!(new_num_bytes, tree.num_bytes().await.unwrap());
                     assert_eq!(
@@ -1408,8 +1404,8 @@ mod all_blocks {
                         expected_tree2_blocks.len() as u64,
                     );
 
-                    let mut tree1 = treestore.load_tree(tree1_id).await.unwrap().unwrap();
-                    let mut tree2 = treestore.load_tree(tree2_id).await.unwrap().unwrap();
+                    let tree1 = treestore.load_tree(tree1_id).await.unwrap().unwrap();
+                    let tree2 = treestore.load_tree(tree2_id).await.unwrap().unwrap();
 
                     let tree1_blocks: Result<HashSet<BlockId>, _> =
                         tree1.all_blocks().unwrap().try_collect().await;

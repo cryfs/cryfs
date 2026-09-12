@@ -21,9 +21,8 @@ use super::OnDiskBlockStore;
 /// deletes the directory when the block store is dropped.
 #[derive(Debug)]
 pub struct TempDirBlockStore {
-    // Order is important, we want to drop the underlying store before the tempdir
     underlying_store: AsyncDropGuard<OnDiskBlockStore>,
-    _tempdir: TempDir,
+    tempdir: TempDir,
 }
 
 impl TempDirBlockStore {
@@ -34,7 +33,7 @@ impl TempDirBlockStore {
             .expect("Failed to create tempdir");
         let path = tempdir.path().to_owned();
         AsyncDropGuard::new(Self {
-            _tempdir: tempdir,
+            tempdir,
             underlying_store: OnDiskBlockStore::new(path),
         })
     }
@@ -95,11 +94,16 @@ impl OptimizedBlockStoreWriter for TempDirBlockStore {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for TempDirBlockStore {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_store.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            underlying_store,
+            tempdir,
+        } = self;
+        underlying_store.async_drop().await?;
+        // Order is important, the underlying store must be dropped before the tempdir gets deleted.
+        std::mem::drop(tempdir);
         Ok(())
     }
 }

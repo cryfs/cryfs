@@ -133,11 +133,10 @@ impl Container {
 // Container's async_drop doesn't call inner.async_drop()!
 
 // RIGHT
-#[async_trait]
 impl AsyncDrop for Container {
     type Error = <Resource as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         self.inner.async_drop().await
     }
 }
@@ -164,9 +163,9 @@ impl MyType {
 // RIGHT - internal unwrapping, still clean up members
 impl MyType {
     pub async fn good(this: AsyncDropGuard<Self>) -> Result<()> {
-        let mut inner = this.unsafe_into_inner_dont_drop();
-        let result = inner.member.do_work().await?;
-        inner.member.async_drop().await?;  // Still our responsibility!
+        let Self { mut member, config: _ } = this.unsafe_into_inner_dont_drop();
+        let result = member.do_work().await?;
+        member.async_drop().await?;  // Still our responsibility!
         Ok(result)
     }
 }
@@ -195,18 +194,19 @@ pub struct System {
     database: AsyncDropGuard<Database>, // Independent
 }
 
-#[async_trait]
 impl AsyncDrop for System {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { cache, database } = self;
+
         // WRONG order - database closes while cache still uses it
-        // self.database.async_drop().await?;
-        // self.cache.async_drop().await?;
+        // database.async_drop().await?;
+        // cache.async_drop().await?;
 
         // RIGHT order - close cache first, then database
-        self.cache.async_drop().await?;
-        self.database.async_drop().await?;
+        cache.async_drop().await?;
+        database.async_drop().await?;
         Ok(())
     }
 }
@@ -233,25 +233,7 @@ async fn may_panic(mut resource: AsyncDropGuard<R>) -> Result<()> {
 
 Don't try to call `async_drop()` in panic handlers.
 
-## Gotcha 9: Double async_drop
-
-Calling `async_drop()` twice is harmless but wasteful - it returns `Ok(())` on second call.
-
-```rust
-let mut resource = Resource::new();
-resource.async_drop().await?;  // Does cleanup
-resource.async_drop().await?;  // No-op, returns Ok(())
-```
-
-Use `is_dropped()` to check if already dropped if needed:
-
-```rust
-if !resource.is_dropped() {
-    resource.async_drop().await?;
-}
-```
-
-## Gotcha 10: Holding Guards Across Await Points Without Cleanup
+## Gotcha 9: Holding Guards Across Await Points Without Cleanup
 
 Long-lived guards in loops need careful handling.
 
@@ -275,33 +257,28 @@ async fn good_loop() -> Result<()> {
 }
 ```
 
-## Gotcha 11: Clone vs AsyncDropArc
+## Gotcha 10: Dropping a Guard Member Through `&mut self`
 
-Regular `Clone` on `AsyncDropGuard` is not available. Use `AsyncDropArc` for shared ownership.
-
-```rust
-// WRONG - AsyncDropGuard doesn't implement Clone
-let guard = AsyncDropGuard::new(resource);
-let clone = guard.clone();  // Compile error!
-
-// RIGHT - use AsyncDropArc for sharing
-let shared = AsyncDropArc::new(AsyncDropGuard::new(resource));
-let clone = AsyncDropArc::clone(&shared);
-// Both must be async_dropped, last one does actual cleanup
-```
-
-## Gotcha 12: Forgetting `mut` Binding
-
-`async_drop()` takes `&mut self`, so the guard must be mutable.
+`async_drop()` takes `self` by value, so it cannot be called on a field behind `&mut self`.
+Inside `AsyncDrop::async_drop_impl(self)` destructure `self` instead. Elsewhere, prefer
+making the method consume `self` (or take `this: AsyncDropGuard<Self>`) over wrapping the
+field in an `Option`.
 
 ```rust
-// WRONG - can't call async_drop on immutable binding
-let resource = Resource::new();
-resource.async_drop().await?;  // Error: cannot borrow as mutable
+// WRONG - cannot move out of `self.inner` behind a mutable reference
+impl Container {
+    pub async fn close(&mut self) -> Result<()> {
+        self.inner.async_drop().await
+    }
+}
 
-// RIGHT
-let mut resource = Resource::new();
-resource.async_drop().await?;
+// RIGHT - consume the container
+impl Container {
+    pub async fn close(this: AsyncDropGuard<Self>) -> Result<()> {
+        let Self { inner } = this.unsafe_into_inner_dont_drop();
+        inner.async_drop().await
+    }
+}
 ```
 
 ## Summary Checklist
@@ -313,8 +290,7 @@ Before submitting code with AsyncDrop:
 - [ ] All early returns call `async_drop()` first
 - [ ] Factory methods return `AsyncDropGuard<Self>`
 - [ ] Direct instantiation prevented (private fields, newtype wrappers for enums)
-- [ ] Types with guard members implement `AsyncDrop`
-- [ ] Guard bindings are `mut`
+- [ ] Types with guard members implement `AsyncDrop` with `async fn async_drop_impl(self)` (no `#[async_trait]`), destructuring `self`
 - [ ] `unsafe_into_inner_dont_drop()` only used internally, with member cleanup handled
 - [ ] Drop order correct for dependent members (reverse of construction)
 - [ ] Independent members dropped concurrently (Pattern 10)

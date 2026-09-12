@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use std::sync::Mutex;
 
@@ -31,7 +30,7 @@ where
         fh: FileHandle,
         callback: impl AsyncFnOnce(&OF) -> Result<R, FsError>,
     ) -> Result<R, FsError> {
-        let mut open_file = {
+        let open_file = {
             let open_files = self.open_files.lock().unwrap();
             let open_file = open_files.get(fh).ok_or_else(|| {
                 log::error!("no open file with handle {fh}");
@@ -78,19 +77,15 @@ where
     async fn call(&self, file: &OF) -> Result<(), FsError>;
 }
 
-#[async_trait]
 impl<OF> AsyncDrop for OpenFileList<OF>
 where
     OF: OpenFile + AsyncDrop<Error = FsError> + Send + Sync,
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let open_files = std::mem::replace(
-            &mut self.open_files,
-            Mutex::new(AsyncDropGuard::new_invalid()),
-        );
-        let mut open_files = open_files.into_inner().unwrap();
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { open_files } = self;
+        let open_files = open_files.into_inner().unwrap();
         open_files.async_drop().await.unwrap();
         Ok(())
     }

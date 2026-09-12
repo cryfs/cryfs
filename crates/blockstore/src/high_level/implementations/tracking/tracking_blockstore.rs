@@ -121,7 +121,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for TrackingBlockStore<B>
 where
     B: BlockStore + AsyncDrop + Debug + Send + Sync,
@@ -129,8 +128,11 @@ where
 {
     type Error = <B as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.underlying_store.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            underlying_store, ..
+        } = self;
+        underlying_store.async_drop().await?;
 
         Ok(())
     }

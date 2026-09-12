@@ -116,13 +116,15 @@ impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyh
     }
 }
 
-#[async_trait]
 impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     for CompressingBlockStore<B>
 {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_block_store.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            underlying_block_store,
+        } = self;
+        underlying_block_store.async_drop().await?;
         Ok(())
     }
 }
@@ -181,7 +183,7 @@ mod generic_tests {
     #[tokio::test]
     async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
         let expected_overhead = Byte::from_u64(0);
 
         assert_eq!(

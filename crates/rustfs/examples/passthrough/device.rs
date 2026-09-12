@@ -28,11 +28,10 @@ impl PassthroughDevice {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for PassthroughDevice {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         // TODO Do we need to do anything here?
         Ok(())
     }

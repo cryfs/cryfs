@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use cryfs_blockstore::{
-    ClientId, DynBlockStore, EncryptedBlockStore, IntegrityBlockStore,
+    ClientId, DynBlockStore, DynLLBlockStore, EncryptedBlockStore, IntegrityBlockStore,
     IntegrityBlockStoreInitError, IntegrityConfig, LLBlockStore, LockingBlockStore,
     OptimizedBlockStoreWriter,
 };
@@ -75,7 +75,7 @@ impl<B: LLBlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCa
 {
     type Result = Result<CB::Result, CliError>;
 
-    async fn callback<C: CipherDef + Send + Sync + 'static>(mut self) -> Self::Result {
+    async fn callback<C: CipherDef + Send + Sync + 'static>(self) -> Self::Result {
         let key = match EncryptionKey::from_hex(&self.config.enc_key) {
             Ok(key) => key,
             Err(err) => {
@@ -97,7 +97,7 @@ impl<B: LLBlockStore + OptimizedBlockStoreWriter + Send + Sync, CB: BlockstoreCa
                 return Err(err).map_cli_error(|_| CliErrorKind::InvalidFilesystem);
             }
         };
-        let mut encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);
+        let encrypted_blockstore = EncryptedBlockStore::new(self.base_blockstore, cipher);
 
         let integrity_file_path = self
             .local_state_dir
@@ -161,7 +161,7 @@ impl BlockstoreCallback for DynCallback {
         blockstore: AsyncDropGuard<LockingBlockStore<B>>,
     ) -> Self::Result {
         let inner = LockingBlockStore::into_inner_block_store(blockstore).await?;
-        let inner: Box<dyn LLBlockStore + Send + Sync> =
+        let inner: Box<dyn DynLLBlockStore + Send + Sync> =
             Box::new(inner.unsafe_into_inner_dont_drop());
         let inner = AsyncDropGuard::new(DynBlockStore(inner));
         Ok(LockingBlockStore::new(inner))

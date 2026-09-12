@@ -117,11 +117,11 @@ impl Debug for BlockStoreAdapter {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for BlockStoreAdapter {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.0.async_drop().await
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self(node_store) = self;
+        node_store.async_drop().await
     }
 }
 

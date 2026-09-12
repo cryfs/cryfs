@@ -729,9 +729,13 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
 
     #[cfg(any(test, feature = "testutils"))]
     pub async fn into_root_node(this: AsyncDropGuard<Self>) -> DataNode<B> {
-        let mut this = this.unsafe_into_inner_dont_drop();
-        this.node_store.async_drop().await.unwrap(); // TODO No unwrap
-        this.root_node.expect("DataTree.RootNode is none")
+        let Self {
+            node_store,
+            root_node,
+            num_bytes_cache: _,
+        } = this.unsafe_into_inner_dont_drop();
+        node_store.async_drop().await.unwrap(); // TODO No unwrap
+        root_node.expect("DataTree.RootNode is none")
     }
 }
 
@@ -755,14 +759,18 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Debug 
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for DataTree<B>
 where
     B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
 {
     type Error = <B as AsyncDrop>::Error;
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.node_store.async_drop().await
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            node_store,
+            root_node: _,
+            num_bytes_cache: _,
+        } = self;
+        node_store.async_drop().await
     }
 }
 

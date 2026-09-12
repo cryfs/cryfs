@@ -144,8 +144,9 @@ Types needing async cleanup use `AsyncDropGuard<T>`. See the async-drop skill fo
 
 **Essential rules**:
 - Every `AsyncDropGuard<T>` must have `async_drop()` called before drop (panics otherwise)
+- `async_drop()` consumes the guard: use-after-drop and double-drop are compile errors
 - Factory methods return `AsyncDropGuard<Self>`, never plain `Self`
-- Types with guard members must implement `AsyncDrop` to delegate
+- Types with guard members must implement `AsyncDrop` to delegate: `async fn async_drop_impl(self)`, destructure `self` listing every field (no `..`), drop the guard members. No `#[async_trait]` on `AsyncDrop` impls
 - Use `with_async_drop_2!` macro when possible; otherwise call `async_drop()` on all exit paths
 - Panics are exceptions - ok to skip `async_drop()` on panic paths
 

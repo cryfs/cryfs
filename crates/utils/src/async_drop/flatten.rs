@@ -26,12 +26,12 @@ where
 {
     match (first, second) {
         (Ok(first), Ok(second)) => Ok((first, second)),
-        (Ok(mut first), Err(second)) => {
+        (Ok(first), Err(second)) => {
             // TODO Report both errors if async_drop fails
             first.async_drop().await?;
             Err(second.into())
         }
-        (Err(first), Ok(mut second)) => {
+        (Err(first), Ok(second)) => {
             // TODO Report both errors if async_drop fails
             second.async_drop().await?;
             Err(first.into())
@@ -46,7 +46,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -62,11 +61,10 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -92,7 +90,7 @@ mod tests {
         let result: Result<_, TestError> = flatten_async_drop(first_result, second_result).await;
         assert!(result.is_ok());
 
-        let (mut first, mut second) = result.unwrap();
+        let (first, second) = result.unwrap();
         assert_eq!("first", first.id);
         assert_eq!("second", second.id);
 

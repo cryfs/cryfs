@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::future::Future;
 use std::ops::{Deref, DerefMut};
 
 use super::AsyncDrop;
@@ -11,6 +12,9 @@ use crate::safe_panic;
 /// [AsyncDropGuard::async_drop]. If the [AsyncDropGuard] leaves scope without a call to
 /// [AsyncDropGuard::async_drop], a safety check will trigger and cause a panic.
 ///
+/// [AsyncDropGuard::async_drop] consumes the guard, so using a value after it was dropped
+/// is a compile error rather than a runtime failure.
+///
 /// Types wrapped in [AsyncDropGuard] must implement [AsyncDrop] to define what exactly
 /// should happen when [AsyncDropGuard::async_drop] gets called.
 ///
@@ -21,17 +25,17 @@ use crate::safe_panic;
 /// call sites might forget to correctly drop `T`.
 #[derive(Debug)]
 #[must_use = "You have to call async_drop() on this value to drop it"]
-pub struct AsyncDropGuard<T: Debug>(Option<T>);
+pub struct AsyncDropGuard<T: Debug>(
+    // Invariant: This is `Some` for the whole lifetime of the guard. The only code that sets it
+    // to `None` consumes the guard, so `None` is only ever observed by the [Drop] impl.
+    Option<T>,
+);
 
 impl<T: Debug> AsyncDropGuard<T> {
     /// Wrap a value into an [AsyncDropGuard]. This enables the safety checks and will enforce
     /// that [AsyncDropGuard::async_drop] gets called before the [AsyncDropGuard] instance leaves scope.
     pub fn new(v: T) -> Self {
         Self(Some(v))
-    }
-
-    pub fn new_invalid() -> Self {
-        Self(None)
     }
 
     pub fn into_box(self) -> AsyncDropGuard<Box<T>> {
@@ -41,36 +45,54 @@ impl<T: Debug> AsyncDropGuard<T> {
     // Warning: The resulting AsyncDropGuard will call async_drop on U instead of T.
     // There will be no call to async_drop for T anymore.
     // Callers of this function need to make sure that this is correct behavior for T, U.
-    pub fn map_unsafe<U: Debug>(mut self, fun: impl FnOnce(T) -> U) -> AsyncDropGuard<U> {
-        AsyncDropGuard(self.0.take().map(fun))
+    pub fn map_unsafe<U: Debug>(self, fun: impl FnOnce(T) -> U) -> AsyncDropGuard<U> {
+        AsyncDropGuard(Some(fun(self.into_inner_unchecked())))
     }
 
     /// Extract the inner value **without** dropping it. This bypasses the protection of the guard.
-    pub fn unsafe_into_inner_dont_drop(mut self) -> T {
-        self.0.take().expect("Value already dropped")
+    pub fn unsafe_into_inner_dont_drop(self) -> T {
+        self.into_inner_unchecked()
     }
 
-    // TODO Test
-    pub fn is_dropped(&self) -> bool {
-        self.0.is_none()
+    /// Take the value out of the guard. This consumes the guard, so the safety check in [Drop]
+    /// sees `None` and passes.
+    fn into_inner_unchecked(mut self) -> T {
+        self.0
+            .take()
+            .expect("Invariant violated: AsyncDropGuard must hold a value for its whole lifetime")
     }
 }
 
 impl<T: Debug + AsyncDrop> AsyncDropGuard<T> {
     /// Asynchronously drop the value. This will call [AsyncDrop::async_drop_impl]
     /// on the contained value.
-    /// Calling code must ensure that the `self` value is dropped after this is called.
+    ///
+    /// This consumes the guard, so the value cannot be used anymore afterwards:
+    ///
+    /// ```compile_fail
+    /// use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+    ///
+    /// #[derive(Debug)]
+    /// struct Value;
+    ///
+    /// impl AsyncDrop for Value {
+    ///     type Error = std::convert::Infallible;
+    ///     async fn async_drop_impl(self) -> Result<(), Self::Error> {
+    ///         Ok(())
+    ///     }
+    /// }
+    ///
+    /// # futures::executor::block_on(async {
+    /// let guard = AsyncDropGuard::new(Value);
+    /// guard.async_drop().await.unwrap();
+    /// let _use_after_drop: &Value = &guard; // error[E0382]: borrow of moved value: `guard`
+    /// # });
+    /// ```
     ///
     /// If this function does not get executed and the [AsyncDropGuard] instance leaves scope,
     /// that will cause a panic.
-    pub async fn async_drop(&mut self) -> Result<(), T::Error> {
-        self.0
-            .take()
-            // This expect cannot fail since the only place where we set it to None
-            // is AsyncDropGuard::async_drop which consumes the whole AsyncDropGuard struct
-            .expect("Value already dropped")
-            .async_drop_impl()
-            .await
+    pub fn async_drop(self) -> impl Future<Output = Result<(), T::Error>> + Send {
+        self.into_inner_unchecked().async_drop_impl()
     }
 }
 
@@ -93,9 +115,7 @@ impl<T: Debug> Deref for AsyncDropGuard<T> {
     fn deref(&self) -> &T {
         self.0
             .as_ref()
-            // This expect cannot fail since the only place where we set it to None
-            // is AsyncDropGuard::async_drop which consumes the whole AsyncDropGuard struct
-            .expect("Value already dropped")
+            .expect("Invariant violated: AsyncDropGuard must hold a value for its whole lifetime")
     }
 }
 
@@ -103,9 +123,7 @@ impl<T: Debug> DerefMut for AsyncDropGuard<T> {
     fn deref_mut(&mut self) -> &mut T {
         self.0
             .as_mut()
-            // This expect cannot fail since the only place where we set it to None
-            // is AsyncDropGuard::async_drop which consumes the whole AsyncDropGuard struct
-            .expect("Value already dropped")
+            .expect("Invariant violated: AsyncDropGuard must hold a value for its whole lifetime")
     }
 }
 
@@ -113,7 +131,6 @@ impl<T: Debug> DerefMut for AsyncDropGuard<T> {
 mod tests {
     use super::{AsyncDrop, AsyncDropGuard};
 
-    use async_trait::async_trait;
     use std::fmt::{self, Debug};
     use std::future::Future;
     use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
@@ -139,7 +156,6 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl<F, FA, FS> AsyncDrop for MyStructWithDrop<F, FA, FS>
     where
         F: Future<Output = Result<(), &'static str>> + Send,
@@ -148,7 +164,7 @@ mod tests {
     {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), &'static str> {
+        async fn async_drop_impl(self) -> Result<(), &'static str> {
             let r = (self.on_async_drop)();
             r.await
         }
@@ -183,7 +199,6 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl<F, FA> AsyncDrop for MyStructWithoutDrop<F, FA>
     where
         F: Future<Output = Result<(), &'static str>> + Send,
@@ -191,7 +206,7 @@ mod tests {
     {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), &'static str> {
+        async fn async_drop_impl(self) -> Result<(), &'static str> {
             let r = (self.on_async_drop)();
             r.await
         }
@@ -217,7 +232,7 @@ mod tests {
     #[tokio::test]
     async fn given_type_without_drop_when_calling_async_drop_then_calls_async_drop_impl() {
         let called = AtomicI32::new(0);
-        let mut obj = AsyncDropGuard::new(MyStructWithoutDrop {
+        let obj = AsyncDropGuard::new(MyStructWithoutDrop {
             on_async_drop: async || {
                 let prev_value = called.swap(1, Ordering::SeqCst);
                 assert_eq!(0, prev_value);
@@ -232,7 +247,7 @@ mod tests {
     async fn given_type_with_drop_when_calling_async_drop_then_calls_async_drop_impl_and_then_calls_drop()
      {
         let called = AtomicI32::new(0);
-        let mut obj = AsyncDropGuard::new(MyStructWithDrop {
+        let obj = AsyncDropGuard::new(MyStructWithDrop {
             on_async_drop: async || {
                 let prev_value = called.swap(1, Ordering::SeqCst);
                 assert_eq!(0, prev_value);
@@ -249,7 +264,7 @@ mod tests {
 
     #[tokio::test]
     async fn given_type_without_drop_when_async_drop_fails_then_returns_error() {
-        let mut obj = AsyncDropGuard::new(MyStructWithoutDrop {
+        let obj = AsyncDropGuard::new(MyStructWithoutDrop {
             on_async_drop: async || Err("My error"),
         });
         assert_eq!(Err("My error"), obj.async_drop().await);
@@ -258,7 +273,7 @@ mod tests {
     #[tokio::test]
     async fn given_type_with_drop_when_async_drop_fails_then_returns_error_and_still_calls_drop() {
         let called = AtomicBool::new(false);
-        let mut obj = AsyncDropGuard::new(MyStructWithDrop {
+        let obj = AsyncDropGuard::new(MyStructWithDrop {
             on_async_drop: async || Err("My error"),
             on_sync_drop: || {
                 called.store(true, Ordering::SeqCst);

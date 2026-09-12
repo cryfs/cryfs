@@ -4,10 +4,9 @@
 //! [`Arc`] for shared ownership. The async drop is only called when the last reference
 //! is dropped.
 
-use async_trait::async_trait;
-use futures::future::BoxFuture;
 use std::borrow::Borrow;
 use std::fmt::Debug;
+use std::future::Future;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -24,8 +23,7 @@ use super::{AsyncDrop, AsyncDropGuard};
 /// [`AsyncDropGuard`].
 #[derive(Debug)]
 pub struct AsyncDropArc<T: AsyncDrop + Debug + Send> {
-    // Always Some except during destruction
-    v: Option<Arc<AsyncDropGuard<T>>>,
+    v: Arc<AsyncDropGuard<T>>,
 }
 
 impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
@@ -33,9 +31,7 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
     ///
     /// The returned guard must have `async_drop()` called on it before being dropped.
     pub fn new(v: AsyncDropGuard<T>) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self {
-            v: Some(Arc::new(v)),
-        })
+        AsyncDropGuard::new(Self { v: Arc::new(v) })
     }
 
     /// Creates a new reference to the same underlying value.
@@ -44,13 +40,13 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
     /// must have `async_drop()` called on it.
     pub fn clone(this: &AsyncDropGuard<Self>) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
-            v: this.v.as_ref().map(Arc::clone),
+            v: Arc::clone(&this.v),
         })
     }
 
     /// Returns the number of strong references to the underlying value.
     pub fn strong_count(this: &AsyncDropGuard<Self>) -> usize {
-        Arc::strong_count(this.v.as_ref().expect("Already dropped"))
+        Arc::strong_count(&this.v)
     }
 
     /// Attempts to extract the inner `AsyncDropGuard<T>` if this is the only reference.
@@ -58,42 +54,33 @@ impl<T: AsyncDrop + Debug + Send> AsyncDropArc<T> {
     /// Returns `Some` if this is the last reference, `None` otherwise.
     /// This consumes the `AsyncDropArc` without calling its async drop.
     pub fn into_inner(this: AsyncDropGuard<Self>) -> Option<AsyncDropGuard<T>> {
-        let v = this
-            .unsafe_into_inner_dont_drop()
-            .v
-            .expect("Already dropped");
-        Arc::into_inner(v)
+        Arc::into_inner(this.unsafe_into_inner_dont_drop().v)
     }
 
     /// Returns a raw pointer to the underlying `AsyncDropGuard<T>`.
     pub fn as_ptr(&self) -> *const AsyncDropGuard<T> {
-        Arc::as_ptr(self.v.as_ref().expect("Already dropped"))
+        Arc::as_ptr(&self.v)
     }
 
     /// Returns `true` if both `AsyncDropArc`s point to the same allocation.
     pub fn ptr_eq(a: &AsyncDropGuard<Self>, b: &AsyncDropGuard<Self>) -> bool {
-        let lhs = a.v.as_ref().expect("Already dropped");
-        let rhs = b.v.as_ref().expect("Already dropped");
-        Arc::ptr_eq(lhs, rhs)
+        Arc::ptr_eq(&a.v, &b.v)
     }
 }
 
-#[async_trait]
 impl<T: AsyncDrop + Debug + Send> AsyncDrop for AsyncDropArc<T> {
     type Error = T::Error;
 
-    fn async_drop_impl<'s, 'async_trait>(
-        &'s mut self,
-    ) -> BoxFuture<'async_trait, Result<(), Self::Error>>
-    where
-        's: 'async_trait,
-        Self: 'async_trait,
-    {
-        let v = self.v.take().expect("Already destructed");
-        if let Some(mut v) = Arc::into_inner(v) {
-            Box::pin(async move { v.async_drop().await })
-        } else {
-            Box::pin(async { Ok(()) })
+    fn async_drop_impl(self) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        // Unwrap the Arc before creating the future so that the future only holds an
+        // `AsyncDropGuard<T>` (which is `Send` if `T: Send`) and not the `Arc` (which would
+        // additionally require `T: Sync`).
+        let last_reference = Arc::into_inner(self.v);
+        async move {
+            match last_reference {
+                Some(v) => v.async_drop().await,
+                None => Ok(()),
+            }
         }
     }
 }
@@ -101,23 +88,19 @@ impl<T: AsyncDrop + Debug + Send> AsyncDrop for AsyncDropArc<T> {
 impl<T: AsyncDrop + Debug + Send> Deref for AsyncDropArc<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        self.v.as_ref().expect("Already destructed").deref()
+        self.v.deref().deref()
     }
 }
 
 impl<T: AsyncDrop + Debug + Send> Borrow<T> for AsyncDropArc<T> {
     fn borrow(&self) -> &T {
-        Borrow::<AsyncDropGuard<T>>::borrow(Borrow::<Arc<AsyncDropGuard<T>>>::borrow(
-            self.v.as_ref().expect("Already destructed"),
-        ))
-        .borrow()
+        Borrow::<AsyncDropGuard<T>>::borrow(&self.v).borrow()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Debug)]
@@ -135,11 +118,10 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -149,7 +131,7 @@ mod tests {
     async fn test_new_creates_guard() {
         let counter = Arc::new(AtomicUsize::new(0));
         let inner = TestValue::new(42, Arc::clone(&counter));
-        let mut arc = AsyncDropArc::new(inner);
+        let arc = AsyncDropArc::new(inner);
 
         assert_eq!(42, arc.value);
         arc.async_drop().await.unwrap();
@@ -172,8 +154,6 @@ mod tests {
 
         // Clean up - drop both arcs via async_drop
         // The actual value is only dropped when the last reference is dropped
-        let mut arc1 = arc1;
-        let mut arc2 = arc2;
         arc1.async_drop().await.unwrap();
         arc2.async_drop().await.unwrap();
         assert_eq!(1, counter.load(Ordering::SeqCst));
@@ -192,13 +172,11 @@ mod tests {
         assert_eq!(2, AsyncDropArc::strong_count(&arc2));
 
         // Drop one clone
-        let mut arc2 = arc2;
         arc2.async_drop().await.unwrap();
 
         assert_eq!(1, AsyncDropArc::strong_count(&arc1));
 
         // Drop the last one
-        let mut arc1 = arc1;
         arc1.async_drop().await.unwrap();
 
         // async_drop should have been called exactly once (on the last reference)
@@ -211,7 +189,7 @@ mod tests {
         let inner = TestValue::new(42, Arc::clone(&counter));
         let arc = AsyncDropArc::new(inner);
 
-        let mut inner = AsyncDropArc::into_inner(arc).expect("Should return inner when single ref");
+        let inner = AsyncDropArc::into_inner(arc).expect("Should return inner when single ref");
         assert_eq!(42, inner.value);
 
         inner.async_drop().await.unwrap();
@@ -223,7 +201,7 @@ mod tests {
         let counter = Arc::new(AtomicUsize::new(0));
         let inner = TestValue::new(42, Arc::clone(&counter));
         let arc1 = AsyncDropArc::new(inner);
-        let mut arc2 = AsyncDropArc::clone(&arc1);
+        let arc2 = AsyncDropArc::clone(&arc1);
 
         // Should return None when there are multiple references
         let result = AsyncDropArc::into_inner(arc1);
@@ -239,10 +217,8 @@ mod tests {
         let counter = Arc::new(AtomicUsize::new(0));
         let inner = TestValue::new(42, Arc::clone(&counter));
         let arc1 = AsyncDropArc::new(inner);
-        let mut arc2 = AsyncDropArc::clone(&arc1);
-        let mut arc3 = AsyncDropArc::clone(&arc1);
-        let mut arc1 = arc1;
-
+        let arc2 = AsyncDropArc::clone(&arc1);
+        let arc3 = AsyncDropArc::clone(&arc1);
         // Drop first two - should not call async_drop_impl
         arc1.async_drop().await.unwrap();
         assert_eq!(0, counter.load(Ordering::SeqCst));
@@ -259,7 +235,7 @@ mod tests {
     async fn test_deref() {
         let counter = Arc::new(AtomicUsize::new(0));
         let inner = TestValue::new(42, Arc::clone(&counter));
-        let mut arc = AsyncDropArc::new(inner);
+        let arc = AsyncDropArc::new(inner);
 
         // Test Deref
         assert_eq!(42, arc.value);

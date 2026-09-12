@@ -146,10 +146,9 @@ impl Debug for InMemoryBlockStore {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for InMemoryBlockStore {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(self) -> Result<()> {
         Ok(())
     }
 }
@@ -180,7 +179,7 @@ mod tests {
     #[tokio::test]
     async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
         let expected_overhead = Byte::from_u64(0);
 
         assert_eq!(

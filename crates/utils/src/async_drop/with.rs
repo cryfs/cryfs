@@ -28,8 +28,7 @@ macro_rules! with_async_drop_2 {
     ($value:ident, $f:block) => {
         async {
             let result = (async || $f)().await;
-            let mut value = $value;
-            value.async_drop().await?;
+            $value.async_drop().await?;
             result
         }
         .await
@@ -37,8 +36,7 @@ macro_rules! with_async_drop_2 {
     ($value:ident, $f:block, $err_map:expr) => {
         async {
             let result = (async || $f)().await;
-            let mut value = $value;
-            value.async_drop().await.map_err($err_map)?;
+            $value.async_drop().await.map_err($err_map)?;
             result
         }
         .await
@@ -54,8 +52,7 @@ macro_rules! with_async_drop_2_infallible {
         async {
             use lockable::InfallibleUnwrap as _;
             let result = (async || $f)().await;
-            let mut value = $value;
-            value.async_drop().await.infallible_unwrap();
+            $value.async_drop().await.infallible_unwrap();
             result
         }
         .await
@@ -94,7 +91,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -113,11 +109,10 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }

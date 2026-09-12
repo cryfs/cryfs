@@ -64,7 +64,7 @@ where
         root_blob_id: BlobId,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> Result<AsyncDropGuard<Self>, Arc<anyhow::Error>> {
-        let mut fsblobstore = ConcurrentFsBlobStore::new(FsBlobStore::new(blobstore));
+        let fsblobstore = ConcurrentFsBlobStore::new(FsBlobStore::new(blobstore));
         match fsblobstore.create_root_dir_blob(&root_blob_id).await {
             Ok(()) => Ok(AsyncDropGuard::new(Self {
                 blobstore: AsyncDropArc::new(fsblobstore),
@@ -95,7 +95,7 @@ where
         &self,
         path: impl IntoIterator<Item = &PathComponent>,
     ) -> FsResult<AsyncDropGuard<ConcurrentFsBlob<B>>> {
-        let mut root_blob = self
+        let root_blob = self
             .blobstore
             .load(&self.root_blob_id)
             .await
@@ -162,13 +162,16 @@ where
                 })
                 .await;
 
-            if let Some(current_blob) = current_blob.as_mut() {
-                current_blob
-                    .async_drop()
-                    .await
-                    .map_err(FsError::internal_error)?;
-            } else {
-                // current_blob is borrowed. No need to drop it
+            match current_blob {
+                MaybeOwned::Owned(current_blob) => {
+                    current_blob
+                        .async_drop()
+                        .await
+                        .map_err(FsError::internal_error)?;
+                }
+                MaybeOwned::Borrowed(_) => {
+                    // current_blob is borrowed. No need to drop it
+                }
             }
 
             let blob_id = blob_id?;
@@ -206,7 +209,7 @@ where
         let shared_path = path1.iter().take(num_shared_path_components);
         let relative_path1 = path1.iter().skip(num_shared_path_components);
         let relative_path2 = path2.iter().skip(num_shared_path_components);
-        let mut shared_blob = self.load_blob(shared_path).await?;
+        let shared_blob = self.load_blob(shared_path).await?;
 
         let relative_path1_len = relative_path1.len();
         let relative_path2_len = relative_path2.len();
@@ -224,12 +227,15 @@ where
                     .map_err(FsError::internal_error)?;
                 Err(err1)
             }
-            (Err(err1), Ok(mut blob2)) => {
+            (Err(err1), Ok(blob2)) => {
                 // TODO async_drop blob2 and shared_blob concurrently
-                if let Some(blob2) = blob2.as_mut() {
-                    blob2.async_drop().await.map_err(FsError::internal_error)?;
-                } else {
-                    // blob2 is borrowed. No need to drop it
+                match blob2 {
+                    MaybeOwned::Owned(blob2) => {
+                        blob2.async_drop().await.map_err(FsError::internal_error)?;
+                    }
+                    MaybeOwned::Borrowed(_) => {
+                        // blob2 is borrowed. No need to drop it
+                    }
                 }
                 shared_blob
                     .async_drop()
@@ -237,12 +243,15 @@ where
                     .map_err(FsError::internal_error)?;
                 Err(err1)
             }
-            (Ok(mut blob1), Err(err2)) => {
+            (Ok(blob1), Err(err2)) => {
                 // TODO async_drop blob1 and shared_blob concurrently
-                if let Some(blob1) = blob1.as_mut() {
-                    blob1.async_drop().await.map_err(FsError::internal_error)?;
-                } else {
-                    // blob1 is borrowed. No need to drop it
+                match blob1 {
+                    MaybeOwned::Owned(blob1) => {
+                        blob1.async_drop().await.map_err(FsError::internal_error)?;
+                    }
+                    MaybeOwned::Borrowed(_) => {
+                        // blob1 is borrowed. No need to drop it
+                    }
                 }
                 shared_blob
                     .async_drop()
@@ -624,7 +633,6 @@ where
     Ok(())
 }
 
-#[async_trait]
 impl<B> AsyncDrop for CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -632,8 +640,14 @@ where
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.blobstore
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            blobstore,
+            root_blob_id: _,
+            atime_update_behavior: _,
+            last_access_time: _,
+        } = self;
+        blobstore
             .async_drop()
             .await
             .map_err(FsError::internal_error)

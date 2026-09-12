@@ -77,11 +77,10 @@ impl Debug for InMemoryDevice {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for InMemoryDevice {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         // Nothing to do
         Ok(())
     }

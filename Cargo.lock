@@ -1057,7 +1057,6 @@ name = "cryfs-check"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "byte-unit",
  "clap",
  "clap-logflag",
@@ -1160,7 +1159,6 @@ name = "cryfs-concurrent-store"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "cryfs-utils",
  "cryfs-version",
  "futures",
@@ -1228,7 +1226,6 @@ name = "cryfs-e2e-perf-tests"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "byte-unit",
  "crabtime",
  "criterion",
@@ -1278,7 +1275,6 @@ name = "cryfs-fsblobstore"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "binary-layout",
  "binrw",
  "byte-unit",
@@ -1330,7 +1326,6 @@ name = "cryfs-utils"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "binrw",
  "common_macros",
  "criterion",

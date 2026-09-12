@@ -48,7 +48,7 @@ mod without_flushing {
 #[tokio::test]
 async fn counters_start_at_zero() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     assert_eq!(
         ActionCounts {
@@ -76,7 +76,7 @@ async fn counters_start_at_zero() {
 #[tokio::test]
 async fn load_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -101,7 +101,7 @@ async fn load_increases_counter() {
 #[tokio::test]
 async fn overwrite_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -134,7 +134,7 @@ async fn overwrite_increases_counter() {
 #[tokio::test]
 async fn remove_by_id_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -162,7 +162,7 @@ async fn remove_by_id_increases_counter() {
 #[tokio::test]
 async fn remove_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -189,7 +189,7 @@ async fn remove_increases_counter() {
 #[tokio::test]
 async fn try_create_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
     let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -244,7 +244,7 @@ async fn try_create_increases_counter() {
 #[tokio::test]
 async fn create_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -263,7 +263,7 @@ async fn create_increases_counter() {
 #[tokio::test]
 async fn resize_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -294,7 +294,7 @@ async fn resize_increases_counter() {
 #[tokio::test]
 async fn flush_block_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -325,7 +325,7 @@ async fn flush_block_increases_counter() {
 #[tokio::test]
 async fn data_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -358,7 +358,7 @@ async fn data_increases_counter() {
 #[tokio::test]
 async fn data_mut_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
     let id2 = store.create(&Data::from(vec![4, 5, 6])).await.unwrap();
@@ -391,7 +391,7 @@ async fn data_mut_increases_counter() {
 #[tokio::test]
 async fn num_blocks_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     // Create some blocks to make the test more meaningful
     store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
@@ -417,7 +417,7 @@ async fn num_blocks_increases_counter() {
 #[tokio::test]
 async fn estimate_num_free_bytes_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     store.estimate_num_free_bytes().unwrap();
     store.estimate_num_free_bytes().unwrap();
@@ -438,7 +438,7 @@ async fn estimate_num_free_bytes_increases_counter() {
 #[tokio::test]
 async fn usable_block_size_from_physical_block_size_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     store
         .overhead()
@@ -467,7 +467,7 @@ async fn usable_block_size_from_physical_block_size_increases_counter() {
 #[tokio::test]
 async fn all_blocks_increases_counter() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     // Create some blocks to make the test more meaningful
     store.create(&Data::from(vec![1, 2, 3])).await.unwrap();
@@ -494,7 +494,7 @@ async fn all_blocks_increases_counter() {
 #[tokio::test]
 async fn get_and_reset_totals_works() {
     let mut fixture = TestFixture::<false>::new();
-    let mut store = fixture.store().await;
+    let store = fixture.store().await;
 
     let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
     let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();

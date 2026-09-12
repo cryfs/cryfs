@@ -97,7 +97,7 @@ pub async fn with_nodestore_with_blocksize(
     blocksize: Byte,
     f: impl FnOnce(&DataNodeStore<LockingBlockStore<InMemoryBlockStore>>) -> BoxFuture<'_, ()>,
 ) {
-    let mut nodestore =
+    let nodestore =
         DataNodeStore::new(LockingBlockStore::new(InMemoryBlockStore::new()), blocksize)
             .await
             .unwrap();

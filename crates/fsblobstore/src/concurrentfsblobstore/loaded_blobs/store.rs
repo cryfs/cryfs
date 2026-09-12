@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use cryfs_concurrent_store::{ConcurrentStore, RequestImmediateDropResult};
 use futures::future::{BoxFuture, Shared};
 use lockable::InfallibleUnwrap as _;
@@ -44,7 +43,7 @@ where
         F: Future<Output = Result<AsyncDropGuard<FsBlob<B>>, Arc<anyhow::Error>>> + Send,
     {
         let loading_fn = move || async move { loading_fn().await.map(AsyncDropTokioMutex::new) };
-        let mut inserted = self
+        let inserted = self
             .loaded_blobs
             .try_insert_loading(blob_id, loading_fn)
             .await?
@@ -105,7 +104,7 @@ where
         blob_id: BlobId,
         blobstore: &AsyncDropGuard<AsyncDropArc<FsBlobStore<B>>>,
     ) -> RequestRemovalResult {
-        let mut blobstore = AsyncDropArc::clone(blobstore);
+        let blobstore = AsyncDropArc::clone(blobstore);
         let request = self
             .loaded_blobs
             .request_immediate_drop(blob_id, move |blob| async move {
@@ -137,7 +136,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for LoadedBlobs<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -145,8 +143,9 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.loaded_blobs.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { loaded_blobs } = self;
+        loaded_blobs.async_drop().await?;
         Ok(())
     }
 }

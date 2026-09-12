@@ -159,13 +159,15 @@ impl<B: OptimizedBlockStoreWriter + Debug + Sync + Send + AsyncDrop<Error = anyh
     }
 }
 
-#[async_trait]
 impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
     for TrackingBlockStore<B>
 {
     type Error = anyhow::Error;
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.underlying_store.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self {
+            underlying_store, ..
+        } = self;
+        underlying_store.async_drop().await?;
         Ok(())
     }
 }
@@ -200,7 +202,7 @@ mod tests {
     #[tokio::test]
     async fn counters_start_at_zero() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         assert_eq!(
             ActionCounts {
@@ -223,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn exists_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -251,7 +253,7 @@ mod tests {
     #[tokio::test]
     async fn load_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -285,7 +287,7 @@ mod tests {
     #[tokio::test]
     async fn store_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -314,7 +316,7 @@ mod tests {
     #[tokio::test]
     async fn store_optimized_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -355,7 +357,7 @@ mod tests {
     #[tokio::test]
     async fn remove_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -410,7 +412,7 @@ mod tests {
     #[tokio::test]
     async fn try_create_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -453,7 +455,7 @@ mod tests {
     #[tokio::test]
     async fn try_create_optimized_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();
@@ -508,7 +510,7 @@ mod tests {
     #[tokio::test]
     async fn test_usable_block_size_from_physical_block_size() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
         let expected_overhead = Byte::from_u64(0);
 
         assert_eq!(
@@ -534,7 +536,7 @@ mod tests {
     #[tokio::test]
     async fn num_blocks_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Create some blocks to make the test more meaningful
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
@@ -562,7 +564,7 @@ mod tests {
     #[tokio::test]
     async fn estimate_num_free_bytes_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Call estimate_num_free_bytes multiple times
         store.estimate_num_free_bytes().unwrap();
@@ -584,7 +586,7 @@ mod tests {
     #[tokio::test]
     async fn usable_block_size_from_physical_block_size_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Call usable_block_size_from_physical_block_size multiple times
         store
@@ -614,7 +616,7 @@ mod tests {
     #[tokio::test]
     async fn all_blocks_increases_counter() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         // Create some blocks to make the test more meaningful
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
@@ -643,7 +645,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_reset_totals() {
         let mut fixture = TestFixture::new();
-        let mut store = fixture.store().await;
+        let store = fixture.store().await;
 
         let id1 = BlockId::from_hex("715db62b0b4e333f8b16c76ee886c95b").unwrap();
         let id2 = BlockId::from_hex("62b0b4e333f8b16c76ee886c95b715db").unwrap();

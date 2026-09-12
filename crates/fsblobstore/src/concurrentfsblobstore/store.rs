@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use std::{fmt::Debug, sync::Arc};
 
@@ -165,7 +164,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for ConcurrentFsBlobStore<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -173,12 +171,17 @@ where
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self {
+            blobstore,
+            loaded_blobs,
+        } = self;
+
         // First drop all loaded blobs
-        self.loaded_blobs.async_drop().await?;
+        loaded_blobs.async_drop().await?;
 
         // Then drop the underlying blobstore
-        self.blobstore.async_drop().await?;
+        blobstore.async_drop().await?;
 
         Ok(())
     }
