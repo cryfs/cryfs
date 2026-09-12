@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::try_join;
 use std::{
     fmt::Debug,
@@ -206,7 +205,8 @@ pub struct InodeGuard {
 /// Holds an inode number and will tell the filesystem to forget it when dropped.
 #[derive(Debug)]
 pub struct InodeGuardInner {
-    fs: AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>,
+    // `Option` because [Drop::drop] only gets `&mut self` but has to move the guard out to drop it.
+    fs: Option<AsyncDropGuard<AsyncDropArc<ObjectBasedFsAdapterLL<Device>>>>,
     ino: InodeNumber,
 }
 
@@ -216,7 +216,7 @@ impl InodeGuard {
         ino: InodeNumber,
     ) -> Self {
         Self {
-            inner: Arc::new(InodeGuardInner { fs, ino }),
+            inner: Arc::new(InodeGuardInner { fs: Some(fs), ino }),
         }
     }
 }
@@ -229,9 +229,10 @@ impl Drop for InodeGuardInner {
         // could starve the tokio runtime.
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
+            let fs = self.fs.take().expect("InodeGuardInner::drop called twice");
             handle.block_on(async {
-                self.fs.forget(&request_info(), self.ino, 1).await.unwrap();
-                self.fs.async_drop().await.unwrap();
+                fs.forget(&request_info(), self.ino, 1).await.unwrap();
+                fs.async_drop().await.unwrap();
             });
         });
     }
@@ -844,12 +845,12 @@ impl<C: FuserCacheBehavior> FilesystemDriver for FuserFilesystemDriver<C> {
     }
 }
 
-#[async_trait]
 impl<C: FuserCacheBehavior> AsyncDrop for FuserFilesystemDriver<C> {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.fs.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { fs, _c: _ } = self;
+        fs.async_drop().await?;
         Ok(())
     }
 }

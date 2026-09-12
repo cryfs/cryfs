@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use nix::{
     fcntl::AT_FDCWD,
     sys::{stat::UtimensatFlags, time::TimeSpec},
@@ -780,14 +779,13 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for MountingFilesystemDriver<B>
 where
     B: MountingBackend,
 {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
+    async fn async_drop_impl(self) -> Result<()> {
         // The filesystem will be unmounted when RunningFilesystem is dropped
         Ok(())
     }

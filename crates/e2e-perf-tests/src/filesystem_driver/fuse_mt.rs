@@ -5,7 +5,6 @@ use std::{fmt::Debug, sync::Arc};
 
 use super::FilesystemDriver;
 use super::common::request_info;
-use async_trait::async_trait;
 use cryfs_blobstore::{BlobStoreOnBlocks, TrackingBlobStore};
 use cryfs_blockstore::{
     DynBlockStore, HLSharedBlockStore, HLTrackingBlockStore, LockingBlockStore,
@@ -380,12 +379,12 @@ impl FilesystemDriver for FusemtFilesystemDriver {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for FusemtFilesystemDriver {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<()> {
-        self.fs.async_drop().await?;
+    async fn async_drop_impl(self) -> Result<()> {
+        let Self { fs } = self;
+        fs.async_drop().await?;
         Ok(())
     }
 }
