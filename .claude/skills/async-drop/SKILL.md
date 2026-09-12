@@ -18,23 +18,40 @@ Rust's `Drop` trait is synchronous, but sometimes cleanup needs to be async. The
 ## Quick Reference
 
 ```rust
-// Creating
-let mut guard = AsyncDropGuard::new(my_value);
+// Creating (no `mut` needed unless you mutate the value)
+let guard = AsyncDropGuard::new(my_value);
 
 // Using (transparent via Deref)
 guard.do_something();
 
-// Cleanup (REQUIRED before dropping)
+// Cleanup (REQUIRED before dropping). Consumes the guard:
+// using `guard` after this line is a compile error.
 guard.async_drop().await?;
 ```
 
 ## The AsyncDrop Trait
 
 ```rust
-#[async_trait]
 pub trait AsyncDrop {
     type Error: Debug;
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error>;
+    fn async_drop_impl(self) -> impl Future<Output = Result<(), Self::Error>> + Send;
+}
+```
+
+Implement it as a plain `async fn async_drop_impl(self)` without `#[async_trait]`.
+`self` is taken by value, so destructure it to move `AsyncDropGuard` members out
+and drop them:
+
+```rust
+impl AsyncDrop for MyType {
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { connection, cache, .. } = self;
+        cache.async_drop().await?;
+        connection.async_drop().await?;
+        Ok(())
+    }
 }
 ```
 
@@ -43,8 +60,10 @@ pub trait AsyncDrop {
 | Rule | Description |
 |------|-------------|
 | **Always call async_drop()** | Every `AsyncDropGuard` must have `async_drop()` called |
+| **async_drop() consumes the guard** | Use-after-drop and double-drop are compile errors |
 | **Factory methods return guards** | `fn new() -> AsyncDropGuard<Self>`, never plain `Self` |
-| **Types with guard members impl AsyncDrop** | Delegate to member async_drops |
+| **Types with guard members impl AsyncDrop** | `async fn async_drop_impl(self)`: destructure `self`, drop members |
+| **No `#[async_trait]` on AsyncDrop impls** | The trait uses native `async fn` in traits |
 | **Use the macro when possible** | `with_async_drop_2!` handles cleanup automatically |
 | **Panics are exceptions** | It's OK to skip async_drop on panic paths |
 

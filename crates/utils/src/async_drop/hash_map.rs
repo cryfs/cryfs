@@ -5,7 +5,6 @@
 //! async-dropped concurrently.
 
 use anyhow::Result;
-use async_trait::async_trait;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -94,7 +93,6 @@ where
     }
 }
 
-#[async_trait]
 impl<K, V> AsyncDrop for AsyncDropHashMap<K, V>
 where
     K: PartialEq + Eq + Hash + Debug + Send,
@@ -103,9 +101,8 @@ where
 {
     type Error = <V as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        let values = self.map.drain().map(|(_key, value)| value);
-        for_each_unordered(values, async move |mut value| {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        for_each_unordered(self.map.into_values(), async move |value| {
             value.async_drop().await?;
             Ok(())
         })
@@ -131,11 +128,10 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -143,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_new_creates_empty_map() {
-        let mut map: AsyncDropGuard<AsyncDropHashMap<i32, TestValue>> = AsyncDropHashMap::new();
+        let map: AsyncDropGuard<AsyncDropHashMap<i32, TestValue>> = AsyncDropHashMap::new();
         assert_eq!(0, map.len());
         map.async_drop().await.unwrap();
     }
@@ -177,7 +173,7 @@ mod tests {
         assert!(result.is_err());
 
         // The rejected value needs to be cleaned up manually
-        let mut rejected = result.unwrap_err().value;
+        let rejected = result.unwrap_err().value;
         rejected.async_drop().await.unwrap();
 
         map.async_drop().await.unwrap();
@@ -192,7 +188,7 @@ mod tests {
         let value = TestValue::new(42, Arc::clone(&counter));
         map.try_insert(1, value).unwrap();
 
-        let mut removed = map.remove(&1).unwrap();
+        let removed = map.remove(&1).unwrap();
         assert_eq!(42, removed.id);
         assert_eq!(0, map.len());
 

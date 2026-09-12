@@ -7,7 +7,6 @@ Common patterns for implementing and using AsyncDrop in this codebase.
 For types that need async cleanup:
 
 ```rust
-use async_trait::async_trait;
 use cryfs_utils::{AsyncDrop, AsyncDropGuard};
 
 pub struct MyResource {
@@ -21,11 +20,11 @@ impl MyResource {
     }
 }
 
-#[async_trait]
 impl AsyncDrop for MyResource {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    // Takes `self` by value, no `#[async_trait]`
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         self.connection.close().await?;
         Ok(())
     }
@@ -34,26 +33,30 @@ impl AsyncDrop for MyResource {
 
 ## Pattern 2: Delegating to Member AsyncDrops
 
-When a type contains `AsyncDropGuard` members:
+When a type contains `AsyncDropGuard` members, destructure `self` to move them out:
 
 ```rust
 pub struct CompositeResource {
     database: AsyncDropGuard<Database>,
     cache: AsyncDropGuard<Cache>,
+    name: String,
 }
 
-#[async_trait]
 impl AsyncDrop for CompositeResource {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { database, cache, name: _ } = self;
         // Drop members in appropriate order
-        self.cache.async_drop().await?;
-        self.database.async_drop().await?;
+        cache.async_drop().await?;
+        database.async_drop().await?;
         Ok(())
     }
 }
 ```
+
+A type that also implements `Drop` cannot be destructured. Store its guard members
+in an `Option` and `.take()` them in `async_drop_impl` instead.
 
 ## Pattern 3: Using `with_async_drop_2!` Macro
 
@@ -101,9 +104,7 @@ with_async_drop_2_infallible!(value, {
 When the macro doesn't fit, manually ensure cleanup on every path:
 
 ```rust
-async fn complex_operation(resource: AsyncDropGuard<Resource>) -> Result<Output> {
-    let mut resource = resource;
-
+async fn complex_operation(mut resource: AsyncDropGuard<Resource>) -> Result<Output> {
     // Early return path 1
     if !resource.is_valid() {
         resource.async_drop().await?;
@@ -139,23 +140,22 @@ impl Wrapper {
     /// The Wrapper's AsyncDrop handles cleanup of the inner resource.
     pub async fn consume(this: AsyncDropGuard<Self>) -> Result<Output> {
         // Unwrap Self from its guard - we're inside our own impl
-        let mut this = this.unsafe_into_inner_dont_drop();
+        let Self { mut inner } = this.unsafe_into_inner_dont_drop();
 
-        // Now we can work with this.inner directly
-        let result = this.inner.do_something().await?;
+        // Now we can work with inner directly
+        let result = inner.do_something().await?;
 
         // We MUST still clean up inner - our responsibility hasn't changed
-        this.inner.async_drop().await?;
+        inner.async_drop().await?;
 
         Ok(result)
     }
 }
 
-#[async_trait]
 impl AsyncDrop for Wrapper {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
         self.inner.async_drop().await?;
         Ok(())
     }
@@ -171,7 +171,7 @@ For types with multiple states (like enums), wrap in a newtype to prevent direct
 ```rust
 // Private enum - cannot be constructed outside this module
 enum MaybeInitializedInner<T> {
-    Uninitialized(Option<Box<dyn FnOnce() -> AsyncDropGuard<T>>>),
+    Uninitialized(Box<dyn FnOnce() -> AsyncDropGuard<T> + Send>),
     Initialized(AsyncDropGuard<T>),
 }
 
@@ -180,8 +180,8 @@ pub struct MaybeInitialized<T>(MaybeInitializedInner<T>);
 
 impl<T> MaybeInitialized<T> {
     // Factory methods return AsyncDropGuard<Self>, never Self
-    pub fn uninitialized(factory: impl FnOnce() -> AsyncDropGuard<T> + 'static) -> AsyncDropGuard<Self> {
-        AsyncDropGuard::new(Self(MaybeInitializedInner::Uninitialized(Some(Box::new(factory)))))
+    pub fn uninitialized(factory: impl FnOnce() -> AsyncDropGuard<T> + Send + 'static) -> AsyncDropGuard<Self> {
+        AsyncDropGuard::new(Self(MaybeInitializedInner::Uninitialized(Box::new(factory))))
     }
 
     pub fn initialized(value: AsyncDropGuard<T>) -> AsyncDropGuard<Self> {
@@ -189,22 +189,14 @@ impl<T> MaybeInitialized<T> {
     }
 }
 
-#[async_trait]
 impl<T: AsyncDrop + Debug + Send> AsyncDrop for MaybeInitialized<T> {
     type Error = T::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        match &mut self.0 {
-            MaybeInitializedInner::Uninitialized(factory) => {
-                if let Some(factory) = factory.take() {
-                    factory().async_drop().await?;
-                }
-            }
-            MaybeInitializedInner::Initialized(value) => {
-                value.async_drop().await?;
-            }
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        match self.0 {
+            MaybeInitializedInner::Uninitialized(factory) => factory().async_drop().await,
+            MaybeInitializedInner::Initialized(value) => value.async_drop().await,
         }
-        Ok(())
     }
 }
 ```
@@ -218,7 +210,7 @@ When passing `AsyncDropGuard<T>` by value, ownership and cleanup responsibility 
 ```rust
 // Caller is responsible for cleanup
 async fn caller() -> Result<()> {
-    let mut resource = create_resource();
+    let resource = create_resource();
     process_resource(resource).await?;  // Transfers ownership
     // No need to call async_drop - process_resource owns it now
     Ok(())
@@ -244,7 +236,7 @@ async fn create_and_configure() -> Result<AsyncDropGuard<Resource>> {
 }
 
 async fn use_it() -> Result<()> {
-    let mut resource = create_and_configure().await?;
+    let resource = create_and_configure().await?;
     resource.work().await?;
     resource.async_drop().await?;  // Our responsibility now
     Ok(())
@@ -277,16 +269,16 @@ pub struct ConnectionPool {
     conn_c: AsyncDropGuard<Connection>,
 }
 
-#[async_trait]
 impl AsyncDrop for ConnectionPool {
     type Error = anyhow::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { conn_a, conn_b, conn_c } = self;
         // GOOD - concurrent drop for independent resources
         let (a, b, c) = tokio::join!(
-            self.conn_a.async_drop(),
-            self.conn_b.async_drop(),
-            self.conn_c.async_drop()
+            conn_a.async_drop(),
+            conn_b.async_drop(),
+            conn_c.async_drop()
         );
         a?;
         b?;
@@ -321,26 +313,23 @@ Choose error types based on context:
 
 ```rust
 // Specific error for library types
-#[async_trait]
 impl AsyncDrop for DatabaseConnection {
     type Error = DatabaseError;  // Specific, detailed
     // ...
 }
 
 // Anyhow for application-level types
-#[async_trait]
 impl AsyncDrop for AppResource {
     type Error = anyhow::Error;  // Flexible
     // ...
 }
 
 // Never for infallible cleanup
-#[async_trait]
 impl AsyncDrop for SimpleBuffer {
     type Error = std::convert::Infallible;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        self.data.clear();  // Can't fail
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        drop(self.data);  // Can't fail
         Ok(())
     }
 }

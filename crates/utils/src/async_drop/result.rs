@@ -3,7 +3,6 @@
 //! This module provides [`AsyncDropResult`], which wraps a `Result<AsyncDropGuard<T>, E>`.
 //! When dropped, it only calls async_drop on the `Ok` variant; the `Err` variant is a no-op.
 
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use crate::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -62,7 +61,6 @@ where
     }
 }
 
-#[async_trait]
 impl<T, E> AsyncDrop for AsyncDropResult<T, E>
 where
     T: Debug + AsyncDrop + Send,
@@ -70,8 +68,8 @@ where
 {
     type Error = <T as AsyncDrop>::Error;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        match &mut self.v {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        match self.v {
             Ok(v) => v.async_drop().await,
             Err(_) => Ok(()),
         }
@@ -99,11 +97,10 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -113,7 +110,7 @@ mod tests {
     async fn test_ok_variant_accessors() {
         let counter = Arc::new(AtomicUsize::new(0));
         let inner = TestValue::new(42, Arc::clone(&counter));
-        let mut result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
+        let result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
             AsyncDropResult::new(Ok(inner));
 
         assert!(result.ok().is_some());
@@ -126,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_err_variant_accessors() {
-        let mut result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
+        let result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
             AsyncDropResult::new(Err("error"));
 
         assert!(result.ok().is_none());
@@ -147,7 +144,7 @@ mod tests {
         let inner_result = AsyncDropResult::into_inner(result);
         assert!(inner_result.is_ok());
 
-        let mut inner = inner_result.unwrap();
+        let inner = inner_result.unwrap();
         assert_eq!(42, inner.value);
         inner.async_drop().await.unwrap();
         assert_eq!(1, counter.load(Ordering::SeqCst));
@@ -167,7 +164,7 @@ mod tests {
     async fn test_async_drop_on_ok_calls_inner() {
         let counter = Arc::new(AtomicUsize::new(0));
         let inner = TestValue::new(42, Arc::clone(&counter));
-        let mut result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
+        let result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
             AsyncDropResult::new(Ok(inner));
 
         assert_eq!(0, counter.load(Ordering::SeqCst));
@@ -177,7 +174,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_async_drop_on_err_succeeds() {
-        let mut result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
+        let result: AsyncDropGuard<AsyncDropResult<TestValue, &str>> =
             AsyncDropResult::new(Err("error"));
 
         // Should succeed without doing anything

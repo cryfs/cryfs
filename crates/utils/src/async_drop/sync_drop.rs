@@ -49,7 +49,7 @@ impl<T: Debug + AsyncDrop> SyncDrop<T> {
 
 impl<T: Debug + AsyncDrop> Drop for SyncDrop<T> {
     fn drop(&mut self) {
-        if let Some(mut v) = self.0.take() {
+        if let Some(v) = self.0.take() {
             // Use block_in_place if we're inside a tokio runtime to avoid deadlocks.
             // The async_drop code may use tokio::sync primitives that require other
             // tokio tasks to make progress (e.g., releasing contended locks).
@@ -86,7 +86,6 @@ impl<T: Debug + AsyncDrop> DerefMut for SyncDrop<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -105,11 +104,10 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl AsyncDrop for TestValue {
         type Error = &'static str;
 
-        async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
             self.drop_counter.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -152,7 +150,7 @@ mod tests {
         let inner = TestValue::new(42, Arc::clone(&counter));
         let sync_drop = SyncDrop::new(inner);
 
-        let mut guard = sync_drop.into_inner_dont_drop();
+        let guard = sync_drop.into_inner_dont_drop();
         assert_eq!(42, guard.value);
 
         // async_drop was not called yet

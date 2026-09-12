@@ -15,8 +15,7 @@ pub struct AsyncDropGuard<T: Debug>(Option<T>);
 | Method | Description |
 |--------|-------------|
 | `new(v: T)` | Wrap a value |
-| `async_drop(&mut self)` | Perform async cleanup (required!) |
-| `is_dropped(&self)` | Check if already dropped |
+| `async_drop(self)` | Perform async cleanup (required!). Consumes the guard |
 | `unsafe_into_inner_dont_drop(self)` | Extract inner, bypassing cleanup |
 | `map_unsafe<U>(self, f)` | Transform inner type |
 
@@ -27,9 +26,9 @@ pub struct AsyncDropGuard<T: Debug>(Option<T>);
 - Panics in `Drop` if `async_drop()` was not called
 
 ```rust
-let mut guard = AsyncDropGuard::new(value);
+let guard = AsyncDropGuard::new(value);
 guard.method();  // Deref to inner
-guard.async_drop().await?;
+guard.async_drop().await?;  // consumes `guard`
 ```
 
 ---
@@ -40,7 +39,7 @@ Reference-counted sharing of async-droppable values.
 
 ```rust
 pub struct AsyncDropArc<T: AsyncDrop + Debug + Send> {
-    v: Option<Arc<AsyncDropGuard<T>>>,
+    v: Arc<AsyncDropGuard<T>>,
 }
 ```
 
@@ -69,7 +68,7 @@ shared.async_drop().await?;  // Actual cleanup (last Arc)
 |--------|-------------|
 | `new(guard)` | Wrap an AsyncDropGuard |
 | `clone(&self)` | Create another reference |
-| `async_drop(&mut self)` | Drop this reference (cleanup on last) |
+| `async_drop(self)` | Drop this reference (cleanup on last) |
 
 ---
 
@@ -79,7 +78,7 @@ Async mutex holding an async-droppable value.
 
 ```rust
 pub struct AsyncDropTokioMutex<T: AsyncDrop + Debug + Send> {
-    v: Option<Mutex<AsyncDropGuard<T>>>,
+    v: Mutex<AsyncDropGuard<T>>,
 }
 ```
 
