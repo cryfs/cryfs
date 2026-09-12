@@ -9,7 +9,11 @@
 set -e
 set -v
 
-SCRIPT=run-clang-tidy-17.py
+# Keep this in step with the clang-tidy version the CI job installs (the
+# clang-tidy include entry in .github/workflows/main.yaml). The driver and the
+# clang-tidy binary it invokes have to be the same version, otherwise the job
+# installs one clang-tidy and analyses with another.
+SCRIPT=run-clang-tidy-21.py
 
 export NUMCORES=`nproc` && if [ ! -n "$NUMCORES" ]; then export NUMCORES=`sysctl -n hw.ncpu`; fi
 echo Using ${NUMCORES} cores

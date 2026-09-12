@@ -418,13 +418,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -435,14 +435,18 @@ jobs:
             run_tests: true
             run_cpack: false
           - name: Werror gcc
-            os: ubuntu-24.04
+            # gcc 16 is only in the ubuntu-26.04 archive; 22.04 and 24.04 stop at
+            # gcc 14 and would need the ubuntu-toolchain-r PPA, which the matrix
+            # deliberately does not pull in. So picking the newest GCC moves this
+            # job's runner image as well as its compiler.
+            os: ubuntu-26.04
             compiler:
               compiler: gcc
-              version: 14
+              version: 16
               libcxx: libstdc++
-              cc: gcc-14
-              cxx: g++-14
-              apt_package: g++-14
+              cc: gcc-16
+              cxx: g++-16
+              apt_package: g++-16
             # build_type cannot be debug because gcc checks for some errors in optimization passes
             build_types: RelWithDebInfo
             extra_conan_flags: "-o '&:use_werror=True'"
@@ -456,13 +460,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: Debug
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
@@ -475,13 +479,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
@@ -495,13 +499,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: RelWithDebInfo
             extra_conan_flags: "-o '&:update_checks=False'"
             extra_cxxflags: '[]'
@@ -515,13 +519,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -535,16 +539,16 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               # Using libstdc++11 instead of libc++ for ASAN because of
               # - https://github.com/llvm/llvm-project/issues/52771
               # - https://github.com/llvm/llvm-project/issues/59432
               libcxx: libstdc++11
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
@@ -558,13 +562,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -578,13 +582,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -599,13 +603,13 @@ jobs:
             os: ubuntu-24.04
             compiler:
               compiler: clang
-              version: 19
+              version: 21
               libcxx: libc++
-              cc: clang-19
-              cxx: clang++-19
-              macos_cc: llvm@19/bin/clang
-              macos_cxx: llvm@19/bin/clang++
-              apt_package: clang-19 clang-tidy-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
+              cc: clang-21
+              cxx: clang++-21
+              macos_cc: llvm@21/bin/clang
+              macos_cxx: llvm@21/bin/clang++
+              apt_package: clang-21 clang-tidy-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
