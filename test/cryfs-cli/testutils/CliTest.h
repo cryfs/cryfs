@@ -152,7 +152,20 @@ public:
     FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         testing::internal::CaptureStdout();
         testing::internal::CaptureStderr();
+        try {
+            return _run_filesystem_with_captured_output(args, std::move(mountDirForUnmounting), std::move(onMounted));
+        } catch (...) {
+            // The exception is reported by gtest once it propagates out of the test body, but
+            // gtest prints that report to stdout, which is still being captured here. Stop
+            // capturing first, and show what the file system printed, because that is where
+            // the reason usually is.
+            std::cerr << "Running the file system threw an exception.\nSTDOUT:\n" << testing::internal::GetCapturedStdout()
+                      << "STDERR:\n" << testing::internal::GetCapturedStderr() << std::endl;
+            throw;
+        }
+    }
 
+    FilesystemOutput _run_filesystem_with_captured_output(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         bool exited = false;
         cpputils::ConditionBarrier isMountedOrFailedBarrier;
 
