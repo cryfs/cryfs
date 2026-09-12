@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_utils::with_async_drop_2;
 use std::fmt::Debug;
 use std::time::SystemTime;
@@ -189,7 +188,7 @@ where
     }
 
     async fn load_lstat_size(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NumBytes> {
-        let mut blob = self.load_blob(blobstore).await?;
+        let blob = self.load_blob(blobstore).await?;
         let lstat_size = blob.with_lock(async |blob| blob.lstat_size().await).await;
         let result = match lstat_size {
             // TODO Return NumBytes from blob.lstat_size() instead of converting it here
@@ -451,7 +450,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> AsyncDrop for NodeInfo<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -459,8 +457,9 @@ where
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> Result<(), Self::Error> {
-        match &mut self.inner {
+    async fn async_drop_impl(self) -> Result<(), Self::Error> {
+        let Self { inner } = self;
+        match inner {
             NodeInfoImpl::IsRootDir { .. } => (),
             NodeInfoImpl::IsNotRootDir { parent_blob, .. } => {
                 parent_blob

@@ -94,7 +94,6 @@ where
     }
 }
 
-#[async_trait]
 impl<'a, B> AsyncDrop for CrySymlink<'a, B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -102,7 +101,11 @@ where
 {
     type Error = FsError;
 
-    async fn async_drop_impl(&mut self) -> FsResult<()> {
-        self.node_info.async_drop().await
+    async fn async_drop_impl(self) -> FsResult<()> {
+        let Self {
+            blobstore: _,
+            node_info,
+        } = self;
+        node_info.async_drop().await
     }
 }
