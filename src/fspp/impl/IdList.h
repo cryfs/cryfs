@@ -13,7 +13,9 @@ template<class Entry>
 class IdList final {
 public:
   IdList();
-  virtual ~IdList();
+  // Not virtual: the class is final, so the destructor can never be overridden,
+  // and clang 21's -Wunnecessary-virtual-specifier rejects saying so.
+  ~IdList();
 
   int add(cpputils::unique_ref<Entry> entry);
   Entry *get(int id);
