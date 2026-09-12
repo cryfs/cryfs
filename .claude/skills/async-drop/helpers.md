@@ -16,6 +16,7 @@ pub struct AsyncDropGuard<T: Debug>(Option<T>);
 |--------|-------------|
 | `new(v: T)` | Wrap a value |
 | `async_drop(self)` | Perform async cleanup (required!). Consumes the guard |
+| `async_drop_on_err(self, result)` | Drops the guard if `result` is an error and returns the error, otherwise returns `(value, guard)`. Drop failures are logged |
 | `unsafe_into_inner_dont_drop(self)` | Extract inner, bypassing cleanup |
 | `map_unsafe<U>(self, f)` | Transform inner type |
 
@@ -250,13 +251,15 @@ This is what the multi-guard form of `with_async_drop_2!` uses after its block.
 Combines two Results of AsyncDropGuards.
 
 ```rust
-pub async fn flatten_async_drop<E, T, E1, U, E2>(
-    first: Result<AsyncDropGuard<T>, E1>,
-    second: Result<AsyncDropGuard<U>, E2>,
+pub async fn flatten_async_drop<E, T, U>(
+    first: Result<AsyncDropGuard<T>, E>,
+    second: Result<AsyncDropGuard<U>, E>,
 ) -> Result<(AsyncDropGuard<T>, AsyncDropGuard<U>), E>
 ```
 
-Returns tuple of both guards if both are Ok. On error, properly cleans up any successful guard before returning error.
+Returns tuple of both guards if both are Ok. On error, drops any successful guard before
+returning the (first) error. Both inputs share one error type, which is inferred, so no
+turbofish is needed. Drop failures on the error path are logged, not returned.
 
 ---
 

@@ -109,30 +109,33 @@ with_async_drop_2!(source, dest, {
 Prefer the multi-guard form over nesting one `with_async_drop_2!` inside another: it
 is flatter and drops the guards concurrently.
 
-## Pattern 4: Manual Cleanup on All Exit Paths
+## Pattern 4: Keeping the Guard on Success, Dropping It on Error
 
-When the macro doesn't fit, manually ensure cleanup on every path:
+When a function keeps the guard on its success path (e.g. moves it into a new object) but
+must drop it on every error path, the macro doesn't fit. Use `async_drop_on_err`: it
+drops the guard if the result is an error and returns that error, otherwise it hands the
+value and the guard back. A failure to drop is logged; the original error is what gets returned.
+
+```rust
+async fn create_child(parent: AsyncDropGuard<Dir>) -> Result<Node> {
+    let child_id = create_child_blob().await;
+    // parent is dropped and the error returned if create_child_blob failed
+    let (child_id, parent) = parent.async_drop_on_err(child_id).await?;
+
+    let attrs = parent.add_entry(child_id).await;
+    let (attrs, parent) = parent.async_drop_on_err(attrs).await?;
+
+    Ok(Node::new(parent, child_id, attrs))  // parent moves into the node
+}
+```
+
+Only write the cleanup by hand when neither the macro nor `async_drop_on_err` fits:
 
 ```rust
 async fn complex_operation(mut resource: AsyncDropGuard<Resource>) -> Result<Output> {
-    // Early return path 1
-    if !resource.is_valid() {
-        resource.async_drop().await?;
-        return Err(Error::Invalid);
-    }
-
-    // Main work
-    let result = match resource.process().await {
-        Ok(data) => data,
-        Err(e) => {
-            resource.async_drop().await?;  // Don't forget!
-            return Err(e.into());
-        }
-    };
-
-    // Success path
+    let result = resource.process().await;
     resource.async_drop().await?;
-    Ok(result)
+    result
 }
 ```
 

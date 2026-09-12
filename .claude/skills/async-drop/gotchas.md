@@ -59,6 +59,14 @@ async fn good(mut resource: AsyncDropGuard<R>) -> Result<Data> {
     resource.async_drop().await?;
     result
 }
+
+// BETTER - if the guard is kept on the success path, let `async_drop_on_err` handle the error paths
+async fn better(resource: AsyncDropGuard<R>) -> Result<(Data, AsyncDropGuard<R>)> {
+    let validated = resource.validate();  // Result<(), Error>
+    let ((), resource) = resource.async_drop_on_err(validated).await?;
+    let data = resource.fetch().await;
+    resource.async_drop_on_err(data).await
+}
 ```
 
 ## Gotcha 3: Allowing Direct Instantiation of AsyncDrop Types
