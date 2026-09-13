@@ -19,7 +19,7 @@ use cryfs_utils::path::AbsolutePathBuf;
 use cryfs_utils::{
     async_drop::{AsyncDropGuard, SyncDrop},
     progress::SilentProgressBarManager,
-    with_async_drop_2,
+    with_async_drop,
 };
 use futures::{Future, future::BoxFuture, stream::StreamExt};
 use rand::{SeedableRng, rngs::SmallRng};
@@ -196,7 +196,7 @@ impl FilesystemFixture {
             Box::pin(async move {
                 let root_blob = blobstore.load(&root_id).await.unwrap().unwrap();
                 let mut root = CreatedDirBlob::new(root_blob, AbsolutePathBuf::root());
-                with_async_drop_2!(root, {
+                with_async_drop!(root, {
                     Ok::<_, anyhow::Error>(
                         super::entry_helpers::create_some_blobs(blobstore, &mut root).await,
                     )
@@ -229,7 +229,7 @@ impl FilesystemFixture {
             Box::pin(async move {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
-                with_async_drop_2!(parent, {
+                with_async_drop!(parent, {
                     let file =
                         super::entry_helpers::create_empty_file(blobstore, &mut parent, &name)
                             .await;
@@ -258,10 +258,10 @@ impl FilesystemFixture {
             Box::pin(async move {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
-                with_async_drop_2!(parent, {
+                with_async_drop!(parent, {
                     let created_dir =
                         super::entry_helpers::create_empty_dir(blobstore, &mut parent, &name).await;
-                    with_async_drop_2!(created_dir, {
+                    with_async_drop!(created_dir, {
                         Ok::<_, anyhow::Error>((&*created_dir).into())
                     })
                 })
@@ -288,7 +288,7 @@ impl FilesystemFixture {
             Box::pin(async move {
                 let parent_blob = blobstore.load(&parent.blob_id).await.unwrap().unwrap();
                 let mut parent_blob = CreatedDirBlob::new(parent_blob, parent.referenced_as.path);
-                with_async_drop_2!(parent_blob, {
+                with_async_drop!(parent_blob, {
                     let symlink = super::entry_helpers::create_symlink(
                         blobstore,
                         &mut parent_blob,
@@ -311,7 +311,7 @@ impl FilesystemFixture {
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
                 let mut parent = blobstore.load(&parent).await.unwrap().unwrap();
-                with_async_drop_2!(parent, {
+                with_async_drop!(parent, {
                     let mut parent = parent.as_dir_mut().unwrap();
                     super::entry_helpers::add_file_entry(&mut parent, &name, blob_id);
                     Ok::<_, anyhow::Error>(())
@@ -327,7 +327,7 @@ impl FilesystemFixture {
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
                 let mut parent = blobstore.load(&parent).await.unwrap().unwrap();
-                with_async_drop_2!(parent, {
+                with_async_drop!(parent, {
                     let mut parent = parent.as_dir_mut().unwrap();
                     super::entry_helpers::add_dir_entry(&mut parent, &name, blob_id);
                     Ok::<_, anyhow::Error>(())
@@ -343,7 +343,7 @@ impl FilesystemFixture {
         self.update_fsblobstore(move |blobstore| {
             Box::pin(async move {
                 let mut parent = blobstore.load(&parent).await.unwrap().unwrap();
-                with_async_drop_2!(parent, {
+                with_async_drop!(parent, {
                     let mut parent = parent.as_dir_mut().unwrap();
                     super::entry_helpers::add_symlink_entry(&mut parent, &name, blob_id);
                     Ok::<_, anyhow::Error>(())
@@ -358,7 +358,7 @@ impl FilesystemFixture {
         self.update_fsblobstore(|fsblobstore| {
             Box::pin(async move {
                 let blob = fsblobstore.load(&dir_blob).await.unwrap().unwrap();
-                with_async_drop_2!(blob, {
+                with_async_drop!(blob, {
                     let blob = blob.as_dir().unwrap();
                     Ok::<_, anyhow::Error>(
                         blob.entries()
@@ -1028,7 +1028,7 @@ impl FilesystemFixture {
             Box::pin(async move {
                 let dir = fsblobstore.load(&blob_info.blob_id).await.unwrap().unwrap();
                 let mut dir = CreatedDirBlob::new(dir, blob_info.referenced_as.path);
-                with_async_drop_2!(dir, {
+                with_async_drop!(dir, {
                     entry_helpers::add_entries_to_make_dir_large(fsblobstore, &mut dir).await;
                     Ok::<_, anyhow::Error>(())
                 })

@@ -1,7 +1,7 @@
 //! Dropping several [AsyncDropGuard]s at once.
 //!
 //! [async_drop_all] takes a tuple of guards, drops all of them concurrently, and waits for
-//! all of them even if some fail. See [with_async_drop_2!](crate::with_async_drop_2) for the
+//! all of them even if some fail. See [with_async_drop!](crate::with_async_drop) for the
 //! macro form that also runs a block of code before dropping.
 
 use std::fmt::Debug;

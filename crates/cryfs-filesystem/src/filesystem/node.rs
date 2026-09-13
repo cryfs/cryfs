@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 #[cfg(feature = "testutils")]
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::with_async_drop;
 #[cfg(feature = "testutils")]
 use futures::join;
 use std::fmt::Debug;
@@ -65,7 +65,7 @@ where
     async fn flush_blob(&self) -> FsResult<()> {
         // TODO We'd only have to flush it if it's actually in some cache, but it might be far down the stack in some blockstore cache.
         let blob = self.node_info.load_blob(&self.blobstore).await?;
-        with_async_drop_2!(
+        with_async_drop!(
             blob,
             {
                 blob.with_lock(async |blob| {

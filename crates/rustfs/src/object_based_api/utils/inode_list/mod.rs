@@ -3,7 +3,7 @@ use core::panic;
 use cryfs_concurrent_store::RequestImmediateDropResult;
 use cryfs_concurrent_store::{ConcurrentStore, LoadedEntryGuard};
 use cryfs_utils::stream::for_each_unordered;
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::with_async_drop;
 use derive_more::{Display, Error};
 use futures::future::BoxFuture;
 use futures::{FutureExt, future};
@@ -212,7 +212,7 @@ where
         ino: InodeNumber,
     ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
         let node = Self::_lookup_node(inner, ino)?;
-        with_async_drop_2!(node, {
+        with_async_drop!(node, {
             let inode_entry = AsyncDropArc::clone(node.value());
             Ok(inode_entry)
         })
@@ -229,7 +229,7 @@ where
 
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
         let inodes = inner.inodes.clone_ref();
-        with_async_drop_2!(inodes, {
+        with_async_drop!(inodes, {
             let insert_result = inner
                 .inode_forest
                 .try_insert(parent_ino, name, node, async |node, new_child_ino| {
@@ -357,9 +357,9 @@ where
             >,
         >,
     ) -> FsResult<AsyncDropGuard<AsyncDropArc<Fs::Node>>> {
-        with_async_drop_2!(node_future, {
+        with_async_drop!(node_future, {
             let node = (&mut *node_future).await;
-            with_async_drop_2!(node, {
+            with_async_drop!(node, {
                 match node.as_inner() {
                     Err(err) => Err(err.clone()),
                     Ok(node) => Ok(AsyncDropArc::clone(node.value())),
@@ -399,7 +399,7 @@ where
 
         // TODO This Arc::clone is only necessary because MutexGuard can't project and get &mut on both inner.inodes and inner.inode_forest at the same time. Once Rust supports that, we can avoid this clone.
         let inodes = inner.inodes.clone_ref();
-        let (new_child_ino, new_node) = with_async_drop_2!(inodes, {
+        let (new_child_ino, new_node) = with_async_drop!(inodes, {
             let insert_result =
                 inner
                     .inode_forest
@@ -413,7 +413,7 @@ where
                                 // It's ok to capture the parent_node in this lambda, because
                                 // * If try_insert returns Ok, it always executes the lambda and we async_drop it here
                                 // * If try_insert returns Err, the lambda is never executed, but we panic below anyways.
-                                with_async_drop_2!(parent_node, {
+                                with_async_drop!(parent_node, {
                                     let node = loading_fn(&parent_node).await?;
                                     Ok(node)
                                 })
@@ -861,7 +861,7 @@ where
             use crate::object_based_api::Node as _;
 
             let guard = inode.wait_until_loaded().await.unwrap().unwrap();
-            with_async_drop_2!(guard, { guard.value().fsync(false).await })
+            with_async_drop!(guard, { guard.value().fsync(false).await })
         })
         .await?;
         Ok(())

@@ -11,7 +11,7 @@ use cryfs_blobstore::BlobStore;
 use cryfs_rustfs::{FsError, FsResult, object_based_api::Symlink};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    with_async_drop_2,
+    with_async_drop,
 };
 
 #[derive(Debug)]
@@ -72,7 +72,7 @@ where
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(
+                with_async_drop!(
                     blob,
                     {
                         blob.with_lock(async |mut blob| {

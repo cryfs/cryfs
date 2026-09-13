@@ -66,16 +66,16 @@ impl AsyncDrop for MyType {
 | **Factory methods return guards** | `fn new() -> AsyncDropGuard<Self>`, never plain `Self` |
 | **Types with guard members impl AsyncDrop** | `async fn async_drop_impl(self)`: destructure `self`, drop members |
 | **No `#[async_trait]` on AsyncDrop impls** | The trait uses native `async fn` in traits |
-| **Use the macro when possible** | `with_async_drop_2!` handles cleanup automatically |
+| **Use the macro when possible** | `with_async_drop!` handles cleanup automatically |
 | **Panics are exceptions** | It's OK to skip async_drop on panic paths |
 
-## The `with_async_drop_2!` Macro
+## The `with_async_drop!` Macro
 
 Automatically calls `async_drop()` on scope exit:
 
 ```rust
 let resource = get_resource().await?;
-with_async_drop_2!(resource, {
+with_async_drop!(resource, {
     // Use resource here
     resource.do_work().await?;
     Ok(result)
@@ -85,7 +85,7 @@ with_async_drop_2!(resource, {
 Several independent guards can be listed; they are dropped concurrently afterward:
 
 ```rust
-with_async_drop_2!(source, dest, {
+with_async_drop!(source, dest, {
     move_entry(&source, &dest).await
 })
 ```

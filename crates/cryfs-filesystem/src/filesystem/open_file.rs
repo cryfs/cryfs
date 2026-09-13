@@ -10,7 +10,7 @@ use cryfs_rustfs::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
     data::Data,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 use super::node_info::NodeInfo;
@@ -65,7 +65,7 @@ where
 
     async fn flush_file_contents(&self) -> FsResult<()> {
         let blob = self.load_blob().await?;
-        with_async_drop_2!(
+        with_async_drop!(
             blob,
             {
                 blob.with_lock(async |mut blob| {
@@ -89,7 +89,7 @@ where
 
     async fn _read(&self, offset: NumBytes, size: NumBytes) -> FsResult<Data> {
         let blob = self.load_blob().await?;
-        with_async_drop_2!(
+        with_async_drop!(
             blob,
             {
                 blob.with_lock(async |mut blob| {
@@ -119,7 +119,7 @@ where
 
     async fn _write(&self, offset: NumBytes, data: Data) -> FsResult<()> {
         let blob = self.load_blob().await?;
-        with_async_drop_2!(
+        with_async_drop!(
             blob,
             {
                 blob.with_lock(async |mut blob| {
