@@ -303,4 +303,111 @@ mod tests {
         );
         assert!(trigger.trigger_reason().lock().unwrap().is_none());
     }
+
+    mod make_device {
+        use super::*;
+        use byte_unit::Byte;
+        use cryfs_blockstore::InMemoryBlockStore;
+        use cryfs_config::config::FilesystemId;
+        use cryfs_utils::async_drop::AsyncDropArc;
+
+        const ROOT_BLOB_ID: &str = "B7847BAA5663DE6A3155A8017B5A8AC2";
+
+        fn config(root_blob: &str) -> CryConfig {
+            CryConfig {
+                root_blob: root_blob.to_string(),
+                enc_key: "F8294D3955FF8CC06B787D71DE64168DFC4C994046FBABB936B2CFE1629F6772"
+                    .to_string(),
+                cipher: "xchacha20-poly1305".to_string(),
+                format_version: "0.10".to_string(),
+                created_with_version: "0.11.2".to_string(),
+                last_opened_with_version: "0.11.3".to_string(),
+                blocksize: Byte::from_u64_with_unit(16, byte_unit::Unit::KiB).unwrap(),
+                filesystem_id: FilesystemId::from_hex("ABDCB364DB327ED401F22E99EB37E78F").unwrap(),
+                exclusive_client_id: None,
+            }
+        }
+
+        async fn blobstore()
+        -> AsyncDropGuard<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>> {
+            BlobStoreOnBlocks::new(
+                LockingBlockStore::new(InMemoryBlockStore::new()),
+                config(ROOT_BLOB_ID).blocksize,
+            )
+            .await
+            .unwrap()
+        }
+
+        // Note for all tests below: if `make_device` failed to async_drop the blobstore or the
+        // device on an error path, the leaked `AsyncDropGuard` would panic when it is dropped
+        // and fail the test.
+
+        #[tokio::test]
+        async fn create_new_filesystem_then_load_it() {
+            let blobstore = AsyncDropArc::new(blobstore().await);
+
+            let device = make_device(
+                AsyncDropArc::clone(&blobstore),
+                &config(ROOT_BLOB_ID),
+                CreateOrLoad::CreateNewFilesystem,
+                AtimeUpdateBehavior::Relatime,
+            )
+            .await
+            .unwrap();
+            device.async_drop().await.unwrap();
+
+            let device = make_device(
+                AsyncDropArc::clone(&blobstore),
+                &config(ROOT_BLOB_ID),
+                CreateOrLoad::LoadExistingFilesystem,
+                AtimeUpdateBehavior::Relatime,
+            )
+            .await
+            .unwrap();
+            device.async_drop().await.unwrap();
+
+            blobstore.async_drop().await.unwrap();
+        }
+
+        #[tokio::test]
+        async fn invalid_root_blob_id_fails_with_invalid_filesystem_and_drops_blobstore() {
+            let error = make_device(
+                blobstore().await,
+                &config("this is not a hex blob id"),
+                CreateOrLoad::LoadExistingFilesystem,
+                AtimeUpdateBehavior::Relatime,
+            )
+            .await
+            .err()
+            .expect("an unparseable root blob id must fail");
+
+            assert_eq!(CliErrorKind::InvalidFilesystem, error.kind);
+            assert!(
+                format!("{:#}", error.error).contains("Error parsing root blob id"),
+                "unexpected error: {:#}",
+                error.error
+            );
+        }
+
+        #[tokio::test]
+        async fn failing_sanity_check_fails_with_invalid_filesystem_and_drops_device() {
+            // Loading a file system whose root blob does not exist fails the sanity check.
+            let error = make_device(
+                blobstore().await,
+                &config(ROOT_BLOB_ID),
+                CreateOrLoad::LoadExistingFilesystem,
+                AtimeUpdateBehavior::Relatime,
+            )
+            .await
+            .err()
+            .expect("loading a file system without a root blob must fail");
+
+            assert_eq!(CliErrorKind::InvalidFilesystem, error.kind);
+            assert!(
+                format!("{:#}", error.error).contains("Couldn't load root blob"),
+                "unexpected error: {:#}",
+                error.error
+            );
+        }
+    }
 }
