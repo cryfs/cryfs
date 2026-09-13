@@ -8,10 +8,17 @@ using std::vector;
 class CliTest_MountFailure: public CliTest {
 public:
     // libfuse parses 'entry_timeout' as a double, so it rejects this while setting up the file
-    // system and refuses the mount before anything gets mounted.
+    // system and refuses the mount before anything gets mounted. Dokany's FUSE wrapper on Windows
+    // doesn't know 'entry_timeout' and silently ignores options it doesn't know, but it parses
+    // 'daemon_timeout' as an integer and rejects this the same way.
     vector<string> argsWithUnparseableFuseOption() {
-        return {basedir.string(), mountdir.string(), "-f", "--cipher", "aes-256-gcm",
-                "-o", "entry_timeout=not_a_number"};
+#if defined(_MSC_VER)
+        const char* option = "daemon_timeout=not_a_number";
+#else
+        const char* option = "entry_timeout=not_a_number";
+#endif
+        return {basedir.string(), mountpoint.string(), "-f", "--cipher", "aes-256-gcm",
+                "-o", option};
     }
 };
 
