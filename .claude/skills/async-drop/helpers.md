@@ -232,6 +232,19 @@ where
     F: Future<Output = Result<R, E>>,
 ```
 
+### `async_drop_all()`
+
+Drops a tuple of guards concurrently. Waits for all of them even if some fail and returns
+the first error; further errors are logged. Elements can be `AsyncDropGuard<T>` or
+`Option<AsyncDropGuard<T>>` (`None` is a no-op), all with the same error type, up to eight
+of them.
+
+```rust
+async_drop_all((source_parent, dest_parent, maybe_self_blob)).await?;
+```
+
+This is what the multi-guard form of `with_async_drop_2!` uses after its block.
+
 ### `flatten_async_drop()`
 
 Combines two Results of AsyncDropGuards.

@@ -24,7 +24,7 @@ use crate::{
     object_based_api::utils::{DirCache, InodeList, OpenDirHandle},
 };
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
+    async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, async_drop_all, flatten_async_drop},
     path::PathComponent,
     with_async_drop_2,
 };
@@ -546,9 +546,7 @@ where
                 })
             }
             .await;
-            // TODO Drop concurrently and drop latter even if first one fails
-            oldparent.async_drop().await?;
-            newparent.async_drop().await?;
+            async_drop_all((oldparent, newparent)).await?;
             result
         }
     }

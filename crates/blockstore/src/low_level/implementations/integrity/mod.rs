@@ -26,7 +26,7 @@ use crate::{
 mod integrity_data;
 
 use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard},
+    async_drop::{AsyncDrop, AsyncDropGuard, async_drop_all},
     data::Data,
 };
 use integrity_data::{
@@ -496,13 +496,7 @@ impl<B: Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> AsyncDrop
             config: _,
             integrity_data,
         } = self;
-        let (drop1, drop2) = join!(
-            underlying_block_store.async_drop(),
-            integrity_data.async_drop(),
-        );
-        drop1?;
-        drop2?;
-        Ok(())
+        async_drop_all((underlying_block_store, integrity_data)).await
     }
 }
 
