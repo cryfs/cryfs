@@ -830,7 +830,7 @@ jobs:
           cd build/${{matrix.build_type}}/test
           ./gitversion/gitversion-test.exe
           ./cpp-utils/cpp-utils-test.exe
-          # ./fspp/fspp-test.exe
+          ./fspp/fspp-test.exe
           ./parallelaccessstore/parallelaccessstore-test.exe
           ./blockstore/blockstore-test.exe
           ./blobstore/blobstore-test.exe
