@@ -40,19 +40,19 @@ public:
     }
 
     void Test_Run_Success() {
-        EXPECT_RUN_SUCCESS(args(), mountdir);
+        EXPECT_RUN_SUCCESS(args(mountpoint), mountpoint);
     }
 
     void Test_Run_Error(const char *expectedError, cryfs::ErrorCode errorCode) {
         EXPECT_RUN_ERROR(
-            args(),
+            args(mountdir),
             expectedError,
             errorCode
         );
     }
 
-    vector<string> args() {
-        vector<string> result = {basedir.string(), mountdir.string()};
+    vector<string> args(const bf::path &mountdir_) {
+        vector<string> result = {basedir.string(), mountdir_.string()};
         if (GetParam().externalConfigfile) {
             result.push_back("--config");
             result.push_back(configfile.path().string());
@@ -91,29 +91,38 @@ TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
     Test_Run_Error("Error 18: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
-bf::path make_relative(const bf::path &path) {
-    bf::path result;
-    const bf::path cwd = bf::current_path();
-    for(auto iter = ++cwd.begin(); iter!=cwd.end(); ++iter) {
-        result /= "..";
+// The path to `path`, relative to the current working directory. On Windows there is no such path
+// when the two are on different drives, which they are on the CI runners, where the working
+// directory is on D: and the temporary directory on C:. The tests below skip in that case.
+boost::optional<bf::path> make_relative(const bf::path &path) {
+    const bf::path result = bf::relative(path, bf::current_path());
+    if (result.empty()) {
+        return boost::none;
     }
-    result /= path.relative_path();
     return result;
 }
 
+#define SKIP_IF_THERE_IS_NO_RELATIVE_PATH_TO(path) \
+    if (make_relative(path) == boost::none) { \
+        GTEST_SKIP() << "There is no relative path to " << (path) << " because it is on a different drive than the working directory " << bf::current_path(); \
+    }
+
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_MountDirRelative) {
-    mountdir = make_relative(basedir);
+    SKIP_IF_THERE_IS_NO_RELATIVE_PATH_TO(basedir);
+    mountdir = *make_relative(basedir);
     Test_Run_Error("Error 18: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BaseDirRelative) {
+    SKIP_IF_THERE_IS_NO_RELATIVE_PATH_TO(basedir);
     mountdir = basedir;
-    basedir = make_relative(basedir);
+    basedir = *make_relative(basedir);
     Test_Run_Error("Error 18: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_BothRelative) {
-    basedir = make_relative(basedir);
+    SKIP_IF_THERE_IS_NO_RELATIVE_PATH_TO(basedir);
+    basedir = *make_relative(basedir);
     mountdir = basedir;
     Test_Run_Error("Error 18: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
@@ -198,6 +207,9 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Noninteractive) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which can't be created";
+#endif
     _mountdir.remove();
     ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     Test_Run_Success();
@@ -212,6 +224,9 @@ TEST_P(CliTest_WrongEnvironment, MountDir_IsNotDirectory) {
 
 TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which has no permissions to set";
+#endif
     //Counter-Test. Test it doesn't fail if permissions are there.
     SetAllPermissions(mountdir);
     Test_Run_Success();
