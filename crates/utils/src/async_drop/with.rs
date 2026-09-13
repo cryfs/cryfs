@@ -44,6 +44,11 @@ macro_rules! with_async_drop {
 /// Variant of [`with_async_drop!`] for types that return a `Never` error in their async_drop.
 ///
 /// Since the error type is `Never` (infallible), this macro unwraps the result directly.
+// TODO Rust 1.100 stabilizes the never type `!`. Once our MSRV allows it, use `!` instead of
+//      `lockable::Never` in the `AsyncDrop` impls that are infallible, and replace the
+//      `.infallible_unwrap()` below with `let Ok(()) = ...;` so this macro no longer needs
+//      `lockable::InfallibleUnwrap`. The macro itself has to stay: `?` cannot convert `!` into
+//      other error types because `impl<T> From<!> for T` was abandoned (rust-lang/rust#160705).
 #[macro_export]
 macro_rules! with_async_drop_infallible {
     ($($value:ident),+ , $f:block) => {

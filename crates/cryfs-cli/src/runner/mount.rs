@@ -241,18 +241,10 @@ where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
     B::ConcreteBlob: AsyncDrop<Error = anyhow::Error>,
 {
-    let root_blob_id = BlobId::from_hex(&config.root_blob);
-    let root_blob_id = match root_blob_id {
-        Ok(root_blob_id) => root_blob_id,
-        Err(e) => {
-            if let Err(err) = blobstore.async_drop().await {
-                log::error!("Error while dropping blockstore: {:?}", err);
-            }
-            return Err(e)
-                .context("Error parsing root blob id")
-                .map_cli_error(CliErrorKind::InvalidFilesystem);
-        }
-    };
+    let root_blob_id = BlobId::from_hex(&config.root_blob)
+        .context("Error parsing root blob id")
+        .map_cli_error(CliErrorKind::InvalidFilesystem);
+    let (root_blob_id, blobstore) = blobstore.async_drop_on_err(root_blob_id).await?;
 
     let device = match create_or_load {
         CreateOrLoad::CreateNewFilesystem => {
@@ -264,17 +256,11 @@ where
             CryDevice::load_filesystem(blobstore, root_blob_id, atime_behavior)
         }
     };
-    match device
+    let sanity_check = device
         .sanity_check()
         .await
-        .map_cli_error(CliErrorKind::InvalidFilesystem)
-    {
-        Ok(()) => {}
-        Err(e) => {
-            device.async_drop().await.unwrap();
-            return Err(e);
-        }
-    }
+        .map_cli_error(CliErrorKind::InvalidFilesystem);
+    let ((), device) = device.async_drop_on_err(sanity_check).await?;
 
     Ok(device)
 }

@@ -38,16 +38,8 @@ impl<B: BlockStore + AsyncDrop + Debug + Send> DataNodeStore<B> {
         block_store: AsyncDropGuard<B>,
         physical_block_size: Byte,
     ) -> Result<AsyncDropGuard<Self>, InvalidBlockSizeError> {
-        let block_size = match Self::_block_size(&block_store, physical_block_size) {
-            Ok(ok) => ok,
-            Err(err) => {
-                // TODO Can something like AsyncDropGuard::try_map make this nicer without a manual drop in the middle?
-                if let Err(async_drop_err) = block_store.async_drop().await {
-                    log::error!("Error while dropping block store: {:?}", async_drop_err);
-                }
-                return Err(err);
-            }
-        };
+        let block_size = Self::_block_size(&block_store, physical_block_size);
+        let (block_size, block_store) = block_store.async_drop_on_err(block_size).await?;
 
         Ok(AsyncDropGuard::new(Self {
             block_store,

@@ -189,17 +189,21 @@ where
 
     async fn load_lstat_size(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NumBytes> {
         let blob = self.load_blob(blobstore).await?;
-        let lstat_size = blob.with_lock(async |blob| blob.lstat_size().await).await;
-        let result = match lstat_size {
-            // TODO Return NumBytes from blob.lstat_size() instead of converting it here
-            Ok(size) => Ok(NumBytes::from(size)),
-            Err(err) => {
-                log::error!("Error getting lstat size: {:?}", err);
-                Err(FsError::UnknownError)
-            }
-        };
-        blob.async_drop().await.map_err(FsError::internal_error)?;
-        result
+        with_async_drop!(
+            blob,
+            {
+                let lstat_size = blob.with_lock(async |blob| blob.lstat_size().await).await;
+                match lstat_size {
+                    // TODO Return NumBytes from blob.lstat_size() instead of converting it here
+                    Ok(size) => Ok(NumBytes::from(size)),
+                    Err(err) => {
+                        log::error!("Error getting lstat size: {:?}", err);
+                        Err(FsError::UnknownError)
+                    }
+                }
+            },
+            FsError::internal_error
+        )
     }
 
     pub async fn getattr(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<NodeAttrs> {

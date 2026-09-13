@@ -52,26 +52,15 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
         // TODO Function too large. Split into subfunctions
 
         let root_blob_id = BlobId::from_hex(&self.config.config.config().root_blob);
-        let root_blob_id = match root_blob_id {
-            Ok(root_blob_id) => root_blob_id,
-            Err(e) => {
-                blockstore.async_drop().await?;
-                return Err(e);
-            }
-        };
+        let (root_blob_id, blockstore) = blockstore.async_drop_on_err(root_blob_id).await?;
 
         // TODO Instead of autotick, we could manually tick it while listing nodes. That would mean users see it if it gets stuck.
         //      Or we could even show a Progress bar since we know we're going from AAA to ZZZ in the folder structure.
         let pb = self
             .progress_bar_manager
             .new_spinner_autotick("Listing all nodes");
-        let all_nodes = match get_all_node_ids(&blockstore).await {
-            Ok(all_nodes) => all_nodes,
-            Err(e) => {
-                blockstore.async_drop().await?;
-                return Err(e);
-            }
-        };
+        let all_nodes = get_all_node_ids(&blockstore).await;
+        let (all_nodes, blockstore) = blockstore.async_drop_on_err(all_nodes).await?;
         pb.finish();
         println!("Found {} nodes", all_nodes.len());
 
@@ -93,13 +82,9 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
             pb.clone(),
         )
         .await;
-        match check_all_reachable_blobs_result {
-            Ok(()) => (),
-            Err(e) => {
-                blobstore.async_drop().await?;
-                return Err(e);
-            }
-        };
+        let ((), blobstore) = blobstore
+            .async_drop_on_err(check_all_reachable_blobs_result)
+            .await?;
         let processed_blobs = Arc::into_inner(processed_blobs)
             .expect("All tasks are finished here and we should be able to unwrap the Arc");
         let reachable_blobs: Vec<(BlobId, BlobReference)> = processed_blobs
@@ -125,13 +110,9 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
             pb.clone(),
         )
         .await;
-        match check_all_nodes_of_reachable_blobs_result {
-            Ok(()) => (),
-            Err(e) => {
-                nodestore.async_drop().await?;
-                return Err(e.into());
-            }
-        };
+        let ((), nodestore) = nodestore
+            .async_drop_on_err(check_all_nodes_of_reachable_blobs_result)
+            .await?;
 
         let processed_nodes = Arc::into_inner(processed_nodes)
             .expect("All tasks are finished here and we should be able to unwrap the Arc");
@@ -139,13 +120,9 @@ impl<'l, PBM: ProgressBarManager> BlockstoreCallback for RecoverRunner<'l, PBM> 
         let check_unreachable_nodes_result =
             check_all_unreachable_nodes(&nodestore, &unreachable_nodes, &checks, pb.clone()).await;
         pb.finish();
-        match check_unreachable_nodes_result {
-            Ok(()) => (),
-            Err(e) => {
-                nodestore.async_drop().await?;
-                return Err(e.into());
-            }
-        };
+        let ((), nodestore) = nodestore
+            .async_drop_on_err(check_unreachable_nodes_result)
+            .await?;
 
         let errors = checks.finalize();
 

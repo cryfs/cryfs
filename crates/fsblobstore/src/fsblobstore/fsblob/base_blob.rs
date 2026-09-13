@@ -1,4 +1,4 @@
-use anyhow::{Result, ensure};
+use anyhow::{Result, anyhow, ensure};
 use binary_layout::Field;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -30,22 +30,20 @@ where
     ) -> Result<AsyncDropGuard<BaseBlob<B>>> {
         // TODO No need to zero-initialize
         let mut header = vec![0; layout::fsblob_header::SIZE.unwrap()];
-        match blob.read(&mut header, 0).await {
-            Ok(()) => (),
-            Err(e) => {
-                blob.async_drop().await.unwrap(); //TODO no unwrap
-                return Err(e);
-            }
-        }
+        let read_result = blob.read(&mut header, 0).await;
+        let ((), blob) = blob.async_drop_on_err(read_result).await?;
         let header_cache = layout::fsblob_header::View::new(header.into());
-        if header_cache.format_version_header().read() != FORMAT_VERSION_HEADER {
-            blob.async_drop().await.unwrap(); //TODO no unwrap
-            anyhow::bail!(
+        let format_version = header_cache.format_version_header().read();
+        let version_check = if format_version == FORMAT_VERSION_HEADER {
+            Ok(())
+        } else {
+            Err(anyhow!(
                 "Loaded FsBlob with format version {} but current version is {}",
-                header_cache.format_version_header().read(),
+                format_version,
                 FORMAT_VERSION_HEADER
-            );
-        }
+            ))
+        };
+        let ((), blob) = blob.async_drop_on_err(version_check).await?;
         Ok(AsyncDropGuard::new(Self { blob, header_cache }))
     }
 
@@ -63,13 +61,8 @@ where
         let Some(mut blob) = blobstore.try_create(blob_id).await? else {
             return Ok(None);
         };
-        match blob.write(&blob_data, 0).await {
-            Ok(()) => (),
-            Err(e) => {
-                blob.async_drop().await.unwrap(); //TODO no unwrap
-                return Err(e);
-            }
-        }
+        let write_result = blob.write(&blob_data, 0).await;
+        let ((), blob) = blob.async_drop_on_err(write_result).await?;
         Ok(Some(AsyncDropGuard::new(Self {
             blob,
             header_cache: layout::fsblob_header::View::new(blob_data),

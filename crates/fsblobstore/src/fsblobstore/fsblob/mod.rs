@@ -50,16 +50,14 @@ where
 {
     pub async fn parse(blob: AsyncDropGuard<B::ConcreteBlob>) -> Result<AsyncDropGuard<FsBlob<B>>> {
         let blob = BaseBlob::parse(blob).await?;
-        match blob.blob_type() {
-            Ok(BlobType::Dir) => Ok(AsyncDropGuard::new(Self::Directory(
+        let blob_type = blob.blob_type();
+        let (blob_type, blob) = blob.async_drop_on_err(blob_type).await?;
+        match blob_type {
+            BlobType::Dir => Ok(AsyncDropGuard::new(Self::Directory(
                 DirBlob::new(blob).await?,
             ))),
-            Ok(BlobType::File) => Ok(AsyncDropGuard::new(Self::File(FileBlob::new(blob)))),
-            Ok(BlobType::Symlink) => Ok(AsyncDropGuard::new(Self::Symlink(SymlinkBlob::new(blob)))),
-            Err(e) => {
-                blob.async_drop().await?;
-                Err(e)
-            }
+            BlobType::File => Ok(AsyncDropGuard::new(Self::File(FileBlob::new(blob)))),
+            BlobType::Symlink => Ok(AsyncDropGuard::new(Self::Symlink(SymlinkBlob::new(blob)))),
         }
     }
 

@@ -59,13 +59,7 @@ where
         mut blob: AsyncDropGuard<BaseBlob<B>>,
     ) -> Result<AsyncDropGuard<DirBlob<B>>> {
         let entries = DirEntryList::deserialize(&mut blob).await;
-        let entries = match entries {
-            Ok(entries) => entries,
-            Err(e) => {
-                blob.async_drop().await.unwrap(); // TODO No unwrap
-                return Err(e);
-            }
-        };
+        let (entries, blob) = blob.async_drop_on_err(entries).await?;
         Ok(AsyncDropGuard::new(Self { blob, entries }))
     }
 
