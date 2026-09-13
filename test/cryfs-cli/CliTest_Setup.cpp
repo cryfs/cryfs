@@ -6,21 +6,17 @@ using cryfs::ErrorCode;
 namespace bf = boost::filesystem;
 
 //Tests that cryfs is correctly setup according to the CLI parameters specified
-class CliTest_Setup: public CliTest {
-public:
-    // All of these mount a file system.
-    static void SetUpTestSuite() {
-        SKIP_IF_MOUNTING_IS_UNAVAILABLE();
-    }
-};
+using CliTest_Setup = CliTest;
 
 TEST_F(CliTest_Setup, NoSpecialOptions) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "--cipher", "aes-256-gcm", "-f"}, mountpoint);
 }
 
 TEST_F(CliTest_Setup, NotexistingLogfileGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     const TempFile notexisting_logfile(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
@@ -29,6 +25,7 @@ TEST_F(CliTest_Setup, NotexistingLogfileGiven) {
 }
 
 TEST_F(CliTest_Setup, ExistingLogfileGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--logfile", logfile.path().string().c_str()}, mountpoint);
@@ -36,12 +33,14 @@ TEST_F(CliTest_Setup, ExistingLogfileGiven) {
 }
 
 TEST_F(CliTest_Setup, ConfigfileGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--config", configfile.path().string().c_str()}, mountpoint);
 }
 
 TEST_F(CliTest_Setup, AutocreateBasedir) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     const TempFile notexisting_basedir(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
@@ -63,6 +62,7 @@ TEST_F(CliTest_Setup, AutocreateMountpoint) {
 #if defined(_MSC_VER)
     GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which can't be created";
 #endif
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     const TempFile notexisting_mountpoint(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
@@ -81,6 +81,7 @@ TEST_F(CliTest_Setup, AutocreateMountdirFail) {
 }
 
 TEST_F(CliTest_Setup, FuseOptionGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--", "-f"}, mountpoint);
