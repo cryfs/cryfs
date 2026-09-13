@@ -218,21 +218,6 @@ async_drop is complete and will cause bad performance.
 
 ## Utility Functions
 
-### `with_async_drop()`
-
-Function version of the macro for more complex scenarios.
-
-```rust
-pub async fn with_async_drop<T, R, E, F>(
-    mut value: AsyncDropGuard<T>,
-    f: impl FnOnce(&mut T) -> F,
-) -> Result<R, E>
-where
-    T: AsyncDrop + Debug,
-    E: From<<T as AsyncDrop>::Error>,
-    F: Future<Output = Result<R, E>>,
-```
-
 ### `async_drop_all()`
 
 Drops a tuple of guards concurrently. Waits for all of them even if some fail and returns
@@ -244,7 +229,7 @@ of them.
 async_drop_all((source_parent, dest_parent, maybe_self_blob)).await?;
 ```
 
-This is what the multi-guard form of `with_async_drop_2!` uses after its block.
+This is what the multi-guard form of `with_async_drop!` uses after its block.
 
 ### `flatten_async_drop()`
 

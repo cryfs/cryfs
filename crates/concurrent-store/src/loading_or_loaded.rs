@@ -3,7 +3,7 @@ use std::{fmt::Debug, hash::Hash};
 
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    safe_panic, with_async_drop_2_infallible,
+    safe_panic, with_async_drop_infallible,
 };
 
 use crate::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner};
@@ -69,7 +69,7 @@ where
             LoadingOrLoadedInner::NotFound => Ok(None),
             LoadingOrLoadedInner::Loaded(loaded) => Ok(Some(loaded)),
             LoadingOrLoadedInner::Loading { store, waiter } => {
-                with_async_drop_2_infallible!(store, { waiter.wait_until_loaded(&store).await })
+                with_async_drop_infallible!(store, { waiter.wait_until_loaded(&store).await })
             }
         }
     }

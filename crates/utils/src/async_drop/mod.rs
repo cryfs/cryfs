@@ -17,7 +17,6 @@ mod hash_map;
 pub use hash_map::AsyncDropHashMap;
 
 mod with;
-pub use with::with_async_drop;
 
 mod all;
 pub use all::{AsyncDropAllElement, AsyncDropTuple, async_drop_all};
