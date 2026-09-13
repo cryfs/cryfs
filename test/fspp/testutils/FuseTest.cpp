@@ -1,4 +1,5 @@
 #include "FuseTest.h"
+#include <mount_availability.h>
 
 using ::testing::Eq;
 using ::testing::Return;
@@ -56,6 +57,10 @@ FuseTest::FuseTest(): fsimpl(make_shared<MockFilesystem>()), _context(boost::non
   ReturnIsDirOnLstat("/");
   ReturnDoesntExistOnLstat("/.Trash");
   ReturnDoesntExistOnLstat("/.Trash-1000");
+}
+
+void FuseTest::SetUpTestSuite() {
+  SKIP_IF_MOUNTING_IS_UNAVAILABLE();
 }
 
 unique_ref<FuseTest::TempTestFS> FuseTest::TestFS(const std::vector<std::string>& fuseOptions) {

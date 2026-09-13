@@ -83,6 +83,7 @@ INSTANTIATE_TEST_SUITE_P(RunningInForeground_ExternalConfigfile_LogIsNotStderr, 
 //Counter-Test. Test that it doesn't fail if we call it without an error condition.
 TEST_P(CliTest_WrongEnvironment, NoErrorCondition) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     Test_Run_Success();
 }
 
@@ -146,6 +147,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Noninteractive) {
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_DoesntExist_Create) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     _basedir.remove();
     ON_CALL(*console, askYesNo("Could not find base directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     Test_Run_Success();
@@ -160,6 +162,7 @@ TEST_P(CliTest_WrongEnvironment, BaseDir_IsNotDirectory) {
 
 TEST_P(CliTest_WrongEnvironment, BaseDir_AllPermissions) {
     if (!GetParam().runningInForeground) {return;} // TODO Make this work also if run in background (see CliTest::EXPECT_RUN_SUCCESS)
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Counter-Test. Test it doesn't fail if permissions are there.
     SetAllPermissions(basedir);
     Test_Run_Success();
@@ -210,6 +213,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_DoesntExist_Create) {
 #if defined(_MSC_VER)
     GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which can't be created";
 #endif
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     _mountdir.remove();
     ON_CALL(*console, askYesNo("Could not find mount directory. Do you want to create it?", testing::_)).WillByDefault(Return(true));
     Test_Run_Success();
@@ -227,6 +231,7 @@ TEST_P(CliTest_WrongEnvironment, MountDir_AllPermissions) {
 #if defined(_MSC_VER)
     GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which has no permissions to set";
 #endif
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Counter-Test. Test it doesn't fail if permissions are there.
     SetAllPermissions(mountdir);
     Test_Run_Success();

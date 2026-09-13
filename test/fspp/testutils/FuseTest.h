@@ -53,6 +53,13 @@ public:
 
   FuseTest();
 
+  // Every test using this fixture mounts a file system through libfuse, which isn't possible
+  // everywhere the tests run (see mount_availability.h). This skips the whole suite there. It has
+  // to happen at suite level, before any fixture is constructed: the fixtures set up gmock
+  // expectations in their constructors, and gmock would report those as unmet on a test that
+  // was skipped in SetUp(), which counts as a failure.
+  static void SetUpTestSuite();
+
   class TempTestFS {
   public:
     TempTestFS(std::shared_ptr<MockFilesystem> fsimpl, const std::vector<std::string>& fuseOptions = {});
