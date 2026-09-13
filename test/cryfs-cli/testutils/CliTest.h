@@ -241,8 +241,10 @@ public:
               if (mountDir.is_initialized()) {
                 try {
                   _unmount(*mountDir);
-                } catch (...) {
-                  // the original exception is the one worth reporting
+                } catch (const std::exception &e) {
+                  // The original exception is the one worth reporting; this goes to the captured
+                  // stderr, which run_filesystem() prints along with it.
+                  std::cerr << "Unmounting after the failure threw as well: " << e.what() << std::endl;
                 }
               }
               throw;
