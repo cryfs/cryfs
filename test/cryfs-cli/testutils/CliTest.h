@@ -113,17 +113,38 @@ public:
     FilesystemOutput run_filesystem(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         testing::internal::CaptureStdout();
         testing::internal::CaptureStderr();
+        try {
+            return _run_filesystem_with_captured_output(args, std::move(mountDirForUnmounting), std::move(onMounted));
+        } catch (...) {
+            // The exception is reported by gtest once it propagates out of the test body, but
+            // gtest prints that report to stdout, which is still being captured here. Stop
+            // capturing first, and show what the file system printed, because that is where
+            // the reason usually is.
+            std::cerr << "Running the file system threw an exception.\nSTDOUT:\n" << testing::internal::GetCapturedStdout()
+                      << "STDERR:\n" << testing::internal::GetCapturedStderr() << std::endl;
+            throw;
+        }
+    }
 
+    FilesystemOutput _run_filesystem_with_captured_output(const std::vector<std::string>& args, boost::optional<boost::filesystem::path> mountDirForUnmounting, std::function<void()> onMounted) {
         bool exited = false;
         cpputils::ConditionBarrier isMountedOrFailedBarrier;
 
         std::future<int> exit_code = std::async(std::launch::async, [&] {
-            const int exit_code = run(args, [&] { isMountedOrFailedBarrier.release(); });
-            // just in case it fails, we also want to release the barrier.
-            // if it succeeds, this will release it a second time, which doesn't hurt.
-            exited = true;
-            isMountedOrFailedBarrier.release();
-            return exit_code;
+            // Release the barrier however run() ends, also when it throws. If it fails before
+            // mounting, this releases the barrier the mount would have released. If it mounted,
+            // this releases it a second time, which doesn't hurt. Without the release on an
+            // exception, the thread below would wait for the whole timeout and then abort the
+            // test binary, and the exception would never be reported.
+            struct ReleaseBarrier final {
+                bool* exited;
+                cpputils::ConditionBarrier* barrier;
+                ~ReleaseBarrier() {
+                    *exited = true;
+                    barrier->release();
+                }
+            } const releaseBarrier{&exited, &isMountedOrFailedBarrier};
+            return run(args, [&] { isMountedOrFailedBarrier.release(); });
         });
 
         std::future<bool> on_mounted_success = std::async(std::launch::async, [&] {
