@@ -155,7 +155,7 @@ optional<unique_ref<fspp::File>> CryDevice::LoadFile(const bf::path &path) {
   if (file == none) {
     throw fspp::fuse::FuseErrnoException(EISDIR); // TODO Also EISDIR if it is a symlink?
   }
-  return std::move(file);
+  return file;
 }
 
 optional<unique_ref<fspp::Dir>> CryDevice::LoadDir(const bf::path &path) {
@@ -167,7 +167,7 @@ optional<unique_ref<fspp::Dir>> CryDevice::LoadDir(const bf::path &path) {
   if (dir == none) {
     throw fspp::fuse::FuseErrnoException(ENOTDIR);
   }
-  return std::move(dir);
+  return dir;
 }
 
 optional<unique_ref<fspp::Symlink>> CryDevice::LoadSymlink(const bf::path &path) {
@@ -179,7 +179,7 @@ optional<unique_ref<fspp::Symlink>> CryDevice::LoadSymlink(const bf::path &path)
   if (lnk == none) {
     throw fspp::fuse::FuseErrnoException(ENOTDIR); // TODO ENOTDIR although it is a symlink?
   }
-  return std::move(lnk);
+  return lnk;
 }
 
 optional<unique_ref<fspp::Node>> CryDevice::Load(const bf::path &path) {
