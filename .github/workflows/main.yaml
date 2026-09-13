@@ -231,6 +231,15 @@ jobs:
             macos_cxx: llvm@19/bin/clang++
             apt_package: clang-19 libc++-19-dev libc++abi-19-dev libunwind-19-dev libomp-19-dev
             homebrew_package: llvm@19
+          - compiler: clang
+            version: 20
+            libcxx: libc++
+            cc: clang-20
+            cxx: clang++-20
+            macos_cc: llvm@20/bin/clang
+            macos_cxx: llvm@20/bin/clang++
+            apt_package: clang-20 libc++-20-dev libc++abi-20-dev libunwind-20-dev libomp-20-dev
+            homebrew_package: llvm@20
           - compiler: gcc
             version: 15
             libcxx: libstdc++11
