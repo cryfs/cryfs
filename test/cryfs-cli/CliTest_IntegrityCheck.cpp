@@ -68,6 +68,11 @@ class FakeCryKeyProvider final : public CryKeyProvider {
 
 class CliTest_IntegrityCheck : public CliTest {
 public:
+  // All of these mount a file system.
+  static void SetUpTestSuite() {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
+  }
+
   void modifyFilesystemId() {
     FakeCryKeyProvider keyProvider;
     auto configFile = CryConfigFile::load(basedir / "cryfs.config", &keyProvider, CryConfigFile::Access::ReadWrite).right_opt().value();
@@ -84,9 +89,9 @@ public:
 };
 
 TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
-  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountpoint.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-  EXPECT_RUN_SUCCESS(args, mountdir);
+  EXPECT_RUN_SUCCESS(args, mountpoint);
   modifyFilesystemId();
   EXPECT_RUN_ERROR(
       args,
@@ -96,9 +101,9 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemId_thenFails) {
 }
 
 TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
-  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountpoint.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-  EXPECT_RUN_SUCCESS(args, mountdir);
+  EXPECT_RUN_SUCCESS(args, mountpoint);
   modifyFilesystemKey();
   EXPECT_RUN_ERROR(
       args,
@@ -109,12 +114,12 @@ TEST_F(CliTest_IntegrityCheck, givenIncorrectFilesystemKey_thenFails) {
 
 // TODO Also enable this
 TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting_thenFails) {
-  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountpoint.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS/EXPECT_RUN_ERROR can handle that
 
   // create a filesystem with one file
-  EXPECT_RUN_SUCCESS(args, mountdir, [&] {
-    writeFile(mountdir / "myfile", "hello world");
+  EXPECT_RUN_SUCCESS(args, mountpoint, [&] {
+    writeFile(in_mountpoint("myfile"), "hello world");
   });
 
   // backup the base directory
@@ -122,8 +127,8 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
   recursive_copy(basedir, backup.path() / "basedir");
 
   // modify the file system contents
-  EXPECT_RUN_SUCCESS(args, mountdir, [&] {
-    writeFile(mountdir / "myfile", "hello world 2");
+  EXPECT_RUN_SUCCESS(args, mountpoint, [&] {
+    writeFile(in_mountpoint("myfile"), "hello world 2");
   });
 
   // roll back base directory
@@ -132,20 +137,20 @@ TEST_F(CliTest_IntegrityCheck, givenFilesystemWithRolledBackBasedir_whenMounting
 
   // error code is success because it unmounts normally
   EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
-    EXPECT_FALSE(readingFileIsSuccessful(mountdir / "myfile"));
-  });
+    EXPECT_FALSE(readingFileIsSuccessful(in_mountpoint("myfile")));
+  }, mountpoint);
 
   // Test it doesn't mount anymore now because it's marked with an integrity violation
   EXPECT_RUN_ERROR(args, "There was an integrity violation detected. Preventing any further access to the file system.", ErrorCode::IntegrityViolationOnPreviousRun);
 }
 
 TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) {
-  const vector<string> args{basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
+  const vector<string> args{basedir.string().c_str(), mountpoint.string().c_str(), "--cipher", "aes-256-gcm", "-f"};
   //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS/EXPECT_RUN_ERROR can handle that
 
   // create a filesystem with one file
-  EXPECT_RUN_SUCCESS(args, mountdir, [&] {
-    writeFile(mountdir / "myfile", "hello world");
+  EXPECT_RUN_SUCCESS(args, mountpoint, [&] {
+    writeFile(in_mountpoint("myfile"), "hello world");
   });
 
   // backup the base directory
@@ -154,8 +159,8 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
 
   EXPECT_RUN_ERROR(args, "Integrity violation detected. Unmounting.", ErrorCode::IntegrityViolation, [&] {
     // modify the file system contents
-    writeFile(mountdir / "myfile", "hello world 2");
-    ASSERT(readingFileIsSuccessful(mountdir / "myfile"), ""); // just to make sure reading usually works
+    writeFile(in_mountpoint("myfile"), "hello world 2");
+    ASSERT(readingFileIsSuccessful(in_mountpoint("myfile")), ""); // just to make sure reading usually works
 
     // wait for cache timeout (i.e. flush file system to disk)
     constexpr auto cache_timeout = blockstore::caching::CachingBlockStore2::MAX_LIFETIME_SEC + cryfs::cachingfsblobstore::CachingFsBlobStore::MAX_LIFETIME_SEC;
@@ -166,8 +171,8 @@ TEST_F(CliTest_IntegrityCheck, whenRollingBackBasedirWhileMounted_thenUnmounts) 
     recursive_copy(backup.path() / "basedir", basedir);
 
     // expect reading now fails
-    EXPECT_FALSE(readingFileIsSuccessful(mountdir / "myfile"));
-  });
+    EXPECT_FALSE(readingFileIsSuccessful(in_mountpoint("myfile")));
+  }, mountpoint);
 
   // Test it doesn't mount anymore now because it's marked with an integrity violation
   EXPECT_RUN_ERROR(args, "There was an integrity violation detected. Preventing any further access to the file system.", ErrorCode::IntegrityViolationOnPreviousRun);

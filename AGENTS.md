@@ -429,7 +429,9 @@ Configuration in `.clang-tidy`:
   `windows-2025`, which ships Visual Studio 2026. The workflow selects the conan compiler
   version per image. Release packages are built on `windows-2025`, so they are compiled with
   Visual Studio 2026.
-- Some tests are disabled on Windows (see CI config)
+- The FUSE integration tests in fspp-test are not built on Windows, because they drive a mounted
+  file system through the POSIX file API (see test/fspp/CMakeLists.txt). The CLI tests mount to a
+  free drive letter on Windows, and the few that need the mount directory to be a directory skip.
 
 ### macOS
 
@@ -440,6 +442,10 @@ Configuration in `.clang-tidy`:
 - macFUSE installs into /usr/local, so pkg-config may need
   `PKG_CONFIG_PATH=/usr/local/lib/pkgconfig` on Apple Silicon.
 - Apple Clang support varies by macOS version
+- GitHub's hosted macOS runners can't load the macFUSE kernel extension, so nothing can be mounted
+  on them. CI sets `CRYFS_TEST_CANNOT_MOUNT=1` there (see the run_tests action) and the tests that
+  need a mounted file system skip (see `test/my-gtest-main/mount_availability.h`); the rest of
+  fspp-test and cryfs-cli-test runs on macOS.
 
 ## Stability Notes
 

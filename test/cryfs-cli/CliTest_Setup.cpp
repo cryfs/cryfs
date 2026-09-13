@@ -9,37 +9,42 @@ namespace bf = boost::filesystem;
 using CliTest_Setup = CliTest;
 
 TEST_F(CliTest_Setup, NoSpecialOptions) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountdir.string().c_str(), "--cipher", "aes-256-gcm", "-f"}, mountdir);
+    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "--cipher", "aes-256-gcm", "-f"}, mountpoint);
 }
 
 TEST_F(CliTest_Setup, NotexistingLogfileGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     const TempFile notexisting_logfile(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--logfile", notexisting_logfile.path().string().c_str()}, mountdir);
+    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--logfile", notexisting_logfile.path().string().c_str()}, mountpoint);
     //TODO Expect logfile is used (check logfile content)
 }
 
 TEST_F(CliTest_Setup, ExistingLogfileGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--logfile", logfile.path().string().c_str()}, mountdir);
+    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--logfile", logfile.path().string().c_str()}, mountpoint);
     //TODO Expect logfile is used (check logfile content)
 }
 
 TEST_F(CliTest_Setup, ConfigfileGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--config", configfile.path().string().c_str()}, mountdir);
+    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--config", configfile.path().string().c_str()}, mountpoint);
 }
 
 TEST_F(CliTest_Setup, AutocreateBasedir) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     const TempFile notexisting_basedir(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-    EXPECT_RUN_SUCCESS({notexisting_basedir.path().string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--create-missing-basedir"}, mountdir);
+    EXPECT_RUN_SUCCESS({notexisting_basedir.path().string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--create-missing-basedir"}, mountpoint);
 }
 
 TEST_F(CliTest_Setup, AutocreateBasedirFail) {
@@ -54,6 +59,10 @@ TEST_F(CliTest_Setup, AutocreateBasedirFail) {
 }
 
 TEST_F(CliTest_Setup, AutocreateMountpoint) {
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, which can't be created";
+#endif
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     const TempFile notexisting_mountpoint(false);
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
@@ -72,15 +81,17 @@ TEST_F(CliTest_Setup, AutocreateMountdirFail) {
 }
 
 TEST_F(CliTest_Setup, FuseOptionGiven) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     //Specify --cipher parameter to make it non-interactive
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
-    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountdir.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--", "-f"}, mountdir);
+    EXPECT_RUN_SUCCESS({basedir.string().c_str(), mountpoint.string().c_str(), "-f", "--cipher", "aes-256-gcm", "--", "-f"}, mountpoint);
 }
 
 TEST_F(CliTest, WorksWithCommasInBasedir) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     // This test makes sure we don't regress on https://github.com/cryfs/cryfs/issues/326
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     auto basedir_ = basedir / "pathname,with,commas";
     bf::create_directory(basedir_);
-    EXPECT_RUN_SUCCESS({basedir_.string().c_str(), mountdir.string().c_str(), "-f"}, mountdir);
+    EXPECT_RUN_SUCCESS({basedir_.string().c_str(), mountpoint.string().c_str(), "-f"}, mountpoint);
 }

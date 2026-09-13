@@ -19,16 +19,25 @@ namespace boost {
     }
 }
 
+// ProgramOptions makes the base and mount directories absolute, so a path that already is absolute
+// has to come back unchanged. On Windows a path starting with a slash isn't absolute, it is
+// relative to the current drive, so the test uses a path with a drive letter there.
+#if defined(_MSC_VER)
+constexpr const char* absolute_dir = "C:\\home\\user\\mydir";
+#else
+constexpr const char* absolute_dir = "/home/user/mydir";
+#endif
+
 class ProgramOptionsTest: public ProgramOptionsTestBase {};
 
 TEST_F(ProgramOptionsTest, BaseDir) {
-    const ProgramOptions testobj("/home/user/mydir", "", none, false, false, false, false, false, none, none, none, none, false, none, {"./myExecutable"});
-    EXPECT_EQ("/home/user/mydir", testobj.baseDir());
+    const ProgramOptions testobj(absolute_dir, "", none, false, false, false, false, false, none, none, none, none, false, none, {"./myExecutable"});
+    EXPECT_EQ(absolute_dir, testobj.baseDir());
 }
 
 TEST_F(ProgramOptionsTest, MountDir) {
-    const ProgramOptions testobj("", "/home/user/mydir", none, false, false, false, false, false, none, none, none, none, false, none, {"./myExecutable"});
-    EXPECT_EQ("/home/user/mydir", testobj.mountDir());
+    const ProgramOptions testobj("", absolute_dir, none, false, false, false, false, false, none, none, none, none, false, none, {"./myExecutable"});
+    EXPECT_EQ(absolute_dir, testobj.mountDir());
 }
 
 TEST_F(ProgramOptionsTest, ConfigfileNone) {

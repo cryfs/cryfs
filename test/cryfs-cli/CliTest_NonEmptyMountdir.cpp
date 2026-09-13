@@ -39,6 +39,10 @@ TEST_F(CliTest_NonEmptyMountdir, WhenMountdirIsNotEmpty_ThenMountingIsRefused) {
 }
 
 TEST_F(CliTest_NonEmptyMountdir, WhenMountdirIsNotEmptyAndNonemptyOptionIsGiven_ThenMountingSucceeds) {
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, not into a directory";
+#endif
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     PutFileIntoMountdir();
     bool wasHiddenWhileMounted = false;
     EXPECT_RUN_SUCCESS(args({"-o", "nonempty"}), mountdir, [&] {
@@ -49,6 +53,10 @@ TEST_F(CliTest_NonEmptyMountdir, WhenMountdirIsNotEmptyAndNonemptyOptionIsGiven_
 
 // Counter-test: an empty mount directory keeps working without the option.
 TEST_F(CliTest_NonEmptyMountdir, WhenMountdirIsEmpty_ThenMountingSucceeds) {
+#if defined(_MSC_VER)
+    GTEST_SKIP() << "CryFS on Windows mounts to a drive letter, not into a directory";
+#endif
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     ASSERT_TRUE(MountdirIsEmpty());
     EXPECT_RUN_SUCCESS(args(), mountdir);
 }
