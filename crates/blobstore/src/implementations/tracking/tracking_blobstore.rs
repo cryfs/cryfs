@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
@@ -42,7 +41,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> BlobStore for TrackingBlobStore<B>
 where
     B: BlobStore + AsyncDrop + Debug + Send + Sync + 'static,

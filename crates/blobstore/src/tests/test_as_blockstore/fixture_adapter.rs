@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_blockstore::tests::low_level::LLFixture;
 
 use super::block_store_adapter::BlockStoreAdapter;
@@ -12,7 +11,6 @@ pub struct TestFixtureAdapter<F: Fixture + Send + Sync, const FLUSH_CACHE_ON_YIE
     f: F,
 }
 
-#[async_trait]
 impl<F: Fixture + Send + Sync, const FLUSH_CACHE_ON_YIELD: bool> LLFixture
     for TestFixtureAdapter<F, FLUSH_CACHE_ON_YIELD>
 {

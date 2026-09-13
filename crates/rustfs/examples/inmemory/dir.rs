@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_rustfs::{
     DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, NumBytes, OpenInFlags, Uid,
     object_based_api::Dir,
@@ -166,7 +165,6 @@ impl InMemoryDirRef {
     }
 }
 
-#[async_trait]
 impl Dir for InMemoryDirRef {
     type Device = InMemoryDevice;
 

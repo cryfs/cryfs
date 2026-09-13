@@ -1,21 +1,24 @@
-use async_trait::async_trait;
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::time::SystemTime;
 
 use crate::common::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid};
 
-#[async_trait]
 pub trait Node {
     type Device: super::Device;
 
-    async fn as_file(&self) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::File<'_>>>;
-    async fn as_dir(&self) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Dir<'_>>>;
-    async fn as_symlink(
+    fn as_file(
         &self,
-    ) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Symlink<'_>>>;
+    ) -> impl Future<Output = FsResult<AsyncDropGuard<<Self::Device as super::Device>::File<'_>>>> + Send;
+    fn as_dir(
+        &self,
+    ) -> impl Future<Output = FsResult<AsyncDropGuard<<Self::Device as super::Device>::Dir<'_>>>> + Send;
+    fn as_symlink(
+        &self,
+    ) -> impl Future<Output = FsResult<AsyncDropGuard<<Self::Device as super::Device>::Symlink<'_>>>>
+    + Send;
 
-    async fn getattr(&self) -> FsResult<NodeAttrs>;
-    async fn setattr(
+    fn getattr(&self) -> impl Future<Output = FsResult<NodeAttrs>> + Send;
+    fn setattr(
         &self,
         mode: Option<Mode>,
         uid: Option<Uid>,
@@ -24,8 +27,8 @@ pub trait Node {
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
         ctime: Option<SystemTime>,
-    ) -> FsResult<NodeAttrs>;
+    ) -> impl Future<Output = FsResult<NodeAttrs>> + Send;
 
     #[cfg(feature = "testutils")]
-    async fn fsync(&self, datasync: bool) -> FsResult<()>;
+    fn fsync(&self, datasync: bool) -> impl Future<Output = FsResult<()>> + Send;
 }

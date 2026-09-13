@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_rustfs::FsError;
 use cryfs_rustfs::{FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::Symlink};
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
@@ -113,7 +112,6 @@ impl InMemorySymlinkRef {
     }
 }
 
-#[async_trait]
 impl Symlink for InMemorySymlinkRef {
     type Device = super::InMemoryDevice;
 

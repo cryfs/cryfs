@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use cryfs_rustfs::FsError;
 use cryfs_rustfs::{FsResult, OpenInFlags, object_based_api::File};
 use cryfs_utils::{
@@ -22,7 +20,6 @@ impl PassthroughFile {
     }
 }
 
-#[async_trait]
 impl File for PassthroughFile {
     type Device = PassthroughDevice;
 

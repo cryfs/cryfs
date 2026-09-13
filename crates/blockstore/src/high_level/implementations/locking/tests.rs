@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
 use anyhow::anyhow;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use mockall::predicate::{always, function};
 use std::sync::{
@@ -19,7 +18,6 @@ use crate::{instantiate_blockstore_tests_for_highlevel_blockstore, tests::utils:
 use cryfs_utils::async_drop::AsyncDropGuard;
 
 struct TestFixture<const FLUSH_CACHE_ON_YIELD: bool> {}
-#[async_trait]
 impl<const FLUSH_CACHE_ON_YIELD: bool> HLFixture for TestFixture<FLUSH_CACHE_ON_YIELD> {
     type ConcreteBlockStore = LockingBlockStore<InMemoryBlockStore>;
     fn new() -> Self {

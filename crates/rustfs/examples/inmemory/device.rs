@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
@@ -86,7 +85,6 @@ impl AsyncDrop for InMemoryDevice {
     }
 }
 
-#[async_trait]
 impl Device for InMemoryDevice {
     type Node = InMemoryNodeRef;
     type Dir<'a> = InMemoryDirRef;

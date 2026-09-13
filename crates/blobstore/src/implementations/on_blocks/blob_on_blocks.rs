@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 
@@ -35,7 +34,6 @@ impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Bl
     }
 }
 
-#[async_trait]
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> Blob for BlobOnBlocks<B> {
     fn id(&self) -> BlobId {
         BlobId {

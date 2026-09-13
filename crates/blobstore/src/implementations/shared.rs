@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use std::{fmt::Debug, ops::Deref};
 
@@ -7,7 +6,6 @@ use crate::{BlobId, interface::BlobStore};
 use cryfs_blockstore::RemoveResult;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 
-#[async_trait]
 impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<B> {
     type ConcreteBlob = B::ConcreteBlob;
 
@@ -62,13 +60,11 @@ impl<B: BlobStore + Send + Sync + Debug + AsyncDrop> BlobStore for AsyncDropArc<
 mod tests {
     use super::*;
     use crate::{BlobStoreOnBlocks, tests::fixture::Fixture};
-    use async_trait::async_trait;
     use byte_unit::Byte;
     use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
     use cryfs_utils::async_drop::AsyncDropGuard;
 
     struct TestFixture;
-    #[async_trait]
     impl Fixture for TestFixture {
         type ConcreteBlobStore =
             AsyncDropArc<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>;

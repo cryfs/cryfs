@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow, bail, ensure};
-use async_trait::async_trait;
 use divrem::DivCeil;
 use futures::{
     future::{self, FutureExt},
@@ -130,7 +129,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
             offset: u64,
             target: Mutex<&'a mut [u8]>,
         }
-        #[async_trait]
         impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync>
             TraversalByByteIndicesCallbacks<B> for Callbacks<'a>
         {
@@ -199,7 +197,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
             offset: u64,
             source: &'a [u8],
         }
-        #[async_trait]
         impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync>
             TraversalByByteIndicesCallbacks<B> for Callbacks<'a>
         {
@@ -281,7 +278,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
             new_num_leaves: NonZeroU64,
             new_last_leaf_size: u32,
         }
-        #[async_trait]
         impl<'a, B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync>
             traversal::TraversalCallbacks<B> for Callbacks<'a, B>
         {
@@ -459,7 +455,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
             wrapped: &'a C,
             _b: PhantomData<B>,
         }
-        #[async_trait]
         impl<
             'a,
             B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync,
@@ -739,16 +734,15 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> DataTr
     }
 }
 
-#[async_trait]
 trait TraversalByByteIndicesCallbacks<B: BlockStore + AsyncDrop + Debug + Send + Sync> {
     // TODO begin/count u32 or u64?
-    async fn on_existing_leaf(
+    fn on_existing_leaf(
         &self,
         index_of_first_leaf_byte: u64,
         leaf: LeafHandle<'_, B>,
         leaf_data_offset: u32,
         leaf_data_size: u32,
-    ) -> Result<()>;
+    ) -> impl Future<Output = Result<()>> + Send;
     // TODO num_bytes u32 or u64?
     fn on_create_leaf(&self, begin_byte: u64, num_bytes: u32) -> Data;
 }

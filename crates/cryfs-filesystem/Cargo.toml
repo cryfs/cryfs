@@ -12,7 +12,6 @@ version.workspace = true
 [dependencies]
 # TODO Cleaner dependency graph with fewer edges between different cryfs crates. For example, cryfs-filesystem already depends on cryfs-fsblobstore - why does it have to depend on blobstore and blockstore too? Also, why does cryfs-config need to depend on blockstore? And so on...
 anyhow.workspace = true
-async-trait.workspace = true
 atomic-time.workspace = true
 cryfs-blobstore = {path = "../blobstore"}
 cryfs-blockstore = {path = "../blockstore"}

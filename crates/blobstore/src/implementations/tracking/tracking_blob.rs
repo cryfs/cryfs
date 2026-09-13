@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
@@ -35,7 +34,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> Blob for TrackingBlob<B>
 where
     B: BlobStore + AsyncDrop + Debug + 'static,

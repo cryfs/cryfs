@@ -995,7 +995,6 @@ name = "cryfs-blobstore"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "binary-layout",
  "binrw",
  "byte-unit",
@@ -1021,7 +1020,6 @@ name = "cryfs-blockstore"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "base64 0.22.1",
  "binary-layout",
  "binrw",
@@ -1124,7 +1122,6 @@ version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
  "assert_cmd",
- "async-trait",
  "byte-unit",
  "clap",
  "clap-logflag",
@@ -1254,7 +1251,6 @@ name = "cryfs-filesystem"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "atomic-time",
  "cryfs-blobstore",
  "cryfs-blockstore",
@@ -1294,7 +1290,6 @@ name = "cryfs-rustfs"
 version = "2.0.0-alpha3"
 dependencies = [
  "anyhow",
- "async-trait",
  "cryfs-concurrent-store",
  "cryfs-utils",
  "cryfs-version",

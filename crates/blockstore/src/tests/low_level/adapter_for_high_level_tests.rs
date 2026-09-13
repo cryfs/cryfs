@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_utils::async_drop::AsyncDropGuard;
 use std::fmt::Debug;
 
@@ -12,7 +11,6 @@ pub struct FixtureAdapterForHLTests<F: LLFixture, const FLUSH_CACHE_ON_YIELD: bo
     f: F,
 }
 
-#[async_trait]
 impl<F, const FLUSH_CACHE_ON_YIELD: bool> HLFixture
     for FixtureAdapterForHLTests<F, FLUSH_CACHE_ON_YIELD>
 where

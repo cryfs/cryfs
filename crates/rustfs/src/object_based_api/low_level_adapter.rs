@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use futures::join;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -192,7 +191,6 @@ where
     }
 }
 
-#[async_trait]
 impl<Fs> AsyncFilesystemLL for ObjectBasedFsAdapterLL<Fs>
 where
     // TODO Do we need those Send + Sync + 'static bounds?

@@ -1,5 +1,4 @@
 use anyhow::{Context, Result, bail, ensure};
-use async_trait::async_trait;
 use binary_layout::prelude::*;
 use byte_unit::Byte;
 use derive_more::{Display, Error};
@@ -128,7 +127,6 @@ impl<B: Send + Debug + AsyncDrop<Error = anyhow::Error>> Debug for IntegrityBloc
     }
 }
 
-#[async_trait]
 impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>> BlockStoreReader
     for IntegrityBlockStore<B>
 {
@@ -263,7 +261,6 @@ impl<B: BlockStoreReader + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error
     }
 }
 
-#[async_trait]
 impl<B: BlockStoreDeleter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
     BlockStoreDeleter for IntegrityBlockStore<B>
 {
@@ -282,7 +279,6 @@ impl<B: BlockStoreDeleter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Erro
 
 create_block_data_wrapper!(BlockData);
 
-#[async_trait]
 impl<B: OptimizedBlockStoreWriter + Sync + Send + Debug + AsyncDrop<Error = anyhow::Error>>
     OptimizedBlockStoreWriter for IntegrityBlockStore<B>
 {
@@ -514,7 +510,6 @@ mod generic_tests {
     > {
         integrity_file_dir: TempDir,
     }
-    #[async_trait]
     impl<const ALLOW_INTEGRITY_VIOLATIONS: bool, const MISSING_BLOCK_IS_INTEGRITY_VIOLATION: bool>
         LLFixture
         for TestFixture<ALLOW_INTEGRITY_VIOLATIONS, MISSING_BLOCK_IS_INTEGRITY_VIOLATION>

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
@@ -101,7 +100,6 @@ where
     }
 }
 
-#[async_trait(?Send)]
 impl<Fs> AsyncFilesystem for ObjectBasedFsAdapter<Fs>
 where
     // TODO Are these Send+Sync bounds only needed because fuse_mt goes multi threaded or would it also be required for fuser? And do we really need the 'static?

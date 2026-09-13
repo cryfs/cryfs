@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use nix::fcntl::{AT_FDCWD, AtFlags};
 use std::os::unix::fs::PermissionsExt;
 use std::time::SystemTime;
@@ -114,7 +113,6 @@ impl PassthroughNode {
     }
 }
 
-#[async_trait]
 impl Node for PassthroughNode {
     type Device = PassthroughDevice;
 

@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::{collections::HashSet, fmt::Debug};
 
 use anyhow::{Result, bail};
-use async_trait::async_trait;
 use byte_unit::Byte;
 use cryfs_utils::async_drop::AsyncDrop;
 use cryfs_utils::{async_drop::AsyncDropGuard, data::Data};
@@ -101,7 +100,6 @@ impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> LockingB
     }
 }
 
-#[async_trait]
 impl<B: crate::low_level::LLBlockStore + Send + Sync + Debug + 'static> BlockStore
     for LockingBlockStore<B>
 {

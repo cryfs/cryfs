@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use std::fmt;
 use std::fmt::Debug;
@@ -33,7 +32,6 @@ impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobSt
     }
 }
 
-#[async_trait]
 impl<B: BlockStore<Block: Send + Sync> + AsyncDrop + Debug + Send + Sync> BlobStore
     for BlobStoreOnBlocks<B>
 {

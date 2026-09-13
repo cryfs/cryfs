@@ -36,7 +36,6 @@ cryfs_version::assert_cargo_version_equals_git_version!();
 
 pub mod reexports_for_tests {
     pub use anyhow;
-    pub use async_trait;
     pub use clap;
     pub use cryfs_version;
 }

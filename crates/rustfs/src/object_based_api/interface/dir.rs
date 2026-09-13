@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use std::fmt::Debug;
 
 use crate::{
@@ -10,7 +9,6 @@ use cryfs_utils::{
     path::PathComponent,
 };
 
-#[async_trait]
 pub trait Dir: AsyncDrop + Debug + Sized {
     type Device: super::Device;
 
@@ -18,64 +16,77 @@ pub trait Dir: AsyncDrop + Debug + Sized {
         this: AsyncDropGuard<Self>,
     ) -> AsyncDropGuard<<Self::Device as super::Device>::Node>;
 
-    async fn entries(&self) -> FsResult<Vec<DirEntry>>;
+    fn entries(&self) -> impl Future<Output = FsResult<Vec<DirEntry>>> + Send;
 
     /// If the child doesn't exist, this must fail with [crate::FsError::NodeDoesNotExist] rather than returning a [super::Node]
     /// object that throws [crate::FsError::NodeDoesNotExist] when any of its members that require existence are called.
-    async fn lookup_child(
+    fn lookup_child(
         &self,
         name: &PathComponent,
-    ) -> FsResult<AsyncDropGuard<<Self::Device as super::Device>::Node>>;
+    ) -> impl Future<Output = FsResult<AsyncDropGuard<<Self::Device as super::Device>::Node>>> + Send;
 
-    async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()>;
+    fn rename_child(
+        &self,
+        oldname: &PathComponent,
+        newname: &PathComponent,
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
-    async fn move_child_to(
+    fn move_child_to(
         &self,
         oldname: &PathComponent,
         newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
-    async fn create_child_dir(
+    fn create_child_dir(
         &self,
         name: &PathComponent,
         mode: Mode,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(
-        NodeAttrs,
-        AsyncDropGuard<<Self::Device as super::Device>::Dir<'_>>,
-    )>;
+    ) -> impl Future<
+        Output = FsResult<(
+            NodeAttrs,
+            AsyncDropGuard<<Self::Device as super::Device>::Dir<'_>>,
+        )>,
+    > + Send;
 
-    async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()>;
+    fn remove_child_dir(&self, name: &PathComponent) -> impl Future<Output = FsResult<()>> + Send;
 
-    async fn create_child_symlink(
+    fn create_child_symlink(
         &self,
         name: &PathComponent,
         // TODO Use custom type for target that can wrap an absolute-or-relative path
         target: &str,
         uid: Uid,
         gid: Gid,
-    ) -> FsResult<(
-        NodeAttrs,
-        AsyncDropGuard<<Self::Device as super::Device>::Symlink<'_>>,
-    )>;
+    ) -> impl Future<
+        Output = FsResult<(
+            NodeAttrs,
+            AsyncDropGuard<<Self::Device as super::Device>::Symlink<'_>>,
+        )>,
+    > + Send;
 
-    async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()>;
+    fn remove_child_file_or_symlink(
+        &self,
+        name: &PathComponent,
+    ) -> impl Future<Output = FsResult<()>> + Send;
 
-    async fn create_and_open_file(
+    fn create_and_open_file(
         &self,
         name: &PathComponent,
         mode: Mode,
         uid: Uid,
         gid: Gid,
         flags: OpenInFlags,
-    ) -> FsResult<(
-        NodeAttrs,
-        // TODO Should we return `File` instead of `Node`?
-        AsyncDropGuard<<Self::Device as super::Device>::Node>,
-        AsyncDropGuard<<Self::Device as super::Device>::OpenFile>,
-    )>;
+    ) -> impl Future<
+        Output = FsResult<(
+            NodeAttrs,
+            // TODO Should we return `File` instead of `Node`?
+            AsyncDropGuard<<Self::Device as super::Device>::Node>,
+            AsyncDropGuard<<Self::Device as super::Device>::OpenFile>,
+        )>,
+    > + Send;
 
-    async fn fsync(&self, datasync: bool) -> FsResult<()>;
+    fn fsync(&self, datasync: bool) -> impl Future<Output = FsResult<()>> + Send;
 }

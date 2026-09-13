@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::{self, Debug};
@@ -40,7 +39,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> BlockStoreReader for BlockStoreAdapter<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -98,7 +96,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> BlockStoreDeleter for BlockStoreAdapter<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -110,7 +107,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> BlockStoreWriter for BlockStoreAdapter<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
