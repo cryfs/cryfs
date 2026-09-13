@@ -6,7 +6,7 @@ use cryfs_rustfs::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::{AbsolutePathBuf, PathComponent},
-    with_async_drop_2,
+    with_async_drop,
 };
 use nix::fcntl::{AT_FDCWD, AtFlags};
 use std::os::unix::fs::OpenOptionsExt;
@@ -63,7 +63,7 @@ impl Dir for PassthroughDir {
         newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
     ) -> FsResult<()> {
-        with_async_drop_2!(newparent, {
+        with_async_drop!(newparent, {
             let old_path = self.path.clone().push(oldname);
             let new_path = newparent.path.clone().push(newname);
             tokio::fs::rename(old_path, new_path).await.map_error()
@@ -134,7 +134,7 @@ impl Dir for PassthroughDir {
         let node = PassthroughDir::new(path.clone());
         // TODO Return value directly without another call but make sure it returns the same value
         let child_node = PassthroughNode::new(path);
-        let attrs = with_async_drop_2!(child_node, { child_node.getattr().await })?;
+        let attrs = with_async_drop!(child_node, { child_node.getattr().await })?;
         Ok((attrs, AsyncDropGuard::new(node)))
     }
 
@@ -172,7 +172,7 @@ impl Dir for PassthroughDir {
             .map_err(|_: tokio::task::JoinError| FsError::UnknownError)??;
         // TODO Return value directly without another call but make sure it returns the same value
         let node = PassthroughNode::new(path);
-        with_async_drop_2!(node, {
+        with_async_drop!(node, {
             let attrs = node.getattr().await?;
             let symlink = node.as_symlink().await?;
             Ok((attrs, symlink))

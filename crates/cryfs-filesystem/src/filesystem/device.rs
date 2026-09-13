@@ -4,7 +4,7 @@ use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
 use cryfs_rustfs::AtimeUpdateBehavior;
 use cryfs_rustfs::object_based_api::Dir as _;
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::with_async_drop;
 use futures::join;
 use maybe_owned::MaybeOwned;
 use std::sync::Arc;
@@ -85,7 +85,7 @@ where
     pub async fn sanity_check(&self) -> Result<()> {
         // Make sure we can load the root dir and load its children
         let rootdir = self.rootdir().await.context("Didn't find root blob")?;
-        with_async_drop_2!(rootdir, {
+        with_async_drop!(rootdir, {
             rootdir.entries().await.context("Couldn't load root blob")?;
             Ok(())
         })
@@ -371,7 +371,7 @@ where
 
             match self.load_two_blobs(source_parent, dest_parent).await? {
                 LoadTwoBlobsResult::AreSameBlob(blob) => {
-                    with_async_drop_2!(
+                    with_async_drop!(
                         blob,
                         {
                             blob.with_lock(async |blob| {
@@ -402,7 +402,7 @@ where
                     //      blobs at once is risky for deadlocks if not done in a consistent order.
                     // TODO Improve concurrency in this function
 
-                    with_async_drop_2!(
+                    with_async_drop!(
                         source_parent_blob,
                         dest_parent_blob,
                         {
@@ -431,7 +431,7 @@ where
                                 .ok_or(FsError::NodeDoesNotExist)?;
 
                             // TODO Drop self_blob concurrently with source_parent_blob and dest_parent_blob
-                            with_async_drop_2!(
+                            with_async_drop!(
                                 self_blob,
                                 {
                                     source_parent_blob
@@ -589,7 +589,7 @@ where
                 FsError::NodeDoesNotExist,
             )?;
 
-        with_async_drop_2!(
+        with_async_drop!(
             overwritten_blob,
             {
                 overwritten_blob.with_lock(async |overwritten_blob| {

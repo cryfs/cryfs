@@ -1,4 +1,4 @@
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::with_async_drop;
 use std::fmt::Debug;
 use std::time::SystemTime;
 use tokio::join;
@@ -320,7 +320,7 @@ where
         new_size: NumBytes,
     ) -> FsResult<()> {
         let blob = self.load_blob(blobstore).await?;
-        with_async_drop_2!(
+        with_async_drop!(
             blob,
             {
                 blob.with_lock(async |mut blob| {

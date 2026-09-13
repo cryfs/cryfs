@@ -21,7 +21,7 @@ use cryfs_rustfs::{DirEntry, FsError, FsResult, NodeAttrs, NodeKind, object_base
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     path::PathComponent,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 #[derive(Debug)]
@@ -253,7 +253,7 @@ where
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(
+                with_async_drop!(
                     blob,
                     {
                         blob.with_lock(async |blob| {
@@ -300,12 +300,12 @@ where
         //      blobs at once is risky for deadlocks if not done in a consistent order.
 
         // TODO Improve concurrency in this function
-        with_async_drop_2!(newparent, {
+        with_async_drop!(newparent, {
             let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
             let (source_parent, dest_parent) =
                 flatten_async_drop(source_parent, dest_parent).await?;
             // TODO Drop newparent and self_blob concurrently with source_parent and dest_parent
-            with_async_drop_2!(
+            with_async_drop!(
                 source_parent,
                 dest_parent,
                 {
@@ -341,7 +341,7 @@ where
                             // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
                             FsError::NodeDoesNotExist,
                         )?;
-                    with_async_drop_2!(
+                    with_async_drop!(
                         self_blob,
                         {
                             let entry = source_parent
@@ -439,7 +439,7 @@ where
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(
+                with_async_drop!(
                     blob,
                     {
                         blob.with_lock(async |blob| {
@@ -561,7 +561,7 @@ where
         self.node_info
             .concurrently_update_modification_timestamp_in_parent( async || {
                 let self_blob = self.load_blob().await?;
-                with_async_drop_2!(self_blob, {
+                with_async_drop!(self_blob, {
                     let child_id = self_blob
                         .with_lock(async |self_blob| {
                             let self_blob = Self::blob_as_dir(&*self_blob)?;
@@ -741,7 +741,7 @@ where
         self.node_info.concurrently_update_modification_timestamp_in_parent( async || {
             let blob = self.load_blob().await?;
 
-            with_async_drop_2!(blob, {
+            with_async_drop!(blob, {
                 let removed = blob.with_lock(async |blob| {
                     let blob = Self::blob_as_dir_mut(&mut *blob)?;
                     // First remove the entry, then flush that change, and only then remove the blob.

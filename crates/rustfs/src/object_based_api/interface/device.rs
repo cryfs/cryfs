@@ -7,7 +7,7 @@ use crate::common::{FsError, FsResult, Statfs};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::AbsolutePath,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 // TODO We only call this `Device` because that's the historical name from the c++ Cryfs version. We should probably rename this to `Filesystem`.
@@ -74,7 +74,7 @@ pub trait Device {
                         match dir {
                             Ok(dir) => {
                                 // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
-                                with_async_drop_2!(dir, {
+                                with_async_drop!(dir, {
                                     let child = dir.lookup_child(component);
                                     child.await
                                 })
@@ -91,7 +91,7 @@ pub trait Device {
                     match dir {
                         Ok(dir) => {
                             // TODO Can we avoid the async_drop here by using something like dir.into_lookup_child() ?
-                            with_async_drop_2!(dir, {
+                            with_async_drop!(dir, {
                                 let child = dir.lookup_child(node_name);
                                 child.await
                             })

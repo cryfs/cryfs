@@ -10,7 +10,7 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     mutex::lock_in_ptr_order,
     path::AbsolutePath,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 use super::dir::{DirInode, InMemoryDirRef};
@@ -118,17 +118,17 @@ impl Device for InMemoryDevice {
                 return Err(FsError::InvalidOperation);
             };
             let new_parent = self.rootdir.load_node(new_parent_path)?;
-            with_async_drop_2!(new_parent, {
+            with_async_drop!(new_parent, {
                 let new_parent = new_parent.as_dir().await?;
-                with_async_drop_2!(new_parent, {
+                with_async_drop!(new_parent, {
                     if old_parent_path == new_parent_path {
                         // We're just renaming it within one directory
                         new_parent.rename(old_name, new_name)
                     } else {
                         let source_parent = self.rootdir.load_node(old_parent_path)?;
-                        with_async_drop_2!(source_parent, {
+                        with_async_drop!(source_parent, {
                             let source_parent = source_parent.as_dir().await?;
-                            with_async_drop_2!(source_parent, {
+                            with_async_drop!(source_parent, {
                                 // We're moving it to another directory
                                 let (mut source_inode, mut target_inode) =
                                     lock_in_ptr_order(&source_parent.inode(), &new_parent.inode());

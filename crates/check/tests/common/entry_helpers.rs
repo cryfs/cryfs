@@ -25,7 +25,7 @@ use cryfs_fsblobstore::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::AbsolutePathBuf,
-    with_async_drop_2,
+    with_async_drop,
 };
 use cryfs_utils::{data::Data, testutils::data_fixture::DataFixture};
 
@@ -941,7 +941,7 @@ where
     Box::pin(
         async move {
             let blob = fsblobstore.load(&dir_blob_id).await.unwrap().unwrap();
-            let (children, dir_children) = with_async_drop_2!(blob, {
+            let (children, dir_children) = with_async_drop!(blob, {
                 let blob = blob.as_dir().expect("Expected a directory blob");
                 let children = blob
                     .entries()
@@ -980,7 +980,7 @@ where
     Box::pin(
         async move {
             let blob = fsblobstore.load(&maybe_dir_blob_id).await.unwrap().unwrap();
-            with_async_drop_2!(blob, {
+            with_async_drop!(blob, {
                 if let Ok(blob) = blob.as_dir() {
                     let children = blob
                         .entries()

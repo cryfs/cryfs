@@ -58,17 +58,17 @@ impl AsyncDrop for CompositeResource {
 A type that also implements `Drop` cannot be destructured. Store its guard members
 in an `Option` and `.take()` them in `async_drop_impl` instead.
 
-## Pattern 3: Using `with_async_drop_2!` Macro
+## Pattern 3: Using `with_async_drop!` Macro
 
 The preferred approach when it fits - automatically handles cleanup:
 
 ```rust
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::with_async_drop;
 
 async fn process_file(path: &Path) -> Result<Data> {
     let file = open_file(path).await?;  // Returns AsyncDropGuard<File>
 
-    with_async_drop_2!(file, {
+    with_async_drop!(file, {
         // Use file here
         let data = file.read_all().await?;
         process(data).await
@@ -81,32 +81,32 @@ async fn process_file(path: &Path) -> Result<Data> {
 
 ```rust
 // Basic - propagates async_drop errors as-is
-with_async_drop_2!(value, {
+with_async_drop!(value, {
     // ... work ...
     Ok(result)
 })
 
 // With error mapping - converts async_drop errors
-with_async_drop_2!(value, {
+with_async_drop!(value, {
     // ... work ...
     Ok(result)
 }, MyError::from)
 
 // Infallible - for types with Error = Never
-with_async_drop_2_infallible!(value, {
+with_async_drop_infallible!(value, {
     // ... work ...
     result
 })
 
 // Several independent guards - all forms accept a list; the guards are dropped
 // concurrently after the block (they must share the same error type)
-with_async_drop_2!(source, dest, {
+with_async_drop!(source, dest, {
     // ... work with source and dest ...
     Ok(result)
 })
 ```
 
-Prefer the multi-guard form over nesting one `with_async_drop_2!` inside another: it
+Prefer the multi-guard form over nesting one `with_async_drop!` inside another: it
 is flatter and drops the guards concurrently.
 
 ## Pattern 4: Keeping the Guard on Success, Dropping It on Error
@@ -362,7 +362,7 @@ async fn good_example(mut resource: AsyncDropGuard<R>) -> Result<()> {
 
 // BETTER - use the macro
 async fn best_example(resource: AsyncDropGuard<R>) -> Result<()> {
-    with_async_drop_2!(resource, {
+    with_async_drop!(resource, {
         resource.step1().await
     })
 }

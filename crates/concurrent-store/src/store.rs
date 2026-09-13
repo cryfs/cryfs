@@ -17,7 +17,7 @@ use crate::guard::LoadedEntryGuard;
 use cryfs_utils::async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard};
 use cryfs_utils::event::Event;
 use cryfs_utils::stream::for_each_unordered;
-use cryfs_utils::with_async_drop_2;
+use cryfs_utils::with_async_drop;
 
 // TODO This is currently not cancellation safe. If a task waiting for an entry to load is cancelled, the num_waiters and num_unfulfilled_waiters counts will be wrong.
 
@@ -379,7 +379,7 @@ where
     ) -> EntryStateLoading<V, E> {
         let inner = AsyncDropArc::clone(&self.inner);
         let loading_task = async move {
-            with_async_drop_2!(inner, {
+            with_async_drop!(inner, {
                 // Run loading_fn concurrently, without a lock on `entries`.
                 let result = loading_fn.await;
 
@@ -620,7 +620,7 @@ where
         let (immediate_drop_request, entry) = loaded.into_inner();
         let this = AsyncDropArc::clone(this);
         async move {
-            with_async_drop_2!(this, {
+            with_async_drop!(this, {
                 // This will be awaited after the lock on entries is released, so we can concurrently drop
                 // the entry without blocking other operations.
                 match immediate_drop_request {
@@ -655,7 +655,7 @@ where
     {
         let this = AsyncDropArc::clone(this);
         async move {
-            with_async_drop_2!(this, {
+            with_async_drop!(this, {
                 Self::_execute_immediate_drop(&this, key, None, drop_fn).await;
                 Ok(())
             })
