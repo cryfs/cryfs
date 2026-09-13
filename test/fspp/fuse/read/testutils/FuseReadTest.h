@@ -23,7 +23,8 @@ public:
     });
 
   ::testing::Action<fspp::num_bytes_t(int, void*, fspp::num_bytes_t, fspp::num_bytes_t)> ReturnSuccessfulReadRegardingSize(fspp::num_bytes_t filesize) {
-    return ::testing::Invoke([filesize](int, void *, fspp::num_bytes_t count, fspp::num_bytes_t offset) {
+    // gmock copies the callable into the Action; the analyzer misreads the temporary as escaping.
+    return ::testing::Invoke([filesize](int, void *, fspp::num_bytes_t count, fspp::num_bytes_t offset) {  // NOLINT(clang-analyzer-core.StackAddressEscape)
       fspp::num_bytes_t ableToReadCount = std::min(count, filesize - offset);
       return ableToReadCount;
     });

@@ -57,6 +57,13 @@ namespace value_type {
 * - val & val (returns val)
 * - val ^ val (returns val)
 */
+// NOLINTBEGIN(bugprone-crtp-constructor-accessibility) -- the check wants each
+// CRTP base's constructors private with `friend ConcreteType`. That cannot be applied to
+// this three-level hierarchy: OrderedIdValueType and FlagsValueType pull IdValueType's
+// constructor in with `using IdValueType::IdValueType`, and an intermediate base is not
+// the ConcreteType that the friend declaration would name, so it would lose the access it
+// needs. The misuse the check guards against is already constrained here - the protected
+// constructor static_asserts the CRTP contract, and every concrete type is declared final.
 template <class ConcreteType, class UnderlyingType>
 class IdValueType {
 public:
@@ -258,6 +265,7 @@ public:
         return lhs ^= rhs;
     }
 };
+// NOLINTEND(bugprone-crtp-constructor-accessibility)
 
 }
 }

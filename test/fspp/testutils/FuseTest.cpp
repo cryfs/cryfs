@@ -78,7 +78,8 @@ const bf::path &FuseTest::TempTestFS::mountDir() const {
 }
 
 Action<void(const boost::filesystem::path&, fspp::fuse::STAT*)> FuseTest::ReturnIsFileWithSize(fspp::num_bytes_t size) {
-  return Invoke([size](const boost::filesystem::path&, fspp::fuse::STAT* result) {
+  // gmock copies the callable into the Action; the analyzer misreads the temporary as escaping.
+  return Invoke([size](const boost::filesystem::path&, fspp::fuse::STAT* result) {  // NOLINT(clang-analyzer-core.StackAddressEscape)
     result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
     result->st_nlink = 1;
     result->st_size = size.value();
@@ -107,7 +108,8 @@ Action<void(int, fspp::fuse::STAT*)> FuseTest::ReturnIsFileFstat =
   });
 
 Action<void(int, fspp::fuse::STAT*)> FuseTest::ReturnIsFileFstatWithSize(fspp::num_bytes_t size) {
-  return Invoke([size](int, struct ::stat *result) {
+  // gmock copies the callable into the Action; the analyzer misreads the temporary as escaping.
+  return Invoke([size](int, struct ::stat *result) {  // NOLINT(clang-analyzer-core.StackAddressEscape)
       result->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
       result->st_nlink = 1;
       result->st_size = size.value();

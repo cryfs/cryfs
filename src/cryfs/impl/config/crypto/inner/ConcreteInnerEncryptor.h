@@ -45,7 +45,7 @@ namespace cryfs {
         if (configData == boost::none) {
             return boost::none;
         }
-        return std::move(*configData);
+        return configData;
     }
 
     template<class Cipher>

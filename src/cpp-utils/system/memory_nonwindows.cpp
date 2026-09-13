@@ -12,6 +12,8 @@ using namespace cpputils::logging;
 namespace cpputils {
 
 void* UnswappableAllocator::allocate(size_t size) {
+    // data is returned as a non-const void*, so it cannot be const-qualified here.
+    // NOLINTNEXTLINE(misc-const-correctness)
     void* data = DefaultAllocator().allocate(size);
     const int result = ::mlock(data, size);
     if (0 != result) {

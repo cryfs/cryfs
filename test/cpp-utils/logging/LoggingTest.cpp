@@ -9,6 +9,7 @@
 using namespace cpputils::logging;
 using std::string;
 
+namespace {
 void logAndExit(const string &message) {
     LOG(INFO, message);
     cpputils::logging::flush();
@@ -20,6 +21,7 @@ void setLoggerAndLogAndExit(const string &message) {
     LOG(INFO, message);
     cpputils::logging::flush();
     exit(1);
+}
 }
 
 // The next two tests log in a child process instead of capturing stderr in

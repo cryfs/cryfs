@@ -401,7 +401,7 @@ namespace {
 }
 
 Fuse::~Fuse() {
-  for(char *arg : _argv) {
+  for(const char *arg : _argv) {
     delete[] arg;
     arg = nullptr;
   }
@@ -1266,6 +1266,7 @@ int Fuse::readdir(const bf::path &path, void *buf, fuse_fill_dir_t filler, int64
         ASSERT(false, "Unknown entry type");
       }
 #if FUSE_MAJOR_VERSION >= 3
+      // 0 means "no flags"; libfuse declares no zero enumerator for fuse_fill_dir_flags.
       if (filler(buf, entry.name.c_str(), &stbuf, 0, static_cast<fuse_fill_dir_flags>(0)) != 0) {
 #else
       if (filler(buf, entry.name.c_str(), &stbuf, 0) != 0) {

@@ -91,6 +91,7 @@ TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir) {
     Test_Run_Error("Error 18: base directory can't be inside the mount directory", ErrorCode::BaseDirInsideMountDir);
 }
 
+namespace {
 bf::path make_relative(const bf::path &path) {
     bf::path result;
     const bf::path cwd = bf::current_path();
@@ -99,6 +100,7 @@ bf::path make_relative(const bf::path &path) {
     }
     result /= path.relative_path();
     return result;
+}
 }
 
 TEST_P(CliTest_WrongEnvironment, MountDirIsBaseDir_MountDirRelative) {

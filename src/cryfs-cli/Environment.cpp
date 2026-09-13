@@ -13,7 +13,7 @@ namespace cryfs_cli {
     const string Environment::LOCALSTATEDIR_KEY = "CRYFS_LOCAL_STATE_DIR";
 
     bool Environment::isNoninteractive() {
-        char *frontend = std::getenv(FRONTEND_KEY.c_str());
+        const char *frontend = std::getenv(FRONTEND_KEY.c_str());
         return frontend != nullptr && frontend == FRONTEND_NONINTERACTIVE;
     }
 

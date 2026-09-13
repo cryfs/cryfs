@@ -6,6 +6,7 @@
 #include <Windows.h>
 #endif
 
+namespace {
 void handle_exit_signal(char **argv) {
 	const std::string kind = argv[1];
 	if (kind == "exception") {
@@ -25,6 +26,7 @@ void handle_exit_signal(char **argv) {
 		}
 #endif
 	}
+}
 }
 
 

@@ -18,7 +18,10 @@ using namespace cryfs;
 
 // This is needed for google test
 namespace boost {
-    inline ostream &operator<<(ostream &stream, const Data &) {
+    // gtest finds this printer by ADL, which looks in the enclosing namespace itself and
+    // does not follow the implicit using-directive of a nested unnamed namespace. Moving it
+    // into one would silently stop it being found, so static is the right mechanism here.
+    static inline ostream &operator<<(ostream &stream, const Data &) {  // NOLINT(misc-use-anonymous-namespace)
         return stream << "cpputils::Data()";
     }
 }

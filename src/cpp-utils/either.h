@@ -9,7 +9,10 @@
 namespace cpputils {
 
     template<class Left, class Right>
-    class either final {
+    // bugprone-tagged-union-member-count miscounts the tags here: Side is declared inline
+    // with its variable, `enum class Side : uint8_t {left, right} _side;`, and has two
+    // enumerators for the union's two members, not one.
+    class either final {  // NOLINT(bugprone-tagged-union-member-count)
     public:
         template<class Head, class... Tail, std::enable_if_t<std::is_constructible<Left, Head, Tail...>::value && !std::is_constructible<Right, Head, Tail...>::value>* = nullptr>
         either(Head&& construct_left_head_arg, Tail&&... construct_left_tail_args) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::forward<Head>(construct_left_head_arg), std::forward<Tail>(construct_left_tail_args)...)))
@@ -24,7 +27,7 @@ namespace cpputils {
         }
 
         //TODO Try allowing copy-construction when Left/Right types are std::is_convertible
-        either(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right)))
+        either(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right)))  // NOLINT(cppcoreguidelines-pro-type-union-access) - the noexcept spec names union members
                 : _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(rhs._left);  // NOLINT(cppcoreguidelines-pro-type-union-access)
@@ -34,7 +37,7 @@ namespace cpputils {
         }
 
         // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations) -- we're only noexcept if the underlying types are
-        either(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right))))
+        either(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right))))  // NOLINT(cppcoreguidelines-pro-type-union-access) - the noexcept spec names union members
                 : _side(rhs._side) {
             if(_side == Side::left) {
                 _construct_left(std::move(rhs._left));  // NOLINT(cppcoreguidelines-pro-type-union-access)
@@ -49,7 +52,7 @@ namespace cpputils {
 
         //TODO Try allowing copy-assignment when Left/Right types are std::is_convertible
         // NOLINTNEXTLINE(cert-oop54-cpp)
-        either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right))) {
+        either<Left, Right> &operator=(const either<Left, Right> &rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(rhs._left)) && noexcept(std::declval<either<Left, Right>>()._construct_right(rhs._right))) {  // NOLINT(cppcoreguidelines-pro-type-union-access) - the noexcept spec names union members
             if (this == &rhs) {
                 return *this;
             }
@@ -65,7 +68,7 @@ namespace cpputils {
         }
 
         // NOLINTNEXTLINE(cppcoreguidelines-noexcept-move-operations) -- we're only noexcept if the underlying types are
-        either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right)))) {
+        either<Left, Right> &operator=(either<Left, Right> &&rhs) noexcept(noexcept(std::declval<either<Left, Right>>()._construct_left(std::move(rhs._left))) && noexcept(std::declval<either<Left, Right>>()._construct_right(std::move(rhs._right)))) {  // NOLINT(cppcoreguidelines-pro-type-union-access) - the noexcept spec names union members
             if (this == &rhs) {
                 return *this;
             }

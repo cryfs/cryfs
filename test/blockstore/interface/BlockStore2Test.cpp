@@ -15,7 +15,10 @@ using cpputils::DataFixture;
 using boost::optional;
 
 namespace boost {
-    inline void PrintTo(const optional<cpputils::Data> &, ::std::ostream *os) {
+    // gtest finds this printer by ADL, which looks in the enclosing namespace itself and
+    // does not follow the implicit using-directive of a nested unnamed namespace. Moving it
+    // into one would silently stop it being found, so static is the right mechanism here.
+    static inline void PrintTo(const optional<cpputils::Data> &, ::std::ostream *os) {  // NOLINT(misc-use-anonymous-namespace)
         *os << "optional<Data>";
     }
 }

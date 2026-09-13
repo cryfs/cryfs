@@ -49,7 +49,7 @@ struct FuseOpenFileListTest: public ::testing::Test {
   }
   void check(int id, int fileid, int flags) {
 	  list.load(id, [=](fspp::OpenFile* _openFile) {
-		  MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(_openFile);
+		  const MockOpenFile *openFile = dynamic_cast<MockOpenFile*>(_openFile);
 		  EXPECT_EQ(fileid, openFile->fileid);
 		  EXPECT_EQ(flags, openFile->flags);
 	  });

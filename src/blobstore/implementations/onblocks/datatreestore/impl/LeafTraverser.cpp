@@ -236,7 +236,7 @@ namespace blobstore {
             }
 
             void LeafTraverser::_whileRootHasOnlyOneChildReplaceRootWithItsChild(unique_ref<DataNode>* root) {
-                DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root->get());
+                const DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root->get());
                 if (inner != nullptr && inner->numChildren() == 1) {
                     ASSERT(!_readOnlyTraversal, "Can't decrease tree depth in a read-only traversal");
 

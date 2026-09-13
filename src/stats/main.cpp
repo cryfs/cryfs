@@ -41,6 +41,7 @@ using namespace cryfs::fsblobstore;
 
 using namespace cryfs_stats;
 
+namespace {
 void printNode(unique_ref<DataNode> node) {
     std::cout << "BlockId: " << node->blockId().ToString() << ", Depth: " << static_cast<int>(node->depth()) << " ";
     auto innerNode = dynamic_pointer_move<DataInnerNode>(node);
@@ -66,6 +67,7 @@ unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader
     };
     auto integrityBlockStore = make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, config.myClientId, false, true, onIntegrityViolation);
     return make_unique_ref<LowToHighLevelBlockStore>(std::move(integrityBlockStore));
+}
 }
 
 struct AccumulateBlockIds final {
@@ -102,6 +104,7 @@ private:
     size_t _numBlocks;
 };
 
+namespace {
 std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
@@ -169,6 +172,7 @@ void printConfig(const CryConfig& config) {
     std::cout << "\n- Has version numbers: " << (config.HasVersionNumbers() ? "yes" : "no");
 #endif
     std::cout << "\n----------------------------------------------------\n";
+}
 }
 
 int main(int argc, char* argv[]) {

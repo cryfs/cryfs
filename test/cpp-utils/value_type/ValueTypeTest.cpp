@@ -286,9 +286,11 @@ TYPED_TEST(OrderedIdValueTypeTest, Set) {
 
 namespace QuantityValueTypeTest_constexpr_test {
     static_assert(++MyQuantityValueType(3) == MyQuantityValueType(4), "");
-	static_assert(MyQuantityValueType(3)++ == MyQuantityValueType(3), "");
+	// The post-increment is the subject of the assertion, not an accident.
+	static_assert(MyQuantityValueType(3)++ == MyQuantityValueType(3), "");  // NOLINT(bugprone-inc-dec-in-conditions)
 	static_assert(--MyQuantityValueType(3) == MyQuantityValueType(2), "");
-	static_assert(MyQuantityValueType(3)-- == MyQuantityValueType(3), "");
+	// The post-decrement is the subject of the assertion, not an accident.
+	static_assert(MyQuantityValueType(3)-- == MyQuantityValueType(3), "");  // NOLINT(bugprone-inc-dec-in-conditions)
     static_assert((MyQuantityValueType(3) += MyQuantityValueType(2)) == MyQuantityValueType(5), "");
     static_assert((MyQuantityValueType(3) -= MyQuantityValueType(2)) == MyQuantityValueType(1), "");
     static_assert((MyQuantityValueType(3) *= 2) == MyQuantityValueType(6), "");
