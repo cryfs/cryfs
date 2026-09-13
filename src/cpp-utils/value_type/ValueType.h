@@ -57,7 +57,7 @@ namespace value_type {
 * - val & val (returns val)
 * - val ^ val (returns val)
 */
-// NOLINTBEGIN(cppcoreguidelines-crtp-constructor-accessibility) -- the check wants each
+// NOLINTBEGIN(bugprone-crtp-constructor-accessibility) -- the check wants each
 // CRTP base's constructors private with `friend ConcreteType`. That cannot be applied to
 // this three-level hierarchy: OrderedIdValueType and FlagsValueType pull IdValueType's
 // constructor in with `using IdValueType::IdValueType`, and an intermediate base is not
@@ -265,7 +265,7 @@ public:
         return lhs ^= rhs;
     }
 };
-// NOLINTEND(cppcoreguidelines-crtp-constructor-accessibility)
+// NOLINTEND(bugprone-crtp-constructor-accessibility)
 
 }
 }

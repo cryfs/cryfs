@@ -53,8 +53,8 @@ int FuseReadDirTest::ReadDirReturnError(const char *dirname) {
 }
 
 DIR *FuseReadDirTest::openDir(TempTestFS *fs, const char *dirname) {
-  // NOLINTNEXTLINE(misc-const-correctness) - dir is returned as a non-const DIR*,
-  // so it cannot be const-qualified here.
+  // dir is returned as a non-const DIR*, so it cannot be const-qualified here.
+  // NOLINTNEXTLINE(misc-const-correctness)
   DIR *dir = openDirAllowError(fs, dirname);
   EXPECT_NE(nullptr, dir) << "Opening directory failed";
   return dir;

@@ -4,8 +4,9 @@
 
 namespace fspp
 {
-    // NOLINTNEXTLINE(misc-use-internal-linkage) - this function exists precisely to give
-    // the library an external symbol, per the comment above. Internal linkage would emit
-    // no symbol at all and bring back the macOS link error this file works around.
+    // This function exists precisely to give the library an external symbol, per the
+    // comment above. Internal linkage would emit no symbol at all and bring back the
+    // macOS link error this file works around.
+    // NOLINTNEXTLINE(misc-use-internal-linkage)
     void dummy() {}
 }
