@@ -60,10 +60,10 @@ jobs:
         # macos-15 is the one kept, because what macOS adds over Linux is the
         # Darwin platform rather than a compiler version, and the Linux runners
         # already build clang 13 to 19 and gcc 9 to 14 on every pull request.
-        # Of the two dropped, macos-15-intel is x86_64, the architecture the
-        # Linux runners cover thoroughly, and macos-26 is a second Darwin SDK
-        # behind the same architecture as macos-15. Neither is a combination
-        # only macOS can show, and a release branch keeps both.
+        # Of the three dropped, macos-15-intel and macos-26-intel are x86_64,
+        # the architecture the Linux runners cover thoroughly, and macos-26 is
+        # a second Darwin SDK behind the same architecture as macos-15. None is
+        # a combination only macOS can show, and a release branch keeps them.
         #
         # This is the os axis alone. The build types, the compiler list and the
         # exclusions that say which compiler exists on which runner are the same
@@ -72,7 +72,7 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
         run: |
-          full='["macos-15","macos-15-intel","macos-26","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
+          full='["macos-15","macos-15-intel","macos-26","macos-26-intel","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
           pr='["macos-15","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"]'
           if [[ "$EVENT" == "pull_request" ]]; then
             os_list="$pr"
@@ -350,6 +350,40 @@ jobs:
             compiler: {compiler: gcc, version: 15, libcxx: libstdc++11, cc: gcc-15, cxx: g++-15, homebrew_package: gcc@15, apt_package: g++-15}
           - os: macos-26
             compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
+          # MacOS 26-intel is the same OS, so the same compilers are missing there.
+          - os: macos-26-intel
+            compiler: {compiler: clang, version: 13, libcxx: libc++, cc: clang-13, cxx: clang++-13, macos_cc: llvm@13/bin/clang, macos_cxx: llvm@13/bin/clang++, apt_package: "clang-13 libc++-13-dev libc++abi-13-dev libunwind-13-dev libomp-13-dev", homebrew_package: llvm@13}
+          - os: macos-26-intel
+            compiler: {compiler: clang, version: 14, libcxx: libc++, cc: clang-14, cxx: clang++-14, macos_cc: llvm@14/bin/clang, macos_cxx: llvm@14/bin/clang++, apt_package: "clang-14 libc++-14-dev libc++abi-14-dev libunwind-14-dev libomp-14-dev", homebrew_package: llvm@14}
+          - os: macos-26-intel
+            compiler: {compiler: clang, version: 15, libcxx: libc++, cc: clang-15, cxx: clang++-15, macos_cc: llvm@15/bin/clang, macos_cxx: llvm@15/bin/clang++, apt_package: "clang-15 libc++-15-dev libc++abi-15-dev libunwind-15-dev libomp-15-dev", homebrew_package: llvm@15}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 9, libcxx: libstdc++11, cc: gcc-9, cxx: g++-9, homebrew_package: gcc@9, apt_package: g++-9}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 10, libcxx: libstdc++11, cc: gcc-10, cxx: g++-10, homebrew_package: gcc@10, apt_package: g++-10}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 11, libcxx: libstdc++11, cc: gcc-11, cxx: g++-11, homebrew_package: gcc@11, apt_package: g++-11}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 12, libcxx: libstdc++11, cc: gcc-12, cxx: g++-12, homebrew_package: gcc@12, apt_package: g++-12}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 14, libcxx: libstdc++11, cc: gcc-14, cxx: g++-14, homebrew_package: gcc@14, apt_package: g++-14}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 15, libcxx: libstdc++11, cc: gcc-15, cxx: g++-15, homebrew_package: gcc@15, apt_package: g++-15}
+          - os: macos-26-intel
+            compiler: {compiler: gcc, version: 16, libcxx: libstdc++11, cc: gcc-16, cxx: g++-16, homebrew_package: gcc@16, apt_package: g++-16}
+          # MacOS 26-intel fails to install Clang 16, as macos-15-intel already did: Homebrew's
+          # llvm@16 depends on python@3.12, and linking that collides with the python.org
+          # framework Python the image ships - "Target /usr/local/bin/2to3-3.12 already exists"
+          # - which makes brew exit non-zero even though llvm@16 itself pours fine.
+          - os: macos-26-intel
+            compiler: {compiler: clang, version: 16, libcxx: libc++, cc: clang-16, cxx: clang++-16, macos_cc: llvm@16/bin/clang, macos_cxx: llvm@16/bin/clang++, apt_package: "clang-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev libomp-16-dev", homebrew_package: llvm@16}
+          # MacOS 26-intel fails to build with Clang 18, which macos-15-intel also excludes:
+          # anything linked with -stdlib=libc++ against the MacOSX26 SDK dies in the very first
+          # CMake compiler check with "ld: library 'c++' not found".
+          - os: macos-26-intel
+            compiler: {compiler: clang, version: 18, libcxx: libc++, cc: clang-18, cxx: clang++-18, macos_cc: llvm@18/bin/clang, macos_cxx: llvm@18/bin/clang++, apt_package: "clang-18 libc++-18-dev libc++abi-18-dev libunwind-18-dev libomp-18-dev", homebrew_package: llvm@18}
           # Ubuntu 22.04 doesn't have gcc 13, 14, 15 or 16
           - os: ubuntu-22.04
             compiler: {compiler: gcc, version: 13, libcxx: libstdc++11, cc: gcc-13, cxx: g++-13, homebrew_package: gcc@13, apt_package: g++-13}
@@ -645,8 +679,8 @@ jobs:
           compiler: ${{ matrix.compiler.compiler }}
           compiler_version: ${{ matrix.compiler.version }}
           compiler_libcxx: ${{ matrix.compiler.libcxx }}
-          compiler_executable_c: ${{ runner.os == 'macOS' && format('{0}{1}', (matrix.os == 'macos-15-intel' && '/usr/local/opt/' || '/opt/homebrew/opt/'), matrix.compiler.macos_cc) || matrix.compiler.cc }}
-          compiler_executable_cxx: ${{ runner.os == 'macOS' && format('{0}{1}', (matrix.os == 'macos-15-intel' && '/usr/local/opt/' || '/opt/homebrew/opt/'), matrix.compiler.macos_cxx) || matrix.compiler.cxx }}
+          compiler_executable_c: ${{ runner.os == 'macOS' && format('{0}{1}', ((matrix.os == 'macos-15-intel' || matrix.os == 'macos-26-intel') && '/usr/local/opt/' || '/opt/homebrew/opt/'), matrix.compiler.macos_cc) || matrix.compiler.cc }}
+          compiler_executable_cxx: ${{ runner.os == 'macOS' && format('{0}{1}', ((matrix.os == 'macos-15-intel' || matrix.os == 'macos-26-intel') && '/usr/local/opt/' || '/opt/homebrew/opt/'), matrix.compiler.macos_cxx) || matrix.compiler.cxx }}
           build_type: ${{ steps.build_types.outputs.first }}
           extra_cxxflags: ${{ matrix.extra_cxxflags }}
       - name: Install dependencies (Debug)
