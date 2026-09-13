@@ -140,3 +140,28 @@ impl AsyncDrop for DynBlockStore {
 }
 
 impl LLBlockStore for DynBlockStore {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instantiate_blockstore_tests_for_lowlevel_blockstore;
+    use crate::low_level::InMemoryBlockStore;
+    use crate::tests::low_level::LLFixture;
+    use cryfs_utils::async_drop::AsyncDropGuard;
+
+    struct TestFixture {}
+    impl LLFixture for TestFixture {
+        type ConcreteBlockStore = DynBlockStore;
+        fn new() -> Self {
+            Self {}
+        }
+        async fn store(&mut self) -> AsyncDropGuard<Self::ConcreteBlockStore> {
+            let inner: Box<dyn DynLLBlockStore + Send + Sync> =
+                Box::new(InMemoryBlockStore::new().unsafe_into_inner_dont_drop());
+            AsyncDropGuard::new(DynBlockStore(inner))
+        }
+        async fn yield_fixture(&self, _store: &Self::ConcreteBlockStore) {}
+    }
+
+    instantiate_blockstore_tests_for_lowlevel_blockstore!(TestFixture, (flavor = "multi_thread"));
+}
