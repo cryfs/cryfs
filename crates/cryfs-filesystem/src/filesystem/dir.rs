@@ -208,7 +208,7 @@ where
         // TODO We shouldn't have to reload the self blob here, that's weird
         let self_blob = self.load_blob().await?;
 
-        let blob_details = self_blob
+        let blob_details: FsResult<_> = self_blob
             .with_lock(async |self_blob| {
                 let self_dir = self_blob.as_dir().expect("Parent blob is not a directory");
                 let entry = self_dir
@@ -223,16 +223,7 @@ where
                 Ok((blob_id, blob_type))
             })
             .await;
-        let (blob_id, blob_type) = match blob_details {
-            Ok(blob_details) => blob_details,
-            Err(err) => {
-                self_blob
-                    .async_drop()
-                    .await
-                    .map_err(FsError::internal_error)?;
-                return Err(err);
-            }
-        };
+        let ((blob_id, blob_type), self_blob) = self_blob.async_drop_on_err(blob_details).await?;
 
         let node_info = NodeInfo::new_non_root_dir(
             self_blob,
