@@ -401,26 +401,43 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         shell: bash
         continue-on-error: true
+        timeout-minutes: 30
         run: |
           set -x
+          # Everything that can block (a mount helper waiting for a kernel extension, a file
+          # operation on a half-mounted volume) runs under a timeout that also kills.
+          t() { gtimeout -k 10 "$@"; }
           sw_vers
           uname -m
           id
           ls -la /Library/Filesystems/ || true
           ls -la /Library/Filesystems/macfuse.fs/Contents/ || true
+          ls -la /Library/Filesystems/macfuse.fs/Contents/Extensions/ /Library/Filesystems/macfuse.fs/Contents/Extensions/* || true
+          ls -la /Library/Filesystems/macfuse.fs/Contents/Resources/ || true
           grep -A1 -E "CFBundleShortVersionString|CFBundleVersion" /Library/Filesystems/macfuse.fs/Contents/Info.plist || true
           ls -la /usr/local/lib/ | grep -i fuse || true
-          PKG_CONFIG_PATH=/usr/local/lib/pkgconfig pkg-config --modversion fuse3 || true
-          kmutil showloaded 2>&1 | grep -i fuse || echo "EXPLORE: no fuse kext loaded"
+          t 30 kmutil showloaded 2>&1 | grep -i fuse || echo "EXPLORE: no fuse kext loaded"
           ls -la /dev/ | grep -i fuse || echo "EXPLORE: no /dev/*fuse* devices"
           ls -la /Volumes/
-          pluginkit -m -v -A 2>&1 | grep -i fuse || echo "EXPLORE: pluginkit does not list a macfuse extension"
-          ls -la /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/Extensions/ || true
-          sudo pluginkit -v -a /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/Extensions/macfuse.appex/ || true
-          pluginkit -m -v -A 2>&1 | grep -i fuse || echo "EXPLORE: pluginkit still does not list a macfuse extension"
-          ls -la /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/ || true
-          /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/macfuse --help 2>&1 | head -50 || true
-          /Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/macfuse status 2>&1 | head -50 || true
+          MACFUSE=/Library/Filesystems/macfuse.fs/Contents/Resources/macfuse.app/Contents/MacOS/macfuse
+          for sub in install log kernel-extension; do t 20 "$MACFUSE" help $sub || true; done
+          t 60 "$MACFUSE" kernel-extension || echo "EXPLORE: macfuse kernel-extension exit $?"
+          t 60 sudo "$MACFUSE" kernel-extension || echo "EXPLORE: sudo macfuse kernel-extension exit $?"
+          t 30 sudo spctl kext-consent status || true
+          KEXT=$(ls -d /Library/Filesystems/macfuse.fs/Contents/Extensions/*/macfuse.kext 2>/dev/null | tail -1 || true)
+          if [ -n "$KEXT" ]; then
+            t 120 sudo kmutil load -p "$KEXT" || echo "EXPLORE: kmutil load exit $?"
+          fi
+          t 60 sudo /Library/Filesystems/macfuse.fs/Contents/Resources/load_macfuse || echo "EXPLORE: load_macfuse exit $?"
+          t 30 kmutil showloaded 2>&1 | grep -i fuse || echo "EXPLORE: still no fuse kext loaded"
+          # FSKit: is the macFUSE module registered, and can it be enabled without the GUI?
+          t 30 pluginkit -m -v -A 2>&1 | grep -i fuse || echo "EXPLORE: pluginkit does not list a macfuse extension"
+          t 30 pluginkit -m -v -p com.apple.fskit.fsmodule || echo "EXPLORE: no fskit modules listed"
+          for id in io.macfuse.app.fsmodule.macfuse io.macfuse.app.fsmodule.macfuse-local; do
+            t 30 pluginkit -e use -i "$id" || echo "EXPLORE: pluginkit -e use $id exit $?"
+          done
+          t 30 pluginkit -m -v -A 2>&1 | grep -i fuse || true
+          t 30 pluginkit -m -v -p com.apple.fskit.fsmodule || true
 
           CRYFS=build/Release/src/cryfs-cli/cryfs
           UNMOUNT=build/Release/src/cryfs-unmount/cryfs-unmount
@@ -431,33 +448,34 @@ jobs:
             local base=/tmp/probe-$name-base
             mkdir -p "$base"
             echo "=== EXPLORE probe $name: mountdir=$mountdir extra args: $*"
-            ( echo pass | gtimeout 120 "$CRYFS" "$base" "$mountdir" -f --cipher aes-256-gcm "$@" ; echo "cryfs exit code: $?" ) > /tmp/probe-$name.log 2>&1 &
+            ( echo pass | gtimeout -k 10 90 "$CRYFS" "$base" "$mountdir" -f --cipher aes-256-gcm "$@" ; echo "cryfs exit code: $?" ) > /tmp/probe-$name.log 2>&1 &
             local pid=$!
             for i in $(seq 1 30); do
-              if mount | grep -q "$mountdir"; then break; fi
+              if t 10 mount | grep -q "$mountdir"; then break; fi
               sleep 1
             done
-            mount | grep "$mountdir" || echo "EXPLORE: $name not mounted after 30s"
-            ls -la "$mountdir" || true
-            echo hello > "$mountdir/testfile" || echo "EXPLORE: $name write failed"
-            cat "$mountdir/testfile" || echo "EXPLORE: $name read failed"
-            ls -la "$mountdir" || true
-            stat "$mountdir/testfile" || true
-            "$UNMOUNT" "$mountdir" || echo "EXPLORE: $name cryfs-unmount failed"
+            t 10 mount | grep "$mountdir" || echo "EXPLORE: $name not mounted after 30s"
+            echo "--- cryfs log for $name so far:"; cat /tmp/probe-$name.log
+            t 20 ls -la "$mountdir" || echo "EXPLORE: $name ls failed or hung"
+            t 20 sh -c "echo hello > '$mountdir/testfile'" || echo "EXPLORE: $name write failed or hung"
+            t 20 cat "$mountdir/testfile" || echo "EXPLORE: $name read failed or hung"
+            t 20 stat "$mountdir/testfile" || true
+            t 30 "$UNMOUNT" "$mountdir" || echo "EXPLORE: $name cryfs-unmount failed"
             sleep 3
-            if mount | grep -q "$mountdir"; then
+            if t 10 mount | grep -q "$mountdir"; then
               echo "EXPLORE: $name still mounted after cryfs-unmount; trying umount"
-              umount "$mountdir" || echo "EXPLORE: $name umount failed"
+              t 30 umount "$mountdir" || echo "EXPLORE: $name umount failed"
               sleep 2
             fi
-            if mount | grep -q "$mountdir"; then
+            if t 10 mount | grep -q "$mountdir"; then
               echo "EXPLORE: $name still mounted after umount; trying diskutil unmount"
-              diskutil unmount "$mountdir" || diskutil unmount force "$mountdir" || echo "EXPLORE: $name diskutil unmount failed"
+              t 60 diskutil unmount force "$mountdir" || echo "EXPLORE: $name diskutil unmount failed"
               sleep 2
             fi
-            mount | grep "$mountdir" && echo "EXPLORE: $name STILL mounted" || echo "EXPLORE: $name is unmounted now"
+            t 10 mount | grep "$mountdir" && echo "EXPLORE: $name STILL mounted" || echo "EXPLORE: $name is unmounted now"
             wait $pid || true
             echo "--- cryfs log for $name:"; cat /tmp/probe-$name.log
+            ps aux | grep -i "[m]ount_macfuse\|[c]ryfs " || true
           }
           mkdir -p /tmp/probe-kext-mount
           probe kext /tmp/probe-kext-mount
@@ -467,16 +485,20 @@ jobs:
           probe fskit2 /tmp/probe-fskit2-mount -o backend=fskit
           sudo chmod a+w /Volumes || true
           probe fskit3 /Volumes/cryfsprobe3 -o backend=fskit --create-missing-mountpoint
+          sudo mkdir -p /Volumes/cryfsprobe4 && sudo chown "$(id -u)" /Volumes/cryfsprobe4
+          probe fskit4 /Volumes/cryfsprobe4 -o backend=fskit -o local
           ls -la /Volumes/
-          mount
+          t 10 mount || true
+          t 30 "$MACFUSE" log || true
       - name: EXPLORE fspp-test and cryfs-cli-test on macOS (Release)
         if: ${{ runner.os == 'macOS' }}
         shell: bash
         continue-on-error: true
+        timeout-minutes: 100
         run: |
           cd build/Release/test
-          gtimeout 1500 ./fspp/fspp-test > /tmp/fspp-test.log 2>&1 || echo "EXPLORE: fspp-test exit $?"
-          grep -E "^\[  (PASSED|FAILED|  SKIPPED)|^\[==========\]|Assertion|exited before|Timeout" /tmp/fspp-test.log | head -300
+          gtimeout -k 10 900 ./fspp/fspp-test > /tmp/fspp-test.log 2>&1 || echo "EXPLORE: fspp-test exit $?"
+          grep -E "^\[  (PASSED|FAILED|  SKIPPED)|^\[==========\]|Assertion|exited before|Timeout|terminate|Abort" /tmp/fspp-test.log | head -300
           echo "::group::fspp-test full log"
           cat /tmp/fspp-test.log || true
           echo "::endgroup::"
@@ -484,22 +506,24 @@ jobs:
           tests=$(awk '/^[^ ]/ {suite=$1} /^  / {sub(/^  /,""); split($0,a,"#"); gsub(/ +$/,"",a[1]); print suite a[1]}' /tmp/tests.txt)
           echo "$tests" | wc -l
           pass=0; fail=0; skip=0
-          for t in $tests; do
+          for test in $tests; do
             start=$(date +%s)
             rc=0
             rm -f /tmp/trace.log
-            CRYFS_TEST_TRACE_FILE=/tmp/trace.log gtimeout 120 ./cryfs-cli/cryfs-cli-test --gtest_filter="$t" > /tmp/one.log 2>&1 || rc=$?
+            CRYFS_TEST_TRACE_FILE=/tmp/trace.log gtimeout -k 5 45 ./cryfs-cli/cryfs-cli-test --gtest_filter="$test" > /tmp/one.log 2>&1 || rc=$?
             end=$(date +%s)
             if [ $rc -eq 0 ]; then
-              if grep -q "SKIPPED" /tmp/one.log; then skip=$((skip+1)); echo "SKIP ($((end-start))s) $t: $(grep -A1 'SKIPPED' /tmp/one.log | head -2 | tr '\n' ' ')"; else pass=$((pass+1)); echo "PASS ($((end-start))s) $t"; fi
+              if grep -q "SKIPPED" /tmp/one.log; then skip=$((skip+1)); echo "SKIP ($((end-start))s) $test: $(grep -A1 'SKIPPED' /tmp/one.log | head -2 | tr '\n' ' ')"; else pass=$((pass+1)); echo "PASS ($((end-start))s) $test"; fi
             else
               fail=$((fail+1))
-              echo "FAIL rc=$rc ($((end-start))s) $t"
-              echo "::group::log of $t"
+              echo "FAIL rc=$rc ($((end-start))s) $test"
+              echo "::group::log of $test"
               cat /tmp/one.log
               echo "--- harness trace:"
               cat /tmp/trace.log || true
               echo "::endgroup::"
+              pkill -x cryfs-cli-test || true
+              pkill -x mount_macfuse || true
             fi
           done
           echo "EXPLORE: cryfs-cli-test pass=$pass fail=$fail skip=$skip"
