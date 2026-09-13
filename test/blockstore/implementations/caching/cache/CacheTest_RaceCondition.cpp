@@ -94,7 +94,8 @@ TEST_F(CacheTest_RaceCondition, PopDoesntBlockWhileOtherElementIsThrownOut_ByAge
 TEST_F(CacheTest_RaceCondition, PopBlocksWhileRequestedElementIsThrownOut_ByPush) {
     auto id = pushObjectWithLongDestructor();
 
-    auto future = causeCacheOverflowInOtherThread();
+    // Held, not read: destroying the future would join the thread and defeat the race.
+    auto future = causeCacheOverflowInOtherThread();  // NOLINT(bugprone-unused-local-non-trivial-variable)
     destructorStarted.wait();
     EXPECT_POP_BLOCKS_UNTIL_DESTRUCTOR_FINISHED(id);
 }
@@ -103,7 +104,8 @@ TEST_F(CacheTest_RaceCondition, PopDoesntBlockWhileOtherElementIsThrownOut_ByPus
     pushObjectWithLongDestructor();
     auto id = pushDummyObject();
 
-    auto future = causeCacheOverflowInOtherThread();
+    // Held, not read: destroying the future would join the thread and defeat the race.
+    auto future = causeCacheOverflowInOtherThread();  // NOLINT(bugprone-unused-local-non-trivial-variable)
     destructorStarted.wait();
     EXPECT_POP_DOESNT_BLOCK_UNTIL_DESTRUCTOR_FINISHED(id);
 }

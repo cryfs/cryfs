@@ -5,9 +5,11 @@ using std::string;
 
 namespace gitversion {
 
-    static const VersionInfo &parse() {
+    namespace {
+    const VersionInfo &parse() {
         static const VersionInfo versionInfo = Parser::parse(VersionString());
         return versionInfo;
+    }
     }
 
     bool IsDevVersion() {

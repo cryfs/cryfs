@@ -15,7 +15,10 @@ namespace bf = boost::filesystem;
 
 //gtest/boost::optional workaround for working with optional<CryConfigFile>
 namespace boost {
-    static inline std::ostream &operator<<(std::ostream &out, const CryConfigFile &file) {
+    // gtest finds this printer by ADL, which looks in the enclosing namespace itself and
+    // does not follow the implicit using-directive of a nested unnamed namespace. Moving it
+    // into one would silently stop it being found, so static is the right mechanism here.
+    static inline std::ostream &operator<<(std::ostream &out, const CryConfigFile &file) {  // NOLINT(misc-use-anonymous-namespace)
         UNUSED(file);
         out << "ConfigFile()";
         return out;

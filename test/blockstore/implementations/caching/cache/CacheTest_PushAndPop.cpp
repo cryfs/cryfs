@@ -75,7 +75,8 @@ TEST_F(CacheTest_PushAndPop, FullCache_PushOrdered_PopNonOrdered) {
   }
 }
 
-static int roundDownToEven(int number) {
+namespace {
+int roundDownToEven(int number) {
   if (number % 2 == 0) {
     return number;
   } else {
@@ -83,12 +84,13 @@ static int roundDownToEven(int number) {
   }
 }
 
-static int roundDownToOdd(int number) {
+int roundDownToOdd(int number) {
   if (number % 2 != 0) {
     return number;
   } else {
     return number - 1;
   }
+}
 }
 
 TEST_F(CacheTest_PushAndPop, FullCache_PushNonOrdered_PopNonOrdered) {

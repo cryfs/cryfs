@@ -41,7 +41,8 @@ using namespace cryfs::fsblobstore;
 
 using namespace cryfs_stats;
 
-static void printNode(unique_ref<DataNode> node) {
+namespace {
+void printNode(unique_ref<DataNode> node) {
     std::cout << "BlockId: " << node->blockId().ToString() << ", Depth: " << static_cast<int>(node->depth()) << " ";
     auto innerNode = dynamic_pointer_move<DataInnerNode>(node);
     if (innerNode != none) {
@@ -55,7 +56,7 @@ static void printNode(unique_ref<DataNode> node) {
     }
 }
 
-static unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto onDiskBlockStore = make_unique_ref<OnDiskBlockStore2>(basedir);
     auto readOnlyBlockStore = make_unique_ref<ReadOnlyBlockStore2>(std::move(onDiskBlockStore));
     auto encryptedBlockStore = CryCiphers::find(config.configFile->config()->Cipher()).createEncryptedBlockstore(std::move(readOnlyBlockStore), config.configFile->config()->EncryptionKey());
@@ -66,6 +67,7 @@ static unique_ref<BlockStore> makeBlockStore(const path& basedir, const CryConfi
     };
     auto integrityBlockStore = make_unique_ref<IntegrityBlockStore2>(std::move(encryptedBlockStore), integrityFilePath, config.myClientId, false, true, onIntegrityViolation);
     return make_unique_ref<LowToHighLevelBlockStore>(std::move(integrityBlockStore));
+}
 }
 
 struct AccumulateBlockIds final {
@@ -102,7 +104,8 @@ private:
     size_t _numBlocks;
 };
 
-static std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+namespace {
+std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     auto fsBlobStore = make_unique_ref<FsBlobStore>(make_unique_ref<BlobStoreOnBlocks>(std::move(blockStore), config.configFile->config()->BlocksizeBytes()));
 
@@ -116,7 +119,7 @@ static std::vector<BlockId> getKnownBlobIds(const path& basedir, const CryConfig
     return knownBlobIds.blockIds();
 }
 
-static std::vector<BlockId> getKnownBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+std::vector<BlockId> getKnownBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto knownBlobIds = getKnownBlobIds(basedir, config, localStateDir);
 
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
@@ -136,7 +139,7 @@ static std::vector<BlockId> getKnownBlockIds(const path& basedir, const CryConfi
     return knownBlockIds.blockIds();
 }
 
-static set<BlockId> getAllBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
+set<BlockId> getAllBlockIds(const path& basedir, const CryConfigLoader::ConfigLoadResult& config, LocalStateDir& localStateDir) {
     auto blockStore = makeBlockStore(basedir, config, localStateDir);
     AccumulateBlockIds allBlockIds;
     allBlockIds.reserve(blockStore->numBlocks());
@@ -144,7 +147,7 @@ static set<BlockId> getAllBlockIds(const path& basedir, const CryConfigLoader::C
     return set<BlockId>(allBlockIds.blockIds().begin(), allBlockIds.blockIds().end());
 }
 
-static void printConfig(const CryConfig& config) {
+void printConfig(const CryConfig& config) {
     std::cout
         << "----------------------------------------------------"
         << "\nFilesystem configuration:"
@@ -169,6 +172,7 @@ static void printConfig(const CryConfig& config) {
     std::cout << "\n- Has version numbers: " << (config.HasVersionNumbers() ? "yes" : "no");
 #endif
     std::cout << "\n----------------------------------------------------\n";
+}
 }
 
 int main(int argc, char* argv[]) {

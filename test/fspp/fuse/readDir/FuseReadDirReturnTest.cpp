@@ -11,13 +11,15 @@ using std::string;
 
 using namespace fspp::fuse;
 
-static vector<string> LARGE_DIR(int num_entries) {
+namespace {
+vector<string> LARGE_DIR(int num_entries) {
   vector<string> result;
   result.reserve(num_entries);
   for(int i=0; i<num_entries; ++i) {
     result.push_back("File "+std::to_string(i)+" file");
   }
   return result;
+}
 }
 
 class FuseReadDirReturnTest: public FuseReadDirTest, public WithParamInterface<vector<string>> {

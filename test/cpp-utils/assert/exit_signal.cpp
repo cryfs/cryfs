@@ -6,7 +6,8 @@
 #include <Windows.h>
 #endif
 
-static void handle_exit_signal(char **argv) {
+namespace {
+void handle_exit_signal(char **argv) {
 	const std::string kind = argv[1];
 	if (kind == "exception") {
 		throw std::logic_error(argv[2]);
@@ -25,6 +26,7 @@ static void handle_exit_signal(char **argv) {
 		}
 #endif
 	}
+}
 }
 
 

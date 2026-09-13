@@ -9,17 +9,19 @@
 using namespace cpputils::logging;
 using std::string;
 
-static void logAndExit(const string &message) {
+namespace {
+void logAndExit(const string &message) {
     LOG(INFO, message);
     cpputils::logging::flush();
     exit(1);
 }
 
-static void setLoggerAndLogAndExit(const string &message) {
+void setLoggerAndLogAndExit(const string &message) {
     setLogger(spdlog::stderr_logger_mt("MyTestLog2"));
     LOG(INFO, message);
     cpputils::logging::flush();
     exit(1);
+}
 }
 
 // The next two tests log in a child process instead of capturing stderr in

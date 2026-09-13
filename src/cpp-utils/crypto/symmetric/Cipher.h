@@ -22,7 +22,8 @@ public:
     const typename X::EncryptionKey key = X::EncryptionKey::CreateKey(Random::OSRandom(), X::KEYSIZE);
     same_type(Data(0), X::encrypt(static_cast<uint8_t*>(nullptr), UINT32_C(0), key));
     same_type(boost::optional<Data>(Data(0)), X::decrypt(static_cast<uint8_t*>(nullptr), UINT32_C(0), key));
-    const string name = X::NAME;
+    // The declaration is the assertion: it checks X::NAME converts to std::string.
+    const string name = X::NAME;  // NOLINT(bugprone-unused-local-non-trivial-variable)
   }
 
 private:
