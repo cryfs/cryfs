@@ -26,7 +26,7 @@ async fn good() -> Result<()> {
 // BETTER - use the macro
 async fn better() -> Result<()> {
     let resource = Resource::new();
-    with_async_drop_2!(resource, {
+    with_async_drop!(resource, {
         resource.do_work().await
     })
 }
@@ -58,6 +58,14 @@ async fn good(mut resource: AsyncDropGuard<R>) -> Result<Data> {
     let result = resource.fetch().await;
     resource.async_drop().await?;
     result
+}
+
+// BETTER - if the guard is kept on the success path, let `async_drop_on_err` handle the error paths
+async fn better(resource: AsyncDropGuard<R>) -> Result<(Data, AsyncDropGuard<R>)> {
+    let validated = resource.validate();  // Result<(), Error>
+    let ((), resource) = resource.async_drop_on_err(validated).await?;
+    let data = resource.fetch().await;
+    resource.async_drop_on_err(data).await
 }
 ```
 
@@ -294,4 +302,4 @@ Before submitting code with AsyncDrop:
 - [ ] `unsafe_into_inner_dont_drop()` only used internally, with member cleanup handled
 - [ ] Drop order correct for dependent members (reverse of construction)
 - [ ] Independent members dropped concurrently (Pattern 10)
-- [ ] Using `with_async_drop_2!` where possible
+- [ ] Using `with_async_drop!` where possible

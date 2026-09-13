@@ -5,7 +5,7 @@ use std::{fmt::Debug, sync::Arc};
 use cryfs_blobstore::{BlobId, BlobStore, RemoveResult};
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    with_async_drop_2,
+    with_async_drop,
 };
 
 use crate::{
@@ -46,7 +46,7 @@ where
         let root_blob_id = *root_blob_id;
         let blobstore = AsyncDropArc::clone(&self.blobstore);
         LoadedBlobs::try_insert_loading(&self.loaded_blobs, root_blob_id, async move || {
-            with_async_drop_2!(blobstore, {
+            with_async_drop!(blobstore, {
                 blobstore.create_root_dir_blob(&root_blob_id).await
             })
             .map_err(Arc::new)
@@ -110,7 +110,7 @@ where
             blob_id,
             &self.blobstore,
             async move |blobstore| {
-                with_async_drop_2!(blobstore, { blobstore.load(&blob_id).await }).map_err(Arc::new)
+                with_async_drop!(blobstore, { blobstore.load(&blob_id).await }).map_err(Arc::new)
             },
         )
         .await?;

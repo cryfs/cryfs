@@ -15,7 +15,7 @@ use crate::high_level_api::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     path::AbsolutePath,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 // TODO Make sure each function checks the preconditions on its parameters, e.g. paths must be absolute, here and elsewhere.
@@ -135,7 +135,7 @@ where
             // TODO No unwrap
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, { node.getattr().await })?
+            with_async_drop!(node, { node.getattr().await })?
         };
         Ok(AttrResponse {
             ttl: TTL_GETATTR,
@@ -164,7 +164,7 @@ where
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, {
+            with_async_drop!(node, {
                 node.setattr(Some(mode), None, None, None, None, None, None)
                     .await
             })?;
@@ -193,7 +193,7 @@ where
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, {
+            with_async_drop!(node, {
                 node.setattr(None, uid, gid, None, None, None, None).await
             })?;
         }
@@ -221,7 +221,7 @@ where
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, {
+            with_async_drop!(node, {
                 node.setattr(None, None, None, Some(size), None, None, None)
                     .await
             })?;
@@ -250,7 +250,7 @@ where
         } else {
             let fs = self.fs.read().unwrap();
             let node = fs.get().lookup(path).await?;
-            with_async_drop_2!(node, {
+            with_async_drop!(node, {
                 node.setattr(None, None, None, None, atime, mtime, None)
                     .await
             })?;
@@ -279,9 +279,9 @@ where
 
         let fs = self.fs.read().unwrap();
         let link = fs.get().lookup(path).await?;
-        with_async_drop_2!(link, {
+        with_async_drop!(link, {
             let link = link.as_symlink().await?;
-            with_async_drop_2!(link, { link.target().await })
+            with_async_drop!(link, { link.target().await })
         })
     }
 
@@ -314,9 +314,9 @@ where
         })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().lookup(parent).await?;
-        with_async_drop_2!(parent_dir, {
+        with_async_drop!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_child_dir() ?
                 // TODO No need to return the child dir object to just immediately async_drop it
                 let (new_dir_attrs, new_dir) = parent_dir
@@ -341,9 +341,9 @@ where
         })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().lookup(parent).await?;
-        with_async_drop_2!(parent_dir, {
+        with_async_drop!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 parent_dir.remove_child_file_or_symlink(&name).await
             })?;
             Ok(())
@@ -360,9 +360,9 @@ where
         })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().lookup(parent).await?;
-        with_async_drop_2!(parent_dir, {
+        with_async_drop!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            with_async_drop_2!(parent_dir, { parent_dir.remove_child_dir(&name).await })?;
+            with_async_drop!(parent_dir, { parent_dir.remove_child_dir(&name).await })?;
             Ok(())
         })
     }
@@ -383,9 +383,9 @@ where
         })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().lookup(parent).await?;
-        with_async_drop_2!(parent_dir, {
+        with_async_drop!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_child_symlink() ?
                 // TODO No need to return the symlink object to just immediately async_drop it
                 let (new_symlink_attrs, symlink) = parent_dir
@@ -444,7 +444,7 @@ where
 
         let fs = self.fs.read().unwrap();
         let file = fs.get().lookup(path).await?;
-        with_async_drop_2!(file, {
+        with_async_drop!(file, {
             let file = file.as_file().await?;
             let result = match File::into_open(file, flags).await {
                 Err(err) => Err(err),
@@ -589,9 +589,9 @@ where
 
         let fs = self.fs.read().unwrap();
         let dir = fs.get().lookup(path).await?;
-        with_async_drop_2!(dir, {
+        with_async_drop!(dir, {
             let dir = dir.as_dir().await?;
-            let entries = with_async_drop_2!(dir, { dir.entries().await })?;
+            let entries = with_async_drop!(dir, { dir.entries().await })?;
             let parent_entries = [
                 DirEntryOrReference::SelfReference,
                 DirEntryOrReference::ParentReference,
@@ -733,9 +733,9 @@ where
         })?;
         let fs = self.fs.read().unwrap();
         let parent_dir = fs.get().lookup(parent).await?;
-        with_async_drop_2!(parent_dir, {
+        with_async_drop!(parent_dir, {
             let parent_dir = parent_dir.as_dir().await?;
-            let (file_attrs, node, open_file) = with_async_drop_2!(parent_dir, {
+            let (file_attrs, node, open_file) = with_async_drop!(parent_dir, {
                 // TODO Can we avoid the parent_dir.async_drop if we do something like parent_dir.into_create_and_open_file() ?
                 // TODO No need to return the node just to immediately async_drop it below
                 parent_dir
@@ -768,7 +768,6 @@ where
             .expect("ObjectBasedFsAdapter::fs is never shared, so this must be the last reference to it")
             .into_inner()
             .unwrap();
-        fs.async_drop().await.map_err(|err| err)?;
-        Ok(())
+        fs.async_drop().await
     }
 }

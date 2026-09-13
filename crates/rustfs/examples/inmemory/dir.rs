@@ -7,7 +7,7 @@ use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
     mutex::lock_in_ptr_order,
     path::{PathComponent, PathComponentBuf},
-    with_async_drop_2,
+    with_async_drop,
 };
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
@@ -194,7 +194,7 @@ impl Dir for InMemoryDirRef {
         newparent: AsyncDropGuard<Self>,
         newname: &PathComponent,
     ) -> FsResult<()> {
-        with_async_drop_2!(newparent, {
+        with_async_drop!(newparent, {
             // We're moving it to another directory
             let (mut source_inode, mut target_inode) =
                 lock_in_ptr_order(&self.inode(), &newparent.inode());

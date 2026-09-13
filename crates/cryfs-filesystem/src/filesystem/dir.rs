@@ -21,7 +21,7 @@ use cryfs_rustfs::{DirEntry, FsError, FsResult, NodeAttrs, NodeKind, object_base
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, flatten_async_drop},
     path::PathComponent,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 #[derive(Debug)]
@@ -253,7 +253,7 @@ where
         self.node_info
             .concurrently_update_modification_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(
+                with_async_drop!(
                     blob,
                     {
                         blob.with_lock(async |blob| {
@@ -300,14 +300,12 @@ where
         //      blobs at once is risky for deadlocks if not done in a consistent order.
 
         // TODO Improve concurrency in this function
-        with_async_drop_2!(newparent, {
+        with_async_drop!(newparent, {
             let (source_parent, dest_parent) = join!(self.load_blob(), newparent.load_blob());
             let (source_parent, dest_parent) =
-                flatten_async_drop::<anyhow::Error, _, _, _, _>(source_parent, dest_parent)
-                    .await
-                    .map_err(FsError::internal_error)?;
+                flatten_async_drop(source_parent, dest_parent).await?;
             // TODO Drop newparent and self_blob concurrently with source_parent and dest_parent
-            with_async_drop_2!(
+            with_async_drop!(
                 source_parent,
                 dest_parent,
                 {
@@ -343,7 +341,7 @@ where
                             // TODO This branch means there was an entry in the parent dir but the blob itself doesn't exist. How should we handle this?
                             FsError::NodeDoesNotExist,
                         )?;
-                    with_async_drop_2!(
+                    with_async_drop!(
                         self_blob,
                         {
                             let entry = source_parent
@@ -441,7 +439,7 @@ where
         self.node_info
             .concurrently_maybe_update_access_timestamp_in_parent(async || {
                 let blob = self.load_blob().await?;
-                with_async_drop_2!(
+                with_async_drop!(
                     blob,
                     {
                         blob.with_lock(async |blob| {
@@ -491,13 +489,7 @@ where
                 };
                 // TODO Is this possible without to_owned()?
                 let name = name.to_owned();
-                let new_dir_blob_id = match new_dir_blob_id {
-                    Ok(new_dir_blob_id) => new_dir_blob_id,
-                    Err(err) => {
-                        blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(err);
-                    }
-                };
+                let (new_dir_blob_id, blob) = blob.async_drop_on_err(new_dir_blob_id).await?;
 
                 let atime = SystemTime::now();
                 let mtime = atime;
@@ -540,14 +532,14 @@ where
                     })
                     .await;
                 let attrs = match attrs {
-                    Ok(attrs) => attrs,
+                    Ok(attrs) => Ok(attrs),
                     Err(err) => {
                         log::error!("Error adding dir entry: {err:?}");
                         self.remove_just_created_blob(new_dir_blob_id).await;
-                        blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(FsError::UnknownError);
+                        Err(FsError::UnknownError)
                     }
                 };
+                let (attrs, blob) = blob.async_drop_on_err(attrs).await?;
                 let node = CryDir::new(
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
@@ -569,7 +561,7 @@ where
         self.node_info
             .concurrently_update_modification_timestamp_in_parent( async || {
                 let self_blob = self.load_blob().await?;
-                with_async_drop_2!(self_blob, {
+                with_async_drop!(self_blob, {
                     let child_id = self_blob
                         .with_lock(async |self_blob| {
                             let self_blob = Self::blob_as_dir(&*self_blob)?;
@@ -597,10 +589,7 @@ where
                         }
                         Ok(())
                     }).await;
-                    if let Err(err) = entries_check {
-                        child_blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(err);
-                    }
+                    let ((), child_blob) = child_blob.async_drop_on_err(entries_check).await?;
 
                     // TODO We released the lock on self_blob above and are now re-locking it. There is a race condition here.
 
@@ -624,13 +613,8 @@ where
                             }
                         }
                     }).await;
-                    let removed_entry = match removed_entry {
-                        Ok(removed_entry) => removed_entry,
-                        Err(err) => {
-                            child_blob.async_drop().await.map_err(FsError::internal_error)?;
-                            return Err(err);
-                        }
-                    };
+                    let (removed_entry, child_blob) =
+                        child_blob.async_drop_on_err(removed_entry).await?;
                     assert_eq!(*removed_entry.blob_id(), child_blob.blob_id());
 
                     let remove_result = ConcurrentFsBlob::remove(child_blob).await;
@@ -683,14 +667,10 @@ where
                 };
                 // TODO Is this possible without to_owned()?
                 let name = name.to_owned();
-                let new_symlink_blob_id = match new_symlink_blob_id {
-                    Ok(id) => id,
-                    Err(err) => {
-                        log::error!("Error creating symlink blob: {err:?}");
-                        blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(err);
-                    }
-                };
+                let new_symlink_blob_id = new_symlink_blob_id
+                    .inspect_err(|err| log::error!("Error creating symlink blob: {err:?}"));
+                let (new_symlink_blob_id, blob) =
+                    blob.async_drop_on_err(new_symlink_blob_id).await?;
 
                 let atime = SystemTime::now();
                 let mtime = atime;
@@ -732,14 +712,14 @@ where
                     })
                     .await;
                 let attrs = match attrs {
-                    Ok(attrs) => attrs,
+                    Ok(attrs) => Ok(attrs),
                     Err(err) => {
                         log::error!("Error adding dir entry: {err:?}");
                         self.remove_just_created_blob(new_symlink_blob_id).await;
-                        blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(FsError::UnknownError);
+                        Err(FsError::UnknownError)
                     }
                 };
+                let (attrs, blob) = blob.async_drop_on_err(attrs).await?;
                 let node = CrySymlink::new(
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
@@ -761,7 +741,7 @@ where
         self.node_info.concurrently_update_modification_timestamp_in_parent( async || {
             let blob = self.load_blob().await?;
 
-            with_async_drop_2!(blob, {
+            with_async_drop!(blob, {
                 let removed = blob.with_lock(async |blob| {
                     let blob = Self::blob_as_dir_mut(&mut *blob)?;
                     // First remove the entry, then flush that change, and only then remove the blob.
@@ -829,13 +809,7 @@ where
                     }
                 };
 
-                let new_file_blob_id = match new_file_blob_id {
-                    Ok(id) => id,
-                    Err(err) => {
-                        blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(err);
-                    }
-                };
+                let (new_file_blob_id, blob) = blob.async_drop_on_err(new_file_blob_id).await?;
 
                 let atime = SystemTime::now();
                 let mtime = atime;
@@ -877,14 +851,14 @@ where
                     })
                     .await;
                 let attrs = match attrs {
-                    Ok(attrs) => attrs,
+                    Ok(attrs) => Ok(attrs),
                     Err(err) => {
                         log::error!("Error adding dir entry: {err:?}");
                         self.remove_just_created_blob(new_file_blob_id).await;
-                        blob.async_drop().await.map_err(FsError::internal_error)?;
-                        return Err(FsError::UnknownError);
+                        Err(FsError::UnknownError)
                     }
                 };
+                let (attrs, blob) = blob.async_drop_on_err(attrs).await?;
                 let node_info = AsyncDropArc::new(NodeInfo::new_non_root_dir(
                     blob,
                     #[cfg(feature = "ancestor_checks_on_move")]

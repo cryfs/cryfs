@@ -26,7 +26,7 @@ use crate::{
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard, async_drop_all, flatten_async_drop},
     path::PathComponent,
-    with_async_drop_2,
+    with_async_drop,
 };
 
 // TODO What are good TTLs here?
@@ -230,12 +230,12 @@ where
         let load_child = move |parent_node: &AsyncDropGuard<AsyncDropArc<Fs::Node>>| {
             let parent_node = AsyncDropArc::clone(parent_node); // TODO Why is this necessary?
             async move {
-                with_async_drop_2!(parent_node, {
+                with_async_drop!(parent_node, {
                     let parent_node_dir = parent_node
                         .as_dir()
                         .await
                         .expect("Error: Inode number is not a directory");
-                    with_async_drop_2!(parent_node_dir, {
+                    with_async_drop!(parent_node_dir, {
                         // TODO Can we avoid the async_drop here by using something like parent_node_dir.into_lookup_child() ?
                         parent_node_dir.lookup_child(&name_clone).await
                     })
@@ -248,7 +248,7 @@ where
             .add_or_increment_refcount(parent_ino, name.to_owned(), load_child)
             .await?;
 
-        with_async_drop_2!(child, {
+        with_async_drop!(child, {
             child.getattr().await.map(|attr| ReplyEntry {
                 ttl: TTL_LOOKUP,
                 ino,
@@ -288,7 +288,7 @@ where
                 .await?
         } else {
             let node = self.get_inode(ino).await?;
-            with_async_drop_2!(node, { node.getattr().await })?
+            with_async_drop!(node, { node.getattr().await })?
         };
 
         Ok(ReplyAttr {
@@ -328,7 +328,7 @@ where
                 .await?
         } else {
             let node = self.get_inode(ino).await?;
-            with_async_drop_2!(node, {
+            with_async_drop!(node, {
                 node.setattr(mode, uid, gid, size, atime, mtime, ctime)
                     .await
             })?
@@ -358,7 +358,7 @@ where
             Err(err) => return callback.call(Err(err)),
         };
         let target = match inode.as_symlink().await {
-            Ok(inode_symlink) => with_async_drop_2!(inode_symlink, {
+            Ok(inode_symlink) => with_async_drop!(inode_symlink, {
                 let target = inode_symlink.target();
                 target.await
             }),
@@ -403,11 +403,11 @@ where
         // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
         // TODO see https://github.com/cberner/fuser/issues/256
         let parent = self.get_inode(parent_ino).await?;
-        let (attr, child) = with_async_drop_2!(parent, {
+        let (attr, child) = with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
 
             // TODO Can we avoid the async_drop here by using something like dir.into_create_child_dir() ?
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 let (attrs, child) = parent_dir
                     .create_child_dir(name, mode, req.uid, req.gid)
                     .await?;
@@ -436,9 +436,9 @@ where
         self.trigger_on_operation().await?;
 
         let parent = self.get_inode(parent_ino).await?;
-        with_async_drop_2!(parent, {
+        with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 parent_dir.remove_child_file_or_symlink(name).await?;
                 self._orphan_inode(parent_ino, name).await;
                 Ok::<_, FsError>(())
@@ -456,9 +456,9 @@ where
         self.trigger_on_operation().await?;
 
         let parent = self.get_inode(parent_ino).await?;
-        with_async_drop_2!(parent, {
+        with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 parent_dir.remove_child_dir(name).await?;
                 self._orphan_inode(parent_ino, name).await;
                 Ok::<_, FsError>(())
@@ -479,10 +479,10 @@ where
         // TODO Here (and maybe also in mkdir / create_file), existing nodes should be overwritten
 
         let parent = self.get_inode(parent_ino).await?;
-        let (attrs, child) = with_async_drop_2!(parent, {
+        let (attrs, child) = with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
             // TODO Can we avoid the async_drop here by using something like dir.into_create_child_symlink()?
-            with_async_drop_2!(parent_dir, {
+            with_async_drop!(parent_dir, {
                 let (attrs, child) = parent_dir
                     .create_child_symlink(name, link, req.uid, req.gid)
                     .await?;
@@ -518,9 +518,9 @@ where
         // TODO Check that oldparent+oldname/newparent+newname aren't ancestors of each other, or at least write a test that fuse already blocks that
         if oldparent_ino == newparent_ino {
             let shared_parent = self.get_inode(oldparent_ino).await?;
-            with_async_drop_2!(shared_parent, {
+            with_async_drop!(shared_parent, {
                 let parent_dir = shared_parent.as_dir().await?;
-                with_async_drop_2!(parent_dir, {
+                with_async_drop!(parent_dir, {
                     parent_dir.rename_child(oldname, newname).await?;
                     self._move_inode(oldparent_ino, oldname, newparent_ino, newname)
                         .await?;
@@ -531,11 +531,10 @@ where
         } else {
             let (oldparent, newparent) =
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
-            let (oldparent, newparent) =
-                flatten_async_drop::<FsError, _, _, _, _>(oldparent, newparent).await?;
+            let (oldparent, newparent) = flatten_async_drop(oldparent, newparent).await?;
             let result = async {
                 let oldparent_dir = oldparent.as_dir().await?;
-                with_async_drop_2!(oldparent_dir, {
+                with_async_drop!(oldparent_dir, {
                     let newparent_dir = newparent.as_dir().await?;
                     oldparent_dir
                         .move_child_to(oldname, newparent_dir, newname)
@@ -573,7 +572,7 @@ where
         self.trigger_on_operation().await?;
 
         let inode = self.get_inode(ino).await?;
-        with_async_drop_2!(inode, {
+        with_async_drop!(inode, {
             let file = inode.as_file().await?;
             let open_file = File::into_open(file, flags);
             let open_file = open_file.await?;
@@ -675,7 +674,7 @@ where
 
         // TODO What to do with flags, lock_owner?
         let open_file = self.open_files.remove(fh);
-        with_async_drop_2!(open_file, {
+        with_async_drop!(open_file, {
             if flush {
                 // TODO Is this actually what the `flush` parameter should do?
                 open_file.flush().await?;
@@ -739,9 +738,9 @@ where
 
         let (node, parent_ino) = self.get_inode_and_parent_ino(ino).await?;
 
-        with_async_drop_2!(node, {
+        with_async_drop!(node, {
             let dir = node.as_dir().await?;
-            with_async_drop_2!(dir, {
+            with_async_drop!(dir, {
                 let offset = usize::try_from(offset).unwrap(); // TODO No unwrap
 
                 if offset == 0 {
@@ -955,10 +954,10 @@ where
         // In my tests with fuser 0.12.0, umask is already auto-applied to mode and the `umask` argument is always `0`.
         // TODO see https://github.com/cberner/fuser/issues/256
         let parent = self.get_inode(parent_ino).await?;
-        with_async_drop_2!(parent, {
+        with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
             // TODO Can we avoid the async_drop here by using something like dir.into_create_and_open_file() ?
-            let (attr, child_node, open_file) = with_async_drop_2!(parent_dir, {
+            let (attr, child_node, open_file) = with_async_drop!(parent_dir, {
                 parent_dir
                     .create_and_open_file(name, mode, req.uid, req.gid, flags)
                     .await

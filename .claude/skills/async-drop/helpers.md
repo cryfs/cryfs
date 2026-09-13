@@ -16,6 +16,7 @@ pub struct AsyncDropGuard<T: Debug>(Option<T>);
 |--------|-------------|
 | `new(v: T)` | Wrap a value |
 | `async_drop(self)` | Perform async cleanup (required!). Consumes the guard |
+| `async_drop_on_err(self, result)` | Drops the guard if `result` is an error and returns the error, otherwise returns `(value, guard)`. Drop failures are logged |
 | `unsafe_into_inner_dont_drop(self)` | Extract inner, bypassing cleanup |
 | `map_unsafe<U>(self, f)` | Transform inner type |
 
@@ -217,21 +218,6 @@ async_drop is complete and will cause bad performance.
 
 ## Utility Functions
 
-### `with_async_drop()`
-
-Function version of the macro for more complex scenarios.
-
-```rust
-pub async fn with_async_drop<T, R, E, F>(
-    mut value: AsyncDropGuard<T>,
-    f: impl FnOnce(&mut T) -> F,
-) -> Result<R, E>
-where
-    T: AsyncDrop + Debug,
-    E: From<<T as AsyncDrop>::Error>,
-    F: Future<Output = Result<R, E>>,
-```
-
 ### `async_drop_all()`
 
 Drops a tuple of guards concurrently. Waits for all of them even if some fail and returns
@@ -243,20 +229,22 @@ of them.
 async_drop_all((source_parent, dest_parent, maybe_self_blob)).await?;
 ```
 
-This is what the multi-guard form of `with_async_drop_2!` uses after its block.
+This is what the multi-guard form of `with_async_drop!` uses after its block.
 
 ### `flatten_async_drop()`
 
 Combines two Results of AsyncDropGuards.
 
 ```rust
-pub async fn flatten_async_drop<E, T, E1, U, E2>(
-    first: Result<AsyncDropGuard<T>, E1>,
-    second: Result<AsyncDropGuard<U>, E2>,
+pub async fn flatten_async_drop<E, T, U>(
+    first: Result<AsyncDropGuard<T>, E>,
+    second: Result<AsyncDropGuard<U>, E>,
 ) -> Result<(AsyncDropGuard<T>, AsyncDropGuard<U>), E>
 ```
 
-Returns tuple of both guards if both are Ok. On error, properly cleans up any successful guard before returning error.
+Returns tuple of both guards if both are Ok. On error, drops any successful guard before
+returning the (first) error. Both inputs share one error type, which is inferred, so no
+turbofish is needed. Drop failures on the error path are logged, not returned.
 
 ---
 

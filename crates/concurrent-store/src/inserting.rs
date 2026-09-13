@@ -3,7 +3,7 @@ use std::{fmt::Debug, hash::Hash};
 
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropArc, AsyncDropGuard},
-    safe_panic, with_async_drop_2_infallible,
+    safe_panic, with_async_drop_infallible,
 };
 
 use crate::{LoadedEntryGuard, entry::EntryLoadingWaiter, store::ConcurrentStoreInner};
@@ -60,7 +60,7 @@ where
         V: AsyncDrop + Debug + Send + Sync,
     {
         let InsertingInner { waiter, store } = self.inner.take().expect("Already destructed");
-        with_async_drop_2_infallible!(store, {
+        with_async_drop_infallible!(store, {
             Ok(waiter.wait_until_loaded(&store).await?.expect(
                 "Invariant violated: Inserting should never return None from the loading function",
             ))

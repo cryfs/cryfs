@@ -94,6 +94,52 @@ impl<T: Debug + AsyncDrop> AsyncDropGuard<T> {
     pub fn async_drop(self) -> impl Future<Output = Result<(), T::Error>> + Send {
         self.into_inner_unchecked().async_drop_impl()
     }
+
+    /// Drops the guard if `result` is an error, otherwise hands the value and the guard back.
+    ///
+    /// This is for functions that keep the guard on their success path (e.g. move it into a
+    /// new object) but have to drop it on every error path:
+    ///
+    /// ```
+    /// # use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+    /// # #[derive(Debug)] struct Blob;
+    /// # impl AsyncDrop for Blob {
+    /// #     type Error = std::convert::Infallible;
+    /// #     async fn async_drop_impl(self) -> Result<(), Self::Error> { Ok(()) }
+    /// # }
+    /// # struct Node { blob: AsyncDropGuard<Blob> }
+    /// # async fn load_blob() -> AsyncDropGuard<Blob> { AsyncDropGuard::new(Blob) }
+    /// # async fn create_child() -> Result<u32, &'static str> { Ok(1) }
+    /// # async fn example() -> Result<Node, &'static str> {
+    /// let blob = load_blob().await;
+    /// // If `create_child` failed, `blob` is dropped and the error is returned here.
+    /// let (child_id, blob) = blob.async_drop_on_err(create_child().await).await?;
+    /// Ok(Node { blob })
+    /// # }
+    /// # futures::executor::block_on(async { example().await.unwrap().blob.async_drop().await.unwrap() });
+    /// ```
+    ///
+    /// If dropping fails on the error path, the drop error is logged and the original error
+    /// is still returned, because that is the error the caller needs to know about.
+    pub async fn async_drop_on_err<R, E>(self, result: Result<R, E>) -> Result<(R, Self), E> {
+        match result {
+            Ok(value) => Ok((value, self)),
+            Err(error) => {
+                self.async_drop_on_error_path().await;
+                Err(error)
+            }
+        }
+    }
+
+    /// Drops the guard while already handling another error. A failure to drop is logged
+    /// instead of returned, so that the original error stays the one that gets reported.
+    pub(super) async fn async_drop_on_error_path(self) {
+        if let Err(drop_error) = self.async_drop().await {
+            log::error!(
+                "Error while dropping a value on an error path. Reporting the original error instead. Drop error: {drop_error:?}"
+            );
+        }
+    }
 }
 
 impl<T: Debug> Drop for AsyncDropGuard<T> {
@@ -133,7 +179,8 @@ mod tests {
 
     use std::fmt::{self, Debug};
     use std::future::Future;
-    use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, AtomicI32, AtomicUsize, Ordering};
 
     struct MyStructWithDrop<F, FA, FS>
     where
@@ -281,5 +328,78 @@ mod tests {
         });
         assert_eq!(Err("My error"), obj.async_drop().await);
         assert_eq!(true, called.load(Ordering::SeqCst));
+    }
+
+    #[derive(Debug)]
+    struct CountingValue {
+        drop_counter: Arc<AtomicUsize>,
+        fail_drop: bool,
+    }
+
+    impl AsyncDrop for CountingValue {
+        type Error = &'static str;
+
+        async fn async_drop_impl(self) -> Result<(), Self::Error> {
+            self.drop_counter.fetch_add(1, Ordering::SeqCst);
+            if self.fail_drop {
+                Err("drop error")
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn given_ok_result_when_async_drop_on_err_then_value_and_guard_are_returned_undropped() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let guard = AsyncDropGuard::new(CountingValue {
+            drop_counter: Arc::clone(&counter),
+            fail_drop: false,
+        });
+
+        let (value, guard) = guard
+            .async_drop_on_err(Ok::<_, &'static str>(42))
+            .await
+            .unwrap();
+
+        assert_eq!(42, value);
+        assert_eq!(0, counter.load(Ordering::SeqCst));
+
+        guard.async_drop().await.unwrap();
+        assert_eq!(1, counter.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn given_err_result_when_async_drop_on_err_then_guard_is_dropped_and_error_returned() {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let guard = AsyncDropGuard::new(CountingValue {
+            drop_counter: Arc::clone(&counter),
+            fail_drop: false,
+        });
+
+        let result = guard
+            .async_drop_on_err(Err::<i32, _>("original error"))
+            .await;
+
+        assert_eq!("original error", result.unwrap_err());
+        assert_eq!(1, counter.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn given_err_result_and_failing_drop_when_async_drop_on_err_then_original_error_returned()
+    {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let guard = AsyncDropGuard::new(CountingValue {
+            drop_counter: Arc::clone(&counter),
+            fail_drop: true,
+        });
+
+        let result = guard
+            .async_drop_on_err(Err::<i32, _>("original error"))
+            .await;
+
+        // The drop error is only logged, the original error is what the caller gets
+        assert_eq!("original error", result.unwrap_err());
+        assert_eq!(1, counter.load(Ordering::SeqCst));
     }
 }
