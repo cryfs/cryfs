@@ -6,7 +6,13 @@ using cryfs::ErrorCode;
 namespace bf = boost::filesystem;
 
 //Tests that cryfs is correctly setup according to the CLI parameters specified
-using CliTest_Setup = CliTest;
+class CliTest_Setup: public CliTest {
+public:
+    // All of these mount a file system.
+    static void SetUpTestSuite() {
+        SKIP_IF_MOUNTING_IS_UNAVAILABLE();
+    }
+};
 
 TEST_F(CliTest_Setup, NoSpecialOptions) {
     //Specify --cipher parameter to make it non-interactive
@@ -81,6 +87,7 @@ TEST_F(CliTest_Setup, FuseOptionGiven) {
 }
 
 TEST_F(CliTest, WorksWithCommasInBasedir) {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
     // This test makes sure we don't regress on https://github.com/cryfs/cryfs/issues/326
     //TODO Remove "-f" parameter, once EXPECT_RUN_SUCCESS can handle that
     auto basedir_ = basedir / "pathname,with,commas";

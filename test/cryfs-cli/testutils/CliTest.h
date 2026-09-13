@@ -22,6 +22,7 @@
 #include <fspp/fuse/Fuse.h>
 #include <cryfs/impl/ErrorCodes.h>
 #include <cpp-utils/testutils/CaptureStderrRAII.h>
+#include <mount_availability.h>
 #include <regex>
 #include <string>
 #include <thread>

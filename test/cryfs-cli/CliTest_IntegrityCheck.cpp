@@ -68,6 +68,11 @@ class FakeCryKeyProvider final : public CryKeyProvider {
 
 class CliTest_IntegrityCheck : public CliTest {
 public:
+  // All of these mount a file system.
+  static void SetUpTestSuite() {
+    SKIP_IF_MOUNTING_IS_UNAVAILABLE();
+  }
+
   void modifyFilesystemId() {
     FakeCryKeyProvider keyProvider;
     auto configFile = CryConfigFile::load(basedir / "cryfs.config", &keyProvider, CryConfigFile::Access::ReadWrite).right_opt().value();
