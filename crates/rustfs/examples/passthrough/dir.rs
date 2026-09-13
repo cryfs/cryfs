@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use cryfs_rustfs::{
     DirEntry, FsError, FsResult, Gid, Mode, NodeAttrs, NodeKind, OpenInFlags, Uid,
     object_based_api::{Dir, Node},
@@ -30,7 +29,6 @@ impl PassthroughDir {
     }
 }
 
-#[async_trait]
 impl Dir for PassthroughDir {
     type Device = PassthroughDevice;
 

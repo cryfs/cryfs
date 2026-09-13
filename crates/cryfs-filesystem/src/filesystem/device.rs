@@ -1,5 +1,4 @@
 use anyhow::{Context as _, Result};
-use async_trait::async_trait;
 use atomic_time::AtomicInstant;
 use cryfs_blockstore::RemoveResult;
 use cryfs_rustfs::AtimeUpdateBehavior;
@@ -290,7 +289,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> Device for CryDevice<B>
 where
     B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
@@ -313,194 +311,185 @@ where
         Ok(CryDir::new(&self.blobstore, AsyncDropArc::new(node_info)))
     }
 
-    // TODO For some reason, async_trait doesn't work for `rename` and trying to do `async fn rename` fails, but the error message says that it's
-    //      a known restriction that will be lifted in later rust versions. Check on later rust versions if it now works.
-    fn rename(
-        &self,
-        source_path: &AbsolutePath,
-        dest_path: &AbsolutePath,
-    ) -> impl Future<Output = FsResult<()>> {
-        async move {
-            if source_path.is_ancestor_of(dest_path) {
-                log::error!(
-                    "Tried to rename {source_path} into its descendant {dest_path}",
-                    source_path = source_path,
-                    dest_path = dest_path
-                );
-                return Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself);
+    async fn rename(&self, source_path: &AbsolutePath, dest_path: &AbsolutePath) -> FsResult<()> {
+        if source_path.is_ancestor_of(dest_path) {
+            log::error!(
+                "Tried to rename {source_path} into its descendant {dest_path}",
+                source_path = source_path,
+                dest_path = dest_path
+            );
+            return Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself);
+        }
+        // We don't need to check dest_path.is_ancestor_of(source_path) because that case would mean
+        // that dest_path is non-empty (it contains source_path), and we check for non-emptiness below.
+
+        let Some((source_parent, source_name)) = source_path.split_last() else {
+            log::error!("Tried to rename the root directory {source_path} into {dest_path}");
+            return Err(FsError::InvalidOperation);
+        };
+        let Some((dest_parent, dest_name)) = dest_path.split_last() else {
+            log::error!("Tried to rename {source_path} to the root directory {dest_path}");
+            return Err(FsError::InvalidOperation);
+        };
+
+        let on_overwritten = async move |source_blob_type: EntryType,
+                                         overwritten_blob_type: EntryType,
+                                         overwritten_blobid: &BlobId| {
+            check_entry_overwrite_allowed(
+                &self.blobstore,
+                source_blob_type,
+                overwritten_blob_type,
+                overwritten_blobid,
+            )
+            .await?;
+
+            match self
+                .blobstore
+                .remove_by_id(&overwritten_blobid)
+                .await
+                .map_err(FsError::internal_error)?
+            {
+                RemoveResult::SuccessfullyRemoved => Ok(()),
+                RemoveResult::NotRemovedBecauseItDoesntExist => {
+                    log::error!(
+                        "During rename->overwrite, tried to remove blob that doesn't exist"
+                    );
+                    Err(FsError::UnknownError)
+                }
             }
-            // We don't need to check dest_path.is_ancestor_of(source_path) because that case would mean
-            // that dest_path is non-empty (it contains source_path), and we check for non-emptiness below.
+        };
 
-            let Some((source_parent, source_name)) = source_path.split_last() else {
-                log::error!("Tried to rename the root directory {source_path} into {dest_path}");
-                return Err(FsError::InvalidOperation);
-            };
-            let Some((dest_parent, dest_name)) = dest_path.split_last() else {
-                log::error!("Tried to rename {source_path} to the root directory {dest_path}");
-                return Err(FsError::InvalidOperation);
-            };
-
-            let on_overwritten =
-                async move |source_blob_type: EntryType,
-                            overwritten_blob_type: EntryType,
-                            overwritten_blobid: &BlobId| {
-                    check_entry_overwrite_allowed(
-                        &self.blobstore,
-                        source_blob_type,
-                        overwritten_blob_type,
-                        overwritten_blobid,
-                    )
-                    .await?;
-
-                    match self
-                        .blobstore
-                        .remove_by_id(&overwritten_blobid)
-                        .await
-                        .map_err(FsError::internal_error)?
+        match self.load_two_blobs(source_parent, dest_parent).await? {
+            LoadTwoBlobsResult::AreSameBlob(blob) => {
+                with_async_drop_2!(
+                    blob,
                     {
-                        RemoveResult::SuccessfullyRemoved => Ok(()),
-                        RemoveResult::NotRemovedBecauseItDoesntExist => {
-                            log::error!(
-                                "During rename->overwrite, tried to remove blob that doesn't exist"
-                            );
-                            Err(FsError::UnknownError)
-                        }
-                    }
-                };
+                        blob.with_lock(async |blob| {
+                            let parent = blob
+                                .as_dir_mut()
+                                .map_err(|_| FsError::NodeIsNotADirectory)?;
+                            parent
+                                .rename_entry_by_name(
+                                    source_name,
+                                    dest_name.to_owned(),
+                                    on_overwritten,
+                                )
+                                .await
+                                .map_err(|err| match err {
+                                    RenameError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                                    RenameError::OnOverwriteError(e) => e,
+                                })?;
+                            Ok::<(), FsError>(())
+                        })
+                        .await
+                    },
+                    FsError::internal_error
+                )?;
+            }
+            LoadTwoBlobsResult::AreDifferentBlobs(source_parent_blob, dest_parent_blob) => {
+                // TODO We're currently locking, releasing and re-locking blobs multiple times. This introduces race conditions and is not optimal for performance either.
+                //      We should just lock each blob once and keep it locked until we're done. But we need to do it in a deadlock-free way, locking multiple
+                //      blobs at once is risky for deadlocks if not done in a consistent order.
+                // TODO Improve concurrency in this function
 
-            match self.load_two_blobs(source_parent, dest_parent).await? {
-                LoadTwoBlobsResult::AreSameBlob(blob) => {
-                    with_async_drop_2!(
-                        blob,
-                        {
-                            blob.with_lock(async |blob| {
-                                let parent = blob
+                with_async_drop_2!(
+                    source_parent_blob,
+                    dest_parent_blob,
+                    {
+                        let entry = source_parent_blob
+                            .with_lock(async |source_parent: &mut FsBlob<B>| {
+                                source_parent
                                     .as_dir_mut()
-                                    .map_err(|_| FsError::NodeIsNotADirectory)?;
-                                parent
-                                    .rename_entry_by_name(
-                                        source_name,
-                                        dest_name.to_owned(),
-                                        on_overwritten,
-                                    )
+                                    .map_err(|_| FsError::NodeIsNotADirectory)?
+                                    .entry_by_name(source_name)
+                                    .ok_or(FsError::NodeDoesNotExist)
+                                    .cloned() // TODO No cloned?
+                            })
+                            .await?;
+                        let self_blob_id = entry.blob_id();
+
+                        // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
+                        //      But it likely has some dependency with source_parent_blob.
+                        let self_blob = self
+                            .blobstore
+                            .load(self_blob_id)
+                            .await
+                            .map_err(|err| {
+                                log::error!("Error loading blob: {:?}", err);
+                                FsError::UnknownError
+                            })?
+                            .ok_or(FsError::NodeDoesNotExist)?;
+
+                        // TODO Drop self_blob concurrently with source_parent_blob and dest_parent_blob
+                        with_async_drop_2!(
+                            self_blob,
+                            {
+                                source_parent_blob
+                                    .with_lock(async |source_parent| {
+                                        source_parent
+                                            .as_dir_mut()
+                                            .map_err(|_| FsError::NodeIsNotADirectory)?
+                                            .remove_entry_by_name(source_name)
+                                            .map_err(|err| match err {
+                                                RemoveError::NodeDoesNotExist => {
+                                                    FsError::NodeDoesNotExist
+                                                }
+                                            })
+                                    })
+                                    .await?;
+                                dest_parent_blob
+                                            .with_lock(async |source_parent| {
+                                                source_parent
+                                                    .as_dir_mut()
+                                                    .map_err(|_| FsError::NodeIsNotADirectory)?
+                                                    .add_or_overwrite_entry(
+                                                        dest_name.to_owned(),
+                                                        *entry.blob_id(),
+                                                        entry.entry_type(),
+                                                        entry.mode(),
+                                                        entry.uid(),
+                                                        entry.gid(),
+                                                        entry.last_access_time(),
+                                                        entry.last_modification_time(),
+                                                        on_overwritten,
+                                                    )
+                                                    .await
+                                                    .map_err(|err| {
+                                                        // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
+                                                        match err {
+                                                            AddOrOverwriteError::ValidationFailed(fs_err) => {
+                                                                log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
+                                                                FsError::internal_error(fs_err.into()) // This shouldn't happen because we are moving an already validated entry
+                                                            }
+                                                            AddOrOverwriteError::OnOverwriteError(err) => {
+                                                                log::error!("Error in add_or_overwrite_entry on_overwritten: {err:?}");
+                                                                err
+                                                            }
+                                                        }
+                                                    })
+                                            }).await?;
+
+                                self_blob
+                                    .with_lock(async |self_blob| {
+                                        self_blob.set_parent(&dest_parent_blob.blob_id()).await
+                                    })
                                     .await
-                                    .map_err(|err| match err {
-                                        RenameError::NodeDoesNotExist => FsError::NodeDoesNotExist,
-                                        RenameError::OnOverwriteError(e) => e,
+                                    .map_err(|err| {
+                                        // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
+                                        log::error!("Error setting parent: {err:?}");
+                                        FsError::UnknownError
                                     })?;
                                 Ok::<(), FsError>(())
-                            })
-                            .await
-                        },
-                        FsError::internal_error
-                    )?;
-                }
-                LoadTwoBlobsResult::AreDifferentBlobs(source_parent_blob, dest_parent_blob) => {
-                    // TODO We're currently locking, releasing and re-locking blobs multiple times. This introduces race conditions and is not optimal for performance either.
-                    //      We should just lock each blob once and keep it locked until we're done. But we need to do it in a deadlock-free way, locking multiple
-                    //      blobs at once is risky for deadlocks if not done in a consistent order.
-                    // TODO Improve concurrency in this function
-
-                    with_async_drop_2!(
-                        source_parent_blob,
-                        dest_parent_blob,
-                        {
-                            let entry = source_parent_blob
-                                .with_lock(async |source_parent: &mut FsBlob<B>| {
-                                    source_parent
-                                        .as_dir_mut()
-                                        .map_err(|_| FsError::NodeIsNotADirectory)?
-                                        .entry_by_name(source_name)
-                                        .ok_or(FsError::NodeDoesNotExist)
-                                        .cloned() // TODO No cloned?
-                                })
-                                .await?;
-                            let self_blob_id = entry.blob_id();
-
-                            // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
-                            //      But it likely has some dependency with source_parent_blob.
-                            let self_blob = self
-                                .blobstore
-                                .load(self_blob_id)
-                                .await
-                                .map_err(|err| {
-                                    log::error!("Error loading blob: {:?}", err);
-                                    FsError::UnknownError
-                                })?
-                                .ok_or(FsError::NodeDoesNotExist)?;
-
-                            // TODO Drop self_blob concurrently with source_parent_blob and dest_parent_blob
-                            with_async_drop_2!(
-                                self_blob,
-                                {
-                                    source_parent_blob
-                                        .with_lock(async |source_parent| {
-                                            source_parent
-                                                .as_dir_mut()
-                                                .map_err(|_| FsError::NodeIsNotADirectory)?
-                                                .remove_entry_by_name(source_name)
-                                                .map_err(|err| match err {
-                                                    RemoveError::NodeDoesNotExist => {
-                                                        FsError::NodeDoesNotExist
-                                                    }
-                                                })
-                                        })
-                                        .await?;
-                                    dest_parent_blob
-                                                .with_lock(async |source_parent| {
-                                                    source_parent
-                                                        .as_dir_mut()
-                                                        .map_err(|_| FsError::NodeIsNotADirectory)?
-                                                        .add_or_overwrite_entry(
-                                                            dest_name.to_owned(),
-                                                            *entry.blob_id(),
-                                                            entry.entry_type(),
-                                                            entry.mode(),
-                                                            entry.uid(),
-                                                            entry.gid(),
-                                                            entry.last_access_time(),
-                                                            entry.last_modification_time(),
-                                                            on_overwritten,
-                                                        )
-                                                        .await
-                                                        .map_err(|err| {
-                                                            // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
-                                                            match err {
-                                                                AddOrOverwriteError::ValidationFailed(fs_err) => {
-                                                                    log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
-                                                                    FsError::internal_error(fs_err.into()) // This shouldn't happen because we are moving an already validated entry
-                                                                }
-                                                                AddOrOverwriteError::OnOverwriteError(err) => {
-                                                                    log::error!("Error in add_or_overwrite_entry on_overwritten: {err:?}");
-                                                                    err
-                                                                }
-                                                            }
-                                                        })
-                                                }).await?;
-
-                                    self_blob
-                                        .with_lock(async |self_blob| {
-                                            self_blob.set_parent(&dest_parent_blob.blob_id()).await
-                                        })
-                                        .await
-                                        .map_err(|err| {
-                                            // TODO Exception safety - we already changed parent dir entries but couldn't update the parent pointer. We should probably try to undo the parent dir entry changes.
-                                            log::error!("Error setting parent: {err:?}");
-                                            FsError::UnknownError
-                                        })?;
-                                    Ok::<(), FsError>(())
-                                },
-                                FsError::internal_error
-                            )
-                        },
-                        FsError::internal_error
-                    )?;
-                }
+                            },
+                            FsError::internal_error
+                        )
+                    },
+                    FsError::internal_error
+                )?;
             }
-
-            Ok(())
         }
+
+        Ok(())
     }
 
     async fn statfs(&self) -> FsResult<Statfs> {

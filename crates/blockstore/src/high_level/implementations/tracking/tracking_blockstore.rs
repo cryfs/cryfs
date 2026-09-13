@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::fmt::Debug;
@@ -43,7 +42,6 @@ where
     }
 }
 
-#[async_trait]
 impl<B> BlockStore for TrackingBlockStore<B>
 where
     B: BlockStore + AsyncDrop + Debug + Send + Sync,

@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use cryfs_rustfs::{
     Data, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, Uid, object_based_api::OpenFile,
 };
@@ -99,7 +98,6 @@ impl PassthroughOpenFile {
     }
 }
 
-#[async_trait]
 impl OpenFile for PassthroughOpenFile {
     async fn getattr(&self) -> FsResult<NodeAttrs> {
         let metadata = self.open_file.metadata().await.map_error()?;

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use derive_more::Debug;
 use std::time::{Duration, SystemTime};
 
@@ -37,80 +36,79 @@ pub struct CreateResponse {
     pub flags: OpenOutFlags,
 }
 
-#[async_trait(?Send)]
 pub trait AsyncFilesystem {
     /// Initialize filesystem.
     /// Called before any other filesystem method.
-    async fn init(&self, req: RequestInfo) -> FsResult<()>;
+    fn init(&self, req: RequestInfo) -> impl Future<Output = FsResult<()>>;
 
     /// Clean up filesystem.
     /// Called on filesystem exit.
-    async fn destroy(&self);
+    fn destroy(&self) -> impl Future<Output = ()>;
 
     /// Get the attributes of a filesystem entry.
     ///
     /// * `fh`: a file handle if this is called on an open file.
-    async fn getattr(
+    fn getattr(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: Option<FileHandle>,
-    ) -> FsResult<AttrResponse>;
+    ) -> impl Future<Output = FsResult<AttrResponse>>;
 
     /// Change the mode of a filesystem entry.
     ///
     /// * `fh`: a file handle if this is called on an open file.
     /// * `mode`: the mode to change the file to.
-    async fn chmod(
+    fn chmod(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: Option<FileHandle>,
         mode: Mode,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Change the owner UID and/or group GID of a filesystem entry.
     ///
     /// * `fh`: a file handle if this is called on an open file.
     /// * `uid`: user ID to change the file's owner to. If `None`, leave the UID unchanged.
     /// * `gid`: group ID to change the file's group to. If `None`, leave the GID unchanged.
-    async fn chown(
+    fn chown(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: Option<FileHandle>,
         uid: Option<Uid>,
         gid: Option<Gid>,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Set the length of a file.
     ///
     /// * `fh`: a file handle if this is called on an open file.
     /// * `size`: size in bytes to set as the file's length.
-    async fn truncate(
+    fn truncate(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: Option<FileHandle>,
         size: NumBytes,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Set timestamps of a filesystem entry.
     ///
     /// * `fh`: a file handle if this is called on an open file.
     /// * `atime`: the time of last access.
     /// * `mtime`: the time of last modification.
-    async fn utimens(
+    fn utimens(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: Option<FileHandle>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Set timestamps of a filesystem entry (with extra options only used on MacOS).
-    async fn utimens_macos(
+    fn utimens_macos(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
@@ -120,80 +118,84 @@ pub trait AsyncFilesystem {
         bkuptime: Option<SystemTime>,
         // TODO What are those flags? Should we wrap them into a custom type?
         flags: Option<u32>,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Read a symbolic link.
     /// TODO Use custom type for absolute-or-relative paths as the return type
-    async fn readlink(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<String>;
+    fn readlink(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<String>>;
 
     /// Create a special file.
     ///
     /// * `path`: path of the file to create
     /// * `mode`: mode for the new entry.
     /// * `rdev`: if mode has the bits `S_IFCHR` or `S_IFBLK` set, this is the major and minor numbers for the device file. Otherwise it should be ignored.
-    async fn mknod(
+    fn mknod(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         mode: Mode,
         // TODO What to do with rdev? Should we wrap it into a custom type?
         rdev: u32,
-    ) -> FsResult<AttrResponse>;
+    ) -> impl Future<Output = FsResult<AttrResponse>>;
 
     /// Create a directory.
     ///
     /// * `path`: path of the directory to create
     /// * `mode`: permissions for the new directory.
-    async fn mkdir(
+    fn mkdir(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         mode: Mode,
-    ) -> FsResult<AttrResponse>;
+    ) -> impl Future<Output = FsResult<AttrResponse>>;
 
     /// Remove a file.
     ///
     /// * `path`: path of the file or symlink to delete
-    async fn unlink(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<()>;
+    fn unlink(&self, req: RequestInfo, path: &AbsolutePath) -> impl Future<Output = FsResult<()>>;
 
     /// Remove a directory.
     ///
     /// * `path`: path of the directory to delete
-    async fn rmdir(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<()>;
+    fn rmdir(&self, req: RequestInfo, path: &AbsolutePath) -> impl Future<Output = FsResult<()>>;
 
     /// Create a symbolic link.
     ///
     /// * `path`: path of the symlink to create
     /// * `target`: path (may be relative or absolute) to the target of the link.
-    async fn symlink(
+    fn symlink(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         // TODO We may want to introduce a separate `Path` type for paths that can be either relative or absolute
         target: &str,
-    ) -> FsResult<AttrResponse>;
+    ) -> impl Future<Output = FsResult<AttrResponse>>;
 
     /// Rename a filesystem entry.
     ///
     /// * `oldpath`: path to the existing entry
     /// * `newpath`: path the entry should be reachable at after the rename/move operation
-    async fn rename(
+    fn rename(
         &self,
         req: RequestInfo,
         oldpath: &AbsolutePath,
         newpath: &AbsolutePath,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Create a hard link.
     ///
     /// * `path`: path to an existing file.
     /// * `newpath`: path to the new hardlink under which the file should now also be reachable.
-    async fn link(
+    fn link(
         &self,
         req: RequestInfo,
         oldpath: &AbsolutePath,
         newpath: &AbsolutePath,
-    ) -> FsResult<AttrResponse>;
+    ) -> impl Future<Output = FsResult<AttrResponse>>;
 
     /// Open a file.
     ///
@@ -203,12 +205,12 @@ pub trait AsyncFilesystem {
     /// Return a struct with file handle and flags. The file handle will be passed to any subsequent
     /// calls that operate on the file, and can be any value you choose, though it should allow
     /// your filesystem to identify the file opened even without any path info.
-    async fn open(
+    fn open(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         flags: OpenInFlags,
-    ) -> FsResult<OpenResponse>;
+    ) -> impl Future<Output = FsResult<OpenResponse>>;
 
     /// Read from a file.
     ///
@@ -224,7 +226,7 @@ pub trait AsyncFilesystem {
     ///    the result data as a slice, or an error code.
     ///
     /// Return the return value from the `callback` function.
-    async fn read<R, C>(
+    fn read<R, C>(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
@@ -232,7 +234,7 @@ pub trait AsyncFilesystem {
         offset: NumBytes,
         size: NumBytes,
         callback: C,
-    ) -> R
+    ) -> impl Future<Output = R>
     where
         C: for<'a> Callback<FsResult<&'a [u8]>, R>;
 
@@ -245,7 +247,7 @@ pub trait AsyncFilesystem {
     /// * `flags`:
     ///
     /// Return the number of bytes written.
-    async fn write(
+    fn write(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
@@ -254,7 +256,7 @@ pub trait AsyncFilesystem {
         data: Vec<u8>,
         // TODO What is the flags parameter for? Should we use a type wrapper instead of u32?
         flags: u32,
-    ) -> FsResult<NumBytes>;
+    ) -> impl Future<Output = FsResult<NumBytes>>;
 
     /// Called each time a program calls `close` on an open file.
     ///
@@ -267,13 +269,13 @@ pub trait AsyncFilesystem {
     /// * `fh`: file handle returned from the `open` call.
     /// * `lock_owner`: if the filesystem supports locking (`setlk`, `getlk`), remove all locks
     ///   belonging to this lock owner.
-    async fn flush(
+    fn flush(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
         lock_owner: u64,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Called when an open file is closed.
     ///
@@ -286,7 +288,7 @@ pub trait AsyncFilesystem {
     /// * `lock_owner`: if the filesystem supports locking (`setlk`, `getlk`), remove all locks
     ///   belonging to this lock owner.
     /// * `flush`: whether pending data must be flushed or not.
-    async fn release(
+    fn release(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
@@ -295,7 +297,7 @@ pub trait AsyncFilesystem {
         // TODO What to do with lock_owner in flush and release? Wrap into a custom type?
         lock_owner: u64,
         flush: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Write out any pending changes of a file.
     ///
@@ -304,13 +306,13 @@ pub trait AsyncFilesystem {
     /// * `path`: path to the file.
     /// * `fh`: file handle returned from the `open` call.
     /// * `datasync`: if `false`, also write metadata, otherwise just write file data.
-    async fn fsync(
+    fn fsync(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
         datasync: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Open a directory.
     ///
@@ -323,12 +325,12 @@ pub trait AsyncFilesystem {
     /// calls that operate on the directory, and can be any value you choose, though it should
     /// allow your filesystem to identify the directory opened even without any path info.
     /// // TODO Wrap flags into some custom type instead of using u32
-    async fn opendir(
+    fn opendir(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         flags: OpenInFlags,
-    ) -> FsResult<OpendirResponse>;
+    ) -> impl Future<Output = FsResult<OpendirResponse>>;
 
     /// Get the entries of a directory.
     ///
@@ -337,12 +339,12 @@ pub trait AsyncFilesystem {
     ///
     /// Return all the entries of the directory.
     /// TODO Should we change the API to a callback based one, similar to how `read` works? With the callback being called for each entry? Could reduce amount of copies needed.
-    async fn readdir(
+    fn readdir(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
-    ) -> FsResult<impl Iterator<Item = DirEntryOrReference>>;
+    ) -> impl Future<Output = FsResult<impl Iterator<Item = DirEntryOrReference>>>;
 
     /// Close an open directory.
     ///
@@ -352,31 +354,35 @@ pub trait AsyncFilesystem {
     /// * `fh`: file handle returned from the `opendir` call.
     /// * `flags`: the file access flags passed to the `opendir` call.
     /// // TODO Wrap flags into some custom type instead of using u32
-    async fn releasedir(
+    fn releasedir(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
         flags: OpenInFlags,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Write out any pending changes to a directory.
     ///
     /// Analogous to the `fsync` call.
-    async fn fsyncdir(
+    fn fsyncdir(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         fh: FileHandle,
         datasync: bool,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Get filesystem statistics.
     ///
     /// * `path`: path to some folder in the filesystem.
     ///
     /// See the `Statfs` struct for more details.
-    async fn statfs(&self, req: RequestInfo, path: &AbsolutePath) -> FsResult<Statfs>;
+    fn statfs(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<Statfs>>;
 
     /// Set a file extended attribute.
     ///
@@ -385,7 +391,7 @@ pub trait AsyncFilesystem {
     /// * `value`: the data to set the value to.
     /// * `flags`: can be either `XATTR_CREATE` or `XATTR_REPLACE`.
     /// * `position`: offset into the attribute value to write data.
-    async fn setxattr(
+    fn setxattr(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
@@ -395,18 +401,18 @@ pub trait AsyncFilesystem {
         // TODO flags/position should be wrapped into a custom types instead of using u32
         flags: u32,
         position: NumBytes,
-    ) -> FsResult<()>;
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Get the size of a file extended attribute.
     ///
     /// * `path`: path to the file
     /// * `name`: attribute name.
-    async fn getxattr_numbytes(
+    fn getxattr_numbytes(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         name: &str,
-    ) -> FsResult<NumBytes>;
+    ) -> impl Future<Output = FsResult<NumBytes>>;
 
     /// Get the data stored in a file extended attribute.
     ///
@@ -417,21 +423,24 @@ pub trait AsyncFilesystem {
     /// Return FsError::XattrBufferTooSmall if `max_bytes_to_read` is too small.
     ///
     /// TODO Should we change the API to a callback based one, similar to how `read` works? Could reduce amount of copies needed
-    async fn getxattr_data(
+    fn getxattr_data(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         name: &str,
         max_bytes_to_read: NumBytes,
-    ) -> FsResult<Vec<u8>>;
+    ) -> impl Future<Output = FsResult<Vec<u8>>>;
 
     /// Return the number of bytes that would be returned by a call to [Self::listxattr_data].
     ///
     /// * `path`: path to the file.
     ///
     /// See [Self::listxattr_data] for a definition of what it returns.
-    async fn listxattr_numbytes(&self, req: RequestInfo, path: &AbsolutePath)
-    -> FsResult<NumBytes>;
+    fn listxattr_numbytes(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+    ) -> impl Future<Output = FsResult<NumBytes>>;
 
     /// List extended attributes for a file.
     ///
@@ -442,18 +451,23 @@ pub trait AsyncFilesystem {
     ///
     /// Return all the null-terminated attribute names.
     /// // TODO Come up with a better way to handle this return, and its combination with listxattr_numbytes.
-    async fn listxattr_data(
+    fn listxattr_data(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         max_bytes_to_read: NumBytes,
-    ) -> FsResult<Vec<u8>>;
+    ) -> impl Future<Output = FsResult<Vec<u8>>>;
 
     /// Remove an extended attribute for a file.
     ///
     /// * `path`: path to the file.
     /// * `name`: name of the attribute to remove.
-    async fn removexattr(&self, req: RequestInfo, path: &AbsolutePath, name: &str) -> FsResult<()>;
+    fn removexattr(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+        name: &str,
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Check for access to a file.
     ///
@@ -463,7 +477,12 @@ pub trait AsyncFilesystem {
     /// Return `Ok(())` if all requested permissions are allowed, otherwise return `Err(EACCES)`
     /// or other error code as appropriate (e.g. `ENOENT` if the file doesn't exist).
     /// TODO Wrap mask into a custom type instead of using u32
-    async fn access(&self, req: RequestInfo, path: &AbsolutePath, mask: u32) -> FsResult<()>;
+    fn access(
+        &self,
+        req: RequestInfo,
+        path: &AbsolutePath,
+        mask: u32,
+    ) -> impl Future<Output = FsResult<()>>;
 
     /// Create and open a new file.
     ///
@@ -473,11 +492,11 @@ pub trait AsyncFilesystem {
     ///
     /// Return a `CreateResponse` (which contains the new file's attributes as well as a file handle
     /// -- see documentation on `open` for more info on that).
-    async fn create(
+    fn create(
         &self,
         req: RequestInfo,
         path: &AbsolutePath,
         mode: Mode,
         flags: OpenInFlags,
-    ) -> FsResult<CreateResponse>;
+    ) -> impl Future<Output = FsResult<CreateResponse>>;
 }

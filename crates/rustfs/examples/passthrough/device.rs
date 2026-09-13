@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use super::errors::{IoResultExt, NixResultExt};
 use cryfs_rustfs::{FsError, FsResult, Statfs, object_based_api::Device};
 use cryfs_utils::{
@@ -37,7 +35,6 @@ impl AsyncDrop for PassthroughDevice {
     }
 }
 
-#[async_trait]
 impl Device for PassthroughDevice {
     type Node = PassthroughNode;
     type Dir<'a> = PassthroughDir;

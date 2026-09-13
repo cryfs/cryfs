@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use binary_layout::Field;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
@@ -50,7 +49,6 @@ impl BlockStoreAdapter {
     }
 }
 
-#[async_trait]
 impl BlockStoreReader for BlockStoreAdapter {
     async fn exists(&self, id: &BlockId) -> Result<bool> {
         Ok(self.load_leaf(*id).await?.is_some())
@@ -83,7 +81,6 @@ impl BlockStoreReader for BlockStoreAdapter {
     }
 }
 
-#[async_trait]
 impl BlockStoreDeleter for BlockStoreAdapter {
     async fn remove(&self, id: &BlockId) -> Result<RemoveResult> {
         if let Some(leaf) = self.load_leaf(*id).await? {
@@ -95,7 +92,6 @@ impl BlockStoreDeleter for BlockStoreAdapter {
     }
 }
 
-#[async_trait]
 impl BlockStoreWriter for BlockStoreAdapter {
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<TryCreateResult> {
         if self.exists(id).await? {
@@ -131,7 +127,6 @@ impl LLBlockStore for BlockStoreAdapter {}
 /// a [Fixture] that creates a [DataNodeStore] based on that [BlockStore].
 /// This allows using our block store test suite on [DataNodeStore].
 pub struct TestFixtureAdapter<const FLUSH_CACHE_ON_YIELD: bool> {}
-#[async_trait]
 impl<const FLUSH_CACHE_ON_YIELD: bool> LLFixture for TestFixtureAdapter<FLUSH_CACHE_ON_YIELD> {
     type ConcreteBlockStore = BlockStoreAdapter;
     fn new() -> Self {

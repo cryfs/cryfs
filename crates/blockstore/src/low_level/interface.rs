@@ -1,5 +1,4 @@
 use anyhow::Result;
-use async_trait::async_trait;
 use byte_unit::Byte;
 use futures::stream::BoxStream;
 use std::any::Any;
@@ -11,30 +10,32 @@ use crate::{
 };
 use cryfs_utils::{async_drop::AsyncDrop, data::Data};
 
-#[async_trait]
 pub trait BlockStoreReader {
     // TODO Add test cases for exists(), they're not among the C++ test cases since we added it later
-    async fn exists(&self, id: &BlockId) -> Result<bool>;
-    async fn load(&self, id: &BlockId) -> Result<Option<Data>>;
-    async fn num_blocks(&self) -> Result<u64>;
+    fn exists(&self, id: &BlockId) -> impl Future<Output = Result<bool>> + Send;
+    fn load(&self, id: &BlockId) -> impl Future<Output = Result<Option<Data>>> + Send;
+    fn num_blocks(&self) -> impl Future<Output = Result<u64>> + Send;
     fn estimate_num_free_bytes(&self) -> Result<Byte>;
     fn overhead(&self) -> Overhead;
 
-    async fn all_blocks(&self) -> Result<BoxStream<'static, Result<BlockId>>>;
+    fn all_blocks(
+        &self,
+    ) -> impl Future<Output = Result<BoxStream<'static, Result<BlockId>>>> + Send;
 }
 
-#[async_trait]
 pub trait BlockStoreDeleter {
-    async fn remove(&self, id: &BlockId) -> Result<RemoveResult>;
+    fn remove(&self, id: &BlockId) -> impl Future<Output = Result<RemoveResult>> + Send;
 }
 
-#[async_trait]
 pub trait BlockStoreWriter {
-    async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<TryCreateResult>;
-    async fn store(&self, id: &BlockId, data: &[u8]) -> Result<()>;
+    fn try_create(
+        &self,
+        id: &BlockId,
+        data: &[u8],
+    ) -> impl Future<Output = Result<TryCreateResult>> + Send;
+    fn store(&self, id: &BlockId, data: &[u8]) -> impl Future<Output = Result<()>> + Send;
 }
 
-#[async_trait]
 pub trait OptimizedBlockStoreWriter {
     /// In-memory representation of the data of a block. This can be allocated using [OptimizedBlockStoreWriter::allocate]
     /// and then can be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
@@ -48,16 +49,19 @@ pub trait OptimizedBlockStoreWriter {
     /// and that can then be passed to [OptimizedBlockStoreWriter::try_create_optimized] or [OptimizedBlockStoreWriter::store_optimized].
     fn allocate(size: usize) -> Self::BlockData;
 
-    async fn try_create_optimized(
+    fn try_create_optimized(
         &self,
         id: &BlockId,
         data: Self::BlockData,
-    ) -> Result<TryCreateResult>;
+    ) -> impl Future<Output = Result<TryCreateResult>> + Send;
 
-    async fn store_optimized(&self, id: &BlockId, data: Self::BlockData) -> Result<()>;
+    fn store_optimized(
+        &self,
+        id: &BlockId,
+        data: Self::BlockData,
+    ) -> impl Future<Output = Result<()>> + Send;
 }
 
-#[async_trait]
 impl<B: OptimizedBlockStoreWriter + Sync> BlockStoreWriter for B {
     async fn try_create(&self, id: &BlockId, data: &[u8]) -> Result<TryCreateResult> {
         let mut block_data = Self::allocate(data.len());
