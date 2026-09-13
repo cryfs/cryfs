@@ -835,8 +835,7 @@ jobs:
           ./blockstore/blockstore-test.exe
           ./blobstore/blobstore-test.exe
           ./cryfs/cryfs-test.exe
-          # TODO Enable cryfs-cli-test on Windows
-          # ./cryfs-cli/cryfs-cli-test.exe
+          ./cryfs-cli/cryfs-cli-test.exe
       - name: CPack
         uses: ./.github/workflows/actions/cpack
         # Release installers are built with Visual Studio 2026, which windows-2025 ships.
