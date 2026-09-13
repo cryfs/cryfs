@@ -16,13 +16,12 @@ inline bool mounting_is_unavailable() {
 }
 
 // Skips the current test, or the whole suite when used from SetUpTestSuite(), where mounting isn't
-// possible.
+// possible. This expands to a plain if statement (clang-tidy doesn't want the usual do-while
+// wrapper), so use it as a statement of its own.
 #define SKIP_IF_MOUNTING_IS_UNAVAILABLE()                                                            \
-    do {                                                                                              \
-        if (mounting_is_unavailable()) {                                                              \
-            GTEST_SKIP() << "This test needs to mount a file system, which isn't possible here "     \
-                            "(CRYFS_TEST_CANNOT_MOUNT is set)";                                       \
-        }                                                                                             \
-    } while (0)
+    if (mounting_is_unavailable()) {                                                                  \
+        GTEST_SKIP() << "This test needs to mount a file system, which isn't possible here "         \
+                        "(CRYFS_TEST_CANNOT_MOUNT is set)";                                           \
+    }
 
 #endif
