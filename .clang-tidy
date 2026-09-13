@@ -4,6 +4,12 @@
 # TODO Maybe just enable * and disable a list instead?
 # TODO Check if there's new checks in clang-tidy-9 and later and potentially enable them
 # TODO Enable misc-include-cleaner
+# clang-analyzer-unix.BlockInCriticalSection and clang-analyzer-optin.core.EnumCastOutOfRange
+# below are disabled because they are only ever reported inside third-party headers from the
+# conan cache, where a NOLINT cannot be placed. BlockInCriticalSection fires solely in
+# boost::process's own posix executor. EnumCastOutOfRange fires in boost::filesystem::perms,
+# and on our own filler(..., fuse_fill_dir_flags(0)) call in fspp/fuse/Fuse.cpp - both are
+# flags enums where a compound or zero value is correct and has no named enumerator.
 Checks: |
   clang-diagnostic-*,
   clang-analyzer-*,
@@ -38,6 +44,8 @@ Checks: |
   -cppcoreguidelines-use-default-member-init,
   -clang-analyzer-optin.cplusplus.VirtualCall,
   -clang-analyzer-cplusplus.NewDeleteLeaks,
+  -clang-analyzer-unix.BlockInCriticalSection,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
   -misc-macro-parentheses,
   -misc-non-private-member-variables-in-classes,
   -misc-unused-raii
