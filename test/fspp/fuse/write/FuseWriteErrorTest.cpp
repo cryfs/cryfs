@@ -31,7 +31,7 @@ TEST_P(FuseWriteErrorTest, ReturnErrorOnFirstWriteCall) {
   EXPECT_CALL(*fsimpl, write(0, testing::_, testing::_, testing::_))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
-  char *buf = new char[WRITECOUNT.value()];
+  const char *buf = new char[WRITECOUNT.value()];
   auto retval = WriteFileReturnError(FILENAME, buf, WRITECOUNT, fspp::num_bytes_t(0));
   EXPECT_EQ(GetParam(), retval.error);
   delete[] buf;
@@ -51,7 +51,7 @@ TEST_P(FuseWriteErrorTest, ReturnErrorOnSecondWriteCall) {
   EXPECT_CALL(*fsimpl, write(0, testing::_, testing::_, Ne(fspp::num_bytes_t(0))))
     .WillRepeatedly(Throw(FuseErrnoException(GetParam())));
 
-  char *buf = new char[WRITECOUNT.value()];
+  const char *buf = new char[WRITECOUNT.value()];
   auto retval = WriteFileReturnError(FILENAME, buf, WRITECOUNT, fspp::num_bytes_t(0));
   EXPECT_EQ(0, retval.error);
   EXPECT_EQ(successfullyWrittenBytes, retval.written_bytes); // Check that we're getting the number of successfully written bytes (the first write call) returned

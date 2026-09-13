@@ -15,7 +15,7 @@ namespace bf = boost::filesystem;
 
 //gtest/boost::optional workaround for working with optional<CryConfigFile>
 namespace boost {
-    inline std::ostream &operator<<(std::ostream &out, const CryConfigFile &file) {
+    static inline std::ostream &operator<<(std::ostream &out, const CryConfigFile &file) {
         UNUSED(file);
         out << "ConfigFile()";
         return out;

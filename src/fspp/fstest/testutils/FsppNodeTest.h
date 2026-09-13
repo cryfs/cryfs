@@ -35,13 +35,13 @@ public:
     virtual cpputils::unique_ref<fspp::Node> CreateNode(const boost::filesystem::path &path) = 0;
 };
 
-#define _REGISTER_SINGLE_NODE_TEST_SUITE(r, Class, Name)                                                                 \
+#define REGISTER_SINGLE_NODE_TEST_SUITE(r, Class, Name)                                                                 \
     TYPED_TEST_P(Class, Name) {                                                                                         \
       this->BOOST_PP_CAT(Test_,Name)();                                                                                 \
     }                                                                                                                   \
 
 #define _REGISTER_NODE_TEST_SUITES_FOR_CLASS(Class, ...)                                                                 \
-    BOOST_PP_SEQ_FOR_EACH(_REGISTER_SINGLE_NODE_TEST_SUITE, Class, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__));               \
+    BOOST_PP_SEQ_FOR_EACH(REGISTER_SINGLE_NODE_TEST_SUITE, Class, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__));               \
     REGISTER_TYPED_TEST_SUITE_P(Class, __VA_ARGS__);                                                                     \
 
 #define _REGISTER_FILE_TEST_SUITE(Class, ...)                                                                            \

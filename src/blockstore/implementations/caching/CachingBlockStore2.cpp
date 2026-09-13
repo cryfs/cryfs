@@ -87,7 +87,7 @@ bool CachingBlockStore2::remove(const BlockId &blockId) {
 optional<unique_ref<CachingBlockStore2::CachedBlock>> CachingBlockStore2::_loadFromCacheOrBaseStore(const BlockId &blockId) const {
   auto popped = _cache.pop(blockId);
   if (popped != boost::none) {
-    return std::move(*popped);
+    return std::move(popped);
   } else {
     auto loaded = _baseBlockStore->load(blockId);
     if (loaded == boost::none) {

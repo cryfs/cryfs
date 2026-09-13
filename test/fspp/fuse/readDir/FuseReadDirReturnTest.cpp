@@ -11,7 +11,7 @@ using std::string;
 
 using namespace fspp::fuse;
 
-vector<string> LARGE_DIR(int num_entries) {
+static vector<string> LARGE_DIR(int num_entries) {
   vector<string> result;
   result.reserve(num_entries);
   for(int i=0; i<num_entries; ++i) {

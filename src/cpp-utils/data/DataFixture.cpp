@@ -14,7 +14,7 @@ namespace cpputils {
     const uint64_t alreadyWritten = (size/sizeof(unsigned long long int))*sizeof(unsigned long long int);
     val *= 6364136223846793005L;
     val += 1442695040888963407;
-    unsigned char *remainingBytes = reinterpret_cast<unsigned char*>(&val);
+    const unsigned char *remainingBytes = reinterpret_cast<unsigned char*>(&val);
     //Fill remaining bytes
     for(size_t i=0; i<size-alreadyWritten; ++i) {
       serialize<unsigned char>(result.dataOffset(alreadyWritten + i), remainingBytes[i]);

@@ -24,7 +24,7 @@ public:
     class WithEnv {
     public:
         WithEnv(const string &key, const string &value): _key(key) , _oldValue(none) {
-            char *oldValue = std::getenv(key.c_str());
+            const char *oldValue = std::getenv(key.c_str());
             if (nullptr != oldValue) {
                 _oldValue = string(oldValue);
             }

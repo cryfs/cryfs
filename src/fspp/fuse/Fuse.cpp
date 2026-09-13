@@ -401,7 +401,7 @@ namespace {
 }
 
 Fuse::~Fuse() {
-  for(char *arg : _argv) {
+  for(const char *arg : _argv) {
     delete[] arg;
     arg = nullptr;
   }

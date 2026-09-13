@@ -38,12 +38,12 @@ using namespace cryfs;
 
 // This is needed for google test
 namespace boost {
-    inline ostream &operator<<(ostream &stream, const CryConfigFile &) {
+    static inline ostream &operator<<(ostream &stream, const CryConfigFile &) {
         return stream << "CryConfigFile()";
     }
 }
 namespace cryfs {
-  inline ostream &operator<<(ostream &stream, const CryConfigLoader::ConfigLoadResult &) {
+  static inline ostream &operator<<(ostream &stream, const CryConfigLoader::ConfigLoadResult &) {
     return stream << "ConfigLoadResult()";
   }
 }

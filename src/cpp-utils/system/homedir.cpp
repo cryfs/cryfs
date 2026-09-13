@@ -13,7 +13,7 @@ namespace {
 		string homedir = (homedir_ == nullptr) ? "" : homedir_;
 		if (homedir == "") {
 			// try the /etc/passwd entry
-			struct passwd* pwd = getpwuid(getuid());
+			struct passwd const* pwd = getpwuid(getuid());
 			if (pwd) {
 				homedir = pwd->pw_dir;
 			}

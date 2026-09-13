@@ -9,13 +9,13 @@
 using namespace cpputils::logging;
 using std::string;
 
-void logAndExit(const string &message) {
+static void logAndExit(const string &message) {
     LOG(INFO, message);
     cpputils::logging::flush();
     exit(1);
 }
 
-void setLoggerAndLogAndExit(const string &message) {
+static void setLoggerAndLogAndExit(const string &message) {
     setLogger(spdlog::stderr_logger_mt("MyTestLog2"));
     LOG(INFO, message);
     cpputils::logging::flush();

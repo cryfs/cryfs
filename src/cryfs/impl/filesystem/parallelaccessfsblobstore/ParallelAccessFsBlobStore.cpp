@@ -13,6 +13,8 @@ namespace parallelaccessfsblobstore {
 
 optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &blockId) {
     return _parallelAccessStore.load(blockId, [] (cachingfsblobstore::FsBlobRef *blob) { // NOLINT (workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=82481 )
+        // NOLINTBEGIN(misc-const-correctness) - each of these is handed to a Ref
+        // constructor that takes a non-const pointer, so they cannot be const.
         cachingfsblobstore::FileBlobRef *fileBlob = dynamic_cast<cachingfsblobstore::FileBlobRef*>(blob);
         if (fileBlob != nullptr) {
             return unique_ref<FsBlobRef>(make_unique_ref<FileBlobRef>(fileBlob));
@@ -25,6 +27,7 @@ optional<unique_ref<FsBlobRef>> ParallelAccessFsBlobStore::load(const BlockId &b
         if (symlinkBlob != nullptr) {
             return unique_ref<FsBlobRef>(make_unique_ref<SymlinkBlobRef>(symlinkBlob));
         }
+        // NOLINTEND(misc-const-correctness)
         ASSERT(false, "Unknown blob type loaded");
     });
 }

@@ -181,7 +181,7 @@ TEST_F(UniqueRefTest, givenUniqueRefToObject_whenArrowDereferencing_thenReturnsO
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigning_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
 }
@@ -210,7 +210,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClass_thenOldInstanc
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToUniquePtr_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   std::unique_ptr<SomeClass> obj2 = std::make_unique<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
 }
@@ -239,7 +239,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassUniquePtr_thenO
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToSharedPtr_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   std::shared_ptr<SomeClass> obj2 = std::make_shared<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
 }
@@ -267,7 +267,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveAssigningToBaseClassSharedPtr_thenO
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructing_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   const unique_ref<SomeClass> obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
 }
@@ -292,7 +292,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClass_thenOldInst
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToUniquePtr_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   const std::unique_ptr<SomeClass> obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
 }
@@ -317,7 +317,7 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassUniquePtr_th
 
 TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToSharedPtr_thenPointsToSameObject) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   const std::shared_ptr<SomeClass> obj2 = std::move(obj1);
   EXPECT_EQ(obj1ptr, obj2.get());
 }
@@ -343,8 +343,8 @@ TEST_F(UniqueRefTest, givenUniqueRef_whenMoveConstructingToBaseClassSharedPtr_th
 TEST_F(UniqueRefTest, Swap) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
-  SomeClass *obj2ptr = obj2.get();
+  const SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj2ptr = obj2.get();
   std::swap(obj1, obj2);
   EXPECT_EQ(obj2ptr, obj1.get());
   EXPECT_EQ(obj1ptr, obj2.get());
@@ -354,7 +354,7 @@ TEST_F(UniqueRefTest, SwapFromInvalid) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   makeInvalid(std::move(obj1));
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
-  SomeClass *obj2ptr = obj2.get();
+  const SomeClass *obj2ptr = obj2.get();
   std::swap(obj1, obj2);
   EXPECT_EQ(obj2ptr, obj1.get());
   EXPECT_TRUE(obj1.is_valid());
@@ -365,7 +365,7 @@ TEST_F(UniqueRefTest, SwapWithInvalid) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
   makeInvalid(std::move(obj2));
-  SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj1ptr = obj1.get();
   std::swap(obj1, obj2);
   EXPECT_FALSE(obj1.is_valid());
   EXPECT_TRUE(obj2.is_valid()); // NOLINT(clang-analyzer-cplusplus.Move)
@@ -385,8 +385,8 @@ TEST_F(UniqueRefTest, SwapInvalidWithInvalid) {
 TEST_F(UniqueRefTest, SwapFromRValue) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
-  SomeClass *obj2ptr = obj2.get();
+  const SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj2ptr = obj2.get();
   std::swap(std::move(obj1), obj2);
   EXPECT_EQ(obj2ptr, obj1.get()); // NOLINT(clang-analyzer-cplusplus.Move,bugprone-use-after-move)
   EXPECT_EQ(obj1ptr, obj2.get());
@@ -395,8 +395,8 @@ TEST_F(UniqueRefTest, SwapFromRValue) {
 TEST_F(UniqueRefTest, SwapWithRValue) {
   unique_ref<SomeClass> obj1 = make_unique_ref<SomeClass>();
   unique_ref<SomeClass> obj2 = make_unique_ref<SomeClass>();
-  SomeClass *obj1ptr = obj1.get();
-  SomeClass *obj2ptr = obj2.get();
+  const SomeClass *obj1ptr = obj1.get();
+  const SomeClass *obj2ptr = obj2.get();
   std::swap(obj1, std::move(obj2));
   EXPECT_EQ(obj2ptr, obj1.get());
   EXPECT_EQ(obj1ptr, obj2.get()); // NOLINT (intentional use-after-move)

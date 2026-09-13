@@ -15,7 +15,7 @@ using cpputils::DataFixture;
 using boost::optional;
 
 namespace boost {
-    inline void PrintTo(const optional<cpputils::Data> &, ::std::ostream *os) {
+    static inline void PrintTo(const optional<cpputils::Data> &, ::std::ostream *os) {
         *os << "optional<Data>";
     }
 }

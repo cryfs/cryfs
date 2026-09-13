@@ -67,7 +67,7 @@ public:
   // NOLINTNEXTLINE(misc-no-recursion)
   void EXPECT_IS_LEFTMAXDATA_TREE(const BlockId &blockId) {
     auto root = nodeStore->load(blockId).value();
-    DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
+    const DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren()-1; ++i) {
         EXPECT_IS_MAXDATA_TREE(inner->readChild(i).blockId());
@@ -79,13 +79,13 @@ public:
   // NOLINTNEXTLINE(misc-no-recursion)
   void EXPECT_IS_MAXDATA_TREE(const BlockId &blockId) {
     auto root = nodeStore->load(blockId).value();
-    DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
+    const DataInnerNode *inner = dynamic_cast<DataInnerNode*>(root.get());
     if (inner != nullptr) {
       for (uint32_t i = 0; i < inner->numChildren(); ++i) {
         EXPECT_IS_MAXDATA_TREE(inner->readChild(i).blockId());
       }
     } else {
-      DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root.get());
+      const DataLeafNode *leaf = dynamic_cast<DataLeafNode*>(root.get());
       EXPECT_EQ(nodeStore->layout().maxBytesPerLeaf(), leaf->numBytes());
     }
   }

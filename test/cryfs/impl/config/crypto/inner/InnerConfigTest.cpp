@@ -10,7 +10,7 @@ using namespace cryfs;
 
 // This is needed for google test
 namespace boost {
-    ostream &operator<<(ostream &stream, const InnerConfig &config) {
+    static ostream &operator<<(ostream &stream, const InnerConfig &config) {
         return stream << "InnerConfig(" << config.cipherName << ", [data])";
     }
 }

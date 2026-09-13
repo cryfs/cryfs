@@ -13,7 +13,7 @@ using namespace cryfs;
 
 // This is needed for google test
 namespace boost {
-    inline ostream &operator<<(ostream &stream, const CryConfigEncryptor::Decrypted &) {
+    static inline ostream &operator<<(ostream &stream, const CryConfigEncryptor::Decrypted &) {
         return stream << "CryConfigEncryptor::Decrypted()";
     }
 }

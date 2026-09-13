@@ -129,7 +129,7 @@ namespace cpputils {
         }
 
         int internal_sync(std::unique_lock <std::mutex> &lock) {
-            char *end(&this->d_tmp[0] + this->d_tmp.size());
+            const char *end(&this->d_tmp[0] + this->d_tmp.size());
             while (this->d_current == end && !this->d_closed) {
                 this->d_condition.wait(lock);
             }

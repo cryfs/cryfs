@@ -18,7 +18,7 @@ using namespace cryfs;
 
 // This is needed for google test
 namespace boost {
-    inline ostream &operator<<(ostream &stream, const Data &) {
+    static inline ostream &operator<<(ostream &stream, const Data &) {
         return stream << "cpputils::Data()";
     }
 }
