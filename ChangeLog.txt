@@ -42,6 +42,13 @@ Version 1.1.0 (unreleased)
 * Fixed: Undefined behavior while parsing mount options. After removing an option that libFUSE
   doesn't know, the parser kept using a reference into the vector it had just erased from. It
   happened to do the right thing in practice, but it was undefined behavior.
+* Fixed: Reading from, writing to or truncating a file failed with an error (ENOENT, which Linux can
+  surface as EIO) if the file was moved to a different directory while it was open
+  (see https://github.com/cryfs/cryfs/issues/565 ). An open file remembered the directory it was in
+  when it was opened and looked up its own directory entry (which stores the timestamps) there, so
+  it didn't find it anymore once the file had been moved somewhere else. Flushing an open file also
+  flushed the old directory instead of the new one. Open files now reload their parent directory
+  when the file was moved.
 * The Windows installer is now built with Visual Studio 2026 instead of Visual Studio 2022. You
   need the Microsoft Visual C++ Redistributable from Visual Studio 2026 or newer to run it, an
   older one is not enough. Only one Redistributable is installed at a time and a newer one
