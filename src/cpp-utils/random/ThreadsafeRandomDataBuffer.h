@@ -8,7 +8,6 @@
 #include <boost/thread.hpp>
 
 namespace cpputils {
-    //TODO Test
     class ThreadsafeRandomDataBuffer final {
     public:
         ThreadsafeRandomDataBuffer();
@@ -46,7 +45,7 @@ namespace cpputils {
     inline void ThreadsafeRandomDataBuffer::get(void *target, size_t numBytes) {
         size_t alreadyGotten = 0;
         while (alreadyGotten < numBytes) {
-            const size_t got = _get(static_cast<uint8_t*>(target)+alreadyGotten, numBytes);
+            const size_t got = _get(static_cast<uint8_t*>(target)+alreadyGotten, numBytes - alreadyGotten);
             alreadyGotten += got;
             ASSERT(alreadyGotten <= numBytes, "Got too many bytes");
         }

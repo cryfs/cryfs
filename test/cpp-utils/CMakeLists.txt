@@ -32,6 +32,7 @@ set(SOURCES
 	io/ConsoleTest_AskPassword.cpp
 	io/ProgressBarTest.cpp
     random/RandomIncludeTest.cpp
+    random/ThreadsafeRandomDataBufferTest.cpp
     lock/LockPoolIncludeTest.cpp
     lock/ConditionBarrierIncludeTest.cpp
     lock/MutexPoolLockIncludeTest.cpp
