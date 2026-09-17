@@ -50,10 +50,12 @@ KnownBlockVersions::~KnownBlockVersions() {
 }
 
 void KnownBlockVersions::setIntegrityViolationOnPreviousRun(bool value) {
+    const unique_lock<mutex> lock(_mutex);
     _integrityViolationOnPreviousRun = value;
 }
 
 bool KnownBlockVersions::integrityViolationOnPreviousRun() const {
+    const unique_lock<mutex> lock(_mutex);
     return _integrityViolationOnPreviousRun;
 }
 
@@ -216,10 +218,12 @@ uint64_t KnownBlockVersions::getBlockVersion(uint32_t clientId, const BlockId &b
 }
 
 void KnownBlockVersions::markBlockAsDeleted(const BlockId &blockId) {
+    const unique_lock<mutex> lock(_mutex);
     _lastUpdateClientId[blockId] = CLIENT_ID_FOR_DELETED_BLOCK;
 }
 
 bool KnownBlockVersions::blockShouldExist(const BlockId &blockId) const {
+    const unique_lock<mutex> lock(_mutex);
     auto found = _lastUpdateClientId.find(blockId);
     if (found == _lastUpdateClientId.end()) {
         // We've never seen (i.e. loaded) this block. So we can't say it has to exist.
@@ -230,6 +234,7 @@ bool KnownBlockVersions::blockShouldExist(const BlockId &blockId) const {
 }
 
 std::unordered_set<BlockId> KnownBlockVersions::existingBlocks() const {
+    const unique_lock<mutex> lock(_mutex);
     std::unordered_set<BlockId> result;
     for (const auto &entry : _lastUpdateClientId) {
         if (entry.second != CLIENT_ID_FOR_DELETED_BLOCK) {

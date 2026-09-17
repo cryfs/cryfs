@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 #include <blockstore/implementations/integrity/KnownBlockVersions.h>
+#include <cpp-utils/data/SerializationHelper.h>
 #include <cpp-utils/tempfile/TempFile.h>
+#include <array>
+#include <atomic>
+#include <thread>
 
 using blockstore::integrity::KnownBlockVersions;
 using blockstore::BlockId;
@@ -19,6 +23,13 @@ public:
 
     TempFile stateFile;
     KnownBlockVersions testobj;
+
+    // Deterministic, distinct block ids, so tests can work on many blocks without a random source
+    static BlockId blockIdForIndex(uint64_t index) {
+        std::array<unsigned char, BlockId::BINARY_LENGTH> data{};
+        cpputils::serialize<uint64_t>(data.data(), index);
+        return BlockId::FromBinary(data.data());
+    }
 
     void setVersion(KnownBlockVersions *testobj, uint32_t clientId, const blockstore::BlockId &blockId, uint64_t version) {
         if (!testobj->checkAndUpdateVersion(clientId, blockId, version)) {
@@ -351,4 +362,81 @@ TEST_F(KnownBlockVersionsTest, existingBlocks_deletedEntries) {
     testobj.markBlockAsDeleted(blockId);
     testobj.markBlockAsDeleted(blockId2);
     EXPECT_EQ(unordered_set<BlockId>({}), testobj.existingBlocks());
+}
+
+// Regression test for a data race. markBlockAsDeleted(), blockShouldExist() and existingBlocks() used to access
+// _lastUpdateClientId without taking the mutex, while incrementVersion() and checkAndUpdateVersion() modify it
+// under the mutex. In CryFS, incrementVersion() runs on the cache flusher threads while markBlockAsDeleted()
+// runs on the thread removing a block. ThreadSanitizer reports the unsynchronized accesses when run against
+// the old code.
+TEST_F(KnownBlockVersionsTest, concurrentAccess_markAsDeletedWhileUpdatingVersions) {
+    constexpr uint64_t NUM_UPDATED_BLOCKS = 100;
+    constexpr uint64_t NUM_ITERATIONS = 2000; // enough new entries to make _lastUpdateClientId rehash several times
+    constexpr uint64_t NUM_ROUNDS = NUM_ITERATIONS / NUM_UPDATED_BLOCKS;
+
+    std::atomic<uint64_t> rejectedUpdates(0);
+    std::thread updater([&] () {
+        for (uint64_t i = 0; i < NUM_ITERATIONS; ++i) {
+            const BlockId blockId = blockIdForIndex(i % NUM_UPDATED_BLOCKS);
+            testobj.incrementVersion(blockId);
+            if (!testobj.checkAndUpdateVersion(clientId, blockId, i / NUM_UPDATED_BLOCKS + 1)) {
+                ++rejectedUpdates;
+            }
+        }
+    });
+
+    std::atomic<uint64_t> deletedBlocksReportedAsExisting(0);
+    std::thread deleter([&] () {
+        for (uint64_t i = 0; i < NUM_ITERATIONS; ++i) {
+            // A new block id on each iteration, so _lastUpdateClientId keeps growing and rehashing
+            const BlockId blockId = blockIdForIndex(NUM_UPDATED_BLOCKS + i);
+            testobj.markBlockAsDeleted(blockId);
+            if (testobj.blockShouldExist(blockId)) {
+                ++deletedBlocksReportedAsExisting;
+            }
+            if (testobj.existingBlocks().count(blockId) != 0) {
+                ++deletedBlocksReportedAsExisting;
+            }
+        }
+    });
+
+    updater.join();
+    deleter.join();
+
+    EXPECT_EQ(0u, rejectedUpdates.load());
+    EXPECT_EQ(0u, deletedBlocksReportedAsExisting.load());
+    for (uint64_t i = 0; i < NUM_UPDATED_BLOCKS; ++i) {
+        const BlockId blockId = blockIdForIndex(i);
+        EXPECT_TRUE(testobj.blockShouldExist(blockId));
+        EXPECT_EQ(NUM_ROUNDS, testobj.getBlockVersion(myClientId, blockId));
+        EXPECT_EQ(NUM_ROUNDS, testobj.getBlockVersion(clientId, blockId));
+    }
+    EXPECT_EQ(NUM_UPDATED_BLOCKS, testobj.existingBlocks().size());
+}
+
+// Regression test for the same data race on the other member guarded by the mutex.
+// setIntegrityViolationOnPreviousRun() and integrityViolationOnPreviousRun() used to touch
+// _integrityViolationOnPreviousRun without taking the mutex, while _loadStateFile()/_saveStateFile()
+// access it under the mutex. IntegrityBlockStore2::integrityViolationDetected() calls the setter and
+// is reachable from load()/forEachBlock() on any thread, so two threads detecting a violation used to
+// write the same bool without synchronization.
+TEST_F(KnownBlockVersionsTest, concurrentAccess_integrityViolationOnPreviousRun) {
+    constexpr uint64_t NUM_ITERATIONS = 2000;
+
+    std::atomic<uint64_t> numNotSet(0);
+    const auto hammer = [&] () {
+        for (uint64_t i = 0; i < NUM_ITERATIONS; ++i) {
+            testobj.setIntegrityViolationOnPreviousRun(true);
+            if (!testobj.integrityViolationOnPreviousRun()) {
+                ++numNotSet;
+            }
+        }
+    };
+    std::thread thread1(hammer);
+    std::thread thread2(hammer);
+    thread1.join();
+    thread2.join();
+
+    EXPECT_EQ(0u, numNotSet.load());
+    EXPECT_TRUE(testobj.integrityViolationOnPreviousRun());
 }
