@@ -137,9 +137,12 @@ TEST_F(CacheTest_PushAndPop, AfterTimeout) {
   // A sleep has a lower bound but no upper one, so on a loaded machine the second sleep overshoots
   // and the second entry is legitimately purged before we look - which failed this test even though
   // the cache did exactly what it promises. So measure the age we actually reached instead of
-  // assuming the sleeps were exact, and retry an attempt that landed outside the window rather than
-  // reporting it as a failure of the cache. The assertions themselves are unchanged: a cache that
-  // purges too early, or doesn't purge at all, still fails.
+  // assuming the sleeps were exact, and retry an attempt whose result the cache was entitled to
+  // produce rather than reporting it as a failure. Note "entitled to": an entry older than
+  // PURGE_LIFETIME_SEC that is still cached is not a reason to retry, because purging runs every
+  // PURGE_INTERVAL rather than the instant an entry becomes old enough. Only an entry that is both
+  // old enough to purge and actually gone leaves us without a verdict. The assertions themselves are
+  // unchanged: a cache that purges too early, or doesn't purge at all, still fails.
   constexpr int MAX_ATTEMPTS = 5;
   for (int attempt = 1; attempt <= MAX_ATTEMPTS; ++attempt) {
     const bool lastAttempt = (attempt == MAX_ATTEMPTS);
@@ -157,22 +160,25 @@ TEST_F(CacheTest_PushAndPop, AfterTimeout) {
         boost::chrono::steady_clock::now() - secondEntryPushedAt).count();
     const int secondEntryAgeMs = static_cast<int>(1000 * secondEntryAgeSec);
 
-    if (secondEntryAgeSec >= Cache::PURGE_LIFETIME_SEC) {
-      // We were too slow: by the time we looked, the cache was allowed to purge the second entry,
-      // so whether it is still there tells us nothing. This attempt gives no verdict.
+    if (secondEntryAgeSec < Cache::PURGE_LIFETIME_SEC) {
+      // Younger than PURGE_LIFETIME_SEC, so the cache is not allowed to have purged it yet.
+      ASSERT_TRUE(secondEntry != boost::none)
+          << "The entry pushed " << secondEntryAgeMs << "ms ago is gone, but the cache may not purge entries "
+          << "younger than PURGE_LIFETIME_SEC (" << (1000 * Cache::PURGE_LIFETIME_SEC) << "ms)";
+    } else if (boost::none == secondEntry) {
+      // We were too slow AND it is gone. Purging it was allowed at that age, so its absence says
+      // nothing about whether the cache is correct, and this attempt gives no verdict.
       if (lastAttempt) {
-        FAIL() << "Didn't manage to read the cache within PURGE_LIFETIME_SEC (" << (1000 * Cache::PURGE_LIFETIME_SEC)
-               << "ms) of pushing an entry, in " << MAX_ATTEMPTS << " attempts. The last one took "
-               << secondEntryAgeMs << "ms for a sleep of " << (1000 * TIMEOUT2_SEC)
-               << "ms, i.e. this machine is too loaded to run this test.";
+        FAIL() << "The entry pushed second was purged before we could read it on all " << MAX_ATTEMPTS
+               << " attempts. The last one read it " << secondEntryAgeMs << "ms after pushing it, for a sleep of "
+               << (1000 * TIMEOUT2_SEC) << "ms, i.e. this machine is too loaded to run this test.";
       }
       continue;
     }
-
-    // The second entry is younger than PURGE_LIFETIME_SEC, so the cache may not have purged it.
-    ASSERT_TRUE(secondEntry != boost::none)
-        << "The entry pushed " << secondEntryAgeMs << "ms ago is gone, but the cache may not purge entries "
-        << "younger than PURGE_LIFETIME_SEC (" << (1000 * Cache::PURGE_LIFETIME_SEC) << "ms)";
+    // Either it was too young to be purged, or it is older than PURGE_LIFETIME_SEC and still here,
+    // which is just as correct: purging runs every PURGE_INTERVAL rather than the moment an entry
+    // becomes old enough, and entries may live up to MAX_LIFETIME_SEC. Its value has to be right
+    // either way.
     EXPECT_EQ(30, secondEntry.value());
 
     if (boost::none != firstEntry && !lastAttempt) {
