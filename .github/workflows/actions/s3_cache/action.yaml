@@ -75,16 +75,35 @@ runs:
         key: v2-${{ inputs.cache_key }}
     - name: Unzip cache files
       if: ${{ inputs.action == 'load' }}
-      # If the cache is corrupted, we still want to continue. Later, this job (if successful) will upload a new cache.
+      # continue-on-error is what makes a broken cache survivable: the job goes on without
+      # one and rebuilds from scratch, and if it gets that far it uploads a fresh archive.
+      # But that only holds if a failed load really leaves nothing behind. tar writes as it
+      # reads, so an archive that arrives truncated or corrupted restores some of the paths
+      # and not the rest, and with `set -e` plus continue-on-error that partial state was
+      # kept and the step still counted as done. The job then ran against a cache directory
+      # that was neither empty nor complete, which is worse than having no cache: it is the
+      # one state nothing downstream is written to expect, and whatever it breaks breaks far
+      # from here, with an error that doesn't mention the cache.
+      #
+      # So look at what tar returned instead of letting continue-on-error swallow it, and
+      # delete what was extracted. Both callers pass a directory that exists only to hold
+      # this cache - conan's CONAN_HOME (restored before `Setup conan` writes the profile
+      # into it) and ccache's dir - so there is nothing else in them to lose, and the job
+      # carries on down the "no cache" path that already works.
       continue-on-error: true
       shell: bash
       run: |
-        set -e
         set -v
-        if [ -f "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ]; then
-          echo "Zipped cache:"
-          ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
-          tar --extract --zstd -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ${{ inputs.paths }}
-        else
+        CACHE_PATHS="${{ inputs.paths }}"
+        if [ ! -f "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" ]; then
           echo "Warning: Cache not found"
+          exit 0
+        fi
+        echo "Zipped cache:"
+        ls -lh "/tmp/s3_cache/${{inputs.cache_key}}"
+        if ! tar --extract --zstd -Pp --same-owner --file "/tmp/s3_cache/${{inputs.cache_key}}/cache.tar.zstd" $CACHE_PATHS; then
+          echo "Warning: the cache archive did not extract cleanly. Discarding what was extracted and continuing without a cache."
+          if [ -n "$CACHE_PATHS" ]; then
+            rm -rf $CACHE_PATHS
+          fi
         fi
