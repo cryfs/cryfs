@@ -4,12 +4,31 @@
 # TODO Maybe just enable * and disable a list instead?
 # TODO Check if there's new checks in clang-tidy-9 and later and potentially enable them
 # TODO Enable misc-include-cleaner
-# clang-analyzer-unix.BlockInCriticalSection and clang-analyzer-optin.core.EnumCastOutOfRange
-# below are disabled because they are only ever reported inside third-party headers from the
-# conan cache, where a NOLINT cannot be placed. BlockInCriticalSection fires solely in
+# clang-analyzer-unix.BlockInCriticalSection, clang-analyzer-optin.core.EnumCastOutOfRange
+# and clang-analyzer-cplusplus.NewDelete below are disabled because they are only ever
+# reported inside third-party headers from the conan cache, where a NOLINT cannot be placed.
+# NewDelete fires in boost::algorithm's classification.hpp, claiming the delete[] in
+# ~char_classification is a double free on a path its own m_dynSet!=0 guard rules out; its
+# sibling clang-analyzer-cplusplus.NewDeleteLeaks is already disabled just below. BlockInCriticalSection fires solely in
 # boost::process's own posix executor. EnumCastOutOfRange fires in boost::filesystem::perms,
 # and on our own filler(..., fuse_fill_dir_flags(0)) call in fspp/fuse/Fuse.cpp - both are
 # flags enums where a compound or zero value is correct and has no named enumerator.
+# clang-tidy 22 adds the five checks disabled at the end of the list below. Each one
+# flags a pattern this codebase uses deliberately and pervasively, so adopting any of
+# them is its own piece of work rather than part of moving the job to clang 22:
+#   bugprone-throwing-static-initialization - every hit is a namespace-scope const
+#     std::string or container constant (config headers, cipher lists, env var names).
+#     Only bad_alloc can throw there, and the process is already lost if it does.
+#   cppcoreguidelines-pro-bounds-avoid-unchecked-container-access - flags every
+#     operator[]. The neighbouring pro-bounds-pointer-arithmetic and
+#     pro-bounds-array-to-pointer-decay are disabled for the same reason.
+#   misc-multiple-inheritance - the fspp/cryfs node hierarchy is built on it, e.g.
+#     CryDir inherits CryNode and fspp::Dir.
+#   misc-override-with-different-visibility - a public interface method implemented on
+#     top of a protected base helper (releaseBaseBlob, getType), plus every gtest
+#     fixture's public SetUp overriding Test's protected one.
+#   misc-use-internal-linkage - wants each of ~160 gtest fixture classes moved into an
+#     anonymous namespace.
 Checks: |
   clang-diagnostic-*,
   clang-analyzer-*,
@@ -43,12 +62,18 @@ Checks: |
   -cppcoreguidelines-narrowing-conversions,
   -cppcoreguidelines-use-default-member-init,
   -clang-analyzer-optin.cplusplus.VirtualCall,
+  -clang-analyzer-cplusplus.NewDelete,
   -clang-analyzer-cplusplus.NewDeleteLeaks,
   -clang-analyzer-unix.BlockInCriticalSection,
   -clang-analyzer-optin.core.EnumCastOutOfRange,
   -misc-macro-parentheses,
   -misc-non-private-member-variables-in-classes,
-  -misc-unused-raii
+  -misc-unused-raii,
+  -bugprone-throwing-static-initialization,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+  -misc-multiple-inheritance,
+  -misc-override-with-different-visibility,
+  -misc-use-internal-linkage,
   -misc-include-cleaner
 WarningsAsErrors: '*'
 HeaderFilterRegex: '/src/|/test/'
