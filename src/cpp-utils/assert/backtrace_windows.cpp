@@ -181,6 +181,19 @@ namespace cpputils {
 		}
 	}
 
+	void showBacktraceOnCrashSignals() {
+		// Windows doesn't have the POSIX crash signals, crashes arrive as SEH exceptions instead.
+		// The top level exception filter that showBacktraceOnCrash() installs already behaves the
+		// way we need here: it logs the backtrace and then leaves the decision how to handle the
+		// exception to whoever it would have gone to without us - the filter that was installed
+		// before us if there was one, and otherwise EXCEPTION_CONTINUE_SEARCH. It never calls
+		// exit() itself, so the process dies the way it would have and a crash dump still gets
+		// written. And because it isn't a signal handler, it doesn't get in the way of abort()
+		// either. showBacktraceOnCrash() only installs the filter once, so a later call from code
+		// running under us can't displace it.
+		showBacktraceOnCrash();
+	}
+
 }
 
 #endif
