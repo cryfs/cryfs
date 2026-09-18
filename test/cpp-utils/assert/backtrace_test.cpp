@@ -5,13 +5,18 @@
 #include <boost/filesystem.hpp>
 #include "my-gtest-main.h"
 
+#if !defined(_MSC_VER)
+#include <sys/wait.h>
+#endif
+
 using std::string;
 using testing::HasSubstr;
+using testing::Not;
 namespace bf = boost::filesystem;
 
 namespace
 {
-	std::string call_process_exiting_with(const std::string &kind, const std::string &signal = "")
+	cpputils::SubprocessResult run_process_exiting_with(const std::string &kind, const std::string &signal)
 	{
 #if defined(_MSC_VER)
 		auto executable = bf::canonical(get_executable().parent_path()) / "cpp-utils-test_exit_signal.exe";
@@ -22,8 +27,12 @@ namespace
 		{
 			throw std::runtime_error(executable.string() + " not found.");
 		}
-		auto result = cpputils::Subprocess::call(executable, {kind, signal}, "");
-		return result.output_stderr;
+		return cpputils::Subprocess::call(executable, {kind, signal}, "");
+	}
+
+	std::string call_process_exiting_with(const std::string &kind, const std::string &signal = "")
+	{
+		return run_process_exiting_with(kind, signal).output_stderr;
 	}
 }
 
@@ -232,5 +241,57 @@ TEST(BacktraceTest, UnknownCode_ShowsCorrectSignalName)
 {
 	auto output = call_process_exiting_with_code(0x1234567);
 	EXPECT_THAT(output, HasSubstr("UNKNOWN_CODE(0x1234567)"));
+}
+#endif
+
+#if !defined(_MSC_VER)
+// The following tests are for showBacktraceOnCrashSignals(), which is about the POSIX crash
+// signals. On Windows, that function just installs the top level exception filter, i.e. exactly
+// what the showBacktraceOnCrash() tests above already cover.
+namespace
+{
+	void expect_shows_backtrace_and_dies_from_signal(int signal, const std::string &signal_name)
+	{
+		const auto result = run_process_exiting_with("crash_signal", std::to_string(signal));
+		EXPECT_THAT(result.output_stderr, HasSubstr(signal_name));
+		// Check for the frame of the function that crashed, not for one of the backtrace machinery
+		// itself (e.g. "cpputils::backtrace"), which would be in there no matter where we crashed.
+		EXPECT_THAT(result.output_stderr, HasSubstr("handle_exit_signal"));
+		// The signal has to kill us, otherwise we'd throw away the core dump and hide from our
+		// caller that we crashed at all.
+		ASSERT_TRUE(WIFSIGNALED(result.native_exit_code)) << "Expected the process to be killed by a signal but it wasn't. Its stderr was:\n"
+														  << result.output_stderr;
+		EXPECT_EQ(signal, WTERMSIG(result.native_exit_code));
+	}
+}
+
+TEST(BacktraceTest, ShowBacktraceOnCrashSignals_SigSegv)
+{
+	expect_shows_backtrace_and_dies_from_signal(SIGSEGV, "SIGSEGV");
+}
+
+TEST(BacktraceTest, ShowBacktraceOnCrashSignals_SigIll)
+{
+	expect_shows_backtrace_and_dies_from_signal(SIGILL, "SIGILL");
+}
+
+TEST(BacktraceTest, ShowBacktraceOnCrashSignals_SigBus)
+{
+	expect_shows_backtrace_and_dies_from_signal(SIGBUS, "SIGBUS");
+}
+
+TEST(BacktraceTest, ShowBacktraceOnCrashSignals_SigFpe)
+{
+	expect_shows_backtrace_and_dies_from_signal(SIGFPE, "SIGFPE");
+}
+
+// ASSERT() and the gtest death tests abort() on purpose, so we have to leave SIGABRT alone.
+TEST(BacktraceTest, ShowBacktraceOnCrashSignals_DoesntHandleSigAbrt)
+{
+	const auto result = run_process_exiting_with("crash_signal", std::to_string(SIGABRT));
+	EXPECT_THAT(result.output_stderr, Not(HasSubstr("SIGABRT")));
+	ASSERT_TRUE(WIFSIGNALED(result.native_exit_code)) << "Expected the process to be killed by a signal but it wasn't. Its stderr was:\n"
+													  << result.output_stderr;
+	EXPECT_EQ(SIGABRT, WTERMSIG(result.native_exit_code));
 }
 #endif

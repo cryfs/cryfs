@@ -15,6 +15,11 @@ namespace cpputils
         std::string output_stdout;
         std::string output_stderr;
         int exitcode;
+        // The exit status the way the OS reports it. On POSIX, `exitcode` can't tell a process
+        // that exited with code N apart from one that was killed by signal N, so if you need to
+        // know whether the process crashed, look at this with WIFSIGNALED()/WTERMSIG().
+        // On Windows, this is the process exit code, i.e. the same value as `exitcode`.
+        int native_exit_code;
     };
 
     struct SubprocessError final : public std::runtime_error

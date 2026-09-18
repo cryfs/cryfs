@@ -173,6 +173,7 @@ namespace cpputils
 			std::move(stdout_handler).output(),
 			std::move(stderr_handler).output(),
 			child.exit_code(),
+			child.native_exit_code(),
 		};
 	}
 
