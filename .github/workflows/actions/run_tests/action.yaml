@@ -20,6 +20,10 @@ runs:
       # them have finished, in the order the binaries used to run in, each in
       # its own group, so the job log reads as before. A failure in any
       # binary fails the step after every log has been printed.
+      #
+      # On Linux, a test binary that dies by a signal leaves a core dump
+      # behind, and a backtrace from it is printed after the logs, so that a
+      # crash can be investigated from the job log alone.
       run: |
         set -v
         set -e
@@ -53,6 +57,40 @@ runs:
           tests+=(cryfs-cli/cryfs-cli-test)
         fi
 
+        # On Linux, let the test binaries dump core. The runner's default
+        # kernel.core_pattern pipes core dumps into apport, which drops them,
+        # so it is pointed at a directory of our own. The core size limit is
+        # inherited by the background test binaries below and the pattern is
+        # system-wide, so the tests need no change. If either cannot be set,
+        # the tests still run, just without core dumps. The pattern is read
+        # back because the kernel silently cuts it to 127 characters.
+        #
+        # Both the directory and the pattern belong to this step alone, so an
+        # EXIT trap undoes them however the step ends. Otherwise the raised
+        # limit would leave the core dump of every deliberate death in the
+        # death tests lying in /tmp for the rest of the job, once per build
+        # type, and the later steps of the job (the other Test steps, CPack)
+        # would keep dumping core into a directory of ours.
+        if [[ "${{runner.os}}" == "Linux" ]]; then
+          coredir=$(mktemp -d)
+          corepattern="$coredir/core.%e.%p"
+          oldcorepattern=$(cat /proc/sys/kernel/core_pattern)
+          restore_core_dumping() {
+            # Compared against the pattern that is actually in the kernel, so
+            # that nothing is restored if setting it below failed, and that it
+            # is restored even if the kernel cut it.
+            if [[ "$(cat /proc/sys/kernel/core_pattern)" != "$oldcorepattern" ]]; then
+              sudo sysctl -w "kernel.core_pattern=$oldcorepattern" > /dev/null || echo "::warning::Could not restore kernel.core_pattern to $oldcorepattern"
+            fi
+            rm -rf "$coredir"
+          }
+          trap restore_core_dumping EXIT
+          ulimit -c unlimited || echo "::warning::Could not raise the core dump size limit, a crashing test binary will not leave a core dump"
+          if ! sudo sysctl -w "kernel.core_pattern=$corepattern" || [[ "$(cat /proc/sys/kernel/core_pattern)" != "$corepattern" ]]; then
+            echo "::warning::kernel.core_pattern is $(cat /proc/sys/kernel/core_pattern) instead of $corepattern, a crashing test binary will not leave a core dump"
+          fi
+        fi
+
         logdir=$(mktemp -d)
         pids=()
         for t in "${tests[@]}"; do
@@ -60,17 +98,72 @@ runs:
           pids+=($!)
         done
         failed=()
+        exitcodes=()
         for i in "${!tests[@]}"; do
           if wait "${pids[$i]}"; then
+            exitcode=0
             status=passed
           else
+            exitcode=$?
             status=FAILED
             failed+=("${tests[$i]}")
           fi
+          exitcodes+=("$exitcode")
           echo "::group::${tests[$i]} ($status)"
           cat "$logdir/$(basename "${tests[$i]}").log"
           echo "::endgroup::"
         done
+
+        # Print a backtrace from each core dump a test binary left behind. A
+        # core dump is matched to its test binary by the pid in its name. The
+        # executable name in there would not do: it is the comm of the crashing
+        # thread, which is cut to 15 characters (parallelaccessstore-test) and
+        # is renamed by set_thread_name in fspp and cryfs-cli. Matching by pid
+        # also skips the core dumps of the child processes that the death
+        # tests in cpp-utils-test and fspp-test kill on purpose, so a job
+        # without a crash prints nothing here and does not install gdb.
+        if [[ "${{runner.os}}" == "Linux" ]]; then
+          crashed=()
+          cores=()
+          for i in "${!tests[@]}"; do
+            found=false
+            for core in "$coredir"/core.*."${pids[$i]}"; do
+              if [[ -f "$core" ]]; then
+                crashed+=("${tests[$i]}")
+                cores+=("$core")
+                found=true
+              fi
+            done
+            # A binary that bash reports as killed by a signal (exit code
+            # 128+signal) but that left no core dump says so, instead of this
+            # step silently printing no backtrace. The ASAN and TSAN builds
+            # are the expected case: their runtime calls
+            # setrlimit(RLIMIT_CORE, 0) while it starts up, after the shell's
+            # limit above was inherited, unless ASAN_OPTIONS or TSAN_OPTIONS
+            # say disable_coredump=0. Setting that is not worth it, because
+            # those runtimes also catch SIGSEGV and print a symbolized report
+            # instead of letting the signal kill the process, so the kind of
+            # crash this block exists for leaves no core there either way.
+            # UBSAN does neither, so the UBSAN build dumps core like the rest.
+            if ! $found && (( exitcodes[i] > 128 )); then
+              echo "::warning::${tests[$i]} was killed by signal $(( exitcodes[i] - 128 )) but left no core dump in $coredir, so no backtrace is printed. The ASAN and TSAN runtimes switch core dumps off, every other build should have left one."
+            fi
+          done
+          if (( ${#cores[@]} > 0 )) && ! command -v gdb > /dev/null; then
+            echo "::group::Install gdb"
+            # The package lists on the runner image can be older than the
+            # archive, which makes the install fail on a 404 for the version
+            # they name, in exactly the job this whole block exists for.
+            sudo apt-get update || echo "::warning::apt-get update failed, installing gdb may fail"
+            sudo apt-get install -y gdb || echo "::warning::Could not install gdb, no backtrace will be printed"
+            echo "::endgroup::"
+          fi
+          for i in "${!cores[@]}"; do
+            echo "::group::Backtrace of ${crashed[$i]} from ${cores[$i]}"
+            gdb -batch -ex 'thread apply all bt full' "./${crashed[$i]}" "${cores[$i]}" || echo "::warning::gdb failed with exit code $? on ${cores[$i]}"
+            echo "::endgroup::"
+          done
+        fi
         if (( ${#failed[@]} > 0 )); then
           echo "Failed test binaries: ${failed[*]}"
           exit 1
