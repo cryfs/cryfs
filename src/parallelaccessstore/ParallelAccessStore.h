@@ -98,6 +98,7 @@ private:
   cpputils::unique_ref<ActualResourceRef> _add(const Key &key, cpputils::unique_ref<Resource> resource, std::function<cpputils::unique_ref<ActualResourceRef>(Resource*)> createResourceRef);
 
   boost::future<cpputils::unique_ref<Resource>> _resourceToRemoveFuture(const Key &key);
+  boost::future<cpputils::unique_ref<Resource>> _resourceToRemoveFuture(const Key &key, std::unique_lock<std::mutex> *lock);
   cpputils::unique_ref<Resource> _waitForResourceToRemove(const Key &key, boost::future<cpputils::unique_ref<Resource>> resourceToRemoveFuture);
 
   void release(const Key &key);
@@ -209,7 +210,15 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
 
 template<class Resource, class ResourceRef, class Key>
 boost::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key) {
-    const std::lock_guard <std::mutex> lock(_mutex); // TODO Lock needed for _resourcesToRemove?
+    std::unique_lock<std::mutex> lock(_mutex);
+    return _resourceToRemoveFuture(key, &lock);
+};
+
+template<class Resource, class ResourceRef, class Key>
+boost::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, ResourceRef, Key>::_resourceToRemoveFuture(const Key &key, std::unique_lock<std::mutex> *lock) {
+    // release() looks _resourcesToRemove up under _mutex from whichever thread drops the last reference,
+    // so the promise has to be registered under _mutex as well.
+    ASSERT(lock->owns_lock(), "The operations in this function require a locked mutex");
     auto insertResult = _resourcesToRemove.emplace(key, boost::promise<cpputils::unique_ref<Resource>>());
     ASSERT(true == insertResult.second, "Inserting failed");
     return insertResult.first->second.get_future();
@@ -217,15 +226,21 @@ boost::future<cpputils::unique_ref<Resource>> ParallelAccessStore<Resource, Reso
 
 template<class Resource, class ResourceRef, class Key>
 void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
+    std::unique_lock<std::mutex> lock(_mutex);
     auto found = _openResources.find(key);
     if (found != _openResources.end()) {
-        auto resourceToRemoveFuture = _resourceToRemoveFuture(key);
+        // The promise has to be registered under the same lock hold as the lookup. If the lock was released
+        // in between, release() could erase the resource in the meantime and nobody would ever fulfil the promise.
+        auto resourceToRemoveFuture = _resourceToRemoveFuture(key, &lock);
+        // release() needs the lock to fulfil the promise, so it can't be held while waiting.
+        lock.unlock();
         //Wait for last resource user to release it
         auto resourceToRemove = resourceToRemoveFuture.get();
-        const std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
+        lock.lock(); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
         _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
         _baseStore->removeFromBaseStore(std::move(resourceToRemove));
     } else {
+        lock.unlock();
         _baseStore->removeFromBaseStore(key);
     }
 };
