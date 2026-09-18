@@ -586,6 +586,32 @@ TEST_F(UniqueRefTest, NullptrIsNotLessThanNullptr) {
   EXPECT_FALSE(std::less<unique_ref<int>>()(var1, var2)); // NOLINT (intentional use-after-move)
 }
 
+TEST_F(UniqueRefTest, OperatorLess_OneIsLess) {
+  const unique_ref<int> var1 = make_unique_ref<int>(3);
+  const unique_ref<int> var2 = make_unique_ref<int>(3);
+  EXPECT_TRUE((var1 < var2) != (var2 < var1));
+}
+
+TEST_F(UniqueRefTest, OperatorLess_NotLessThanItself) {
+  const unique_ref<int> var = make_unique_ref<int>(3);
+  EXPECT_FALSE(var < var);
+}
+
+TEST_F(UniqueRefTest, OperatorLess_NullptrIsLess) {
+  unique_ref<int> var1 = make_unique_ref<int>(3);
+  const unique_ref<int> var2 = make_unique_ref<int>(3);
+  makeInvalid(std::move(var1));
+  EXPECT_TRUE(var1 < var2); // NOLINT (intentional use-after-move)
+  EXPECT_FALSE(var2 < var1); // NOLINT (intentional use-after-move)
+}
+
+TEST_F(UniqueRefTest, OperatorLess_AgreesWithStdLess) {
+  const unique_ref<int> var1 = make_unique_ref<int>(3);
+  const unique_ref<int> var2 = make_unique_ref<int>(3);
+  EXPECT_EQ(std::less<unique_ref<int>>()(var1, var2), var1 < var2);
+  EXPECT_EQ(std::less<unique_ref<int>>()(var2, var1), var2 < var1);
+}
+
 namespace {
 class OnlyMoveable {
 public:
