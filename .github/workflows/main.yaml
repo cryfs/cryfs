@@ -427,13 +427,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -465,13 +465,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: Debug
             extra_conan_flags: "-o '&:use_werror=True'"
             extra_cxxflags: '["-D_LIBCPP_ENABLE_NODISCARD=1", "-D_LIBCPP_ENABLE_DEPRECATION_WARNINGS=1"]'
@@ -484,13 +484,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '["-DCRYFS_NO_COMPATIBILITY"]'
@@ -504,13 +504,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: RelWithDebInfo
             extra_conan_flags: "-o '&:update_checks=False'"
             extra_cxxflags: '[]'
@@ -524,13 +524,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: RelWithDebInfo
             extra_conan_flags: ""
             extra_cxxflags: '[]'
@@ -544,16 +544,16 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               # Using libstdc++11 instead of libc++ for ASAN because of
               # - https://github.com/llvm/llvm-project/issues/52771
               # - https://github.com/llvm/llvm-project/issues/59432
               libcxx: libstdc++11
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fsanitize=address", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common", "-fsanitize-address-use-after-scope"]'
@@ -567,13 +567,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O1", "-fno-sanitize-recover=undefined,nullability,implicit-conversion,unsigned-integer-overflow,local-bounds,float-divide-by-zero", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -587,13 +587,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '["-O2", "-fsanitize=thread", "-fno-omit-frame-pointer", "-fno-omit-frame-pointer", "-fno-optimize-sibling-calls", "-fno-common"]'
@@ -608,13 +608,13 @@ jobs:
             os: ubuntu-26.04
             compiler:
               compiler: clang
-              version: 21
+              version: 22
               libcxx: libc++
-              cc: clang-21
-              cxx: clang++-21
-              macos_cc: llvm@21/bin/clang
-              macos_cxx: llvm@21/bin/clang++
-              apt_package: clang-21 clang-tidy-21 libc++-21-dev libc++abi-21-dev libunwind-21-dev libomp-21-dev
+              cc: clang-22
+              cxx: clang++-22
+              macos_cc: llvm@22/bin/clang
+              macos_cxx: llvm@22/bin/clang++
+              apt_package: clang-22 clang-tidy-22 libc++-22-dev libc++abi-22-dev libunwind-22-dev libomp-22-dev
             build_types: Debug
             extra_conan_flags: ""
             extra_cxxflags: '[]'

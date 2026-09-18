@@ -9,7 +9,7 @@ class ConsoleTest_Ask: public ConsoleTest {};
 
 TEST_F(ConsoleTest_Ask, CrashesWithoutOptions) {
   EXPECT_THROW(
-    (ask("My Question?", {}).get()),
+    static_cast<void>(ask("My Question?", {}).get()),
     std::invalid_argument
   );
 }

@@ -171,7 +171,7 @@ inline bool operator<(const unique_ref<T, D> &lhs, const unique_ref<T, D> &rhs) 
 
 }
 
-// NOLINTBEGIN(cert-dcl58-cpp) -- intentional change of namespace std
+// NOLINTBEGIN(cert-dcl58-cpp,bugprone-std-namespace-modification) -- intentional change of namespace std
 namespace std {
     // NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved) -- arguments don't need to be moved for swapping, they're passed by reference
 
@@ -206,6 +206,6 @@ namespace std {
         }
     };
 }
-// NOLINTEND(cert-dcl58-cpp)
+// NOLINTEND(cert-dcl58-cpp,bugprone-std-namespace-modification)
 
 #endif
