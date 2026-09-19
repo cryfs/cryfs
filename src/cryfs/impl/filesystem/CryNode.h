@@ -4,6 +4,7 @@
 
 #include <fspp/fs_interface/Node.h>
 #include <cpp-utils/macros.h>
+#include <string>
 #include <fspp/fs_interface/Dir.h>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 #include "CryDevice.h"
@@ -45,6 +46,7 @@ protected:
   void removeNode();
 
 private:
+  void _checkAllowedOverwrite(const parallelaccessfsblobstore::DirBlobRef &targetParent, const std::string &targetName) const;
   void _updateParentModificationTimestamp();
   void _updateTargetDirModificationTimestamp(const parallelaccessfsblobstore::DirBlobRef &targetDir, boost::optional<cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef>> targetDirParent);
 
