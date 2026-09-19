@@ -20,6 +20,12 @@ Version 1.1.0 (unreleased)
   heap buffer over-read. In practice, this would occur if a block file on disk was truncated or
   corrupted, and the memcmp would simply fail to match — but it is still undefined behavior that
   should be avoided. Added bounds checks before the memcmp calls.
+* Fixed: Heap buffer overrun in ThreadsafeRandomDataBuffer::get(). When a request for random bytes
+  could not be satisfied from the buffer in one go, the following round advanced the target pointer
+  but still asked for the full requested size, so it could write up to that many bytes past the end
+  of the caller's buffer. This sits on the path Random::Csprng() uses, and the buffer is refilled a
+  megabyte or two at a time, so a request only spans two rounds when it arrives while the buffer is
+  nearly empty. That makes the overrun rare, but it is a matter of timing rather than an invariant.
 * CryFS now builds against libFUSE 3 instead of libFUSE 2 on Linux and macOS. libFUSE 2 has been
   unmaintained for years and distributions are dropping it. What this means when you upgrade:
   - On Linux you need libFUSE 3 and the fusermount3 helper it uses to mount and unmount. Both ship
