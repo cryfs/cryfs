@@ -203,8 +203,10 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key, cpp
 
   //Wait for last resource user to release it
   auto resourceToRemove = resourceToRemoveFuture.get();
-  const std::lock_guard<std::mutex> lock(_mutex); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
-  _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
+  // release() looks _resourcesToRemove up under _mutex, so the promise has to be erased under it as well.
+  // Erasing it here is safe because get() has returned, i.e. the promise was fulfilled and its value read.
+  const std::lock_guard<std::mutex> lock(_mutex);
+  _resourcesToRemove.erase(key);
   _baseStore->removeFromBaseStore(std::move(resourceToRemove));
 }
 
@@ -236,8 +238,10 @@ void ParallelAccessStore<Resource, ResourceRef, Key>::remove(const Key &key) {
         lock.unlock();
         //Wait for last resource user to release it
         auto resourceToRemove = resourceToRemoveFuture.get();
-        lock.lock(); // TODO Just added this as a precaution on a whim, but I seriously need to rethink locking here.
-        _resourcesToRemove.erase(key); //TODO Is this erase causing a race condition?
+        // Re-taken because release() looks _resourcesToRemove up under _mutex. Erasing the promise here
+        // is safe because get() has returned, i.e. it was fulfilled and its value read.
+        lock.lock();
+        _resourcesToRemove.erase(key);
         _baseStore->removeFromBaseStore(std::move(resourceToRemove));
     } else {
         lock.unlock();

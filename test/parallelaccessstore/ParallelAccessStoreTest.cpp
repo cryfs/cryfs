@@ -6,6 +6,12 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <array>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdlib>
+#include <iostream>
+#include <mutex>
+#include <string>
 #include <thread>
 
 using blockstore::BlockId;
@@ -85,6 +91,47 @@ BlockId blockId(unsigned int index) {
   return BlockId::FromBinary(data.data());
 }
 
+// Generous on purpose: both tests run in well under a second natively and the point of the limit is
+// only to turn a hang into a failure, not to measure anything.
+constexpr std::chrono::seconds TEST_TIMEOUT(300);
+
+// gtest has no per-test timeout and the hang these tests guard against happens inside
+// ParallelAccessStore::remove(), i.e. below the join() the test would be sitting in, so a regression
+// would block until the CI job's six hour limit and print nothing - run_tests only shows a test
+// binary's output once that binary has finished. Abort instead, so the failure is immediate and the
+// core dump CI keeps shows which thread is stuck. Failing and returning is not an option: the stuck
+// thread still uses the fixture, so letting the test finish underneath it would be undefined behavior.
+class AbortOnTimeout final {
+public:
+  explicit AbortOnTimeout(std::chrono::seconds timeout, std::string message)
+      : _message(std::move(message)), _finished(false),
+        _watchdog([this, timeout] {
+          std::unique_lock<std::mutex> lock(_mutex);
+          if (!_finishedCondition.wait_for(lock, timeout, [this] { return _finished; })) {
+            std::cerr << "Timeout: " << _message << std::endl;
+            std::abort();
+          }
+        }) {}
+
+  ~AbortOnTimeout() {
+    {
+      const std::lock_guard<std::mutex> lock(_mutex);
+      _finished = true;
+    }
+    _finishedCondition.notify_all();
+    _watchdog.join();
+  }
+
+private:
+  std::string _message;
+  bool _finished;
+  std::mutex _mutex;
+  std::condition_variable _finishedCondition;
+  std::thread _watchdog;
+
+  DISALLOW_COPY_AND_ASSIGN(AbortOnTimeout);
+};
+
 class ParallelAccessStoreTest: public ::testing::Test {
 public:
   ParallelAccessStoreTest()
@@ -105,6 +152,9 @@ public:
 // keys that are never opened and remove(key, ref) on resources only it holds, so neither call has to wait, but each
 // remove(key) looks the key up in the map the loading thread is modifying.
 TEST_F(ParallelAccessStoreTest, RemoveWhileOtherThreadLoadsAndReleases) {
+  const AbortOnTimeout abortOnTimeout(TEST_TIMEOUT,
+      "ParallelAccessStoreTest.RemoveWhileOtherThreadLoadsAndReleases did not finish. It only ever blocks "
+      "if remove() waits for a promise nobody will fulfil, i.e. the bug this test guards against is back.");
   std::thread loader([this] {
     for (unsigned int i = 0; i < NUM_ITERATIONS; ++i) {
       const auto ref = store.load(blockId(i % NUM_LOAD_KEYS));
@@ -134,6 +184,9 @@ TEST_F(ParallelAccessStoreTest, RemoveWhileOtherThreadLoadsAndReleases) {
 // path was taken. Without the handshake, remove() almost always found the resource already released and the test
 // exercised the other branch instead.
 TEST_F(ParallelAccessStoreTest, RemoveKeysWhileOtherThreadReleasesThem) {
+  const AbortOnTimeout abortOnTimeout(TEST_TIMEOUT,
+      "ParallelAccessStoreTest.RemoveKeysWhileOtherThreadReleasesThem did not finish. It only ever blocks "
+      "if remove() waits for a promise nobody will fulfil, i.e. the bug this test guards against is back.");
   std::atomic<unsigned int> numKeysOpened(0);     // the resource for key i is open once this is greater than i
   std::atomic<unsigned int> numRemovesStarted(0); // remove() is about to be called for key i once this is greater than i
 
