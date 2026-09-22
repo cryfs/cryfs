@@ -7,6 +7,8 @@
 #include "PeriodicTask.h"
 #include <memory>
 #include <boost/optional.hpp>
+#include <algorithm>
+#include <cstdint>
 #include <future>
 #include <cpp-utils/assert/assert.h>
 #include <cpp-utils/lock/MutexPoolLock.h>
@@ -40,6 +42,7 @@ private:
   void _deleteOldEntriesParallel();
   void _deleteAllEntriesParallel();
   void _deleteMatchingEntriesAtBeginningParallel(std::function<bool (const CacheEntry<Key, Value> &)> matches);
+  uint32_t _numEntriesAtBeginningMatching(std::function<bool (const CacheEntry<Key, Value> &)> matches);
   void _deleteMatchingEntriesAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches);
   bool _deleteMatchingEntryAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches);
 
@@ -64,6 +67,11 @@ Cache<Key, Value, MAX_ENTRIES>::Cache(const std::string& cacheName): _mutex(), _
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 Cache<Key, Value, MAX_ENTRIES>::~Cache() {
+  //Stop the flusher before tearing anything down. It calls _deleteOldEntriesParallel() on this Cache,
+  //so leaving it running means a background thread keeps calling member functions on an object that is
+  //already being destructed. This mirrors the constructor, which deliberately doesn't start the flusher
+  //until the Cache is fully constructed.
+  _timeoutFlusher.reset();
   _deleteAllEntriesParallel();
   ASSERT(_cachedBlocks.size() == 0, "Error in _deleteAllEntriesParallel()");
 }
@@ -131,10 +139,21 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteOldEntriesParallel() {
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginningParallel(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
-  // Twice the number of cores, so we use full CPU even if half the threads are doing I/O
-  const unsigned int numThreads = 2 * (std::max)(1u, std::thread::hardware_concurrency());
+  // The entries are ordered oldest first and the threads below stop at the first entry that doesn't
+  // match, so if the oldest one doesn't match, there is nothing to delete at all. Finding that out
+  // before starting any threads matters, because the flusher calls this every PURGE_INTERVAL whether
+  // or not anything has expired: without this check, an idle cache creates (and immediately tears
+  // down) 2 * hardware_concurrency threads twice a second for nothing.
+  const uint32_t numEntries = _numEntriesAtBeginningMatching(matches);
+  if (numEntries == 0) {
+    return;
+  }
+  // Twice the number of cores, so we use full CPU even if half the threads are doing I/O,
+  // but never more threads than there are entries for them to delete.
+  const uint32_t maxThreads = 2 * (std::max)(1u, std::thread::hardware_concurrency());
+  const uint32_t numThreads = (std::min)(numEntries, maxThreads);
   std::vector<std::future<void>> waitHandles;
-  for (unsigned int i = 0; i < numThreads; ++i) {
+  for (uint32_t i = 0; i < numThreads; ++i) {
     waitHandles.push_back(std::async(std::launch::async, [this, matches] {
         _deleteMatchingEntriesAtBeginning(matches);
     }));
@@ -143,6 +162,18 @@ void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginningParallel(s
     waitHandle.wait();
   }
 };
+
+template<class Key, class Value, uint32_t MAX_ENTRIES>
+uint32_t Cache<Key, Value, MAX_ENTRIES>::_numEntriesAtBeginningMatching(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
+  const std::unique_lock<std::mutex> lock(_mutex);
+  if (_cachedBlocks.size() == 0 || !matches(*_cachedBlocks.peek())) {
+    return 0;
+  }
+  //The oldest entry matches, so there is work to do. We don't know how many of the following entries
+  //also match without walking them, and the size is only used to cap the number of threads, so the
+  //total size is a good enough upper bound.
+  return _cachedBlocks.size();
+}
 
 template<class Key, class Value, uint32_t MAX_ENTRIES>
 void Cache<Key, Value, MAX_ENTRIES>::_deleteMatchingEntriesAtBeginning(std::function<bool (const CacheEntry<Key, Value> &)> matches) {
