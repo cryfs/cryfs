@@ -55,6 +55,15 @@ Version 1.1.0 (unreleased)
 * Fixed: Undefined behavior while parsing mount options. After removing an option that libFUSE
   doesn't know, the parser kept using a reference into the vector it had just erased from. It
   happened to do the right thing in practice, but it was undefined behavior.
+* Fixed: A data race and a possible hang when deleting blocks or blobs. ParallelAccessStore::remove()
+  looked the key up in its map of open resources without holding the lock that every other access to
+  that map takes, so it could read a node another thread was relinking or freeing. And when it did
+  find the resource open, it registered the promise it then waits on under a separate lock
+  acquisition: if the last reference was dropped in between, there was no longer anything to fulfil
+  that promise and remove() waited for it forever. The race needs no more than another thread
+  opening or releasing any resource at the same time; the hang needs the resource being deleted to
+  be released in that window. Both happen while the cache flusher releases resources in the
+  background, so deleting files could hang the file system.
 * The Windows installer is now built with Visual Studio 2026 instead of Visual Studio 2022. You
   need the Microsoft Visual C++ Redistributable from Visual Studio 2026 or newer to run it, an
   older one is not enough. Only one Redistributable is installed at a time and a newer one

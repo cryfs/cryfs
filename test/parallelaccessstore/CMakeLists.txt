@@ -2,6 +2,7 @@ project (parallelaccessstore-test)
 
 set(SOURCES
     ParallelAccessBaseStoreTest.cpp
+    ParallelAccessStoreTest.cpp
     DummyTest.cpp
 )
 
