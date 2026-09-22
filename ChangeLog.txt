@@ -64,6 +64,15 @@ Version 1.1.0 (unreleased)
   opening or releasing any resource at the same time; the hang needs the resource being deleted to
   be released in that window. Both happen while the cache flusher releases resources in the
   background, so deleting files could hang the file system.
+* Fixed: The block and blob caches didn't stop their periodic flush thread before deleting their
+  cached entries on shutdown, so that thread kept calling into a cache that was already being
+  destructed. The constructor already avoided the mirror image of this, starting the thread only
+  once the cache was fully constructed; the destructor now stops it before tearing anything down.
+* The caches no longer start a thread pool on every purge. They look for expired entries twice a
+  second and used to spawn twice as many threads as the machine has cores each time, whether or not
+  anything had actually expired, so an idle mounted file system created and destroyed dozens of
+  threads per second for nothing. They now check whether there is anything to purge before starting
+  any thread, and never start more threads than there are entries to delete.
 * The Windows installer is now built with Visual Studio 2026 instead of Visual Studio 2022. You
   need the Microsoft Visual C++ Redistributable from Visual Studio 2026 or newer to run it, an
   older one is not enough. Only one Redistributable is installed at a time and a newer one
