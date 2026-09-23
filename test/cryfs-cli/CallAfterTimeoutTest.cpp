@@ -2,6 +2,7 @@
 #include <cpp-utils/pointer/unique_ref.h>
 #include <cryfs-cli/CallAfterTimeout.h>
 #include <atomic>
+#include <functional>
 
 using cpputils::unique_ref;
 using cpputils::make_unique_ref;
@@ -24,11 +25,41 @@ public:
         return make_unique_ref<CallAfterTimeout>(timeout, [this] {_rememberCall();}, "test");
     }
 
-    // Restarts the timer. Same reasoning as above: we remember the time before restarting it, so
-    // the new deadline can only be later than what we remember, never earlier.
-    void resetTimer(CallAfterTimeout* obj) {
-        _timerStartedAt = steady_clock::now();
+    // Restarts the timer and remembers when. Same reasoning as above: we remember the time before
+    // restarting it, so the new deadline can only be later than what we remember, never earlier.
+    //
+    // Returns false if the old timer had already expired and the callback already happened before
+    // we got here. A sleep can only ever take longer than requested, never shorter, so on a loaded
+    // machine a sleep that is meant to end before the timeout can end after it. There is nothing to
+    // measure then and it says nothing about CallAfterTimeout, so the tests retry instead of
+    // failing, see runUntilResetWasInTime().
+    //
+    // Checking _called here is reliable and not a race: CallAfterTimeout runs the callback while
+    // holding the same mutex that resetTimer() takes, so once resetTimer() returned, the callback
+    // either already happened or cannot happen before the new deadline anymore.
+    bool resetTimer(CallAfterTimeout* obj) {
+        const steady_clock::time_point resetAt = steady_clock::now();
         obj->resetTimer();
+        if (_called) {
+            return false;
+        }
+        _timerStartedAt = resetAt;
+        return true;
+    }
+
+    // Runs 'scenario' until it managed to reset the timer before it expired. The scenario returns
+    // what resetTimer() returned, i.e. false if a sleep overshot the timeout. Retrying lets the
+    // checks in expectCalledAfter() stay strict without making the test flaky on a busy machine.
+    void runUntilResetWasInTime(const std::function<bool()>& scenario) {
+        for (int attempt = 0; attempt < maxAttempts(); ++attempt) {
+            _called = false;
+            if (scenario()) {
+                return;
+            }
+        }
+        FAIL() << "The timer expired before the test managed to reset it, in all " << maxAttempts()
+               << " attempts. Either this machine is too busy to run timing tests, or the timer "
+                  "expires earlier than it should.";
     }
 
     // Waits for the callback and checks that it didn't happen earlier than 'timeout' after the
@@ -62,6 +93,9 @@ private:
 
     // How long we wait to make sure a callback we don't expect really doesn't happen.
     static milliseconds waitForUnexpectedCall() { return milliseconds(150); }
+
+    // How often runUntilResetWasInTime() retries a scenario whose sleep overshot the timeout.
+    static int maxAttempts() { return 5; }
 
     void _rememberCall() {
         _calledAt = steady_clock::now();
@@ -100,19 +134,31 @@ TEST_F(CallAfterTimeoutTest, DoesntCallTwice) {
 }
 
 TEST_F(CallAfterTimeoutTest, OneReset) {
-    auto obj = callAfterTimeout(milliseconds(200));
-    sleep_for(milliseconds(125));
-    // Without the reset, the callback would happen 75ms from here. expectCalledAfter() checks it
-    // doesn't happen before 200ms from here, i.e. that the reset actually restarted the timer.
-    resetTimer(obj.get());
-    expectCalledAfter(milliseconds(200));
+    runUntilResetWasInTime([this] {
+        auto obj = callAfterTimeout(milliseconds(200));
+        sleep_for(milliseconds(125));
+        // Without the reset, the callback would happen 75ms from here. expectCalledAfter() checks
+        // it doesn't happen before 200ms from here, i.e. that the reset restarted the timer.
+        if (!resetTimer(obj.get())) {
+            return false;
+        }
+        expectCalledAfter(milliseconds(200));
+        return true;
+    });
 }
 
 TEST_F(CallAfterTimeoutTest, TwoResets) {
-    auto obj = callAfterTimeout(milliseconds(200));
-    sleep_for(milliseconds(100));
-    resetTimer(obj.get());
-    sleep_for(milliseconds(125));
-    resetTimer(obj.get());
-    expectCalledAfter(milliseconds(200));
+    runUntilResetWasInTime([this] {
+        auto obj = callAfterTimeout(milliseconds(200));
+        sleep_for(milliseconds(100));
+        if (!resetTimer(obj.get())) {
+            return false;
+        }
+        sleep_for(milliseconds(125));
+        if (!resetTimer(obj.get())) {
+            return false;
+        }
+        expectCalledAfter(milliseconds(200));
+        return true;
+    });
 }
