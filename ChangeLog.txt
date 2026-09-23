@@ -1,91 +1,26 @@
 Version 1.1.0 (unreleased)
 ---------------
-* Improved protection and zeroing of encryption key material in CryFS process memory while the
-  file system is mounted. Note that this is not a vulnerability in CryFS's threat model, since keys
-  lingering in memory do not allow a cloud storage provider to break the encryption. It would only
-  matter in scenarios where the local machine is already compromised (e.g. memory disclosure
-  exploits), which is outside CryFS's threat model. However, it is still good practice to protect
-  and zero key material as early as possible.
-  - Fixed: UnswappableAllocator used std::memset to zero sensitive memory on deallocation, which the
-    compiler could optimize away as a dead store. Now uses CryptoPP::SecureWipeBuffer, which is
-    guaranteed not to be elided.
-  - Use the EncryptionKey class (which locks memory with mlock and zeroes on free) consistently
-    throughout the codebase. Previously, encryption keys already used this class in most places,
-    but there were a few exceptions (e.g. config file handling) where keys were converted to plain
-    std::string, bypassing the memory protections. Keys are now only converted to/from hex strings
-    at serialization boundaries (config file I/O).
-* Fixed: Data races in KnownBlockVersions. Five accessors (markBlockAsDeleted, blockShouldExist,
-  existingBlocks, setIntegrityViolationOnPreviousRun and integrityViolationOnPreviousRun) read and
-  wrote state that the rest of the class guards with a mutex, without taking that mutex. These are
-  reachable during normal operation: block version updates run on the cache flusher's threads while
-  deletions and loads run on whichever thread requested them. markBlockAsDeleted inserts into a map
-  and can rehash the whole table while another thread is updating it, which can corrupt it; the
-  integrity violation flag could be written by two FUSE worker threads at once.
-* Fixed: Undefined behavior in OnDiskBlockStore2 when loading a block file smaller than the format
-  version header. The header validation functions (_isAcceptedCryfsHeader, _isOtherCryfsHeader)
-  called std::memcmp without first checking that the data buffer was large enough, causing a
-  heap buffer over-read. In practice, this would occur if a block file on disk was truncated or
-  corrupted, and the memcmp would simply fail to match — but it is still undefined behavior that
-  should be avoided. Added bounds checks before the memcmp calls.
-* Fixed: Heap buffer overrun in ThreadsafeRandomDataBuffer::get(). When a request for random bytes
-  could not be satisfied from the buffer in one go, the following round advanced the target pointer
-  but still asked for the full requested size, so it could write up to that many bytes past the end
-  of the caller's buffer. This sits on the path Random::Csprng() uses, and the buffer is refilled a
-  megabyte or two at a time, so a request only spans two rounds when it arrives while the buffer is
-  nearly empty. That makes the overrun rare, but it is a matter of timing rather than an invariant.
-* CryFS now builds against libFUSE 3 instead of libFUSE 2 on Linux and macOS. libFUSE 2 has been
-  unmaintained for years and distributions are dropping it. What this means when you upgrade:
-  - On Linux you need libFUSE 3 and the fusermount3 helper it uses to mount and unmount. Both ship
-    in the fuse3 package on Debian, Ubuntu and Fedora. Note that installing the libFUSE 2 package,
-    which is called fuse on Debian and Ubuntu, removes fuse3 and leaves CryFS unable to mount.
-  - On macOS you need macFUSE 4.10.0 or newer. That is the first macFUSE release that ships
-    libFUSE 3; older ones only have the libFUSE 2 API.
-  - On Windows nothing changes. Dokany's FUSE wrapper is still FUSE 2.7 and there is no libFUSE 3
-    version of it, so the Windows build keeps using the FUSE 2 API.
-  - Some mount options that libFUSE 2 accepted do not exist in libFUSE 3 any more: hard_remove,
-    use_ino, readdir_ino, direct_io, nopath, intr, intr_signal, big_writes, large_read and
-    max_write. Passing one of them used to configure the file system; now only the file system
-    itself can decide those, so CryFS ignores them and prints a warning instead of failing to
-    mount. nonempty is gone as well, but it still works: libFUSE used to refuse a non-empty mount
-    directory itself, and CryFS now does that check and honours -o nonempty to override it.
-* Fixed: A mount that libFUSE refused, for example because of an unknown -o option or a missing
-  fusermount3, made cryfs print "Mounting filesystem" and then exit with status 0, as though it had
-  mounted and later unmounted cleanly. Scripts and service managers had no way to tell a failed
-  mount from a successful one. It now exits with error code 26 and an error message.
-* Fixed: Undefined behavior while parsing mount options. After removing an option that libFUSE
-  doesn't know, the parser kept using a reference into the vector it had just erased from. It
-  happened to do the right thing in practice, but it was undefined behavior.
-* Fixed: A data race and a possible hang when deleting blocks or blobs. ParallelAccessStore::remove()
-  looked the key up in its map of open resources without holding the lock that every other access to
-  that map takes, so it could read a node another thread was relinking or freeing. And when it did
-  find the resource open, it registered the promise it then waits on under a separate lock
-  acquisition: if the last reference was dropped in between, there was no longer anything to fulfil
-  that promise and remove() waited for it forever. The race needs no more than another thread
-  opening or releasing any resource at the same time; the hang needs the resource being deleted to
-  be released in that window. Both happen while the cache flusher releases resources in the
-  background, so deleting files could hang the file system.
-* Fixed: The block and blob caches didn't stop their periodic flush thread before deleting their
-  cached entries on shutdown, so that thread kept calling into a cache that was already being
-  destructed. The constructor already avoided the mirror image of this, starting the thread only
-  once the cache was fully constructed; the destructor now stops it before tearing anything down.
-* The caches no longer start a thread pool on every purge. They look for expired entries twice a
-  second and used to spawn twice as many threads as the machine has cores each time, whether or not
-  anything had actually expired, so an idle mounted file system created and destroyed dozens of
-  threads per second for nothing. They now check whether there is anything to purge before starting
-  any thread, and never start more threads than there are entries to delete.
-* The Windows installer is now built with Visual Studio 2026 instead of Visual Studio 2022. You
-  need the Microsoft Visual C++ Redistributable from Visual Studio 2026 or newer to run it, an
-  older one is not enough. Only one Redistributable is installed at a time and a newer one
-  replaces an older one, so installing the latest is all that is needed.
+* Improved protection and zeroing of encryption keys in memory. This is hardening, not a fix for a vulnerability in CryFS's threat model (see https://github.com/cryfs/cryfs/pull/528 and https://github.com/cryfs/cryfs/pull/529 )
+* Fixed data races in the integrity checks (see https://github.com/cryfs/cryfs/pull/664 )
+* Fixed a buffer over-read when loading a truncated or corrupted block file (see https://github.com/cryfs/cryfs/pull/530 )
+* Fixed a rare heap buffer overrun when generating random data (see https://github.com/cryfs/cryfs/pull/663 )
+* CryFS now uses libFUSE 3 instead of libFUSE 2 on Linux and macOS (see https://github.com/cryfs/cryfs/pull/590 )
+  - Linux: requires libFUSE 3 (the fuse3 package on Debian, Ubuntu and Fedora). Installing the libFUSE 2 package (fuse on Debian and Ubuntu) removes fuse3 and leaves CryFS unable to mount.
+  - macOS: requires macFUSE 4.10.0 or newer.
+  - Mount options that libFUSE 3 removed are now ignored with a warning. The nonempty option still works.
+* Fixed CryFS exiting with status 0 when libFUSE refused to mount. It now exits with error code 26 (see https://github.com/cryfs/cryfs/pull/570 )
+* Fixed undefined behavior while parsing mount options (see https://github.com/cryfs/cryfs/pull/576 )
+* Fixed a data race and a possible hang when deleting files (see https://github.com/cryfs/cryfs/pull/665 )
+* Fixed a race condition in the caches when unmounting (see https://github.com/cryfs/cryfs/pull/670 )
+* An idle mounted file system no longer creates and destroys dozens of threads per second (see https://github.com/cryfs/cryfs/pull/670 )
+* The Windows installer is now built with Visual Studio 2026, so CryFS needs the Microsoft Visual C++ Redistributable from Visual Studio 2026 or newer (see https://github.com/cryfs/cryfs/pull/588 )
 
 Dependency Updates
 * Fuse 3.9 on Linux and macOS (was: Fuse 2.9), still Fuse 2.7 via DokanY on Windows
 * spdlog 1.17.0 (was: 1.14.1)
 * gtest 1.17.0 (was: 1.15.0), test-only dependency
 * boost 1.91.0 (was: 1.84.0)
-* DokanY 2.3.1.1000 on Windows (was: 2.2.0.1000). If you already have DokanY 2.2.0.1000
-  installed, uninstall it and reboot before installing 2.3.1.1000. Since DokanY 2.3.0 the
-  installer refuses to install over an existing DokanY 2.x instead of upgrading in place.
+* DokanY 2.3.1.1000 on Windows (was: 2.2.0.1000). Uninstall the old DokanY and reboot before installing it (see https://github.com/cryfs/cryfs/pull/605 )
 
 
 Version 1.0.3
