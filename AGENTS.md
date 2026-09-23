@@ -429,7 +429,9 @@ Configuration in `.clang-tidy`:
   `windows-2025`, which ships Visual Studio 2026. The workflow selects the conan compiler
   version per image. Release packages are built on `windows-2025`, so they are compiled with
   Visual Studio 2026.
-- Some tests are disabled on Windows (see CI config)
+- The FUSE integration tests in fspp-test are not built on Windows, because they drive a mounted
+  file system through the POSIX file API (see test/fspp/CMakeLists.txt). The CLI tests mount to a
+  free drive letter on Windows, and the few that need the mount directory to be a directory skip.
 
 ### macOS
 
