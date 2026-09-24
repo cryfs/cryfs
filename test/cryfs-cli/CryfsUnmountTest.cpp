@@ -2,7 +2,13 @@
 #include <cryfs-cli/Cli.h>
 #include <cryfs-unmount/Cli.h>
 
-using CliTest_Unmount = CliTest;
+class CliTest_Unmount: public CliTest {
+public:
+    // All of these mount a file system.
+    static void SetUpTestSuite() {
+        SKIP_IF_MOUNTING_IS_UNAVAILABLE();
+    }
+};
 namespace bf = boost::filesystem;
 
 namespace {

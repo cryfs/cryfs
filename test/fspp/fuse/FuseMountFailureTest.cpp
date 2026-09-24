@@ -20,6 +20,11 @@ public:
   Fuse createFuse() {
     return Fuse([this] (Fuse*) {return fsimpl;}, []{}, "fusetest", boost::none);
   }
+
+  // FuseTest::SetUpTestSuite() skips where mounting isn't possible. These tests only check that
+  // a refused mount is reported, and libfuse refuses this one before it gets to mounting, so they
+  // run everywhere.
+  static void SetUpTestSuite() {}
 };
 
 TEST_F(FuseMountFailureTest, WhenRunningInForeground_ThenLibfusesExitCodeIsReported) {

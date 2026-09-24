@@ -4,6 +4,12 @@
 
 using namespace fspp::fuse;
 
+// This suite derives from FuseTest, so all of it skips where a file system can't be mounted (see
+// test/my-gtest-main/mount_availability.h). The _thenFails tests below would in fact run there:
+// Fuse::_run() validates the atime options and dies before it ever calls fuse_main(), so they
+// never reach a mount. They are skipped along with the rest of the suite anyway, because giving
+// them a fixture of their own would make death tests, which re-execute the test binary, run on
+// macOS for the first time to gain 20 tests. Worth revisiting if the suite is split up anyway.
 typedef FuseTest FuseTimestampTest;
 
 // Single flag

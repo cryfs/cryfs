@@ -46,15 +46,18 @@ runs:
           blobstore/blobstore-test
           cryfs/cryfs-test
         )
-        # TODO Also run on macOS once fixed
+        # TODO Also run with TSAN once fixed
+        if [[ "${{matrix.name}}" != "TSAN" ]]; then
+          tests+=(fspp/fspp-test)
+        fi
+        tests+=(cryfs-cli/cryfs-cli-test)
         if [[ "${{runner.os}}" == "macOS" ]]; then
-          echo Skipping some tests because they are not fixed for macOS yet
-        else
-          # TODO Also run with TSAN once fixed
-          if [[ "${{matrix.name}}" != "TSAN" ]]; then
-            tests+=(fspp/fspp-test)
-          fi
-          tests+=(cryfs-cli/cryfs-cli-test)
+          # GitHub's macOS runners can't load the macFUSE kernel extension: a user has to approve
+          # it and reboot, and Apple Silicon needs Reduced Security on top. So nothing can be
+          # mounted on them. The tests that need a mounted file system skip when this is set (see
+          # test/my-gtest-main/mount_availability.h), everything else in fspp-test and
+          # cryfs-cli-test runs.
+          export CRYFS_TEST_CANNOT_MOUNT=1
         fi
 
         # On Linux, let the test binaries dump core. The runner's default

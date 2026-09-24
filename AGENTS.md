@@ -442,6 +442,10 @@ Configuration in `.clang-tidy`:
 - macFUSE installs into /usr/local, so pkg-config may need
   `PKG_CONFIG_PATH=/usr/local/lib/pkgconfig` on Apple Silicon.
 - Apple Clang support varies by macOS version
+- GitHub's hosted macOS runners can't load the macFUSE kernel extension, so nothing can be mounted
+  on them. CI sets `CRYFS_TEST_CANNOT_MOUNT=1` there (see the run_tests action) and the tests that
+  need a mounted file system skip (see `test/my-gtest-main/mount_availability.h`); the rest of
+  fspp-test and cryfs-cli-test runs on macOS.
 
 ## Stability Notes
 
