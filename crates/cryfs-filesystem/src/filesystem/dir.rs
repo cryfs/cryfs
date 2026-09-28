@@ -3,7 +3,7 @@ use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use crate::filesystem::device::check_entry_overwrite_allowed;
+use crate::filesystem::device::{check_entry_overwrite_allowed, check_move_into_dir_allowed};
 
 use super::{
     device::CryDevice, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
@@ -316,6 +316,16 @@ where
                             .await?;
                     }
 
+                    // Check that the destination accepts the entry before we remove it from the source,
+                    // otherwise a rejected overwrite would lose the entry. Don't hold the source parent lock here.
+                    check_move_into_dir_allowed(
+                        self.blobstore,
+                        &dest_parent,
+                        newname,
+                        entry.entry_type(),
+                    )
+                    .await?;
+
                     // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
                     //      But it likely has some dependency with source_parent_blob.
                     let self_blob = self
@@ -357,7 +367,7 @@ where
                                                     entry.last_access_time(),
                                                     entry.last_modification_time(),
                                                     async |source_blob_type, overwritten_blob_type, overwritten_blobid| {
-                                                        // Other checks (ensuring we don't overwrite a dir with a non-dir or a non-dir with a dir) is done in [DirEntryList::_check_allowed_overwrite].
+                                                        // check_move_into_dir_allowed() above already ran this check, but we released the lock on the destination directory since then, so we check again.
                                                         check_entry_overwrite_allowed(
                                                             &self.blobstore,
                                                             source_blob_type,
@@ -374,6 +384,9 @@ where
                                                 .await
                                                 .map_err(|err| {
                                                     // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
+                                                    //      check_move_into_dir_allowed() above rejects invalid overwrites before we remove anything, so this only happens if loading or removing
+                                                    //      the overwritten blob failed (I/O error or corrupted file system), or if the destination entry was changed concurrently since that check.
+                                                    //      Through a Linux mount, the kernel's rename locks prevent the latter, but concurrent callers in this process can still hit it.
                                                     match err {
                                                         AddOrOverwriteError::ValidationFailed(fs_err) => {
                                                             log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");

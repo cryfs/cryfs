@@ -28,7 +28,7 @@ tokio = {workspace = true, features = ["sync"]}
 
 [dev-dependencies]
 cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
-tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
+tokio = {workspace = true, features = ["rt-multi-thread", "macros", "time"]}
 
 [features]
 ancestor_checks_on_move = []

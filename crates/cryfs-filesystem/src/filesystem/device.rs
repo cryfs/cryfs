@@ -321,7 +321,8 @@ where
             return Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself);
         }
         // We don't need to check dest_path.is_ancestor_of(source_path) because that case would mean
-        // that dest_path is non-empty (it contains source_path), and we check for non-emptiness below.
+        // that dest_path is a non-empty directory (it contains source_path), and check_move_into_dir_allowed() below
+        // rejects that before we remove anything (with ENOTEMPTY, or EISDIR if the source isn't a directory).
 
         let Some((source_parent, source_name)) = source_path.split_last() else {
             log::error!("Tried to rename the root directory {source_path} into {dest_path}");
@@ -335,6 +336,8 @@ where
         let on_overwritten = async move |source_blob_type: EntryType,
                                          overwritten_blob_type: EntryType,
                                          overwritten_blobid: &BlobId| {
+            // For renames across directories, this check already ran in check_move_into_dir_allowed() before the
+            // source entry was removed, but the destination directory was unlocked since then, so we check again.
             check_entry_overwrite_allowed(
                 &self.blobstore,
                 source_blob_type,
@@ -408,6 +411,16 @@ where
                             .await?;
                         let self_blob_id = entry.blob_id();
 
+                        // Check that the destination accepts the entry before we remove it from the source,
+                        // otherwise a rejected overwrite would lose the entry. Don't hold the source parent lock here.
+                        check_move_into_dir_allowed(
+                            &self.blobstore,
+                            &dest_parent_blob,
+                            dest_name,
+                            entry.entry_type(),
+                        )
+                        .await?;
+
                         // TODO In theory, we could load self_blob concurrently with dest_parent_blob. No need to only do it after dest_parent_blob loaded.
                         //      But it likely has some dependency with source_parent_blob.
                         let self_blob = self
@@ -456,6 +469,9 @@ where
                                                     .await
                                                     .map_err(|err| {
                                                         // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
+                                                        //      check_move_into_dir_allowed() above rejects invalid overwrites before we remove anything, so this only happens if loading or removing
+                                                        //      the overwritten blob failed (I/O error or corrupted file system), or if the destination entry was changed concurrently since that check.
+                                                        //      Through a Linux mount, the kernel's rename locks prevent the latter, but concurrent callers in this process can still hit it.
                                                         match err {
                                                             AddOrOverwriteError::ValidationFailed(fs_err) => {
                                                                 log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
@@ -535,6 +551,46 @@ where
     check_were_not_overwriting_nonempty_dir(blobstore, overwritten_blobid, overwritten_blob_type)
         .await?;
     Ok(())
+}
+
+/// Checks whether an entry of type `source_entry_type` may be moved into `dest_parent` under `dest_name`,
+/// without modifying anything. Returns the same errors the `on_overwritten` callback of
+/// `add_or_overwrite_entry` would return, plus `NodeIsNotADirectory` if `dest_parent` isn't a
+/// directory, so that a cross-directory move can be rejected before the entry is removed from
+/// its source directory.
+///
+/// Must not be called while holding the lock on the source parent directory: if the
+/// destination entry is the source parent itself (e.g. moving `/a/x` to `/a`), this
+/// locks that blob to check whether it is empty.
+pub async fn check_move_into_dir_allowed<B>(
+    blobstore: &AsyncDropArc<ConcurrentFsBlobStore<B>>,
+    dest_parent: &ConcurrentFsBlob<B>,
+    dest_name: &PathComponent,
+    source_entry_type: EntryType,
+) -> FsResult<()>
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    dest_parent
+        .with_lock(async |dest_parent| {
+            let dest_parent = dest_parent
+                .as_dir()
+                .map_err(|_| FsError::NodeIsNotADirectory)?;
+            match dest_parent.entry_by_name(dest_name) {
+                None => Ok(()),
+                Some(existing) => {
+                    check_entry_overwrite_allowed(
+                        blobstore,
+                        source_entry_type,
+                        existing.entry_type(),
+                        existing.blob_id(),
+                    )
+                    .await
+                }
+            }
+        })
+        .await
 }
 
 fn check_blob_type_transition_allowed(
