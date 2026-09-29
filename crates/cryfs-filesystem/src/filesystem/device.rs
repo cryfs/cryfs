@@ -313,6 +313,8 @@ where
     }
 
     async fn rename(&self, source_path: &AbsolutePath, dest_path: &AbsolutePath) -> FsResult<()> {
+        // TODO Unlike CryDir::rename_child and CryDir::move_child_to, this doesn't update the modification timestamps of the
+        //      source and destination parent directories, although POSIX says a rename marks them for update.
         if source_path.is_ancestor_of(dest_path) {
             log::error!(
                 "Tried to rename {source_path} into its descendant {dest_path}",
@@ -348,6 +350,8 @@ where
             )
             .await?;
 
+            // TODO We hold the lock on the destination directory here, and remove_by_id waits until every handle to the
+            //      overwritten blob is dropped. That can deadlock with a concurrent CryDir::remove_child_dir, see the TODO there.
             match self
                 .blobstore
                 .remove_by_id(&overwritten_blobid)
