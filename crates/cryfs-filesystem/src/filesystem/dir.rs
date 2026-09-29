@@ -143,6 +143,8 @@ where
         &self,
         old_destination_blob_id: BlobId,
     ) -> FsResult<()> {
+        // TODO The caller holds the lock on the destination directory, and remove_by_id waits until every handle to the
+        //      overwritten blob is dropped. That can deadlock with a concurrent remove_child_dir, see the TODO there.
         let result = self
             .blobstore
             .remove_by_id(&old_destination_blob_id)
@@ -604,6 +606,11 @@ where
                     let ((), child_blob) = child_blob.async_drop_on_err(entries_check).await?;
 
                     // TODO We released the lock on self_blob above and are now re-locking it. There is a race condition here.
+                    // TODO This can deadlock with a concurrent rename that overwrites this child. We keep child_blob loaded while we wait
+                    //      for the lock on self_blob below, but the rename holds the lock on self_blob (its destination directory) while
+                    //      its on_overwritten callback calls remove_by_id on the child, and remove_by_id waits until every handle to the
+                    //      child is dropped, including ours. Through a Linux mount, the kernel doesn't run rmdir and rename in the same
+                    //      directory at the same time, but concurrent callers in this process can hit it.
 
                     // First remove the entry, then flush that change, and only then remove the blob.
                     // This is to make sure the file system doesn't end up in an invalid state

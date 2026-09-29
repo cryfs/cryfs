@@ -336,6 +336,10 @@ where
         )
     }
 
+    // TODO fuse_mt 0.6.4 drops the renameat2() flags before it calls this (its `rename` takes `_flags: u32, // TODO`),
+    //      so RENAME_NOREPLACE and RENAME_EXCHANGE arrive here as a plain rename that overwrites the target.
+    //      The fuser backend rejects any flags with EINVAL instead, see `reject_unsupported_rename_flags` in
+    //      object_based_api/low_level_adapter.rs. Do the same here once fuse_mt passes the flags on.
     fn rename(
         &self,
         req: RequestInfo,
