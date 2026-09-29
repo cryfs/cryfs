@@ -27,6 +27,7 @@ nix = {workspace = true, features = ["user"] }
 tokio = {workspace = true, features = ["sync"]}
 
 [dev-dependencies]
+byte-unit.workspace = true
 cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
 tokio = {workspace = true, features = ["rt-multi-thread", "macros", "time"]}
 

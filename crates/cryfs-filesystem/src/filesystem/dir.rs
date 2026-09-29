@@ -3,7 +3,9 @@ use futures::join;
 use std::fmt::Debug;
 use std::time::SystemTime;
 
-use crate::filesystem::device::{check_entry_overwrite_allowed, check_move_into_dir_allowed};
+use crate::filesystem::device::{
+    check_entry_overwrite_allowed, check_move_into_dir_allowed, undo_remove_entry,
+};
 
 use super::{
     device::CryDevice, node::CryNode, node_info::NodeInfo, open_file::CryOpenFile,
@@ -354,7 +356,7 @@ where
                                         })
                                 })
                                 .await?;
-                            dest_parent
+                            let add_result = dest_parent
                                         .with_lock(async |dest_parent_dir| {
                                             Self::blob_as_dir_mut(dest_parent_dir)?
                                                 .add_or_overwrite_entry(
@@ -368,6 +370,7 @@ where
                                                     entry.last_modification_time(),
                                                     async |source_blob_type, overwritten_blob_type, overwritten_blobid| {
                                                         // check_move_into_dir_allowed() above already ran this check, but we released the lock on the destination directory since then, so we check again.
+                                                        // If it fails now, we put the source entry back below.
                                                         check_entry_overwrite_allowed(
                                                             &self.blobstore,
                                                             source_blob_type,
@@ -383,10 +386,6 @@ where
                                                 )
                                                 .await
                                                 .map_err(|err| {
-                                                    // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
-                                                    //      check_move_into_dir_allowed() above rejects invalid overwrites before we remove anything, so this only happens if loading or removing
-                                                    //      the overwritten blob failed (I/O error or corrupted file system), or if the destination entry was changed concurrently since that check.
-                                                    //      Through a Linux mount, the kernel's rename locks prevent the latter, but concurrent callers in this process can still hit it.
                                                     match err {
                                                         AddOrOverwriteError::ValidationFailed(fs_err) => {
                                                             log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
@@ -398,7 +397,18 @@ where
                                                         }
                                                     }
                                                 })
-                                        }).await?;
+                                        }).await;
+                            if let Err(err) = add_result {
+                                // We couldn't add the entry to the destination, but we already removed it from the source, so put it back instead of losing it.
+                                // check_move_into_dir_allowed() above rejects invalid overwrites before we remove anything, so this only happens if loading or removing
+                                // the overwritten blob failed (I/O error or corrupted file system), or if the destination entry was changed concurrently since that check.
+                                // Through a Linux mount, the kernel's rename locks prevent the latter, but concurrent callers in this process can still hit it.
+                                // TODO Until we put it back, the entry is in neither directory, and putting it back fails if something took its name in the source directory
+                                //      in the meantime. We might want to fully close this window later by keeping both directories locked for the whole move instead,
+                                //      see the TODO about locking each blob only once at the top of this function.
+                                undo_remove_entry(&source_parent, &entry).await;
+                                return Err(err);
+                            }
 
                             self_blob
                                 .with_lock(async |self_blob| {

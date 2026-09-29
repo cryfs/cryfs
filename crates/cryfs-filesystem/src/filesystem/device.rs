@@ -23,7 +23,8 @@ use super::{
 };
 use cryfs_fsblobstore::concurrentfsblobstore::{ConcurrentFsBlob, ConcurrentFsBlobStore};
 use cryfs_fsblobstore::fsblobstore::{
-    AddOrOverwriteError, BlobType, EntryType, FsBlob, FsBlobStore, RemoveError, RenameError,
+    AddOrOverwriteError, BlobType, DirEntry, EntryType, FsBlob, FsBlobStore, RemoveError,
+    RenameError,
 };
 
 pub struct CryDevice<B>
@@ -338,6 +339,7 @@ where
                                          overwritten_blobid: &BlobId| {
             // For renames across directories, this check already ran in check_move_into_dir_allowed() before the
             // source entry was removed, but the destination directory was unlocked since then, so we check again.
+            // If it fails now, the rename puts the source entry back, see undo_remove_entry().
             check_entry_overwrite_allowed(
                 &self.blobstore,
                 source_blob_type,
@@ -437,7 +439,7 @@ where
                         with_async_drop!(
                             self_blob,
                             {
-                                source_parent_blob
+                                let removed_entry = source_parent_blob
                                     .with_lock(async |source_parent| {
                                         source_parent
                                             .as_dir_mut()
@@ -450,7 +452,7 @@ where
                                             })
                                     })
                                     .await?;
-                                dest_parent_blob
+                                let add_result = dest_parent_blob
                                             .with_lock(async |source_parent| {
                                                 source_parent
                                                     .as_dir_mut()
@@ -468,10 +470,6 @@ where
                                                     )
                                                     .await
                                                     .map_err(|err| {
-                                                        // TODO Exception safety - we couldn't add the entry to the destination, but we already removed it from the source. We should probably re-add it to the source.
-                                                        //      check_move_into_dir_allowed() above rejects invalid overwrites before we remove anything, so this only happens if loading or removing
-                                                        //      the overwritten blob failed (I/O error or corrupted file system), or if the destination entry was changed concurrently since that check.
-                                                        //      Through a Linux mount, the kernel's rename locks prevent the latter, but concurrent callers in this process can still hit it.
                                                         match err {
                                                             AddOrOverwriteError::ValidationFailed(fs_err) => {
                                                                 log::error!("Error in add_or_overwrite_entry validation: {fs_err:?}");
@@ -483,7 +481,18 @@ where
                                                             }
                                                         }
                                                     })
-                                            }).await?;
+                                            }).await;
+                                if let Err(err) = add_result {
+                                    // We couldn't add the entry to the destination, but we already removed it from the source, so put it back instead of losing it.
+                                    // check_move_into_dir_allowed() above rejects invalid overwrites before we remove anything, so this only happens if loading or removing
+                                    // the overwritten blob failed (I/O error or corrupted file system), or if the destination entry was changed concurrently since that check.
+                                    // Through a Linux mount, the kernel's rename locks prevent the latter, but concurrent callers in this process can still hit it.
+                                    // TODO Until we put it back, the entry is in neither directory, and putting it back fails if something took its name in the source directory
+                                    //      in the meantime. We might want to fully close this window later by keeping both directories locked for the whole move instead,
+                                    //      see the TODO about locking each blob only once above.
+                                    undo_remove_entry(&source_parent_blob, &removed_entry).await;
+                                    return Err(err);
+                                }
 
                                 self_blob
                                     .with_lock(async |self_blob| {
@@ -588,6 +597,66 @@ where
                     )
                     .await
                 }
+            }
+        })
+        .await
+}
+
+/// Puts `entry` back into `source_parent` after a move removed it from there but then failed to
+/// add it to the destination directory, so that the failed move doesn't lose it. This fails if
+/// another entry with the same name was added to `source_parent` in the meantime. Errors are only
+/// logged, because the caller returns the error that made the move fail.
+///
+/// Must not be called while holding the lock on the destination directory, so that a move never
+/// holds the locks on both directories at once.
+pub async fn undo_remove_entry<B>(source_parent: &ConcurrentFsBlob<B>, entry: &DirEntry)
+where
+    B: BlobStore + AsyncDrop<Error = anyhow::Error> + Debug + Send + Sync + 'static,
+    <B as BlobStore>::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    source_parent
+        .with_lock(async |source_parent| {
+            let Ok(source_parent) = source_parent.as_dir_mut() else {
+                log::error!(
+                    "Couldn't put {} back into its source directory because that isn't a directory. The entry is lost.",
+                    entry.name()
+                );
+                return;
+            };
+            let name = entry.name().to_owned();
+            let result = match entry.entry_type() {
+                EntryType::Dir => source_parent.add_entry_dir(
+                    name,
+                    *entry.blob_id(),
+                    entry.mode(),
+                    entry.uid(),
+                    entry.gid(),
+                    entry.last_access_time(),
+                    entry.last_modification_time(),
+                ),
+                EntryType::File => source_parent.add_entry_file(
+                    name,
+                    *entry.blob_id(),
+                    entry.mode(),
+                    entry.uid(),
+                    entry.gid(),
+                    entry.last_access_time(),
+                    entry.last_modification_time(),
+                ),
+                EntryType::Symlink => source_parent.add_entry_symlink(
+                    name,
+                    *entry.blob_id(),
+                    entry.uid(),
+                    entry.gid(),
+                    entry.last_access_time(),
+                    entry.last_modification_time(),
+                ),
+            };
+            if let Err(err) = result {
+                log::error!(
+                    "Couldn't put {} back into its source directory. The entry is lost: {err:?}",
+                    entry.name()
+                );
             }
         })
         .await
