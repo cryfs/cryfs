@@ -20,7 +20,7 @@ use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AtimeUpdateBehavior, FsError, FsResult, Gid, Mode, OpenInFlags, Uid,
-    object_based_api::{Device, Dir, Node},
+    object_based_api::{Device, Dir, Node, Symlink},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -217,6 +217,33 @@ async fn touch(device: &TestDevice, path: &str) {
         parent.async_drop().await.unwrap();
     }
     parent.async_drop().await.unwrap();
+}
+
+async fn symlink(device: &TestDevice, path: &str, target: &str) {
+    let (parent, name) = abspath(path).split_last().unwrap();
+    let parent = device.lookup(parent).await.unwrap();
+    {
+        let parent = parent.as_dir().await.unwrap();
+        let (_, symlink) = parent
+            .create_child_symlink(name, target, Uid::from(1000), Gid::from(1000))
+            .await
+            .unwrap();
+        symlink.async_drop().await.unwrap();
+        parent.async_drop().await.unwrap();
+    }
+    parent.async_drop().await.unwrap();
+}
+
+async fn read_symlink(device: &TestDevice, path: &str) -> String {
+    let node = device.lookup(abspath(path)).await.unwrap();
+    let target = {
+        let symlink = node.as_symlink().await.unwrap();
+        let target = symlink.target().await.unwrap();
+        symlink.async_drop().await.unwrap();
+        target
+    };
+    node.async_drop().await.unwrap();
+    target
 }
 
 /// Sorted entry names of the directory at `path`, or `None` if `path` is not a directory.
@@ -456,40 +483,95 @@ async fn across_dirs_to_new_name_succeeds(api: Api) {
 }
 
 /// If overwriting the destination fails after the source entry was already removed, the source
-/// entry must be put back instead of getting lost. Here, removing the overwritten directory fails.
-/// The destination being changed concurrently after the rename checked it ends up in the same place.
-async fn across_dirs_failed_overwrite_puts_source_back(api: Api) {
+/// entry must be put back instead of getting lost. The tests below get there by making the removal
+/// of the overwritten node fail. The destination being changed concurrently after the rename
+/// checked it ends up in the same place.
+///
+/// Renames `/p1/src` onto the existing `/p2/dst` while removing blobs fails, and checks that
+/// the rename failed without changing any of the directories in `dirs`, nor the number of blocks.
+/// Then renames it again with removing blobs working, which must succeed because the failed
+/// rename didn't leave anything half done.
+async fn assert_failed_overwrite_puts_source_back(
+    device: &TestDevice,
+    fail_removals: &AtomicBool,
+    api: Api,
+    dirs: &[&str],
+) {
+    let mut entries_before = Vec::new();
+    for dir in dirs {
+        entries_before.push(ls_dir(device, dir).await);
+    }
+    let blocks_before = num_blocks(device).await;
+
+    fail_removals.store(true, Ordering::SeqCst);
+    let result = rename(device, api, "/p1/src", "/p2/dst").await;
+    fail_removals.store(false, Ordering::SeqCst);
+
+    assert!(
+        result.is_err(),
+        "{api:?}: expected an error, got {result:?}"
+    );
+    for (dir, entries_before) in dirs.iter().zip(entries_before) {
+        assert_eq!(
+            entries_before,
+            ls_dir(device, dir).await,
+            "{api:?}: the failed rename changed the entries of {dir}"
+        );
+    }
+    assert_eq!(
+        blocks_before,
+        num_blocks(device).await,
+        "{api:?}: the failed rename changed the number of blocks"
+    );
+
+    rename(device, api, "/p1/src", "/p2/dst").await.unwrap();
+    assert_eq!(Vec::<String>::new(), ls_dir(device, "/p1").await);
+    assert_eq!(vec!["dst"], ls_dir(device, "/p2").await);
+}
+
+async fn across_dirs_failed_overwrite_of_dir_puts_source_back(api: Api) {
     run_with_fault_injection(async |device, fail_removals| {
         mkdir(device, "/p1").await;
         mkdir(device, "/p2").await;
         mkdir(device, "/p1/src").await;
         touch(device, "/p1/src/src_file").await;
         mkdir(device, "/p2/dst").await;
-        let blocks_before = num_blocks(device).await;
 
-        fail_removals.store(true, Ordering::SeqCst);
-        let result = rename(device, api, "/p1/src", "/p2/dst").await;
-        fail_removals.store(false, Ordering::SeqCst);
-
-        assert!(
-            result.is_err(),
-            "{api:?}: expected an error, got {result:?}"
-        );
-        assert_eq!(
-            vec!["src"],
-            ls_dir(device, "/p1").await,
-            "{api:?}: the failed rename lost the source entry"
-        );
-        assert_eq!(vec!["src_file"], ls_dir(device, "/p1/src").await);
-        assert_eq!(vec!["dst"], ls_dir(device, "/p2").await);
-        assert_eq!(Vec::<String>::new(), ls_dir(device, "/p2/dst").await);
-        assert_eq!(blocks_before, num_blocks(device).await);
-
-        // Nothing was left half done, so the same rename succeeds now that removing works again
-        rename(device, api, "/p1/src", "/p2/dst").await.unwrap();
-        assert_eq!(Vec::<String>::new(), ls_dir(device, "/p1").await);
-        assert_eq!(vec!["dst"], ls_dir(device, "/p2").await);
+        assert_failed_overwrite_puts_source_back(
+            device,
+            fail_removals,
+            api,
+            &["/", "/p1", "/p2", "/p1/src", "/p2/dst"],
+        )
+        .await;
         assert_eq!(vec!["src_file"], ls_dir(device, "/p2/dst").await);
+    })
+    .await
+}
+
+async fn across_dirs_failed_overwrite_of_file_puts_source_back(api: Api) {
+    run_with_fault_injection(async |device, fail_removals| {
+        mkdir(device, "/p1").await;
+        mkdir(device, "/p2").await;
+        touch(device, "/p1/src").await;
+        touch(device, "/p2/dst").await;
+
+        assert_failed_overwrite_puts_source_back(device, fail_removals, api, &["/", "/p1", "/p2"])
+            .await;
+    })
+    .await
+}
+
+async fn across_dirs_failed_overwrite_of_symlink_puts_source_back(api: Api) {
+    run_with_fault_injection(async |device, fail_removals| {
+        mkdir(device, "/p1").await;
+        mkdir(device, "/p2").await;
+        symlink(device, "/p1/src", "src_target").await;
+        symlink(device, "/p2/dst", "dst_target").await;
+
+        assert_failed_overwrite_puts_source_back(device, fail_removals, api, &["/", "/p1", "/p2"])
+            .await;
+        assert_eq!("src_target", read_symlink(device, "/p2/dst").await);
     })
     .await
 }
@@ -558,7 +640,9 @@ tests_for_both_apis!(
     across_dirs_dir_onto_its_grandparent_is_rejected,
     across_dirs_dir_onto_empty_dir_succeeds,
     across_dirs_to_new_name_succeeds,
-    across_dirs_failed_overwrite_puts_source_back,
+    across_dirs_failed_overwrite_of_dir_puts_source_back,
+    across_dirs_failed_overwrite_of_file_puts_source_back,
+    across_dirs_failed_overwrite_of_symlink_puts_source_back,
     same_dir_dir_onto_nonempty_dir_is_rejected,
     same_dir_dir_onto_empty_dir_succeeds,
 );
