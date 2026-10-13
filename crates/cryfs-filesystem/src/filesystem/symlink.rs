@@ -68,7 +68,7 @@ where
 
     async fn target(&self) -> FsResult<String> {
         self.node_info
-            .concurrently_maybe_update_access_timestamp_in_parent(async || {
+            .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
                 let blob = self.load_blob().await?;
                 with_async_drop!(
                     blob,

@@ -11,7 +11,7 @@ use cryfs_fsblobstore::fsblobstore::{
 };
 use cryfs_fsblobstore::{Gid, Mode, Uid};
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, NodeAttrs, NumBytes};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
 
 // TODO The ancestor_checks_on_move feature implements checks that when moving a node to a different directory,
 //      it doesn't get moved into an ancestor or child of itself. But it requires that `NodeInfo` remembers the blob ids
@@ -34,7 +34,11 @@ where
         atime_update_behavior: AtimeUpdateBehavior,
     },
     IsNotRootDir {
-        parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
+        /// The directory that has this node's entry. This can be out of date: When the node is moved to a different
+        /// directory, nodes loaded before the move can still be in use, e.g. fuser keeps them in its inode list and
+        /// open files keep theirs, and they still point to the old directory. Access it through [NodeInfo::with_own_entry],
+        /// which notices that and switches to the new directory.
+        parent_blob: AsyncDropGuard<AsyncDropTokioMutex<ConcurrentFsBlob<B>>>,
         // TODO It probably makes sense to store the self_blob here as well, maybe optional (OnceCell?) so it isn't unnecessarily loaded, but once it's loaded it's cached and doesn't have to be re-loaded.
         //      But we need to be careful with deadlocks, given that NodeInfo is stored in fuser in the inode list and the open file list.
         /// ancestors.first() is the root blob id, ancestors.last() is the immediate parent of this node.
@@ -87,7 +91,7 @@ where
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
-                parent_blob,
+                parent_blob: AsyncDropTokioMutex::new(parent_blob),
                 #[cfg(feature = "ancestor_checks_on_move")]
                 ancestors,
                 blob_id,
@@ -101,13 +105,6 @@ where
         match &self.inner {
             NodeInfoImpl::IsRootDir { root_blob_id, .. } => root_blob_id,
             NodeInfoImpl::IsNotRootDir { blob_id, .. } => blob_id,
-        }
-    }
-
-    pub fn parent_blob(&self) -> Option<&AsyncDropGuard<ConcurrentFsBlob<B>>> {
-        match &self.inner {
-            NodeInfoImpl::IsRootDir { .. } => None,
-            NodeInfoImpl::IsNotRootDir { parent_blob, .. } => Some(parent_blob),
         }
     }
 
@@ -237,10 +234,9 @@ where
                 ..
             } => {
                 let lstat_size = self.load_lstat_size(blobstore).await?;
-                let entry: DirEntry = parent_blob
-                    .with_lock(async |blob| {
-                        blob.as_dir()
-                            .expect("Parent dir is not a directory")
+                let entry: DirEntry =
+                    Self::with_own_entry(blobstore, parent_blob, blob_id, async |parent_dir| {
+                        parent_dir
                             .entry_by_id(blob_id)
                             .cloned()
                             .ok_or_else(|| FsError::NodeDoesNotExist)
@@ -285,35 +281,29 @@ where
                 let uid = uid.map(|uid| Uid::from(u32::from(uid)));
                 let gid = gid.map(|gid| Gid::from(u32::from(gid)));
                 let lstat_size = self.load_lstat_size(blobstore).await?;
-                parent_blob
-                    .with_lock(async |parent_blob| {
-                        let parent_dir = parent_blob
-                            .as_dir_mut()
-                            .expect("Parent dir is not a directory");
-                        let result = parent_dir
-                            .set_attr_of_entry(blob_id, mode, uid, gid, atime, mtime)
-                            .map(|result| dir_entry_to_node_attrs(result, lstat_size))
-                            .map_err(|err| {
-                                log::error!("Error setting attributes of entry: {:?}", err);
-                                match err {
-                                    SetAttrError::NodeDoesNotExist => FsError::NodeDoesNotExist,
-                                    SetAttrError::ValidationFailed(_) => FsError::InvalidOperation,
-                                }
-                            });
-                        // Even if other fields are `None` (i.e. we don't run chmod, chown, utime), we still need to update the mtime in a truncate operation
-                        if size.is_some() {
-                            // TODO Don't look up the entry twice when we have attrs and size.is_some(). Looking it up once should be enough.
-                            parent_dir
-                                .update_modification_timestamp_of_entry(blob_id)
-                                .map_err(|err| match err {
-                                    UpdateTimestampError::NodeDoesNotExist => {
-                                        FsError::NodeDoesNotExist
-                                    }
-                                })?;
-                        }
-                        result
-                    })
-                    .await
+                Self::with_own_entry(blobstore, parent_blob, blob_id, async |parent_dir| {
+                    let result = parent_dir
+                        .set_attr_of_entry(blob_id, mode, uid, gid, atime, mtime)
+                        .map(|result| dir_entry_to_node_attrs(result, lstat_size))
+                        .map_err(|err| {
+                            log::error!("Error setting attributes of entry: {:?}", err);
+                            match err {
+                                SetAttrError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                                SetAttrError::ValidationFailed(_) => FsError::InvalidOperation,
+                            }
+                        });
+                    // Even if other fields are `None` (i.e. we don't run chmod, chown, utime), we still need to update the mtime in a truncate operation
+                    if size.is_some() {
+                        // TODO Don't look up the entry twice when we have attrs and size.is_some(). Looking it up once should be enough.
+                        parent_dir
+                            .update_modification_timestamp_of_entry(blob_id)
+                            .map_err(|err| match err {
+                                UpdateTimestampError::NodeDoesNotExist => FsError::NodeDoesNotExist,
+                            })?;
+                    }
+                    result
+                })
+                .await
             }
         }
     }
@@ -342,10 +332,11 @@ where
 
     pub async fn concurrently_maybe_update_access_timestamp_in_parent<F>(
         &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
         concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
     ) -> FsResult<F> {
         let (update_result, fn_result) = join!(
-            self.maybe_update_access_timestamp_in_parent(self.atime_update_behavior()),
+            self.maybe_update_access_timestamp_in_parent(blobstore, self.atime_update_behavior()),
             concurrent_fn(),
         );
         update_result?;
@@ -354,10 +345,11 @@ where
 
     pub async fn concurrently_update_modification_timestamp_in_parent<F>(
         &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
         concurrent_fn: impl AsyncFnOnce() -> FsResult<F>,
     ) -> FsResult<F> {
         let (update_result, fn_result) = join!(
-            self.update_modification_timestamp_in_parent(),
+            self.update_modification_timestamp_in_parent(blobstore),
             concurrent_fn(),
         );
         update_result?;
@@ -366,9 +358,10 @@ where
 
     pub async fn maybe_update_access_timestamp_in_parent(
         &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
         atime_update_behavior: AtimeUpdateBehavior,
     ) -> FsResult<()> {
-        self._update_in_parent(|parent, blob_id| {
+        self._update_in_parent(blobstore, |parent, blob_id| {
             parent
                 .maybe_update_access_timestamp_of_entry(
                     blob_id,
@@ -381,8 +374,11 @@ where
         .await
     }
 
-    pub async fn update_modification_timestamp_in_parent(&self) -> FsResult<()> {
-        self._update_in_parent(|parent, blob_id| {
+    pub async fn update_modification_timestamp_in_parent(
+        &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
+    ) -> FsResult<()> {
+        self._update_in_parent(blobstore, |parent, blob_id| {
             parent
                 .update_modification_timestamp_of_entry(blob_id)
                 .map_err(|err| match err {
@@ -394,6 +390,7 @@ where
 
     async fn _update_in_parent(
         &self,
+        blobstore: &ConcurrentFsBlobStore<B>,
         update_fn: impl FnOnce(&mut DirBlob<B>, &BlobId) -> FsResult<()>,
     ) -> FsResult<()> {
         match &self.inner {
@@ -407,14 +404,10 @@ where
                 blob_id,
                 ..
             } => {
-                parent_blob
-                    .with_lock(async |parent_blob| {
-                        let parent_dir = parent_blob
-                            .as_dir_mut()
-                            .expect("Parent blob is not a directory");
-                        update_fn(parent_dir, blob_id)
-                    })
-                    .await
+                Self::with_own_entry(blobstore, parent_blob, blob_id, async |parent_dir| {
+                    update_fn(parent_dir, blob_id)
+                })
+                .await
             }
         }
     }
@@ -432,25 +425,120 @@ where
         }
     }
 
-    pub async fn flush_metadata(&self) -> FsResult<()> {
-        let Some(parent_blob) = self.parent_blob() else {
+    pub async fn flush_metadata(&self, blobstore: &ConcurrentFsBlobStore<B>) -> FsResult<()> {
+        let NodeInfoImpl::IsNotRootDir {
+            parent_blob,
+            blob_id,
+            ..
+        } = &self.inner
+        else {
             // Can't flush metadata of root dir
             return Ok(());
         };
-        parent_blob
-            .with_lock(async |parent_blob| {
-                parent_blob
-                    .as_dir_mut()
-                    .expect("Parent dir isn't a directory")
-                    .flush()
-                    .await
-            })
-            .await
-            .map_err(|err| {
+        let result = Self::with_own_entry(blobstore, parent_blob, blob_id, async |parent_dir| {
+            parent_dir.flush().await.map_err(|err| {
                 log::error!("Failed to flush_metadata of parent blob: {err:?}");
                 FsError::UnknownError
+            })
+        })
+        .await;
+        match result {
+            // The node was removed, e.g. a file that was deleted while it was open, so there's no entry to flush
+            Err(FsError::NodeDoesNotExist) => Ok(()),
+            result => result,
+        }
+    }
+
+    /// Runs `f` on the directory that has this node's entry, i.e. on this node's parent directory.
+    ///
+    /// `parent_blob` can be out of date, see [NodeInfoImpl::IsNotRootDir::parent_blob]. If our entry isn't in it,
+    /// we read our actual parent from our own blob, switch `parent_blob` to it and look there.
+    /// `f` only runs if the entry exists, and we return [FsError::NodeDoesNotExist] if it doesn't.
+    async fn with_own_entry<R>(
+        blobstore: &ConcurrentFsBlobStore<B>,
+        parent_blob: &AsyncDropTokioMutex<ConcurrentFsBlob<B>>,
+        blob_id: &BlobId,
+        f: impl AsyncFnOnce(&mut DirBlob<B>) -> FsResult<R>,
+    ) -> FsResult<R> {
+        // Holding this lock until `f` is done makes sure nobody switches `parent_blob` in between
+        let mut parent_blob = parent_blob.lock().await;
+        let mut f = Some(f);
+        // We look in at most two directories: the one we had, and the one our own blob says is our parent.
+        // If the entry isn't in the second one either, we were removed, or a concurrent rename moved us
+        // and didn't get to update our parent pointer yet.
+        for _ in 0..2 {
+            let result = parent_blob
+                .with_lock(async |parent_blob| {
+                    let parent_dir = parent_blob
+                        .as_dir_mut()
+                        .expect("Parent blob is not a directory");
+                    if parent_dir.entry_by_id(blob_id).is_none() {
+                        return None;
+                    }
+                    let f = f
+                        .take()
+                        .expect("We return after running f, so it only runs once");
+                    Some(f(parent_dir).await)
+                })
+                .await;
+            if let Some(result) = result {
+                return result;
+            }
+            if !Self::switch_to_actual_parent(blobstore, &mut parent_blob, blob_id).await? {
+                break;
+            }
+        }
+        Err(FsError::NodeDoesNotExist)
+    }
+
+    /// Reads our actual parent from our own blob. If that is a different directory than `parent_blob`,
+    /// i.e. we were moved, switches `parent_blob` to it and returns true. Returns false if `parent_blob`
+    /// already is our actual parent, or if our own blob doesn't exist anymore.
+    async fn switch_to_actual_parent(
+        blobstore: &ConcurrentFsBlobStore<B>,
+        parent_blob: &mut AsyncDropGuard<ConcurrentFsBlob<B>>,
+        blob_id: &BlobId,
+    ) -> FsResult<bool> {
+        let self_blob = blobstore.load(blob_id).await.map_err(|err| {
+            log::error!("Error loading blob {blob_id:?}: {err:?}");
+            FsError::UnknownError
+        })?;
+        let Some(self_blob) = self_blob else {
+            // We were removed
+            return Ok(false);
+        };
+        let actual_parent_id = with_async_drop!(
+            self_blob,
+            {
+                Ok::<_, FsError>(
+                    self_blob
+                        .with_lock(async |self_blob| self_blob.parent())
+                        .await,
+                )
+            },
+            FsError::internal_error
+        )?;
+        if actual_parent_id == parent_blob.blob_id() {
+            return Ok(false);
+        }
+        let actual_parent = blobstore
+            .load(&actual_parent_id)
+            .await
+            .map_err(|err| {
+                log::error!("Error loading blob {actual_parent_id:?}: {err:?}");
+                FsError::UnknownError
+            })?
+            .ok_or_else(|| FsError::CorruptedFilesystem {
+                message: format!(
+                    "Blob {blob_id:?} has parent {actual_parent_id:?} but that blob doesn't exist"
+                ),
             })?;
-        Ok(())
+        let old_parent = std::mem::replace(parent_blob, actual_parent);
+        old_parent
+            .async_drop()
+            .await
+            .map_err(FsError::internal_error)?;
+        Ok(true)
     }
 }
 
