@@ -12,7 +12,7 @@ use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AtimeUpdateBehavior, FsError, Gid, InodeNumber, Mode, OpenInFlags, RequestInfo, Uid,
+    AtimeUpdateBehavior, FsError, Gid, InodeNumber, Mode, NodeAttrs, OpenInFlags, RequestInfo, Uid,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -47,6 +47,10 @@ fn file_mode() -> Mode {
         .add_file_flag()
         .add_user_read_flag()
         .add_user_write_flag()
+}
+
+fn read_only_file_mode() -> Mode {
+    Mode::default().add_file_flag().add_user_read_flag()
 }
 
 async fn make_adapter() -> AsyncDropGuard<Adapter> {
@@ -124,6 +128,59 @@ async fn lookup(fs: &Adapter, parent: InodeNumber, child_name: &str) -> Option<I
     }
 }
 
+async fn getattr(fs: &Adapter, ino: InodeNumber) -> NodeAttrs {
+    fs.getattr(&req(), ino, None).await.unwrap().attr
+}
+
+async fn chmod(fs: &Adapter, ino: InodeNumber, mode: Mode) {
+    fs.setattr(
+        &req(),
+        ino,
+        Some(mode),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+}
+
+// A rename within one directory changes the name of a node the kernel still has loaded.
+
+/// Through a mount, `touch file; mv file renamed; touch file; chmod 400 renamed` used to change the mode of the
+/// new `file` instead of `renamed`, because the node looked up its entry by the name it had when it was loaded.
+#[tokio::test]
+async fn setattr_after_rename_within_dir_changes_the_renamed_node() {
+    run(async |fs| {
+        let renamed = touch(fs, FUSE_ROOT_ID, "file").await;
+        fs.rename(
+            &req(),
+            FUSE_ROOT_ID,
+            name("file"),
+            FUSE_ROOT_ID,
+            name("renamed"),
+            0,
+        )
+        .await
+        .unwrap();
+        let new_file = touch(fs, FUSE_ROOT_ID, "file").await;
+
+        chmod(fs, renamed, read_only_file_mode()).await;
+
+        assert_eq!(read_only_file_mode(), getattr(fs, renamed).await.mode);
+        assert_eq!(file_mode(), getattr(fs, new_file).await.mode);
+    })
+    .await
+}
+
 // Renames within one directory that overwrite a node the kernel still has loaded, e.g. an editor saving a
 // file by writing a temporary file and renaming it over the original. The overwritten node stays loaded
 // as an orphan until the kernel forgets it.
@@ -145,11 +202,12 @@ async fn rename_within_dir_onto_loaded_file() {
         .await
         .unwrap();
 
-        // The kernel forgets the orphaned node once it doesn't need it anymore, and the moved node too
-        fs.forget(&req(), target, 1).await.unwrap();
-        fs.forget(&req(), source, 1).await.unwrap();
         assert_eq!(None, lookup(fs, FUSE_ROOT_ID, "source").await);
-        assert!(lookup(fs, FUSE_ROOT_ID, "target").await.is_some());
+        assert_eq!(Some(source), lookup(fs, FUSE_ROOT_ID, "target").await);
+        // The kernel forgets the orphaned node once it doesn't need it anymore. That must not take the
+        // node that replaced it out of the inode list.
+        fs.forget(&req(), target, 1).await.unwrap();
+        assert_eq!(Some(source), lookup(fs, FUSE_ROOT_ID, "target").await);
     })
     .await
 }
@@ -171,11 +229,12 @@ async fn rename_within_dir_onto_loaded_empty_dir() {
         .await
         .unwrap();
 
-        // The kernel forgets the orphaned node once it doesn't need it anymore, and the moved node too
-        fs.forget(&req(), target, 1).await.unwrap();
-        fs.forget(&req(), source, 1).await.unwrap();
         assert_eq!(None, lookup(fs, FUSE_ROOT_ID, "source").await);
-        assert!(lookup(fs, FUSE_ROOT_ID, "target").await.is_some());
+        assert_eq!(Some(source), lookup(fs, FUSE_ROOT_ID, "target").await);
+        // The kernel forgets the orphaned node once it doesn't need it anymore. That must not take the
+        // node that replaced it out of the inode list.
+        fs.forget(&req(), target, 1).await.unwrap();
+        assert_eq!(Some(source), lookup(fs, FUSE_ROOT_ID, "target").await);
     })
     .await
 }
