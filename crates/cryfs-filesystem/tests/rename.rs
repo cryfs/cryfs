@@ -24,7 +24,7 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
-    path::AbsolutePath,
+    path::{AbsolutePath, PathComponent},
 };
 
 type TestDevice =
@@ -303,6 +303,33 @@ async fn rename(device: &TestDevice, api: Api, from: &str, to: &str) -> FsResult
     }
 }
 
+/// Moves the node at `from` into `dest`, a directory node that was loaded earlier,
+/// like fuser does with the nodes in its inode list
+async fn move_into(
+    device: &TestDevice,
+    from: &str,
+    dest: &<TestDevice as Device>::Node,
+    new_name: &str,
+) -> FsResult<()> {
+    let (from_parent, from_name) = abspath(from).split_last().unwrap();
+    let from_parent_node = device.lookup(from_parent).await.unwrap();
+    let result = {
+        let from_parent_dir = from_parent_node.as_dir().await.unwrap();
+        let dest_dir = dest.as_dir().await.unwrap();
+        let result = from_parent_dir
+            .move_child_to(
+                from_name,
+                dest_dir,
+                PathComponent::try_from_str(new_name).unwrap(),
+            )
+            .await;
+        from_parent_dir.async_drop().await.unwrap();
+        result
+    };
+    from_parent_node.async_drop().await.unwrap();
+    result
+}
+
 /// Runs a rename that must fail with `expected_error` and checks that it didn't change
 /// any of the directories in `dirs`, nor the number of blocks.
 async fn assert_rejected_without_changes(
@@ -576,6 +603,42 @@ async fn across_dirs_failed_overwrite_of_symlink_puts_source_back(api: Api) {
     .await
 }
 
+async fn across_dirs_dir_into_itself_is_rejected(api: Api) {
+    run(async |device| {
+        mkdir(device, "/dir").await;
+
+        assert_rejected_without_changes(
+            device,
+            api,
+            "/dir",
+            "/dir/dir",
+            FsError::CannotMoveDirectoryIntoSubdirectoryOfItself,
+            &["/", "/dir"],
+        )
+        .await;
+    })
+    .await
+}
+
+async fn across_dirs_dir_into_its_own_subdir_is_rejected(api: Api) {
+    run(async |device| {
+        mkdir(device, "/a").await;
+        mkdir(device, "/a/b").await;
+        mkdir(device, "/a/b/c").await;
+
+        assert_rejected_without_changes(
+            device,
+            api,
+            "/a",
+            "/a/b/c/a",
+            FsError::CannotMoveDirectoryIntoSubdirectoryOfItself,
+            &["/", "/a", "/a/b", "/a/b/c"],
+        )
+        .await;
+    })
+    .await
+}
+
 // Renames within one directory (https://github.com/cryfs/cryfs/issues/566)
 
 async fn same_dir_dir_onto_nonempty_dir_is_rejected(api: Api) {
@@ -646,6 +709,86 @@ tests_for_both_apis!(
     same_dir_dir_onto_nonempty_dir_is_rejected,
     same_dir_dir_onto_empty_dir_succeeds,
 );
+
+// `Device::rename` always rejects moving a directory into itself or into one of its own subdirectories,
+// `Dir::move_child_to` only with the `ancestor_checks_on_move` feature.
+
+#[tokio::test]
+async fn device_api_across_dirs_dir_into_itself_is_rejected() {
+    across_dirs_dir_into_itself_is_rejected(Api::Device).await
+}
+
+#[cfg(feature = "ancestor_checks_on_move")]
+#[tokio::test]
+async fn dir_api_across_dirs_dir_into_itself_is_rejected() {
+    across_dirs_dir_into_itself_is_rejected(Api::Dir).await
+}
+
+#[tokio::test]
+async fn device_api_across_dirs_dir_into_its_own_subdir_is_rejected() {
+    across_dirs_dir_into_its_own_subdir_is_rejected(Api::Device).await
+}
+
+#[cfg(feature = "ancestor_checks_on_move")]
+#[tokio::test]
+async fn dir_api_across_dirs_dir_into_its_own_subdir_is_rejected() {
+    across_dirs_dir_into_its_own_subdir_is_rejected(Api::Dir).await
+}
+
+// Only `Dir::move_child_to` gets the destination as a node that can have been loaded before its ancestors moved.
+// `Device::rename` gets paths and looks them up fresh.
+
+/// Through a mount, `mkdir -p a/b/c x; mv a/b x/b; mv a x/b/c/a` used to be rejected, because the destination
+/// node remembered the ancestors it had when it was loaded
+#[tokio::test]
+async fn dir_api_into_a_dir_that_was_moved_out_of_the_source_succeeds() {
+    run(async |device| {
+        mkdir(device, "/a").await;
+        mkdir(device, "/a/b").await;
+        mkdir(device, "/a/b/c").await;
+        mkdir(device, "/x").await;
+        let c = device.lookup(abspath("/a/b/c")).await.unwrap();
+        rename(device, Api::Dir, "/a/b", "/x/b").await.unwrap();
+
+        // c is in /x/b now, so this doesn't move /a into its own subdirectory
+        move_into(device, "/a", &c, "a").await.unwrap();
+
+        assert_eq!(vec!["x"], ls_dir(device, "/").await);
+        assert_eq!(vec!["a"], ls_dir(device, "/x/b/c").await);
+        c.async_drop().await.unwrap();
+    })
+    .await
+}
+
+/// Accepting this would have moved /a into its own subdirectory, making it and everything in it unreachable
+#[cfg(feature = "ancestor_checks_on_move")]
+#[tokio::test]
+async fn dir_api_into_a_dir_that_was_moved_into_the_source_is_rejected() {
+    run(async |device| {
+        mkdir(device, "/a").await;
+        mkdir(device, "/x").await;
+        mkdir(device, "/x/y").await;
+        let y = device.lookup(abspath("/x/y")).await.unwrap();
+        rename(device, Api::Dir, "/x", "/a/x").await.unwrap();
+        let blocks_before = num_blocks(device).await;
+
+        // y is in /a/x now, so this would move /a into its own subdirectory
+        let result = move_into(device, "/a", &y, "a").await;
+
+        assert_eq!(
+            format!(
+                "{:?}",
+                Err::<(), _>(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself)
+            ),
+            format!("{result:?}")
+        );
+        assert_eq!(vec!["a"], ls_dir(device, "/").await);
+        assert_eq!(Vec::<String>::new(), ls_dir(device, "/a/x/y").await);
+        assert_eq!(blocks_before, num_blocks(device).await);
+        y.async_drop().await.unwrap();
+    })
+    .await
+}
 
 /// Only `Device::rename` takes paths, so only it can be asked to move a node into a file.
 /// `Dir::move_child_to` takes the new parent as a `Dir`, so it can't be given a file.

@@ -16,14 +16,6 @@ use cryfs_utils::{
     path::PathComponentBuf,
 };
 
-// TODO The ancestor_checks_on_move feature implements checks that when moving a node to a different directory,
-//      it doesn't get moved into an ancestor or child of itself. But it requires that `NodeInfo` remembers the blob ids
-//      of all ancestors, from the root blob to the blob itself. This could be expensive? Or maybe not?
-//      We need to test how expensive it is and if we should remove it. Note also that this check might be
-//      unnecessary, because I think fuser already implements this check? But need to verify that they do, and
-//      even if they do, maybe it's better to check ourselves as well and not fully trust fuser because it could
-//      break file system consistency when broken?
-
 #[derive(Debug)]
 enum NodeInfoImpl<B>
 where
@@ -40,10 +32,6 @@ where
         parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
         // TODO It probably makes sense to store the self_blob here as well, maybe optional (OnceCell?) so it isn't unnecessarily loaded, but once it's loaded it's cached and doesn't have to be re-loaded.
         //      But we need to be careful with deadlocks, given that NodeInfo is stored in fuser in the inode list and the open file list.
-        /// ancestors.first() is the root blob id, ancestors.last() is the immediate parent of this node.
-        #[cfg(feature = "ancestor_checks_on_move")]
-        ancestors: Box<[BlobId]>,
-
         name: PathComponentBuf,
 
         blob_id: BlobId,
@@ -82,7 +70,6 @@ where
 
     pub fn new_non_root_dir(
         parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
-        #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
         name: PathComponentBuf,
         blob_id: BlobId,
         blob_type: BlobType,
@@ -91,8 +78,6 @@ where
         AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
                 parent_blob,
-                #[cfg(feature = "ancestor_checks_on_move")]
-                ancestors,
                 name,
                 blob_id,
                 blob_type,
@@ -113,33 +98,6 @@ where
             NodeInfoImpl::IsRootDir { .. } => None,
             NodeInfoImpl::IsNotRootDir { parent_blob, .. } => Some(parent_blob),
         }
-    }
-
-    #[cfg(feature = "ancestor_checks_on_move")]
-    pub fn ancestors(&self) -> &[BlobId] {
-        match &self.inner {
-            NodeInfoImpl::IsRootDir { .. } => {
-                // Return an empty array for the root dir
-                &[]
-            }
-            NodeInfoImpl::IsNotRootDir { ancestors, .. } => {
-                // Return the stored ancestors
-                ancestors
-            }
-        }
-    }
-
-    #[cfg(feature = "ancestor_checks_on_move")]
-    pub fn ancestors_and_self(&self) -> AncestorChain {
-        // TODO Both self.blob_id and self.ancestors() match over Self::{IsRootDir/IsNotRootDir}, can we combine that into just one branch?
-        let self_blob_id = self.blob_id();
-        let ancestors_and_self = self
-            .ancestors()
-            .iter()
-            .copied()
-            .chain(std::iter::once(*self_blob_id))
-            .collect::<Box<[BlobId]>>();
-        AncestorChain::new(ancestors_and_self)
     }
 
     pub fn node_type(&self) -> BlobType {
@@ -470,8 +428,6 @@ where
             } => (),
             NodeInfoImpl::IsNotRootDir {
                 parent_blob,
-                #[cfg(feature = "ancestor_checks_on_move")]
-                    ancestors: _,
                 name: _,
                 blob_id: _,
                 blob_type: _,
@@ -501,27 +457,6 @@ fn dir_entry_to_node_attrs(entry: &DirEntry, num_bytes: NumBytes) -> NodeAttrs {
         atime: entry.last_access_time(),
         mtime: entry.last_modification_time(),
         ctime: entry.last_metadata_change_time(),
-    }
-}
-
-#[cfg(feature = "ancestor_checks_on_move")]
-pub struct AncestorChain {
-    ancestors_and_self: Box<[BlobId]>,
-}
-
-#[cfg(feature = "ancestor_checks_on_move")]
-impl AncestorChain {
-    pub fn new(ancestors_and_self: Box<[BlobId]>) -> Self {
-        assert!(
-            !ancestors_and_self.is_empty(),
-            "Ancestors should not be empty, there must be at least the self node"
-        );
-        Self { ancestors_and_self }
-    }
-
-    pub fn ancestors_and_self(self) -> Box<[BlobId]> {
-        // Return the stored ancestors
-        self.ancestors_and_self
     }
 }
 

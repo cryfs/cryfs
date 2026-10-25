@@ -20,6 +20,7 @@ crate::perf_test_macro::perf_test!(
         symlink,
         from_nested_to_deeply_nested,
         from_deeply_nested_to_nested,
+        directory_into_deeply_nested_dir,
     ]
 );
 
@@ -873,6 +874,108 @@ fn from_deeply_nested_to_nested(test_driver: impl TestDriver) -> impl TestReady 
                     FixtureType::Fusemt => 3, // TODO Why less than fuser with cache?
                     FixtureType::FuserWithInodeCache | FixtureType::FuserWithoutInodeCache => 7, // TODO Why more than fusemt? Maybe because our CryNode structs don't cache the node and only store the path, so we have to lookup for fuser and then lookup everythin again?
                 },
+                ..LLActionCounts::ZERO
+            },
+        })
+}
+
+/// Moving a directory to a different directory checks that the destination isn't inside the moved directory,
+/// by walking up the destination's ancestors
+fn directory_into_deeply_nested_dir(test_driver: impl TestDriver) -> impl TestReady {
+    test_driver
+        .create_filesystem()
+        .setup(async |fixture| {
+            // Create a directory to move and a deeply nested destination directory
+            fixture
+                .filesystem
+                .mkdir(None, PathComponent::try_from_str("dir").unwrap())
+                .await
+                .unwrap();
+            fixture
+                .filesystem
+                .mkdir_recursive(AbsolutePath::try_from_str("/deep/path/structure").unwrap())
+                .await
+                .unwrap()
+        })
+        .test(async |fixture, deeply_nested_dir| {
+            fixture
+                .filesystem
+                .rename(
+                    None,
+                    PathComponent::try_from_str("dir").unwrap(),
+                    Some(deeply_nested_dir),
+                    PathComponent::try_from_str("moved").unwrap(),
+                )
+                .await
+                .unwrap();
+        })
+        // Through fuser, the move walks up the destination's ancestors (see CryDir::validate_move_doesnt_cause_cycle).
+        // That doesn't add to these counts because the ancestors are already loaded: The counts were the same when
+        // NodeInfo remembered the ancestors instead. fuse-mt checks the paths instead.
+        .expect_op_counts(|fixture_type, _atime_behavior| ActionCounts {
+            blobstore: BlobStoreActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_load: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8,
+                },
+                blob_read_all: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8,
+                },
+                blob_read: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 2,
+                    FixtureType::Fusemt => 5,
+                    FixtureType::FuserWithoutInodeCache => 8,
+                },
+                blob_write: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 4,
+                    FixtureType::Fusemt => 3,
+                    FixtureType::FuserWithoutInodeCache => 4,
+                },
+                blob_resize: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 3,
+                    FixtureType::Fusemt => 2,
+                    FixtureType::FuserWithoutInodeCache => 3,
+                },
+                ..BlobStoreActionCounts::ZERO
+            },
+            high_level: HLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                store_load: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 4,
+                    FixtureType::Fusemt => 11,
+                    FixtureType::FuserWithoutInodeCache => 14,
+                },
+                store_remove_by_id: 1,
+                store_remove: 1,
+                blob_data: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 49,
+                    FixtureType::Fusemt => 103,
+                    FixtureType::FuserWithoutInodeCache => 132,
+                },
+                blob_data_mut: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 8,
+                    FixtureType::Fusemt => 7,
+                    FixtureType::FuserWithoutInodeCache => 8,
+                },
+                ..HLActionCounts::ZERO
+            },
+            low_level: LLActionCounts {
+                // TODO Check if these counts are what we'd expect
+                load: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 3,
+                    FixtureType::Fusemt => 7,
+                    FixtureType::FuserWithoutInodeCache => 7,
+                },
+                store: match fixture_type {
+                    FixtureType::FuserWithInodeCache => 4,
+                    FixtureType::Fusemt => 3,
+                    FixtureType::FuserWithoutInodeCache => 4,
+                },
+                remove: 2,
                 ..LLActionCounts::ZERO
             },
         })

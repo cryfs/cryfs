@@ -159,21 +159,61 @@ where
         }
     }
 
-    // TODO Add tests for this ancestor check
+    /// Checks that we're not moving a directory into itself or into one of its own subdirectories, which would make
+    /// it unreachable. For a file system mounted on Linux, the kernel already rejects such moves, but we don't rely on that.
+    ///
+    /// We walk up from the destination along the parent pointers stored in the blobs, which a move keeps up to date.
+    /// We don't remember the ancestors of a node instead, because that would get out of date when an ancestor is moved.
+    /// The blobs on the way are usually loaded anyways: fuser keeps the ancestors of every inode it handed out loaded,
+    /// and each of them keeps its parent directory loaded (see [NodeInfo]).
     #[cfg(feature = "ancestor_checks_on_move")]
     async fn validate_move_doesnt_cause_cycle(
         &self,
         child_to_move: &BlobId,
-        newparent: &Self,
+        child_type: EntryType,
+        dest_dir: &ConcurrentFsBlob<B>,
     ) -> FsResult<()> {
-        let dest_ancestors = newparent.node_info.ancestors_and_self();
-
-        // Check we're not moving a directory into itself or one of its own subdirectories
-        // TODO Do we handle moving /path/to/file to /path/to/file/newname correctly? Or does it only work with /path/to/dir ?
-        if dest_ancestors.ancestors_and_self().contains(&child_to_move) {
-            Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself)
-        } else {
-            Ok(())
+        if child_type != EntryType::Dir {
+            // Only a directory can have subdirectories
+            return Ok(());
+        }
+        let mut current_id = dest_dir.blob_id();
+        let mut parent_id = dest_dir.with_lock(async |blob| blob.parent()).await;
+        // In a corrupted file system, the parent pointers could form a cycle. Don't loop forever then.
+        let mut visited = std::collections::HashSet::new();
+        loop {
+            if current_id == *child_to_move {
+                return Err(FsError::CannotMoveDirectoryIntoSubdirectoryOfItself);
+            }
+            if parent_id == BlobId::zero() {
+                // `current_id` is the root directory
+                return Ok(());
+            }
+            if !visited.insert(current_id) {
+                return Err(FsError::CorruptedFilesystem {
+                    message: format!("The parent pointers above blob {current_id:?} form a cycle"),
+                });
+            }
+            current_id = parent_id;
+            let current = self
+                .blobstore
+                .load(&current_id)
+                .await
+                .map_err(|err| {
+                    log::error!("Error loading blob {current_id:?}: {err:?}");
+                    FsError::UnknownError
+                })?
+                .ok_or_else(|| FsError::CorruptedFilesystem {
+                    message: format!(
+                        "Didn't find blob {current_id:?}, which is an ancestor of {:?}",
+                        dest_dir.blob_id()
+                    ),
+                })?;
+            parent_id = with_async_drop!(
+                current,
+                { Ok::<_, FsError>(current.with_lock(async |blob| blob.parent()).await) },
+                FsError::internal_error
+            )?;
         }
     }
 
@@ -229,8 +269,6 @@ where
 
         let node_info = NodeInfo::new_non_root_dir(
             self_blob,
-            #[cfg(feature = "ancestor_checks_on_move")]
-            self.node_info.ancestors_and_self().ancestors_and_self(),
             name.to_owned(),
             blob_id,
             blob_type,
@@ -315,9 +353,12 @@ where
                     let self_blob_id = entry.blob_id();
                     #[cfg(feature = "ancestor_checks_on_move")]
                     {
-                        // TODO This can happen concurrently with the load_blob above
-                        self.validate_move_doesnt_cause_cycle(self_blob_id, &newparent)
-                            .await?;
+                        self.validate_move_doesnt_cause_cycle(
+                            self_blob_id,
+                            entry.entry_type(),
+                            &dest_parent,
+                        )
+                        .await?;
                     }
 
                     // Check that the destination accepts the entry before we remove it from the source,
@@ -558,8 +599,6 @@ where
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        #[cfg(feature = "ancestor_checks_on_move")]
-                        self.node_info.ancestors_and_self().ancestors_and_self(),
                         name,
                         new_dir_blob_id,
                         BlobType::Dir,
@@ -743,8 +782,6 @@ where
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        #[cfg(feature = "ancestor_checks_on_move")]
-                        self.node_info.ancestors_and_self().ancestors_and_self(),
                         name,
                         new_symlink_blob_id,
                         BlobType::Symlink,
@@ -880,8 +917,6 @@ where
                 let (attrs, blob) = blob.async_drop_on_err(attrs).await?;
                 let node_info = AsyncDropArc::new(NodeInfo::new_non_root_dir(
                     blob,
-                    #[cfg(feature = "ancestor_checks_on_move")]
-                    self.node_info.ancestors_and_self().ancestors_and_self(),
                     name.to_owned(),
                     new_file_blob_id,
                     BlobType::File,
