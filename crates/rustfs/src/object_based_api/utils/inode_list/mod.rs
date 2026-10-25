@@ -721,11 +721,12 @@ where
     }
 
     /// Remove an inode from its parent's childrn map. The inode itself stays alive, but becomes an orphan in the inode forest.
+    /// Returns the orphaned inode.
     pub async fn make_into_orphan(
         &self,
         parent_ino: InodeNumber,
         name: &PathComponent,
-    ) -> Result<(), MakeOrphanError> {
+    ) -> Result<InodeNumber, MakeOrphanError> {
         // TODO After unlink, the kernel could try to re-enter a node ad parent_ino/name again.
         //      We support that here, but does CryNode support that correctly? The previous child node might still exist and stored in the orphaned inode.
         let mut inner = self.inner.lock().await;
@@ -749,12 +750,15 @@ where
         old_name: &PathComponent,
         new_parent_ino: InodeNumber,
         new_name: PathComponentBuf,
-    ) -> Result<(), MoveInodeError> {
+    ) -> Result<MovedInode, MoveInodeError> {
         let mut inner = self.inner.lock().await;
         log::debug!(
             "Inode {old_parent_ino} / {old_name} -> {new_parent_ino} / {new_name}: Moving inode"
         );
-        let move_result = inner
+        let MoveInodeSuccess {
+            moved_child,
+            orphaned_child,
+        } = inner
             .inode_forest
             .move_node(old_parent_ino, old_name, new_parent_ino, new_name)
             .map_err(|err| match err {
@@ -772,19 +776,14 @@ where
         // According to invariant E1, each child's parent pointer counts towards the refcount of the parent.
         // Since we just redirected that pointer to a new parent, we need to adjust the refcounts.
         if old_parent_ino != new_parent_ino {
-            match move_result {
-                MoveInodeSuccess::OrphanedExistingChildInNewParent
-                | MoveInodeSuccess::AddedAsNewChildToNewParent => {
-                    // Whether we replaced an existing (now orphaned) child or whether we added a new child, we need to increment
-                    // the refcount of the new parent for invariant E1, because we count the number of nodes pointing to it, not the number of nodes in is children map.
-                    inner
-                        .inode_forest
-                        .get_mut(&new_parent_ino)
-                        .expect("We already checked that it exists when we moved the node above")
-                        .value_mut()
-                        .increment_refcount();
-                }
-            }
+            // Whether we replaced an existing (now orphaned) child or whether we added a new child, we need to increment
+            // the refcount of the new parent for invariant E1, because we count the number of nodes pointing to it, not the number of nodes in is children map.
+            inner
+                .inode_forest
+                .get_mut(&new_parent_ino)
+                .expect("We already checked that it exists when we moved the node above")
+                .value_mut()
+                .increment_refcount();
             self._decrease_refcount(inner, old_parent_ino, 1)
                 .await
                 .map_err(|err| match err {
@@ -796,17 +795,10 @@ where
                     }
                 })?;
         } else {
-            match move_result {
-                MoveInodeSuccess::OrphanedExistingChildInNewParent => {
-                    // The rename overwrote a node under the new name that is still loaded, e.g. because the kernel
-                    // still remembers its inode. That node is an orphan now, but its parent pointer still points to
-                    // this parent, so it still counts towards the parent's refcount for invariant E1. The moved node
-                    // stays in the same parent as well, so no refcounts change.
-                }
-                MoveInodeSuccess::AddedAsNewChildToNewParent => {
-                    // everything ok
-                }
-            }
+            // If the rename overwrote a node under the new name that is still loaded, e.g. because the kernel
+            // still remembers its inode, that node is an orphan now, but its parent pointer still points to
+            // this parent, so it still counts towards the parent's refcount for invariant E1. The moved node
+            // stays in the same parent as well, so no refcounts change.
         }
 
         // Fulfilling invariants:
@@ -816,7 +808,10 @@ where
         // * E1: If parent didn't change, we didn't change refcounts. That includes a node the rename orphaned, because it still points to the same parent.
         //       If parent changed, we incremented new parent's refcount and decremented old parent's refcount.
         // * E2: We used [Self::_decrement_refcount] to decrement old parent's refcount, which would drop the parent if its refcount went to zero.
-        Ok(())
+        Ok(MovedInode {
+            moved: moved_child,
+            orphaned: orphaned_child,
+        })
     }
 
     #[cfg(feature = "testutils")]
@@ -909,6 +904,14 @@ where
 pub enum DecrementRefcountError {
     NodeNotFound,
     ErrorWhileDroppingNode(FsError),
+}
+
+/// The inodes that [InodeList::move_inode] changed
+pub struct MovedInode {
+    /// The inode that was moved
+    pub moved: InodeNumber,
+    /// The inode that was in the new parent under the new name before, if it was loaded. It is an orphan now.
+    pub orphaned: Option<InodeNumber>,
 }
 
 #[derive(Error, Debug, Display)]

@@ -16,4 +16,6 @@ pub use dir_cache::{DirCache, OpenDirHandle};
 #[cfg(feature = "fuser")]
 mod inode_list;
 #[cfg(feature = "fuser")]
-pub use inode_list::{DUMMY_INO, FUSE_ROOT_ID, InodeList, MakeOrphanError, MoveInodeError};
+pub use inode_list::{
+    DUMMY_INO, FUSE_ROOT_ID, InodeList, MakeOrphanError, MoveInodeError, MovedInode,
+};

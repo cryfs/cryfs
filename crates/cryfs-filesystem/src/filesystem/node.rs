@@ -144,6 +144,10 @@ where
             .await
     }
 
+    async fn on_moved_out_or_removed(&self) -> FsResult<()> {
+        self.node_info.release_parent().await
+    }
+
     #[cfg(feature = "testutils")]
     async fn fsync(&self, datasync: bool) -> FsResult<()> {
         // TODO Can we unify the fsync implementation betweeh CryNode, CryDir and CryOpenFile?

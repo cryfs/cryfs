@@ -314,3 +314,136 @@ async fn rename_within_dir_onto_loaded_empty_dir() {
     })
     .await
 }
+
+// Removing a directory waits until nobody has its blob loaded anymore. A node the kernel still has loaded must not
+// keep the directory it was moved out of or removed from loaded, otherwise removing that directory blocks until
+// the kernel forgets the node.
+
+/// Fails the test if the directory can't be removed, or if removing it blocks
+async fn rmdir(fs: &Adapter, parent: InodeNumber, dir_name: &str) {
+    tokio::time::timeout(
+        Duration::from_secs(10),
+        fs.rmdir(&req(), parent, name(dir_name)),
+    )
+    .await
+    .expect("rmdir blocked")
+    .unwrap();
+}
+
+/// Through a mount, `mkdir -p a/x b; mv a/x b/x; rmdir a` blocked until the kernel forgot `x`
+#[tokio::test]
+async fn rmdir_after_moving_a_loaded_dir_out() {
+    run(async |fs| {
+        let a = mkdir(fs, FUSE_ROOT_ID, "a").await;
+        let x = mkdir(fs, a, "x").await;
+        let b = mkdir(fs, FUSE_ROOT_ID, "b").await;
+        fs.rename(&req(), a, name("x"), b, name("x"), 0)
+            .await
+            .unwrap();
+
+        rmdir(fs, FUSE_ROOT_ID, "a").await;
+
+        // The moved node finds its new parent when it is used again
+        assert_eq!(dir_mode(), getattr(fs, x).await.mode);
+    })
+    .await
+}
+
+#[tokio::test]
+async fn rmdir_after_moving_an_open_file_out() {
+    run(async |fs| {
+        let a = mkdir(fs, FUSE_ROOT_ID, "a").await;
+        let b = mkdir(fs, FUSE_ROOT_ID, "b").await;
+        let file = fs
+            .create(
+                &req(),
+                a,
+                name("file"),
+                file_mode(),
+                0,
+                OpenInFlags::ReadWrite,
+            )
+            .await
+            .unwrap();
+        fs.rename(&req(), a, name("file"), b, name("file"), 0)
+            .await
+            .unwrap();
+
+        rmdir(fs, FUSE_ROOT_ID, "a").await;
+
+        fs.write(
+            &req(),
+            file.ino.handle,
+            file.fh,
+            NumBytes::from(0),
+            b"hello".to_vec(),
+            0,
+            0,
+            None,
+        )
+        .await
+        .unwrap();
+        fs.release(
+            &req(),
+            file.ino.handle,
+            file.fh,
+            OpenInFlags::ReadWrite,
+            None,
+            true,
+        )
+        .await
+        .unwrap();
+    })
+    .await
+}
+
+#[tokio::test]
+async fn rmdir_after_removing_an_open_file() {
+    run(async |fs| {
+        let dir = mkdir(fs, FUSE_ROOT_ID, "dir").await;
+        let file = fs
+            .create(
+                &req(),
+                dir,
+                name("file"),
+                file_mode(),
+                0,
+                OpenInFlags::ReadWrite,
+            )
+            .await
+            .unwrap();
+        fs.unlink(&req(), dir, name("file")).await.unwrap();
+
+        rmdir(fs, FUSE_ROOT_ID, "dir").await;
+
+        // Don't flush, the file's blob is already gone
+        fs.release(
+            &req(),
+            file.ino.handle,
+            file.fh,
+            OpenInFlags::ReadWrite,
+            None,
+            false,
+        )
+        .await
+        .unwrap();
+    })
+    .await
+}
+
+/// The node the rename overwrote stays loaded as an orphan
+#[tokio::test]
+async fn rmdir_after_a_rename_overwrote_a_loaded_node() {
+    run(async |fs| {
+        let dir = mkdir(fs, FUSE_ROOT_ID, "dir").await;
+        touch(fs, dir, "a").await;
+        touch(fs, dir, "b").await;
+        fs.rename(&req(), dir, name("a"), dir, name("b"), 0)
+            .await
+            .unwrap();
+        fs.unlink(&req(), dir, name("b")).await.unwrap();
+
+        rmdir(fs, FUSE_ROOT_ID, "dir").await;
+    })
+    .await
+}
