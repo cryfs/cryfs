@@ -798,9 +798,10 @@ where
         } else {
             match move_result {
                 MoveInodeSuccess::OrphanedExistingChildInNewParent => {
-                    panic!(
-                        "If parents are the same, we should never hit the case of orphaning an existing child."
-                    )
+                    // The rename overwrote a node under the new name that is still loaded, e.g. because the kernel
+                    // still remembers its inode. That node is an orphan now, but its parent pointer still points to
+                    // this parent, so it still counts towards the parent's refcount for invariant E1. The moved node
+                    // stays in the same parent as well, so no refcounts change.
                 }
                 MoveInodeSuccess::AddedAsNewChildToNewParent => {
                     // everything ok
@@ -812,7 +813,7 @@ where
         // * A, C, D, F: No change here
         // * B1: No change here
         // * B2: We assigned a new parent pointer to the node, but with B1+B2, we know that that parent is fully loaded.
-        // * E1: If parent didn't change, we didn't change refcounts.
+        // * E1: If parent didn't change, we didn't change refcounts. That includes a node the rename orphaned, because it still points to the same parent.
         //       If parent changed, we incremented new parent's refcount and decremented old parent's refcount.
         // * E2: We used [Self::_decrement_refcount] to decrement old parent's refcount, which would drop the parent if its refcount went to zero.
         Ok(())
