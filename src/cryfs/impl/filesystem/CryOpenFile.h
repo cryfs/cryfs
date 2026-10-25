@@ -3,8 +3,6 @@
 #define MESSMER_CRYFS_FILESYSTEM_CRYOPENFILE_H_
 
 #include <fspp/fs_interface/OpenFile.h>
-#include <memory>
-#include <mutex>
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/FileBlobRef.h"
 #include "cryfs/impl/filesystem/parallelaccessfsblobstore/DirBlobRef.h"
 
@@ -13,7 +11,7 @@ class CryDevice;
 
 class CryOpenFile final: public fspp::OpenFile {
 public:
-  explicit CryOpenFile(CryDevice *device, std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> parent, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
+  explicit CryOpenFile(CryDevice *device, cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> fileBlob);
   ~CryOpenFile() override;
 
   stat_info stat() const override;
@@ -26,15 +24,13 @@ public:
   fspp::TimestampUpdateBehavior timestampUpdateBehavior() const;
 
 private:
-  // The file can be moved into a different directory while it is open. Our dir entry (which stores
-  // for example the timestamps) then lives in the new parent directory blob and the parent we
-  // remembered when the file was opened is stale. This returns the directory blob that currently
-  // holds our dir entry, reloading it if the file was moved.
-  std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> _parentBlob() const;
+  // Loads the directory blob that holds our dir entry (which stores for example the timestamps).
+  // We load it for each operation instead of keeping it loaded while the file is open, because the file
+  // can be moved into a different directory while it is open. Our dir entry then lives in the new parent
+  // directory, and keeping the old one loaded would make removing it wait until the file is closed.
+  cpputils::unique_ref<parallelaccessfsblobstore::DirBlobRef> _parentBlob() const;
 
   CryDevice *_device;
-  mutable std::mutex _parentMutex;
-  mutable std::shared_ptr<parallelaccessfsblobstore::DirBlobRef> _parent;
   cpputils::unique_ref<parallelaccessfsblobstore::FileBlobRef> _fileBlob;
 
   DISALLOW_COPY_AND_ASSIGN(CryOpenFile);

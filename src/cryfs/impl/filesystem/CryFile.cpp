@@ -37,7 +37,7 @@ unique_ref<fspp::OpenFile> CryFile::open(fspp::openflags_t flags) {
   UNUSED(flags);
   device()->callFsActionCallbacks();
   auto blob = LoadBlob();
-  return make_unique_ref<CryOpenFile>(device(), parent(), std::move(blob));
+  return make_unique_ref<CryOpenFile>(device(), std::move(blob));
 }
 
 void CryFile::truncate(fspp::num_bytes_t size) {

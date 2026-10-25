@@ -4,7 +4,9 @@
 
 #include "testutils/FileTest.h"
 
+#include <chrono>
 #include <cstring>
+#include <future>
 
 template<class ConcreteFileSystemTestFixture>
 class FsppOpenFileTest: public FileSystemTest<ConcreteFileSystemTestFixture> {
@@ -158,6 +160,24 @@ TYPED_TEST_P(FsppOpenFileTest, RenameToOtherDirOverwritingExistingFile_Read) {
     this->EXPECT_CONTENT_READABLE(openFile.get());
 }
 
+// The directory the open file was moved out of can be removed while the file is still open.
+TYPED_TEST_P(FsppOpenFileTest, RenameToOtherDir_RemoveOldDir) {
+    this->CreateDir("/olddir");
+    this->CreateDir("/newdir");
+    auto openFile = this->CreateFileWithContent("/olddir/myfile");
+    this->Load("/olddir/myfile")->rename("/newdir/myfile");
+
+    auto removal = std::async(std::launch::async, [this] {
+        this->Load("/olddir")->remove();
+    });
+    const bool removedWhileFileIsOpen = removal.wait_for(std::chrono::seconds(10)) == std::future_status::ready;
+    // If the removal waits for the file to be closed, closing it lets the removal and the test finish
+    cpputils::destruct(std::move(openFile));
+    removal.get();
+
+    EXPECT_TRUE(removedWhileFileIsOpen);
+}
+
 REGISTER_TYPED_TEST_SUITE_P(FsppOpenFileTest,
     CreatedFileIsEmpty,
     FileIsFile,
@@ -170,7 +190,8 @@ REGISTER_TYPED_TEST_SUITE_P(FsppOpenFileTest,
     RenameToParentDir_Read,
     RenameToNestedDir_Read,
     RenameToOtherDirTwice_Read,
-    RenameToOtherDirOverwritingExistingFile_Read
+    RenameToOtherDirOverwritingExistingFile_Read,
+    RenameToOtherDir_RemoveOldDir
 );
 
 //TODO Test stat
