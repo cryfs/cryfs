@@ -150,7 +150,10 @@ where
         if datasync {
             self.flush_blob().await?;
         } else {
-            let (r1, r2) = join!(self.flush_blob(), self.node_info.flush_metadata());
+            let (r1, r2) = join!(
+                self.flush_blob(),
+                self.node_info.flush_metadata(&self.blobstore)
+            );
             // TODO Report both errors if both happen
             r1?;
             r2?;

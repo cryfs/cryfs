@@ -24,6 +24,7 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    data::Data,
     path::AbsolutePath,
 };
 
@@ -741,6 +742,95 @@ async fn same_dir_file_opened_before_rename_still_works(api: Api) {
     .await
 }
 
+async fn across_dirs_node_loaded_before_move_still_works(api: Api) {
+    run(async |device| {
+        mkdir(device, "/p1").await;
+        mkdir(device, "/p2").await;
+        touch(device, "/p1/file").await;
+        mkdir(device, "/p1/subdir").await;
+        let file = device.lookup(abspath("/p1/file")).await.unwrap();
+        let subdir = device.lookup(abspath("/p1/subdir")).await.unwrap();
+
+        rename(device, api, "/p1/file", "/p2/file").await.unwrap();
+        rename(device, api, "/p1/subdir", "/p2/subdir")
+            .await
+            .unwrap();
+
+        assert_eq!(file_mode(), file.getattr().await.unwrap().mode);
+        assert_eq!(dir_mode(), subdir.getattr().await.unwrap().mode);
+        chmod(&file, read_only_file_mode()).await.unwrap();
+        assert_eq!(
+            read_only_file_mode(),
+            getattr(device, "/p2/file").await.mode
+        );
+
+        file.async_drop().await.unwrap();
+        subdir.async_drop().await.unwrap();
+    })
+    .await
+}
+
+/// See https://github.com/cryfs/cryfs/issues/565 for the same bug in the C++ implementation
+async fn across_dirs_file_opened_before_move_still_works(api: Api) {
+    run(async |device| {
+        mkdir(device, "/p1").await;
+        mkdir(device, "/p2").await;
+        let (node, openfile) = create_and_open(device, "/p1/file").await;
+
+        rename(device, api, "/p1/file", "/p2/file").await.unwrap();
+
+        // Writing and reading update the timestamps in the file's entry
+        openfile
+            .write(NumBytes::from(0), Data::from(b"content".to_vec()))
+            .await
+            .unwrap();
+        let read = openfile
+            .read(NumBytes::from(0), NumBytes::from(7))
+            .await
+            .unwrap();
+        assert_eq!(b"content", read.as_ref());
+        assert_eq!(
+            NumBytes::from(7),
+            openfile.getattr().await.unwrap().num_bytes
+        );
+        openfile.fsync(false).await.unwrap();
+        assert_eq!(
+            NumBytes::from(7),
+            getattr(device, "/p2/file").await.num_bytes
+        );
+
+        openfile.async_drop().await.unwrap();
+        node.async_drop().await.unwrap();
+    })
+    .await
+}
+
+/// The node is moved twice before it is used again, and then moved back to the directory it was loaded from.
+async fn across_dirs_node_moved_several_times_still_works(api: Api) {
+    run(async |device| {
+        mkdir(device, "/p1").await;
+        mkdir(device, "/p2").await;
+        mkdir(device, "/p3").await;
+        touch(device, "/p1/file").await;
+        let node = device.lookup(abspath("/p1/file")).await.unwrap();
+
+        rename(device, api, "/p1/file", "/p2/file").await.unwrap();
+        rename(device, api, "/p2/file", "/p3/file").await.unwrap();
+        chmod(&node, read_only_file_mode()).await.unwrap();
+        assert_eq!(
+            read_only_file_mode(),
+            getattr(device, "/p3/file").await.mode
+        );
+
+        rename(device, api, "/p3/file", "/p1/file").await.unwrap();
+        chmod(&node, file_mode()).await.unwrap();
+        assert_eq!(file_mode(), getattr(device, "/p1/file").await.mode);
+
+        node.async_drop().await.unwrap();
+    })
+    .await
+}
+
 macro_rules! tests_for_both_apis {
     ($($name:ident),* $(,)?) => {
         mod dir_api {
@@ -778,6 +868,9 @@ tests_for_both_apis!(
     same_dir_node_loaded_before_rename_still_works,
     same_dir_node_loaded_before_rename_doesnt_touch_new_node_with_its_old_name,
     same_dir_file_opened_before_rename_still_works,
+    across_dirs_node_loaded_before_move_still_works,
+    across_dirs_file_opened_before_move_still_works,
+    across_dirs_node_moved_several_times_still_works,
 );
 
 /// Only `Device::rename` takes paths, so only it can be asked to move a node into a file.

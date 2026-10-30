@@ -180,7 +180,7 @@ where
         let should_update_atime = size > NumBytes::from(0);
         if should_update_atime {
             self.node_info
-                .concurrently_maybe_update_access_timestamp_in_parent(async || {
+                .concurrently_maybe_update_access_timestamp_in_parent(&self.blobstore, async || {
                     self._read(offset, size).await
                 })
                 .await
@@ -194,7 +194,7 @@ where
         let should_update_mtime = data.len() > 0;
         if should_update_mtime {
             self.node_info
-                .concurrently_update_modification_timestamp_in_parent(async || {
+                .concurrently_update_modification_timestamp_in_parent(&self.blobstore, async || {
                     self._write(offset, data).await
                 })
                 .await
@@ -219,7 +219,10 @@ where
         if datasync {
             self.flush_file_contents().await?;
         } else {
-            let (r1, r2) = join!(self.flush_file_contents(), self.node_info.flush_metadata());
+            let (r1, r2) = join!(
+                self.flush_file_contents(),
+                self.node_info.flush_metadata(&self.blobstore)
+            );
             // TODO Report both errors if both happen
             r1?;
             r2?;

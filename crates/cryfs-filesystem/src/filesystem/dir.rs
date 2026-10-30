@@ -243,7 +243,7 @@ where
 
     async fn rename_child(&self, oldname: &PathComponent, newname: &PathComponent) -> FsResult<()> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(async || {
+            .concurrently_update_modification_timestamp_in_parent(self.blobstore, async || {
                 let blob = self.load_blob().await?;
                 with_async_drop!(
                     blob,
@@ -426,10 +426,11 @@ where
                             // TODO This requires loading the grandparent blobs so we can update the parent blob's timestamps.
                             //      Can this cause a deadlock? What if one of the grandparents is already loaded as one of the parents?
                             let (source_update, dest_update) = join!(
-                                self.node_info.update_modification_timestamp_in_parent(),
+                                self.node_info
+                                    .update_modification_timestamp_in_parent(self.blobstore),
                                 newparent
                                     .node_info
-                                    .update_modification_timestamp_in_parent(),
+                                    .update_modification_timestamp_in_parent(self.blobstore),
                             );
 
                             source_update?;
@@ -450,7 +451,7 @@ where
     async fn entries(&self) -> FsResult<Vec<DirEntry>> {
         // TODO Can we return an iterator instead of a Vec from here? But it'll need state with an async destructor. Probably needs async generators.
         self.node_info
-            .concurrently_maybe_update_access_timestamp_in_parent(async || {
+            .concurrently_maybe_update_access_timestamp_in_parent(self.blobstore, async || {
                 let blob = self.load_blob().await?;
                 with_async_drop!(
                     blob,
@@ -486,7 +487,7 @@ where
         gid: cryfs_rustfs::Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CryDir<'_, B>>)> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(async || {
+            .concurrently_update_modification_timestamp_in_parent(self.blobstore, async || {
                 let self_blob_id = self.node_info.blob_id();
                 let (blob, new_dir_blob_id) =
                     join!(self.load_blob(), self.create_dir_blob(&self_blob_id));
@@ -569,7 +570,7 @@ where
 
     async fn remove_child_dir(&self, name: &PathComponent) -> FsResult<()> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent( async || {
+            .concurrently_update_modification_timestamp_in_parent(self.blobstore, async || {
                 let self_blob = self.load_blob().await?;
                 with_async_drop!(self_blob, {
                     let child_id = self_blob
@@ -660,7 +661,7 @@ where
         gid: cryfs_rustfs::Gid,
     ) -> FsResult<(NodeAttrs, AsyncDropGuard<CrySymlink<'_, B>>)> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(async || {
+            .concurrently_update_modification_timestamp_in_parent(self.blobstore, async || {
                 // TODO What should NumBytes be? Also, no unwrap?
                 let num_bytes = NumBytes::from(u64::try_from(name.len()).unwrap());
 
@@ -750,7 +751,7 @@ where
     }
 
     async fn remove_child_file_or_symlink(&self, name: &PathComponent) -> FsResult<()> {
-        self.node_info.concurrently_update_modification_timestamp_in_parent( async || {
+        self.node_info.concurrently_update_modification_timestamp_in_parent(self.blobstore, async || {
             let blob = self.load_blob().await?;
 
             with_async_drop!(blob, {
@@ -806,7 +807,7 @@ where
         AsyncDropGuard<CryOpenFile<B>>,
     )> {
         self.node_info
-            .concurrently_update_modification_timestamp_in_parent(async || {
+            .concurrently_update_modification_timestamp_in_parent(self.blobstore, async || {
                 let self_blob_id = self.node_info.blob_id();
                 let (blob, new_file_blob_id) =
                     join!(self.load_blob(), self.create_file_blob(&self_blob_id),);
@@ -895,7 +896,10 @@ where
         if datasync {
             self.flush_dir_contents().await?;
         } else {
-            let (r1, r2) = join!(self.flush_dir_contents(), self.node_info.flush_metadata());
+            let (r1, r2) = join!(
+                self.flush_dir_contents(),
+                self.node_info.flush_metadata(self.blobstore)
+            );
             // TODO Report both errors if both happen
             r1?;
             r2?;

@@ -12,7 +12,8 @@ use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
 use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AtimeUpdateBehavior, FsError, Gid, InodeNumber, Mode, NodeAttrs, OpenInFlags, RequestInfo, Uid,
+    AtimeUpdateBehavior, FsError, Gid, InodeNumber, Mode, NodeAttrs, NumBytes, OpenInFlags,
+    RequestInfo, Uid,
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
@@ -177,6 +178,81 @@ async fn setattr_after_rename_within_dir_changes_the_renamed_node() {
 
         assert_eq!(read_only_file_mode(), getattr(fs, renamed).await.mode);
         assert_eq!(file_mode(), getattr(fs, new_file).await.mode);
+    })
+    .await
+}
+
+// A rename across directories moves a node the kernel still has loaded to a different directory.
+
+/// Through a mount, `echo hello > a/f; mv a/f b/f; cat b/f` used to fail with ENOENT, because the node looked
+/// for its entry in the directory it was loaded from. https://github.com/cryfs/cryfs/issues/565 is the same
+/// bug in the C++ implementation.
+#[tokio::test]
+async fn setattr_after_rename_across_dirs() {
+    run(async |fs| {
+        let a = mkdir(fs, FUSE_ROOT_ID, "a").await;
+        let b = mkdir(fs, FUSE_ROOT_ID, "b").await;
+        let file = touch(fs, a, "file").await;
+
+        fs.rename(&req(), a, name("file"), b, name("file"), 0)
+            .await
+            .unwrap();
+
+        chmod(fs, file, read_only_file_mode()).await;
+        assert_eq!(read_only_file_mode(), getattr(fs, file).await.mode);
+        assert_eq!(Some(file), lookup(fs, b, "file").await);
+    })
+    .await
+}
+
+#[tokio::test]
+async fn write_to_open_file_after_rename_across_dirs() {
+    run(async |fs| {
+        let a = mkdir(fs, FUSE_ROOT_ID, "a").await;
+        let b = mkdir(fs, FUSE_ROOT_ID, "b").await;
+        let file = fs
+            .create(
+                &req(),
+                a,
+                name("file"),
+                file_mode(),
+                0,
+                OpenInFlags::ReadWrite,
+            )
+            .await
+            .unwrap();
+
+        fs.rename(&req(), a, name("file"), b, name("file"), 0)
+            .await
+            .unwrap();
+
+        // Writing updates the modification time in the file's entry
+        fs.write(
+            &req(),
+            file.ino.handle,
+            file.fh,
+            NumBytes::from(0),
+            b"hello".to_vec(),
+            0,
+            0,
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            NumBytes::from(5),
+            getattr(fs, file.ino.handle).await.num_bytes
+        );
+        fs.release(
+            &req(),
+            file.ino.handle,
+            file.fh,
+            OpenInFlags::ReadWrite,
+            None,
+            true,
+        )
+        .await
+        .unwrap();
     })
     .await
 }
