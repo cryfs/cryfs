@@ -8,7 +8,7 @@ use super::utils::{MaybeInitializedFs, OpenFileList};
 use super::{Device, Dir, File, Node, OpenFile, Symlink};
 #[cfg(target_os = "macos")]
 use crate::low_level_api::ReplyXTimes;
-use crate::object_based_api::utils::{DUMMY_INO, MakeOrphanError, MoveInodeError};
+use crate::object_based_api::utils::{DUMMY_INO, MakeOrphanError, MoveInodeError, MovedInode};
 use crate::{
     DirEntry,
     common::{
@@ -132,11 +132,14 @@ where
         self.inodes.get_node(ino).await
     }
 
-    async fn _orphan_inode(&self, parent_ino: InodeNumber, name: &PathComponent) {
+    /// Returns the orphaned inode, or `None` if it wasn't loaded
+    async fn _orphan_inode(
+        &self,
+        parent_ino: InodeNumber,
+        name: &PathComponent,
+    ) -> Option<InodeNumber> {
         match self.inodes.make_into_orphan(parent_ino, name).await {
-            Ok(()) => {
-                // everything ok
-            }
+            Ok(orphaned_ino) => Some(orphaned_ino),
             Err(MakeOrphanError::ParentNotFound) => {
                 panic!(
                     "Tried to orphan inode with name {:?} under parent inode {:?}, and the operation (unlink/rmdir) seems to have been successful, but when trying to orphan, the parent inode was not found",
@@ -145,17 +148,49 @@ where
             }
             Err(MakeOrphanError::ChildNotFound) => {
                 // This can happen if the unlink'ed/rmdir'ed file/directory was never looked up before, so it is not in the inode list.
+                None
             }
         }
     }
 
+    /// See [Node::on_moved_out_or_removed]. The file system operation that moved or removed the node already
+    /// succeeded, so we only log errors.
+    async fn _notify_moved_out_or_removed(&self, ino: InodeNumber) {
+        // A lookup can still be loading the node. While the kernel moves or removes something in a directory, it only
+        // looks up names there to revalidate inodes it already has, which are loaded, but callers in this process can
+        // look up any name. Once loaded, the node could keep the directory it was moved out of or removed from
+        // loaded, so we wait until the lookup loaded it.
+        let node = match self.inodes.get_node_once_loaded(ino).await {
+            Ok(Some(node)) => node,
+            Ok(None) => {
+                log::debug!(
+                    "Inode {ino}: Isn't in the inode list anymore, so there's nothing to tell that it was moved or removed"
+                );
+                return;
+            }
+            Err(err) => {
+                log::debug!(
+                    "Inode {ino}: Loading it failed, so there's nothing to tell it that it was moved or removed: {err:?}"
+                );
+                return;
+            }
+        };
+        if let Err(err) = node.on_moved_out_or_removed().await {
+            log::warn!("Inode {ino}: Error after it was moved or removed: {err:?}");
+        }
+        if let Err(err) = node.async_drop().await {
+            log::warn!("Inode {ino}: Error dropping it: {err:?}");
+        }
+    }
+
+    /// Returns the inodes that were moved and orphaned, or `None` if the moved inode wasn't loaded
     async fn _move_inode(
         &self,
         old_parent_ino: InodeNumber,
         old_name: &PathComponent,
         new_parent_ino: InodeNumber,
         new_name: &PathComponent,
-    ) -> FsResult<()> {
+    ) -> FsResult<Option<MovedInode>> {
         match self
             .inodes
             .move_inode(
@@ -166,10 +201,7 @@ where
             )
             .await
         {
-            Ok(()) => {
-                // everything ok
-                Ok(())
-            }
+            Ok(moved) => Ok(Some(moved)),
             Err(MoveInodeError::OldParentNotFound) => {
                 panic!(
                     "Tried to move inode with name {:?} under parent inode {:?} to name {:?} under parent inode {:?}, but the operation (rename) seems to have been successful, but when trying to update the inode list, the old parent inode was not found",
@@ -184,7 +216,7 @@ where
             }
             Err(MoveInodeError::ChildNotFound) => {
                 // The moved inode wasn't loaded, everything is ok. No need to adjust anything.
-                Ok(())
+                Ok(None)
             }
             Err(MoveInodeError::ErrorWhileDroppingNode(err)) => Err(err),
         }
@@ -434,15 +466,17 @@ where
         self.trigger_on_operation().await?;
 
         let parent = self.get_inode(parent_ino).await?;
-        with_async_drop!(parent, {
+        let orphaned_ino = with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
             with_async_drop!(parent_dir, {
                 parent_dir.remove_child_file_or_symlink(name).await?;
-                self._orphan_inode(parent_ino, name).await;
-                Ok::<_, FsError>(())
-            })?;
-            Ok(())
-        })
+                Ok::<_, FsError>(self._orphan_inode(parent_ino, name).await)
+            })
+        })?;
+        if let Some(orphaned_ino) = orphaned_ino {
+            self._notify_moved_out_or_removed(orphaned_ino).await;
+        }
+        Ok(())
     }
 
     async fn rmdir(
@@ -454,15 +488,17 @@ where
         self.trigger_on_operation().await?;
 
         let parent = self.get_inode(parent_ino).await?;
-        with_async_drop!(parent, {
+        let orphaned_ino = with_async_drop!(parent, {
             let parent_dir = parent.as_dir().await?;
             with_async_drop!(parent_dir, {
                 parent_dir.remove_child_dir(name).await?;
-                self._orphan_inode(parent_ino, name).await;
-                Ok::<_, FsError>(())
-            })?;
-            Ok(())
-        })
+                Ok::<_, FsError>(self._orphan_inode(parent_ino, name).await)
+            })
+        })?;
+        if let Some(orphaned_ino) = orphaned_ino {
+            self._notify_moved_out_or_removed(orphaned_ino).await;
+        }
+        Ok(())
     }
 
     async fn symlink(
@@ -516,16 +552,23 @@ where
         // TODO Check that oldparent+oldname/newparent+newname aren't ancestors of each other, or at least write a test that fuse already blocks that
         if oldparent_ino == newparent_ino {
             let shared_parent = self.get_inode(oldparent_ino).await?;
-            with_async_drop!(shared_parent, {
+            let moved = with_async_drop!(shared_parent, {
                 let parent_dir = shared_parent.as_dir().await?;
                 with_async_drop!(parent_dir, {
                     parent_dir.rename_child(oldname, newname).await?;
                     self._move_inode(oldparent_ino, oldname, newparent_ino, newname)
-                        .await?;
-                    Ok::<_, FsError>(())
-                })?;
-                Ok(())
-            })
+                        .await
+                })
+            })?;
+            // The moved node stays in its directory, but a node that the rename overwrote was removed from it
+            if let Some(MovedInode {
+                moved: _,
+                orphaned: Some(orphaned_ino),
+            }) = moved
+            {
+                self._notify_moved_out_or_removed(orphaned_ino).await;
+            }
+            Ok(())
         } else {
             let (oldparent, newparent) =
                 join!(self.get_inode(oldparent_ino), self.get_inode(newparent_ino));
@@ -538,13 +581,18 @@ where
                         .move_child_to(oldname, newparent_dir, newname)
                         .await?;
                     self._move_inode(oldparent_ino, oldname, newparent_ino, newname)
-                        .await?;
-                    Ok::<_, FsError>(())
+                        .await
                 })
             }
             .await;
             async_drop_all((oldparent, newparent)).await?;
-            result
+            if let Some(MovedInode { moved, orphaned }) = result? {
+                self._notify_moved_out_or_removed(moved).await;
+                if let Some(orphaned_ino) = orphaned {
+                    self._notify_moved_out_or_removed(orphaned_ino).await;
+                }
+            }
+            Ok(())
         }
     }
 

@@ -11,7 +11,8 @@ use cryfs_fsblobstore::fsblobstore::{
 };
 use cryfs_fsblobstore::{Gid, Mode, Uid};
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, NodeAttrs, NumBytes};
-use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard, AsyncDropTokioMutex};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
+use tokio::sync::Mutex;
 
 // TODO The ancestor_checks_on_move feature implements checks that when moving a node to a different directory,
 //      it doesn't get moved into an ancestor or child of itself. But it requires that `NodeInfo` remembers the blob ids
@@ -38,7 +39,8 @@ where
         /// directory, nodes loaded before the move can still be in use, e.g. fuser keeps them in its inode list and
         /// open files keep theirs, and they still point to the old directory. Access it through [NodeInfo::with_own_entry],
         /// which notices that and switches to the new directory.
-        parent_blob: AsyncDropGuard<AsyncDropTokioMutex<ConcurrentFsBlob<B>>>,
+        /// `None` after [NodeInfo::release_parent], until [NodeInfo::with_own_entry] loads the parent again.
+        parent_blob: Mutex<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>>,
         // TODO It probably makes sense to store the self_blob here as well, maybe optional (OnceCell?) so it isn't unnecessarily loaded, but once it's loaded it's cached and doesn't have to be re-loaded.
         //      But we need to be careful with deadlocks, given that NodeInfo is stored in fuser in the inode list and the open file list.
         /// ancestors.first() is the root blob id, ancestors.last() is the immediate parent of this node.
@@ -91,7 +93,7 @@ where
     ) -> AsyncDropGuard<Self> {
         AsyncDropGuard::new(Self {
             inner: NodeInfoImpl::IsNotRootDir {
-                parent_blob: AsyncDropTokioMutex::new(parent_blob),
+                parent_blob: Mutex::new(Some(parent_blob)),
                 #[cfg(feature = "ancestor_checks_on_move")]
                 ancestors,
                 blob_id,
@@ -452,11 +454,11 @@ where
     /// Runs `f` on the directory that has this node's entry, i.e. on this node's parent directory.
     ///
     /// `parent_blob` can be out of date, see [NodeInfoImpl::IsNotRootDir::parent_blob]. If our entry isn't in it,
-    /// we read our actual parent from our own blob, switch `parent_blob` to it and look there.
+    /// or if we released it, we read our actual parent from our own blob, switch `parent_blob` to it and look there.
     /// `f` only runs if the entry exists, and we return [FsError::NodeDoesNotExist] if it doesn't.
     async fn with_own_entry<R>(
         blobstore: &ConcurrentFsBlobStore<B>,
-        parent_blob: &AsyncDropTokioMutex<ConcurrentFsBlob<B>>,
+        parent_blob: &Mutex<Option<AsyncDropGuard<ConcurrentFsBlob<B>>>>,
         blob_id: &BlobId,
         f: impl AsyncFnOnce(&mut DirBlob<B>) -> FsResult<R>,
     ) -> FsResult<R> {
@@ -467,22 +469,24 @@ where
         // If the entry isn't in the second one either, we were removed, or a concurrent rename moved us
         // and didn't get to update our parent pointer yet.
         for _ in 0..2 {
-            let result = parent_blob
-                .with_lock(async |parent_blob| {
-                    let parent_dir = parent_blob
-                        .as_dir_mut()
-                        .expect("Parent blob is not a directory");
-                    if parent_dir.entry_by_id(blob_id).is_none() {
-                        return None;
-                    }
-                    let f = f
-                        .take()
-                        .expect("We return after running f, so it only runs once");
-                    Some(f(parent_dir).await)
-                })
-                .await;
-            if let Some(result) = result {
-                return result;
+            if let Some(current_parent) = &*parent_blob {
+                let result = current_parent
+                    .with_lock(async |parent_blob| {
+                        let parent_dir = parent_blob
+                            .as_dir_mut()
+                            .expect("Parent blob is not a directory");
+                        if parent_dir.entry_by_id(blob_id).is_none() {
+                            return None;
+                        }
+                        let f = f
+                            .take()
+                            .expect("We return after running f, so it only runs once");
+                        Some(f(parent_dir).await)
+                    })
+                    .await;
+                if let Some(result) = result {
+                    return result;
+                }
             }
             if !Self::switch_to_actual_parent(blobstore, &mut parent_blob, blob_id).await? {
                 break;
@@ -492,11 +496,11 @@ where
     }
 
     /// Reads our actual parent from our own blob. If that is a different directory than `parent_blob`,
-    /// i.e. we were moved, switches `parent_blob` to it and returns true. Returns false if `parent_blob`
-    /// already is our actual parent, or if our own blob doesn't exist anymore.
+    /// i.e. we were moved, or if we released `parent_blob`, switches `parent_blob` to it and returns true.
+    /// Returns false if `parent_blob` already is our actual parent, or if our own blob doesn't exist anymore.
     async fn switch_to_actual_parent(
         blobstore: &ConcurrentFsBlobStore<B>,
-        parent_blob: &mut AsyncDropGuard<ConcurrentFsBlob<B>>,
+        parent_blob: &mut Option<AsyncDropGuard<ConcurrentFsBlob<B>>>,
         blob_id: &BlobId,
     ) -> FsResult<bool> {
         let self_blob = blobstore.load(blob_id).await.map_err(|err| {
@@ -518,7 +522,10 @@ where
             },
             FsError::internal_error
         )?;
-        if actual_parent_id == parent_blob.blob_id() {
+        if parent_blob
+            .as_ref()
+            .is_some_and(|parent_blob| parent_blob.blob_id() == actual_parent_id)
+        {
             return Ok(false);
         }
         let actual_parent = blobstore
@@ -533,12 +540,31 @@ where
                     "Blob {blob_id:?} has parent {actual_parent_id:?} but that blob doesn't exist"
                 ),
             })?;
-        let old_parent = std::mem::replace(parent_blob, actual_parent);
-        old_parent
-            .async_drop()
-            .await
-            .map_err(FsError::internal_error)?;
+        if let Some(old_parent) = parent_blob.replace(actual_parent) {
+            old_parent
+                .async_drop()
+                .await
+                .map_err(FsError::internal_error)?;
+        }
         Ok(true)
+    }
+
+    /// Releases the parent directory this node keeps loaded. The node calls this when it was moved to a different
+    /// directory or removed from its directory, because removing a directory waits until nobody has its blob loaded
+    /// anymore. If the node is used again, [Self::with_own_entry] loads its parent again.
+    pub async fn release_parent(&self) -> FsResult<()> {
+        let NodeInfoImpl::IsNotRootDir { parent_blob, .. } = &self.inner else {
+            // The root dir doesn't have a parent
+            return Ok(());
+        };
+        let released = parent_blob.lock().await.take();
+        if let Some(released) = released {
+            released
+                .async_drop()
+                .await
+                .map_err(FsError::internal_error)?;
+        }
+        Ok(())
     }
 }
 
@@ -564,10 +590,12 @@ where
                 blob_type: _,
                 atime_update_behavior: _,
             } => {
-                parent_blob
-                    .async_drop()
-                    .await
-                    .map_err(FsError::internal_error)?;
+                if let Some(parent_blob) = parent_blob.into_inner() {
+                    parent_blob
+                        .async_drop()
+                        .await
+                        .map_err(FsError::internal_error)?;
+                }
             }
         }
         Ok(())

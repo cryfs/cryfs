@@ -223,11 +223,13 @@ where
         self.handles.release(removed_handle);
     }
 
+    /// Removes the child from its parent but leaves the child in the forest, as an orphan that still points to its parent.
+    /// Returns the handle of the orphaned child.
     pub fn make_node_into_orphan<K>(
         &mut self,
         parent_handle: &Handle,
         edge: &K,
-    ) -> Result<(), MakeOrphanError>
+    ) -> Result<Handle, MakeOrphanError>
     where
         K: ?Sized + Hash + Eq,
         EdgeKey: Borrow<K>,
@@ -237,7 +239,7 @@ where
             .get_mut(parent_handle)
             .ok_or(MakeOrphanError::ParentNotFound)?;
 
-        let (_removed_handle, remove_result) = parent_node
+        let (removed_handle, remove_result) = parent_node
             .try_remove_child(edge)
             .ok_or(MakeOrphanError::ChildNotFound)?;
         match remove_result {
@@ -245,7 +247,7 @@ where
         }
 
         // We're leaving the child orphaned, that's ok for invariant C.
-        Ok(())
+        Ok(removed_handle)
     }
 
     pub fn move_node<E>(
@@ -254,7 +256,7 @@ where
         old_edge: &E,
         new_parent_handle: Handle,
         new_edge: EdgeKey,
-    ) -> Result<MoveInodeSuccess, MoveInodeError>
+    ) -> Result<MoveInodeSuccess<Handle>, MoveInodeError>
     where
         EdgeKey: Borrow<E>,
         E: ?Sized + Hash + Eq + ToOwned<Owned = EdgeKey>,
@@ -295,11 +297,10 @@ where
             .expect("Invariant B2 violated");
         child_node.set_parent(Some((new_parent_handle, new_edge)));
 
-        if overwritten_child.is_some() {
-            Ok(MoveInodeSuccess::OrphanedExistingChildInNewParent)
-        } else {
-            Ok(MoveInodeSuccess::AddedAsNewChildToNewParent)
-        }
+        Ok(MoveInodeSuccess {
+            moved_child: child_handle,
+            orphaned_child: overwritten_child,
+        })
     }
 
     #[cfg(feature = "testutils")]
@@ -330,9 +331,10 @@ pub enum MakeOrphanError {
 }
 
 #[must_use]
-pub enum MoveInodeSuccess {
-    AddedAsNewChildToNewParent,
-    OrphanedExistingChildInNewParent,
+pub struct MoveInodeSuccess<Handle> {
+    pub moved_child: Handle,
+    /// The child that was in the new parent under the new name before, if any. It is an orphan now.
+    pub orphaned_child: Option<Handle>,
 }
 
 #[derive(Error, Debug, Display)]
