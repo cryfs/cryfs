@@ -1,15 +1,23 @@
 //! Tests that drive CryFS through rustfs's fuser adapter, [ObjectBasedFsAdapterLL], the way the kernel does,
 //! but without mounting anything. Like for a mount, the adapter keeps every inode it handed out loaded until
 //! it is forgotten, so nodes stay in use across operations.
+//!
+//! Some tests also run requests concurrently that the kernel wouldn't, like callers in this process can.
+//! They poll the requests by hand and pause a flush in the blob store, see [FlushPause], so that the
+//! requests interleave the same way every time.
 
 // The async state machines built here nest deeply enough that computing their layout
 // overflows rustc's default recursion limit of 128.
 #![recursion_limit = "512"]
 
+use std::pin::Pin;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use cryfs_blobstore::{BlobId, BlobStoreOnBlocks};
-use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
+use byte_unit::Byte;
+use cryfs_blobstore::{Blob, BlobId, BlobStore, BlobStoreOnBlocks, RemoveResult};
+use cryfs_blockstore::{BlockId, InMemoryBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AtimeUpdateBehavior, FsError, Gid, InodeNumber, Mode, NodeAttrs, NumBytes, OpenInFlags,
@@ -17,10 +25,16 @@ use cryfs_rustfs::{
     low_level_api::AsyncFilesystemLL,
     object_based_api::{FUSE_ROOT_ID, ObjectBasedFsAdapterLL},
 };
-use cryfs_utils::{async_drop::AsyncDropGuard, path::PathComponent};
+use cryfs_utils::{
+    async_drop::{AsyncDrop, AsyncDropGuard},
+    data::Data,
+    path::PathComponent,
+};
+use futures::{FutureExt as _, stream::BoxStream};
+use tokio::sync::Notify;
 
-type Adapter =
-    ObjectBasedFsAdapterLL<CryDevice<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>>;
+type InMemoryBlobStore = BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>;
+type Adapter = ObjectBasedFsAdapterLL<CryDevice<PausingBlobStore>>;
 
 fn req() -> RequestInfo {
     RequestInfo {
@@ -54,11 +68,16 @@ fn read_only_file_mode() -> Mode {
     Mode::default().add_file_flag().add_user_read_flag()
 }
 
-async fn make_adapter() -> AsyncDropGuard<Adapter> {
+async fn make_adapter() -> (AsyncDropGuard<Adapter>, Arc<FlushPause>) {
     let blockstore = LockingBlockStore::new(InMemoryBlockStore::new());
     let blobstore = BlobStoreOnBlocks::new(blockstore, 1024u32.into())
         .await
         .unwrap();
+    let pause = Arc::new(FlushPause::default());
+    let blobstore = AsyncDropGuard::new(PausingBlobStore {
+        underlying_store: blobstore,
+        pause: Arc::clone(&pause),
+    });
     let device = CryDevice::create_new_filesystem(
         blobstore,
         BlobId::new_random(),
@@ -68,14 +87,19 @@ async fn make_adapter() -> AsyncDropGuard<Adapter> {
     .unwrap();
     let adapter = ObjectBasedFsAdapterLL::new(|_uid, _gid| device);
     adapter.init(&req()).await.unwrap();
-    adapter
+    (adapter, pause)
 }
 
 /// Runs `test` on a fresh file system. Fails instead of hanging if `test` blocks forever.
 async fn run(test: impl AsyncFnOnce(&Adapter)) {
-    let adapter = make_adapter().await;
+    run_with_pause(async |fs, _pause| test(fs).await).await
+}
+
+/// Like [run], for tests that pause a flush
+async fn run_with_pause(test: impl AsyncFnOnce(&Adapter, &FlushPause)) {
+    let (adapter, pause) = make_adapter().await;
     {
-        let mut test = std::pin::pin!(test(&adapter));
+        let mut test = std::pin::pin!(test(&adapter, &pause));
         if tokio::time::timeout(Duration::from_secs(60), &mut test)
             .await
             .is_err()
@@ -446,4 +470,284 @@ async fn rmdir_after_a_rename_overwrote_a_loaded_node() {
         rmdir(fs, FUSE_ROOT_ID, "dir").await;
     })
     .await
+}
+
+// While the kernel removes a name from a directory, it only looks up names there to revalidate inodes it already
+// has, which are loaded, but callers in this process can look up any name. Then a lookup can still be loading a
+// node when the removal tells the node that it was removed.
+
+/// Starts `request` without polling it, so that the test can interleave it with other requests by hand.
+/// Without [tokio::task::unconstrained], tokio's cooperative scheduling could make it pending even though
+/// it doesn't wait for anything.
+fn start<F: Future>(request: F) -> Pin<Box<impl Future<Output = F::Output>>> {
+    Box::pin(tokio::task::unconstrained(request))
+}
+
+/// Polls `request` once and returns its result if it finished. Nothing wakes it up, the test decides when
+/// to poll it again.
+fn poll_once<T>(request: Pin<&mut impl Future<Output = T>>) -> Option<T> {
+    request.now_or_never()
+}
+
+#[derive(Clone, Copy)]
+enum Removal {
+    UnlinkFile,
+    RmdirDir,
+}
+
+/// The removal of P/x tells x that it was removed while a lookup of P/x is still loading x. This used to panic
+/// with "Forgot to call async_drop on AsyncDropArc { v: AsyncDropGuard(Some(ConcurrentStoreInner)) }".
+async fn remove_while_a_lookup_is_still_loading(removal: Removal) {
+    run_with_pause(async |fs, pause| {
+        let req = req();
+        let p = mkdir(fs, FUSE_ROOT_ID, "P").await;
+        let p_blob = pause.last_created_blob();
+        let x = match removal {
+            Removal::UnlinkFile => touch(fs, p, "x").await,
+            Removal::RmdirDir => mkdir(fs, p, "x").await,
+        };
+        // So that the lookup below has to load x
+        fs.forget(&req, x, 1).await.unwrap();
+
+        // The removal pauses while it holds P's lock, after it removed the entry of x
+        pause.pause_next_flush_of(p_blob);
+        let mut remove = start(async {
+            match removal {
+                Removal::UnlinkFile => fs.unlink(&req, p, name("x")).await,
+                Removal::RmdirDir => fs.rmdir(&req, p, name("x")).await,
+            }
+        });
+        assert!(poll_once(remove.as_mut()).is_none());
+        assert!(pause.flush_is_paused());
+
+        // A getattr of P waits for P's lock, and so does the lookup of x, which already added x to the inode list
+        let mut getattr = start(fs.getattr(&req, p, None));
+        assert!(poll_once(getattr.as_mut()).is_none());
+        let mut lookup = start(fs.lookup(&req, p, name("x")));
+        assert!(poll_once(lookup.as_mut()).is_none());
+
+        // The removal releases P's lock, which goes to the getattr, and we don't poll that yet. So the lookup is still
+        // loading x when the removal tells x that it was removed, and the removal waits until the lookup loaded x.
+        pause.release_flush();
+        assert!(poll_once(remove.as_mut()).is_none());
+
+        let (remove, getattr, lookup) = futures::join!(remove, getattr, lookup);
+        remove.unwrap();
+        getattr.unwrap();
+        // The lookup doesn't find x anymore once it gets P's lock
+        assert!(
+            matches!(lookup, Err(FsError::NodeDoesNotExist)),
+            "lookup returned {lookup:?}"
+        );
+        // Nothing keeps P loaded, so removing it doesn't block
+        rmdir(fs, FUSE_ROOT_ID, "P").await;
+    })
+    .await
+}
+
+#[tokio::test]
+async fn unlink_while_a_lookup_is_still_loading_the_file() {
+    remove_while_a_lookup_is_still_loading(Removal::UnlinkFile).await
+}
+
+#[tokio::test]
+async fn rmdir_while_a_lookup_is_still_loading_the_dir() {
+    remove_while_a_lookup_is_still_loading(Removal::RmdirDir).await
+}
+
+/// Lets a test pause the next flush of a chosen blob until it releases it, see [PausingBlobStore]
+#[derive(Debug, Default)]
+struct FlushPause {
+    last_created_blob: Mutex<Option<BlobId>>,
+    blob_to_pause: Mutex<Option<BlobId>>,
+    paused: AtomicBool,
+    released: Notify,
+}
+
+impl FlushPause {
+    /// The blob that the file system created last, e.g. for the directory that `mkdir` just created
+    fn last_created_blob(&self) -> BlobId {
+        self.last_created_blob
+            .lock()
+            .unwrap()
+            .expect("No blob was created yet")
+    }
+
+    /// The next flush of `blob_id` waits until [Self::release_flush] is called
+    fn pause_next_flush_of(&self, blob_id: BlobId) {
+        *self.blob_to_pause.lock().unwrap() = Some(blob_id);
+    }
+
+    fn flush_is_paused(&self) -> bool {
+        self.paused.load(Ordering::SeqCst)
+    }
+
+    fn release_flush(&self) {
+        self.released.notify_one();
+    }
+
+    async fn maybe_pause_flush_of(&self, blob_id: BlobId) {
+        let pause = self
+            .blob_to_pause
+            .lock()
+            .unwrap()
+            .take_if(|blob_to_pause| *blob_to_pause == blob_id)
+            .is_some();
+        if pause {
+            self.paused.store(true, Ordering::SeqCst);
+            self.released.notified().await;
+            self.paused.store(false, Ordering::SeqCst);
+        }
+    }
+}
+
+/// The in-memory blob store, with blobs whose flush can be paused, see [FlushPause]
+#[derive(Debug)]
+struct PausingBlobStore {
+    underlying_store: AsyncDropGuard<InMemoryBlobStore>,
+    pause: Arc<FlushPause>,
+}
+
+impl PausingBlobStore {
+    fn wrap(
+        &self,
+        blob: AsyncDropGuard<<InMemoryBlobStore as BlobStore>::ConcreteBlob>,
+    ) -> AsyncDropGuard<PausingBlob> {
+        AsyncDropGuard::new(PausingBlob {
+            blob,
+            pause: Arc::clone(&self.pause),
+        })
+    }
+}
+
+impl BlobStore for PausingBlobStore {
+    type ConcreteBlob = PausingBlob;
+
+    async fn create(&self) -> anyhow::Result<AsyncDropGuard<PausingBlob>> {
+        let blob = self.underlying_store.create().await?;
+        *self.pause.last_created_blob.lock().unwrap() = Some(blob.id());
+        Ok(self.wrap(blob))
+    }
+
+    async fn try_create(&self, id: &BlobId) -> anyhow::Result<Option<AsyncDropGuard<PausingBlob>>> {
+        Ok(self
+            .underlying_store
+            .try_create(id)
+            .await?
+            .map(|blob| self.wrap(blob)))
+    }
+
+    async fn load(&self, id: &BlobId) -> anyhow::Result<Option<AsyncDropGuard<PausingBlob>>> {
+        Ok(self
+            .underlying_store
+            .load(id)
+            .await?
+            .map(|blob| self.wrap(blob)))
+    }
+
+    async fn remove_by_id(&self, id: &BlobId) -> anyhow::Result<RemoveResult> {
+        self.underlying_store.remove_by_id(id).await
+    }
+
+    async fn num_nodes(&self) -> anyhow::Result<u64> {
+        self.underlying_store.num_nodes().await
+    }
+
+    fn estimate_space_for_num_blocks_left(&self) -> anyhow::Result<u64> {
+        self.underlying_store.estimate_space_for_num_blocks_left()
+    }
+
+    fn logical_block_size_bytes(&self) -> Byte {
+        self.underlying_store.logical_block_size_bytes()
+    }
+
+    async fn flush_if_cached(&self, blob_id: BlobId) -> anyhow::Result<()> {
+        self.underlying_store.flush_if_cached(blob_id).await
+    }
+
+    async fn clear_cache_slow(&self) -> anyhow::Result<()> {
+        self.underlying_store.clear_cache_slow().await
+    }
+
+    async fn clear_unloaded_blocks_from_cache(&self) -> anyhow::Result<()> {
+        self.underlying_store
+            .clear_unloaded_blocks_from_cache()
+            .await
+    }
+}
+
+impl AsyncDrop for PausingBlobStore {
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(self) -> anyhow::Result<()> {
+        let Self {
+            underlying_store,
+            pause: _,
+        } = self;
+        underlying_store.async_drop().await
+    }
+}
+
+/// A blob of [PausingBlobStore]
+#[derive(Debug)]
+struct PausingBlob {
+    blob: AsyncDropGuard<<InMemoryBlobStore as BlobStore>::ConcreteBlob>,
+    pause: Arc<FlushPause>,
+}
+
+impl Blob for PausingBlob {
+    fn id(&self) -> BlobId {
+        self.blob.id()
+    }
+
+    async fn num_bytes(&mut self) -> anyhow::Result<u64> {
+        self.blob.num_bytes().await
+    }
+
+    async fn resize(&mut self, new_num_bytes: u64) -> anyhow::Result<()> {
+        self.blob.resize(new_num_bytes).await
+    }
+
+    async fn read_all(&mut self) -> anyhow::Result<Data> {
+        self.blob.read_all().await
+    }
+
+    async fn read(&mut self, target: &mut [u8], offset: u64) -> anyhow::Result<()> {
+        self.blob.read(target, offset).await
+    }
+
+    async fn try_read(&mut self, target: &mut [u8], offset: u64) -> anyhow::Result<usize> {
+        self.blob.try_read(target, offset).await
+    }
+
+    async fn write(&mut self, source: &[u8], offset: u64) -> anyhow::Result<()> {
+        self.blob.write(source, offset).await
+    }
+
+    async fn flush(&mut self) -> anyhow::Result<()> {
+        self.pause.maybe_pause_flush_of(self.id()).await;
+        self.blob.flush().await
+    }
+
+    async fn num_nodes(&mut self) -> anyhow::Result<u64> {
+        self.blob.num_nodes().await
+    }
+
+    async fn remove(this: AsyncDropGuard<Self>) -> anyhow::Result<()> {
+        let Self { blob, pause: _ } = this.unsafe_into_inner_dont_drop();
+        Blob::remove(blob).await
+    }
+
+    fn all_blocks(&self) -> anyhow::Result<BoxStream<'_, anyhow::Result<BlockId>>> {
+        self.blob.all_blocks()
+    }
+}
+
+impl AsyncDrop for PausingBlob {
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(self) -> anyhow::Result<()> {
+        let Self { blob, pause: _ } = self;
+        blob.async_drop().await
+    }
 }

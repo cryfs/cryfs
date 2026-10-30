@@ -218,6 +218,29 @@ where
         })
     }
 
+    /// Like [Self::get_node], but for an inode that can still be loading, e.g. one that a lookup added but didn't
+    /// return yet. [Self::get_node] is only for inode numbers we gave out, which are loaded (invariant B1).
+    /// Waits until the inode is loaded. Returns `None` if the inode isn't in the list (anymore), and the error if
+    /// loading it failed.
+    pub async fn get_node_once_loaded(
+        &self,
+        ino: InodeNumber,
+    ) -> FsResult<Option<AsyncDropGuard<AsyncDropArc<Fs::Node>>>> {
+        let node_future = {
+            let inner = self.inner.lock().await;
+            let Some(inode) = inner.inode_forest.get(&ino) else {
+                return Ok(None);
+            };
+            AsyncDropShared::clone(inode.value().inode_future())
+        };
+        // Like [Self::add_or_increment_refcount], free the lock on inner before waiting for the inode to load
+        let node = Self::_wait_for_node_loaded(node_future).await?;
+        Ok(Some(node))
+
+        // Fulfilling invariants:
+        // * A, B, C, D, E, F: No change here
+    }
+
     pub async fn add(
         &self,
         parent_ino: InodeNumber,
@@ -721,7 +744,7 @@ where
     }
 
     /// Remove an inode from its parent's childrn map. The inode itself stays alive, but becomes an orphan in the inode forest.
-    /// Returns the orphaned inode.
+    /// Returns the orphaned inode. It can still be loading, see [Self::get_node_once_loaded].
     pub async fn make_into_orphan(
         &self,
         parent_ino: InodeNumber,
@@ -906,7 +929,7 @@ pub enum DecrementRefcountError {
     ErrorWhileDroppingNode(FsError),
 }
 
-/// The inodes that [InodeList::move_inode] changed
+/// The inodes that [InodeList::move_inode] changed. They can still be loading, see [InodeList::get_node_once_loaded].
 pub struct MovedInode {
     /// The inode that was moved
     pub moved: InodeNumber,

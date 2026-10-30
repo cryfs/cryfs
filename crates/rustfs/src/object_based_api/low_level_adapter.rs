@@ -156,11 +156,21 @@ where
     /// See [Node::on_moved_out_or_removed]. The file system operation that moved or removed the node already
     /// succeeded, so we only log errors.
     async fn _notify_moved_out_or_removed(&self, ino: InodeNumber) {
-        let node = match self.get_inode(ino).await {
-            Ok(node) => node,
+        // A lookup can still be loading the node. While the kernel moves or removes something in a directory, it only
+        // looks up names there to revalidate inodes it already has, which are loaded, but callers in this process can
+        // look up any name. Once loaded, the node could keep the directory it was moved out of or removed from
+        // loaded, so we wait until the lookup loaded it.
+        let node = match self.inodes.get_node_once_loaded(ino).await {
+            Ok(Some(node)) => node,
+            Ok(None) => {
+                log::debug!(
+                    "Inode {ino}: Isn't in the inode list anymore, so there's nothing to tell that it was moved or removed"
+                );
+                return;
+            }
             Err(err) => {
-                log::warn!(
-                    "Inode {ino}: Couldn't load it to tell it that it was moved or removed: {err:?}"
+                log::debug!(
+                    "Inode {ino}: Loading it failed, so there's nothing to tell it that it was moved or removed: {err:?}"
                 );
                 return;
             }
