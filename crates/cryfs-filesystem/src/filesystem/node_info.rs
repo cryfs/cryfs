@@ -11,10 +11,7 @@ use cryfs_fsblobstore::fsblobstore::{
 };
 use cryfs_fsblobstore::{Gid, Mode, Uid};
 use cryfs_rustfs::{AtimeUpdateBehavior, FsError, FsResult, NodeAttrs, NumBytes};
-use cryfs_utils::{
-    async_drop::{AsyncDrop, AsyncDropGuard},
-    path::PathComponentBuf,
-};
+use cryfs_utils::async_drop::{AsyncDrop, AsyncDropGuard};
 
 // TODO The ancestor_checks_on_move feature implements checks that when moving a node to a different directory,
 //      it doesn't get moved into an ancestor or child of itself. But it requires that `NodeInfo` remembers the blob ids
@@ -44,8 +41,9 @@ where
         #[cfg(feature = "ancestor_checks_on_move")]
         ancestors: Box<[BlobId]>,
 
-        name: PathComponentBuf,
-
+        // We don't store the name of the node. A rename changes the name in the parent directory, but nodes loaded
+        // before the rename can still be in use, e.g. fuser keeps them in its inode list. We look up the node's entry
+        // in its parent directory by blob id instead, which a rename doesn't change.
         blob_id: BlobId,
 
         blob_type: BlobType,
@@ -83,7 +81,6 @@ where
     pub fn new_non_root_dir(
         parent_blob: AsyncDropGuard<ConcurrentFsBlob<B>>,
         #[cfg(feature = "ancestor_checks_on_move")] ancestors: Box<[BlobId]>,
-        name: PathComponentBuf,
         blob_id: BlobId,
         blob_type: BlobType,
         atime_update_behavior: AtimeUpdateBehavior,
@@ -93,7 +90,6 @@ where
                 parent_blob,
                 #[cfg(feature = "ancestor_checks_on_move")]
                 ancestors,
-                name,
                 blob_id,
                 blob_type,
                 atime_update_behavior,
@@ -236,14 +232,16 @@ where
                 })
             }
             NodeInfoImpl::IsNotRootDir {
-                parent_blob, name, ..
+                parent_blob,
+                blob_id,
+                ..
             } => {
                 let lstat_size = self.load_lstat_size(blobstore).await?;
                 let entry: DirEntry = parent_blob
                     .with_lock(async |blob| {
                         blob.as_dir()
                             .expect("Parent dir is not a directory")
-                            .entry_by_name(name)
+                            .entry_by_id(blob_id)
                             .cloned()
                             .ok_or_else(|| FsError::NodeDoesNotExist)
                     })
@@ -278,7 +276,9 @@ where
                 Err(FsError::InvalidOperation)
             }
             NodeInfoImpl::IsNotRootDir {
-                parent_blob, name, ..
+                parent_blob,
+                blob_id,
+                ..
             } => {
                 // TODO No Mode/Uid/Gid conversion
                 let mode = mode.map(|mode| Mode::from(u32::from(mode)));
@@ -291,7 +291,7 @@ where
                             .as_dir_mut()
                             .expect("Parent dir is not a directory");
                         let result = parent_dir
-                            .set_attr_of_entry_by_name(name, mode, uid, gid, atime, mtime)
+                            .set_attr_of_entry(blob_id, mode, uid, gid, atime, mtime)
                             .map(|result| dir_entry_to_node_attrs(result, lstat_size))
                             .map_err(|err| {
                                 log::error!("Error setting attributes of entry: {:?}", err);
@@ -302,9 +302,9 @@ where
                             });
                         // Even if other fields are `None` (i.e. we don't run chmod, chown, utime), we still need to update the mtime in a truncate operation
                         if size.is_some() {
-                            // TODO Don't look up the entry by name twice when we have attrs and size.is_some(). Looking it up once should be enough.
+                            // TODO Don't look up the entry twice when we have attrs and size.is_some(). Looking it up once should be enough.
                             parent_dir
-                                .update_modification_timestamp_by_name(name)
+                                .update_modification_timestamp_of_entry(blob_id)
                                 .map_err(|err| match err {
                                     UpdateTimestampError::NodeDoesNotExist => {
                                         FsError::NodeDoesNotExist
@@ -472,7 +472,6 @@ where
                 parent_blob,
                 #[cfg(feature = "ancestor_checks_on_move")]
                     ancestors: _,
-                name: _,
                 blob_id: _,
                 blob_type: _,
                 atime_update_behavior: _,

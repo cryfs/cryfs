@@ -309,16 +309,16 @@ impl DirEntryList {
         Ok(())
     }
 
-    pub fn set_attr_by_name<'s>(
+    pub fn set_attr<'s>(
         &'s mut self,
-        name: &PathComponent,
+        blob_id: &BlobId,
         mode: Option<Mode>,
         uid: Option<Uid>,
         gid: Option<Gid>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> Result<&'s DirEntry, SetAttrError> {
-        let Some(entry) = self.get_by_name_mut(name) else {
+        let Some(entry) = self.get_by_id_mut(blob_id) else {
             return Err(SetAttrError::NodeDoesNotExist);
         };
         entry
@@ -366,17 +366,6 @@ impl DirEntryList {
         blob_id: &BlobId,
     ) -> Result<(), UpdateTimestampError> {
         let Some(entry) = self.get_by_id_mut(blob_id) else {
-            return Err(UpdateTimestampError::NodeDoesNotExist);
-        };
-        entry.update_modification_time();
-        Ok(())
-    }
-
-    pub fn update_modification_timestamp_by_name(
-        &mut self,
-        name: &PathComponent,
-    ) -> Result<(), UpdateTimestampError> {
-        let Some(entry) = self.get_by_name_mut(name) else {
             return Err(UpdateTimestampError::NodeDoesNotExist);
         };
         entry.update_modification_time();
