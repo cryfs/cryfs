@@ -19,8 +19,8 @@ use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, RemoveResult};
 use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
-    AtimeUpdateBehavior, FsError, FsResult, Gid, Mode, OpenInFlags, Uid,
-    object_based_api::{Device, Dir, Node, Symlink},
+    AtimeUpdateBehavior, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenInFlags, Uid,
+    object_based_api::{Device, Dir, Node, OpenFile, Symlink},
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
@@ -143,6 +143,10 @@ fn file_mode() -> Mode {
         .add_user_write_flag()
 }
 
+fn read_only_file_mode() -> Mode {
+    Mode::default().add_file_flag().add_user_read_flag()
+}
+
 async fn make_device(fail_removals: &Arc<AtomicBool>) -> AsyncDropGuard<TestDevice> {
     let blockstore = LockingBlockStore::new(InMemoryBlockStore::new());
     let blobstore = BlobStoreOnBlocks::new(blockstore, 1024u32.into())
@@ -219,6 +223,35 @@ async fn touch(device: &TestDevice, path: &str) {
     parent.async_drop().await.unwrap();
 }
 
+/// Creates a file and returns its node and an open file for it, both still loaded.
+async fn create_and_open(
+    device: &TestDevice,
+    path: &str,
+) -> (
+    AsyncDropGuard<<TestDevice as Device>::Node>,
+    AsyncDropGuard<<TestDevice as Device>::OpenFile>,
+) {
+    let (parent, name) = abspath(path).split_last().unwrap();
+    let parent = device.lookup(parent).await.unwrap();
+    let result = {
+        let parent = parent.as_dir().await.unwrap();
+        let (_, node, openfile) = parent
+            .create_and_open_file(
+                name,
+                file_mode(),
+                Uid::from(1000),
+                Gid::from(1000),
+                OpenInFlags::ReadWrite,
+            )
+            .await
+            .unwrap();
+        parent.async_drop().await.unwrap();
+        (node, openfile)
+    };
+    parent.async_drop().await.unwrap();
+    result
+}
+
 async fn symlink(device: &TestDevice, path: &str, target: &str) {
     let (parent, name) = abspath(path).split_last().unwrap();
     let parent = device.lookup(parent).await.unwrap();
@@ -266,6 +299,19 @@ async fn ls(device: &TestDevice, path: &str) -> Option<Vec<String>> {
 
 async fn ls_dir(device: &TestDevice, path: &str) -> Vec<String> {
     ls(device, path).await.expect("Not a directory")
+}
+
+/// Attributes of the node at `path`, from a lookup that starts at the root directory
+async fn getattr(device: &TestDevice, path: &str) -> NodeAttrs {
+    let node = device.lookup(abspath(path)).await.unwrap();
+    let attrs = node.getattr().await.unwrap();
+    node.async_drop().await.unwrap();
+    attrs
+}
+
+async fn chmod(node: &<TestDevice as Device>::Node, mode: Mode) -> FsResult<NodeAttrs> {
+    node.setattr(Some(mode), None, None, None, None, None, None)
+        .await
 }
 
 /// Number of blocks in the block store. If a rejected rename keeps every directory entry
@@ -674,6 +720,90 @@ async fn same_dir_dir_onto_empty_dir_succeeds(api: Api) {
     .await
 }
 
+// Nodes that were loaded before a rename. fuser keeps the nodes it handed out inode numbers for
+// in its inode list, and an open file keeps its node, so they're still in use after the rename.
+
+async fn same_dir_node_loaded_before_rename_still_works(api: Api) {
+    run(async |device| {
+        mkdir(device, "/dir").await;
+        touch(device, "/dir/file").await;
+        mkdir(device, "/dir/subdir").await;
+        let file = device.lookup(abspath("/dir/file")).await.unwrap();
+        let subdir = device.lookup(abspath("/dir/subdir")).await.unwrap();
+
+        rename(device, api, "/dir/file", "/dir/renamed_file")
+            .await
+            .unwrap();
+        rename(device, api, "/dir/subdir", "/dir/renamed_subdir")
+            .await
+            .unwrap();
+
+        assert_eq!(file_mode(), file.getattr().await.unwrap().mode);
+        assert_eq!(dir_mode(), subdir.getattr().await.unwrap().mode);
+        chmod(&file, read_only_file_mode()).await.unwrap();
+        assert_eq!(
+            read_only_file_mode(),
+            getattr(device, "/dir/renamed_file").await.mode
+        );
+
+        file.async_drop().await.unwrap();
+        subdir.async_drop().await.unwrap();
+    })
+    .await
+}
+
+/// After the rename, a new file takes the old name. The node loaded before the rename must keep
+/// reading and changing its own entry, not the entry of the new file.
+async fn same_dir_node_loaded_before_rename_doesnt_touch_new_node_with_its_old_name(api: Api) {
+    run(async |device| {
+        mkdir(device, "/dir").await;
+        touch(device, "/dir/file").await;
+        let node = device.lookup(abspath("/dir/file")).await.unwrap();
+
+        rename(device, api, "/dir/file", "/dir/renamed")
+            .await
+            .unwrap();
+        touch(device, "/dir/file").await;
+        chmod(&node, read_only_file_mode()).await.unwrap();
+
+        assert_eq!(
+            read_only_file_mode(),
+            getattr(device, "/dir/renamed").await.mode
+        );
+        assert_eq!(file_mode(), getattr(device, "/dir/file").await.mode);
+        assert_eq!(read_only_file_mode(), node.getattr().await.unwrap().mode);
+
+        node.async_drop().await.unwrap();
+    })
+    .await
+}
+
+async fn same_dir_file_opened_before_rename_still_works(api: Api) {
+    run(async |device| {
+        mkdir(device, "/dir").await;
+        let (node, openfile) = create_and_open(device, "/dir/file").await;
+
+        rename(device, api, "/dir/file", "/dir/renamed")
+            .await
+            .unwrap();
+
+        assert_eq!(file_mode(), openfile.getattr().await.unwrap().mode);
+        // Truncating also updates the modification time in the file's entry
+        openfile
+            .setattr(None, None, None, Some(NumBytes::from(10)), None, None, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            NumBytes::from(10),
+            getattr(device, "/dir/renamed").await.num_bytes
+        );
+
+        openfile.async_drop().await.unwrap();
+        node.async_drop().await.unwrap();
+    })
+    .await
+}
+
 macro_rules! tests_for_both_apis {
     ($($name:ident),* $(,)?) => {
         mod dir_api {
@@ -708,6 +838,9 @@ tests_for_both_apis!(
     across_dirs_failed_overwrite_of_symlink_puts_source_back,
     same_dir_dir_onto_nonempty_dir_is_rejected,
     same_dir_dir_onto_empty_dir_succeeds,
+    same_dir_node_loaded_before_rename_still_works,
+    same_dir_node_loaded_before_rename_doesnt_touch_new_node_with_its_old_name,
+    same_dir_file_opened_before_rename_still_works,
 );
 
 // `Device::rename` always rejects moving a directory into itself or into one of its own subdirectories,

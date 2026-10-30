@@ -156,24 +156,16 @@ where
         self.entries.update_modification_timestamp(blob_id)
     }
 
-    pub fn set_attr_of_entry_by_name<'s>(
+    pub fn set_attr_of_entry<'s>(
         &'s mut self,
-        name: &PathComponent,
+        blob_id: &BlobId,
         mode: Option<Mode>,
         uid: Option<Uid>,
         gid: Option<Gid>,
         atime: Option<SystemTime>,
         mtime: Option<SystemTime>,
     ) -> Result<&'s DirEntry, SetAttrError> {
-        self.entries
-            .set_attr_by_name(name, mode, uid, gid, atime, mtime)
-    }
-
-    pub fn update_modification_timestamp_by_name(
-        &mut self,
-        name: &PathComponent,
-    ) -> Result<(), UpdateTimestampError> {
-        self.entries.update_modification_timestamp_by_name(name)
+        self.entries.set_attr(blob_id, mode, uid, gid, atime, mtime)
     }
 
     pub fn maybe_update_access_timestamp_of_entry(

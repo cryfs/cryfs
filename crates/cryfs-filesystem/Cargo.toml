@@ -29,6 +29,8 @@ tokio = {workspace = true, features = ["sync"]}
 [dev-dependencies]
 byte-unit.workspace = true
 cryfs-blobstore = {path = "../blobstore", features = ["testutils"]}
+# tests/fuser_adapter.rs drives the file system through the adapter the fuser backend uses
+cryfs-rustfs = {path = "../rustfs", features = ["fuser"]}
 tokio = {workspace = true, features = ["rt-multi-thread", "macros", "time"]}
 
 [features]

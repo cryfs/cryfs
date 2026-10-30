@@ -269,7 +269,6 @@ where
 
         let node_info = NodeInfo::new_non_root_dir(
             self_blob,
-            name.to_owned(),
             blob_id,
             blob_type,
             self.node_info.atime_update_behavior(),
@@ -542,8 +541,6 @@ where
                         return Err(err);
                     }
                 };
-                // TODO Is this possible without to_owned()?
-                let name = name.to_owned();
                 let (new_dir_blob_id, blob) = blob.async_drop_on_err(new_dir_blob_id).await?;
 
                 let atime = SystemTime::now();
@@ -554,7 +551,7 @@ where
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                         blob.add_entry_dir(
-                            name.clone(),
+                            name.to_owned(),
                             new_dir_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
                             Mode::from(u32::from(mode)),
@@ -599,7 +596,6 @@ where
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        name,
                         new_dir_blob_id,
                         BlobType::Dir,
                         self.node_info.atime_update_behavior(),
@@ -723,8 +719,6 @@ where
                         return Err(err);
                     }
                 };
-                // TODO Is this possible without to_owned()?
-                let name = name.to_owned();
                 let new_symlink_blob_id = new_symlink_blob_id
                     .inspect_err(|err| log::error!("Error creating symlink blob: {err:?}"));
                 let (new_symlink_blob_id, blob) =
@@ -738,7 +732,7 @@ where
                         let blob = Self::blob_as_dir_mut(&mut *blob)?;
 
                         blob.add_entry_symlink(
-                            name.clone(),
+                            name.to_owned(),
                             new_symlink_blob_id,
                             // TODO Don't convert between fs_types::xxx and cryfs_rustfs::xxx but reuse the same types
                             Uid::from(u32::from(uid)),
@@ -782,7 +776,6 @@ where
                     &self.blobstore,
                     AsyncDropArc::new(NodeInfo::new_non_root_dir(
                         blob,
-                        name,
                         new_symlink_blob_id,
                         BlobType::Symlink,
                         self.node_info.atime_update_behavior(),
@@ -917,7 +910,6 @@ where
                 let (attrs, blob) = blob.async_drop_on_err(attrs).await?;
                 let node_info = AsyncDropArc::new(NodeInfo::new_non_root_dir(
                     blob,
-                    name.to_owned(),
                     new_file_blob_id,
                     BlobType::File,
                     self.node_info.atime_update_behavior(),
