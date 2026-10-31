@@ -13,6 +13,8 @@
 #include <cpp-utils/system/homedir.h>
 #include "../testutils/TestWithFakeHomeDirectory.h"
 #include <cpp-utils/io/NoninteractiveConsole.h>
+#include <chrono>
+#include <thread>
 
 //TODO (whole project) Make constructors explicit when implicit construction not needed
 
@@ -85,6 +87,41 @@ TEST_F(CryFsTest, LoadingFilesystemDoesntModifyConfigFile) {
   }
   const Data configAfterLoading = Data::LoadFromFile(config.path()).value();
   EXPECT_EQ(configAfterCreating, configAfterLoading);
+}
+
+// The caches write a new file's directory entry to disk within seconds, even while the file is still open.
+// The file's blob has to be on disk by then too, or after a crash the entry can't be read or deleted.
+TEST_F(CryFsTest, NewFileThatIsStillOpenIsReadableAfterCrash) {
+  {
+    // Create the file system, so its root directory is on disk
+    CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+    dev.setContext(fspp::Context {fspp::relatime()});
+  }
+  CryDevice dev(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+  dev.setContext(fspp::Context {fspp::relatime()});
+  const auto openFile = dev.LoadDir(bf::path("/")).value()->createAndOpenFile("newfile", fspp::mode_t().addFileFlag().addUserReadFlag().addUserWriteFlag(), fspp::uid_t(0), fspp::gid_t(0));
+
+  // Load the file system again while the first instance keeps running with the file open, as if it had crashed.
+  // Wait until its caches have written the directory entry, and then a bit longer, so they're done writing.
+  bool entryIsOnDisk = false;
+  for (int attempt = 0; attempt < 100 && !entryIsOnDisk; ++attempt) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    try {
+      CryDevice afterCrash(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+      afterCrash.setContext(fspp::Context {fspp::relatime()});
+      entryIsOnDisk = afterCrash.Load(bf::path("/newfile")) != none;
+    } catch (const std::exception &) { // NOLINT(bugprone-empty-catch)
+      // The first instance doesn't write block files atomically, and it may have been writing the one we read
+    }
+  }
+  ASSERT_TRUE(entryIsOnDisk) << "The directory entry didn't reach the disk";
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  CryDevice afterCrash(loadOrCreateConfig(), blockStore(), localStateDir, 0x12345678, false, false, failOnIntegrityViolation());
+  afterCrash.setContext(fspp::Context {fspp::relatime()});
+  const auto file = afterCrash.Load(bf::path("/newfile"));
+  ASSERT_TRUE(file != none);
+  EXPECT_EQ(fspp::num_bytes_t(0), file.value()->stat().size);
 }
 
 }
