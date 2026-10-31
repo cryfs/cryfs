@@ -15,8 +15,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use byte_unit::Byte;
-use cryfs_blobstore::{BlobId, BlobStore, BlobStoreOnBlocks, RemoveResult};
-use cryfs_blockstore::{InMemoryBlockStore, LockingBlockStore};
+use cryfs_blobstore::{BLOBID_LEN, Blob, BlobId, BlobStore, BlobStoreOnBlocks, RemoveResult};
+use cryfs_blockstore::{BlockId, InMemoryBlockStore, LockingBlockStore};
 use cryfs_filesystem::filesystem::CryDevice;
 use cryfs_rustfs::{
     AtimeUpdateBehavior, FsError, FsResult, Gid, Mode, NodeAttrs, NumBytes, OpenInFlags, Uid,
@@ -24,50 +24,166 @@ use cryfs_rustfs::{
 };
 use cryfs_utils::{
     async_drop::{AsyncDrop, AsyncDropGuard},
+    data::Data,
     path::{AbsolutePath, PathComponent},
 };
+use futures::stream::BoxStream;
 
 type TestDevice =
     CryDevice<FaultInjectingBlobStore<BlobStoreOnBlocks<LockingBlockStore<InMemoryBlockStore>>>>;
 
-/// Wraps a blob store and makes [BlobStore::remove_by_id] fail while `fail_removals` is set.
-/// A rename that overwrites a node removes its blob, so this lets a test make the overwrite
-/// fail after the rename already removed the entry from the source directory.
+/// Faults a test can switch on while it runs
+#[derive(Debug, Default)]
+struct Faults {
+    /// Makes [BlobStore::remove_by_id] fail. A rename that overwrites a node removes its blob, so this lets a test
+    /// make the overwrite fail after the rename already removed the entry from the source directory.
+    fail_removals: AtomicBool,
+    /// Makes writes of a blob's parent pointer succeed without writing anything. This leaves a moved directory with a
+    /// parent pointer that still names the directory it was moved out of, as a failed write or a crash can.
+    drop_parent_pointer_writes: AtomicBool,
+}
+
+/// Where an fsblob stores its parent pointer: after a u16 format version and a u8 blob type
+const PARENT_POINTER_OFFSET: u64 = 3;
+
+/// Wraps a blob store and injects the [Faults] that are switched on
 #[derive(Debug)]
 struct FaultInjectingBlobStore<B>
 where
     B: BlobStore + AsyncDrop + Debug + Send + Sync + 'static,
+    B::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     underlying_store: AsyncDropGuard<B>,
-    fail_removals: Arc<AtomicBool>,
+    faults: Arc<Faults>,
+}
+
+impl<B> FaultInjectingBlobStore<B>
+where
+    B: BlobStore + AsyncDrop + Debug + Send + Sync + 'static,
+    B::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    fn wrap(
+        &self,
+        blob: AsyncDropGuard<B::ConcreteBlob>,
+    ) -> AsyncDropGuard<FaultInjectingBlob<B::ConcreteBlob>> {
+        AsyncDropGuard::new(FaultInjectingBlob {
+            inner: blob,
+            faults: Arc::clone(&self.faults),
+        })
+    }
+}
+
+/// A blob of [FaultInjectingBlobStore]
+#[derive(Debug)]
+struct FaultInjectingBlob<I>
+where
+    I: Blob + Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    inner: AsyncDropGuard<I>,
+    faults: Arc<Faults>,
+}
+
+impl<I> Blob for FaultInjectingBlob<I>
+where
+    I: Blob + Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    fn id(&self) -> BlobId {
+        self.inner.id()
+    }
+
+    async fn num_bytes(&mut self) -> anyhow::Result<u64> {
+        self.inner.num_bytes().await
+    }
+
+    async fn resize(&mut self, new_num_bytes: u64) -> anyhow::Result<()> {
+        self.inner.resize(new_num_bytes).await
+    }
+
+    async fn read_all(&mut self) -> anyhow::Result<Data> {
+        self.inner.read_all().await
+    }
+
+    async fn read(&mut self, target: &mut [u8], offset: u64) -> anyhow::Result<()> {
+        self.inner.read(target, offset).await
+    }
+
+    async fn try_read(&mut self, target: &mut [u8], offset: u64) -> anyhow::Result<usize> {
+        self.inner.try_read(target, offset).await
+    }
+
+    async fn write(&mut self, source: &[u8], offset: u64) -> anyhow::Result<()> {
+        if offset == PARENT_POINTER_OFFSET
+            && source.len() == BLOBID_LEN
+            && self
+                .faults
+                .drop_parent_pointer_writes
+                .load(Ordering::SeqCst)
+        {
+            return Ok(());
+        }
+        self.inner.write(source, offset).await
+    }
+
+    async fn flush(&mut self) -> anyhow::Result<()> {
+        self.inner.flush().await
+    }
+
+    async fn num_nodes(&mut self) -> anyhow::Result<u64> {
+        self.inner.num_nodes().await
+    }
+
+    async fn remove(this: AsyncDropGuard<Self>) -> anyhow::Result<()> {
+        let this = this.unsafe_into_inner_dont_drop();
+        I::remove(this.inner).await
+    }
+
+    fn all_blocks(&self) -> anyhow::Result<BoxStream<'_, anyhow::Result<BlockId>>> {
+        self.inner.all_blocks()
+    }
+}
+
+impl<I> AsyncDrop for FaultInjectingBlob<I>
+where
+    I: Blob + Debug + Send + Sync + AsyncDrop<Error = anyhow::Error>,
+{
+    type Error = anyhow::Error;
+
+    async fn async_drop_impl(self) -> anyhow::Result<()> {
+        let Self { inner, faults: _ } = self;
+        inner.async_drop().await
+    }
 }
 
 impl<B> BlobStore for FaultInjectingBlobStore<B>
 where
     B: BlobStore + AsyncDrop + Debug + Send + Sync + 'static,
+    B::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
-    type ConcreteBlob = B::ConcreteBlob;
+    type ConcreteBlob = FaultInjectingBlob<B::ConcreteBlob>;
 
     async fn create(&self) -> anyhow::Result<AsyncDropGuard<Self::ConcreteBlob>> {
-        self.underlying_store.create().await
+        let blob = self.underlying_store.create().await?;
+        Ok(self.wrap(blob))
     }
 
     async fn try_create(
         &self,
         id: &BlobId,
     ) -> anyhow::Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
-        self.underlying_store.try_create(id).await
+        let blob = self.underlying_store.try_create(id).await?;
+        Ok(blob.map(|blob| self.wrap(blob)))
     }
 
     async fn load(
         &self,
         id: &BlobId,
     ) -> anyhow::Result<Option<AsyncDropGuard<Self::ConcreteBlob>>> {
-        self.underlying_store.load(id).await
+        let blob = self.underlying_store.load(id).await?;
+        Ok(blob.map(|blob| self.wrap(blob)))
     }
 
     async fn remove_by_id(&self, id: &BlobId) -> anyhow::Result<RemoveResult> {
-        if self.fail_removals.load(Ordering::SeqCst) {
+        if self.faults.fail_removals.load(Ordering::SeqCst) {
             anyhow::bail!("Injected error when removing blob {id:?}");
         }
         self.underlying_store.remove_by_id(id).await
@@ -103,13 +219,14 @@ where
 impl<B> AsyncDrop for FaultInjectingBlobStore<B>
 where
     B: BlobStore + AsyncDrop + Debug + Send + Sync + 'static,
+    B::ConcreteBlob: Send + Sync + AsyncDrop<Error = anyhow::Error>,
 {
     type Error = B::Error;
 
     async fn async_drop_impl(self) -> Result<(), B::Error> {
         let Self {
             underlying_store,
-            fail_removals: _,
+            faults: _,
         } = self;
         underlying_store.async_drop().await
     }
@@ -147,14 +264,14 @@ fn read_only_file_mode() -> Mode {
     Mode::default().add_file_flag().add_user_read_flag()
 }
 
-async fn make_device(fail_removals: &Arc<AtomicBool>) -> AsyncDropGuard<TestDevice> {
+async fn make_device(faults: &Arc<Faults>) -> AsyncDropGuard<TestDevice> {
     let blockstore = LockingBlockStore::new(InMemoryBlockStore::new());
     let blobstore = BlobStoreOnBlocks::new(blockstore, 1024u32.into())
         .await
         .unwrap();
     let blobstore = AsyncDropGuard::new(FaultInjectingBlobStore {
         underlying_store: blobstore,
-        fail_removals: Arc::clone(fail_removals),
+        faults: Arc::clone(faults),
     });
     CryDevice::create_new_filesystem(
         blobstore,
@@ -167,15 +284,20 @@ async fn make_device(fail_removals: &Arc<AtomicBool>) -> AsyncDropGuard<TestDevi
 
 /// Runs `test` on a fresh file system. Fails instead of hanging if `test` blocks forever.
 async fn run(test: impl AsyncFnOnce(&TestDevice)) {
-    run_with_fault_injection(async move |device, _fail_removals| test(device).await).await
+    run_with_faults(async move |device, _faults| test(device).await).await
 }
 
 /// Like [run], but also gives `test` a flag that makes removing blobs fail while it is set.
 async fn run_with_fault_injection(test: impl AsyncFnOnce(&TestDevice, &AtomicBool)) {
-    let fail_removals = Arc::new(AtomicBool::new(false));
-    let device = make_device(&fail_removals).await;
+    run_with_faults(async move |device, faults| test(device, &faults.fail_removals).await).await
+}
+
+/// Like [run], but also gives `test` the [Faults] it can switch on.
+async fn run_with_faults(test: impl AsyncFnOnce(&TestDevice, &Faults)) {
+    let faults = Arc::new(Faults::default());
+    let device = make_device(&faults).await;
     {
-        let mut test = std::pin::pin!(test(&device, &fail_removals));
+        let mut test = std::pin::pin!(test(&device, &faults));
         if tokio::time::timeout(Duration::from_secs(60), &mut test)
             .await
             .is_err()
@@ -919,6 +1041,41 @@ async fn dir_api_into_a_dir_that_was_moved_into_the_source_is_rejected() {
         assert_eq!(Vec::<String>::new(), ls_dir(device, "/a/x/y").await);
         assert_eq!(blocks_before, num_blocks(device).await);
         y.async_drop().await.unwrap();
+    })
+    .await
+}
+
+/// A move whose write of the moved directory's parent pointer never reached the blob leaves the pointer naming the
+/// directory the node was moved out of. Following it, the check would think /b/n3 is in /a, and accept moving /b
+/// into /b/n3, which would make /b and everything in it unreachable.
+#[cfg(feature = "ancestor_checks_on_move")]
+#[tokio::test]
+async fn dir_api_into_its_own_subdir_with_a_stale_parent_pointer_is_rejected() {
+    run_with_faults(async |device, faults| {
+        mkdir(device, "/a").await;
+        mkdir(device, "/a/n3").await;
+        mkdir(device, "/b").await;
+        faults
+            .drop_parent_pointer_writes
+            .store(true, Ordering::SeqCst);
+        rename(device, Api::Dir, "/a/n3", "/b/n3").await.unwrap();
+        faults
+            .drop_parent_pointer_writes
+            .store(false, Ordering::SeqCst);
+        let n3 = device.lookup(abspath("/b/n3")).await.unwrap();
+        let blocks_before = num_blocks(device).await;
+
+        let result = move_into(device, "/b", &n3, "b").await;
+
+        assert!(
+            matches!(result, Err(FsError::CorruptedFilesystem { .. })),
+            "{result:?}"
+        );
+        assert_eq!(vec!["a", "b"], ls_dir(device, "/").await);
+        assert_eq!(vec!["n3"], ls_dir(device, "/b").await);
+        assert_eq!(Vec::<String>::new(), ls_dir(device, "/b/n3").await);
+        assert_eq!(blocks_before, num_blocks(device).await);
+        n3.async_drop().await.unwrap();
     })
     .await
 }

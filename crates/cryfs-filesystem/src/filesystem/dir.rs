@@ -166,6 +166,12 @@ where
     /// We don't remember the ancestors of a node instead, because that would get out of date when an ancestor is moved.
     /// The blobs on the way are usually loaded anyways: fuser keeps the ancestors of every inode it handed out loaded,
     /// and each of them keeps its parent directory loaded (see [NodeInfo]).
+    ///
+    /// A parent pointer can be out of date, though: a move that failed after it moved the entry, or a crash before the
+    /// moved directory's blob reached the disk, leaves it naming the directory the node was moved out of. Following
+    /// such a pointer would check the wrong ancestors and could accept a move that makes a subtree unreachable.
+    /// So at each step, we check that the parent pointed to really has an entry for the node, and fail with
+    /// [FsError::CorruptedFilesystem] if it doesn't.
     #[cfg(feature = "ancestor_checks_on_move")]
     async fn validate_move_doesnt_cause_cycle(
         &self,
@@ -194,26 +200,43 @@ where
                     message: format!("The parent pointers above blob {current_id:?} form a cycle"),
                 });
             }
-            current_id = parent_id;
-            let current = self
+            let parent = self
                 .blobstore
-                .load(&current_id)
+                .load(&parent_id)
                 .await
                 .map_err(|err| {
-                    log::error!("Error loading blob {current_id:?}: {err:?}");
+                    log::error!("Error loading blob {parent_id:?}: {err:?}");
                     FsError::UnknownError
                 })?
                 .ok_or_else(|| FsError::CorruptedFilesystem {
                     message: format!(
-                        "Didn't find blob {current_id:?}, which is an ancestor of {:?}",
+                        "Didn't find blob {parent_id:?}, which is an ancestor of {:?}",
                         dest_dir.blob_id()
                     ),
                 })?;
-            parent_id = with_async_drop!(
-                current,
-                { Ok::<_, FsError>(current.with_lock(async |blob| blob.parent()).await) },
+            let grandparent_id = with_async_drop!(
+                parent,
+                {
+                    parent
+                        .with_lock(async |blob| {
+                            let has_entry = blob
+                                .as_dir()
+                                .is_ok_and(|dir| dir.entry_by_id(&current_id).is_some());
+                            if !has_entry {
+                                return Err(FsError::CorruptedFilesystem {
+                                    message: format!(
+                                        "Blob {current_id:?} names {parent_id:?} as its parent, but that isn't a directory with an entry for it"
+                                    ),
+                                });
+                            }
+                            Ok(blob.parent())
+                        })
+                        .await
+                },
                 FsError::internal_error
             )?;
+            current_id = parent_id;
+            parent_id = grandparent_id;
         }
     }
 
