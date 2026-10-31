@@ -43,6 +43,9 @@ namespace cryfs {
 
             std::function<fspp::num_bytes_t(const blockstore::BlockId &)> _getLstatSize();
 
+            template<class BlobType>
+            static cpputils::unique_ref<BlobType> _flushNewBlob(cpputils::unique_ref<BlobType> blob);
+
             cpputils::unique_ref<blobstore::BlobStore> _baseBlobStore;
 
             DISALLOW_COPY_AND_ASSIGN(FsBlobStore);
@@ -52,19 +55,30 @@ namespace cryfs {
                 : _baseBlobStore(std::move(baseBlobStore)) {
         }
 
+        template<class BlobType>
+        inline cpputils::unique_ref<BlobType> FsBlobStore::_flushNewBlob(cpputils::unique_ref<BlobType> blob) {
+            // The caller adds a directory entry for the new blob, which the caches write to disk within a few seconds.
+            // Until the new blob is flushed, its header (magic number, parent pointer) only exists in memory, and an open
+            // file doesn't flush it until it's closed. A crash in between would leave an entry that points to a blob
+            // without a header, which can't be read or deleted. Flushing hands the header to the block cache, which
+            // writes it to disk within about a second.
+            blob->baseBlob().flush();
+            return blob;
+        }
+
         inline cpputils::unique_ref<FileBlob> FsBlobStore::createFileBlob(const blockstore::BlockId &parent) {
             auto blob = _baseBlobStore->create();
-            return FileBlob::InitializeEmptyFile(std::move(blob), parent);
+            return _flushNewBlob(FileBlob::InitializeEmptyFile(std::move(blob), parent));
         }
 
         inline cpputils::unique_ref<DirBlob> FsBlobStore::createDirBlob(const blockstore::BlockId &parent) {
             auto blob = _baseBlobStore->create();
-            return DirBlob::InitializeEmptyDir(std::move(blob), parent);
+            return _flushNewBlob(DirBlob::InitializeEmptyDir(std::move(blob), parent));
         }
 
         inline cpputils::unique_ref<SymlinkBlob> FsBlobStore::createSymlinkBlob(const boost::filesystem::path &target, const blockstore::BlockId &parent) {
             auto blob = _baseBlobStore->create();
-            return SymlinkBlob::InitializeSymlink(std::move(blob), target, parent);
+            return _flushNewBlob(SymlinkBlob::InitializeSymlink(std::move(blob), target, parent));
         }
 
         inline uint64_t FsBlobStore::numBlocks() const {
